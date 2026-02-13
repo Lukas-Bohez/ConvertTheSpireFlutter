@@ -1,0 +1,9 @@
+# This file contains configuration options for the Dart analyzer, specifying rules and guidelines for code quality.
+analyzer:
+  errors:
+    unused_import: warning
+    dead_code: warning
+    missing_return: error
+    unnecessary_this: warning
+  exclude:
+    - test/**

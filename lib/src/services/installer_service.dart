@@ -1,0 +1,80 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:archive/archive.dart';
+import 'package:crypto/crypto.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+
+class InstallerService {
+  Future<String> installFfmpeg({
+    required Uri url,
+    String? checksumSha256,
+    void Function(int percent, String message)? onProgress,
+  }) async {
+    final support = await getApplicationSupportDirectory();
+    final downloadDir = Directory('${support.path}${Platform.pathSeparator}ffmpeg');
+    await downloadDir.create(recursive: true);
+    final zipPath = '${downloadDir.path}${Platform.pathSeparator}ffmpeg.zip';
+
+    onProgress?.call(0, 'Downloading');
+    final bytes = await _download(url, onProgress: onProgress);
+    await File(zipPath).writeAsBytes(bytes, flush: true);
+
+    if (checksumSha256 != null && checksumSha256.trim().isNotEmpty) {
+      final digest = sha256.convert(bytes).toString();
+      if (digest.toLowerCase() != checksumSha256.toLowerCase()) {
+        throw Exception('Checksum mismatch');
+      }
+    }
+
+    onProgress?.call(60, 'Extracting');
+    final archive = ZipDecoder().decodeBytes(bytes);
+    for (final file in archive) {
+      final outPath = '${downloadDir.path}${Platform.pathSeparator}${file.name}';
+      if (file.isFile) {
+        final data = file.content as List<int>;
+        await File(outPath).create(recursive: true);
+        await File(outPath).writeAsBytes(data, flush: true);
+      } else {
+        await Directory(outPath).create(recursive: true);
+      }
+    }
+
+    final ffmpegExe = await _findFfmpegExe(downloadDir);
+    if (ffmpegExe == null) {
+      throw Exception('ffmpeg.exe not found after extraction');
+    }
+
+    onProgress?.call(100, 'Complete');
+    return ffmpegExe.path;
+  }
+
+  Future<Uint8List> _download(Uri url, {void Function(int percent, String message)? onProgress}) async {
+    final response = await http.Client().send(http.Request('GET', url));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Download failed: ${response.statusCode}');
+    }
+    final total = response.contentLength ?? 0;
+    final bytes = <int>[];
+    int received = 0;
+    await for (final chunk in response.stream) {
+      bytes.addAll(chunk);
+      received += chunk.length;
+      if (total > 0) {
+        final pct = ((received / total) * 100).clamp(0, 100).toInt();
+        onProgress?.call(pct, 'Downloading');
+      }
+    }
+    return Uint8List.fromList(bytes);
+  }
+
+  Future<File?> _findFfmpegExe(Directory root) async {
+    await for (final entity in root.list(recursive: true, followLinks: false)) {
+      if (entity is File && entity.path.toLowerCase().endsWith('ffmpeg.exe')) {
+        return entity;
+      }
+    }
+    return null;
+  }
+}

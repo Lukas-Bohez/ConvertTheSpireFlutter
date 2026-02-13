@@ -1,0 +1,33 @@
+name: my_flutter_app
+description: A new Flutter project.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.6.0
+  path_provider: ^2.1.2
+  file_picker: ^10.3.10
+  youtube_explode_dart: ^2.1.2
+  archive: ^3.4.10
+  image: ^4.3.0
+  mime: ^1.0.4
+  uuid: ^4.4.0
+  crypto: ^3.0.3
+  ffmpeg_kit_flutter: ^6.0.3
+  pdf: ^3.10.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
