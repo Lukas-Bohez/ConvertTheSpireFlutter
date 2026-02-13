@@ -195,6 +195,22 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, size: 18, color: Colors.orange),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'YouTube Mix playlists (IDs starting with RD) cannot be expanded.',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: Colors.orange[800]),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
