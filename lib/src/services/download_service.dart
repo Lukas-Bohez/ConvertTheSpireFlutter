@@ -45,7 +45,8 @@ class DownloadService {
     final safeTitle = _sanitizeFileName(video.title);
     final formatLower = format.toLowerCase();
 
-    final outputFolder = Directory('${outputDir}${Platform.pathSeparator}$formatLower');
+    // Create output directory if it doesn't exist
+    final outputFolder = Directory(outputDir);
     await outputFolder.create(recursive: true);
 
     Uint8List? thumbBytes = await _fetchThumbnailBytes(video.thumbnails.highResUrl);
@@ -74,18 +75,34 @@ class DownloadService {
         '-y',
         '-i',
         tempMp4Path,
-        if (coverPath != null) ...['-i', coverPath, '-map', '0:a', '-map', '1:v'],
-        '-c:a', 'libmp3lame',
-        '-b:a', '192k',
-        '-metadata', 'title=${video.title}',
-        '-metadata', 'artist=${video.author}',
-        '-metadata', 'album=${video.author}',
-        '-metadata', 'date=${video.uploadDate?.toIso8601String() ?? ''}',
+        if (coverPath != null) ...[
+          '-i',
+          coverPath,
+          '-map',
+          '0:a',
+          '-map',
+          '1:v',
+          '-c:v',
+          'mjpeg',
+          '-disposition:v',
+          'attached_pic',
+        ],
+        '-c:a',
+        'libmp3lame',
+        '-b:a',
+        '192k',
+        '-id3v2_version',
+        '3',
+        '-metadata',
+        'title=${video.title}',
+        '-metadata',
+        'artist=${video.author}',
+        '-metadata',
+        'album=${video.author}',
+        '-metadata',
+        'date=${video.uploadDate?.toIso8601String() ?? ''}',
+        outputPath,
       ];
-      if (coverPath != null) {
-        args.addAll(<String>['-c:v', 'mjpeg', '-disposition:v', 'attached_pic', '-id3v2_version', '3']);
-      }
-      args.add(outputPath);
       await ffmpeg.run(args, ffmpegPath: ffmpegPath);
 
       await _safeDelete(tempMp4Path);
@@ -96,37 +113,11 @@ class DownloadService {
       return DownloadResult(path: outputPath, thumbnail: thumbBytes);
     }
 
-    // For MP4, embed thumbnail if available
+    // For MP4, just rename the temp file to final output
     final outputPath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.mp4';
     onProgress(95, DownloadStatus.converting);
-    
-    if (thumbBytes != null) {
-      // Re-encode with embedded thumbnail
-      final coverPath = await _writeCoverFile(outputFolder.path, safeTitle, thumbBytes);
-      await ffmpeg.run(
-        <String>[
-          '-y',
-          '-i', tempMp4Path,
-          '-i', coverPath!,
-          '-map', '0',
-          '-map', '1',
-          '-c', 'copy',
-          '-disposition:v:1', 'attached_pic',
-          '-metadata', 'title=${video.title}',
-          '-metadata', 'artist=${video.author}',
-          '-metadata', 'album=${video.author}',
-          '-metadata', 'date=${video.uploadDate?.toIso8601String() ?? ''}',
-          outputPath,
-        ],
-        ffmpegPath: ffmpegPath,
-      );
-      await _safeDelete(tempMp4Path);
-      await _safeDelete(coverPath);
-    } else {
-      // No thumbnail, just rename
-      final tempFile = File(tempMp4Path);
-      await tempFile.rename(outputPath);
-    }
+    final tempFile = File(tempMp4Path);
+    await tempFile.rename(outputPath);
 
     return DownloadResult(path: outputPath, thumbnail: thumbBytes);
   }
