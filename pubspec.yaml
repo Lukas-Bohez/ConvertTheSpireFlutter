@@ -12,6 +12,7 @@ dependencies:
   http: ^1.6.0
   path_provider: ^2.1.2
   file_picker: ^10.3.10
+  url_launcher: ^6.2.5
   youtube_explode_dart: ^2.1.2
   archive: ^3.4.10
   image: ^4.3.0
@@ -24,6 +25,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  msix: ^3.16.7
 
 flutter:
   uses-material-design: true
@@ -31,3 +33,12 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+
+msix_config:
+  display_name: Convert the Spire Reborn
+  publisher_display_name: Oroka Conner
+  publisher: CN=Oroka Conner
+  identity_name: OrokaConner.ConvertTheSpireReborn
+  msix_version: 1.0.0.0
+  logo_path: assets/icons/favicon-192x192.png
+  capabilities: internetClient

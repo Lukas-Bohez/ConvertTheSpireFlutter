@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/app_settings.dart';
 import '../models/preview_item.dart';
@@ -19,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static final Uri _buyMeCoffeeUri = Uri.parse('https://buymeacoffee.com/orokaconner');
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _downloadDirController = TextEditingController();
   final TextEditingController _workersController = TextEditingController();
@@ -954,6 +956,47 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 24),
+
+          // About
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.info_outline),
+                      const SizedBox(width: 8),
+                      Text('About', style: Theme.of(context).textTheme.titleLarge),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Convert the Spire Reborn',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text('Copyright (c) 2026 Oroka Conner. All rights reserved.'),
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    icon: const Icon(Icons.coffee),
+                    label: const Text('Buy me a coffee'),
+                    onPressed: _openBuyMeCoffee,
+                  ),
+                  const SizedBox(height: 4),
+                  SelectableText(
+                    _buyMeCoffeeUri.toString(),
+                    style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
           
           // Save Button
           Center(
@@ -985,6 +1028,15 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _openBuyMeCoffee() async {
+    final launched = await launchUrl(_buyMeCoffeeUri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the Buy Me a Coffee link.')),
+      );
+    }
   }
 
   Widget _buildConvertTab(AppSettings? settings) {

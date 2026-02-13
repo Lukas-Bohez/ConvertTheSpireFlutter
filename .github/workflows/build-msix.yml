@@ -1,0 +1,43 @@
+name: Build MSIX
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-msix:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Decode code-signing certificate
+        shell: pwsh
+        env:
+          MSIX_PFX_BASE64: ${{ secrets.MSIX_PFX_BASE64 }}
+        run: |
+          $pfxBytes = [System.Convert]::FromBase64String($env:MSIX_PFX_BASE64)
+          $outPath = "${{ github.workspace }}\\build\\codesign.pfx"
+          [System.IO.File]::WriteAllBytes($outPath, $pfxBytes)
+
+      - name: Build and sign MSIX
+        shell: pwsh
+        env:
+          MSIX_PFX_PASSWORD: ${{ secrets.MSIX_PFX_PASSWORD }}
+        run: |
+          $certPath = "${{ github.workspace }}\\build\\codesign.pfx"
+          dart run msix:create --certificate-path="$certPath" --certificate-password="$env:MSIX_PFX_PASSWORD"
+
+      - name: Upload MSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: msix
+          path: build/windows/runner/Release/*.msix

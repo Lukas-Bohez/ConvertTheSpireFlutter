@@ -67,4 +67,8 @@ Contributions are welcome! Please feel free to submit a pull request or open an 
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+All rights reserved. See [LICENSE](LICENSE) for details.
+
+## Support
+
+Buy me a coffee: https://buymeacoffee.com/orokaconner
