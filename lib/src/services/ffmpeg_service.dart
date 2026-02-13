@@ -21,7 +21,10 @@ class FfmpegService {
 
     final result = await Process.run(ffmpegPath, args, runInShell: false);
     if (result.exitCode != 0) {
-      throw Exception('FFmpeg failed: ${result.stderr}');
+      final stderr = result.stderr?.toString().trim() ?? '';
+      final stdout = result.stdout?.toString().trim() ?? '';
+      final details = [stderr, stdout].where((text) => text.isNotEmpty).join(' ');
+      throw Exception(details.isEmpty ? 'FFmpeg failed with exit code ${result.exitCode}' : 'FFmpeg failed: $details');
     }
   }
 

@@ -31,6 +31,7 @@ class AppController extends ChangeNotifier {
   List<QueueItem> queue = <QueueItem>[];
   final Map<String, DownloadToken> _tokens = {};
   final List<ConvertResult> convertResults = <ConvertResult>[];
+  Future<String?>? _ffmpegInstall;
 
   AppController({
     required this.settingsStore,
@@ -111,6 +112,18 @@ class AppController extends ChangeNotifier {
     final token = DownloadToken();
     _tokens[item.url] = token;
     _updateQueue(item, item.copyWith(status: DownloadStatus.downloading, progress: 0, error: null));
+    logs.add('Preparing download: ${item.title}');
+
+    String? ffmpegPath = settings.ffmpegPath;
+    try {
+      ffmpegPath = await _ensureFfmpegPath(settings, item.format);
+    } catch (e) {
+      final updated = item.copyWith(status: DownloadStatus.failed, error: '$e');
+      _updateQueue(item, updated);
+      logs.add('FFmpeg setup failed: $e');
+      _tokens.remove(item.url);
+      return;
+    }
 
     try {
       final previewItem = PreviewItem(
@@ -125,7 +138,7 @@ class AppController extends ChangeNotifier {
         previewItem,
         format: item.format,
         outputDir: settings.downloadDir,
-        ffmpegPath: settings.ffmpegPath,
+        ffmpegPath: ffmpegPath,
         token: token,
         onProgress: (pct, status) {
           final updated = item.copyWith(progress: pct, status: status);
@@ -166,6 +179,11 @@ class AppController extends ChangeNotifier {
     final reset = item.copyWith(status: DownloadStatus.queued, progress: 0, error: null);
     _updateQueue(item, reset);
     downloadSingle(reset);
+  }
+
+  void changeQueueItemFormat(QueueItem item, String newFormat) {
+    final updated = item.copyWith(format: newFormat);
+    _updateQueue(item, updated);
   }
 
   Future<void> installFfmpeg(Uri url, {String? checksum, void Function(int, String)? onProgress}) async {
@@ -223,5 +241,48 @@ class AppController extends ChangeNotifier {
     next[index] = updated;
     queue = next;
     notifyListeners();
+  }
+
+  Future<String?> _ensureFfmpegPath(AppSettings settings, String format) async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      return settings.ffmpegPath;
+    }
+
+    final formatLower = format.toLowerCase();
+    if (formatLower != 'mp3' && formatLower != 'mp4') {
+      return settings.ffmpegPath;
+    }
+
+    final available = await downloadService.ffmpeg.isAvailable(settings.ffmpegPath);
+    if (available) {
+      return settings.ffmpegPath;
+    }
+
+    _ffmpegInstall ??= _installFfmpeg(settings);
+    try {
+      return await _ffmpegInstall;
+    } finally {
+      _ffmpegInstall = null;
+    }
+  }
+
+  Future<String?> _installFfmpeg(AppSettings settings) async {
+    if (!Platform.isWindows) {
+      throw Exception('FFmpeg is required for this operation on desktop.');
+    }
+
+    logs.add('FFmpeg not found. Downloading automatically...');
+    const url = 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip';
+    final path = await installerService.installFfmpeg(
+      url: Uri.parse(url),
+      onProgress: (pct, message) {
+        if (pct == 0 || pct == 60 || pct == 100) {
+          logs.add('FFmpeg $message ($pct%)');
+        }
+      },
+    );
+    await saveSettings(settings.copyWith(ffmpegPath: path, autoInstallFfmpeg: true));
+    logs.add('FFmpeg installed: $path');
+    return path;
   }
 }

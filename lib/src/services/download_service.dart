@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:image/image.dart' as img;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 import '../models/preview_item.dart';
@@ -39,17 +40,30 @@ class DownloadService {
     required void Function(int pct, DownloadStatus status) onProgress,
     required DownloadToken token,
   }) async {
+    if (outputDir.trim().isEmpty) {
+      throw Exception('Download folder is not configured');
+    }
     final video = await yt.videos.get(item.url);
     final streams = await yt.videos.streamsClient.getManifest(video.id);
 
     final safeTitle = _sanitizeFileName(video.title);
     final formatLower = format.toLowerCase();
+    if (formatLower == 'mp3' && !await ffmpeg.isAvailable(ffmpegPath)) {
+      throw Exception('FFmpeg is required for MP3 conversion. Configure it in Settings.');
+    }
 
     // Create output directory if it doesn't exist
-    final outputFolder = Directory(outputDir);
+    final outputFolder = await _resolveOutputFolder(outputDir, formatLower);
     await outputFolder.create(recursive: true);
 
     Uint8List? thumbBytes = await _fetchThumbnailBytes(video.thumbnails.highResUrl);
+    thumbBytes = _prepareCoverBytes(thumbBytes);
+    final thumbPath = await _writeThumbnailFile(outputFolder.path, safeTitle, thumbBytes);
+
+    final needsMp4Embed = formatLower == 'mp4' && thumbBytes != null;
+    if (needsMp4Embed && !await ffmpeg.isAvailable(ffmpegPath)) {
+      throw Exception('FFmpeg is required to embed MP4 thumbnails. Configure it in Settings.');
+    }
 
     // Always download muxed MP4 first (video + audio in one stream)
     final muxedStream = streams.muxed.withHighestBitrate();
@@ -86,6 +100,10 @@ class DownloadService {
           'mjpeg',
           '-disposition:v',
           'attached_pic',
+          '-metadata:s:v',
+          'title=Album cover',
+          '-metadata:s:v',
+          'comment=Cover (front)',
         ],
         '-c:a',
         'libmp3lame',
@@ -109,15 +127,30 @@ class DownloadService {
       if (coverPath != null) {
         await _safeDelete(coverPath);
       }
+      if (thumbPath != null) {
+        await _safeDelete(thumbPath);
+      }
 
       return DownloadResult(path: outputPath, thumbnail: thumbBytes);
     }
 
-    // For MP4, just rename the temp file to final output
     final outputPath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.mp4';
     onProgress(95, DownloadStatus.converting);
-    final tempFile = File(tempMp4Path);
-    await tempFile.rename(outputPath);
+    if (needsMp4Embed) {
+      final coverPath = await _writeCoverFile(outputFolder.path, safeTitle, thumbBytes);
+      await _embedMp4Cover(tempMp4Path, outputPath, coverPath, ffmpegPath: ffmpegPath);
+      await _safeDelete(tempMp4Path);
+      if (coverPath != null) {
+        await _safeDelete(coverPath);
+      }
+      if (thumbPath != null) {
+        await _safeDelete(thumbPath);
+      }
+    } else {
+      // For MP4 without thumbnail embedding, just rename the temp file to final output
+      final tempFile = File(tempMp4Path);
+      await tempFile.rename(outputPath);
+    }
 
     return DownloadResult(path: outputPath, thumbnail: thumbBytes);
   }
@@ -172,6 +205,123 @@ class DownloadService {
     final path = '$dir${Platform.pathSeparator}$name.cover.jpg';
     await File(path).writeAsBytes(bytes, flush: true);
     return path;
+  }
+
+  Future<String?> _writeThumbnailFile(String dir, String name, Uint8List? bytes) async {
+    if (bytes == null) {
+      return null;
+    }
+    final path = '$dir${Platform.pathSeparator}$name.thumbnail.jpg';
+    await File(path).writeAsBytes(bytes, flush: true);
+    return path;
+  }
+
+  Uint8List? _prepareCoverBytes(Uint8List? bytes) {
+    if (bytes == null) {
+      return null;
+    }
+    final decoded = img.decodeImage(bytes);
+    if (decoded == null) {
+      return bytes;
+    }
+    
+    // Detect and crop black bars first
+    final trimmed = _trimBlackBars(decoded);
+    
+    // Now crop to center square from the trimmed image
+    final size = trimmed.width < trimmed.height ? trimmed.width : trimmed.height;
+    final offsetX = (trimmed.width - size) ~/ 2;
+    final offsetY = (trimmed.height - size) ~/ 2;
+    final cropped = img.copyCrop(trimmed, x: offsetX, y: offsetY, width: size, height: size);
+    
+    // Resize to target size if needed
+    final targetSize = size > 1200 ? 1200 : size;
+    final resized = size > targetSize
+        ? img.copyResize(cropped, width: targetSize, height: targetSize, interpolation: img.Interpolation.cubic)
+        : cropped;
+    final encoded = img.encodeJpg(resized, quality: 90);
+    return Uint8List.fromList(encoded);
+  }
+
+  img.Image _trimBlackBars(img.Image image) {
+    // Find content bounds by detecting non-black pixels
+    int minX = image.width;
+    int minY = image.height;
+    int maxX = 0;
+    int maxY = 0;
+    
+    const blackThreshold = 20; // Pixels darker than this are considered black
+    
+    for (int y = 0; y < image.height; y++) {
+      for (int x = 0; x < image.width; x++) {
+        final pixel = image.getPixel(x, y);
+        final r = pixel.r.toInt();
+        final g = pixel.g.toInt();
+        final b = pixel.b.toInt();
+        
+        // If pixel is not black
+        if (r > blackThreshold || g > blackThreshold || b > blackThreshold) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    
+    // If we found content bounds, crop to them
+    if (maxX > minX && maxY > minY) {
+      final width = maxX - minX + 1;
+      final height = maxY - minY + 1;
+      return img.copyCrop(image, x: minX, y: minY, width: width, height: height);
+    }
+    
+    // No black bars detected, return original
+    return image;
+  }
+
+  Future<void> _embedMp4Cover(
+    String inputPath,
+    String outputPath,
+    String? coverPath, {
+    required String? ffmpegPath,
+  }) async {
+    if (coverPath == null) {
+      final tempFile = File(inputPath);
+      await tempFile.rename(outputPath);
+      return;
+    }
+    final args = <String>[
+      '-y',
+      '-i',
+      inputPath,
+      '-i',
+      coverPath,
+      '-map',
+      '0',
+      '-map',
+      '1',
+      '-c',
+      'copy',
+      '-c:v:1',
+      'mjpeg',
+      '-disposition:v:1',
+      'attached_pic',
+      '-metadata:s:v:1',
+      'title=Album cover',
+      '-metadata:s:v:1',
+      'comment=Cover (front)',
+      outputPath,
+    ];
+    await ffmpeg.run(args, ffmpegPath: ffmpegPath);
+  }
+
+  Future<Directory> _resolveOutputFolder(String outputDir, String formatLower) async {
+    final base = Directory(outputDir);
+    if (formatLower == 'mp3' || formatLower == 'mp4') {
+      return Directory('${base.path}${Platform.pathSeparator}$formatLower');
+    }
+    return base;
   }
 
   String _sanitizeFileName(String value) {

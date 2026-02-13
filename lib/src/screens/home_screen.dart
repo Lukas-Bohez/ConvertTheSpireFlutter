@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../models/app_settings.dart';
 import '../models/preview_item.dart';
+import '../models/queue_item.dart';
 import '../state/app_controller.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -499,14 +500,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              Row(
+              Wrap(
+                spacing: 8,
                 children: [
+                  DropdownButton<String>(
+                    value: _downloadFormat,
+                    items: const [
+                      DropdownMenuItem(value: 'MP4', child: Text('MP4 (Video)')),
+                      DropdownMenuItem(value: 'MP3', child: Text('MP3 (Audio)')),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() {
+                        _downloadFormat = value;
+                      });
+                    },
+                  ),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.download_for_offline),
                     label: const Text('Download All'),
                     onPressed: items.isEmpty ? null : () => widget.controller.downloadAll(),
                   ),
-                  const SizedBox(width: 8),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.clear_all),
                     label: const Text('Clear Queue'),
@@ -588,6 +602,23 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text('${item.progress}%'),
+                              const SizedBox(width: 8),
+                              DropdownButton<String>(
+                                value: item.format.toUpperCase(),
+                                isDense: true,
+                                items: const [
+                                  DropdownMenuItem(value: 'MP4', child: Text('MP4')),
+                                  DropdownMenuItem(value: 'MP3', child: Text('MP3')),
+                                ],
+                                onChanged: item.status == DownloadStatus.downloading || 
+                                          item.status == DownloadStatus.converting ||
+                                          item.status == DownloadStatus.completed
+                                    ? null
+                                    : (value) {
+                                        if (value == null) return;
+                                        widget.controller.changeQueueItemFormat(item, value.toLowerCase());
+                                      },
+                              ),
                             ],
                           ),
                         ],
@@ -721,6 +752,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             setState(() {
                               _downloadDirController.text = result;
                             });
+                            await widget.controller.saveSettings(settings.copyWith(downloadDir: result));
                           }
                         },
                       ),

@@ -33,6 +33,7 @@ class QueueItem {
   });
 
   QueueItem copyWith({
+    String? format,
     Uint8List? thumbnailBytes,
     int? progress,
     DownloadStatus? status,
@@ -42,7 +43,7 @@ class QueueItem {
     return QueueItem(
       url: url,
       title: title,
-      format: format,
+      format: format ?? this.format,
       uploader: uploader,
       thumbnailBytes: thumbnailBytes ?? this.thumbnailBytes,
       progress: progress ?? this.progress,
