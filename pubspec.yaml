@@ -42,3 +42,4 @@ msix_config:
   msix_version: 1.0.0.0
   logo_path: assets/icons/favicon-192x192.png
   capabilities: internetClient
+  sign_msix: false
