@@ -354,11 +354,42 @@ class _HomeScreenState extends State<HomeScreen> {
           (item) => Card(
             margin: const EdgeInsets.only(bottom: 8),
             child: ListTile(
-              leading: CircleAvatar(
-                child: Icon(
-                  _downloadFormat == 'MP4' ? Icons.video_file : Icons.audio_file,
-                ),
-              ),
+              leading: item.thumbnailUrl != null && item.thumbnailUrl!.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        item.thumbnailUrl!,
+                        width: 80,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 80,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              _downloadFormat == 'MP4' ? Icons.video_file : Icons.audio_file,
+                              color: Colors.grey[600],
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  : Container(
+                      width: 80,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        _downloadFormat == 'MP4' ? Icons.video_file : Icons.audio_file,
+                        color: Colors.grey[600],
+                      ),
+                    ),
               title: Text(
                 item.title,
                 maxLines: 2,

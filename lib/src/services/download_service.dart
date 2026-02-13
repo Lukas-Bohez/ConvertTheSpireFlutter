@@ -50,22 +50,30 @@ class DownloadService {
 
     Uint8List? thumbBytes = await _fetchThumbnailBytes(video.thumbnails.highResUrl);
 
+    // Always download muxed MP4 first (video + audio in one stream)
+    final muxedStream = streams.muxed.withHighestBitrate();
+    final tempMp4Path = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.mp4';
+    
+    // Download muxed stream (0-90% of total progress)
+    await _downloadStream(muxedStream, tempMp4Path, token, (pct, status) {
+      final adjustedPct = (pct * 0.9).toInt(); // 0-90%
+      onProgress(adjustedPct, status);
+    });
+
+    if (token.cancelled) {
+      await _safeDelete(tempMp4Path);
+      throw Exception('Cancelled');
+    }
+
     if (formatLower == 'mp3') {
-      final audioStream = streams.audioOnly.withHighestBitrate();
-      final tempPath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.${audioStream.container.name}';
-      await _downloadStream(audioStream, tempPath, token, onProgress);
-
-      if (token.cancelled) {
-        throw Exception('Cancelled');
-      }
-
+      // Convert MP4 to MP3
       final coverPath = await _writeCoverFile(outputFolder.path, safeTitle, thumbBytes);
       final outputPath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.mp3';
       onProgress(95, DownloadStatus.converting);
       final args = <String>[
         '-y',
         '-i',
-        tempPath,
+        tempMp4Path,
         if (coverPath != null) ...['-i', coverPath, '-map', '0:a', '-map', '1:v'],
         '-c:a', 'libmp3lame',
         '-b:a', '192k',
@@ -80,7 +88,7 @@ class DownloadService {
       args.add(outputPath);
       await ffmpeg.run(args, ffmpegPath: ffmpegPath);
 
-      await _safeDelete(tempPath);
+      await _safeDelete(tempMp4Path);
       if (coverPath != null) {
         await _safeDelete(coverPath);
       }
@@ -88,37 +96,37 @@ class DownloadService {
       return DownloadResult(path: outputPath, thumbnail: thumbBytes);
     }
 
-    final videoStream = streams.videoOnly.withHighestBitrate();
-    final audioStream = streams.audioOnly.withHighestBitrate();
-
-    final tempVideo = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.video.${videoStream.container.name}';
-    final tempAudio = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.audio.${audioStream.container.name}';
-    await _downloadStream(videoStream, tempVideo, token, onProgress);
-    if (token.cancelled) {
-      throw Exception('Cancelled');
-    }
-    await _downloadStream(audioStream, tempAudio, token, onProgress);
-
-    if (token.cancelled) {
-      throw Exception('Cancelled');
-    }
-
+    // For MP4, embed thumbnail if available
     final outputPath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.mp4';
     onProgress(95, DownloadStatus.converting);
-    await ffmpeg.run(
-      <String>[
-        '-y',
-        '-i', tempVideo,
-        '-i', tempAudio,
-        '-c:v', 'copy',
-        '-c:a', 'aac',
-        outputPath,
-      ],
-      ffmpegPath: ffmpegPath,
-    );
-
-    await _safeDelete(tempVideo);
-    await _safeDelete(tempAudio);
+    
+    if (thumbBytes != null) {
+      // Re-encode with embedded thumbnail
+      final coverPath = await _writeCoverFile(outputFolder.path, safeTitle, thumbBytes);
+      await ffmpeg.run(
+        <String>[
+          '-y',
+          '-i', tempMp4Path,
+          '-i', coverPath!,
+          '-map', '0',
+          '-map', '1',
+          '-c', 'copy',
+          '-disposition:v:1', 'attached_pic',
+          '-metadata', 'title=${video.title}',
+          '-metadata', 'artist=${video.author}',
+          '-metadata', 'album=${video.author}',
+          '-metadata', 'date=${video.uploadDate?.toIso8601String() ?? ''}',
+          outputPath,
+        ],
+        ffmpegPath: ffmpegPath,
+      );
+      await _safeDelete(tempMp4Path);
+      await _safeDelete(coverPath);
+    } else {
+      // No thumbnail, just rename
+      final tempFile = File(tempMp4Path);
+      await tempFile.rename(outputPath);
+    }
 
     return DownloadResult(path: outputPath, thumbnail: thumbBytes);
   }
@@ -176,16 +184,14 @@ class DownloadService {
   }
 
   String _sanitizeFileName(String value) {
-    final buffer = StringBuffer();
-    for (final rune in value.runes) {
-      final ch = String.fromCharCode(rune);
-      if (RegExp(r'[A-Za-z0-9._-]').hasMatch(ch)) {
-        buffer.write(ch);
-      } else {
-        buffer.write('_');
-      }
-    }
-    final result = buffer.toString();
+    // Remove only filesystem-unsafe characters but keep Unicode (Japanese, etc.)
+    // Unsafe characters on Windows/Linux: < > : " / \\ | ? *
+    final unsafe = RegExp(r'[<>:"/\\|?*]');
+    String result = value.replaceAll(unsafe, '_');
+    // Also replace control characters
+    result = result.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '_');
+    // Trim whitespace and dots from ends (Windows doesn't like trailing dots)
+    result = result.trim().replaceAll(RegExp(r'\.+$'), '');
     return result.isEmpty ? 'download' : result;
   }
 
