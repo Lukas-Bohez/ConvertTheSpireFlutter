@@ -2,6 +2,11 @@ name: Build MSIX
 
 on:
   workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
 
 jobs:
   build-msix:
@@ -19,6 +24,12 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
       - name: Build Windows release
         run: flutter build windows --release
 
@@ -30,3 +41,9 @@ jobs:
         with:
           name: msix
           path: build/windows/runner/Release/*.msix
+
+      - name: Upload MSIX to Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/windows/runner/Release/*.msix

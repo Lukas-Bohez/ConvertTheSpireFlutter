@@ -67,7 +67,7 @@ Contributions are welcome! Please feel free to submit a pull request or open an 
 
 ## License
 
-All rights reserved. See [LICENSE](LICENSE) for details.
+This project is licensed under the GNU GPLv3. See [LICENSE](LICENSE) for details.
 
 ## Support
 

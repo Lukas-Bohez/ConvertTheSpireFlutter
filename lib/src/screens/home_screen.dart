@@ -980,7 +980,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                   ),
                   const SizedBox(height: 6),
-                  const Text('Copyright (c) 2026 Oroka Conner. All rights reserved.'),
+                  const Text('Copyright (c) 2026 Oroka Conner. Licensed under GPLv3.'),
                   const SizedBox(height: 12),
                   TextButton.icon(
                     icon: const Icon(Icons.coffee),
