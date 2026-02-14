@@ -46,7 +46,9 @@ class DownloadService {
     if (kIsWeb) {
       throw Exception('Downloads are not supported on web. Please use the desktop or mobile app.');
     }
-    if (outputDir.trim().isEmpty) {
+    final isAndroid = Platform.isAndroid;
+    final useMediaStoreOnly = isAndroid && outputDir.trim().isEmpty;
+    if (outputDir.trim().isEmpty && !useMediaStoreOnly) {
       throw Exception('Download folder is not configured');
     }
     final isSafOutput = _isSafOutput(outputDir);
@@ -60,8 +62,8 @@ class DownloadService {
     }
 
     // Create output directory if it doesn't exist
-    final outputFolder = isSafOutput
-      ? await Directory.systemTemp.createTemp('cts_download_')
+    final outputFolder = (isSafOutput || useMediaStoreOnly)
+      ? await _resolveTempFolder()
       : await _resolveOutputFolder(outputDir, formatLower);
     await outputFolder.create(recursive: true);
 
@@ -147,9 +149,36 @@ class DownloadService {
           safeTitle: safeTitle,
           formatLower: formatLower,
         );
+        if (destUri == null) {
+          final fallbackUri = await _copyFileToDownloads(
+            sourcePath: outputPath,
+            safeTitle: safeTitle,
+            formatLower: formatLower,
+          );
+          if (fallbackUri == null) {
+            throw Exception('Failed to save file to selected folder');
+          }
+          await _safeDelete(outputPath);
+          await _safeDeleteDir(outputFolder.path);
+          return DownloadResult(path: fallbackUri, thumbnail: thumbBytes);
+        }
         await _safeDelete(outputPath);
         await _safeDeleteDir(outputFolder.path);
-        return DownloadResult(path: destUri ?? '$safeTitle.$formatLower', thumbnail: thumbBytes);
+        return DownloadResult(path: destUri, thumbnail: thumbBytes);
+      }
+
+      if (useMediaStoreOnly) {
+        final fallbackUri = await _copyFileToDownloads(
+          sourcePath: outputPath,
+          safeTitle: safeTitle,
+          formatLower: formatLower,
+        );
+        if (fallbackUri == null) {
+          throw Exception('Failed to save file to Downloads');
+        }
+        await _safeDelete(outputPath);
+        await _safeDeleteDir(outputFolder.path);
+        return DownloadResult(path: fallbackUri, thumbnail: thumbBytes);
       }
 
       return DownloadResult(path: outputPath, thumbnail: thumbBytes);
@@ -180,9 +209,36 @@ class DownloadService {
         safeTitle: safeTitle,
         formatLower: formatLower,
       );
+      if (destUri == null) {
+        final fallbackUri = await _copyFileToDownloads(
+          sourcePath: outputPath,
+          safeTitle: safeTitle,
+          formatLower: formatLower,
+        );
+        if (fallbackUri == null) {
+          throw Exception('Failed to save file to selected folder');
+        }
+        await _safeDelete(outputPath);
+        await _safeDeleteDir(outputFolder.path);
+        return DownloadResult(path: fallbackUri, thumbnail: thumbBytes);
+      }
       await _safeDelete(outputPath);
       await _safeDeleteDir(outputFolder.path);
-      return DownloadResult(path: destUri ?? '$safeTitle.$formatLower', thumbnail: thumbBytes);
+      return DownloadResult(path: destUri, thumbnail: thumbBytes);
+    }
+
+    if (useMediaStoreOnly) {
+      final fallbackUri = await _copyFileToDownloads(
+        sourcePath: outputPath,
+        safeTitle: safeTitle,
+        formatLower: formatLower,
+      );
+      if (fallbackUri == null) {
+        throw Exception('Failed to save file to Downloads');
+      }
+      await _safeDelete(outputPath);
+      await _safeDeleteDir(outputFolder.path);
+      return DownloadResult(path: fallbackUri, thumbnail: thumbBytes);
     }
 
     return DownloadResult(path: outputPath, thumbnail: thumbBytes);
@@ -362,6 +418,13 @@ class DownloadService {
     return base;
   }
 
+  Future<Directory> _resolveTempFolder() async {
+    final temp = Directory.systemTemp;
+    final dir = Directory('${temp.path}${Platform.pathSeparator}cts_download');
+    await dir.create(recursive: true);
+    return dir;
+  }
+
   bool _isSafOutput(String outputDir) {
     return !kIsWeb && Platform.isAndroid && outputDir.startsWith('content://');
   }
@@ -377,6 +440,22 @@ class DownloadService {
     final subdir = (formatLower == 'mp3' || formatLower == 'mp4') ? formatLower : null;
     return _saf.copyToTree(
       treeUri: treeUri,
+      sourcePath: sourcePath,
+      displayName: displayName,
+      mimeType: mimeType,
+      subdir: subdir,
+    );
+  }
+
+  Future<String?> _copyFileToDownloads({
+    required String sourcePath,
+    required String safeTitle,
+    required String formatLower,
+  }) async {
+    final displayName = '$safeTitle.$formatLower';
+    final mimeType = formatLower == 'mp3' ? 'audio/mpeg' : 'video/mp4';
+    final subdir = (formatLower == 'mp3' || formatLower == 'mp4') ? formatLower : null;
+    return _saf.copyToDownloads(
       sourcePath: sourcePath,
       displayName: displayName,
       mimeType: mimeType,

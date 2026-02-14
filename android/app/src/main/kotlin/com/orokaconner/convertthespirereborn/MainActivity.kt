@@ -2,7 +2,10 @@ package com.orokaconner.convertthespirereborn
 
 import android.app.Activity
 import android.content.Intent
+import android.content.ContentValues
 import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
 import androidx.documentfile.provider.DocumentFile
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -37,21 +40,27 @@ class MainActivity : FlutterActivity() {
 						startActivityForResult(intent, pickTreeRequestCode)
 					}
 					"copyToTree" -> {
-						try {
-							val treeUri = call.argument<String>("treeUri")
-							val sourcePath = call.argument<String>("sourcePath")
-							val displayName = call.argument<String>("displayName")
-							val mimeType = call.argument<String>("mimeType")
-							val subdir = call.argument<String>("subdir")
-							if (treeUri.isNullOrBlank() || sourcePath.isNullOrBlank() || displayName.isNullOrBlank() || mimeType.isNullOrBlank()) {
-								result.error("INVALID_ARGS", "Missing arguments", null)
-								return@setMethodCallHandler
-							}
-							val destUri = copyFileToTree(treeUri, sourcePath, displayName, mimeType, subdir)
-							result.success(destUri?.toString())
-						} catch (e: Exception) {
-							result.error("COPY_FAILED", e.message, null)
+						val treeUri = call.argument<String>("treeUri")
+						val sourcePath = call.argument<String>("sourcePath")
+						val displayName = call.argument<String>("displayName")
+						val mimeType = call.argument<String>("mimeType")
+						val subdir = call.argument<String>("subdir")
+						if (treeUri.isNullOrBlank() || sourcePath.isNullOrBlank() || displayName.isNullOrBlank() || mimeType.isNullOrBlank()) {
+							result.error("INVALID_ARGS", "Missing arguments", null)
+							return@setMethodCallHandler
 						}
+						Thread {
+							try {
+								val destUri = copyFileToTree(treeUri, sourcePath, displayName, mimeType, subdir)
+								runOnUiThread {
+									result.success(destUri?.toString())
+								}
+							} catch (e: Exception) {
+								runOnUiThread {
+									result.error("COPY_FAILED", e.message, null)
+								}
+							}
+						}.start()
 					}
 					"openTree" -> {
 						try {
@@ -69,6 +78,38 @@ class MainActivity : FlutterActivity() {
 						} catch (e: Exception) {
 							result.success(false)
 						}
+					}
+					"copyToDownloads" -> {
+						val sourcePath = call.argument<String>("sourcePath")
+						val displayName = call.argument<String>("displayName")
+						val mimeType = call.argument<String>("mimeType")
+						val subdir = call.argument<String>("subdir")
+						if (sourcePath.isNullOrBlank() || displayName.isNullOrBlank() || mimeType.isNullOrBlank()) {
+							result.error("INVALID_ARGS", "Missing arguments", null)
+							return@setMethodCallHandler
+						}
+						Thread {
+							try {
+								val destUri = copyFileToDownloads(sourcePath, displayName, mimeType, subdir)
+								runOnUiThread {
+									result.success(destUri?.toString())
+								}
+							} catch (e: Exception) {
+								runOnUiThread {
+									result.error("COPY_FAILED", e.message, null)
+								}
+							}
+						}.start()
+					}
+					"getFilesDir" -> {
+						result.success(filesDir.absolutePath)
+					}
+					"getCacheDir" -> {
+						result.success(cacheDir.absolutePath)
+					}
+					"getExternalFilesDir" -> {
+						val dir = getExternalFilesDir(null)
+						result.success(dir?.absolutePath)
 					}
 					else -> result.notImplemented()
 				}
@@ -125,5 +166,38 @@ class MainActivity : FlutterActivity() {
 			}
 		}
 		return destFile.uri
+	}
+
+	private fun copyFileToDownloads(
+		sourcePath: String,
+		displayName: String,
+		mimeType: String,
+		subdir: String?,
+	): Uri? {
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+			return null
+		}
+
+		val relativeBase = if (subdir.isNullOrBlank()) {
+			"Download/ConvertTheSpireReborn"
+		} else {
+			"Download/ConvertTheSpireReborn/$subdir"
+		}
+
+		val values = ContentValues().apply {
+			put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+			put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+			put(MediaStore.MediaColumns.RELATIVE_PATH, relativeBase)
+		}
+		val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+		val uri = contentResolver.insert(collection, values) ?: return null
+
+		contentResolver.openOutputStream(uri, "w")?.use { output ->
+			FileInputStream(File(sourcePath)).use { input ->
+				input.copyTo(output)
+			}
+		} ?: return null
+
+		return uri
 	}
 }

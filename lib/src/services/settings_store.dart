@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:path_provider/path_provider.dart';
 
 import '../models/app_settings.dart';
+import 'platform_dirs.dart';
 
 class SettingsStore {
   static const String _fileName = 'config.json';
@@ -20,56 +20,52 @@ class SettingsStore {
 
     if (Platform.isAndroid) {
       // Try app-specific external storage (no permissions required)
-      try {
-        final extDir = await getExternalStorageDirectory();
-        if (extDir != null) {
-          final dlDir = Directory('${extDir.path}${Platform.pathSeparator}downloads');
-          await dlDir.create(recursive: true);
-          return dlDir.path;
-        }
-      } catch (_) {}
-
-      // Try documents directory
-      try {
-        final docs = await getApplicationDocumentsDirectory();
-        final dlDir = Directory('${docs.path}${Platform.pathSeparator}downloads');
+      final extDir = await PlatformDirs.getExternalDir();
+      if (extDir != null) {
+        final dlDir = Directory('${extDir.path}${Platform.pathSeparator}downloads');
         await dlDir.create(recursive: true);
         return dlDir.path;
-      } catch (_) {}
+      }
 
-      // path_provider is completely broken — mark it and return empty string;
+      // Try internal files directory
+      final filesDir = await PlatformDirs.getFilesDir();
+      if (filesDir != null) {
+        final dlDir = Directory('${filesDir.path}${Platform.pathSeparator}downloads');
+        await dlDir.create(recursive: true);
+        return dlDir.path;
+      }
+
+      // Native channel failed — return empty string;
       // the user will need to configure a download directory manually.
       _pathProviderBroken = true;
       return '';
     }
 
     // Desktop / iOS
-    try {
-      final directory = await getDownloadsDirectory();
-      if (directory != null) {
-        return directory.path;
-      }
-    } catch (_) {}
-    try {
-      final docs = await getApplicationDocumentsDirectory();
+    final downloadsDir = await PlatformDirs.getDownloadsDir();
+    if (downloadsDir != null) {
+      return downloadsDir.path;
+    }
+    final docs = await PlatformDirs.getFilesDir();
+    if (docs != null) {
       return '${docs.path}${Platform.pathSeparator}downloads';
-    } catch (_) {}
+    }
     return '';
   }
 
   Future<File?> _settingsFile() async {
     if (_pathProviderBroken) return null;
 
-    try {
-      final dir = await getApplicationSupportDirectory();
-      await dir.create(recursive: true);
-      return File('${dir.path}${Platform.pathSeparator}$_fileName');
-    } catch (_) {}
+    final supportDir = await PlatformDirs.getAppSupportDir();
+    if (supportDir != null) {
+      await supportDir.create(recursive: true);
+      return File('${supportDir.path}${Platform.pathSeparator}$_fileName');
+    }
 
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      return File('${dir.path}${Platform.pathSeparator}$_fileName');
-    } catch (_) {}
+    final filesDir = await PlatformDirs.getFilesDir();
+    if (filesDir != null) {
+      return File('${filesDir.path}${Platform.pathSeparator}$_fileName');
+    }
 
     _pathProviderBroken = true;
     return null;

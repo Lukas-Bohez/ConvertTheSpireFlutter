@@ -1415,8 +1415,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         labelText: 'Download folder',
                         border: const OutlineInputBorder(),
                         prefixIcon: const Icon(Icons.folder),
-                        helperText: 'Pick a folder using the system file picker. Re-select after reinstall.',
-                        helperMaxLines: 2,
+                        helperText: 'Pick a folder using the system file picker. If not set, files go to Downloads/ConvertTheSpireReborn.',
+                        helperMaxLines: 3,
                       ),
                       readOnly: true,
                     ),
@@ -1446,8 +1446,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                          'Choose a folder before downloading on Android.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.red[700]),
+                          'No folder selected. Downloads will be saved to Downloads/ConvertTheSpireReborn.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange[800]),
                         ),
                       ),
                   ] else ...[

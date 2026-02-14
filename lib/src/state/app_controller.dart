@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
+import '../services/platform_dirs.dart';
 
 import '../models/app_settings.dart';
 import '../models/convert_result.dart';
@@ -237,16 +237,14 @@ class AppController extends ChangeNotifier {
   Future<String?> _resolveSavePath(String filename) async {
     if (kIsWeb) return null;
     if (Platform.isAndroid || Platform.isIOS) {
-      try {
-        final extDir = await getExternalStorageDirectory();
-        if (extDir != null) {
-          return '${extDir.path}${Platform.pathSeparator}$filename';
-        }
-      } catch (_) {}
-      try {
-        final docs = await getApplicationDocumentsDirectory();
-        return '${docs.path}${Platform.pathSeparator}$filename';
-      } catch (_) {}
+      final extDir = await PlatformDirs.getExternalDir();
+      if (extDir != null) {
+        return '${extDir.path}${Platform.pathSeparator}$filename';
+      }
+      final filesDir = await PlatformDirs.getFilesDir();
+      if (filesDir != null) {
+        return '${filesDir.path}${Platform.pathSeparator}$filename';
+      }
       return null;
     }
 

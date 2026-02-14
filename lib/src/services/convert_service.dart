@@ -6,7 +6,7 @@ import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image/image.dart' as img;
 import 'package:mime/mime.dart';
-import 'package:path_provider/path_provider.dart';
+import 'platform_dirs.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:uuid/uuid.dart';
 
@@ -148,7 +148,7 @@ class ConvertService {
     if (kIsWeb) {
       return _report(baseName, target, 'Media conversion is not supported on web. Use the desktop or mobile app.');
     }
-    final tempDir = await getTemporaryDirectory();
+    final tempDir = await PlatformDirs.getCacheDir();
     final outputPath = '${tempDir.path}${Platform.pathSeparator}$baseName.$target';
 
     await ffmpeg.run(

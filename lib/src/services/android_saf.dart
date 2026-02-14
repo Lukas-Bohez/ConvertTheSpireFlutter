@@ -36,4 +36,19 @@ class AndroidSaf {
     });
     return result ?? false;
   }
+
+  Future<String?> copyToDownloads({
+    required String sourcePath,
+    required String displayName,
+    required String mimeType,
+    String? subdir,
+  }) async {
+    if (!isSupported) return null;
+    return _channel.invokeMethod<String>('copyToDownloads', {
+      'sourcePath': sourcePath,
+      'displayName': displayName,
+      'mimeType': mimeType,
+      'subdir': subdir,
+    });
+  }
 }

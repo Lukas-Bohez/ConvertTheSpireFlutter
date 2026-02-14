@@ -5,7 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
+import 'platform_dirs.dart';
 
 class InstallerService {
   Future<String> installFfmpeg({
@@ -16,12 +16,9 @@ class InstallerService {
     if (kIsWeb) {
       throw Exception('FFmpeg installation is not available on web.');
     }
-    final support = await getApplicationSupportDirectory().catchError((_) async {
-      return await getApplicationDocumentsDirectory();
-    }).catchError((_) async {
-      // Last resort: use temp directory
-      return await Directory.systemTemp.createTemp('ffmpeg_install');
-    });
+    var support = await PlatformDirs.getAppSupportDir();
+    support ??= await PlatformDirs.getFilesDir();
+    support ??= await Directory.systemTemp.createTemp('ffmpeg_install');
     final downloadDir = Directory('${support.path}${Platform.pathSeparator}ffmpeg');
     await downloadDir.create(recursive: true);
     final zipPath = '${downloadDir.path}${Platform.pathSeparator}ffmpeg.zip';
