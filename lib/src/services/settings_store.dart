@@ -9,16 +9,17 @@ import '../models/app_settings.dart';
 class SettingsStore {
   static const String _fileName = 'config.json';
 
-  /// In-memory cache used on web where file I/O is unavailable.
+  /// In-memory cache used on web or when file I/O is unavailable.
   String? _webSettingsJson;
+
+  /// Whether path_provider is known to be broken on this device.
+  bool _pathProviderBroken = false;
 
   Future<String> resolveDefaultDownloadDir() async {
     if (kIsWeb) return '/downloads';
 
-    // On Android, getDownloadsDirectory() and getExternalStorageDirectory() use
-    // Pigeon channels that can fail if binding isn't fully ready or permissions
-    // are missing. Wrap every call individually and always have a fallback.
     if (Platform.isAndroid) {
+      // Try app-specific external storage (no permissions required)
       try {
         final extDir = await getExternalStorageDirectory();
         if (extDir != null) {
@@ -27,38 +28,51 @@ class SettingsStore {
           return dlDir.path;
         }
       } catch (_) {}
+
+      // Try documents directory
       try {
         final docs = await getApplicationDocumentsDirectory();
         final dlDir = Directory('${docs.path}${Platform.pathSeparator}downloads');
         await dlDir.create(recursive: true);
         return dlDir.path;
       } catch (_) {}
-      // Last resort: use a known Android-safe path
-      final fallback = Directory('/data/data/com.orokaconner.convertthespirereborn/files/downloads');
-      await fallback.create(recursive: true);
-      return fallback.path;
+
+      // path_provider is completely broken — mark it and return empty string;
+      // the user will need to configure a download directory manually.
+      _pathProviderBroken = true;
+      return '';
     }
 
+    // Desktop / iOS
     try {
       final directory = await getDownloadsDirectory();
       if (directory != null) {
         return directory.path;
       }
     } catch (_) {}
-    final docs = await getApplicationDocumentsDirectory();
-    return '${docs.path}${Platform.pathSeparator}downloads';
+    try {
+      final docs = await getApplicationDocumentsDirectory();
+      return '${docs.path}${Platform.pathSeparator}downloads';
+    } catch (_) {}
+    return '';
   }
 
-  Future<File> _settingsFile() async {
+  Future<File?> _settingsFile() async {
+    if (_pathProviderBroken) return null;
+
     try {
       final dir = await getApplicationSupportDirectory();
       await dir.create(recursive: true);
       return File('${dir.path}${Platform.pathSeparator}$_fileName');
-    } catch (_) {
-      // Fallback to documents directory if support directory fails
+    } catch (_) {}
+
+    try {
       final dir = await getApplicationDocumentsDirectory();
       return File('${dir.path}${Platform.pathSeparator}$_fileName');
-    }
+    } catch (_) {}
+
+    _pathProviderBroken = true;
+    return null;
   }
 
   Future<AppSettings> load() async {
@@ -75,7 +89,7 @@ class SettingsStore {
     }
 
     final file = await _settingsFile();
-    if (!await file.exists()) {
+    if (file == null || !await file.exists()) {
       return AppSettings.defaults(downloadDir: fallbackDir);
     }
     try {
@@ -93,7 +107,16 @@ class SettingsStore {
       _webSettingsJson = json;
       return;
     }
-    final file = await _settingsFile();
-    await file.writeAsString(json);
+    try {
+      final file = await _settingsFile();
+      if (file != null) {
+        await file.writeAsString(json);
+      } else {
+        // Can't persist — keep in memory
+        _webSettingsJson = json;
+      }
+    } catch (_) {
+      _webSettingsJson = json;
+    }
   }
 }

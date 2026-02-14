@@ -236,16 +236,17 @@ class AppController extends ChangeNotifier {
   Future<String?> _resolveSavePath(String filename) async {
     if (kIsWeb) return null;
     if (Platform.isAndroid || Platform.isIOS) {
-      // Avoid getDownloadsDirectory() on Android - it requires external storage
-      // permissions and fails with a PlatformException channel error.
       try {
         final extDir = await getExternalStorageDirectory();
         if (extDir != null) {
           return '${extDir.path}${Platform.pathSeparator}$filename';
         }
       } catch (_) {}
-      final docs = await getApplicationDocumentsDirectory();
-      return '${docs.path}${Platform.pathSeparator}$filename';
+      try {
+        final docs = await getApplicationDocumentsDirectory();
+        return '${docs.path}${Platform.pathSeparator}$filename';
+      } catch (_) {}
+      return null;
     }
 
     return FilePicker.platform.saveFile(fileName: filename);

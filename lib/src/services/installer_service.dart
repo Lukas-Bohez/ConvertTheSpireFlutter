@@ -16,7 +16,12 @@ class InstallerService {
     if (kIsWeb) {
       throw Exception('FFmpeg installation is not available on web.');
     }
-    final support = await getApplicationSupportDirectory();
+    final support = await getApplicationSupportDirectory().catchError((_) async {
+      return await getApplicationDocumentsDirectory();
+    }).catchError((_) async {
+      // Last resort: use temp directory
+      return await Directory.systemTemp.createTemp('ffmpeg_install');
+    });
     final downloadDir = Directory('${support.path}${Platform.pathSeparator}ffmpeg');
     await downloadDir.create(recursive: true);
     final zipPath = '${downloadDir.path}${Platform.pathSeparator}ffmpeg.zip';
