@@ -11,6 +11,7 @@ class YouTubeService {
     String url, {
     required bool expandPlaylist,
     required int limit,
+    int startIndex = 0,
   }) async {
     if (expandPlaylist) {
       try {
@@ -25,12 +26,16 @@ class YouTubeService {
             final playlistId = PlaylistId(parsedId);
             final playlistVideos = _yt.playlists.getVideos(playlistId);
             final items = <PreviewItem>[];
+            int index = 0;
 
             await for (final video in playlistVideos) {
-              items.add(_toPreviewItem(video));
-              if (items.length >= limit) {
-                break;
+              if (index >= startIndex) {
+                items.add(_toPreviewItem(video));
+                if (items.length >= limit) {
+                  break;
+                }
               }
+              index++;
             }
 
             if (items.isNotEmpty) {

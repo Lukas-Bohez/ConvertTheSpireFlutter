@@ -53,7 +53,7 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> preview(String url, bool expandPlaylist) async {
+  Future<void> preview(String url, bool expandPlaylist, {int startIndex = 0, int? limit}) async {
     if (_settings == null) {
       return;
     }
@@ -63,7 +63,8 @@ class AppController extends ChangeNotifier {
       final items = await youtube.preview(
         url,
         expandPlaylist: expandPlaylist,
-        limit: _settings!.previewMaxEntries,
+        limit: limit ?? _settings!.previewMaxEntries,
+        startIndex: startIndex,
       );
       previewItems = items;
       logs.add('Preview loaded: ${items.length} items');

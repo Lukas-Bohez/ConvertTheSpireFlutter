@@ -26,10 +26,11 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _downloadDirController = TextEditingController();
   final TextEditingController _workersController = TextEditingController();
-  final TextEditingController _previewMaxController = TextEditingController();
   final TextEditingController _ffmpegChecksumController = TextEditingController();
   final TextEditingController _retryCountController = TextEditingController();
   final TextEditingController _retryBackoffController = TextEditingController();
+  final TextEditingController _rangeFromController = TextEditingController();
+  final TextEditingController _rangeToController = TextEditingController();
 
   bool _expandPlaylist = false;
   String _downloadFormat = 'MP4';
@@ -37,15 +38,24 @@ class _HomeScreenState extends State<HomeScreen> {
   File? _convertFile;
   String _convertTarget = 'mp4';
 
+  /// Playlist preview amount: '10', '25', '50', '100', 'all', 'custom'
+  String _previewPreset = '25';
+  bool get _isAndroid => !kIsWeb && Platform.isAndroid;
+
+  // Range selector for adding subset of preview results to queue
+  int _addRangeFrom = 1;
+  int _addRangeTo = 1;
+
   @override
   void dispose() {
     _urlController.dispose();
     _downloadDirController.dispose();
     _workersController.dispose();
-    _previewMaxController.dispose();
     _ffmpegChecksumController.dispose();
     _retryCountController.dispose();
     _retryBackoffController.dispose();
+    _rangeFromController.dispose();
+    _rangeToController.dispose();
     super.dispose();
   }
 
@@ -94,18 +104,22 @@ class _HomeScreenState extends State<HomeScreen> {
   void _initSettings(AppSettings settings) {
     _downloadDirController.text = settings.downloadDir;
     _workersController.text = settings.maxWorkers.toString();
-    _previewMaxController.text = settings.previewMaxEntries.toString();
     _retryCountController.text = settings.retryCount.toString();
     _retryBackoffController.text = settings.retryBackoffSeconds.toString();
     _expandPlaylist = settings.previewExpandPlaylist;
     _settingsInitialized = true;
   }
 
+  // ---------------------------------------------------------------------------
+  // SEARCH TAB
+  // ---------------------------------------------------------------------------
+
   Widget _buildSearchTab(AppSettings? settings) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: ListView(
         children: [
+          // URL input
           Row(
             children: [
               Expanded(
@@ -147,6 +161,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 16),
+
+          // Download Options card
           Card(
             elevation: 2,
             child: Padding(
@@ -199,27 +215,128 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.warning_amber_rounded, size: 18, color: Colors.orange),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'YouTube Mix playlists (IDs starting with RD) cannot be expanded.',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: Colors.orange[800]),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
           ),
+          const SizedBox(height: 12),
+
+          // Playlist Range card (only visible when expand playlist is checked)
+          if (_expandPlaylist)
+            Card(
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.playlist_play),
+                        const SizedBox(width: 8),
+                        Text('Playlist Options', style: Theme.of(context).textTheme.titleMedium),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _previewPreset,
+                            decoration: const InputDecoration(
+                              labelText: 'Preview amount',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.format_list_numbered),
+                              isDense: true,
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: '10', child: Text('First 10')),
+                              DropdownMenuItem(value: '25', child: Text('First 25')),
+                              DropdownMenuItem(value: '50', child: Text('First 50')),
+                              DropdownMenuItem(value: '100', child: Text('First 100')),
+                              DropdownMenuItem(value: 'all', child: Text('All')),
+                              DropdownMenuItem(value: 'custom', child: Text('Custom range...')),
+                            ],
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() {
+                                _previewPreset = value;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_previewPreset == 'custom') ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _rangeFromController,
+                              decoration: const InputDecoration(
+                                labelText: 'From #',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.first_page),
+                                hintText: '1',
+                                isDense: true,
+                              ),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text('to', style: TextStyle(fontSize: 16)),
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: _rangeToController,
+                              decoration: const InputDecoration(
+                                labelText: 'To #',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.last_page),
+                                hintText: '50',
+                                isDense: true,
+                              ),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Video numbers are 1-based (e.g. 1 to 25 = first 25 videos)',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, size: 18, color: Colors.orange),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'YouTube Mix playlists (IDs starting with RD) cannot be expanded.',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: Colors.orange[800]),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           const SizedBox(height: 16),
+
+          // Search / Download buttons
           Row(
             children: [
               Expanded(
@@ -228,10 +345,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   label: const Text('Search / Preview'),
                   onPressed: settings == null || _urlController.text.trim().isEmpty
                       ? null
-                      : () => widget.controller.preview(
-                            _urlController.text.trim(),
-                            _expandPlaylist,
-                          ),
+                      : _onSearch,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -298,6 +412,48 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _onSearch() {
+    int startIndex = 0;
+    int? limit;
+
+    if (_expandPlaylist) {
+      switch (_previewPreset) {
+        case '10':
+          limit = 10;
+          break;
+        case '25':
+          limit = 25;
+          break;
+        case '50':
+          limit = 50;
+          break;
+        case '100':
+          limit = 100;
+          break;
+        case 'all':
+          limit = 999999;
+          break;
+        case 'custom':
+          final from = int.tryParse(_rangeFromController.text.trim()) ?? 1;
+          final to = int.tryParse(_rangeToController.text.trim()) ?? 50;
+          startIndex = (from - 1).clamp(0, 999999);
+          limit = (to - from + 1).clamp(1, 999999);
+          break;
+      }
+    }
+
+    widget.controller.preview(
+      _urlController.text.trim(),
+      _expandPlaylist,
+      startIndex: startIndex,
+      limit: limit,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // PREVIEW LIST
+  // ---------------------------------------------------------------------------
+
   Widget _buildPreviewList() {
     final items = widget.controller.previewItems;
     if (items.isEmpty) {
@@ -323,9 +479,14 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    // Ensure range sliders stay in bounds
+    _addRangeFrom = _addRangeFrom.clamp(1, items.length);
+    _addRangeTo = _addRangeTo.clamp(_addRangeFrom, items.length);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Header row
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -370,90 +531,203 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        ...items.map(
-          (item) => Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              leading: item.thumbnailUrl != null && item.thumbnailUrl!.isNotEmpty
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        item.thumbnailUrl!,
-                        width: 80,
-                        height: 60,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 80,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              _downloadFormat == 'MP4' ? Icons.video_file : Icons.audio_file,
-                              color: Colors.grey[600],
-                            ),
+
+        // Range selector for adding a subset to queue
+        if (items.length > 1) ...[
+          const SizedBox(height: 8),
+          Card(
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Add range to queue',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Text('From '),
+                      SizedBox(
+                        width: 60,
+                        child: DropdownButton<int>(
+                          value: _addRangeFrom.clamp(1, items.length),
+                          isDense: true,
+                          isExpanded: true,
+                          items: List.generate(items.length, (i) {
+                            return DropdownMenuItem(value: i + 1, child: Text('${i + 1}'));
+                          }),
+                          onChanged: (v) {
+                            if (v == null) return;
+                            setState(() {
+                              _addRangeFrom = v;
+                              if (_addRangeTo < v) _addRangeTo = v;
+                            });
+                          },
+                        ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Text('to'),
+                      ),
+                      SizedBox(
+                        width: 60,
+                        child: DropdownButton<int>(
+                          value: _addRangeTo.clamp(_addRangeFrom, items.length),
+                          isDense: true,
+                          isExpanded: true,
+                          items: List.generate(
+                            items.length - _addRangeFrom + 1,
+                            (i) {
+                              final v = _addRangeFrom + i;
+                              return DropdownMenuItem(value: v, child: Text('$v'));
+                            },
+                          ),
+                          onChanged: (v) {
+                            if (v == null) return;
+                            setState(() {
+                              _addRangeTo = v;
+                            });
+                          },
+                        ),
+                      ),
+                      const Spacer(),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.playlist_add, size: 18),
+                        label: Text('Add ${_addRangeTo - _addRangeFrom + 1}'),
+                        onPressed: () {
+                          final subset = items.sublist(_addRangeFrom - 1, _addRangeTo);
+                          for (final item in subset) {
+                            widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Added ${subset.length} items to queue')),
                           );
                         },
                       ),
-                    )
-                  : Container(
-                      width: 80,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(8),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.download, size: 18),
+                        label: Text('Download ${_addRangeTo - _addRangeFrom + 1}'),
+                        onPressed: () {
+                          final subset = items.sublist(_addRangeFrom - 1, _addRangeTo);
+                          for (final item in subset) {
+                            widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                          }
+                          widget.controller.downloadAll();
+                        },
                       ),
-                      child: Icon(
-                        _downloadFormat == 'MP4' ? Icons.video_file : Icons.audio_file,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-              title: Text(
-                item.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.uploader),
-                  if (item.duration != null)
-                    Text(
-                      _formatDuration(item.duration!),
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                    ),
-                ],
-              ),
-              trailing: Wrap(
-                spacing: 8,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.add_circle_outline),
-                    onPressed: () {
-                      widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Added to queue')),
-                      );
-                    },
-                    tooltip: 'Add to queue',
-                  ),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.download, size: 18),
-                    label: const Text('Download'),
-                    onPressed: () {
-                      widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
-                      widget.controller.downloadAll();
-                    },
+                    ],
                   ),
                 ],
               ),
             ),
           ),
+        ],
+
+        const SizedBox(height: 12),
+        ...items.asMap().entries.map(
+          (entry) {
+            final index = entry.key;
+            final item = entry.value;
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 28,
+                      child: Text(
+                        '${index + 1}',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    item.thumbnailUrl != null && item.thumbnailUrl!.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              item.thumbnailUrl!,
+                              width: 80,
+                              height: 60,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return _thumbnailPlaceholder();
+                              },
+                            ),
+                          )
+                        : _thumbnailPlaceholder(),
+                  ],
+                ),
+                title: Text(
+                  item.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.uploader),
+                    if (item.duration != null)
+                      Text(
+                        _formatDuration(item.duration!),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
+                  ],
+                ),
+                trailing: Wrap(
+                  spacing: 8,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline),
+                      onPressed: () {
+                        widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Added to queue')),
+                        );
+                      },
+                      tooltip: 'Add to queue',
+                    ),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.download, size: 18),
+                      label: const Text('Download'),
+                      onPressed: () {
+                        widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                        widget.controller.downloadAll();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ],
+    );
+  }
+
+  Widget _thumbnailPlaceholder() {
+    return Container(
+      width: 80,
+      height: 60,
+      decoration: BoxDecoration(
+        color: Colors.grey[300],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(
+        _downloadFormat == 'MP4' ? Icons.video_file : Icons.audio_file,
+        color: Colors.grey[600],
+      ),
     );
   }
 
@@ -469,6 +743,10 @@ class _HomeScreenState extends State<HomeScreen> {
       return '${seconds}s';
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // QUEUE TAB
+  // ---------------------------------------------------------------------------
 
   Widget _buildQueueTab() {
     final items = widget.controller.queue;
@@ -515,7 +793,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${items.length} total • $inProgressCount downloading • $completedCount completed',
+                    '${items.length} total \u2022 $inProgressCount downloading \u2022 $completedCount completed',
                     style: TextStyle(color: Colors.grey[700]),
                   ),
                 ],
@@ -743,6 +1021,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // SETTINGS TAB
+  // ---------------------------------------------------------------------------
+
   Widget _buildSettingsTab(AppSettings? settings) {
     if (settings == null) {
       return const Center(child: CircularProgressIndicator());
@@ -768,35 +1050,72 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const Divider(),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _downloadDirController,
-                          decoration: const InputDecoration(
-                            labelText: 'Download folder',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.folder),
-                          ),
-                          readOnly: true,
+                  if (_isAndroid) ...[
+                    // Android: show the auto-resolved path and a reset button
+                    TextField(
+                      controller: _downloadDirController,
+                      decoration: InputDecoration(
+                        labelText: 'Download folder',
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.folder),
+                        helperText: 'On Android, downloads are saved to app storage automatically.',
+                        helperMaxLines: 2,
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.refresh),
+                          onPressed: () async {
+                            final dir = await widget.controller.settingsStore.resolveDefaultDownloadDir();
+                            if (dir.isNotEmpty) {
+                              setState(() {
+                                _downloadDirController.text = dir;
+                              });
+                              await widget.controller.saveSettings(settings.copyWith(downloadDir: dir));
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Download folder reset to default'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          tooltip: 'Reset to default',
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.folder_open),
-                        label: const Text('Browse'),
-                        onPressed: () async {
-                          final result = await FilePicker.platform.getDirectoryPath();
-                          if (result != null) {
-                            setState(() {
-                              _downloadDirController.text = result;
-                            });
-                            await widget.controller.saveSettings(settings.copyWith(downloadDir: result));
-                          }
-                        },
-                      ),
-                    ],
-                  ),
+                      readOnly: true,
+                    ),
+                  ] else ...[
+                    // Desktop: Browse button with FilePicker
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _downloadDirController,
+                            decoration: const InputDecoration(
+                              labelText: 'Download folder',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.folder),
+                            ),
+                            readOnly: true,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.folder_open),
+                          label: const Text('Browse'),
+                          onPressed: () async {
+                            final result = await FilePicker.platform.getDirectoryPath();
+                            if (result != null) {
+                              setState(() {
+                                _downloadDirController.text = result;
+                              });
+                              await widget.controller.saveSettings(settings.copyWith(downloadDir: result));
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   TextField(
                     controller: _workersController,
@@ -817,51 +1136,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: const Text('Show notifications'),
                     subtitle: const Text('Display notifications when downloads complete'),
                     secondary: const Icon(Icons.notifications),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Preview Settings
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.preview),
-                      const SizedBox(width: 8),
-                      Text('Preview Settings', style: Theme.of(context).textTheme.titleLarge),
-                    ],
-                  ),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _previewMaxController,
-                    decoration: const InputDecoration(
-                      labelText: 'Max preview items',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.list),
-                      hintText: 'Maximum number of items to preview',
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 12),
-                  SwitchListTile(
-                    value: settings.previewExpandPlaylist,
-                    onChanged: (value) {
-                      widget.controller.saveSettings(settings.copyWith(previewExpandPlaylist: value));
-                      setState(() {
-                        _expandPlaylist = value;
-                      });
-                    },
-                    title: const Text('Expand playlists by default'),
-                    subtitle: const Text('Show all videos in playlists automatically'),
-                    secondary: const Icon(Icons.playlist_play),
                   ),
                 ],
               ),
@@ -1037,7 +1311,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 final next = settings.copyWith(
                   downloadDir: _downloadDirController.text.trim(),
                   maxWorkers: int.tryParse(_workersController.text.trim()) ?? settings.maxWorkers,
-                  previewMaxEntries: int.tryParse(_previewMaxController.text.trim()) ?? settings.previewMaxEntries,
                   retryCount: int.tryParse(_retryCountController.text.trim()) ?? settings.retryCount,
                   retryBackoffSeconds: int.tryParse(_retryBackoffController.text.trim()) ?? settings.retryBackoffSeconds,
                 );
@@ -1077,6 +1350,10 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // CONVERT TAB
+  // ---------------------------------------------------------------------------
 
   Widget _buildConvertTab(AppSettings? settings) {
     return Padding(
@@ -1275,6 +1552,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // LOGS TAB
+  // ---------------------------------------------------------------------------
 
   Widget _buildLogsTab() {
     return ValueListenableBuilder<List<String>>(
