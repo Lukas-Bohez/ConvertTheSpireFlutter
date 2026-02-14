@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
@@ -40,6 +41,9 @@ class DownloadService {
     required void Function(int pct, DownloadStatus status) onProgress,
     required DownloadToken token,
   }) async {
+    if (kIsWeb) {
+      throw Exception('Downloads are not supported on web. Please use the desktop or mobile app.');
+    }
     if (outputDir.trim().isEmpty) {
       throw Exception('Download folder is not configured');
     }
@@ -163,26 +167,31 @@ class DownloadService {
   ) async {
     final file = File(outputPath);
     final sink = file.openWrite();
-    final streamData = yt.videos.streamsClient.get(stream);
-    final total = stream.size.totalBytes;
-    int received = 0;
-    onProgress(0, DownloadStatus.downloading);
+    try {
+      final streamData = yt.videos.streamsClient.get(stream);
+      final total = stream.size.totalBytes;
+      int received = 0;
+      onProgress(0, DownloadStatus.downloading);
 
-    await for (final data in streamData) {
-      if (token.cancelled) {
-        await sink.close();
-        await _safeDelete(outputPath);
-        throw Exception('Cancelled');
+      await for (final data in streamData) {
+        if (token.cancelled) {
+          await sink.close();
+          await _safeDelete(outputPath);
+          throw Exception('Cancelled');
+        }
+        sink.add(data);
+        received += data.length;
+        if (total > 0) {
+          final pct = ((received / total) * 100).clamp(0, 100).toInt();
+          onProgress(pct, DownloadStatus.downloading);
+        }
       }
-      sink.add(data);
-      received += data.length;
-      if (total > 0) {
-        final pct = ((received / total) * 100).clamp(0, 100).toInt();
-        onProgress(pct, DownloadStatus.downloading);
-      }
+      await sink.flush();
+      await sink.close();
+    } catch (e) {
+      try { await sink.close(); } catch (_) {}
+      rethrow;
     }
-    await sink.flush();
-    await sink.close();
   }
 
   Future<Uint8List?> _fetchThumbnailBytes(String? url) async {

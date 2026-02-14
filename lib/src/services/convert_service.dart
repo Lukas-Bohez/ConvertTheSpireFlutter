@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image/image.dart' as img;
 import 'package:mime/mime.dart';
 import 'package:path_provider/path_provider.dart';
@@ -113,9 +114,14 @@ class ConvertService {
         break;
       case 'webp':
         // WebP encoding is not available in image package 4.3.0
-        // Use PNG as fallback
+        // Falling back to PNG format
         out = img.encodePng(image);
-        break;
+        return ConvertResult(
+          name: '$baseName.png',
+          mime: 'image/png',
+          bytes: out,
+          message: 'WebP not supported; saved as PNG',
+        );
       case 'bmp':
         out = img.encodeBmp(image);
         break;
@@ -139,6 +145,9 @@ class ConvertService {
   }
 
   Future<ConvertResult> _convertMedia(File input, String target, String baseName, {required String? ffmpegPath}) async {
+    if (kIsWeb) {
+      return _report(baseName, target, 'Media conversion is not supported on web. Use the desktop or mobile app.');
+    }
     final tempDir = await getTemporaryDirectory();
     final outputPath = '${tempDir.path}${Platform.pathSeparator}$baseName.$target';
 
@@ -273,23 +282,20 @@ class ConvertService {
 
   String? _decodeText(List<int> bytes) {
     try {
-      return String.fromCharCodes(bytes);
+      return utf8.decode(bytes, allowMalformed: true);
     } catch (_) {
       return null;
     }
   }
 
   String _sanitizeFileName(String value) {
-    final buffer = StringBuffer();
-    for (final rune in value.runes) {
-      final ch = String.fromCharCode(rune);
-      if (RegExp(r'[A-Za-z0-9._-]').hasMatch(ch)) {
-        buffer.write(ch);
-      } else {
-        buffer.write('_');
-      }
-    }
-    final result = buffer.toString();
+    // Remove only filesystem-unsafe characters but keep Unicode (Japanese, etc.)
+    final unsafe = RegExp(r'[<>:"/\\|?*]');
+    String result = value.replaceAll(unsafe, '_');
+    // Also replace control characters
+    result = result.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '_');
+    // Trim whitespace and dots from ends (Windows doesn't like trailing dots)
+    result = result.trim().replaceAll(RegExp(r'\.+$'), '');
     return result.isEmpty ? 'file' : result;
   }
 
@@ -302,6 +308,7 @@ class ConvertService {
   }
 
   Future<void> _safeDelete(String path) async {
+    if (kIsWeb) return;
     try {
       final file = File(path);
       if (await file.exists()) {

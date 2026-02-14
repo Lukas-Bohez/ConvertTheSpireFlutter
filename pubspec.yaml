@@ -19,7 +19,7 @@ dependencies:
   mime: ^1.0.4
   uuid: ^4.4.0
   crypto: ^3.0.3
-  ffmpeg_kit_flutter: ^6.0.3
+  ffmpeg_kit_flutter_new: ^4.1.0
   pdf: ^3.10.7
 
 dev_dependencies:

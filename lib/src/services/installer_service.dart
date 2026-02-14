@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
@@ -12,6 +13,9 @@ class InstallerService {
     String? checksumSha256,
     void Function(int percent, String message)? onProgress,
   }) async {
+    if (kIsWeb) {
+      throw Exception('FFmpeg installation is not available on web.');
+    }
     final support = await getApplicationSupportDirectory();
     final downloadDir = Directory('${support.path}${Platform.pathSeparator}ffmpeg');
     await downloadDir.create(recursive: true);
@@ -51,22 +55,27 @@ class InstallerService {
   }
 
   Future<Uint8List> _download(Uri url, {void Function(int percent, String message)? onProgress}) async {
-    final response = await http.Client().send(http.Request('GET', url));
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Download failed: ${response.statusCode}');
-    }
-    final total = response.contentLength ?? 0;
-    final bytes = <int>[];
-    int received = 0;
-    await for (final chunk in response.stream) {
-      bytes.addAll(chunk);
-      received += chunk.length;
-      if (total > 0) {
-        final pct = ((received / total) * 100).clamp(0, 100).toInt();
-        onProgress?.call(pct, 'Downloading');
+    final client = http.Client();
+    try {
+      final response = await client.send(http.Request('GET', url));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception('Download failed: ${response.statusCode}');
       }
+      final total = response.contentLength ?? 0;
+      final bytes = <int>[];
+      int received = 0;
+      await for (final chunk in response.stream) {
+        bytes.addAll(chunk);
+        received += chunk.length;
+        if (total > 0) {
+          final pct = ((received / total) * 100).clamp(0, 100).toInt();
+          onProgress?.call(pct, 'Downloading');
+        }
+      }
+      return Uint8List.fromList(bytes);
+    } finally {
+      client.close();
     }
-    return Uint8List.fromList(bytes);
   }
 
   Future<File?> _findFfmpegExe(Directory root) async {

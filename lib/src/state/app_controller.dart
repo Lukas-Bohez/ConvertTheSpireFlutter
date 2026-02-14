@@ -98,8 +98,10 @@ class AppController extends ChangeNotifier {
   }
 
   void removeFromQueue(QueueItem item) {
-    _tokens[item.url]?.cancel();
-    queue = List<QueueItem>.from(queue)..remove(item);
+    final key = '${item.url}|${item.format}';
+    _tokens[key]?.cancel();
+    queue = List<QueueItem>.from(queue)
+      ..removeWhere((q) => q.url == item.url && q.format == item.format);
     notifyListeners();
   }
 
@@ -110,8 +112,9 @@ class AppController extends ChangeNotifier {
     }
 
     final token = DownloadToken();
-    _tokens[item.url] = token;
-    _updateQueue(item, item.copyWith(status: DownloadStatus.downloading, progress: 0, error: null));
+    final key = '${item.url}|${item.format}';
+    _tokens[key] = token;
+    _updateQueue(item, item.copyWith(status: DownloadStatus.downloading, progress: 0, error: const Object()));
     logs.add('Preparing download: ${item.title}');
 
     String? ffmpegPath = settings.ffmpegPath;
@@ -121,7 +124,7 @@ class AppController extends ChangeNotifier {
       final updated = item.copyWith(status: DownloadStatus.failed, error: '$e');
       _updateQueue(item, updated);
       logs.add('FFmpeg setup failed: $e');
-      _tokens.remove(item.url);
+      _tokens.remove(key);
       return;
     }
 
@@ -158,19 +161,20 @@ class AppController extends ChangeNotifier {
       _updateQueue(item, updated);
       logs.add('Download failed: $e');
     } finally {
-      _tokens.remove(item.url);
+      _tokens.remove(key);
     }
   }
 
   Future<void> downloadAll() async {
-    final pending = queue.where((item) => item.status != DownloadStatus.downloading).toList();
+    final pending = queue.where((item) => item.status == DownloadStatus.queued).toList();
     for (final item in pending) {
       await downloadSingle(item);
     }
   }
 
   void cancelDownload(QueueItem item) {
-    _tokens[item.url]?.cancel();
+    final key = '${item.url}|${item.format}';
+    _tokens[key]?.cancel();
     final updated = item.copyWith(status: DownloadStatus.cancelled, error: 'Cancelled');
     _updateQueue(item, updated);
   }
@@ -204,12 +208,22 @@ class AppController extends ChangeNotifier {
     if (settings == null) {
       return;
     }
-    final result = await convertService.convertFile(file, target, ffmpegPath: settings.ffmpegPath);
-    convertResults.add(result);
-    notifyListeners();
+    try {
+      final result = await convertService.convertFile(file, target, ffmpegPath: settings.ffmpegPath);
+      convertResults.add(result);
+      logs.add('Conversion complete: ${result.name}');
+      notifyListeners();
+    } catch (e) {
+      logs.add('Conversion failed: $e');
+      notifyListeners();
+    }
   }
 
   Future<void> saveConvertedResult(ConvertResult result) async {
+    if (kIsWeb) {
+      logs.add('Saving files is not supported on web.');
+      return;
+    }
     final path = await _resolveSavePath(result.name);
     if (path == null) {
       return;
@@ -220,6 +234,7 @@ class AppController extends ChangeNotifier {
   }
 
   Future<String?> _resolveSavePath(String filename) async {
+    if (kIsWeb) return null;
     if (Platform.isAndroid || Platform.isIOS) {
       final dir = await getDownloadsDirectory();
       if (dir == null) {
@@ -244,6 +259,7 @@ class AppController extends ChangeNotifier {
   }
 
   Future<String?> _ensureFfmpegPath(AppSettings settings, String format) async {
+    if (kIsWeb) return null;
     if (Platform.isAndroid || Platform.isIOS) {
       return settings.ffmpegPath;
     }
@@ -267,6 +283,9 @@ class AppController extends ChangeNotifier {
   }
 
   Future<String?> _installFfmpeg(AppSettings settings) async {
+    if (kIsWeb) {
+      throw Exception('FFmpeg is not available on web.');
+    }
     if (!Platform.isWindows) {
       throw Exception('FFmpeg is required for this operation on desktop.');
     }

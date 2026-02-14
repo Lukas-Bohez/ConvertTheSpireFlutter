@@ -5,7 +5,7 @@
 import FlutterMacOS
 import Foundation
 
-import ffmpeg_kit_flutter
+import ffmpeg_kit_flutter_new
 import file_picker
 import url_launcher_macos
 

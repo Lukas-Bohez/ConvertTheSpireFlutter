@@ -10,6 +10,8 @@ enum DownloadStatus {
 }
 
 class QueueItem {
+  static const _unset = Object();
+
   final String url;
   final String title;
   final String format;
@@ -37,8 +39,8 @@ class QueueItem {
     Uint8List? thumbnailBytes,
     int? progress,
     DownloadStatus? status,
-    String? outputPath,
-    String? error,
+    Object? outputPath = _unset,
+    Object? error = _unset,
   }) {
     return QueueItem(
       url: url,
@@ -48,8 +50,16 @@ class QueueItem {
       thumbnailBytes: thumbnailBytes ?? this.thumbnailBytes,
       progress: progress ?? this.progress,
       status: status ?? this.status,
-      outputPath: outputPath ?? this.outputPath,
-      error: error,
+      outputPath: outputPath == _unset ? this.outputPath : outputPath as String?,
+      error: error == _unset ? this.error : error as String?,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is QueueItem && url == other.url && format == other.format;
+
+  @override
+  int get hashCode => url.hashCode ^ format.hashCode;
 }

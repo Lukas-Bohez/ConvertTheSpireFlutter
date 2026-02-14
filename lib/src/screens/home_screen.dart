@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -492,8 +493,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    final completedCount = items.where((i) => i.status.name == 'completed').length;
-    final inProgressCount = items.where((i) => i.status.name == 'downloading').length;
+    final completedCount = items.where((i) => i.status == DownloadStatus.completed).length;
+    final inProgressCount = items.where((i) => i.status == DownloadStatus.downloading).length;
 
     return Column(
       children: [
@@ -558,7 +559,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   ElevatedButton(
                                     onPressed: () {
-                                      for (final item in items) {
+                                      final snapshot = List<QueueItem>.from(items);
+                                      for (final item in snapshot) {
                                         widget.controller.removeFromQueue(item);
                                       }
                                       Navigator.pop(context);
@@ -581,8 +583,8 @@ class _HomeScreenState extends State<HomeScreen> {
             itemCount: items.length,
             itemBuilder: (context, index) {
               final item = items[index];
-              final statusColor = _getStatusColor(item.status.name);
-              final statusIcon = _getStatusIcon(item.status.name);
+              final statusColor = _getStatusColor(item.status);
+              final statusIcon = _getStatusIcon(item.status);
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
@@ -645,30 +647,39 @@ class _HomeScreenState extends State<HomeScreen> {
                       trailing: Wrap(
                         spacing: 4,
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.download),
-                            onPressed: () => widget.controller.downloadSingle(item),
-                            tooltip: 'Download',
-                            color: Colors.blue,
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.pause_circle),
-                            onPressed: () => widget.controller.cancelDownload(item),
-                            tooltip: 'Pause',
-                            color: Colors.orange,
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.play_circle),
-                            onPressed: () => widget.controller.resumeDownload(item),
-                            tooltip: 'Resume',
-                            color: Colors.green,
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            onPressed: () => widget.controller.removeFromQueue(item),
-                            tooltip: 'Remove',
-                            color: Colors.red,
-                          ),
+                          if (item.status == DownloadStatus.queued ||
+                              item.status == DownloadStatus.failed ||
+                              item.status == DownloadStatus.cancelled)
+                            IconButton(
+                              icon: const Icon(Icons.download),
+                              onPressed: () => widget.controller.downloadSingle(item),
+                              tooltip: 'Download',
+                              color: Colors.blue,
+                            ),
+                          if (item.status == DownloadStatus.downloading ||
+                              item.status == DownloadStatus.converting)
+                            IconButton(
+                              icon: const Icon(Icons.pause_circle),
+                              onPressed: () => widget.controller.cancelDownload(item),
+                              tooltip: 'Cancel',
+                              color: Colors.orange,
+                            ),
+                          if (item.status == DownloadStatus.cancelled ||
+                              item.status == DownloadStatus.failed)
+                            IconButton(
+                              icon: const Icon(Icons.play_circle),
+                              onPressed: () => widget.controller.resumeDownload(item),
+                              tooltip: 'Resume',
+                              color: Colors.green,
+                            ),
+                          if (item.status != DownloadStatus.downloading &&
+                              item.status != DownloadStatus.converting)
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () => widget.controller.removeFromQueue(item),
+                              tooltip: 'Remove',
+                              color: Colors.red,
+                            ),
                         ],
                       ),
                     ),
@@ -677,6 +688,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         value: item.progress / 100,
                         backgroundColor: Colors.grey[200],
                         valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                      ),
+                    if (item.error != null && item.status == DownloadStatus.failed)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        color: Colors.red.withValues(alpha: 0.1),
+                        child: Text(
+                          item.error!,
+                          style: const TextStyle(color: Colors.red, fontSize: 12),
+                        ),
                       ),
                   ],
                 ),
@@ -688,37 +709,36 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'completed':
+  Color _getStatusColor(DownloadStatus status) {
+    switch (status) {
+      case DownloadStatus.completed:
         return Colors.green;
-      case 'downloading':
+      case DownloadStatus.downloading:
         return Colors.blue;
-      case 'paused':
-      case 'cancelled':
+      case DownloadStatus.converting:
+        return Colors.indigo;
+      case DownloadStatus.cancelled:
         return Colors.orange;
-      case 'error':
-      case 'failed':
+      case DownloadStatus.failed:
         return Colors.red;
-      default:
+      case DownloadStatus.queued:
         return Colors.grey;
     }
   }
 
-  IconData _getStatusIcon(String status) {
-    switch (status.toLowerCase()) {
-      case 'completed':
+  IconData _getStatusIcon(DownloadStatus status) {
+    switch (status) {
+      case DownloadStatus.completed:
         return Icons.check_circle;
-      case 'downloading':
+      case DownloadStatus.downloading:
         return Icons.downloading;
-      case 'paused':
-        return Icons.pause_circle;
-      case 'cancelled':
+      case DownloadStatus.converting:
+        return Icons.sync;
+      case DownloadStatus.cancelled:
         return Icons.cancel;
-      case 'error':
-      case 'failed':
+      case DownloadStatus.failed:
         return Icons.error;
-      default:
+      case DownloadStatus.queued:
         return Icons.hourglass_empty;
     }
   }
@@ -1081,7 +1101,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ElevatedButton.icon(
                     icon: const Icon(Icons.file_upload),
                     label: const Text('Select file to convert'),
-                    onPressed: () async {
+                    onPressed: kIsWeb ? null : () async {
                       final result = await FilePicker.platform.pickFiles();
                       if (result == null || result.files.isEmpty) {
                         return;
@@ -1118,7 +1138,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                 ),
                                 Text(
-                                  _convertFile!.path.split('\\').last,
+                                  _convertFile!.path.split(Platform.pathSeparator).last,
                                   style: const TextStyle(fontSize: 14),
                                   overflow: TextOverflow.ellipsis,
                                 ),
