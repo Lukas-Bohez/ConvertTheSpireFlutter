@@ -72,3 +72,4 @@ This project is licensed under the GNU GPLv3. See [LICENSE](LICENSE) for details
 ## Support
 
 Buy me a coffee: https://buymeacoffee.com/orokaconner
+Website: https://quizthespire.com/

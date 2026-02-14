@@ -21,6 +21,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   static final Uri _buyMeCoffeeUri = Uri.parse('https://buymeacoffee.com/orokaconner');
+  static final Uri _websiteUri = Uri.parse('https://quizthespire.com/');
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _downloadDirController = TextEditingController();
   final TextEditingController _workersController = TextEditingController();
@@ -987,9 +988,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     label: const Text('Buy me a coffee'),
                     onPressed: _openBuyMeCoffee,
                   ),
+                  TextButton.icon(
+                    icon: const Icon(Icons.public),
+                    label: const Text('Visit quizthespire.com'),
+                    onPressed: _openWebsite,
+                  ),
                   const SizedBox(height: 4),
                   SelectableText(
                     _buyMeCoffeeUri.toString(),
+                    style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                  ),
+                  SelectableText(
+                    _websiteUri.toString(),
                     style: TextStyle(color: Theme.of(context).colorScheme.primary),
                   ),
                 ],
@@ -1035,6 +1045,15 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open the Buy Me a Coffee link.')),
+      );
+    }
+  }
+
+  Future<void> _openWebsite() async {
+    final launched = await launchUrl(_websiteUri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the website.')),
       );
     }
   }

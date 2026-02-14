@@ -2,6 +2,13 @@ name: Build MSIX
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (e.g. v1.0.0). Leave empty to auto-generate.'
+        required: false
+      release_name:
+        description: 'Release name. Leave empty to use tag.'
+        required: false
   release:
     types: [published]
 
@@ -41,6 +48,14 @@ jobs:
         with:
           name: msix
           path: build/windows/runner/Release/*.msix
+
+      - name: Create Release (manual run)
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_tag || format('manual-{0}', github.run_number) }}
+          name: ${{ inputs.release_name || inputs.release_tag || format('Manual build {0}', github.run_number) }}
+          files: build/windows/runner/Release/*.msix
 
       - name: Upload MSIX to Release
         if: github.event_name == 'release'
