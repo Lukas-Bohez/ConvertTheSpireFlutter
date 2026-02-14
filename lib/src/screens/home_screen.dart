@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/app_settings.dart';
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
+import '../services/android_saf.dart';
 import '../state/app_controller.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -31,16 +32,19 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _retryBackoffController = TextEditingController();
   final TextEditingController _rangeFromController = TextEditingController();
   final TextEditingController _rangeToController = TextEditingController();
+  final AndroidSaf _androidSaf = AndroidSaf();
 
   bool _expandPlaylist = false;
   String _downloadFormat = 'MP4';
   bool _settingsInitialized = false;
   File? _convertFile;
   String _convertTarget = 'mp4';
+  String _androidDownloadUri = '';
 
   /// Playlist preview amount: '10', '25', '50', '100', 'all', 'custom'
   String _previewPreset = '25';
   bool get _isAndroid => !kIsWeb && Platform.isAndroid;
+  bool _isNarrowLayout(BuildContext context) => MediaQuery.of(context).size.width < 600;
 
   // Range selector for adding subset of preview results to queue
   int _addRangeFrom = 1;
@@ -102,7 +106,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _initSettings(AppSettings settings) {
-    _downloadDirController.text = settings.downloadDir;
+    if (_isAndroid) {
+      _androidDownloadUri = settings.downloadDir;
+      _downloadDirController.text = _formatAndroidFolderLabel(settings.downloadDir);
+    } else {
+      _downloadDirController.text = settings.downloadDir;
+    }
     _workersController.text = settings.maxWorkers.toString();
     _retryCountController.text = settings.retryCount.toString();
     _retryBackoffController.text = settings.retryBackoffSeconds.toString();
@@ -110,11 +119,65 @@ class _HomeScreenState extends State<HomeScreen> {
     _settingsInitialized = true;
   }
 
+  String _formatAndroidFolderLabel(String uriString) {
+    if (uriString.trim().isEmpty) {
+      return 'Not set';
+    }
+    if (!uriString.startsWith('content://')) {
+      return uriString;
+    }
+    final decoded = Uri.decodeComponent(uriString);
+    final treeIndex = decoded.indexOf('tree/');
+    if (treeIndex >= 0) {
+      final treePart = decoded.substring(treeIndex + 5);
+      return treePart.replaceAll(':', '/');
+    }
+    return uriString;
+  }
+
+  bool get _hasAndroidFolder => _androidDownloadUri.startsWith('content://');
+
+  Future<void> _pickAndroidFolder(AppSettings settings) async {
+    final uri = await _androidSaf.pickTree();
+    if (uri == null || uri.isEmpty) {
+      return;
+    }
+    setState(() {
+      _androidDownloadUri = uri;
+      _downloadDirController.text = _formatAndroidFolderLabel(uri);
+    });
+    await widget.controller.saveSettings(settings.copyWith(downloadDir: uri));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Download folder updated')),
+      );
+    }
+  }
+
+  Future<void> _openAndroidFolder() async {
+    if (!_hasAndroidFolder) return;
+    final ok = await _androidSaf.openTree(_androidDownloadUri);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the selected folder.')),
+      );
+    }
+  }
+
+  Future<void> _clearAndroidFolder(AppSettings settings) async {
+    setState(() {
+      _androidDownloadUri = '';
+      _downloadDirController.text = 'Not set';
+    });
+    await widget.controller.saveSettings(settings.copyWith(downloadDir: ''));
+  }
+
   // ---------------------------------------------------------------------------
   // SEARCH TAB
   // ---------------------------------------------------------------------------
 
   Widget _buildSearchTab(AppSettings? settings) {
+    final isNarrow = _isNarrowLayout(context);
     return Padding(
       padding: const EdgeInsets.all(16),
       child: ListView(
@@ -177,10 +240,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
+                  if (isNarrow)
+                    Column(
+                      children: [
+                        DropdownButtonFormField<String>(
                           initialValue: _downloadFormat,
                           decoration: const InputDecoration(
                             labelText: 'Format',
@@ -198,10 +261,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             });
                           },
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: CheckboxListTile(
+                        const SizedBox(height: 12),
+                        CheckboxListTile(
                           value: _expandPlaylist,
                           onChanged: (value) {
                             setState(() {
@@ -212,9 +273,47 @@ class _HomeScreenState extends State<HomeScreen> {
                           subtitle: const Text('Show all videos'),
                           contentPadding: EdgeInsets.zero,
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _downloadFormat,
+                            decoration: const InputDecoration(
+                              labelText: 'Format',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.video_library),
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: 'MP4', child: Text('MP4 (Video)')),
+                              DropdownMenuItem(value: 'MP3', child: Text('MP3 (Audio)')),
+                            ],
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() {
+                                _downloadFormat = value;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: CheckboxListTile(
+                            value: _expandPlaylist,
+                            onChanged: (value) {
+                              setState(() {
+                                _expandPlaylist = value ?? false;
+                              });
+                            },
+                            title: const Text('Expand playlist'),
+                            subtitle: const Text('Show all videos'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -337,60 +436,118 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 16),
 
           // Search / Download buttons
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.search),
-                  label: const Text('Search / Preview'),
-                  onPressed: settings == null || _urlController.text.trim().isEmpty
-                      ? null
-                      : _onSearch,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+          if (isNarrow)
+            Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.search),
+                    label: const Text('Search / Preview'),
+                    onPressed: settings == null || _urlController.text.trim().isEmpty
+                        ? null
+                        : _onSearch,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.download),
-                  label: const Text('Download'),
-                  onPressed: settings == null || _urlController.text.trim().isEmpty
-                      ? null
-                      : () {
-                          final url = _urlController.text.trim();
-                          if (url.isEmpty) return;
-                          final item = widget.controller.previewItems.isNotEmpty
-                              ? widget.controller.previewItems.firstWhere(
-                                  (p) => p.url == url,
-                                  orElse: () => widget.controller.previewItems.first,
-                                )
-                              : null;
-                          if (item != null) {
-                            widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
-                          } else {
-                            widget.controller.addToQueue(
-                              PreviewItem(
-                                id: url,
-                                title: url,
-                                url: url,
-                                uploader: '',
-                                duration: null,
-                                thumbnailUrl: null,
-                              ),
-                              _downloadFormat.toLowerCase(),
-                            );
-                          }
-                          widget.controller.downloadAll();
-                        },
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.download),
+                    label: const Text('Download'),
+                    onPressed: settings == null || _urlController.text.trim().isEmpty
+                        ? null
+                        : () {
+                            final url = _urlController.text.trim();
+                            if (url.isEmpty) return;
+                            final item = widget.controller.previewItems.isNotEmpty
+                                ? widget.controller.previewItems.firstWhere(
+                                    (p) => p.url == url,
+                                    orElse: () => widget.controller.previewItems.first,
+                                  )
+                                : null;
+                            if (item != null) {
+                              widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                            } else {
+                              widget.controller.addToQueue(
+                                PreviewItem(
+                                  id: url,
+                                  title: url,
+                                  url: url,
+                                  uploader: '',
+                                  duration: null,
+                                  thumbnailUrl: null,
+                                ),
+                                _downloadFormat.toLowerCase(),
+                              );
+                            }
+                            widget.controller.downloadAll();
+                          },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.search),
+                    label: const Text('Search / Preview'),
+                    onPressed: settings == null || _urlController.text.trim().isEmpty
+                        ? null
+                        : _onSearch,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.download),
+                    label: const Text('Download'),
+                    onPressed: settings == null || _urlController.text.trim().isEmpty
+                        ? null
+                        : () {
+                            final url = _urlController.text.trim();
+                            if (url.isEmpty) return;
+                            final item = widget.controller.previewItems.isNotEmpty
+                                ? widget.controller.previewItems.firstWhere(
+                                    (p) => p.url == url,
+                                    orElse: () => widget.controller.previewItems.first,
+                                  )
+                                : null;
+                            if (item != null) {
+                              widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                            } else {
+                              widget.controller.addToQueue(
+                                PreviewItem(
+                                  id: url,
+                                  title: url,
+                                  url: url,
+                                  uploader: '',
+                                  duration: null,
+                                  thumbnailUrl: null,
+                                ),
+                                _downloadFormat.toLowerCase(),
+                              );
+                            }
+                            widget.controller.downloadAll();
+                          },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           const SizedBox(height: 24),
           if (widget.controller.previewLoading)
             const Center(
@@ -455,6 +612,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildPreviewList() {
+    final isNarrow = _isNarrowLayout(context);
     final items = widget.controller.previewItems;
     if (items.isEmpty) {
       return Card(
@@ -487,50 +645,100 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Header row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.video_library, color: Theme.of(context).primaryColor),
-                const SizedBox(width: 8),
-                Text(
-                  'Preview Results (${items.length})',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                TextButton.icon(
-                  icon: const Icon(Icons.select_all),
-                  label: const Text('Add All'),
-                  onPressed: () {
-                    for (final item in items) {
-                      widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
-                    }
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Added ${items.length} items to queue')),
-                    );
-                  },
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.download),
-                  label: const Text('Download All'),
-                  onPressed: () {
-                    for (final item in items) {
-                      widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
-                    }
-                    widget.controller.downloadAll();
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
+        if (isNarrow)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.video_library, color: Theme.of(context).primaryColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Preview Results (${items.length})',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.select_all),
+                    label: const Text('Add All'),
+                    onPressed: () {
+                      for (final item in items) {
+                        widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Added ${items.length} items to queue')),
+                      );
+                    },
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.download),
+                    label: const Text('Download All'),
+                    onPressed: () {
+                      for (final item in items) {
+                        widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                      }
+                      widget.controller.downloadAll();
+                    },
+                  ),
+                ],
+              ),
+            ],
+          )
+        else
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.video_library, color: Theme.of(context).primaryColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Preview Results (${items.length})',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.select_all),
+                    label: const Text('Add All'),
+                    onPressed: () {
+                      for (final item in items) {
+                        widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Added ${items.length} items to queue')),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.download),
+                    label: const Text('Download All'),
+                    onPressed: () {
+                      for (final item in items) {
+                        widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                      }
+                      widget.controller.downloadAll();
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
 
         // Range selector for adding a subset to queue
         if (items.length > 1) ...[
@@ -549,11 +757,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       const Text('From '),
                       SizedBox(
-                        width: 60,
+                        width: 70,
                         child: DropdownButton<int>(
                           value: _addRangeFrom.clamp(1, items.length),
                           isDense: true,
@@ -570,12 +781,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           },
                         ),
                       ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8),
-                        child: Text('to'),
-                      ),
+                      const Text('to'),
                       SizedBox(
-                        width: 60,
+                        width: 70,
                         child: DropdownButton<int>(
                           value: _addRangeTo.clamp(_addRangeFrom, items.length),
                           isDense: true,
@@ -595,7 +803,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           },
                         ),
                       ),
-                      const Spacer(),
                       OutlinedButton.icon(
                         icon: const Icon(Icons.playlist_add, size: 18),
                         label: Text('Add ${_addRangeTo - _addRangeFrom + 1}'),
@@ -609,7 +816,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                         },
                       ),
-                      const SizedBox(width: 8),
                       ElevatedButton.icon(
                         icon: const Icon(Icons.download, size: 18),
                         label: Text('Download ${_addRangeTo - _addRangeFrom + 1}'),
@@ -636,78 +842,112 @@ class _HomeScreenState extends State<HomeScreen> {
             final item = entry.value;
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                leading: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 28,
-                      child: Text(
-                        '${index + 1}',
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    item.thumbnailUrl != null && item.thumbnailUrl!.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              item.thumbnailUrl!,
-                              width: 80,
-                              height: 60,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return _thumbnailPlaceholder();
-                              },
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 28,
+                          child: Text(
+                            '${index + 1}',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
                             ),
-                          )
-                        : _thumbnailPlaceholder(),
-                  ],
-                ),
-                title: Text(
-                  item.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(item.uploader),
-                    if (item.duration != null)
-                      Text(
-                        _formatDuration(item.duration!),
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        item.thumbnailUrl != null && item.thumbnailUrl!.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  item.thumbnailUrl!,
+                                  width: 80,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return _thumbnailPlaceholder();
+                                  },
+                                ),
+                              )
+                            : _thumbnailPlaceholder(),
+                      ],
+                    ),
+                    title: Text(
+                      item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item.uploader),
+                        if (item.duration != null)
+                          Text(
+                            _formatDuration(item.duration!),
+                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          ),
+                      ],
+                    ),
+                    trailing: isNarrow
+                        ? null
+                        : Wrap(
+                            spacing: 8,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.add_circle_outline),
+                                onPressed: () {
+                                  widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Added to queue')),
+                                  );
+                                },
+                                tooltip: 'Add to queue',
+                              ),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.download, size: 18),
+                                label: const Text('Download'),
+                                onPressed: () {
+                                  widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                                  widget.controller.downloadAll();
+                                },
+                              ),
+                            ],
+                          ),
+                  ),
+                  if (isNarrow)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.playlist_add, size: 18),
+                            label: const Text('Add to queue'),
+                            onPressed: () {
+                              widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Added to queue')),
+                              );
+                            },
+                          ),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.download, size: 18),
+                            label: const Text('Download'),
+                            onPressed: () {
+                              widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                              widget.controller.downloadAll();
+                            },
+                          ),
+                        ],
                       ),
-                  ],
-                ),
-                trailing: Wrap(
-                  spacing: 8,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.add_circle_outline),
-                      onPressed: () {
-                        widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Added to queue')),
-                        );
-                      },
-                      tooltip: 'Add to queue',
                     ),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.download, size: 18),
-                      label: const Text('Download'),
-                      onPressed: () {
-                        widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
-                        widget.controller.downloadAll();
-                      },
-                    ),
-                  ],
-                ),
+                ],
               ),
             );
           },
@@ -749,6 +989,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildQueueTab() {
+    final isNarrow = _isNarrowLayout(context);
     final items = widget.controller.queue;
     if (items.isEmpty) {
       return Center(
@@ -779,81 +1020,154 @@ class _HomeScreenState extends State<HomeScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Queue Status',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${items.length} total \u2022 $inProgressCount downloading \u2022 $completedCount completed',
-                    style: TextStyle(color: Colors.grey[700]),
-                  ),
-                ],
-              ),
-              Wrap(
-                spacing: 8,
-                children: [
-                  DropdownButton<String>(
-                    value: _downloadFormat,
-                    items: const [
-                      DropdownMenuItem(value: 'MP4', child: Text('MP4 (Video)')),
-                      DropdownMenuItem(value: 'MP3', child: Text('MP3 (Audio)')),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() {
-                        _downloadFormat = value;
-                      });
-                    },
-                  ),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.download_for_offline),
-                    label: const Text('Download All'),
-                    onPressed: items.isEmpty ? null : () => widget.controller.downloadAll(),
-                  ),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.clear_all),
-                    label: const Text('Clear Queue'),
-                    onPressed: items.isEmpty
-                        ? null
-                        : () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Clear Queue'),
-                                content: const Text('Are you sure you want to clear all items from the queue?'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      final snapshot = List<QueueItem>.from(items);
-                                      for (final item in snapshot) {
-                                        widget.controller.removeFromQueue(item);
-                                      }
-                                      Navigator.pop(context);
-                                    },
-                                    child: const Text('Clear'),
-                                  ),
-                                ],
-                              ),
-                            );
+          child: isNarrow
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Queue Status',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${items.length} total \u2022 $inProgressCount downloading \u2022 $completedCount completed',
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        DropdownButton<String>(
+                          value: _downloadFormat,
+                          items: const [
+                            DropdownMenuItem(value: 'MP4', child: Text('MP4 (Video)')),
+                            DropdownMenuItem(value: 'MP3', child: Text('MP3 (Audio)')),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() {
+                              _downloadFormat = value;
+                            });
                           },
-                  ),
-                ],
-              ),
-            ],
-          ),
+                        ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.download_for_offline),
+                          label: const Text('Download All'),
+                          onPressed: items.isEmpty ? null : () => widget.controller.downloadAll(),
+                        ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.clear_all),
+                          label: const Text('Clear Queue'),
+                          onPressed: items.isEmpty
+                              ? null
+                              : () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Clear Queue'),
+                                      content: const Text('Are you sure you want to clear all items from the queue?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            final snapshot = List<QueueItem>.from(items);
+                                            for (final item in snapshot) {
+                                              widget.controller.removeFromQueue(item);
+                                            }
+                                            Navigator.pop(context);
+                                          },
+                                          child: const Text('Clear'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Queue Status',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${items.length} total \u2022 $inProgressCount downloading \u2022 $completedCount completed',
+                          style: TextStyle(color: Colors.grey[700]),
+                        ),
+                      ],
+                    ),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        DropdownButton<String>(
+                          value: _downloadFormat,
+                          items: const [
+                            DropdownMenuItem(value: 'MP4', child: Text('MP4 (Video)')),
+                            DropdownMenuItem(value: 'MP3', child: Text('MP3 (Audio)')),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() {
+                              _downloadFormat = value;
+                            });
+                          },
+                        ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.download_for_offline),
+                          label: const Text('Download All'),
+                          onPressed: items.isEmpty ? null : () => widget.controller.downloadAll(),
+                        ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.clear_all),
+                          label: const Text('Clear Queue'),
+                          onPressed: items.isEmpty
+                              ? null
+                              : () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Clear Queue'),
+                                      content: const Text('Are you sure you want to clear all items from the queue?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            final snapshot = List<QueueItem>.from(items);
+                                            for (final item in snapshot) {
+                                              widget.controller.removeFromQueue(item);
+                                            }
+                                            Navigator.pop(context);
+                                          },
+                                          child: const Text('Clear'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
         ),
         Expanded(
           child: ListView.builder(
@@ -882,7 +1196,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 4),
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -899,9 +1216,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
                               Text('${item.progress}%'),
-                              const SizedBox(width: 8),
                               DropdownButton<String>(
                                 value: item.format.toUpperCase(),
                                 isDense: true,
@@ -909,9 +1224,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   DropdownMenuItem(value: 'MP4', child: Text('MP4')),
                                   DropdownMenuItem(value: 'MP3', child: Text('MP3')),
                                 ],
-                                onChanged: item.status == DownloadStatus.downloading || 
-                                          item.status == DownloadStatus.converting ||
-                                          item.status == DownloadStatus.completed
+                                onChanged: item.status == DownloadStatus.downloading ||
+                                            item.status == DownloadStatus.converting ||
+                                            item.status == DownloadStatus.completed
                                     ? null
                                     : (value) {
                                         if (value == null) return;
@@ -922,45 +1237,86 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ],
                       ),
-                      trailing: Wrap(
-                        spacing: 4,
-                        children: [
-                          if (item.status == DownloadStatus.queued ||
-                              item.status == DownloadStatus.failed ||
-                              item.status == DownloadStatus.cancelled)
-                            IconButton(
-                              icon: const Icon(Icons.download),
-                              onPressed: () => widget.controller.downloadSingle(item),
-                              tooltip: 'Download',
-                              color: Colors.blue,
+                      trailing: isNarrow
+                          ? null
+                          : Wrap(
+                              spacing: 4,
+                              children: [
+                                if (item.status == DownloadStatus.queued ||
+                                    item.status == DownloadStatus.failed ||
+                                    item.status == DownloadStatus.cancelled)
+                                  IconButton(
+                                    icon: const Icon(Icons.download),
+                                    onPressed: () => widget.controller.downloadSingle(item),
+                                    tooltip: 'Download',
+                                    color: Colors.blue,
+                                  ),
+                                if (item.status == DownloadStatus.downloading ||
+                                    item.status == DownloadStatus.converting)
+                                  IconButton(
+                                    icon: const Icon(Icons.pause_circle),
+                                    onPressed: () => widget.controller.cancelDownload(item),
+                                    tooltip: 'Cancel',
+                                    color: Colors.orange,
+                                  ),
+                                if (item.status == DownloadStatus.cancelled ||
+                                    item.status == DownloadStatus.failed)
+                                  IconButton(
+                                    icon: const Icon(Icons.play_circle),
+                                    onPressed: () => widget.controller.resumeDownload(item),
+                                    tooltip: 'Resume',
+                                    color: Colors.green,
+                                  ),
+                                if (item.status != DownloadStatus.downloading &&
+                                    item.status != DownloadStatus.converting)
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline),
+                                    onPressed: () => widget.controller.removeFromQueue(item),
+                                    tooltip: 'Remove',
+                                    color: Colors.red,
+                                  ),
+                              ],
                             ),
-                          if (item.status == DownloadStatus.downloading ||
-                              item.status == DownloadStatus.converting)
-                            IconButton(
-                              icon: const Icon(Icons.pause_circle),
-                              onPressed: () => widget.controller.cancelDownload(item),
-                              tooltip: 'Cancel',
-                              color: Colors.orange,
-                            ),
-                          if (item.status == DownloadStatus.cancelled ||
-                              item.status == DownloadStatus.failed)
-                            IconButton(
-                              icon: const Icon(Icons.play_circle),
-                              onPressed: () => widget.controller.resumeDownload(item),
-                              tooltip: 'Resume',
-                              color: Colors.green,
-                            ),
-                          if (item.status != DownloadStatus.downloading &&
-                              item.status != DownloadStatus.converting)
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline),
-                              onPressed: () => widget.controller.removeFromQueue(item),
-                              tooltip: 'Remove',
-                              color: Colors.red,
-                            ),
-                        ],
-                      ),
                     ),
+                    if (isNarrow)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            if (item.status == DownloadStatus.queued ||
+                                item.status == DownloadStatus.failed ||
+                                item.status == DownloadStatus.cancelled)
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.download, size: 18),
+                                label: const Text('Download'),
+                                onPressed: () => widget.controller.downloadSingle(item),
+                              ),
+                            if (item.status == DownloadStatus.downloading ||
+                                item.status == DownloadStatus.converting)
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.pause_circle, size: 18),
+                                label: const Text('Cancel'),
+                                onPressed: () => widget.controller.cancelDownload(item),
+                              ),
+                            if (item.status == DownloadStatus.cancelled ||
+                                item.status == DownloadStatus.failed)
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.play_circle, size: 18),
+                                label: const Text('Resume'),
+                                onPressed: () => widget.controller.resumeDownload(item),
+                              ),
+                            if (item.status != DownloadStatus.downloading &&
+                                item.status != DownloadStatus.converting)
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.delete_outline, size: 18),
+                                label: const Text('Remove'),
+                                onPressed: () => widget.controller.removeFromQueue(item),
+                              ),
+                          ],
+                        ),
+                      ),
                     if (item.progress > 0 && item.progress < 100)
                       LinearProgressIndicator(
                         value: item.progress / 100,
@@ -1029,6 +1385,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (settings == null) {
       return const Center(child: CircularProgressIndicator());
     }
+    final isNarrow = _isNarrowLayout(context);
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -1051,45 +1408,54 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Divider(),
                   const SizedBox(height: 8),
                   if (_isAndroid) ...[
-                    // Android: show the auto-resolved path and a reset button
+                    // Android: SAF folder picker
                     TextField(
                       controller: _downloadDirController,
                       decoration: InputDecoration(
                         labelText: 'Download folder',
                         border: const OutlineInputBorder(),
                         prefixIcon: const Icon(Icons.folder),
-                        helperText: 'On Android, downloads are saved to app storage automatically.',
+                        helperText: 'Pick a folder using the system file picker. Re-select after reinstall.',
                         helperMaxLines: 2,
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.refresh),
-                          onPressed: () async {
-                            final dir = await widget.controller.settingsStore.resolveDefaultDownloadDir();
-                            if (dir.isNotEmpty) {
-                              setState(() {
-                                _downloadDirController.text = dir;
-                              });
-                              await widget.controller.saveSettings(settings.copyWith(downloadDir: dir));
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Download folder reset to default'),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                          tooltip: 'Reset to default',
-                        ),
                       ),
                       readOnly: true,
                     ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.folder_open),
+                          label: Text(_hasAndroidFolder ? 'Change folder' : 'Choose folder'),
+                          onPressed: () => _pickAndroidFolder(settings),
+                        ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.folder),
+                          label: const Text('Open folder'),
+                          onPressed: _hasAndroidFolder ? _openAndroidFolder : null,
+                        ),
+                        TextButton.icon(
+                          icon: const Icon(Icons.clear),
+                          label: const Text('Clear'),
+                          onPressed: _hasAndroidFolder ? () => _clearAndroidFolder(settings) : null,
+                        ),
+                      ],
+                    ),
+                    if (!_hasAndroidFolder)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Choose a folder before downloading on Android.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.red[700]),
+                        ),
+                      ),
                   ] else ...[
                     // Desktop: Browse button with FilePicker
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
+                    if (isNarrow)
+                      Column(
+                        children: [
+                          TextField(
                             controller: _downloadDirController,
                             decoration: const InputDecoration(
                               labelText: 'Download folder',
@@ -1098,23 +1464,55 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             readOnly: true,
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.folder_open),
-                          label: const Text('Browse'),
-                          onPressed: () async {
-                            final result = await FilePicker.platform.getDirectoryPath();
-                            if (result != null) {
-                              setState(() {
-                                _downloadDirController.text = result;
-                              });
-                              await widget.controller.saveSettings(settings.copyWith(downloadDir: result));
-                            }
-                          },
-                        ),
-                      ],
-                    ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.folder_open),
+                              label: const Text('Browse'),
+                              onPressed: () async {
+                                final result = await FilePicker.platform.getDirectoryPath();
+                                if (result != null) {
+                                  setState(() {
+                                    _downloadDirController.text = result;
+                                  });
+                                  await widget.controller.saveSettings(settings.copyWith(downloadDir: result));
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _downloadDirController,
+                              decoration: const InputDecoration(
+                                labelText: 'Download folder',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.folder),
+                              ),
+                              readOnly: true,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.folder_open),
+                            label: const Text('Browse'),
+                            onPressed: () async {
+                              final result = await FilePicker.platform.getDirectoryPath();
+                              if (result != null) {
+                                setState(() {
+                                  _downloadDirController.text = result;
+                                });
+                                await widget.controller.saveSettings(settings.copyWith(downloadDir: result));
+                              }
+                            },
+                          ),
+                        ],
+                      ),
                   ],
                   const SizedBox(height: 16),
                   TextField(
@@ -1309,7 +1707,7 @@ class _HomeScreenState extends State<HomeScreen> {
               label: const Text('Save Settings'),
               onPressed: () {
                 final next = settings.copyWith(
-                  downloadDir: _downloadDirController.text.trim(),
+                  downloadDir: _isAndroid ? _androidDownloadUri : _downloadDirController.text.trim(),
                   maxWorkers: int.tryParse(_workersController.text.trim()) ?? settings.maxWorkers,
                   retryCount: int.tryParse(_retryCountController.text.trim()) ?? settings.retryCount,
                   retryBackoffSeconds: int.tryParse(_retryBackoffController.text.trim()) ?? settings.retryBackoffSeconds,
@@ -1561,37 +1959,68 @@ class _HomeScreenState extends State<HomeScreen> {
     return ValueListenableBuilder<List<String>>(
       valueListenable: widget.controller.logs.logs,
       builder: (context, logs, _) {
+        final isNarrow = _isNarrowLayout(context);
         return Column(
           children: [
             Container(
               padding: const EdgeInsets.all(16),
               color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.list_alt),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Application Logs (${logs.length})',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+              child: isNarrow
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.list_alt),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Application Logs (${logs.length})',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
                             ),
-                      ),
-                    ],
-                  ),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.clear),
-                    label: const Text('Clear Logs'),
-                    onPressed: logs.isEmpty
-                        ? null
-                        : () {
-                            widget.controller.logs.logs.value = [];
-                          },
-                  ),
-                ],
-              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.clear),
+                          label: const Text('Clear Logs'),
+                          onPressed: logs.isEmpty
+                              ? null
+                              : () {
+                                  widget.controller.logs.logs.value = [];
+                                },
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.list_alt),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Application Logs (${logs.length})',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.clear),
+                          label: const Text('Clear Logs'),
+                          onPressed: logs.isEmpty
+                              ? null
+                              : () {
+                                  widget.controller.logs.logs.value = [];
+                                },
+                        ),
+                      ],
+                    ),
             ),
             Expanded(
               child: logs.isEmpty

@@ -8,6 +8,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
+import 'android_saf.dart';
 import 'ffmpeg_service.dart';
 
 class DownloadToken {
@@ -30,6 +31,7 @@ class DownloadResult {
 class DownloadService {
   final YoutubeExplode yt;
   final FfmpegService ffmpeg;
+  final AndroidSaf _saf = AndroidSaf();
 
   DownloadService({required this.yt, required this.ffmpeg});
 
@@ -47,6 +49,7 @@ class DownloadService {
     if (outputDir.trim().isEmpty) {
       throw Exception('Download folder is not configured');
     }
+    final isSafOutput = _isSafOutput(outputDir);
     final video = await yt.videos.get(item.url);
     final streams = await yt.videos.streamsClient.getManifest(video.id);
 
@@ -57,7 +60,9 @@ class DownloadService {
     }
 
     // Create output directory if it doesn't exist
-    final outputFolder = await _resolveOutputFolder(outputDir, formatLower);
+    final outputFolder = isSafOutput
+      ? await Directory.systemTemp.createTemp('cts_download_')
+      : await _resolveOutputFolder(outputDir, formatLower);
     await outputFolder.create(recursive: true);
 
     Uint8List? thumbBytes = await _fetchThumbnailBytes(video.thumbnails.highResUrl);
@@ -135,6 +140,18 @@ class DownloadService {
         await _safeDelete(thumbPath);
       }
 
+      if (isSafOutput) {
+        final destUri = await _copyFileToSaf(
+          treeUri: outputDir,
+          sourcePath: outputPath,
+          safeTitle: safeTitle,
+          formatLower: formatLower,
+        );
+        await _safeDelete(outputPath);
+        await _safeDeleteDir(outputFolder.path);
+        return DownloadResult(path: destUri ?? '$safeTitle.$formatLower', thumbnail: thumbBytes);
+      }
+
       return DownloadResult(path: outputPath, thumbnail: thumbBytes);
     }
 
@@ -154,6 +171,18 @@ class DownloadService {
       // For MP4 without thumbnail embedding, just rename the temp file to final output
       final tempFile = File(tempMp4Path);
       await tempFile.rename(outputPath);
+    }
+
+    if (isSafOutput) {
+      final destUri = await _copyFileToSaf(
+        treeUri: outputDir,
+        sourcePath: outputPath,
+        safeTitle: safeTitle,
+        formatLower: formatLower,
+      );
+      await _safeDelete(outputPath);
+      await _safeDeleteDir(outputFolder.path);
+      return DownloadResult(path: destUri ?? '$safeTitle.$formatLower', thumbnail: thumbBytes);
     }
 
     return DownloadResult(path: outputPath, thumbnail: thumbBytes);
@@ -333,6 +362,28 @@ class DownloadService {
     return base;
   }
 
+  bool _isSafOutput(String outputDir) {
+    return !kIsWeb && Platform.isAndroid && outputDir.startsWith('content://');
+  }
+
+  Future<String?> _copyFileToSaf({
+    required String treeUri,
+    required String sourcePath,
+    required String safeTitle,
+    required String formatLower,
+  }) async {
+    final displayName = '$safeTitle.$formatLower';
+    final mimeType = formatLower == 'mp3' ? 'audio/mpeg' : 'video/mp4';
+    final subdir = (formatLower == 'mp3' || formatLower == 'mp4') ? formatLower : null;
+    return _saf.copyToTree(
+      treeUri: treeUri,
+      sourcePath: sourcePath,
+      displayName: displayName,
+      mimeType: mimeType,
+      subdir: subdir,
+    );
+  }
+
   String _sanitizeFileName(String value) {
     // Remove only filesystem-unsafe characters but keep Unicode (Japanese, etc.)
     // Unsafe characters on Windows/Linux: < > : " / \\ | ? *
@@ -350,6 +401,15 @@ class DownloadService {
       final file = File(path);
       if (await file.exists()) {
         await file.delete();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _safeDeleteDir(String path) async {
+    try {
+      final dir = Directory(path);
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
       }
     } catch (_) {}
   }
