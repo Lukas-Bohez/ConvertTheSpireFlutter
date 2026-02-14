@@ -26,6 +26,17 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   msix: ^3.16.7
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  web:
+    generate: false
+  windows:
+    generate: true
+    icon_size: 48
+  image_path: "assets/icons/favicon-192x192.png"
 
 flutter:
   uses-material-design: true

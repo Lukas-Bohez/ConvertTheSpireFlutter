@@ -15,9 +15,9 @@ class SettingsStore {
   Future<String> resolveDefaultDownloadDir() async {
     if (kIsWeb) return '/downloads';
 
-    // On Android, getDownloadsDirectory() calls getExternalStoragePaths which
-    // requires storage permissions and often fails with a channel error.
-    // Use the app-specific external directory instead.
+    // On Android, getDownloadsDirectory() and getExternalStorageDirectory() use
+    // Pigeon channels that can fail if binding isn't fully ready or permissions
+    // are missing. Wrap every call individually and always have a fallback.
     if (Platform.isAndroid) {
       try {
         final extDir = await getExternalStorageDirectory();
@@ -27,10 +27,16 @@ class SettingsStore {
           return dlDir.path;
         }
       } catch (_) {}
-      final docs = await getApplicationDocumentsDirectory();
-      final dlDir = Directory('${docs.path}${Platform.pathSeparator}downloads');
-      await dlDir.create(recursive: true);
-      return dlDir.path;
+      try {
+        final docs = await getApplicationDocumentsDirectory();
+        final dlDir = Directory('${docs.path}${Platform.pathSeparator}downloads');
+        await dlDir.create(recursive: true);
+        return dlDir.path;
+      } catch (_) {}
+      // Last resort: use a known Android-safe path
+      final fallback = Directory('/data/data/com.orokaconner.convertthespirereborn/files/downloads');
+      await fallback.create(recursive: true);
+      return fallback.path;
     }
 
     try {
@@ -44,9 +50,15 @@ class SettingsStore {
   }
 
   Future<File> _settingsFile() async {
-    final dir = await getApplicationSupportDirectory();
-    await dir.create(recursive: true);
-    return File('${dir.path}${Platform.pathSeparator}$_fileName');
+    try {
+      final dir = await getApplicationSupportDirectory();
+      await dir.create(recursive: true);
+      return File('${dir.path}${Platform.pathSeparator}$_fileName');
+    } catch (_) {
+      // Fallback to documents directory if support directory fails
+      final dir = await getApplicationDocumentsDirectory();
+      return File('${dir.path}${Platform.pathSeparator}$_fileName');
+    }
   }
 
   Future<AppSettings> load() async {
