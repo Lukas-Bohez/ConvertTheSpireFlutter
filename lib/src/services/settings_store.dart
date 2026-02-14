@@ -14,10 +14,31 @@ class SettingsStore {
 
   Future<String> resolveDefaultDownloadDir() async {
     if (kIsWeb) return '/downloads';
-    final directory = await getDownloadsDirectory();
-    if (directory != null) {
-      return directory.path;
+
+    // On Android, getDownloadsDirectory() calls getExternalStoragePaths which
+    // requires storage permissions and often fails with a channel error.
+    // Use the app-specific external directory instead.
+    if (Platform.isAndroid) {
+      try {
+        final extDir = await getExternalStorageDirectory();
+        if (extDir != null) {
+          final dlDir = Directory('${extDir.path}${Platform.pathSeparator}downloads');
+          await dlDir.create(recursive: true);
+          return dlDir.path;
+        }
+      } catch (_) {}
+      final docs = await getApplicationDocumentsDirectory();
+      final dlDir = Directory('${docs.path}${Platform.pathSeparator}downloads');
+      await dlDir.create(recursive: true);
+      return dlDir.path;
     }
+
+    try {
+      final directory = await getDownloadsDirectory();
+      if (directory != null) {
+        return directory.path;
+      }
+    } catch (_) {}
     final docs = await getApplicationDocumentsDirectory();
     return '${docs.path}${Platform.pathSeparator}downloads';
   }
