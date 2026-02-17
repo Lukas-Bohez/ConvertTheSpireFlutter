@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -8,11 +9,21 @@ import '../models/app_settings.dart';
 import '../models/convert_result.dart';
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
+import '../models/search_result.dart' as models;
+import '../services/bulk_import_service.dart';
 import '../services/convert_service.dart';
 import '../services/download_service.dart';
+import '../services/file_organization_service.dart';
 import '../services/installer_service.dart';
 import '../services/log_service.dart';
+import '../services/metadata_service.dart';
+import '../services/multi_source_search_service.dart';
+import '../services/notification_service.dart';
+import '../services/playlist_service.dart';
+import '../services/preview_player_service.dart';
 import '../services/settings_store.dart';
+import '../services/statistics_service.dart';
+import '../services/watched_playlist_service.dart';
 import '../services/youtube_service.dart';
 
 class AppController extends ChangeNotifier {
@@ -23,6 +34,18 @@ class AppController extends ChangeNotifier {
   final InstallerService installerService;
   final LogService logs;
 
+  // ── New feature services ──────────────────────────────────────────────
+  final MultiSourceSearchService searchService;
+  final PreviewPlayerService previewPlayer;
+  final PlaylistService playlistService;
+  final WatchedPlaylistService watchedPlaylistService;
+  final BulkImportService bulkImportService;
+  final MusicBrainzService musicBrainzService;
+  final LyricsService lyricsService;
+  final FileOrganizationService fileOrganizationService;
+  final StatisticsService statisticsService;
+  final NotificationService notificationService;
+
   AppSettings? _settings;
   AppSettings? get settings => _settings;
 
@@ -32,6 +55,7 @@ class AppController extends ChangeNotifier {
   final Map<String, DownloadToken> _tokens = {};
   final List<ConvertResult> convertResults = <ConvertResult>[];
   Future<String?>? _ffmpegInstall;
+  bool _downloadAllRunning = false;
 
   AppController({
     required this.settingsStore,
@@ -40,10 +64,22 @@ class AppController extends ChangeNotifier {
     required this.convertService,
     required this.installerService,
     required this.logs,
+    required this.searchService,
+    required this.previewPlayer,
+    required this.playlistService,
+    required this.watchedPlaylistService,
+    required this.bulkImportService,
+    required this.musicBrainzService,
+    required this.lyricsService,
+    required this.fileOrganizationService,
+    required this.statisticsService,
+    required this.notificationService,
   });
 
   Future<void> init() async {
     _settings = await settingsStore.load();
+    await statisticsService.load();
+    await notificationService.initialize();
     notifyListeners();
   }
 
@@ -112,64 +148,133 @@ class AppController extends ChangeNotifier {
       return;
     }
 
+    // Resolve title if it's still a raw URL (user downloaded without preview)
+    if (item.title.startsWith('http://') || item.title.startsWith('https://')) {
+      try {
+        final video = await downloadService.yt.videos.get(item.url)
+            .timeout(const Duration(seconds: 15));
+        final resolved = item.copyWith(title: video.title);
+        _updateQueue(item, resolved);
+        item = resolved;
+      } catch (_) {
+        // Keep URL title if resolution fails
+      }
+    }
+
     final token = DownloadToken();
     final key = '${item.url}|${item.format}';
     _tokens[key] = token;
-    _updateQueue(item, item.copyWith(status: DownloadStatus.downloading, progress: 0, error: const Object()));
-    logs.add('Preparing download: ${item.title}');
+    _updateQueue(item, item.copyWith(status: DownloadStatus.downloading, progress: 0, error: null));
+    logs.add('Preparing download: ${item.title} [${item.format.toUpperCase()}]');
 
     String? ffmpegPath = settings.ffmpegPath;
     try {
       ffmpegPath = await _ensureFfmpegPath(settings, item.format);
     } catch (e) {
-      final updated = item.copyWith(status: DownloadStatus.failed, error: '$e');
+      final msg = _cleanError(e);
+      final updated = item.copyWith(status: DownloadStatus.failed, error: msg);
       _updateQueue(item, updated);
-      logs.add('FFmpeg setup failed: $e');
+      logs.add('FFmpeg setup failed: $msg');
       _tokens.remove(key);
       return;
     }
 
-    try {
-      final previewItem = PreviewItem(
-        id: item.url,
-        title: item.title,
-        url: item.url,
-        uploader: item.uploader ?? '',
-        duration: null,
-        thumbnailUrl: null,
-      );
-      final result = await downloadService.download(
-        previewItem,
-        format: item.format,
-        outputDir: settings.downloadDir,
-        ffmpegPath: ffmpegPath,
-        token: token,
-        onProgress: (pct, status) {
-          final updated = item.copyWith(progress: pct, status: status);
+    final maxAttempts = (_settings?.retryCount ?? 2).clamp(1, 5);
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (token.cancelled) break;
+      try {
+        final previewItem = PreviewItem(
+          id: item.url,
+          title: item.title,
+          url: item.url,
+          uploader: item.uploader ?? '',
+          duration: null,
+          thumbnailUrl: null,
+        );
+        final result = await downloadService.download(
+          previewItem,
+          format: item.format,
+          outputDir: settings.downloadDir,
+          ffmpegPath: ffmpegPath,
+          token: token,
+          onProgress: (pct, status) {
+            final updated = item.copyWith(progress: pct, status: status);
+            _updateQueue(item, updated);
+          },
+        );
+        final updated = item.copyWith(
+          progress: 100,
+          status: DownloadStatus.completed,
+          outputPath: result.path,
+          thumbnailBytes: result.thumbnail ?? item.thumbnailBytes,
+        );
+        _updateQueue(item, updated);
+        logs.add('Download complete: ${result.path}');
+        _tokens.remove(key);
+        // Fire-and-forget: notification/stats failures must never
+        // mask a successful download.
+        unawaited(onDownloadCompleted(
+          title: item.title,
+          artist: item.uploader ?? '',
+          source: 'youtube',
+          format: item.format,
+          success: true,
+        ).catchError((_) {}));
+        return; // success – exit retry loop
+      } catch (e) {
+        final msg = _cleanError(e);
+        // Don't retry YouTube permanent errors (bot detection, unavailable, etc.)
+        final isRetryable = !_isYouTubePermanentError(msg) &&
+            !token.cancelled &&
+            !msg.contains('Cancelled');
+        if (attempt < maxAttempts && isRetryable) {
+          logs.add('Download attempt $attempt failed: $msg – retrying...');
+          _updateQueue(item, item.copyWith(progress: 0, error: null));
+          await Future.delayed(Duration(seconds: (_settings?.retryBackoffSeconds ?? 3)));
+        } else {
+          final updated = item.copyWith(status: DownloadStatus.failed, error: msg);
           _updateQueue(item, updated);
-        },
-      );
-      final updated = item.copyWith(
-        progress: 100,
-        status: DownloadStatus.completed,
-        outputPath: result.path,
-        thumbnailBytes: result.thumbnail ?? item.thumbnailBytes,
-      );
-      _updateQueue(item, updated);
-      logs.add('Download complete: ${result.path}');
-    } catch (e) {
-      final updated = item.copyWith(status: DownloadStatus.failed, error: '$e');
-      _updateQueue(item, updated);
-      logs.add('Download failed: $e');
-    } finally {
-      _tokens.remove(key);
+          logs.add('Download failed: $msg');
+          unawaited(onDownloadCompleted(
+            title: item.title,
+            artist: item.uploader ?? '',
+            source: 'youtube',
+            format: item.format,
+            success: false,
+          ).catchError((_) {}));
+        }
+      }
     }
+    _tokens.remove(key);
   }
 
   Future<void> downloadAll() async {
-    final pending = queue.where((item) => item.status == DownloadStatus.queued).toList();
-    for (final item in pending) {
-      await downloadSingle(item);
+    if (_downloadAllRunning) return; // already processing; new items picked up by the loop below
+    _downloadAllRunning = true;
+    try {
+      while (true) {
+        final pending = queue.where((item) => item.status == DownloadStatus.queued).toList();
+        if (pending.isEmpty) break;
+
+        final workers = (_settings?.maxWorkers ?? 3).clamp(1, 5);
+        int index = 0;
+
+        Future<void> worker() async {
+          while (true) {
+            final i = index;
+            if (i >= pending.length) break;
+            index++;
+            await downloadSingle(pending[i]);
+          }
+        }
+
+        await Future.wait(
+          List.generate(workers.clamp(1, pending.length), (_) => worker()),
+        );
+        // Loop back to check if new items were queued while we were downloading
+      }
+    } finally {
+      _downloadAllRunning = false;
     }
   }
 
@@ -210,7 +315,8 @@ class AppController extends ChangeNotifier {
       return;
     }
     try {
-      final result = await convertService.convertFile(file, target, ffmpegPath: settings.ffmpegPath);
+      final ffmpegPath = await _ensureFfmpegPath(settings, target);
+      final result = await convertService.convertFile(file, target, ffmpegPath: ffmpegPath);
       convertResults.add(result);
       logs.add('Conversion complete: ${result.name}');
       notifyListeners();
@@ -262,6 +368,47 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Strip 'Exception: ' prefix and simplify verbose error messages.
+  static String _cleanError(Object e) {
+    var s = '$e';
+    // Remove class name prefixes like "VideoUnplayableException: " etc.
+    final prefixes = [
+      'Exception: ',
+      'VideoUnplayableException: ',
+      'VideoUnavailableException: ',
+      'VideoRequiresPurchaseException: ',
+      'TimeoutException: ',
+      'RequestLimitExceededException: ',
+      'FatalFailureException: ',
+    ];
+    for (final prefix in prefixes) {
+      if (s.startsWith(prefix)) {
+        s = s.substring(prefix.length);
+        break;
+      }
+    }
+    // Trim multi-line messages to the first meaningful line
+    final lines = s.split('\n').where((l) => l.trim().isNotEmpty).toList();
+    if (lines.length > 2) {
+      return lines.take(2).join(' ');
+    }
+    return s;
+  }
+
+  /// Returns true for YouTube errors that will never succeed on retry
+  /// (bot detection, video unavailable/private, unplayable).
+  static bool _isYouTubePermanentError(String msg) {
+    final lower = msg.toLowerCase();
+    return lower.contains('unplayable') ||
+        lower.contains('unavailable') ||
+        lower.contains('sign in') ||
+        lower.contains('confirm you\'re not a bot') ||
+        lower.contains('private') ||
+        lower.contains('does not exist') ||
+        lower.contains('taken down') ||
+        lower.contains('not supported on web');
+  }
+
   Future<String?> _ensureFfmpegPath(AppSettings settings, String format) async {
     if (kIsWeb) return null;
     if (Platform.isAndroid || Platform.isIOS) {
@@ -269,14 +416,14 @@ class AppController extends ChangeNotifier {
     }
 
     final formatLower = format.toLowerCase();
-    if (formatLower != 'mp3' && formatLower != 'mp4') {
+    // MP4 is downloaded natively; all audio formats need FFmpeg for conversion
+    if (formatLower == 'mp4') {
       return settings.ffmpegPath;
     }
 
-    final available = await downloadService.ffmpeg.isAvailable(settings.ffmpegPath);
-    if (available) {
-      return settings.ffmpegPath;
-    }
+    // Check configured path AND system PATH
+    final resolved = await downloadService.ffmpeg.resolveAvailablePath(settings.ffmpegPath);
+    if (resolved != null) return resolved;
 
     _ffmpegInstall ??= _installFfmpeg(settings);
     try {
@@ -296,16 +443,104 @@ class AppController extends ChangeNotifier {
 
     logs.add('FFmpeg not found. Downloading automatically...');
     const url = 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip';
-    final path = await installerService.installFfmpeg(
-      url: Uri.parse(url),
-      onProgress: (pct, message) {
-        if (pct == 0 || pct == 60 || pct == 100) {
-          logs.add('FFmpeg $message ($pct%)');
-        }
-      },
+    try {
+      final path = await installerService.installFfmpeg(
+        url: Uri.parse(url),
+        onProgress: (pct, message) {
+          if (pct == 0 || pct == 60 || pct == 100) {
+            logs.add('FFmpeg $message ($pct%)');
+          }
+        },
+      ).timeout(const Duration(minutes: 5),
+          onTimeout: () => throw TimeoutException('FFmpeg download timed out after 5 minutes'));
+      await saveSettings(settings.copyWith(ffmpegPath: path, autoInstallFfmpeg: true));
+      logs.add('FFmpeg installed: $path');
+      return path;
+    } catch (e) {
+      logs.add('FFmpeg auto-install failed: $e');
+      throw Exception(
+        'FFmpeg is required for audio conversion but could not be installed automatically. '
+        'Install FFmpeg manually and ensure it is on your system PATH, '
+        'or set the path in Settings.',
+      );
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // New feature methods
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /// Multi-source search
+  Future<List<models.SearchResult>> multiSearch(String query) async {
+    try {
+      final results = await searchService.searchAll(query);
+      logs.add('Search found ${results.length} results for "$query"');
+      return results;
+    } catch (e) {
+      logs.add('Search failed: $e');
+      return [];
+    }
+  }
+
+  /// Add a SearchResult to the download queue.
+  void addSearchResultToQueue(models.SearchResult result, {String? format}) {
+    final fmt = format ?? _settings?.defaultAudioFormat ?? 'mp3';
+    addToQueue(
+      PreviewItem(
+        id: result.id,
+        title: result.title,
+        url: 'https://www.youtube.com/watch?v=${result.id}',
+        uploader: result.artist,
+        duration: result.duration,
+        thumbnailUrl: result.thumbnailUrl,
+      ),
+      fmt,
     );
-    await saveSettings(settings.copyWith(ffmpegPath: path, autoInstallFfmpeg: true));
-    logs.add('FFmpeg installed: $path');
-    return path;
+  }
+
+  /// Bulk import: parses queries and adds each best match to the queue.
+  Future<void> processBulkImport(List<String> queries, {String? format}) async {
+    int found = 0;
+    int failed = 0;
+    for (final query in queries) {
+      try {
+        final results = await searchService.youtubeSearcher.search(query, limit: 1);
+        if (results.isEmpty) {
+          failed++;
+          continue;
+        }
+        addSearchResultToQueue(results.first, format: format);
+        found++;
+      } catch (_) {
+        failed++;
+      }
+    }
+    logs.add('Bulk import: $found queued, $failed failed out of ${queries.length}');
+    notifyListeners();
+  }
+
+  /// Record a completed download in statistics and show notification.
+  Future<void> onDownloadCompleted({
+    required String title,
+    required String artist,
+    required String source,
+    required String format,
+    required bool success,
+  }) async {
+    await statisticsService.recordDownload(
+      success: success,
+      artist: artist,
+      source: source,
+      format: format,
+    );
+    if (success && (_settings?.showNotifications ?? false)) {
+      await notificationService.showDownloadComplete(title, artist);
+    }
+  }
+
+  @override
+  void dispose() {
+    previewPlayer.dispose();
+    super.dispose();
   }
 }

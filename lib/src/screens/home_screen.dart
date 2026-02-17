@@ -11,6 +11,11 @@ import '../models/preview_item.dart';
 import '../models/queue_item.dart';
 import '../services/android_saf.dart';
 import '../state/app_controller.dart';
+import 'bulk_import_screen.dart';
+import 'playlist_screen.dart';
+import 'search_screen.dart';
+import 'statistics_screen.dart';
+import 'watched_playlists_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppController controller;
@@ -21,7 +26,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   static final Uri _buyMeCoffeeUri = Uri.parse('https://buymeacoffee.com/orokaconner');
   static final Uri _websiteUri = Uri.parse('https://quizthespire.com/');
   final TextEditingController _urlController = TextEditingController();
@@ -35,8 +40,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final AndroidSaf _androidSaf = AndroidSaf();
 
   bool _expandPlaylist = false;
-  String _downloadFormat = 'MP4';
+  String _downloadFormat = 'mp3';
   bool _settingsInitialized = false;
+  late final TabController _mainTabController;
+  late final TabController _playlistTabController;
   File? _convertFile;
   String _convertTarget = 'mp4';
   String _androidDownloadUri = '';
@@ -51,7 +58,16 @@ class _HomeScreenState extends State<HomeScreen> {
   int _addRangeTo = 1;
 
   @override
+  void initState() {
+    super.initState();
+    _mainTabController = TabController(length: 9, vsync: this);
+    _playlistTabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
   void dispose() {
+    _mainTabController.dispose();
+    _playlistTabController.dispose();
     _urlController.dispose();
     _downloadDirController.dispose();
     _workersController.dispose();
@@ -75,15 +91,19 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         }
 
-        return DefaultTabController(
-          length: 5,
-          child: Scaffold(
+        return Scaffold(
             appBar: AppBar(
               title: const Text('Convert the Spire'),
-              bottom: const TabBar(
-                tabs: [
+              bottom: TabBar(
+                controller: _mainTabController,
+                isScrollable: true,
+                tabs: const [
                   Tab(icon: Icon(Icons.search), text: 'Search'),
+                  Tab(icon: Icon(Icons.travel_explore), text: 'Multi-Search'),
                   Tab(icon: Icon(Icons.queue_music), text: 'Queue'),
+                  Tab(icon: Icon(Icons.playlist_play), text: 'Playlists'),
+                  Tab(icon: Icon(Icons.upload_file), text: 'Bulk Import'),
+                  Tab(icon: Icon(Icons.bar_chart), text: 'Stats'),
                   Tab(icon: Icon(Icons.settings), text: 'Settings'),
                   Tab(icon: Icon(Icons.transform), text: 'Convert'),
                   Tab(icon: Icon(Icons.list_alt), text: 'Logs'),
@@ -91,32 +111,51 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             body: TabBarView(
+              controller: _mainTabController,
               children: [
                 _buildSearchTab(settings),
+                SearchScreen(
+                  key: const ValueKey('multi-search'),
+                  searchService: widget.controller.searchService,
+                  previewPlayer: widget.controller.previewPlayer,
+                  onDownload: (result, format) => widget.controller.addSearchResultToQueue(result, format: format),
+                ),
                 _buildQueueTab(),
+                _buildPlaylistsTab(),
+                BulkImportScreen(
+                  key: const ValueKey('bulk-import'),
+                  importService: widget.controller.bulkImportService,
+                  onProcess: (queries, format) => widget.controller.processBulkImport(queries, format: format),
+                ),
+                StatisticsScreen(
+                  key: const ValueKey('statistics'),
+                  statisticsService: widget.controller.statisticsService,
+                ),
                 _buildSettingsTab(settings),
                 _buildConvertTab(settings),
                 _buildLogsTab(),
               ],
             ),
-          ),
         );
       },
     );
   }
 
   void _initSettings(AppSettings settings) {
-    if (_isAndroid) {
-      _androidDownloadUri = settings.downloadDir;
-      _downloadDirController.text = _formatAndroidFolderLabel(settings.downloadDir);
-    } else {
-      _downloadDirController.text = settings.downloadDir;
-    }
-    _workersController.text = settings.maxWorkers.toString();
-    _retryCountController.text = settings.retryCount.toString();
-    _retryBackoffController.text = settings.retryBackoffSeconds.toString();
-    _expandPlaylist = settings.previewExpandPlaylist;
-    _settingsInitialized = true;
+    setState(() {
+      if (_isAndroid) {
+        _androidDownloadUri = settings.downloadDir;
+        _downloadDirController.text = _formatAndroidFolderLabel(settings.downloadDir);
+      } else {
+        _downloadDirController.text = settings.downloadDir;
+      }
+      _workersController.text = settings.maxWorkers.toString();
+      _retryCountController.text = settings.retryCount.toString();
+      _retryBackoffController.text = settings.retryBackoffSeconds.toString();
+      _expandPlaylist = settings.previewExpandPlaylist;
+      _downloadFormat = settings.defaultAudioFormat;
+      _settingsInitialized = true;
+    });
   }
 
   String _formatAndroidFolderLabel(String uriString) {
@@ -244,15 +283,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     Column(
                       children: [
                         DropdownButtonFormField<String>(
+                          key: ValueKey('fmt-narrow-$_downloadFormat'),
                           initialValue: _downloadFormat,
                           decoration: const InputDecoration(
                             labelText: 'Format',
                             border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.video_library),
+                            prefixIcon: Icon(Icons.audio_file),
                           ),
                           items: const [
-                            DropdownMenuItem(value: 'MP4', child: Text('MP4 (Video)')),
-                            DropdownMenuItem(value: 'MP3', child: Text('MP3 (Audio)')),
+                            DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+                            DropdownMenuItem(value: 'm4a', child: Text('M4A')),
+                            DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
                           ],
                           onChanged: (value) {
                             if (value == null) return;
@@ -280,15 +321,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
+                            key: ValueKey('fmt-wide-$_downloadFormat'),
                             initialValue: _downloadFormat,
                             decoration: const InputDecoration(
                               labelText: 'Format',
                               border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.video_library),
+                              prefixIcon: Icon(Icons.audio_file),
                             ),
                             items: const [
-                              DropdownMenuItem(value: 'MP4', child: Text('MP4 (Video)')),
-                              DropdownMenuItem(value: 'MP3', child: Text('MP3 (Audio)')),
+                              DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+                              DropdownMenuItem(value: 'm4a', child: Text('M4A')),
+                              DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
                             ],
                             onChanged: (value) {
                               if (value == null) return;
@@ -342,6 +385,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Expanded(
                           flex: 2,
                           child: DropdownButtonFormField<String>(
+                            key: ValueKey('preset-$_previewPreset'),
                             initialValue: _previewPreset,
                             decoration: const InputDecoration(
                               labelText: 'Preview amount',
@@ -637,9 +681,19 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Ensure range sliders stay in bounds
-    _addRangeFrom = _addRangeFrom.clamp(1, items.length);
-    _addRangeTo = _addRangeTo.clamp(_addRangeFrom, items.length);
+    // Ensure range sliders stay in bounds (computed locally, not mutating state)
+    final clampedFrom = _addRangeFrom.clamp(1, items.length);
+    final clampedTo = _addRangeTo.clamp(clampedFrom, items.length);
+    if (clampedFrom != _addRangeFrom || clampedTo != _addRangeTo) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _addRangeFrom = clampedFrom;
+            _addRangeTo = clampedTo;
+          });
+        }
+      });
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -965,7 +1019,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(
-        _downloadFormat == 'MP4' ? Icons.video_file : Icons.audio_file,
+        _downloadFormat == 'mp4' ? Icons.video_file : Icons.audio_file,
         color: Colors.grey[600],
       ),
     );
@@ -1043,8 +1097,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         DropdownButton<String>(
                           value: _downloadFormat,
                           items: const [
-                            DropdownMenuItem(value: 'MP4', child: Text('MP4 (Video)')),
-                            DropdownMenuItem(value: 'MP3', child: Text('MP3 (Audio)')),
+                            DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+                            DropdownMenuItem(value: 'm4a', child: Text('M4A')),
+                            DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
                           ],
                           onChanged: (value) {
                             if (value == null) return;
@@ -1118,8 +1173,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         DropdownButton<String>(
                           value: _downloadFormat,
                           items: const [
-                            DropdownMenuItem(value: 'MP4', child: Text('MP4 (Video)')),
-                            DropdownMenuItem(value: 'MP3', child: Text('MP3 (Audio)')),
+                            DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+                            DropdownMenuItem(value: 'm4a', child: Text('M4A')),
+                            DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
                           ],
                           onChanged: (value) {
                             if (value == null) return;
@@ -1218,11 +1274,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               Text('${item.progress}%'),
                               DropdownButton<String>(
-                                value: item.format.toUpperCase(),
+                                value: item.format,
                                 isDense: true,
                                 items: const [
-                                  DropdownMenuItem(value: 'MP4', child: Text('MP4')),
-                                  DropdownMenuItem(value: 'MP3', child: Text('MP3')),
+                                  DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+                                  DropdownMenuItem(value: 'm4a', child: Text('M4A')),
+                                  DropdownMenuItem(value: 'mp4', child: Text('MP4')),
                                 ],
                                 onChanged: item.status == DownloadStatus.downloading ||
                                             item.status == DownloadStatus.converting ||
@@ -1230,7 +1287,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ? null
                                     : (value) {
                                         if (value == null) return;
-                                        widget.controller.changeQueueItemFormat(item, value.toLowerCase());
+                                        widget.controller.changeQueueItemFormat(item, value);
                                       },
                               ),
                             ],
@@ -1378,8 +1435,40 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // SETTINGS TAB
+  // PLAYLISTS TAB (combines playlist manager + watched playlists)
   // ---------------------------------------------------------------------------
+
+  Widget _buildPlaylistsTab() {
+    return Column(
+      children: [
+        TabBar(
+          controller: _playlistTabController,
+          tabs: const [
+            Tab(text: 'Playlist Manager'),
+            Tab(text: 'Watched Playlists'),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _playlistTabController,
+            children: [
+                PlaylistScreen(
+                  playlistService: widget.controller.playlistService,
+                  onDownloadMissing: (tracks, format) {
+                    for (final t in tracks) {
+                      widget.controller.addSearchResultToQueue(t, format: format);
+                    }
+                  },
+                ),
+                WatchedPlaylistsScreen(
+                  watchedService: widget.controller.watchedPlaylistService,
+                ),
+              ],
+            ),
+          ),
+        ],
+    );
+  }
 
   Widget _buildSettingsTab(AppSettings? settings) {
     if (settings == null) {
@@ -1861,6 +1950,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
+                    key: ValueKey('convert-$_convertTarget'),
                     initialValue: _convertTarget,
                     decoration: const InputDecoration(
                       labelText: 'Convert to format',
@@ -1869,8 +1959,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     items: const [
                       DropdownMenuItem(value: 'mp3', child: Text('MP3 (Audio)')),
+                      DropdownMenuItem(value: 'm4a', child: Text('M4A (Audio)')),
                       DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
-                      DropdownMenuItem(value: 'wav', child: Text('WAV (Audio)')),
                       DropdownMenuItem(value: 'png', child: Text('PNG (Image)')),
                       DropdownMenuItem(value: 'jpg', child: Text('JPG (Image)')),
                       DropdownMenuItem(value: 'pdf', child: Text('PDF (Document)')),

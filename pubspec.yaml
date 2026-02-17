@@ -13,7 +13,7 @@ dependencies:
   path_provider: ^2.1.2
   file_picker: ^10.3.10
   url_launcher: ^6.2.5
-  youtube_explode_dart: ^2.1.2
+  youtube_explode_dart: ^3.0.5
   archive: ^3.4.10
   image: ^4.3.0
   mime: ^1.0.4
@@ -21,6 +21,30 @@ dependencies:
   crypto: ^3.0.3
   ffmpeg_kit_flutter_new: ^4.1.0
   pdf: ^3.10.7
+
+  # Download & HTTP
+  dio: ^5.4.0
+
+  # Audio playback / preview
+  just_audio: ^0.9.36
+
+  # Storage
+  shared_preferences: ^2.2.2
+
+  # UI components
+  fl_chart: ^0.66.0
+
+  # Notifications
+  flutter_local_notifications: ^16.3.0
+
+  # Sharing
+  share_plus: ^7.2.1
+
+  # CSV parsing
+  csv: ^5.1.1
+
+  # HTML parsing
+  html: ^0.15.4
 
 dev_dependencies:
   flutter_test:

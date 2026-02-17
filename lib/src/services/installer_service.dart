@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -59,14 +60,24 @@ class InstallerService {
   Future<Uint8List> _download(Uri url, {void Function(int percent, String message)? onProgress}) async {
     final client = http.Client();
     try {
-      final response = await client.send(http.Request('GET', url));
+      final response = await client.send(http.Request('GET', url))
+          .timeout(const Duration(seconds: 30),
+              onTimeout: () => throw TimeoutException('FFmpeg download request timed out'));
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception('Download failed: ${response.statusCode}');
       }
       final total = response.contentLength ?? 0;
       final bytes = <int>[];
       int received = 0;
-      await for (final chunk in response.stream) {
+      // Add stall detection: abort if no data for 60 seconds
+      final streamData = response.stream.timeout(
+        const Duration(seconds: 60),
+        onTimeout: (sink) {
+          sink.addError(TimeoutException('FFmpeg download stalled – no data for 60 seconds'));
+          sink.close();
+        },
+      );
+      await for (final chunk in streamData) {
         bytes.addAll(chunk);
         received += chunk.length;
         if (total > 0) {

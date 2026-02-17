@@ -71,10 +71,6 @@ class ConvertService {
   bool _isMediaTarget(String target) {
     return <String>{
       'mp3',
-      'wav',
-      'ogg',
-      'flac',
-      'aac',
       'm4a',
       'mp4',
       'avi',
@@ -155,7 +151,7 @@ class ConvertService {
       <String>[
         '-y',
         '-i', input.path,
-        if (<String>{'mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'}.contains(target)) '-vn',
+        if (<String>{'mp3', 'm4a'}.contains(target)) '-vn',
         outputPath,
       ],
       ffmpegPath: ffmpegPath,

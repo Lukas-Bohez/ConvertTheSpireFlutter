@@ -35,14 +35,29 @@ class FfmpegService {
     }
   }
 
+  /// Resolves a working FFmpeg path.
+  /// Returns the configured path if it exists, or `'ffmpeg'` if FFmpeg
+  /// is available on the system PATH, or `null` if not found anywhere.
+  Future<String?> resolveAvailablePath(String? configuredPath) async {
+    if (kIsWeb) return null;
+    if (Platform.isAndroid || Platform.isIOS) return configuredPath;
+
+    // 1. Check configured path
+    if (configuredPath != null && configuredPath.trim().isNotEmpty) {
+      if (await File(configuredPath).exists()) return configuredPath;
+    }
+
+    // 2. Check system PATH
+    try {
+      final result = await Process.run('ffmpeg', ['-version'])
+          .timeout(const Duration(seconds: 5));
+      if (result.exitCode == 0) return 'ffmpeg';
+    } catch (_) {}
+
+    return null;
+  }
+
   Future<bool> isAvailable(String? ffmpegPath) async {
-    if (kIsWeb) return false;
-    if (Platform.isAndroid || Platform.isIOS) {
-      return true;
-    }
-    if (ffmpegPath == null || ffmpegPath.trim().isEmpty) {
-      return false;
-    }
-    return File(ffmpegPath).exists();
+    return await resolveAvailablePath(ffmpegPath) != null;
   }
 }

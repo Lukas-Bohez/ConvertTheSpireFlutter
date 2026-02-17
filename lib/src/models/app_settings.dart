@@ -13,6 +13,13 @@ class AppSettings {
   final int convertCleanupMinutes;
   final int convertMaxAgeHours;
 
+  // ── New feature settings ─────────────────────────────────────────────
+  final String defaultAudioFormat;   // mp3, m4a
+  final int defaultBitrate;          // kbps (0 = format default)
+  final int minimumBitrate;          // quality gate; 0 = disabled
+  final String namingTemplate;       // file organisation template
+  final String? soundcloudClientId;  // optional SoundCloud API key
+
   const AppSettings({
     required this.downloadDir,
     required this.maxWorkers,
@@ -27,6 +34,11 @@ class AppSettings {
     required this.convertMaxMb,
     required this.convertCleanupMinutes,
     required this.convertMaxAgeHours,
+    this.defaultAudioFormat = 'mp3',
+    this.defaultBitrate = 0,
+    this.minimumBitrate = 0,
+    this.namingTemplate = '{artist}/{title}',
+    this.soundcloudClientId,
   });
 
   factory AppSettings.defaults({required String downloadDir}) {
@@ -44,6 +56,11 @@ class AppSettings {
       convertMaxMb: 0,
       convertCleanupMinutes: 15,
       convertMaxAgeHours: 2,
+      defaultAudioFormat: 'mp3',
+      defaultBitrate: 0,
+      minimumBitrate: 0,
+      namingTemplate: '{artist}/{title}',
+      soundcloudClientId: null,
     );
   }
 
@@ -61,6 +78,11 @@ class AppSettings {
     int? convertMaxMb,
     int? convertCleanupMinutes,
     int? convertMaxAgeHours,
+    String? defaultAudioFormat,
+    int? defaultBitrate,
+    int? minimumBitrate,
+    String? namingTemplate,
+    String? soundcloudClientId,
   }) {
     return AppSettings(
       downloadDir: downloadDir ?? this.downloadDir,
@@ -76,6 +98,11 @@ class AppSettings {
       convertMaxMb: convertMaxMb ?? this.convertMaxMb,
       convertCleanupMinutes: convertCleanupMinutes ?? this.convertCleanupMinutes,
       convertMaxAgeHours: convertMaxAgeHours ?? this.convertMaxAgeHours,
+      defaultAudioFormat: defaultAudioFormat ?? this.defaultAudioFormat,
+      defaultBitrate: defaultBitrate ?? this.defaultBitrate,
+      minimumBitrate: minimumBitrate ?? this.minimumBitrate,
+      namingTemplate: namingTemplate ?? this.namingTemplate,
+      soundcloudClientId: soundcloudClientId ?? this.soundcloudClientId,
     );
   }
 
@@ -96,6 +123,11 @@ class AppSettings {
       convertMaxMb: (json['convert_max_mb'] as num?)?.toInt() ?? 0,
       convertCleanupMinutes: (json['convert_cleanup_minutes'] as num?)?.toInt() ?? 15,
       convertMaxAgeHours: (json['convert_max_age_hours'] as num?)?.toInt() ?? 2,
+      defaultAudioFormat: json['default_audio_format'] as String? ?? 'mp3',
+      defaultBitrate: (json['default_bitrate'] as num?)?.toInt() ?? 0,
+      minimumBitrate: (json['minimum_bitrate'] as num?)?.toInt() ?? 0,
+      namingTemplate: json['naming_template'] as String? ?? '{artist}/{title}',
+      soundcloudClientId: json['soundcloud_client_id'] as String?,
     );
   }
 
@@ -114,6 +146,11 @@ class AppSettings {
       'convert_max_mb': convertMaxMb,
       'convert_cleanup_minutes': convertCleanupMinutes,
       'convert_max_age_hours': convertMaxAgeHours,
+      'default_audio_format': defaultAudioFormat,
+      'default_bitrate': defaultBitrate,
+      'minimum_bitrate': minimumBitrate,
+      'naming_template': namingTemplate,
+      'soundcloud_client_id': soundcloudClientId,
     };
   }
 }
