@@ -91,27 +91,34 @@ class _BulkImportScreenState extends State<BulkImportScreen>
             ),
           ),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.start,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              const Text('Format: '),
-              DropdownButton<String>(
-                value: _selectedFormat,
-                items: const [
-                  DropdownMenuItem(value: 'mp3', child: Text('MP3')),
-                  DropdownMenuItem(value: 'm4a', child: Text('M4A')),
-                  DropdownMenuItem(value: 'mp4', child: Text('MP4')),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Format: '),
+                  DropdownButton<String>(
+                    value: _selectedFormat,
+                    items: const [
+                      DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+                      DropdownMenuItem(value: 'm4a', child: Text('M4A')),
+                      DropdownMenuItem(value: 'mp4', child: Text('MP4')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setState(() => _selectedFormat = v);
+                    },
+                  ),
                 ],
-                onChanged: (v) {
-                  if (v != null) setState(() => _selectedFormat = v);
-                },
               ),
-              const Spacer(),
               ElevatedButton.icon(
                 icon: const Icon(Icons.text_fields),
                 label: const Text('Import from Text'),
                 onPressed: _processing ? null : _importFromText,
               ),
-              const SizedBox(width: 8),
               ElevatedButton.icon(
                 icon: const Icon(Icons.file_upload),
                 label: const Text('Import from File'),

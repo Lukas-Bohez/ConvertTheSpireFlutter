@@ -92,10 +92,12 @@ class InstallerService {
   }
 
   Future<File?> _findFfmpegExe(Directory root) async {
+    final isWindows = Platform.isWindows;
     await for (final entity in root.list(recursive: true, followLinks: false)) {
-      if (entity is File && entity.path.toLowerCase().endsWith('ffmpeg.exe')) {
-        return entity;
-      }
+      if (entity is! File) continue;
+      final name = entity.uri.pathSegments.last.toLowerCase();
+      if (isWindows && name == 'ffmpeg.exe') return entity;
+      if (!isWindows && name == 'ffmpeg') return entity;
     }
     return null;
   }

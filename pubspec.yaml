@@ -35,7 +35,7 @@ dependencies:
   fl_chart: ^0.66.0
 
   # Notifications
-  flutter_local_notifications: ^16.3.0
+  flutter_local_notifications: ^20.1.0
 
   # Sharing
   share_plus: ^7.2.1

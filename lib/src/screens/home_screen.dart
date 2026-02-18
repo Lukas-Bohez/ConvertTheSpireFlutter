@@ -14,6 +14,7 @@ import '../state/app_controller.dart';
 import 'bulk_import_screen.dart';
 import 'playlist_screen.dart';
 import 'search_screen.dart';
+import 'guide_screen.dart';
 import 'statistics_screen.dart';
 import 'watched_playlists_screen.dart';
 
@@ -47,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   File? _convertFile;
   String _convertTarget = 'mp4';
   String _androidDownloadUri = '';
+  int _selectedPageIndex = 0;
 
   /// Playlist preview amount: '10', '25', '50', '100', 'all', 'custom'
   String _previewPreset = '25';
@@ -60,7 +62,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _mainTabController = TabController(length: 9, vsync: this);
+    _mainTabController = TabController(length: 10, vsync: this);
+    _mainTabController.addListener(() {
+      if (!_mainTabController.indexIsChanging) {
+        setState(() => _selectedPageIndex = _mainTabController.index);
+      }
+    });
     _playlistTabController = TabController(length: 2, vsync: this);
   }
 
@@ -79,6 +86,121 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  static const _navItems = <_NavItem>[
+    _NavItem(0, Icons.search, 'Search', 'Search & Discovery'),
+    _NavItem(1, Icons.travel_explore, 'Multi-Search', 'Search & Discovery'),
+    _NavItem(2, Icons.queue_music, 'Queue', 'Downloads'),
+    _NavItem(3, Icons.playlist_play, 'Playlists', 'Downloads'),
+    _NavItem(4, Icons.upload_file, 'Bulk Import', 'Downloads'),
+    _NavItem(5, Icons.bar_chart, 'Stats', 'Tools'),
+    _NavItem(6, Icons.settings, 'Settings', null),
+    _NavItem(7, Icons.transform, 'Convert', 'Tools'),
+    _NavItem(8, Icons.list_alt, 'Logs', 'Tools'),
+    _NavItem(9, Icons.menu_book, 'Guide', null),
+  ];
+
+  Widget _buildPageContent(int index, AppSettings? settings) {
+    switch (index) {
+      case 0:
+        return _buildSearchTab(settings);
+      case 1:
+        return SearchScreen(
+          key: const ValueKey('multi-search'),
+          searchService: widget.controller.searchService,
+          previewPlayer: widget.controller.previewPlayer,
+          onDownload: (result, format) =>
+              widget.controller.addSearchResultToQueue(result, format: format),
+        );
+      case 2:
+        return _buildQueueTab();
+      case 3:
+        return _buildPlaylistsTab();
+      case 4:
+        return BulkImportScreen(
+          key: const ValueKey('bulk-import'),
+          importService: widget.controller.bulkImportService,
+          onProcess: (queries, format) =>
+              widget.controller.processBulkImport(queries, format: format),
+        );
+      case 5:
+        return StatisticsScreen(
+          key: const ValueKey('statistics'),
+          statisticsService: widget.controller.statisticsService,
+        );
+      case 6:
+        return _buildSettingsTab(settings);
+      case 7:
+        return _buildConvertTab(settings);
+      case 8:
+        return _buildLogsTab();
+      case 9:
+        return const GuideScreen(key: ValueKey('guide'));
+      default:
+        return _buildSearchTab(settings);
+    }
+  }
+
+  Widget _buildNavigationDrawer() {
+    final cs = Theme.of(context).colorScheme;
+    String? lastGroup;
+    final children = <Widget>[
+      DrawerHeader(
+        decoration: BoxDecoration(color: cs.primaryContainer),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Icon(Icons.music_note, size: 48, color: cs.onPrimaryContainer),
+            const SizedBox(height: 8),
+            Text('Convert the Spire',
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: cs.onPrimaryContainer)),
+          ],
+        ),
+      ),
+    ];
+
+    for (final item in _navItems) {
+      if (item.group != lastGroup) {
+        if (lastGroup != null) children.add(const Divider());
+        if (item.group != null) {
+          children.add(Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text(item.group!,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: cs.primary,
+                    letterSpacing: 0.5)),
+          ));
+        }
+        lastGroup = item.group;
+      }
+      final selected = _selectedPageIndex == item.index;
+      children.add(ListTile(
+        leading: Icon(item.icon, color: selected ? cs.primary : null),
+        title: Text(item.label,
+            style: TextStyle(
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                color: selected ? cs.primary : null)),
+        selected: selected,
+        selectedTileColor: cs.primaryContainer,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        onTap: () {
+          setState(() {
+            _selectedPageIndex = item.index;
+            _mainTabController.index = item.index;
+          });
+          Navigator.pop(context);
+        },
+      ));
+    }
+
+    return Drawer(child: ListView(padding: EdgeInsets.zero, children: children));
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -89,6 +211,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _initSettings(settings);
           });
+        }
+
+        if (_isNarrowLayout(context)) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Convert the Spire')),
+            drawer: _buildNavigationDrawer(),
+            body: _buildPageContent(_selectedPageIndex, settings),
+          );
         }
 
         return Scaffold(
@@ -107,6 +237,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Tab(icon: Icon(Icons.settings), text: 'Settings'),
                   Tab(icon: Icon(Icons.transform), text: 'Convert'),
                   Tab(icon: Icon(Icons.list_alt), text: 'Logs'),
+                  Tab(icon: Icon(Icons.menu_book), text: 'Guide'),
                 ],
               ),
             ),
@@ -134,6 +265,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 _buildSettingsTab(settings),
                 _buildConvertTab(settings),
                 _buildLogsTab(),
+                const GuideScreen(key: ValueKey('guide')),
               ],
             ),
         );
@@ -1613,6 +1745,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       hintText: 'Number of concurrent downloads',
                     ),
                     keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(2),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   SwitchListTile(
@@ -2229,4 +2365,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
     return result;
   }
+}
+
+class _NavItem {
+  final int index;
+  final IconData icon;
+  final String label;
+  final String? group;
+
+  const _NavItem(this.index, this.icon, this.label, this.group);
 }

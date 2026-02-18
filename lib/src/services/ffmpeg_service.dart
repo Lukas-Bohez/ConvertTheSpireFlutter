@@ -19,11 +19,24 @@ class FfmpegService {
       return;
     }
 
-    if (ffmpegPath == null || ffmpegPath.trim().isEmpty) {
-      throw Exception('FFmpeg path not configured');
+    // Resolve the actual executable: use configured path, or fall back to
+    // system PATH on desktop so users don't have to manually configure it.
+    String exe;
+    if (ffmpegPath != null && ffmpegPath.trim().isNotEmpty) {
+      exe = ffmpegPath;
+    } else {
+      final resolved = await resolveAvailablePath(null);
+      if (resolved == null) {
+        throw Exception(
+          'FFmpeg is not installed or not on your system PATH. '
+          'Install it (e.g. "sudo apt install ffmpeg" on Linux) '
+          'or set the path in Settings.',
+        );
+      }
+      exe = resolved;
     }
 
-    final result = await Process.run(ffmpegPath, args, runInShell: false)
+    final result = await Process.run(exe, args, runInShell: false)
         .timeout(const Duration(minutes: 30), onTimeout: () {
       throw Exception('FFmpeg timed out after 30 minutes');
     });
@@ -38,9 +51,11 @@ class FfmpegService {
   /// Resolves a working FFmpeg path.
   /// Returns the configured path if it exists, or `'ffmpeg'` if FFmpeg
   /// is available on the system PATH, or `null` if not found anywhere.
+  /// On Android/iOS, FFmpegKit is bundled so FFmpeg is always available.
   Future<String?> resolveAvailablePath(String? configuredPath) async {
     if (kIsWeb) return null;
-    if (Platform.isAndroid || Platform.isIOS) return configuredPath;
+    // FFmpegKit is bundled into the app on mobile — always available.
+    if (Platform.isAndroid || Platform.isIOS) return configuredPath ?? 'ffmpeg';
 
     // 1. Check configured path
     if (configuredPath != null && configuredPath.trim().isNotEmpty) {

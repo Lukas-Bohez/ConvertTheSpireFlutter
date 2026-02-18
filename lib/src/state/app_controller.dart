@@ -437,8 +437,19 @@ class AppController extends ChangeNotifier {
     if (kIsWeb) {
       throw Exception('FFmpeg is not available on web.');
     }
+    if (Platform.isLinux) {
+      throw Exception(
+        'FFmpeg is required for audio conversion but was not found on your system PATH.\n'
+        'Install it with: sudo apt install ffmpeg\n'
+        'Or on Fedora: sudo dnf install ffmpeg\n'
+        'Or set the path manually in Settings.',
+      );
+    }
     if (!Platform.isWindows) {
-      throw Exception('FFmpeg is required for this operation on desktop.');
+      throw Exception(
+        'FFmpeg is required for audio conversion but was not found.\n'
+        'Install it via your system package manager or set the path in Settings.',
+      );
     }
 
     logs.add('FFmpeg not found. Downloading automatically...');

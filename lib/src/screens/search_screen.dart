@@ -90,9 +90,10 @@ class _SearchScreenState extends State<SearchScreen>
       children: [
         Padding(
           padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final narrow = constraints.maxWidth < 500;
+              final searchField = Expanded(
                 child: TextField(
                   controller: _controller,
                   decoration: const InputDecoration(
@@ -103,9 +104,8 @@ class _SearchScreenState extends State<SearchScreen>
                   ),
                   onSubmitted: (_) => _search(),
                 ),
-              ),
-              const SizedBox(width: 8),
-              DropdownButton<String>(
+              );
+              final formatDropdown = DropdownButton<String>(
                 value: _selectedFormat,
                 items: const [
                   DropdownMenuItem(value: 'mp3', child: Text('MP3')),
@@ -115,13 +115,38 @@ class _SearchScreenState extends State<SearchScreen>
                 onChanged: (v) {
                   if (v != null) setState(() => _selectedFormat = v);
                 },
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
+              );
+              final searchButton = ElevatedButton(
                 onPressed: _loading ? null : _search,
                 child: const Text('Search'),
-              ),
-            ],
+              );
+
+              if (narrow) {
+                return Column(
+                  children: [
+                    Row(children: [searchField]),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        formatDropdown,
+                        const Spacer(),
+                        searchButton,
+                      ],
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  searchField,
+                  const SizedBox(width: 8),
+                  formatDropdown,
+                  const SizedBox(width: 8),
+                  searchButton,
+                ],
+              );
+            },
           ),
         ),
         if (_loading) const LinearProgressIndicator(),

@@ -5,9 +5,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Cross-platform local notification helper.
 ///
-/// flutter_local_notifications does not ship a Windows implementation.
 /// All public methods silently no-op on unsupported platforms so callers
-/// never need to worry about [LateInitializationError].
+/// never need to worry about platform errors.
 class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   bool _initialised = false;
@@ -15,7 +14,7 @@ class NotificationService {
   /// Whether the current platform has a notification implementation.
   static bool get _supported =>
       !kIsWeb &&
-      (Platform.isAndroid || Platform.isIOS || Platform.isMacOS || Platform.isLinux);
+      (Platform.isAndroid || Platform.isIOS || Platform.isMacOS || Platform.isLinux || Platform.isWindows);
 
   Future<void> initialize() async {
     if (!_supported || _initialised) return;
@@ -32,7 +31,7 @@ class NotificationService {
     );
 
     try {
-      await _plugin.initialize(settings);
+      await _plugin.initialize(settings: settings);
       _initialised = true;
     } catch (_) {
       // Platform not supported – silently disable notifications.
@@ -56,10 +55,10 @@ class NotificationService {
 
     try {
       await _plugin.show(
-        DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        'Download Complete',
-        '$title – $artist',
-        details,
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title: 'Download Complete',
+        body: '$title \u2013 $artist',
+        notificationDetails: details,
       );
     } catch (_) {
       // Notification failure must never affect downloads.
@@ -85,14 +84,14 @@ class NotificationService {
     );
 
     try {
-      await _plugin.show(id, 'Downloading', title, details);
+      await _plugin.show(id: id, title: 'Downloading', body: title, notificationDetails: details);
     } catch (_) {}
   }
 
   Future<void> cancel(int id) async {
     if (!_initialised) return;
     try {
-      await _plugin.cancel(id);
+      await _plugin.cancel(id: id);
     } catch (_) {}
   }
 }
