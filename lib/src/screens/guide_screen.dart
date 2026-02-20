@@ -104,7 +104,7 @@ class GuideScreen extends StatelessWidget {
                 _RequirementRow(
                   text: 'FFmpeg',
                   detail:
-                      'Required for audio conversion. The app can auto-install it, or you can provide a custom path in Settings.',
+                      'Required for audio conversion. On Windows it is installed automatically on first launch. On Linux, install via your package manager (e.g. sudo apt install ffmpeg).',
                 ),
                 SizedBox(height: 8),
                 _RequirementRow(
@@ -200,7 +200,7 @@ class GuideScreen extends StatelessWidget {
                 _TipRow(
                   title: 'Downloads fail at 0%',
                   detail:
-                      'This usually means FFmpeg is missing. Go to Settings and enable auto-install, or install FFmpeg manually and ensure it is on your system PATH.',
+                      'This usually means FFmpeg is missing. On Windows the app installs it automatically; on Linux run: sudo apt install ffmpeg (or dnf install ffmpeg on Fedora).',
                 ),
                 SizedBox(height: 10),
                 _TipRow(

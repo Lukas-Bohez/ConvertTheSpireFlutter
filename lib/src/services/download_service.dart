@@ -102,11 +102,16 @@ class DownloadService {
       if (streams.muxed.isNotEmpty) {
         sourceStream = streams.muxed.withHighestBitrate();
         tempFilePath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.mp4';
-      } else {
+      } else if (streams.audioOnly.isNotEmpty) {
         sourceStream = streams.audioOnly.withHighestBitrate();
         tempFilePath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.webm';
+      } else {
+        throw Exception('No downloadable streams found for this video. It may be region-restricted or DRM-protected.');
       }
     } else {
+      if (streams.muxed.isEmpty) {
+        throw Exception('No downloadable video streams found for this video. It may be region-restricted or DRM-protected.');
+      }
       sourceStream = streams.muxed.withHighestBitrate();
       tempFilePath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.mp4';
     }

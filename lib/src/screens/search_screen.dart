@@ -61,6 +61,7 @@ class _SearchScreenState extends State<SearchScreen>
     _hoverTimer = Timer(const Duration(seconds: 2), () async {
       try {
         final url = await widget.searchService.youtubeSearcher.getAudioUrl(result.id);
+        if (!mounted) return;
         setState(() => _previewingId = result.id);
         await widget.previewPlayer.previewAudio(url);
       } catch (_) {}

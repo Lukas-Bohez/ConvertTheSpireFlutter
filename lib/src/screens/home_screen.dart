@@ -33,7 +33,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _downloadDirController = TextEditingController();
   final TextEditingController _workersController = TextEditingController();
-  final TextEditingController _ffmpegChecksumController = TextEditingController();
   final TextEditingController _retryCountController = TextEditingController();
   final TextEditingController _retryBackoffController = TextEditingController();
   final TextEditingController _rangeFromController = TextEditingController();
@@ -78,7 +77,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _urlController.dispose();
     _downloadDirController.dispose();
     _workersController.dispose();
-    _ffmpegChecksumController.dispose();
     _retryCountController.dispose();
     _retryBackoffController.dispose();
     _rangeFromController.dispose();
@@ -209,6 +207,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         final settings = widget.controller.settings;
         if (settings != null && !_settingsInitialized) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
             _initSettings(settings);
           });
         }
@@ -1777,43 +1776,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     children: [
                       const Icon(Icons.code),
                       const SizedBox(width: 8),
-                      Text('FFmpeg Settings', style: Theme.of(context).textTheme.titleLarge),
+                      Text('FFmpeg', style: Theme.of(context).textTheme.titleLarge),
                     ],
                   ),
                   const Divider(),
                   const SizedBox(height: 8),
-                  SwitchListTile(
-                    value: settings.autoInstallFfmpeg,
-                    onChanged: (value) {
-                      widget.controller.saveSettings(settings.copyWith(autoInstallFfmpeg: value));
-                    },
-                    title: const Text('Auto-install FFmpeg'),
-                    subtitle: const Text('Automatically download FFmpeg if not found'),
-                    secondary: const Icon(Icons.download_for_offline),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _ffmpegChecksumController,
-                    decoration: const InputDecoration(
-                      labelText: 'FFmpeg SHA256 checksum (optional)',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.security),
-                      hintText: 'For verifying downloads',
+                  ListTile(
+                    leading: Icon(
+                      settings.ffmpegPath != null && settings.ffmpegPath!.isNotEmpty
+                          ? Icons.check_circle
+                          : Icons.info_outline,
+                      color: settings.ffmpegPath != null && settings.ffmpegPath!.isNotEmpty
+                          ? Colors.green
+                          : Colors.orange,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Center(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.build),
-                      label: const Text('Install FFmpeg Manually'),
-                      onPressed: () async {
-                        final url = await _promptForUrl(context, 'FFmpeg download URL');
-                        if (url == null) return;
-                        await widget.controller.installFfmpeg(
-                          Uri.parse(url),
-                          checksum: _ffmpegChecksumController.text.trim(),
-                        );
-                      },
+                    title: Text(
+                      settings.ffmpegPath != null && settings.ffmpegPath!.isNotEmpty
+                          ? 'FFmpeg installed'
+                          : 'FFmpeg not configured',
+                    ),
+                    subtitle: Text(
+                      settings.ffmpegPath != null && settings.ffmpegPath!.isNotEmpty
+                          ? settings.ffmpegPath!
+                          : 'Will be installed automatically on Windows when needed',
                     ),
                   ),
                 ],

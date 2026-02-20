@@ -81,6 +81,36 @@ class AppController extends ChangeNotifier {
     await statisticsService.load();
     await notificationService.initialize();
     notifyListeners();
+
+    // Auto-install FFmpeg on boot (desktop only; mobile bundles FFmpegKit)
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      _ensureFfmpegOnBoot();
+    }
+  }
+
+  /// Fire-and-forget FFmpeg check at startup so it's ready before downloads.
+  void _ensureFfmpegOnBoot() {
+    unawaited(Future(() async {
+      final settings = _settings;
+      if (settings == null) return;
+      final resolved = await downloadService.ffmpeg.resolveAvailablePath(settings.ffmpegPath);
+      if (resolved != null) {
+        // Already available – persist resolved path if it wasn't saved
+        if (settings.ffmpegPath != resolved) {
+          await saveSettings(settings.copyWith(ffmpegPath: resolved));
+        }
+        return;
+      }
+      // Not found – attempt auto-install (Windows only; Linux/macOS log a hint)
+      try {
+        _ffmpegInstall ??= _installFfmpeg(settings);
+        await _ffmpegInstall;
+      } catch (e) {
+        logs.add('FFmpeg not found on startup: $e');
+      } finally {
+        _ffmpegInstall = null;
+      }
+    }).catchError((_) {}));
   }
 
   Future<void> saveSettings(AppSettings next) async {
@@ -256,7 +286,7 @@ class AppController extends ChangeNotifier {
         final pending = queue.where((item) => item.status == DownloadStatus.queued).toList();
         if (pending.isEmpty) break;
 
-        final workers = (_settings?.maxWorkers ?? 3).clamp(1, 5);
+        final workers = (_settings?.maxWorkers ?? 3).clamp(1, 10);
         int index = 0;
 
         Future<void> worker() async {
@@ -292,6 +322,10 @@ class AppController extends ChangeNotifier {
   }
 
   void changeQueueItemFormat(QueueItem item, String newFormat) {
+    // Prevent duplicate: another queue item with the same URL + new format
+    if (queue.any((q) => q.url == item.url && q.format == newFormat)) {
+      return;
+    }
     final updated = item.copyWith(format: newFormat);
     _updateQueue(item, updated);
   }
@@ -416,9 +450,17 @@ class AppController extends ChangeNotifier {
     }
 
     final formatLower = format.toLowerCase();
-    // MP4 is downloaded natively; all audio formats need FFmpeg for conversion
-    if (formatLower == 'mp4') {
+
+    // Non-media formats (images, docs) don't need FFmpeg at all
+    const nonMediaFormats = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'pdf', 'txt', 'zip', 'epub'};
+    if (nonMediaFormats.contains(formatLower)) {
       return settings.ffmpegPath;
+    }
+
+    // MP4 is downloaded natively but may need FFmpeg for thumbnail embed.
+    // Still try to resolve PATH so we have a working path when available.
+    if (formatLower == 'mp4') {
+      return await downloadService.ffmpeg.resolveAvailablePath(settings.ffmpegPath) ?? settings.ffmpegPath;
     }
 
     // Check configured path AND system PATH
@@ -464,7 +506,7 @@ class AppController extends ChangeNotifier {
         },
       ).timeout(const Duration(minutes: 5),
           onTimeout: () => throw TimeoutException('FFmpeg download timed out after 5 minutes'));
-      await saveSettings(settings.copyWith(ffmpegPath: path, autoInstallFfmpeg: true));
+      await saveSettings(settings.copyWith(ffmpegPath: path));
       logs.add('FFmpeg installed: $path');
       return path;
     } catch (e) {
