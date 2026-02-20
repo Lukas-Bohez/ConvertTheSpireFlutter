@@ -59,6 +59,7 @@ class PreviewPlayerService {
 
   void dispose() {
     _autoStopTimer?.cancel();
+    _player?.stop();
     _player?.dispose();
   }
 }

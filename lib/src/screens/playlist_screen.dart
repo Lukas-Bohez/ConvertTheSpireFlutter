@@ -67,6 +67,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       final info = await infoFuture;
       final tracks = await tracksFuture;
 
+      if (!mounted) return;
       setState(() {
         _playlistInfo = info;
         _tracks = tracks;
@@ -75,6 +76,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         _tabController.index = 0; // Switch to Overview tab
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = '$e';
         _loading = false;
@@ -107,6 +109,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         _tracks!,
         folder,
       );
+      if (!mounted) return;
       setState(() {
         _comparison = comparison;
         _loading = false;
@@ -119,6 +122,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         }
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = '$e';
         _loading = false;
@@ -315,7 +319,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
+        color: Theme.of(context).colorScheme.errorContainer,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -415,7 +419,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
           // Uncertain matches warning
           if (_comparison!.uncertainMatches().isNotEmpty)
             Card(
-              color: Colors.amber.shade50,
+              color: Colors.amber.withValues(alpha: 0.15),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(
@@ -525,7 +529,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
               child: LinearProgressIndicator(
                 value: c.completionPercentage / 100,
                 minHeight: 12,
-                backgroundColor: Colors.grey.shade200,
+                backgroundColor: theme.colorScheme.surfaceContainerHighest,
                 valueColor: AlwaysStoppedAnimation(
                   c.completionPercentage >= 100
                       ? Colors.green

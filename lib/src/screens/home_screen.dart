@@ -196,7 +196,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ));
     }
 
-    return Drawer(child: ListView(padding: EdgeInsets.zero, children: children));
+    final bottomPad = MediaQuery.of(context).viewPadding.bottom;
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.only(bottom: bottomPad + 16),
+        children: children,
+      ),
+    );
   }
 
   @override
@@ -216,7 +222,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           return Scaffold(
             appBar: AppBar(title: const Text('Convert the Spire')),
             drawer: _buildNavigationDrawer(),
-            body: _buildPageContent(_selectedPageIndex, settings),
+            body: SafeArea(
+              top: false,
+              child: _buildPageContent(_selectedPageIndex, settings),
+            ),
           );
         }
 
@@ -312,6 +321,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (uri == null || uri.isEmpty) {
       return;
     }
+    if (!mounted) return;
     setState(() {
       _androidDownloadUri = uri;
       _downloadDirController.text = _formatAndroidFolderLabel(uri);
@@ -584,7 +594,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Text(
                         'Video numbers are 1-based (e.g. 1 to 25 = first 25 videos)',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                       ),
                     ],
@@ -599,7 +609,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
-                                ?.copyWith(color: Colors.orange[800]),
+                                ?.copyWith(color: Colors.orange),
                           ),
                         ),
                       ],
@@ -795,16 +805,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              Icon(Icons.info_outline, size: 48, color: Colors.grey[400]),
+              Icon(Icons.info_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
               const SizedBox(height: 16),
               Text(
                 'No preview results yet.',
-                style: TextStyle(color: Colors.grey[600]),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 8),
               Text(
                 'Enter a YouTube URL above and click Search',
-                style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
               ),
             ],
           ),
@@ -1038,7 +1048,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           child: Text(
                             '${index + 1}',
                             style: TextStyle(
-                              color: Colors.grey[500],
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -1074,7 +1084,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         if (item.duration != null)
                           Text(
                             _formatDuration(item.duration!),
-                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
                           ),
                       ],
                     ),
@@ -1146,12 +1156,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       width: 80,
       height: 60,
       decoration: BoxDecoration(
-        color: Colors.grey[300],
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(
         _downloadFormat == 'mp4' ? Icons.video_file : Icons.audio_file,
-        color: Colors.grey[600],
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     );
   }
@@ -1181,16 +1191,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.queue_music, size: 64, color: Colors.grey[400]),
+            Icon(Icons.queue_music, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant),
             const SizedBox(height: 16),
             Text(
               'No items in queue',
-              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
             Text(
               'Add items from the Search tab',
-              style: TextStyle(color: Colors.grey[500]),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -1218,7 +1228,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 4),
                     Text(
                       '${items.length} total \u2022 $inProgressCount downloading \u2022 $completedCount completed',
-                      style: TextStyle(color: Colors.grey[700]),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(height: 8),
                     Wrap(
@@ -1294,7 +1304,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         const SizedBox(height: 4),
                         Text(
                           '${items.length} total \u2022 $inProgressCount downloading \u2022 $completedCount completed',
-                          style: TextStyle(color: Colors.grey[700]),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -1508,7 +1518,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     if (item.progress > 0 && item.progress < 100)
                       LinearProgressIndicator(
                         value: item.progress / 100,
-                        backgroundColor: Colors.grey[200],
+                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                         valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                       ),
                     if (item.error != null && item.status == DownloadStatus.failed)
@@ -1667,7 +1677,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
                           'No folder selected. Downloads will be saved to Downloads/ConvertTheSpireReborn.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange[800]),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange),
                         ),
                       ),
                   ] else ...[
@@ -1692,7 +1702,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               label: const Text('Browse'),
                               onPressed: () async {
                                 final result = await FilePicker.platform.getDirectoryPath();
-                                if (result != null) {
+                                if (result != null && mounted) {
                                   setState(() {
                                     _downloadDirController.text = result;
                                   });
@@ -1723,7 +1733,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             label: const Text('Browse'),
                             onPressed: () async {
                               final result = await FilePicker.platform.getDirectoryPath();
-                              if (result != null) {
+                              if (result != null && mounted) {
                                 setState(() {
                                   _downloadDirController.text = result;
                                 });
@@ -1853,6 +1863,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       hintText: 'Wait time between retries',
                     ),
                     keyboardType: TextInputType.number,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Theme Settings
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.palette_outlined),
+                      const SizedBox(width: 8),
+                      Text('Appearance', style: Theme.of(context).textTheme.titleLarge),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'system', label: Text('System'), icon: Icon(Icons.brightness_auto)),
+                      ButtonSegment(value: 'light', label: Text('Light'), icon: Icon(Icons.light_mode)),
+                      ButtonSegment(value: 'dark', label: Text('Dark'), icon: Icon(Icons.dark_mode)),
+                    ],
+                    selected: {settings.themeMode},
+                    onSelectionChanged: (value) {
+                      widget.controller.saveSettings(settings.copyWith(themeMode: value.first));
+                    },
                   ),
                 ],
               ),
@@ -2029,7 +2072,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 ),
                                 Text(
                                   _convertFile!.path,
-                                  style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                                  style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 2,
                                 ),
@@ -2059,11 +2102,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       child: Center(
                         child: Column(
                           children: [
-                            Icon(Icons.file_present, size: 48, color: Colors.grey[400]),
+                            Icon(Icons.file_present, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
                             const SizedBox(height: 8),
                             Text(
                               'No file selected',
-                              style: TextStyle(color: Colors.grey[600]),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -2239,16 +2282,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.info_outline, size: 64, color: Colors.grey[400]),
+                          Icon(Icons.info_outline, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant),
                           const SizedBox(height: 16),
                           Text(
                             'No logs yet',
-                            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                            style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'Activity will be logged here',
-                            style: TextStyle(color: Colors.grey[500]),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),

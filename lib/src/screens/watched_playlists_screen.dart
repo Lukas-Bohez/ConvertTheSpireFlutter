@@ -44,6 +44,7 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
       return;
     }
     await widget.watchedService.addPlaylist(url);
+    if (!mounted) return;
     _urlController.clear();
     await _loadUrls();
   }

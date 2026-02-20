@@ -39,12 +39,14 @@ class _BulkImportScreenState extends State<BulkImportScreen>
 
     try {
       final queries = widget.importService.parseText(text);
+      if (!mounted) return;
       setState(() => _parsedQueries = queries);
       await widget.onProcess(queries, _selectedFormat);
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = '$e');
     } finally {
-      setState(() => _processing = false);
+      if (mounted) setState(() => _processing = false);
     }
   }
 
@@ -56,6 +58,7 @@ class _BulkImportScreenState extends State<BulkImportScreen>
 
     try {
       final queries = await widget.importService.importFromFile();
+      if (!mounted) return;
       if (queries.isEmpty) {
         setState(() => _processing = false);
         return;
@@ -63,9 +66,10 @@ class _BulkImportScreenState extends State<BulkImportScreen>
       setState(() => _parsedQueries = queries);
       await widget.onProcess(queries, _selectedFormat);
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = '$e');
     } finally {
-      setState(() => _processing = false);
+      if (mounted) setState(() => _processing = false);
     }
   }
 

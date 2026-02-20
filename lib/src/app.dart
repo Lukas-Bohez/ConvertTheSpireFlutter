@@ -119,41 +119,66 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Convert the Spire',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-      ),
-      home: _initError != null
-          ? Scaffold(
-              body: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text('Failed to start', style: Theme.of(context).textTheme.headlineSmall),
-                      const SizedBox(height: 8),
-                      Text(_initError!, textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() { _initError = null; });
-                          _initController();
-                        },
-                        child: const Text('Retry'),
+    return AnimatedBuilder(
+      animation: _controller ?? Listenable.merge([]),
+      builder: (context, _) {
+        final themeMode = _resolveThemeMode(_controller?.settings?.themeMode);
+        return MaterialApp(
+          title: 'Convert the Spire',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.teal,
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          ),
+          themeMode: themeMode,
+          home: _initError != null
+              ? Scaffold(
+                  body: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                          const SizedBox(height: 16),
+                          Text('Failed to start', style: Theme.of(context).textTheme.headlineSmall),
+                          const SizedBox(height: 8),
+                          Text(_initError!, textAlign: TextAlign.center),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() { _initError = null; });
+                              _initController();
+                            },
+                            child: const Text('Retry'),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            )
-          : _controller == null
-              ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-              : HomeScreen(controller: _controller!),
+                )
+              : _controller == null
+                  ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+                  : HomeScreen(controller: _controller!),
+        );
+      },
     );
+  }
+
+  static ThemeMode _resolveThemeMode(String? mode) {
+    switch (mode) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
+    }
   }
 }

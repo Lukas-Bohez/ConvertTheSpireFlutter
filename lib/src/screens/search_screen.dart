@@ -44,11 +44,13 @@ class _SearchScreenState extends State<SearchScreen>
 
     try {
       final results = await widget.searchService.searchAll(query, limitPerSource: 15);
+      if (!mounted) return;
       setState(() {
         _results = results;
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = '$e';
         _loading = false;

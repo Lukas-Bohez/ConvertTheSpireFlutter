@@ -185,8 +185,8 @@ class _StatisticsScreenState extends State<StatisticsScreen>
         label: 'Successful',
         value: _stats.successfulDownloads.toString(),
         color: Colors.green,
-        bgColor: Colors.green.shade50,
-        fgColor: Colors.green.shade900,
+        bgColor: Colors.green.withValues(alpha: 0.15),
+        fgColor: Colors.green,
       ),
       _OverviewCard(
         icon: Icons.error,
