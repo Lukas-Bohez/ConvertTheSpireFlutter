@@ -51,6 +51,7 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
   WebviewController? _winIncognitoController;
 
   bool _winInitError = false; // set true if Windows webview fails to init
+  bool _genericInitError = false; // used for other platforms (Linux/Mac/Android/iOS)
   bool _isIncognito = false;
 
   /// Whether we should attempt to create a WebView controller.  After
@@ -113,9 +114,15 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
     } else if (_webViewSupported) {
       try {
         await _createNormalController();
-        setState(() {});
-      } catch (_) {
-        _addressController.text = 'https://www.youtube.com/';
+        setState(() {
+          _genericInitError = false;
+        });
+      } catch (e) {
+        debugPrint('WebView init error: $e');
+        setState(() {
+          _genericInitError = true;
+          _addressController.text = 'https://www.youtube.com/';
+        });
       }
     } else {
       _addressController.text = 'https://www.youtube.com/';
@@ -491,11 +498,25 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
                           key: const ValueKey('win-normal'),
                           child: Webview(_winController!),
                         )))
-              : (!_webViewSupported || _activeController == null)
+              : (!_webViewSupported)
                   ? const Center(
                       child: Text('WebView not supported in this environment'),
                     )
-                  : WebViewWidget(controller: _activeController!),
+                  : (_activeController == null
+                      ? (_genericInitError
+                          ? Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('Failed to initialize WebView'),
+                                const SizedBox(height: 8),
+                                ElevatedButton(
+                                  onPressed: _setupControllers,
+                                  child: const Text('Retry'),
+                                ),
+                              ],
+                            )
+                          : const Center(child: CircularProgressIndicator()))
+                      : WebViewWidget(controller: _activeController!)),
         ),
       ],
     );
