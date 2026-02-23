@@ -279,12 +279,15 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
     return Container(
       color: bgColor,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        // trimmed padding to give a little more room when space is tight
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         child: IconTheme(
           data: IconThemeData(color: iconColor),
           child: Row(
             children: [
           IconButton(
+            padding: const EdgeInsets.all(4),
+            visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.arrow_back),
             onPressed: () async {
               if (_usingWindows) {
@@ -300,6 +303,8 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
             },
           ),
           IconButton(
+            padding: const EdgeInsets.all(4),
+            visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.arrow_forward),
             onPressed: () async {
               if (_usingWindows) {
@@ -335,6 +340,8 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
             ),
           ),
           IconButton(
+            padding: const EdgeInsets.all(4),
+            visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.refresh),
             onPressed: () {
               if (_usingWindows) {
@@ -346,6 +353,8 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
             },
           ),
           IconButton(
+            padding: const EdgeInsets.all(4),
+            visualDensity: VisualDensity.compact,
             icon: Icon(_isIncognito ? Icons.visibility_off : Icons.visibility),
             tooltip: _isIncognito ? 'Exit incognito' : 'Enter incognito',
             onPressed: () {
@@ -357,11 +366,15 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
             },
           ),
           IconButton(
+            padding: const EdgeInsets.all(4),
+            visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.bookmark),
             tooltip: 'Bookmarks',
             onPressed: _showBookmarksDialog,
           ),
           IconButton(
+            padding: const EdgeInsets.all(4),
+            visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.coffee),
             tooltip: 'Support me',
             onPressed: () async {
@@ -372,6 +385,8 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
             },
           ),
           IconButton(
+            padding: const EdgeInsets.all(4),
+            visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.quiz),
             tooltip: 'Quiz the Spire',
             onPressed: () {
@@ -379,6 +394,8 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
             },
           ),
           IconButton(
+            padding: const EdgeInsets.all(4),
+            visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.download),
             tooltip: 'Download current',
             onPressed: _addCurrentToQueue,
