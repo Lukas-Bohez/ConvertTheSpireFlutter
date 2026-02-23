@@ -17,6 +17,7 @@ import 'search_screen.dart';
 import 'guide_screen.dart';
 import 'statistics_screen.dart';
 import 'watched_playlists_screen.dart';
+import 'browser_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppController controller;
@@ -24,10 +25,10 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.controller});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   static final Uri _buyMeCoffeeUri = Uri.parse('https://buymeacoffee.com/orokaconner');
   static final Uri _websiteUri = Uri.parse('https://quizthespire.com/');
   final TextEditingController _urlController = TextEditingController();
@@ -61,7 +62,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _mainTabController = TabController(length: 10, vsync: this);
+    _mainTabController = TabController(length: 11, vsync: this);
     _mainTabController.addListener(() {
       if (!_mainTabController.indexIsChanging) {
         setState(() => _selectedPageIndex = _mainTabController.index);
@@ -87,14 +88,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   static const _navItems = <_NavItem>[
     _NavItem(0, Icons.search, 'Search', 'Search & Discovery'),
     _NavItem(1, Icons.travel_explore, 'Multi-Search', 'Search & Discovery'),
-    _NavItem(2, Icons.queue_music, 'Queue', 'Downloads'),
-    _NavItem(3, Icons.playlist_play, 'Playlists', 'Downloads'),
-    _NavItem(4, Icons.upload_file, 'Bulk Import', 'Downloads'),
-    _NavItem(5, Icons.bar_chart, 'Stats', 'Tools'),
-    _NavItem(6, Icons.settings, 'Settings', null),
-    _NavItem(7, Icons.transform, 'Convert', 'Tools'),
-    _NavItem(8, Icons.list_alt, 'Logs', 'Tools'),
-    _NavItem(9, Icons.menu_book, 'Guide', null),
+    _NavItem(2, Icons.open_in_browser, 'Browser', 'Tools'),
+    _NavItem(3, Icons.queue_music, 'Queue', 'Downloads'),
+    _NavItem(4, Icons.playlist_play, 'Playlists', 'Downloads'),
+    _NavItem(5, Icons.upload_file, 'Bulk Import', 'Downloads'),
+    _NavItem(6, Icons.bar_chart, 'Stats', 'Tools'),
+    _NavItem(7, Icons.settings, 'Settings', null),
+    _NavItem(8, Icons.transform, 'Convert', 'Tools'),
+    _NavItem(9, Icons.list_alt, 'Logs', 'Tools'),
+    _NavItem(10, Icons.menu_book, 'Guide', null),
   ];
 
   Widget _buildPageContent(int index, AppSettings? settings) {
@@ -110,28 +112,33 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               widget.controller.addSearchResultToQueue(result, format: format),
         );
       case 2:
-        return _buildQueueTab();
+        return BrowserScreen(
+            key: BrowserScreen.browserKey,
+            onAddToQueue: widget.controller.addSearchResultToQueue,
+        );
       case 3:
-        return _buildPlaylistsTab();
+        return _buildQueueTab();
       case 4:
+        return _buildPlaylistsTab();
+      case 5:
         return BulkImportScreen(
           key: const ValueKey('bulk-import'),
           importService: widget.controller.bulkImportService,
           onProcess: (queries, format) =>
               widget.controller.processBulkImport(queries, format: format),
         );
-      case 5:
+      case 6:
         return StatisticsScreen(
           key: const ValueKey('statistics'),
           statisticsService: widget.controller.statisticsService,
         );
-      case 6:
-        return _buildSettingsTab(settings);
       case 7:
-        return _buildConvertTab(settings);
+        return _buildSettingsTab(settings);
       case 8:
-        return _buildLogsTab();
+        return _buildConvertTab(settings);
       case 9:
+        return _buildLogsTab();
+      case 10:
         return const GuideScreen(key: ValueKey('guide'));
       default:
         return _buildSearchTab(settings);
@@ -238,6 +245,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 tabs: const [
                   Tab(icon: Icon(Icons.search), text: 'Search'),
                   Tab(icon: Icon(Icons.travel_explore), text: 'Multi-Search'),
+                  Tab(icon: Icon(Icons.open_in_browser), text: 'Browser'),
                   Tab(icon: Icon(Icons.queue_music), text: 'Queue'),
                   Tab(icon: Icon(Icons.playlist_play), text: 'Playlists'),
                   Tab(icon: Icon(Icons.upload_file), text: 'Bulk Import'),
@@ -258,6 +266,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   searchService: widget.controller.searchService,
                   previewPlayer: widget.controller.previewPlayer,
                   onDownload: (result, format) => widget.controller.addSearchResultToQueue(result, format: format),
+                ),
+                BrowserScreen(
+                  key: BrowserScreen.browserKey,
+                  onAddToQueue: widget.controller.addSearchResultToQueue,
                 ),
                 _buildQueueTab(),
                 _buildPlaylistsTab(),
@@ -295,6 +307,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _expandPlaylist = settings.previewExpandPlaylist;
       _downloadFormat = settings.defaultAudioFormat;
       _settingsInitialized = true;
+    });
+  }
+
+  /// Programmatically switch to the browser tab and navigate it.
+  void openBrowserWith(String url) {
+    setState(() {
+      _selectedPageIndex = 2;
+      _mainTabController.index = 2;
+    });
+    // schedule navigation after the tab switch has taken effect so that the
+    // BrowserScreen widget tree is mounted and its controller may be created.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      BrowserScreen.navigate(url);
     });
   }
 

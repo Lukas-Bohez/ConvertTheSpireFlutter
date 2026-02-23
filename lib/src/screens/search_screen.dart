@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../models/search_result.dart';
 import '../services/multi_source_search_service.dart';
 import '../services/preview_player_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'home_screen.dart';
 
 /// Screen for searching multiple audio sources in parallel.
 class SearchScreen extends StatefulWidget {
@@ -29,8 +31,7 @@ class _SearchScreenState extends State<SearchScreen>
   List<SearchResult> _results = [];
   bool _loading = false;
   String? _error;
-  Timer? _hoverTimer;
-  String? _previewingId;
+  // preview removed, use external button
   String _selectedFormat = 'mp3';
 
   Future<void> _search() async {
@@ -58,28 +59,10 @@ class _SearchScreenState extends State<SearchScreen>
     }
   }
 
-  void _startPreview(SearchResult result) {
-    _hoverTimer?.cancel();
-    _hoverTimer = Timer(const Duration(seconds: 2), () async {
-      try {
-        final url = await widget.searchService.youtubeSearcher.getAudioUrl(result.id);
-        if (!mounted) return;
-        setState(() => _previewingId = result.id);
-        await widget.previewPlayer.previewAudio(url);
-      } catch (_) {}
-    });
-  }
-
-  void _stopPreview() {
-    _hoverTimer?.cancel();
-    widget.previewPlayer.stopPreview();
-    setState(() => _previewingId = null);
-  }
 
   @override
   void dispose() {
     _controller.dispose();
-    _hoverTimer?.cancel();
     super.dispose();
   }
 
@@ -163,36 +146,35 @@ class _SearchScreenState extends State<SearchScreen>
             itemCount: _results.length,
             itemBuilder: (context, index) {
               final r = _results[index];
-              return MouseRegion(
-                onEnter: (_) => _startPreview(r),
-                onExit: (_) => _stopPreview(),
-                child: ListTile(
-                  leading: r.thumbnailUrl.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: Image.network(r.thumbnailUrl, width: 48, height: 48, fit: BoxFit.cover),
-                        )
-                      : const Icon(Icons.music_note, size: 48),
-                  title: Text(r.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(
-                    '${r.artist}  •  ${_formatDuration(r.duration)}  •  ${r.source}',
-                    maxLines: 1,
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (_previewingId == r.id)
-                        const Padding(
-                          padding: EdgeInsets.only(right: 8),
-                          child: Icon(Icons.volume_up, size: 18, color: Colors.teal),
-                        ),
-                      IconButton(
-                        icon: const Icon(Icons.download),
-                        tooltip: 'Download',
-                        onPressed: () => widget.onDownload(r, _selectedFormat),
-                      ),
-                    ],
-                  ),
+              final leadingWidget = r.thumbnailUrl.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Image.network(r.thumbnailUrl, width: 48, height: 48, fit: BoxFit.cover),
+                    )
+                  : const Icon(Icons.music_note, size: 48);
+
+              final previewButton = IconButton(
+                icon: const Icon(Icons.play_arrow),
+                tooltip: 'Preview in browser',
+                onPressed: () => _launchPreview(r.id),
+              );
+
+              final downloadButton = IconButton(
+                icon: const Icon(Icons.download),
+                tooltip: 'Download',
+                onPressed: () => widget.onDownload(r, _selectedFormat),
+              );
+
+              return ListTile(
+                leading: leadingWidget,
+                title: Text(r.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                subtitle: Text(
+                  '${r.artist}  •  ${_formatDuration(r.duration)}  •  ${r.source}',
+                  maxLines: 1,
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [previewButton, downloadButton],
                 ),
               );
             },
@@ -206,5 +188,17 @@ class _SearchScreenState extends State<SearchScreen>
     final m = d.inMinutes;
     final s = d.inSeconds % 60;
     return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  void _launchPreview(String id) {
+    final url = 'https://www.youtube.com/watch?v=$id';
+    // try to find the HomeScreen state to move to browser tab; if not
+    // available (e.g. tests) fall back to external launch.
+    final homeState = context.findAncestorStateOfType<HomeScreenState>();
+    if (homeState != null) {
+      homeState.openBrowserWith(url);
+    } else {
+      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    }
   }
 }
