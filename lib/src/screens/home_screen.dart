@@ -18,6 +18,8 @@ import 'guide_screen.dart';
 import 'statistics_screen.dart';
 import 'watched_playlists_screen.dart';
 import 'browser_screen.dart';
+import 'player.dart';  // player player screen
+
 
 class HomeScreen extends StatefulWidget {
   final AppController controller;
@@ -62,7 +64,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _mainTabController = TabController(length: 11, vsync: this);
+    _mainTabController = TabController(length: 12, vsync: this);
     _mainTabController.addListener(() {
       if (!_mainTabController.indexIsChanging) {
         setState(() => _selectedPageIndex = _mainTabController.index);
@@ -97,6 +99,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _NavItem(8, Icons.transform, 'Convert', 'Tools'),
     _NavItem(9, Icons.list_alt, 'Logs', 'Tools'),
     _NavItem(10, Icons.menu_book, 'Guide', null),
+    _NavItem(11, Icons.music_note, 'Player', 'Tools'),
   ];
 
   Widget _buildPageContent(int index, AppSettings? settings) {
@@ -140,6 +143,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return _buildLogsTab();
       case 10:
         return const GuideScreen(key: ValueKey('guide'));
+      case 11:
+        return const playerPlayerPage(key: ValueKey('player-player'));
       default:
         return _buildSearchTab(settings);
     }
@@ -254,6 +259,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Tab(icon: Icon(Icons.transform), text: 'Convert'),
                   Tab(icon: Icon(Icons.list_alt), text: 'Logs'),
                   Tab(icon: Icon(Icons.menu_book), text: 'Guide'),
+                  Tab(icon: Icon(Icons.music_note), text: 'player'),
                 ],
               ),
             ),
@@ -286,6 +292,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 _buildConvertTab(settings),
                 _buildLogsTab(),
                 const GuideScreen(key: ValueKey('guide')),
+                const playerPlayerPage(key: ValueKey('player-player')),
               ],
             ),
         );

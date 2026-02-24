@@ -14,9 +14,11 @@ dependencies:
   file_picker: ^10.3.10
   url_launcher: ^6.2.5
   youtube_explode_dart: ^3.0.5
+  provider: ^6.0.5
+  video_player: ^2.5.1
   archive: ^3.4.10
   image: ^4.3.0
-  mime: ^1.0.4
+  mime: ^2.0.0
   uuid: ^4.4.0
   crypto: ^3.0.3
   ffmpeg_kit_flutter_new: ^4.1.0
@@ -28,6 +30,7 @@ dependencies:
 
   # Audio playback / preview
   just_audio: ^0.9.36
+  audio_metadata_reader: ^1.4.2
 
   # Storage
   shared_preferences: ^2.2.2
@@ -39,7 +42,7 @@ dependencies:
   flutter_local_notifications: ^20.1.0
 
   # Sharing
-  share_plus: ^7.2.1
+  share_plus: ^12.0.1
 
   # CSV parsing
   csv: ^5.1.1
@@ -48,6 +51,13 @@ dependencies:
   html: ^0.15.4
   webview_windows: ^0.4.0
   webview_flutter_web: ^0.2.3+4
+  just_audio_windows: ^0.2.2
+  video_thumbnail: ^0.5.6
+
+  # Windows media support
+  media_kit: ^1.1.10
+  media_kit_video: ^1.2.4
+  media_kit_libs_windows_video: ^1.0.9
 
 dev_dependencies:
   flutter_test:

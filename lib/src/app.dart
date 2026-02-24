@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart' hide SearchResult;
 
 import 'screens/home_screen.dart';
+import 'screens/player.dart';
 import 'services/bulk_import_service.dart';
 import 'services/convert_service.dart';
 import 'services/download_service.dart';
@@ -165,7 +168,18 @@ class _MyAppState extends State<MyApp> {
                 )
               : _controller == null
                   ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-                  : HomeScreen(controller: _controller!),
+                  : FutureBuilder<SharedPreferences>(
+                      future: SharedPreferences.getInstance(),
+                      builder: (context, snap) {
+                        if (!snap.hasData) {
+                          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                        }
+                        return ChangeNotifierProvider(
+                          create: (_) => PlayerState(snap.data!),
+                          child: HomeScreen(controller: _controller!),
+                        );
+                      },
+                    ),
         );
       },
     );

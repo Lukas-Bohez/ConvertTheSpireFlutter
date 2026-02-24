@@ -264,7 +264,7 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
     if (!_webViewSupported) {
       return Container(
         padding: const EdgeInsets.all(8),
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         child: const Center(child: Text('WebView unsupported')),
       );
     }
