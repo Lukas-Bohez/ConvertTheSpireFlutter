@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_flutter_app/src/screens/browser_screen.dart';
+import 'package:my_flutter_app/src/screens/onboarding_screen.dart';
 import 'package:my_flutter_app/src/state/app_controller.dart';
+import 'package:my_flutter_app/src/app.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('Basic widget tree builds', (WidgetTester tester) async {
@@ -33,4 +36,41 @@ void main() {
     // webview itself is still initializing or unsupported.
     expect(find.byType(TextField), findsOneWidget);
   });
+
+  testWidgets('Onboarding screen shows previews, supports theme toggle', (WidgetTester tester) async {
+    ThemeMode? changed;
+
+    // instantiate with a known starting mode and capture any changes
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OnboardingScreen(
+          onFinish: () {},
+          themeMode: ThemeMode.dark,
+          onThemeChanged: (m) => changed = m,
+        ),
+      ),
+    );
+
+    // let all entrance animations finish
+    await tester.pumpAndSettle();
+
+    // theme toggle should reflect dark mode initially
+    expect(find.byTooltip('Theme: Dark — tap to cycle'), findsOneWidget);
+
+    // exercising previews as before
+    expect(find.text('Search'), findsWidgets);
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.byKey(const Key('onboarding_preview_queue')), findsOneWidget);
+
+    // tapping the toggle should notify the callback with the next mode
+    await tester.tap(find.byTooltip('Theme: Dark — tap to cycle'));
+    await tester.pumpAndSettle();
+    expect(changed, ThemeMode.system);
+  });
+
+
+
 }

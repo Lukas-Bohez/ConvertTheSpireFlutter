@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../services/platform_dirs.dart';
 
 import '../models/app_settings.dart';
@@ -117,6 +118,17 @@ class AppController extends ChangeNotifier {
     _settings = next;
     await settingsStore.save(next);
     notifyListeners();
+  }
+
+  /// Update the application's theme preference and persist it.
+  Future<void> setThemeMode(ThemeMode mode) async {
+    if (_settings == null) return;
+    final str = switch (mode) {
+      ThemeMode.light => 'light',
+      ThemeMode.dark => 'dark',
+      ThemeMode.system => 'system',
+    };
+    await saveSettings(_settings!.copyWith(themeMode: str));
   }
 
   Future<void> preview(String url, bool expandPlaylist, {int startIndex = 0, int? limit}) async {

@@ -54,6 +54,18 @@ To run the app, use the following command:
 flutter run
 ```
 
+> **First launch**: the application will automatically display a brief onboarding tour covering each of the main tabs. During the tour you’ll now see small previews and mock‑ups of the features being described (for example, the **Queue** page shows a mini list with status icons) so you get an immediate feel for what the real screen looks like. The tour also exposes a theme toggle which calls back to the host, allowing you to switch between light/dark/auto without leaving the walkthrough. You can revisit the tour at any time via the "Show onboarding" button at the top of the **Guide** tab.
+
+To wire it up in your own app pass the active `ThemeMode` and handle changes:
+
+```dart
+OnboardingScreen(
+  onFinish: _markSeen,
+  themeMode: _themeMode,
+  onThemeChanged: (mode) => setState(() => _themeMode = mode),
+)
+```
+
 ### Testing
 
 To run the widget tests, use:

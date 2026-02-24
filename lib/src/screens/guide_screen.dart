@@ -3,10 +3,23 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+import 'onboarding_screen.dart';
+
 /// In-app guide covering usage instructions, supported platforms,
 /// and feature explanations.
 class GuideScreen extends StatelessWidget {
-  const GuideScreen({super.key});
+  /// Current theme mode so the onboarder toggle starts in the right state.
+  final ThemeMode themeMode;
+
+  /// Called if the user cycles the theme while running through onboarding.
+  /// GuideScreen doesn't itself manage theme, it simply proxies to the host.
+  final ValueChanged<ThemeMode>? onThemeChanged;
+
+  const GuideScreen({
+    super.key,
+    this.themeMode = ThemeMode.system,
+    this.onThemeChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +50,23 @@ class GuideScreen extends StatelessWidget {
                           ?.copyWith(color: cs.onPrimaryContainer.withValues(alpha: 0.8))),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton(
+              onPressed: () {
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => OnboardingScreen(
+                          onFinish: () {
+                            Navigator.of(context).pop();
+                          },
+                          themeMode: themeMode,
+                          onThemeChanged: onThemeChanged,
+                        )));
+              },
+              child: const Text('Show onboarding'),
             ),
           ),
           const SizedBox(height: 16),
@@ -161,6 +191,9 @@ class GuideScreen extends StatelessWidget {
                 _FeatureRow(icon: Icons.travel_explore, name: 'Multi-Search',
                     detail: 'Search across multiple sources at once. Hover a result to hear a preview.'),
                 SizedBox(height: 8),
+                _FeatureRow(icon: Icons.open_in_browser, name: 'Browser',
+                    detail: 'Use an integrated web view to browse YouTube (or other sites) and add videos directly to the queue.'),
+                SizedBox(height: 8),
                 _FeatureRow(icon: Icons.queue_music, name: 'Queue',
                     detail: 'View and manage downloads. Start all, cancel, retry failed, or remove items.'),
                 SizedBox(height: 8),
@@ -184,6 +217,9 @@ class GuideScreen extends StatelessWidget {
                 SizedBox(height: 8),
                 _FeatureRow(icon: Icons.menu_book, name: 'Guide',
                     detail: 'This screen! Instructions, supported platforms, and tips.'),
+                SizedBox(height: 8),
+                _FeatureRow(icon: Icons.music_note, name: 'Player',
+                    detail: 'Built‑in media player for your local files; control playback, shuffle, repeat and manage a library.'),
               ],
             ),
           ),
@@ -225,6 +261,12 @@ class GuideScreen extends StatelessWidget {
                   title: 'Parallel workers',
                   detail:
                       'More workers means faster batch downloads but uses more bandwidth and may trigger YouTube rate limits. 2-3 is recommended.',
+                ),
+                SizedBox(height: 10),
+                _TipRow(
+                  title: 'Need a refresher?',
+                  detail:
+                      'Tap "Show onboarding" at the top of this screen to walk through every tab again.',
                 ),
               ],
             ),

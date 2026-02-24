@@ -32,6 +32,17 @@ class HomeScreen extends StatefulWidget {
 
 class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   static final Uri _buyMeCoffeeUri = Uri.parse('https://buymeacoffee.com/orokaconner');
+
+  ThemeMode _resolveThemeMode(String? mode) {
+    switch (mode) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
+    }
+  }
   static final Uri _websiteUri = Uri.parse('https://quizthespire.com/');
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _downloadDirController = TextEditingController();
@@ -142,7 +153,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       case 9:
         return _buildLogsTab();
       case 10:
-        return const GuideScreen(key: ValueKey('guide'));
+        final tm = _resolveThemeMode(widget.controller.settings?.themeMode);
+        return GuideScreen(
+          key: const ValueKey('guide'),
+          themeMode: tm,
+          onThemeChanged: (mode) => widget.controller.setThemeMode(mode),
+        );
       case 11:
         return const playerPlayerPage(key: ValueKey('player-player'));
       default:
