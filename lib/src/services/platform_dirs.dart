@@ -72,6 +72,61 @@ class PlatformDirs {
     }
   }
 
+  /// Enumerates all files beneath a SAF tree URI, returning a map for each
+  /// document containing its content URI and its display name.
+  ///
+  /// This is used when the directory picker returns a content:// URI which
+  /// cannot be accessed via `Directory` on Android.
+  static Future<List<Map<String, String>>> listTree(String treeUri) async {
+    if (kIsWeb) return [];
+    try {
+      final List<dynamic> resp =
+          await _channel.invokeMethod('listTree', {'treeUri': treeUri});
+      // The platform channel returns loosely-typed maps (Map<Object?,Object?>),
+      // so we need to manually convert each entry to a Map<String,String> rather
+      // than relying on `cast` which throws at iteration time.
+      final List<Map<String, String>> result = [];
+      for (final item in resp) {
+        if (item is Map) {
+          final Map<String, String> m = {};
+          item.forEach((key, value) {
+            m[key.toString()] = value?.toString() ?? '';
+          });
+          result.add(m);
+        }
+      }
+      return result;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Show the system folder picker (ACTION_OPEN_DOCUMENT_TREE) and return a
+  /// persistable URI or null if the user cancelled.  This matches the
+  /// `pickTree` method implemented in MainActivity.kt.
+  static Future<String?> pickTree() async {
+    if (kIsWeb) return null;
+    try {
+      return await _channel.invokeMethod<String>('pickTree');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Copy a document represented by a content:// URI into a temporary file
+  /// under the app cache directory.  Returns the local file path or null on
+  /// failure.  The native implementation (`copyToTemp`) is provided in
+  /// MainActivity.kt and is useful for plugins that require real file paths
+  /// (e.g. metadata readers or thumbnail generators).
+  static Future<String?> copyToTemp(String uri) async {
+    if (kIsWeb) return null;
+    try {
+      return await _channel.invokeMethod<String>('copyToTemp', {'uri': uri});
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Application support directory (for config files).
   /// On Android, uses filesDir. On desktop, uses getApplicationSupportDirectory.
   static Future<Directory?> getAppSupportDir() async {

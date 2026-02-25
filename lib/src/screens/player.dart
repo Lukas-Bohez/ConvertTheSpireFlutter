@@ -13,6 +13,8 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:video_player/video_player.dart';
+import '../services/platform_dirs.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // IMPORTANT: In your main.dart add these two lines before runApp():
@@ -59,20 +61,9 @@ class MediaItem {
 }
 
 // ─── Thumbnail transcoding ───────────────────────────────────────────────────
-//
-// Flutter on Windows can only natively decode JPEG and PNG in Image.memory.
-// WebP, BMP, GIF etc. all fail with "Invalid image data".
-// We use the pure-Dart `image` package to decode ANY format and re-encode
-// as PNG — this works on every platform with zero native dependencies.
-//
-// FIX: We now accept an optional mimeType hint so we can pick the right
-// decoder first, dramatically improving success rates for WebP/BMP/GIF art.
-// The minimum byte threshold is also lowered to 4 (just enough for a magic
-// number check) and we no longer silently drop small-but-valid images.
 
 Future<Uint8List?> _transcodeToSafePng(Uint8List raw,
     {String? mimeType}) async {
-  // Need at least 4 bytes for any image magic number.
   if (raw.length < 4) {
     debugPrint('_transcodeToSafePng: data too short (${raw.length} bytes)');
     return null;
@@ -81,7 +72,6 @@ Future<Uint8List?> _transcodeToSafePng(Uint8List raw,
   try {
     img.Image? decoded;
 
-    // --- MIME-type-directed decode (most reliable when hint is available) ---
     if (mimeType != null) {
       final mt = mimeType.toLowerCase().trim();
       if (mt.contains('jpeg') || mt.contains('jpg')) {
@@ -103,12 +93,10 @@ Future<Uint8List?> _transcodeToSafePng(Uint8List raw,
       }
     }
 
-    // --- Magic-number-directed decode (no hint, or hint decoder failed) ---
     if (decoded == null) {
       decoded = _decodeByMagic(raw);
     }
 
-    // --- Generic auto-detect fallback ---
     if (decoded == null) {
       decoded = img.decodeImage(raw);
     }
@@ -119,7 +107,6 @@ Future<Uint8List?> _transcodeToSafePng(Uint8List raw,
       return null;
     }
 
-    // Resize to a sensible thumbnail — keeps memory lean for large library art.
     final thumb = img.copyResize(decoded,
         width: 240, interpolation: img.Interpolation.average);
 
@@ -130,46 +117,38 @@ Future<Uint8List?> _transcodeToSafePng(Uint8List raw,
   }
 }
 
-/// Inspect the first few bytes (magic numbers) to pick the right decoder.
-/// Returns null if the format is unrecognised.
 img.Image? _decodeByMagic(Uint8List raw) {
   if (raw.length < 4) return null;
 
-  // JPEG: FF D8 FF
   if (raw[0] == 0xFF && raw[1] == 0xD8 && raw[2] == 0xFF) {
     return img.decodeJpg(raw);
   }
-  // PNG: 89 50 4E 47
   if (raw[0] == 0x89 &&
       raw[1] == 0x50 &&
       raw[2] == 0x4E &&
       raw[3] == 0x47) {
     return img.decodePng(raw);
   }
-  // GIF: 47 49 46 38
   if (raw[0] == 0x47 &&
       raw[1] == 0x49 &&
       raw[2] == 0x46 &&
       raw[3] == 0x38) {
     return img.decodeGif(raw);
   }
-  // BMP: 42 4D
   if (raw[0] == 0x42 && raw[1] == 0x4D) {
     return img.decodeBmp(raw);
   }
-  // WebP: RIFF????WEBP  (bytes 0-3 = RIFF, bytes 8-11 = WEBP)
   if (raw.length >= 12 &&
       raw[0] == 0x52 && raw[1] == 0x49 && raw[2] == 0x46 && raw[3] == 0x46 &&
       raw[8] == 0x57 && raw[9] == 0x45 && raw[10] == 0x42 && raw[11] == 0x50) {
     return img.decodeWebP(raw);
   }
-  // TIFF: 49 49 2A 00 (little-endian) or 4D 4D 00 2A (big-endian)
   if ((raw[0] == 0x49 && raw[1] == 0x49 && raw[2] == 0x2A && raw[3] == 0x00) ||
       (raw[0] == 0x4D && raw[1] == 0x4D && raw[2] == 0x00 && raw[3] == 0x2A)) {
     return img.decodeTiff(raw);
   }
 
-  return null; // unknown — caller will try generic auto-detect
+  return null;
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -184,28 +163,28 @@ class PlayerState with ChangeNotifier {
   double volume = 0.5;
   bool isLoading = false;
 
-  // Audio — just_audio works fine on Windows
+  // Audio — just_audio works fine on all platforms
   final AudioPlayer _audio = AudioPlayer();
 
-  // Video — media_kit works on Windows/Linux/macOS/Android/iOS, but we
-  // treat Android specially because the current plugin release throws
-  // "Unsupported platform: android" even when the library is provided.
-  //
-  // `_videoSupported` lets the rest of the class avoid invoking any
-  // media_kit APIs on unsupported platforms.  On Android we fall back to
-  // audio-only behaviour (just_audio) and keep the player fields null.
+  // media_kit is used on Windows/Linux/macOS/iOS.
+  // On Android we use the `video_player` plugin (ExoPlayer) instead, because
+  // media_kit throws "Unsupported platform: android" at runtime.
   final bool _videoSupported = !Platform.isAndroid;
 
-  // The Player and VideoController are created ONCE and reused.  Never
-  // recreate them — the Video widget holds a reference and breaks if you do.
+  // Created once and reused — never recreate, the Video widget holds a ref.
   Player? _mkPlayer;
   VideoController? _mkController;
 
-  // Auxiliary player used for thumbnail extraction; kept separate so the
-  // main player is never blocked.
+  // Android-only: one VideoPlayerController per track, created/disposed each load.
+  VideoPlayerController? _androidController;
+  // Stored so we can remove it before disposing the controller.
+  VoidCallback? _androidListener;
+
+  // Auxiliary player for thumbnail screenshots (desktop/iOS only).
   Player? _thumbPlayer;
 
-  // True once media_kit has opened a video AND received its first frame.
+  // True once the first video frame has arrived (media_kit) or initialize()
+  // has completed (video_player on Android).
   bool _videoReady = false;
 
   bool _videoCompletionFired = false;
@@ -217,9 +196,6 @@ class PlayerState with ChangeNotifier {
   final _random = Random();
 
   PlayerState(this.prefs) {
-    // media_kit Player objects will throw if the native library hasn't been
-    // initialized or the platform is unsupported.  if video is not supported
-    // we simply leave the player fields null and guard all uses elsewhere.
     if (_videoSupported) {
       try {
         _mkPlayer = Player();
@@ -228,20 +204,15 @@ class PlayerState with ChangeNotifier {
       } catch (e, st) {
         debugPrint('media_kit player creation failed: $e');
         debugPrint('$st');
-        // disable further video operations; keep the fields null
         _videoReady = false;
         _mkPlayer = null;
         _mkController = null;
         _thumbPlayer = null;
       }
     } else {
-      debugPrint('media_kit video disabled on Android - audio only');
+      debugPrint('media_kit disabled on Android — using video_player fallback');
     }
 
-    // load preferences as soon as possible; volume will be applied when
-    // the future completes so it's safe to start playback before the prefs
-    // are ready.  We still call _applyVolume() immediately afterwards to
-    // guard against any unexpected resets that happen when switching tracks.
     _loadPrefs().then((_) => _applyVolume());
 
     // ── Audio streams ──
@@ -264,7 +235,7 @@ class PlayerState with ChangeNotifier {
       notifyListeners();
     });
 
-    // ── Video streams ──
+    // ── Video streams (media_kit, non-Android only) ──
     if (_videoSupported && _mkPlayer != null) {
       _mkPlayer!.stream.position.listen((pos) {
         if (currentItem?.type == MediaType.video) {
@@ -278,8 +249,6 @@ class PlayerState with ChangeNotifier {
           notifyListeners();
         }
       });
-      // Listen for external volume adjustments (e.g. built-in player UI) so we
-      // keep our slider / prefs in sync.  media_kit reports 0–100.
       _mkPlayer!.stream.volume.listen((v) {
         final vol = (v / 100).clamp(0.0, 1.0);
         if (vol != volume) {
@@ -288,7 +257,6 @@ class PlayerState with ChangeNotifier {
           notifyListeners();
         }
       });
-      // width > 0 means the first frame arrived — now safe to show the widget
       _mkPlayer!.stream.width.listen((w) {
         if (currentItem?.type == MediaType.video && (w ?? 0) > 0) {
           if (!_videoReady) {
@@ -310,16 +278,33 @@ class PlayerState with ChangeNotifier {
 
   // ── Getters ──
 
-  MediaItem? get currentItem =>
-      library.isNotEmpty ? library[currentIndex] : null;
+  MediaItem? get currentItem {
+    if (library.isEmpty) return null;
+    if (currentIndex < 0 || currentIndex >= library.length) {
+      currentIndex = library.isNotEmpty ? 0 : -1;
+    }
+    return library[currentIndex];
+  }
 
-  bool get isVideo => _videoSupported && currentItem?.type == MediaType.video;
+  bool get isVideo => currentItem?.type == MediaType.video;
+
+  // Video is supported on every platform: media_kit on desktop/iOS,
+  // video_player on Android.
+  bool get videoSupported => true;
+
   bool get videoReady => _videoReady;
 
-  bool get isPlaying =>
-      isVideo ? _mkPlayer!.state.playing : _audio.playing;
+  bool get isPlaying {
+    if (isVideo) {
+      if (_videoSupported && _mkPlayer != null) return _mkPlayer!.state.playing;
+      if (_androidController != null) return _androidController!.value.isPlaying;
+      return false;
+    }
+    return _audio.playing;
+  }
 
   VideoController? get videoController => _mkController;
+  VideoPlayerController? get androidVideoController => _androidController;
 
   List<MapEntry<int, MediaItem>> get audioEntries => library
       .asMap()
@@ -335,33 +320,35 @@ class PlayerState with ChangeNotifier {
 
   // ── Library loading ──
 
+  Future<String> _resolveLocalPath(String path) async {
+    if (path.startsWith('content://')) {
+      final copied = await PlatformDirs.copyToTemp(path);
+      return copied ?? path;
+    }
+    return path;
+  }
+
   Future<void> setLibrary(List<MediaItem> items) async {
     isLoading = true;
     library = List.from(items);
+    currentIndex = 0;
     notifyListeners();
 
     for (int i = 0; i < library.length; i++) {
       final item = library[i];
 
-      // ── Extract embedded metadata & cover art ──
       try {
-        final tag = await readMetadata(File(item.path), getImage: true);
+        final metaPath = await _resolveLocalPath(item.path);
+        final tag = await readMetadata(File(metaPath), getImage: true);
         Uint8List? safePng;
 
         if (tag.pictures.isNotEmpty) {
-          // FIX: Iterate all pictures; the first one with valid art wins.
-          // Some files put back-cover or low-quality art at index 0.
           for (final pic in tag.pictures) {
             final raw = pic.bytes;
             if (raw.isEmpty) continue;
-
-            // FIX: Pass the MIME type hint so the transcoder picks the right
-            // decoder first (critical for WebP / BMP embedded art).
-            final String? mimeHint =
-                pic.mimetype;
-
+            final String? mimeHint = pic.mimetype;
             safePng = await _transcodeToSafePng(raw, mimeType: mimeHint);
-            if (safePng != null) break; // found a good image — stop looking
+            if (safePng != null) break;
           }
         }
 
@@ -378,7 +365,6 @@ class PlayerState with ChangeNotifier {
         debugPrint('metadata error for ${item.path}: $e');
       }
 
-      // ── For videos without embedded art, generate a thumbnail ──
       if (item.type == MediaType.video && library[i].thumbnailData == null) {
         final thumb = await _generateVideoThumbnail(item.path);
         if (thumb != null) {
@@ -394,57 +380,49 @@ class PlayerState with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Tries multiple strategies to generate a video thumbnail.
-  /// Returns a PNG-encoded Uint8List or null on complete failure.
   Future<Uint8List?> _generateVideoThumbnail(String filePath) async {
     debugPrint('generating thumbnail for $filePath');
+
+    final resolved = await _resolveLocalPath(filePath);
 
     // Strategy 1: video_thumbnail plugin (fast, native, preferred)
     Uint8List? snap;
     try {
       snap = await VideoThumbnail.thumbnailData(
-        video: filePath,
+        video: resolved,
         imageFormat: ImageFormat.JPEG,
         maxWidth: 256,
         quality: 60,
       );
       debugPrint(
-          'video_thumbnail returned ${snap?.length ?? 0} bytes for $filePath');
+          'video_thumbnail returned ${snap?.length ?? 0} bytes for $resolved');
     } catch (e) {
-      debugPrint('video_thumbnail error for $filePath: $e');
+      debugPrint('video_thumbnail error for $resolved: $e');
     }
 
     if (_isValidImageBytes(snap)) {
       return _transcodeToSafePng(snap!, mimeType: 'image/jpeg');
     }
 
-    // Strategy 2: media_kit screenshot via auxiliary player (only if
-    // video is available).  Skip entirely on Android/unsupported platform.
+    // Strategy 2: media_kit screenshot (desktop/iOS only)
     if (_videoSupported && _thumbPlayer != null) {
       try {
         await _thumbPlayer!.setVolume(0);
         await _thumbPlayer!.open(Media(_toUri(filePath)), play: false);
 
-        // Wait for the player to buffer enough to know the duration.
-        // FIX: The original code had `firstWhere((d))` — a syntax error.
-        //      The correct form is `firstWhere((d) => d.inMilliseconds > 0)`.
         Duration? dur;
         try {
           dur = await _thumbPlayer!.stream.duration
               .firstWhere((d) => d.inMilliseconds > 0)
               .timeout(const Duration(seconds: 5));
-        } catch (_) {
-          // Timeout or stream error — proceed without seeking
-        }
+        } catch (_) {}
 
         if (dur != null && dur.inMilliseconds > 0) {
-          // Seek to ~10% but cap at 15 s to avoid seeking into end credits
           final seekMs =
               (dur.inMilliseconds * 0.1).round().clamp(0, 15000);
           await _thumbPlayer!.seek(Duration(milliseconds: seekMs));
         }
 
-        // Give the decoder time to render the target frame
         await Future.delayed(const Duration(milliseconds: 400));
         snap = await _thumbPlayer!.screenshot();
         debugPrint(
@@ -459,14 +437,9 @@ class PlayerState with ChangeNotifier {
     }
 
     if (_isValidImageBytes(snap)) {
-      // Screenshots from media_kit may be BGRA raw or PNG depending on
-      // platform — run through our transcoder to normalise to PNG.  If the
-      // transcoder fails to recognise the data, fall back to a manual BGRA
-      // conversion using the known video dimensions.
       final result = await _transcodeToSafePng(snap!);
       if (result != null) return result;
 
-      // attempt raw BGRA -> PNG conversion
       try {
         if (_videoSupported && _thumbPlayer != null) {
           final w = await _thumbPlayer!.stream.width
@@ -477,9 +450,6 @@ class PlayerState with ChangeNotifier {
               .timeout(const Duration(seconds: 2));
 
           if (w != null && h != null && snap.length == w * h * 4) {
-            // manual BGRA -> RGBA conversion since the image package on
-            // Windows no longer exposes a convenient BGRA constant.  This is
-            // cheap and avoids any dependency on library internals.
             final rgba = Uint8List(snap.length);
             for (int i = 0; i < snap.length; i += 4) {
               rgba[i] = snap[i + 2];
@@ -487,39 +457,30 @@ class PlayerState with ChangeNotifier {
               rgba[i + 2] = snap[i];
               rgba[i + 3] = snap[i + 3];
             }
-            // the image package now expects named arguments for fromBytes
             final imgBuf = img.Image.fromBytes(
               width: w,
               height: h,
-              bytes: rgba.buffer, // convert to ByteBuffer per newer API
+              bytes: rgba.buffer,
             );
             return Uint8List.fromList(img.encodePng(imgBuf));
           }
         }
-      } catch (_) {
-        // ignore; fall through to final failure log
-      }
+      } catch (_) {}
     }
 
     debugPrint('all thumbnail strategies failed for $filePath');
     return null;
   }
 
-  /// Returns true only when [bytes] is non-null and large enough to be a
-  /// real encoded image (64 bytes covers any image file header).
   bool _isValidImageBytes(Uint8List? bytes) =>
       bytes != null && bytes.length >= 64;
 
-  /// Applies the current [volume] value to *both* players.  Having a single
-  /// helper makes it easy to call from multiple places (constructor, load
-  /// routines, slider changes) and ensures we never forget to re‑apply when
-  /// the backend may have reset itself during a track transition.
   void _applyVolume() {
     _audio.setVolume(volume);
-    // media_kit uses 0–100 range for historical reasons
     if (_videoSupported && _mkPlayer != null) {
       _mkPlayer!.setVolume(volume * 100);
     }
+    _androidController?.setVolume(volume);
   }
 
   // ── Playback ──
@@ -531,15 +492,28 @@ class PlayerState with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Remove the listener and dispose the Android controller safely.
+  Future<void> _disposeAndroidController() async {
+    if (_androidController == null) return;
+    if (_androidListener != null) {
+      _androidController!.removeListener(_androidListener!);
+      _androidListener = null;
+    }
+    try {
+      await _androidController!.dispose();
+    } catch (e) {
+      debugPrint('android controller dispose error: $e');
+    }
+    _androidController = null;
+  }
+
   Future<void> _loadCurrent() async {
     if (currentItem == null || _loadingTrack) return;
     _loadingTrack = true;
     _videoCompletionFired = false;
     _videoReady = false;
-    notifyListeners(); // show spinner immediately
+    notifyListeners();
 
-    // ensure the current volume value is applied before we start loading
-    // to avoid any momentary blips when the underlying player resets.
     _applyVolume();
 
     try {
@@ -547,17 +521,14 @@ class PlayerState with ChangeNotifier {
         if (_videoSupported && _mkPlayer != null) {
           await _mkPlayer!.stop();
         }
+        await _disposeAndroidController();
         try {
           final path = currentItem!.path;
           if (path.startsWith('content://')) {
-            // just_audio can consume content URIs via setUrl, which delegates
-            // to Android's ContentResolver.
             await _audio.setUrl(path);
           } else {
             await _audio.setFilePath(path);
           }
-          // volume is already applied in _applyVolume() but setting again
-          // after loading can't hurt and covers any plugin quirks.
           await _audio.setVolume(volume);
           duration = _audio.duration;
           position = Duration.zero;
@@ -569,10 +540,91 @@ class PlayerState with ChangeNotifier {
         await _audio.stop();
         try {
           if (_videoSupported && _mkPlayer != null) {
+            // ── Desktop / iOS: media_kit ──
             await _mkPlayer!.open(Media(_toUri(currentItem!.path)), play: true);
-            await _mkPlayer!.setVolume(volume * 100); // media_kit: 0–100
+            await _mkPlayer!.setVolume(volume * 100);
+          } else {
+            // ── Android: video_player (ExoPlayer) ──
+            await _disposeAndroidController();
+
+            final path = currentItem!.path;
+            VideoPlayerController? ctrl;
+
+            // Try 1: content:// URI directly — ExoPlayer handles SAF URIs natively.
+            if (path.startsWith('content://')) {
+              try {
+                ctrl = VideoPlayerController.networkUrl(Uri.parse(path));
+                await ctrl.initialize();
+              } catch (e) {
+                debugPrint('android VP content:// init failed: $e');
+                try { await ctrl?.dispose(); } catch (_) {}
+                ctrl = null;
+              }
+            }
+
+            // Try 2: regular file path.
+            if (ctrl == null && !path.startsWith('content://')) {
+              try {
+                ctrl = VideoPlayerController.file(File(path));
+                await ctrl.initialize();
+              } catch (e) {
+                debugPrint('android VP file init failed: $e');
+                try { await ctrl?.dispose(); } catch (_) {}
+                ctrl = null;
+              }
+            }
+
+            // Try 3: copy content URI to a temp file, then open as file.
+            if (ctrl == null && path.startsWith('content://')) {
+              try {
+                final local = await _resolveLocalPath(path);
+                if (local != path) {
+                  ctrl = VideoPlayerController.file(File(local));
+                  await ctrl.initialize();
+                }
+              } catch (e) {
+                debugPrint('android VP temp-copy init failed: $e');
+                try { await ctrl?.dispose(); } catch (_) {}
+                ctrl = null;
+              }
+            }
+
+            if (ctrl != null) {
+              _androidController = ctrl;
+              duration = ctrl.value.duration;
+              position = Duration.zero;
+              await ctrl.setVolume(volume);
+              await ctrl.play();
+              // initialize() completes synchronously once the codec is ready,
+              // so the widget can be shown immediately.
+              _videoReady = true;
+
+              // Mirror position/duration/completion back into PlayerState so
+              // the progress slider and next-track logic work correctly.
+              void listener() {
+                if (_androidController == null) return;
+                final val = _androidController!.value;
+                if (currentItem?.type == MediaType.video) {
+                  position = val.position;
+                  if (val.duration != Duration.zero) duration = val.duration;
+                }
+                if (!_videoCompletionFired &&
+                    val.duration != Duration.zero &&
+                    val.position >= val.duration &&
+                    !val.isPlaying) {
+                  _videoCompletionFired = true;
+                  _handleCompletion();
+                }
+                notifyListeners();
+              }
+              _androidListener = listener;
+              ctrl.addListener(listener);
+            } else {
+              debugPrint('all android VP strategies failed for $path');
+            }
+
+            position = Duration.zero;
           }
-          position = Duration.zero;
         } catch (e) {
           debugPrint('video load error: $e');
         }
@@ -584,10 +636,6 @@ class PlayerState with ChangeNotifier {
   }
 
   String _toUri(String path) {
-    // media_kit expects a valid URI string.  We already support file:// and
-    // http(s).  Content URIs are passed through unchanged so Android can
-    // resolve them via content resolver; converting them to file URIs would
-    // break access.
     if (path.startsWith('file://') || path.startsWith('http') ||
         path.startsWith('content://')) return path;
     if (Platform.isWindows) return Uri.file(path, windows: true).toString();
@@ -598,6 +646,10 @@ class PlayerState with ChangeNotifier {
     if (isVideo) {
       if (_videoSupported && _mkPlayer != null) {
         _mkPlayer!.state.playing ? _mkPlayer!.pause() : _mkPlayer!.play();
+      } else if (_androidController != null) {
+        _androidController!.value.isPlaying
+            ? _androidController!.pause()
+            : _androidController!.play();
       }
     } else {
       _audio.playing ? _audio.pause() : _audio.play();
@@ -610,6 +662,8 @@ class PlayerState with ChangeNotifier {
       _videoCompletionFired = false;
       if (_videoSupported && _mkPlayer != null) {
         _mkPlayer!.seek(d);
+      } else if (_androidController != null) {
+        _androidController!.seekTo(d);
       }
     } else {
       _audio.seek(d);
@@ -620,8 +674,9 @@ class PlayerState with ChangeNotifier {
 
   Future<void> next() async {
     if (library.isEmpty) return;
-    currentIndex =
-        shuffle ? _randomOther() : (currentIndex + 1) % library.length;
+    currentIndex = shuffle
+        ? _randomOther()
+        : (currentIndex + 1) % library.length;
     await _loadCurrent();
     notifyListeners();
   }
@@ -668,8 +723,6 @@ class PlayerState with ChangeNotifier {
     shuffle = prefs.getBool('shuffle') ?? false;
     repeatMode = RepeatMode.values[
         (prefs.getInt('repeat') ?? 0).clamp(0, RepeatMode.values.length - 1)];
-    // note: don't bother setting the player volumes here, caller may do that
-    // once async work is complete (see constructor).
     notifyListeners();
   }
 
@@ -698,6 +751,7 @@ class PlayerState with ChangeNotifier {
     if (_videoSupported && _thumbPlayer != null) {
       _thumbPlayer!.dispose();
     }
+    _disposeAndroidController();
     super.dispose();
   }
 }
@@ -758,8 +812,10 @@ class _PlayerScreenState extends State<PlayerScreen>
         children: [
           // ── Persistent video renderer (always in tree, hidden when not needed) ──
           _PersistentVideoWidget(
-            controller: state.videoController,
-            visible: state.isVideo,
+            mkController: state.videoController,
+            androidController: state.androidVideoController,
+            visible: state.isVideo &&
+                (state.videoController != null || state.androidVideoController != null),
             ready: state.videoReady,
             onTap: state.togglePlay,
             accent: _accent,
@@ -1247,7 +1303,6 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
-  /// All bytes are pre-transcoded to PNG so decode always succeeds.
   Widget _img(Uint8List bytes,
       {double? width, double? height, BoxFit fit = BoxFit.cover}) {
     return Image.memory(bytes,
@@ -1271,64 +1326,97 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   Future<void> _pickFolder() async {
-    final result = await FilePicker.platform.getDirectoryPath();
+    String? result;
+    if (Platform.isAndroid) {
+      result = await PlatformDirs.pickTree();
+      debugPrint('SAF pickTree returned: $result');
+    }
+    result ??= await FilePicker.platform.getDirectoryPath();
+    debugPrint('picked folder path: $result');
     if (result == null || !mounted) return;
 
     const audioExt = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.opus'];
     const videoExt = ['.mp4', '.mov', '.mkv', '.avi', '.webm', '.flv', '.wmv'];
 
     List<MediaItem> files = [];
+
     try {
-      final dir = Directory(result);
-      if (await dir.exists()) {
-        files = dir
-            .listSync(recursive: true)
-            .whereType<File>()
-            .where((f) {
-              final ext = p.extension(f.path).toLowerCase();
-              return audioExt.contains(ext) || videoExt.contains(ext);
-            })
-            .map((f) {
-              final ext = p.extension(f.path).toLowerCase();
+      if (result.startsWith('content://')) {
+        final entries = await PlatformDirs.listTree(result);
+        debugPrint('listTree returned ${entries.length} entries');
+        for (final entry in entries) {
+          final uri = entry['uri'] ?? '';
+          if (uri.isEmpty) continue;
+          final name = entry['name'] ?? '';
+          final mime = entry['mime'] ?? '';
+          var ext = p.extension(name).toLowerCase();
+          debugPrint('SAF entry uri=$uri name=$name mime=$mime ext=$ext');
+          if (ext.isEmpty && mime.isNotEmpty) {
+            if (mime.contains('/')) {
+              final subtype = mime.split('/').last;
+              ext = '.$subtype';
+            }
+          }
+          if (!audioExt.contains(ext) && !videoExt.contains(ext)) continue;
+          final type = videoExt.contains(ext) ? MediaType.video : MediaType.audio;
+          files.add(MediaItem(uri, type,
+              title: p.basenameWithoutExtension(name)));
+        }
+      } else {
+        final dir = Directory(result);
+        if (await dir.exists()) {
+          files = dir
+              .listSync(recursive: true)
+              .whereType<File>()
+              .where((f) {
+                final ext = p.extension(f.path).toLowerCase();
+                return audioExt.contains(ext) || videoExt.contains(ext);
+              })
+              .map((f) {
+                final ext = p.extension(f.path).toLowerCase();
+                final type =
+                    videoExt.contains(ext) ? MediaType.video : MediaType.audio;
+                return MediaItem(f.path, type,
+                    title: p.basenameWithoutExtension(f.path));
+              })
+              .toList();
+        } else {
+          final picked = await FilePicker.platform.pickFiles(
+            allowMultiple: true,
+            type: FileType.custom,
+            allowedExtensions: [...audioExt, ...videoExt]
+                .map((e) => e.substring(1))
+                .toList(),
+          );
+          if (picked != null && picked.files.isNotEmpty) {
+            for (final pf in picked.files) {
+              final path = pf.path;
+              if (path == null) continue;
+              final ext = p.extension(path).toLowerCase();
               final type =
                   videoExt.contains(ext) ? MediaType.video : MediaType.audio;
-              return MediaItem(f.path, type,
-                  title: p.basenameWithoutExtension(f.path));
-            })
-            .toList();
-      } else {
-        // The picked path might be a content URI or a non-filesystem surface.
-        // Fall back to letting user choose individual files instead.
-        final picked = await FilePicker.platform.pickFiles(
-          allowMultiple: true,
-          type: FileType.custom,
-          allowedExtensions: [...audioExt, ...videoExt].map((e) => e.substring(1)).toList(),
-        );
-        if (picked != null && picked.files.isNotEmpty) {
-          for (final pf in picked.files) {
-            final path = pf.path;
-            if (path == null) continue;
-            final ext = p.extension(path).toLowerCase();
-            final type = videoExt.contains(ext) ? MediaType.video : MediaType.audio;
-            files.add(MediaItem(path, type,
-                title: p.basenameWithoutExtension(path)));
+              files.add(MediaItem(path, type,
+                  title: p.basenameWithoutExtension(path)));
+            }
           }
         }
       }
     } catch (e) {
       debugPrint('folder scan failed, falling back to file picker: $e');
-      // fallback to file picker
       final picked = await FilePicker.platform.pickFiles(
         allowMultiple: true,
         type: FileType.custom,
-        allowedExtensions: [...audioExt, ...videoExt].map((e) => e.substring(1)).toList(),
+        allowedExtensions: [...audioExt, ...videoExt]
+            .map((e) => e.substring(1))
+            .toList(),
       );
       if (picked != null && picked.files.isNotEmpty) {
         for (final pf in picked.files) {
           final path = pf.path;
           if (path == null) continue;
           final ext = p.extension(path).toLowerCase();
-          final type = videoExt.contains(ext) ? MediaType.video : MediaType.audio;
+          final type =
+              videoExt.contains(ext) ? MediaType.video : MediaType.audio;
           files.add(MediaItem(path, type,
               title: p.basenameWithoutExtension(path)));
         }
@@ -1342,9 +1430,8 @@ class _PlayerScreenState extends State<PlayerScreen>
 // ─── Persistent video widget ──────────────────────────────────────────────────
 
 class _PersistentVideoWidget extends StatefulWidget {
-  // controller may be null on platforms where video is disabled; callers
-  // should also set `visible` to false in that case.
-  final VideoController? controller;
+  final VideoController? mkController;
+  final VideoPlayerController? androidController;
   final bool visible;
   final bool ready;
   final VoidCallback onTap;
@@ -1352,14 +1439,14 @@ class _PersistentVideoWidget extends StatefulWidget {
   final Color tileBg;
 
   const _PersistentVideoWidget({
-    this.controller,
+    this.mkController,
+    this.androidController,
     required this.visible,
     required this.ready,
     required this.onTap,
     required this.accent,
     required this.tileBg,
-  }) : assert(!visible || controller != null,
-            'controller must be provided when visible is true');
+  });
 
   @override
   State<_PersistentVideoWidget> createState() => _PersistentVideoWidgetState();
@@ -1374,7 +1461,7 @@ class _PersistentVideoWidgetState extends State<_PersistentVideoWidget>
   Widget build(BuildContext context) {
     super.build(context);
 
-    if (!widget.visible || widget.controller == null) return const SizedBox.shrink();
+    if (!widget.visible) return const SizedBox.shrink();
 
     return LayoutBuilder(builder: (ctx, bc) {
       final screenH = MediaQuery.of(ctx).size.height;
@@ -1387,7 +1474,25 @@ class _PersistentVideoWidgetState extends State<_PersistentVideoWidget>
         child: GestureDetector(
           onTap: widget.onTap,
           child: Stack(fit: StackFit.expand, children: [
-            ClipRect(child: Video(controller: widget.controller!)),
+            if (widget.androidController != null)
+              // ValueListenableBuilder ensures the widget rebuilds when
+              // isInitialized / aspectRatio becomes available.
+              ValueListenableBuilder<VideoPlayerValue>(
+                valueListenable: widget.androidController!,
+                builder: (_, value, __) {
+                  if (!value.isInitialized) return Container(color: widget.tileBg);
+                  return ClipRect(
+                    child: Center(
+                      child: AspectRatio(
+                        aspectRatio: value.aspectRatio == 0 ? 16 / 9 : value.aspectRatio,
+                        child: VideoPlayer(widget.androidController!),
+                      ),
+                    ),
+                  );
+                },
+              )
+            else if (widget.mkController != null)
+              ClipRect(child: Video(controller: widget.mkController!)),
             if (!widget.ready)
               Container(
                 color: widget.tileBg,
