@@ -81,6 +81,69 @@ Contributions are welcome! Please feel free to submit a pull request or open an 
 
 This project is licensed under the GNU GPLv3. See [LICENSE](LICENSE) for details.
 
+## Native library requirements
+
+This application uses [`package:media_kit`](https://pub.dev/packages/media_kit)
+for video playback.  `media_kit` is a thin Dart wrapper around the native
+`libmpv` library – the MPV media player core – which **is not bundled with
+the Dart package**.  You must supply the appropriate `libmpv` binaries for
+each target platform before the player can be used.
+
+### Android
+
+* **Important:** the `media_kit` Dart package currently does **not** support
+  video playback on Android.  Even if you bundle the native `libmpv.so` files
+  correctly, the plugin throws `Unsupported platform: android` during
+  initialization.  The app has been updated to gracefully disable video and
+  fall back to audio-only behaviour on Android, but you should not expect
+  video playback to work until a future release of `media_kit` adds Android
+  support.
+
+* Add the `.so` files for each ABI you intend to support under
+  `android/app/src/main/jniLibs/<abi>/libmpv.so`.  Prebuilt libraries can be
+  downloaded from the [media_kit GitHub releases](https://github.com/media-kit/media-kit/releases)
+  (look for `android-arm64-v8a`, `android-armeabi-v7a`, etc.).  To automate
+  the process you can run one of the helper scripts included in this
+  repository:
+
+  ```bash
+  # bash (Linux/macOS/WSL)
+  chmod +x scripts/fetch_mpv_android.sh && scripts/fetch_mpv_android.sh
+
+  # PowerShell (Windows)
+  scripts\fetch_mpv_android.ps1
+  ```
+
+  The script downloads the appropriate APKs from the release and extracts the
+  `libmpv.so` into the correct `jniLibs` subfolders.  (This step is harmless
+  on Android and will be necessary once support is added.)
+* When building APKs make sure you either build an Android App Bundle or add
+  `--split-per-abi` to your `flutter build apk` command; the library is large
+  and Gradle will strip it out of fat APKs unless the split is enabled, which
+  leads to the runtime error `Cannot find libmpv.so`.  (The error screen you
+  now see explains the problem.)
+* Our runtime checks will display a friendly error page if the library is
+  missing, rather than crashing to a black screen.
+### Linux
+
+Install the system packages so that `libmpv` is available at runtime:
+
+```bash
+sudo apt install libmpv-dev mpv  # Debian/Ubuntu
+# or the equivalent for your distro
+```
+
+The application will catch initialization failures and show an error message
+with these instructions.
+
+### iOS / macOS / Windows
+
+Binaries for these platforms are currently bundled automatically by the
+`media_kit` plugin (via the `media_kit_video` and
+`media_kit_libs_windows_video` packages), so no manual steps are required.
+
+---
+
 ## Support
 
 Buy me a coffee: https://buymeacoffee.com/orokaconner

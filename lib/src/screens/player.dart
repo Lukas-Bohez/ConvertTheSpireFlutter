@@ -187,15 +187,23 @@ class PlayerState with ChangeNotifier {
   // Audio — just_audio works fine on Windows
   final AudioPlayer _audio = AudioPlayer();
 
-  // Video — media_kit works on Windows/Linux/macOS/Android/iOS
-  // The Player and VideoController are created ONCE and reused.
-  // Never recreate them — the Video widget holds a reference and breaks if you do.
-  late final Player _mkPlayer;
-  late final VideoController _mkController;
+  // Video — media_kit works on Windows/Linux/macOS/Android/iOS, but we
+  // treat Android specially because the current plugin release throws
+  // "Unsupported platform: android" even when the library is provided.
+  //
+  // `_videoSupported` lets the rest of the class avoid invoking any
+  // media_kit APIs on unsupported platforms.  On Android we fall back to
+  // audio-only behaviour (just_audio) and keep the player fields null.
+  final bool _videoSupported = !Platform.isAndroid;
+
+  // The Player and VideoController are created ONCE and reused.  Never
+  // recreate them — the Video widget holds a reference and breaks if you do.
+  Player? _mkPlayer;
+  VideoController? _mkController;
 
   // Auxiliary player used for thumbnail extraction; kept separate so the
   // main player is never blocked.
-  late final Player _thumbPlayer;
+  Player? _thumbPlayer;
 
   // True once media_kit has opened a video AND received its first frame.
   bool _videoReady = false;
@@ -209,9 +217,26 @@ class PlayerState with ChangeNotifier {
   final _random = Random();
 
   PlayerState(this.prefs) {
-    _mkPlayer = Player();
-    _mkController = VideoController(_mkPlayer);
-    _thumbPlayer = Player();
+    // media_kit Player objects will throw if the native library hasn't been
+    // initialized or the platform is unsupported.  if video is not supported
+    // we simply leave the player fields null and guard all uses elsewhere.
+    if (_videoSupported) {
+      try {
+        _mkPlayer = Player();
+        _mkController = VideoController(_mkPlayer!);
+        _thumbPlayer = Player();
+      } catch (e, st) {
+        debugPrint('media_kit player creation failed: $e');
+        debugPrint('$st');
+        // disable further video operations; keep the fields null
+        _videoReady = false;
+        _mkPlayer = null;
+        _mkController = null;
+        _thumbPlayer = null;
+      }
+    } else {
+      debugPrint('media_kit video disabled on Android - audio only');
+    }
 
     // load preferences as soon as possible; volume will be applied when
     // the future completes so it's safe to start playback before the prefs
@@ -240,45 +265,47 @@ class PlayerState with ChangeNotifier {
     });
 
     // ── Video streams ──
-    _mkPlayer.stream.position.listen((pos) {
-      if (currentItem?.type == MediaType.video) {
-        position = pos;
-        notifyListeners();
-      }
-    });
-    _mkPlayer.stream.duration.listen((dur) {
-      if (currentItem?.type == MediaType.video) {
-        duration = dur;
-        notifyListeners();
-      }
-    });
-    // Listen for external volume adjustments (e.g. built-in player UI) so we
-    // keep our slider / prefs in sync.  media_kit reports 0–100.
-    _mkPlayer.stream.volume.listen((v) {
-      final vol = (v / 100).clamp(0.0, 1.0);
-      if (vol != volume) {
-        volume = vol;
-        prefs.setDouble('volume', volume);
-        notifyListeners();
-      }
-    });
-    // width > 0 means the first frame arrived — now safe to show the widget
-    _mkPlayer.stream.width.listen((w) {
-      if (currentItem?.type == MediaType.video && (w ?? 0) > 0) {
-        if (!_videoReady) {
-          _videoReady = true;
+    if (_videoSupported && _mkPlayer != null) {
+      _mkPlayer!.stream.position.listen((pos) {
+        if (currentItem?.type == MediaType.video) {
+          position = pos;
           notifyListeners();
         }
-      }
-    });
-    _mkPlayer.stream.completed.listen((done) {
-      if (done &&
-          currentItem?.type == MediaType.video &&
-          !_videoCompletionFired) {
-        _videoCompletionFired = true;
-        _handleCompletion();
-      }
-    });
+      });
+      _mkPlayer!.stream.duration.listen((dur) {
+        if (currentItem?.type == MediaType.video) {
+          duration = dur;
+          notifyListeners();
+        }
+      });
+      // Listen for external volume adjustments (e.g. built-in player UI) so we
+      // keep our slider / prefs in sync.  media_kit reports 0–100.
+      _mkPlayer!.stream.volume.listen((v) {
+        final vol = (v / 100).clamp(0.0, 1.0);
+        if (vol != volume) {
+          volume = vol;
+          prefs.setDouble('volume', volume);
+          notifyListeners();
+        }
+      });
+      // width > 0 means the first frame arrived — now safe to show the widget
+      _mkPlayer!.stream.width.listen((w) {
+        if (currentItem?.type == MediaType.video && (w ?? 0) > 0) {
+          if (!_videoReady) {
+            _videoReady = true;
+            notifyListeners();
+          }
+        }
+      });
+      _mkPlayer!.stream.completed.listen((done) {
+        if (done &&
+            currentItem?.type == MediaType.video &&
+            !_videoCompletionFired) {
+          _videoCompletionFired = true;
+          _handleCompletion();
+        }
+      });
+    }
   }
 
   // ── Getters ──
@@ -286,13 +313,13 @@ class PlayerState with ChangeNotifier {
   MediaItem? get currentItem =>
       library.isNotEmpty ? library[currentIndex] : null;
 
-  bool get isVideo => currentItem?.type == MediaType.video;
+  bool get isVideo => _videoSupported && currentItem?.type == MediaType.video;
   bool get videoReady => _videoReady;
 
   bool get isPlaying =>
-      isVideo ? _mkPlayer.state.playing : _audio.playing;
+      isVideo ? _mkPlayer!.state.playing : _audio.playing;
 
-  VideoController get videoController => _mkController;
+  VideoController? get videoController => _mkController;
 
   List<MapEntry<int, MediaItem>> get audioEntries => library
       .asMap()
@@ -391,41 +418,44 @@ class PlayerState with ChangeNotifier {
       return _transcodeToSafePng(snap!, mimeType: 'image/jpeg');
     }
 
-    // Strategy 2: media_kit screenshot via auxiliary player
-    try {
-      await _thumbPlayer.setVolume(0);
-      await _thumbPlayer.open(Media(_toUri(filePath)), play: false);
-
-      // Wait for the player to buffer enough to know the duration.
-      // FIX: The original code had `firstWhere((d))` — a syntax error.
-      //      The correct form is `firstWhere((d) => d.inMilliseconds > 0)`.
-      Duration? dur;
+    // Strategy 2: media_kit screenshot via auxiliary player (only if
+    // video is available).  Skip entirely on Android/unsupported platform.
+    if (_videoSupported && _thumbPlayer != null) {
       try {
-        dur = await _thumbPlayer.stream.duration
-            .firstWhere((d) => d.inMilliseconds > 0)
-            .timeout(const Duration(seconds: 5));
-      } catch (_) {
-        // Timeout or stream error — proceed without seeking
-      }
+        await _thumbPlayer!.setVolume(0);
+        await _thumbPlayer!.open(Media(_toUri(filePath)), play: false);
 
-      if (dur != null && dur.inMilliseconds > 0) {
-        // Seek to ~10% but cap at 15 s to avoid seeking into end credits
-        final seekMs =
-            (dur.inMilliseconds * 0.1).round().clamp(0, 15000);
-        await _thumbPlayer.seek(Duration(milliseconds: seekMs));
-      }
+        // Wait for the player to buffer enough to know the duration.
+        // FIX: The original code had `firstWhere((d))` — a syntax error.
+        //      The correct form is `firstWhere((d) => d.inMilliseconds > 0)`.
+        Duration? dur;
+        try {
+          dur = await _thumbPlayer!.stream.duration
+              .firstWhere((d) => d.inMilliseconds > 0)
+              .timeout(const Duration(seconds: 5));
+        } catch (_) {
+          // Timeout or stream error — proceed without seeking
+        }
 
-      // Give the decoder time to render the target frame
-      await Future.delayed(const Duration(milliseconds: 400));
-      snap = await _thumbPlayer.screenshot();
-      debugPrint(
-          'screenshot() returned ${snap?.length ?? 0} bytes for $filePath');
-    } catch (e) {
-      debugPrint('screenshot error for $filePath: $e');
-    } finally {
-      try {
-        await _thumbPlayer.stop();
-      } catch (_) {}
+        if (dur != null && dur.inMilliseconds > 0) {
+          // Seek to ~10% but cap at 15 s to avoid seeking into end credits
+          final seekMs =
+              (dur.inMilliseconds * 0.1).round().clamp(0, 15000);
+          await _thumbPlayer!.seek(Duration(milliseconds: seekMs));
+        }
+
+        // Give the decoder time to render the target frame
+        await Future.delayed(const Duration(milliseconds: 400));
+        snap = await _thumbPlayer!.screenshot();
+        debugPrint(
+            'screenshot() returned ${snap?.length ?? 0} bytes for $filePath');
+      } catch (e) {
+        debugPrint('screenshot error for $filePath: $e');
+      } finally {
+        try {
+          await _thumbPlayer!.stop();
+        } catch (_) {}
+      }
     }
 
     if (_isValidImageBytes(snap)) {
@@ -438,31 +468,33 @@ class PlayerState with ChangeNotifier {
 
       // attempt raw BGRA -> PNG conversion
       try {
-        final w = await _thumbPlayer.stream.width
-            .firstWhere((w) => w != null && w > 0)
-            .timeout(const Duration(seconds: 2));
-        final h = await _thumbPlayer.stream.height
-            .firstWhere((h) => h != null && h > 0)
-            .timeout(const Duration(seconds: 2));
+        if (_videoSupported && _thumbPlayer != null) {
+          final w = await _thumbPlayer!.stream.width
+              .firstWhere((w) => w != null && w > 0)
+              .timeout(const Duration(seconds: 2));
+          final h = await _thumbPlayer!.stream.height
+              .firstWhere((h) => h != null && h > 0)
+              .timeout(const Duration(seconds: 2));
 
-        if (w != null && h != null && snap.length == w * h * 4) {
-          // manual BGRA -> RGBA conversion since the image package on
-          // Windows no longer exposes a convenient BGRA constant.  This is
-          // cheap and avoids any dependency on library internals.
-          final rgba = Uint8List(snap.length);
-          for (int i = 0; i < snap.length; i += 4) {
-            rgba[i] = snap[i + 2];
-            rgba[i + 1] = snap[i + 1];
-            rgba[i + 2] = snap[i];
-            rgba[i + 3] = snap[i + 3];
+          if (w != null && h != null && snap.length == w * h * 4) {
+            // manual BGRA -> RGBA conversion since the image package on
+            // Windows no longer exposes a convenient BGRA constant.  This is
+            // cheap and avoids any dependency on library internals.
+            final rgba = Uint8List(snap.length);
+            for (int i = 0; i < snap.length; i += 4) {
+              rgba[i] = snap[i + 2];
+              rgba[i + 1] = snap[i + 1];
+              rgba[i + 2] = snap[i];
+              rgba[i + 3] = snap[i + 3];
+            }
+            // the image package now expects named arguments for fromBytes
+            final imgBuf = img.Image.fromBytes(
+              width: w,
+              height: h,
+              bytes: rgba.buffer, // convert to ByteBuffer per newer API
+            );
+            return Uint8List.fromList(img.encodePng(imgBuf));
           }
-          // the image package now expects named arguments for fromBytes
-          final imgBuf = img.Image.fromBytes(
-            width: w,
-            height: h,
-            bytes: rgba.buffer, // convert to ByteBuffer per newer API
-          );
-          return Uint8List.fromList(img.encodePng(imgBuf));
         }
       } catch (_) {
         // ignore; fall through to final failure log
@@ -485,7 +517,9 @@ class PlayerState with ChangeNotifier {
   void _applyVolume() {
     _audio.setVolume(volume);
     // media_kit uses 0–100 range for historical reasons
-    _mkPlayer.setVolume(volume * 100);
+    if (_videoSupported && _mkPlayer != null) {
+      _mkPlayer!.setVolume(volume * 100);
+    }
   }
 
   // ── Playback ──
@@ -510,9 +544,18 @@ class PlayerState with ChangeNotifier {
 
     try {
       if (currentItem!.type == MediaType.audio) {
-        await _mkPlayer.stop();
+        if (_videoSupported && _mkPlayer != null) {
+          await _mkPlayer!.stop();
+        }
         try {
-          await _audio.setFilePath(currentItem!.path);
+          final path = currentItem!.path;
+          if (path.startsWith('content://')) {
+            // just_audio can consume content URIs via setUrl, which delegates
+            // to Android's ContentResolver.
+            await _audio.setUrl(path);
+          } else {
+            await _audio.setFilePath(path);
+          }
           // volume is already applied in _applyVolume() but setting again
           // after loading can't hurt and covers any plugin quirks.
           await _audio.setVolume(volume);
@@ -520,13 +563,15 @@ class PlayerState with ChangeNotifier {
           position = Duration.zero;
           await _audio.play();
         } catch (e) {
-          debugPrint('audio load error: $e');
+          debugPrint('audio load error ($currentItem): $e');
         }
       } else {
         await _audio.stop();
         try {
-          await _mkPlayer.open(Media(_toUri(currentItem!.path)), play: true);
-          await _mkPlayer.setVolume(volume * 100); // media_kit: 0–100
+          if (_videoSupported && _mkPlayer != null) {
+            await _mkPlayer!.open(Media(_toUri(currentItem!.path)), play: true);
+            await _mkPlayer!.setVolume(volume * 100); // media_kit: 0–100
+          }
           position = Duration.zero;
         } catch (e) {
           debugPrint('video load error: $e');
@@ -539,14 +584,21 @@ class PlayerState with ChangeNotifier {
   }
 
   String _toUri(String path) {
-    if (path.startsWith('file://') || path.startsWith('http')) return path;
+    // media_kit expects a valid URI string.  We already support file:// and
+    // http(s).  Content URIs are passed through unchanged so Android can
+    // resolve them via content resolver; converting them to file URIs would
+    // break access.
+    if (path.startsWith('file://') || path.startsWith('http') ||
+        path.startsWith('content://')) return path;
     if (Platform.isWindows) return Uri.file(path, windows: true).toString();
     return Uri.file(path).toString();
   }
 
   void togglePlay() {
     if (isVideo) {
-      _mkPlayer.state.playing ? _mkPlayer.pause() : _mkPlayer.play();
+      if (_videoSupported && _mkPlayer != null) {
+        _mkPlayer!.state.playing ? _mkPlayer!.pause() : _mkPlayer!.play();
+      }
     } else {
       _audio.playing ? _audio.pause() : _audio.play();
     }
@@ -556,7 +608,9 @@ class PlayerState with ChangeNotifier {
   void seek(Duration d) {
     if (isVideo) {
       _videoCompletionFired = false;
-      _mkPlayer.seek(d);
+      if (_videoSupported && _mkPlayer != null) {
+        _mkPlayer!.seek(d);
+      }
     } else {
       _audio.seek(d);
     }
@@ -638,8 +692,12 @@ class PlayerState with ChangeNotifier {
   @override
   void dispose() {
     _audio.dispose();
-    _mkPlayer.dispose();
-    _thumbPlayer.dispose();
+    if (_videoSupported && _mkPlayer != null) {
+      _mkPlayer!.dispose();
+    }
+    if (_videoSupported && _thumbPlayer != null) {
+      _thumbPlayer!.dispose();
+    }
     super.dispose();
   }
 }
@@ -1219,22 +1277,63 @@ class _PlayerScreenState extends State<PlayerScreen>
     const audioExt = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.opus'];
     const videoExt = ['.mp4', '.mov', '.mkv', '.avi', '.webm', '.flv', '.wmv'];
 
-    final dir = Directory(result);
-    final files = dir
-        .listSync(recursive: true)
-        .whereType<File>()
-        .where((f) {
-          final ext = p.extension(f.path).toLowerCase();
-          return audioExt.contains(ext) || videoExt.contains(ext);
-        })
-        .map((f) {
-          final ext = p.extension(f.path).toLowerCase();
-          final type =
-              videoExt.contains(ext) ? MediaType.video : MediaType.audio;
-          return MediaItem(f.path, type,
-              title: p.basenameWithoutExtension(f.path));
-        })
-        .toList();
+    List<MediaItem> files = [];
+    try {
+      final dir = Directory(result);
+      if (await dir.exists()) {
+        files = dir
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) {
+              final ext = p.extension(f.path).toLowerCase();
+              return audioExt.contains(ext) || videoExt.contains(ext);
+            })
+            .map((f) {
+              final ext = p.extension(f.path).toLowerCase();
+              final type =
+                  videoExt.contains(ext) ? MediaType.video : MediaType.audio;
+              return MediaItem(f.path, type,
+                  title: p.basenameWithoutExtension(f.path));
+            })
+            .toList();
+      } else {
+        // The picked path might be a content URI or a non-filesystem surface.
+        // Fall back to letting user choose individual files instead.
+        final picked = await FilePicker.platform.pickFiles(
+          allowMultiple: true,
+          type: FileType.custom,
+          allowedExtensions: [...audioExt, ...videoExt].map((e) => e.substring(1)).toList(),
+        );
+        if (picked != null && picked.files.isNotEmpty) {
+          for (final pf in picked.files) {
+            final path = pf.path;
+            if (path == null) continue;
+            final ext = p.extension(path).toLowerCase();
+            final type = videoExt.contains(ext) ? MediaType.video : MediaType.audio;
+            files.add(MediaItem(path, type,
+                title: p.basenameWithoutExtension(path)));
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('folder scan failed, falling back to file picker: $e');
+      // fallback to file picker
+      final picked = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: FileType.custom,
+        allowedExtensions: [...audioExt, ...videoExt].map((e) => e.substring(1)).toList(),
+      );
+      if (picked != null && picked.files.isNotEmpty) {
+        for (final pf in picked.files) {
+          final path = pf.path;
+          if (path == null) continue;
+          final ext = p.extension(path).toLowerCase();
+          final type = videoExt.contains(ext) ? MediaType.video : MediaType.audio;
+          files.add(MediaItem(path, type,
+              title: p.basenameWithoutExtension(path)));
+        }
+      }
+    }
 
     if (mounted) context.read<PlayerState>().setLibrary(files);
   }
@@ -1243,7 +1342,9 @@ class _PlayerScreenState extends State<PlayerScreen>
 // ─── Persistent video widget ──────────────────────────────────────────────────
 
 class _PersistentVideoWidget extends StatefulWidget {
-  final VideoController controller;
+  // controller may be null on platforms where video is disabled; callers
+  // should also set `visible` to false in that case.
+  final VideoController? controller;
   final bool visible;
   final bool ready;
   final VoidCallback onTap;
@@ -1251,13 +1352,14 @@ class _PersistentVideoWidget extends StatefulWidget {
   final Color tileBg;
 
   const _PersistentVideoWidget({
-    required this.controller,
+    this.controller,
     required this.visible,
     required this.ready,
     required this.onTap,
     required this.accent,
     required this.tileBg,
-  });
+  }) : assert(!visible || controller != null,
+            'controller must be provided when visible is true');
 
   @override
   State<_PersistentVideoWidget> createState() => _PersistentVideoWidgetState();
@@ -1272,7 +1374,7 @@ class _PersistentVideoWidgetState extends State<_PersistentVideoWidget>
   Widget build(BuildContext context) {
     super.build(context);
 
-    if (!widget.visible) return const SizedBox.shrink();
+    if (!widget.visible || widget.controller == null) return const SizedBox.shrink();
 
     return LayoutBuilder(builder: (ctx, bc) {
       final screenH = MediaQuery.of(ctx).size.height;
@@ -1285,7 +1387,7 @@ class _PersistentVideoWidgetState extends State<_PersistentVideoWidget>
         child: GestureDetector(
           onTap: widget.onTap,
           child: Stack(fit: StackFit.expand, children: [
-            ClipRect(child: Video(controller: widget.controller)),
+            ClipRect(child: Video(controller: widget.controller!)),
             if (!widget.ready)
               Container(
                 color: widget.tileBg,
