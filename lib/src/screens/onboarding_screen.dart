@@ -123,7 +123,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       icon: Icons.music_note_rounded,
       title: 'Player',
       detail:
-          'Built‑in media player for your own files. Control playback, shuffle, repeat, and manage a simple library.',
+          'Built‑in media player for your own files. Control playback, shuffle, repeat, and manage a simple library. On Linux the app requires the system libmpv (mpv) runtime for video playback — install it via your package manager (for example `sudo apt install mpv libmpv-dev`) to enable video. On Android the app uses a fallback player for video (ExoPlayer) when available.',
       color: Color(0xFF7E57C2),
     ),
   ];

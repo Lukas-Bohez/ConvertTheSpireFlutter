@@ -132,6 +132,14 @@ Install the system packages so that `libmpv` is available at runtime:
 sudo apt install libmpv-dev mpv  # Debian/Ubuntu
 # or the equivalent for your distro
 ```
+The application will catch initialization failures and show an error message
+with these instructions.
+
+Important: video playback on Linux requires the system `libmpv` (mpv) runtime.
+If you want video support, install `mpv` / `libmpv` (examples above) or
+ensure your target distribution bundles `libmpv` alongside the app. Without
+`libmpv` the app will fall back to audio-only behaviour and display a
+helpful message explaining how to install it.
 
 The application will catch initialization failures and show an error message
 with these instructions.

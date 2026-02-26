@@ -30,8 +30,8 @@ enum AudioFormat {
 
 /// Quality presets for lossy encoders.
 enum QualityPreset {
-  best(320, 'Best', 'Highest available (320 kbps)'),
-  high(320, 'High', '320 kbps'),
+  best(320, 'Best', 'Highest available'),
+  high(320, 'High', 'High quality'),
   medium(192, 'Medium', '192 kbps'),
   low(128, 'Low', '128 kbps'),
   custom(0, 'Custom', 'User sets specific bitrate');
