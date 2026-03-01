@@ -65,16 +65,29 @@ class DownloadService {
     final video = await yt.videos.get(item.url)
         .timeout(const Duration(seconds: 30),
             onTimeout: () => throw TimeoutException('Timed out fetching video info'));
-    final streams = await yt.videos.streamsClient.getManifest(video.id)
-        .timeout(const Duration(seconds: 30),
-            onTimeout: () => throw TimeoutException('Timed out fetching stream manifest'));
+    // Fetch stream manifest with retry using different YouTube API clients
+    StreamManifest streams;
+    try {
+      streams = await yt.videos.streamsClient.getManifest(video.id)
+          .timeout(const Duration(seconds: 30),
+              onTimeout: () => throw TimeoutException('Timed out fetching stream manifest'));
+    } catch (_) {
+      // Retry with safari + androidVr clients for broader stream availability
+      streams = await yt.videos.streamsClient.getManifest(
+        video.id,
+        ytClients: [YoutubeApiClient.safari, YoutubeApiClient.androidVr],
+      ).timeout(const Duration(seconds: 45),
+          onTimeout: () => throw TimeoutException('Timed out fetching stream manifest (retry)'));
+    }
 
     final safeTitle = _sanitizeFileName(video.title);
     final needsConversion = formatLower != 'mp4';
-    final wantHd = !needsConversion && _qualityToHeight(preferredVideoQuality) > 720;
+    // Muxed streams are limited to 360p. Anything above 360p requires
+    // separate video + audio streams merged via FFmpeg.
+    final wantHd = !needsConversion && _qualityToHeight(preferredVideoQuality) > 360;
     if ((needsConversion || wantHd) && !await ffmpeg.isAvailable(ffmpegPath)) {
       if (wantHd) {
-        // Fall back to muxed (720p max) if FFmpeg unavailable for HD merge
+        // Fall back to muxed (360p max) if FFmpeg unavailable for merge
       } else {
         throw Exception('FFmpeg is required for $formatLower conversion. Configure it in Settings.');
       }
@@ -356,12 +369,15 @@ class DownloadService {
     final sink = file.openWrite();
     try {
       final rawStream = yt.videos.streamsClient.get(stream);
-      // Stall detection: if no data chunk arrives within 45 seconds, abort.
-      // YouTube CDNs can be slow to start, so 45s gives enough headroom.
+      // Dynamic stall detection: scale timeout based on stream size.
+      // Larger HD streams need more time as CDNs can be slower for adaptive
+      // streams. Small (<50MB): 60s, Medium (50-200MB): 120s, Large (>200MB): 180s
+      final sizeMb = stream.size.totalBytes / (1024 * 1024);
+      final stallSeconds = sizeMb > 200 ? 180 : sizeMb > 50 ? 120 : 60;
       final streamData = rawStream.timeout(
-        const Duration(seconds: 45),
+        Duration(seconds: stallSeconds),
         onTimeout: (sink) {
-          sink.addError(TimeoutException('Download stalled – no data received for 45 seconds'));
+          sink.addError(TimeoutException('Download stalled – no data received for $stallSeconds seconds'));
           sink.close();
         },
       );
@@ -594,20 +610,38 @@ class DownloadService {
   }
 
   /// Pick the best video-only stream whose height is ≤ targetHeight.
-  /// Falls back to the smallest if nothing matches, or the largest if 'best'.
+  /// Strongly prefers MP4 (H.264) container for direct copy into MP4 output.
+  /// Falls back to WebM (VP9) only if no MP4 stream is available at target.
   VideoOnlyStreamInfo _pickBestVideoStream(
     Iterable<VideoOnlyStreamInfo> streams,
     int targetHeight,
   ) {
-    final sorted = streams.toList()
-      ..sort((a, b) => (b.videoResolution.height).compareTo(a.videoResolution.height));
-    if (targetHeight >= 9999) return sorted.first; // best = highest
-    // Find the highest resolution ≤ target
-    for (final s in sorted) {
+    // Separate MP4 (H.264) and other (WebM/VP9) streams
+    final mp4Streams = streams
+        .where((s) => s.container.name.toLowerCase().contains('mp4'))
+        .toList()
+      ..sort((a, b) => b.videoResolution.height.compareTo(a.videoResolution.height));
+    final allSorted = streams.toList()
+      ..sort((a, b) => b.videoResolution.height.compareTo(a.videoResolution.height));
+
+    if (targetHeight >= 9999) {
+      // 'best' quality: prefer highest-res MP4, fall back to any
+      if (mp4Streams.isNotEmpty) return mp4Streams.first;
+      return allSorted.first;
+    }
+
+    // Prefer MP4/H.264 stream at or below target height
+    for (final s in mp4Streams) {
       if (s.videoResolution.height <= targetHeight) return s;
     }
+
+    // No MP4 at or below target; try any codec
+    for (final s in allSorted) {
+      if (s.videoResolution.height <= targetHeight) return s;
+    }
+
     // Nothing ≤ target; return the lowest available
-    return sorted.last;
+    return allSorted.last;
   }
 
   /// Determine a container extension from a StreamInfo's codec/container.
@@ -619,6 +653,8 @@ class DownloadService {
   }
 
   /// Merge separate video and audio files into a single MP4 using FFmpeg.
+  /// Handles codec mismatch: VP9/WebM video is re-encoded to H.264 for MP4
+  /// output, while H.264/MP4 video is stream-copied (fast, lossless).
   Future<void> _mergeVideoAudio({
     required String videoPath,
     required String audioPath,
@@ -626,18 +662,27 @@ class DownloadService {
     required String? coverPath,
     required String? ffmpegPath,
   }) async {
+    // Detect codec mismatch: VP9/WebM can't be stream-copied into MP4
+    final videoIsWebm = videoPath.toLowerCase().endsWith('.webm');
+    final outputIsMp4 = outputPath.toLowerCase().endsWith('.mp4');
+    final needsVideoReencode = videoIsWebm && outputIsMp4;
+    final videoCodec = needsVideoReencode ? 'libx264' : 'copy';
+
     final args = <String>['-y', '-i', videoPath, '-i', audioPath];
     if (coverPath != null) {
       args.addAll(['-i', coverPath]);
-      // Map video from input 0, audio from input 1, cover from input 2
       args.addAll(['-map', '0:v', '-map', '1:a', '-map', '2:v']);
-      args.addAll(['-c:v:0', 'copy', '-c:a', 'aac', '-c:v:1', 'mjpeg',
+      args.addAll(['-c:v:0', videoCodec, '-c:a', 'aac', '-c:v:1', 'mjpeg',
                    '-disposition:v:1', 'attached_pic',
                    '-metadata:s:v:1', 'title=Album cover',
                    '-metadata:s:v:1', 'comment=Cover (front)']);
     } else {
       args.addAll(['-map', '0:v', '-map', '1:a']);
-      args.addAll(['-c:v', 'copy', '-c:a', 'aac']);
+      args.addAll(['-c:v', videoCodec, '-c:a', 'aac']);
+    }
+    if (needsVideoReencode) {
+      // Reasonable H.264 encoding settings for re-encoding VP9
+      args.addAll(['-preset', 'medium', '-crf', '23']);
     }
     args.addAll(['-movflags', '+faststart', outputPath]);
     await ffmpeg.run(args, ffmpegPath: ffmpegPath);

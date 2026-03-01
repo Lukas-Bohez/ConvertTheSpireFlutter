@@ -61,7 +61,6 @@ dependencies:
 
 dependency_overrides:
   win32: '<5.13.0'
-  youtube_explode_dart: 3.0.3
   fl_chart: 0.65.0
   package_info_plus: 8.1.0
   share_plus: 11.0.0
