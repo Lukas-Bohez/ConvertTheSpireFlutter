@@ -360,14 +360,15 @@ class DownloadService {
     return DownloadResult(path: outputPath, thumbnail: thumbBytes);
   }
 
-  /// Download a stream using chunked HTTP Range requests.
+  /// Download a stream using YouTube-native chunked range parameters.
   ///
-  /// YouTube throttles long-lived single connections on adaptive (video-only /
-  /// audio-only) streams, causing them to stall after ~15-20 %.  By splitting
-  /// the download into small byte-range chunks (~10 MB each), every chunk
-  /// creates a fresh HTTP request that resets the throttle window.
+  /// YouTube blocks standard HTTP Range headers after a few requests (403).
+  /// Instead, we use YouTube's own `&range=START-END` and `&rn=N` URL query
+  /// parameters — the same mechanism used by YouTube's player and yt-dlp.
+  /// The `rn` (request number) parameter tells YouTube the requests are part
+  /// of a legitimate sequential download, and `rbuf=0` signals zero buffering.
   ///
-  /// Each chunk is retried up to 3 times on stall / failure before giving up.
+  /// Each chunk (~10 MB) is retried up to 5 times before giving up.
   Future<void> _downloadStream(
     StreamInfo stream,
     String outputPath,
@@ -381,12 +382,12 @@ class DownloadService {
       return;
     }
 
-    final url = stream.url;
     const chunkSize = 10 * 1024 * 1024; // 10 MB per chunk
-    const maxRetries = 3;
+    const maxRetries = 5;
     final client = http.Client();
     final file = File(outputPath);
     int received = 0;
+    int requestNum = 0;
     onProgress(0, DownloadStatus.downloading);
 
     try {
@@ -402,15 +403,17 @@ class DownloadService {
         final end = (start + chunkSize - 1).clamp(0, total - 1);
         final chunkBytes = await _downloadChunkWithRetry(
           client: client,
-          url: url,
+          streamUrl: stream.url,
           start: start,
           end: end,
+          requestNum: requestNum,
           maxRetries: maxRetries,
           token: token,
         );
         // Append the completed chunk to the file
         await file.writeAsBytes(chunkBytes, mode: FileMode.writeOnlyAppend, flush: true);
         received += chunkBytes.length;
+        requestNum++;
         final pct = ((received / total) * 100).clamp(0, 100).toInt();
         onProgress(pct, DownloadStatus.downloading);
       }
@@ -422,25 +425,37 @@ class DownloadService {
     }
   }
 
-  /// Download a single byte-range chunk, retrying up to [maxRetries] times.
+  /// Build a chunk URL using YouTube-native range parameters.
+  ///
+  /// YouTube's CDN expects `&range=START-END&rn=N&rbuf=0` as URL query params,
+  /// NOT as HTTP Range headers.  Using HTTP Range headers triggers 403 blocks
+  /// after a few requests.  This mirrors how yt-dlp downloads adaptive streams.
+  Uri _buildChunkUrl(Uri baseUrl, int start, int end, int requestNum) {
+    final urlStr = baseUrl.toString();
+    final sep = urlStr.contains('?') ? '&' : '?';
+    return Uri.parse('$urlStr${sep}range=$start-$end&rn=$requestNum&rbuf=0');
+  }
+
+  /// Download a single chunk, retrying up to [maxRetries] times.
   Future<Uint8List> _downloadChunkWithRetry({
     required http.Client client,
-    required Uri url,
+    required Uri streamUrl,
     required int start,
     required int end,
+    required int requestNum,
     required int maxRetries,
     required DownloadToken token,
   }) async {
     for (int attempt = 0; attempt < maxRetries; attempt++) {
       try {
         if (token.cancelled) throw Exception('Cancelled');
-        final request = http.Request('GET', url);
-        request.headers['Range'] = 'bytes=$start-$end';
+        final chunkUrl = _buildChunkUrl(streamUrl, start, end, requestNum);
+        final request = http.Request('GET', chunkUrl);
         final response = await client.send(request).timeout(
           const Duration(seconds: 30),
           onTimeout: () => throw TimeoutException('Chunk request timed out'),
         );
-        if (response.statusCode != 206 && response.statusCode != 200) {
+        if (response.statusCode >= 400) {
           throw Exception('HTTP ${response.statusCode} for range $start-$end');
         }
 
