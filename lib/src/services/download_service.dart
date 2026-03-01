@@ -112,8 +112,9 @@ class DownloadService {
 
     // Determine download strategy:
     // (a) Audio conversion (MP3/M4A): prefer muxed, fall back audio-only
-    // (b) MP4 1080p+: download separate video+audio and merge via FFmpeg
-    // (c) MP4 720p or below: use muxed stream directly
+    // (b) MP4 480p+: download separate video+audio and merge via FFmpeg
+    //     (muxed streams are capped at 360p by YouTube)
+    // (c) MP4 360p: use muxed stream directly
     final StreamInfo sourceStream;
     final String tempFilePath;
     StreamInfo? separateAudioStream;  // non-null when doing HD merge
