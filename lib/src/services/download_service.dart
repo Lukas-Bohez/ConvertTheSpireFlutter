@@ -360,7 +360,121 @@ class DownloadService {
     return DownloadResult(path: outputPath, thumbnail: thumbBytes);
   }
 
+  /// Download a stream using chunked HTTP Range requests.
+  ///
+  /// YouTube throttles long-lived single connections on adaptive (video-only /
+  /// audio-only) streams, causing them to stall after ~15-20 %.  By splitting
+  /// the download into small byte-range chunks (~10 MB each), every chunk
+  /// creates a fresh HTTP request that resets the throttle window.
+  ///
+  /// Each chunk is retried up to 3 times on stall / failure before giving up.
   Future<void> _downloadStream(
+    StreamInfo stream,
+    String outputPath,
+    DownloadToken token,
+    void Function(int pct, DownloadStatus status) onProgress,
+  ) async {
+    final total = stream.size.totalBytes;
+    if (total <= 0) {
+      // Unknown size – fall back to the library's own streaming API
+      await _downloadStreamLegacy(stream, outputPath, token, onProgress);
+      return;
+    }
+
+    final url = stream.url;
+    const chunkSize = 10 * 1024 * 1024; // 10 MB per chunk
+    const maxRetries = 3;
+    final client = http.Client();
+    final file = File(outputPath);
+    int received = 0;
+    onProgress(0, DownloadStatus.downloading);
+
+    try {
+      // Pre-create the file (truncate if leftover from a previous attempt)
+      await file.writeAsBytes([], flush: true);
+
+      while (received < total) {
+        if (token.cancelled) {
+          await _safeDelete(outputPath);
+          throw Exception('Cancelled');
+        }
+        final start = received;
+        final end = (start + chunkSize - 1).clamp(0, total - 1);
+        final chunkBytes = await _downloadChunkWithRetry(
+          client: client,
+          url: url,
+          start: start,
+          end: end,
+          maxRetries: maxRetries,
+          token: token,
+        );
+        // Append the completed chunk to the file
+        await file.writeAsBytes(chunkBytes, mode: FileMode.writeOnlyAppend, flush: true);
+        received += chunkBytes.length;
+        final pct = ((received / total) * 100).clamp(0, 100).toInt();
+        onProgress(pct, DownloadStatus.downloading);
+      }
+    } catch (e) {
+      await _safeDelete(outputPath);
+      rethrow;
+    } finally {
+      client.close();
+    }
+  }
+
+  /// Download a single byte-range chunk, retrying up to [maxRetries] times.
+  Future<Uint8List> _downloadChunkWithRetry({
+    required http.Client client,
+    required Uri url,
+    required int start,
+    required int end,
+    required int maxRetries,
+    required DownloadToken token,
+  }) async {
+    for (int attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        if (token.cancelled) throw Exception('Cancelled');
+        final request = http.Request('GET', url);
+        request.headers['Range'] = 'bytes=$start-$end';
+        final response = await client.send(request).timeout(
+          const Duration(seconds: 30),
+          onTimeout: () => throw TimeoutException('Chunk request timed out'),
+        );
+        if (response.statusCode != 206 && response.statusCode != 200) {
+          throw Exception('HTTP ${response.statusCode} for range $start-$end');
+        }
+
+        // Collect the chunk data with stall detection
+        final buffer = BytesBuilder(copy: false);
+        await for (final data in response.stream.timeout(
+          const Duration(seconds: 30),
+          onTimeout: (eventSink) {
+            eventSink.addError(TimeoutException('Chunk data stalled'));
+            eventSink.close();
+          },
+        )) {
+          if (token.cancelled) throw Exception('Cancelled');
+          buffer.add(data);
+        }
+        return buffer.toBytes();
+      } on Exception catch (e) {
+        if (token.cancelled) rethrow;
+        if (e.toString().contains('Cancelled')) rethrow;
+        if (attempt == maxRetries - 1) {
+          throw Exception(
+            'Download failed after $maxRetries attempts on chunk $start-$end: $e',
+          );
+        }
+        // Exponential back-off before retry
+        await Future.delayed(Duration(seconds: 2 * (attempt + 1)));
+      }
+    }
+    // Should never reach here
+    throw Exception('Download chunk failed unexpectedly');
+  }
+
+  /// Legacy single-connection download for streams with unknown total size.
+  Future<void> _downloadStreamLegacy(
     StreamInfo stream,
     String outputPath,
     DownloadToken token,
@@ -370,15 +484,10 @@ class DownloadService {
     final sink = file.openWrite();
     try {
       final rawStream = yt.videos.streamsClient.get(stream);
-      // Dynamic stall detection: scale timeout based on stream size.
-      // Larger HD streams need more time as CDNs can be slower for adaptive
-      // streams. Small (<50MB): 60s, Medium (50-200MB): 120s, Large (>200MB): 180s
-      final sizeMb = stream.size.totalBytes / (1024 * 1024);
-      final stallSeconds = sizeMb > 200 ? 180 : sizeMb > 50 ? 120 : 60;
       final streamData = rawStream.timeout(
-        Duration(seconds: stallSeconds),
+        const Duration(seconds: 60),
         onTimeout: (sink) {
-          sink.addError(TimeoutException('Download stalled – no data received for $stallSeconds seconds'));
+          sink.addError(TimeoutException('Download stalled – no data received for 60 seconds'));
           sink.close();
         },
       );
