@@ -55,6 +55,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   bool _expandPlaylist = false;
   String _downloadFormat = 'mp3';
+  String _videoQuality = '720p';
+  int _audioBitrate = 192;
   bool _settingsInitialized = false;
   late final TabController _mainTabController;
   late final TabController _playlistTabController;
@@ -275,7 +277,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Tab(icon: Icon(Icons.transform), text: 'Convert'),
                   Tab(icon: Icon(Icons.list_alt), text: 'Logs'),
                   Tab(icon: Icon(Icons.menu_book), text: 'Guide'),
-                  Tab(icon: Icon(Icons.music_note), text: 'player'),
+                  Tab(icon: Icon(Icons.music_note), text: 'Player'),
                 ],
               ),
             ),
@@ -307,7 +309,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 _buildSettingsTab(settings),
                 _buildConvertTab(settings),
                 _buildLogsTab(),
-                const GuideScreen(key: ValueKey('guide')),
+                Builder(builder: (_) {
+                  final tm = _resolveThemeMode(widget.controller.settings?.themeMode);
+                  return GuideScreen(
+                    key: const ValueKey('guide'),
+                    themeMode: tm,
+                    onThemeChanged: (mode) => widget.controller.setThemeMode(mode),
+                  );
+                }),
                 const playerPlayerPage(key: ValueKey('player-player')),
               ],
             ),
@@ -329,6 +338,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _retryBackoffController.text = settings.retryBackoffSeconds.toString();
       _expandPlaylist = settings.previewExpandPlaylist;
       _downloadFormat = settings.defaultAudioFormat;
+      _videoQuality = settings.preferredVideoQuality;
+      _audioBitrate = settings.preferredAudioBitrate;
       _settingsInitialized = true;
     });
   }
@@ -492,6 +503,51 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           },
                         ),
                         const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          key: ValueKey('vq-narrow-$_videoQuality'),
+                          initialValue: _videoQuality,
+                          decoration: const InputDecoration(
+                            labelText: 'Video Quality',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.high_quality),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: '360p', child: Text('360p')),
+                            DropdownMenuItem(value: '480p', child: Text('480p')),
+                            DropdownMenuItem(value: '720p', child: Text('720p (HD)')),
+                            DropdownMenuItem(value: '1080p', child: Text('1080p (Full HD)')),
+                            DropdownMenuItem(value: 'best', child: Text('Best Available')),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() {
+                              _videoQuality = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<int>(
+                          key: ValueKey('abr-narrow-$_audioBitrate'),
+                          initialValue: _audioBitrate,
+                          decoration: const InputDecoration(
+                            labelText: 'Audio Bitrate',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.equalizer),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 128, child: Text('128 kbps')),
+                            DropdownMenuItem(value: 192, child: Text('192 kbps')),
+                            DropdownMenuItem(value: 256, child: Text('256 kbps')),
+                            DropdownMenuItem(value: 320, child: Text('320 kbps')),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() {
+                              _audioBitrate = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 12),
                         CheckboxListTile(
                           value: _expandPlaylist,
                           onChanged: (value) {
@@ -506,43 +562,94 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ],
                     )
                   else
-                    Row(
+                    Column(
                       children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            key: ValueKey('fmt-wide-$_downloadFormat'),
-                            initialValue: _downloadFormat,
-                            decoration: const InputDecoration(
-                              labelText: 'Format',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.audio_file),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                key: ValueKey('fmt-wide-$_downloadFormat'),
+                                initialValue: _downloadFormat,
+                                decoration: const InputDecoration(
+                                  labelText: 'Format',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.audio_file),
+                                ),
+                                items: const [
+                                  DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+                                  DropdownMenuItem(value: 'm4a', child: Text('M4A')),
+                                  DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
+                                ],
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setState(() {
+                                    _downloadFormat = value;
+                                  });
+                                },
+                              ),
                             ),
-                            items: const [
-                              DropdownMenuItem(value: 'mp3', child: Text('MP3')),
-                              DropdownMenuItem(value: 'm4a', child: Text('M4A')),
-                              DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
-                            ],
-                            onChanged: (value) {
-                              if (value == null) return;
-                              setState(() {
-                                _downloadFormat = value;
-                              });
-                            },
-                          ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                key: ValueKey('vq-wide-$_videoQuality'),
+                                initialValue: _videoQuality,
+                                decoration: const InputDecoration(
+                                  labelText: 'Video Quality',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.high_quality),
+                                ),
+                                items: const [
+                                  DropdownMenuItem(value: '360p', child: Text('360p')),
+                                  DropdownMenuItem(value: '480p', child: Text('480p')),
+                                  DropdownMenuItem(value: '720p', child: Text('720p (HD)')),
+                                  DropdownMenuItem(value: '1080p', child: Text('1080p (Full HD)')),
+                                  DropdownMenuItem(value: 'best', child: Text('Best Available')),
+                                ],
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setState(() {
+                                    _videoQuality = value;
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                key: ValueKey('abr-wide-$_audioBitrate'),
+                                initialValue: _audioBitrate,
+                                decoration: const InputDecoration(
+                                  labelText: 'Audio Bitrate',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.equalizer),
+                                ),
+                                items: const [
+                                  DropdownMenuItem(value: 128, child: Text('128 kbps')),
+                                  DropdownMenuItem(value: 192, child: Text('192 kbps')),
+                                  DropdownMenuItem(value: 256, child: Text('256 kbps')),
+                                  DropdownMenuItem(value: 320, child: Text('320 kbps')),
+                                ],
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setState(() {
+                                    _audioBitrate = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: CheckboxListTile(
-                            value: _expandPlaylist,
-                            onChanged: (value) {
-                              setState(() {
-                                _expandPlaylist = value ?? false;
-                              });
-                            },
-                            title: const Text('Expand playlist'),
-                            subtitle: const Text('Show all videos'),
-                            contentPadding: EdgeInsets.zero,
-                          ),
+                        const SizedBox(height: 12),
+                        CheckboxListTile(
+                          value: _expandPlaylist,
+                          onChanged: (value) {
+                            setState(() {
+                              _expandPlaylist = value ?? false;
+                            });
+                          },
+                          title: const Text('Expand playlist'),
+                          subtitle: const Text('Show all videos'),
+                          contentPadding: EdgeInsets.zero,
                         ),
                       ],
                     ),
@@ -1822,6 +1929,130 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(height: 16),
+
+          // Quality Settings
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.high_quality_outlined),
+                      const SizedBox(width: 8),
+                      Text('Quality Settings', style: Theme.of(context).textTheme.titleLarge),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  if (isNarrow) ...[
+                    DropdownButtonFormField<String>(
+                      key: ValueKey('settings-vq-$_videoQuality'),
+                      initialValue: _videoQuality,
+                      decoration: const InputDecoration(
+                        labelText: 'Video Quality',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.videocam),
+                        helperText: '1080p+ downloads separate video & audio and merges them (requires FFmpeg)',
+                        helperMaxLines: 2,
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: '360p', child: Text('360p')),
+                        DropdownMenuItem(value: '480p', child: Text('480p')),
+                        DropdownMenuItem(value: '720p', child: Text('720p (HD)')),
+                        DropdownMenuItem(value: '1080p', child: Text('1080p (Full HD)')),
+                        DropdownMenuItem(value: 'best', child: Text('Best Available')),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() { _videoQuality = value; });
+                        widget.controller.saveSettings(settings.copyWith(preferredVideoQuality: value));
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                      key: ValueKey('settings-abr-$_audioBitrate'),
+                      initialValue: _audioBitrate,
+                      decoration: const InputDecoration(
+                        labelText: 'Audio Bitrate',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.equalizer),
+                        helperText: 'Higher bitrate = better quality, larger file size',
+                        helperMaxLines: 2,
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 128, child: Text('128 kbps (Compact)')),
+                        DropdownMenuItem(value: 192, child: Text('192 kbps (Standard)')),
+                        DropdownMenuItem(value: 256, child: Text('256 kbps (High)')),
+                        DropdownMenuItem(value: 320, child: Text('320 kbps (Maximum)')),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() { _audioBitrate = value; });
+                        widget.controller.saveSettings(settings.copyWith(preferredAudioBitrate: value));
+                      },
+                    ),
+                  ] else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            key: ValueKey('settings-vq-$_videoQuality'),
+                            initialValue: _videoQuality,
+                            decoration: const InputDecoration(
+                              labelText: 'Video Quality',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.videocam),
+                              helperText: '1080p+ merges separate streams',
+                              helperMaxLines: 2,
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: '360p', child: Text('360p')),
+                              DropdownMenuItem(value: '480p', child: Text('480p')),
+                              DropdownMenuItem(value: '720p', child: Text('720p (HD)')),
+                              DropdownMenuItem(value: '1080p', child: Text('1080p (Full HD)')),
+                              DropdownMenuItem(value: 'best', child: Text('Best Available')),
+                            ],
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() { _videoQuality = value; });
+                              widget.controller.saveSettings(settings.copyWith(preferredVideoQuality: value));
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            key: ValueKey('settings-abr-$_audioBitrate'),
+                            initialValue: _audioBitrate,
+                            decoration: const InputDecoration(
+                              labelText: 'Audio Bitrate',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.equalizer),
+                              helperText: 'Higher = better quality',
+                              helperMaxLines: 2,
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: 128, child: Text('128 kbps (Compact)')),
+                              DropdownMenuItem(value: 192, child: Text('192 kbps (Standard)')),
+                              DropdownMenuItem(value: 256, child: Text('256 kbps (High)')),
+                              DropdownMenuItem(value: 320, child: Text('320 kbps (Maximum)')),
+                            ],
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() { _audioBitrate = value; });
+                              widget.controller.saveSettings(settings.copyWith(preferredAudioBitrate: value));
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           
           // FFmpeg Settings
           Card(
@@ -1894,23 +2125,31 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   TextField(
                     controller: _retryCountController,
                     decoration: const InputDecoration(
-                      labelText: 'Retry count',
+                      labelText: 'Retry count (0-10)',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.repeat),
                       hintText: 'Number of retry attempts',
                     ),
                     keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(2),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: _retryBackoffController,
                     decoration: const InputDecoration(
-                      labelText: 'Retry backoff (seconds)',
+                      labelText: 'Retry backoff seconds (0-60)',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.timelapse),
                       hintText: 'Wait time between retries',
                     ),
                     keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(2),
+                    ],
                   ),
                 ],
               ),
@@ -2009,9 +2248,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               onPressed: () {
                 final next = settings.copyWith(
                   downloadDir: _isAndroid ? _androidDownloadUri : _downloadDirController.text.trim(),
-                  maxWorkers: int.tryParse(_workersController.text.trim()) ?? settings.maxWorkers,
-                  retryCount: int.tryParse(_retryCountController.text.trim()) ?? settings.retryCount,
-                  retryBackoffSeconds: int.tryParse(_retryBackoffController.text.trim()) ?? settings.retryBackoffSeconds,
+                  maxWorkers: (int.tryParse(_workersController.text.trim()) ?? settings.maxWorkers).clamp(1, 10),
+                  retryCount: (int.tryParse(_retryCountController.text.trim()) ?? settings.retryCount).clamp(0, 10),
+                  retryBackoffSeconds: (int.tryParse(_retryBackoffController.text.trim()) ?? settings.retryBackoffSeconds).clamp(0, 60),
+                  preferredVideoQuality: _videoQuality,
+                  preferredAudioBitrate: _audioBitrate,
+                  defaultAudioFormat: _downloadFormat,
                 );
                 widget.controller.saveSettings(next);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -2170,15 +2412,35 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       prefixIcon: Icon(Icons.transform),
                     ),
                     items: const [
+                      // ── Audio ──
                       DropdownMenuItem(value: 'mp3', child: Text('MP3 (Audio)')),
                       DropdownMenuItem(value: 'm4a', child: Text('M4A (Audio)')),
+                      DropdownMenuItem(value: 'wav', child: Text('WAV (Audio)')),
+                      DropdownMenuItem(value: 'flac', child: Text('FLAC (Audio)')),
+                      DropdownMenuItem(value: 'ogg', child: Text('OGG (Audio)')),
+                      DropdownMenuItem(value: 'aac', child: Text('AAC (Audio)')),
+                      DropdownMenuItem(value: 'wma', child: Text('WMA (Audio)')),
+                      // ── Video ──
                       DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
+                      DropdownMenuItem(value: 'webm', child: Text('WebM (Video)')),
+                      DropdownMenuItem(value: 'mkv', child: Text('MKV (Video)')),
+                      DropdownMenuItem(value: 'avi', child: Text('AVI (Video)')),
+                      DropdownMenuItem(value: 'mov', child: Text('MOV (Video)')),
+                      DropdownMenuItem(value: 'wmv', child: Text('WMV (Video)')),
+                      // ── Image ──
                       DropdownMenuItem(value: 'png', child: Text('PNG (Image)')),
                       DropdownMenuItem(value: 'jpg', child: Text('JPG (Image)')),
+                      DropdownMenuItem(value: 'bmp', child: Text('BMP (Image)')),
+                      DropdownMenuItem(value: 'gif', child: Text('GIF (Image)')),
+                      DropdownMenuItem(value: 'tiff', child: Text('TIFF (Image)')),
+                      DropdownMenuItem(value: 'webp', child: Text('WebP (Image)')),
+                      // ── Document ──
                       DropdownMenuItem(value: 'pdf', child: Text('PDF (Document)')),
                       DropdownMenuItem(value: 'txt', child: Text('TXT (Text)')),
-                      DropdownMenuItem(value: 'zip', child: Text('ZIP (Archive)')),
                       DropdownMenuItem(value: 'epub', child: Text('EPUB (E-book)')),
+                      // ── Archive ──
+                      DropdownMenuItem(value: 'zip', child: Text('ZIP (Archive)')),
+                      DropdownMenuItem(value: 'cbz', child: Text('CBZ (Comic Archive)')),
                     ],
                     onChanged: (value) {
                       if (value == null) return;

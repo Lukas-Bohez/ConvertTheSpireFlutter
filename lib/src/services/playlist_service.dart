@@ -44,10 +44,10 @@ class PlaylistService {
   /// Get the audio URL for a given YouTube video id.
   Future<String> getAudioUrl(String videoId) async {
     final manifest = await _yt.videos.streamsClient.getManifest(videoId);
-    // Prefer muxed stream (reliable), fall back to audio-only
-    final stream = manifest.muxed.isNotEmpty
-        ? manifest.muxed.withHighestBitrate()
-        : manifest.audioOnly.withHighestBitrate();
+    // Prefer audio-only (saves bandwidth), fall back to muxed
+    final stream = manifest.audioOnly.isNotEmpty
+        ? manifest.audioOnly.withHighestBitrate()
+        : manifest.muxed.withHighestBitrate();
     return stream.url.toString();
   }
 

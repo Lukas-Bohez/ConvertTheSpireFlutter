@@ -22,6 +22,10 @@ class AppSettings {
   final String namingTemplate;       // file organisation template
   final String? soundcloudClientId;  // optional SoundCloud API key
 
+  // ── Quality settings ──────────────────────────────────────────────────
+  final String preferredVideoQuality; // '360p', '480p', '720p', '1080p', 'best'
+  final int preferredAudioBitrate;    // 128, 192, 256, 320 (kbps)
+
   const AppSettings({
     required this.downloadDir,
     required this.maxWorkers,
@@ -42,6 +46,8 @@ class AppSettings {
     this.minimumBitrate = 0,
     this.namingTemplate = '{artist}/{title}',
     this.soundcloudClientId,
+    this.preferredVideoQuality = '720p',
+    this.preferredAudioBitrate = 192,
   });
 
   factory AppSettings.defaults({required String downloadDir}) {
@@ -65,6 +71,8 @@ class AppSettings {
       minimumBitrate: 0,
       namingTemplate: '{artist}/{title}',
       soundcloudClientId: null,
+      preferredVideoQuality: '720p',
+      preferredAudioBitrate: 192,
     );
   }
 
@@ -88,6 +96,8 @@ class AppSettings {
     int? minimumBitrate,
     String? namingTemplate,
     String? soundcloudClientId,
+    String? preferredVideoQuality,
+    int? preferredAudioBitrate,
   }) {
     return AppSettings(
       downloadDir: downloadDir ?? this.downloadDir,
@@ -109,6 +119,8 @@ class AppSettings {
       minimumBitrate: minimumBitrate ?? this.minimumBitrate,
       namingTemplate: namingTemplate ?? this.namingTemplate,
       soundcloudClientId: soundcloudClientId ?? this.soundcloudClientId,
+      preferredVideoQuality: preferredVideoQuality ?? this.preferredVideoQuality,
+      preferredAudioBitrate: preferredAudioBitrate ?? this.preferredAudioBitrate,
     );
   }
 
@@ -135,6 +147,8 @@ class AppSettings {
       minimumBitrate: (json['minimum_bitrate'] as num?)?.toInt() ?? 0,
       namingTemplate: json['naming_template'] as String? ?? '{artist}/{title}',
       soundcloudClientId: json['soundcloud_client_id'] as String?,
+      preferredVideoQuality: json['preferred_video_quality'] as String? ?? '720p',
+      preferredAudioBitrate: (json['preferred_audio_bitrate'] as num?)?.toInt() ?? 192,
     );
   }
 
@@ -159,6 +173,8 @@ class AppSettings {
       'minimum_bitrate': minimumBitrate,
       'naming_template': namingTemplate,
       'soundcloud_client_id': soundcloudClientId,
+      'preferred_video_quality': preferredVideoQuality,
+      'preferred_audio_bitrate': preferredAudioBitrate,
     };
   }
 }

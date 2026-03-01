@@ -672,29 +672,52 @@ class PlayerState with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> next() async {
+  Future<void> next({MediaType? only}) async {
     if (library.isEmpty) return;
-    currentIndex = shuffle
-        ? _randomOther()
-        : (currentIndex + 1) % library.length;
+    int start = currentIndex;
+    int visited = 0;
+    do {
+      currentIndex = shuffle
+          ? _randomOther()
+          : (currentIndex + 1) % library.length;
+      visited++;
+      final item = library[currentIndex];
+      if (only != null) {
+        if (item.type == only) break;
+      } else {
+        if (_videoSupported || Platform.isAndroid || item.type == MediaType.audio) break;
+      }
+    } while (currentIndex != start && visited < library.length);
     await _loadCurrent();
     notifyListeners();
   }
 
-  Future<void> previous() async {
+  Future<void> previous({MediaType? only}) async {
     if (library.isEmpty) return;
-    currentIndex = shuffle
-        ? _randomOther()
-        : (currentIndex - 1 + library.length) % library.length;
+    int start = currentIndex;
+    int visited = 0;
+    do {
+      currentIndex = shuffle
+          ? _randomOther()
+          : (currentIndex - 1 + library.length) % library.length;
+      visited++;
+      final item = library[currentIndex];
+      if (only != null) {
+        if (item.type == only) break;
+      } else {
+        if (_videoSupported || Platform.isAndroid || item.type == MediaType.audio) break;
+      }
+    } while (currentIndex != start && visited < library.length);
     await _loadCurrent();
     notifyListeners();
   }
 
   int _randomOther() {
+    if (library.length <= 1) return 0;
     int idx;
     do {
       idx = _random.nextInt(library.length);
-    } while (idx == currentIndex && library.length > 1);
+    } while (idx == currentIndex);
     return idx;
   }
 
@@ -1004,7 +1027,18 @@ class _PlayerScreenState extends State<PlayerScreen>
           onTap: state.toggleShuffle,
         ),
         const SizedBox(width: 8),
-        _iconBtn(Icons.skip_previous_rounded, state.previous, size: 30),
+        _iconBtn(
+          Icons.skip_previous_rounded,
+          () {
+            final filter = _tabController.index == 1
+                ? MediaType.audio
+                : _tabController.index == 2
+                    ? MediaType.video
+                    : null;
+            state.previous(only: filter);
+          },
+          size: 30,
+        ),
         const SizedBox(width: 6),
         GestureDetector(
           onTap: state.library.isEmpty ? null : state.togglePlay,
@@ -1023,7 +1057,18 @@ class _PlayerScreenState extends State<PlayerScreen>
           ),
         ),
         const SizedBox(width: 6),
-        _iconBtn(Icons.skip_next_rounded, state.next, size: 30),
+        _iconBtn(
+          Icons.skip_next_rounded,
+          () {
+            final filter = _tabController.index == 1
+                ? MediaType.audio
+                : _tabController.index == 2
+                    ? MediaType.video
+                    : null;
+            state.next(only: filter);
+          },
+          size: 30,
+        ),
         const SizedBox(width: 8),
         _toggleBtn(
           icon: state.repeatMode == RepeatMode.one

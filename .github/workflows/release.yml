@@ -1,0 +1,189 @@
+name: Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (e.g. v2.0.0). Leave empty to auto-generate.'
+        required: false
+      release_name:
+        description: 'Release name. Leave empty to use tag.'
+        required: false
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Code quality gate ────────────────────────────────────────────────
+  analyze:
+    name: Code Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze project source
+        run: flutter analyze --fatal-infos
+
+      - name: Run tests
+        run: flutter test
+
+  # ── Windows Build ────────────────────────────────────────────────────
+  build-windows:
+    name: Build Windows
+    needs: analyze
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Build MSIX (unsigned)
+        run: dart run msix:create
+        continue-on-error: true
+
+      - name: Archive Windows bundle
+        run: |
+          Compress-Archive -Path build\windows\x64\release\bundle\* -DestinationPath ConvertTheSpire-windows-x64.zip
+        shell: pwsh
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: ConvertTheSpire-windows-x64.zip
+
+      - name: Upload MSIX artifact
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: windows-msix
+          path: build/windows/runner/Release/*.msix
+        continue-on-error: true
+
+  # ── Linux Build ──────────────────────────────────────────────────────
+  build-linux:
+    name: Build Linux
+    needs: analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake ninja-build pkg-config \
+            libgtk-3-dev clang \
+            libasound2-dev libmpv-dev
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Linux release
+        run: flutter build linux --release
+
+      - name: Archive Linux bundle
+        run: |
+          cd build/linux/x64/release/bundle
+          tar czf "$GITHUB_WORKSPACE/ConvertTheSpire-linux-x64.tar.gz" .
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: ConvertTheSpire-linux-x64.tar.gz
+
+  # ── Android Build ────────────────────────────────────────────────────
+  build-android:
+    name: Build Android
+    needs: analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  # ── Create / Update GitHub Release ──────────────────────────────────
+  release:
+    name: Publish Release
+    needs: [build-windows, build-linux, build-android]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f
+
+      - name: Create Release (manual dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_tag || format('v0.0.{0}', github.run_number) }}
+          name: ${{ inputs.release_name || inputs.release_tag || format('Build {0}', github.run_number) }}
+          generate_release_notes: true
+          files: |
+            artifacts/windows-x64/ConvertTheSpire-windows-x64.zip
+            artifacts/linux-x64/ConvertTheSpire-linux-x64.tar.gz
+            artifacts/android-apk/app-release.apk
+            artifacts/windows-msix/*.msix
+
+      - name: Upload to existing Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/windows-x64/ConvertTheSpire-windows-x64.zip
+            artifacts/linux-x64/ConvertTheSpire-linux-x64.tar.gz
+            artifacts/android-apk/app-release.apk
+            artifacts/windows-msix/*.msix

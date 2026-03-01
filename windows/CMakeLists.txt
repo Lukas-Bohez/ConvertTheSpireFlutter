@@ -32,6 +32,12 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
 
+# Silence MSVC warning C4821 (BOM/unicode encoding detection) treated as error
+# Some Windows SDK headers can trigger C4821; disable it globally for MSVC.
+if(MSVC)
+  add_compile_options(/wd4821)
+endif()
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by
