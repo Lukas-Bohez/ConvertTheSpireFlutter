@@ -1,158 +1,143 @@
-# My Flutter App
+# Convert the Spire Reborn
 
-This is a Flutter application designed to demonstrate the functionality of a mobile app using Flutter framework. 
+[![CI](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/actions/workflows/ci.yml/badge.svg)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/actions/workflows/ci.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+A cross-platform Flutter application for downloading, converting, organizing, and playing media files. Built for **Windows**, **Linux**, and **Android**.
+
+## Features
+
+- **YouTube Downloads** — Search, browse, and download videos/audio with configurable quality (up to 1080p video, 320 kbps audio)
+- **File Converter** — Convert between 27+ formats: documents (PDF, EPUB, DOCX, HTML, TXT, CSV, JSON, XML, YAML, MD), images (PNG, JPG, BMP, GIF, TIFF, WebP, ICO), archives (ZIP, TAR.GZ, CBZ), and media (MP3, WAV, AAC, FLAC, OGG, MP4, MKV, WEBM)
+- **Media Player** — Built-in audio/video player with library management, playlists, and queue
+- **File Organization** — Automatic duplicate detection (streaming MD5), cross-filesystem moves, and smart folder structure
+- **Bulk Import** — Parse track lists and batch-download from YouTube
+- **Built-in Browser** — YouTube browsing with incognito mode (Windows)
+- **Statistics Dashboard** — Track listening habits with charts and summaries
+- **Notifications** — Download progress and completion alerts
+- **Customizable** — Dark/light/auto theme, onboarding tour, configurable settings
+
+## Downloads
+
+Pre-built binaries are available on the [Releases](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases) page:
+
+| Platform | File |
+|----------|------|
+| Windows  | `ConvertTheSpire-windows-x64.zip` |
+| Linux    | `ConvertTheSpire-linux-x64.tar.gz` |
+| Android  | `app-release.apk` |
+
+## Building from Source
+
+### Prerequisites
+
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) (stable channel, 3.41+)
+- Git
+
+### Quick Start
+
+```bash
+git clone https://github.com/Lukas-Bohez/ConvertTheSpireFlutter.git
+cd ConvertTheSpireFlutter
+flutter pub get
+```
+
+### Windows
+
+```bash
+flutter build windows --release
+# Output: build/windows/x64/release/bundle/
+```
+
+### Linux
+
+Install system dependencies first:
+
+```bash
+sudo apt install cmake ninja-build pkg-config libgtk-3-dev clang libasound2-dev libmpv-dev
+```
+
+Then build:
+
+```bash
+flutter build linux --release
+# Output: build/linux/x64/release/bundle/
+```
+
+**WSL users:** Symlinks don't work on NTFS mounts. Use the included build script which automatically copies to the native filesystem:
+
+```bash
+wsl -e bash scripts/build_linux_wsl.sh
+```
+
+### Android
+
+```bash
+flutter build apk --release
+# Output: build/app/outputs/flutter-apk/app-release.apk
+```
+
+## CI/CD Pipeline
+
+This project uses GitHub Actions for automated builds and quality assurance:
+
+- **[CI](.github/workflows/ci.yml)** — Runs on every push/PR: formatting check, static analysis, and tests
+- **[Release Build](.github/workflows/release.yml)** — Triggered manually or on release: builds all three platforms, runs quality gate, and publishes artifacts to GitHub Releases
+
+All release binaries are built from the public source via the automated pipeline, ensuring full reproducibility and traceability from source to binary.
 
 ## Project Structure
 
 ```
-my_flutter_app
-├── android                # Android platform-specific code
-├── ios                    # iOS platform-specific code
-├── lib                    # Main application code
-│   ├── main.dart          # Entry point of the application
-│   ├── src                # Source files for the app
-│   │   ├── app.dart       # Main application widget
-│   │   ├── screens        # Contains different screens of the app
-│   │   │   └── home_screen.dart # Home screen layout and logic
-│   │   ├── widgets        # Reusable widgets
-│   │   │   └── reusable_widget.dart # A reusable widget class
-│   │   ├── models         # Data models
-│   │   │   └── item_model.dart # Structure of an item
-│   │   └── services       # Services for API calls
-│   │       └── api_service.dart # Handles API interactions
-├── test                   # Test files
-│   └── widget_test.dart   # Widget tests for the application
-├── pubspec.yaml           # Project configuration and dependencies
-├── analysis_options.yaml   # Dart analyzer configuration
-├── .gitignore             # Files to ignore in version control
-└── README.md              # Project documentation
+lib/
+├── main.dart                    # Entry point
+└── src/
+    ├── app.dart                 # Root widget, theme, routing
+    ├── models/                  # Data models (AppSettings, QueueItem, etc.)
+    ├── screens/                 # UI screens (Home, Player, Browser, etc.)
+    ├── services/                # Business logic (Download, Convert, Playlist, etc.)
+    ├── state/                   # State management (AppController)
+    └── widgets/                 # Reusable UI components
 ```
 
-## Getting Started
+## Native Library Requirements
 
-To get started with this project, ensure you have Flutter installed on your machine. You can follow the official Flutter installation guide [here](https://flutter.dev/docs/get-started/install).
+This application uses [`media_kit`](https://pub.dev/packages/media_kit) for video playback, which wraps the native `libmpv` library.
 
-### Installation
+### Linux
 
-1. Clone the repository:
-   ```
-   git clone <repository-url>
-   ```
-2. Navigate to the project directory:
-   ```
-   cd my_flutter_app
-   ```
-3. Install the dependencies:
-   ```
-   flutter pub get
-   ```
+Install the runtime libraries:
 
-### Running the App
-
-To run the app, use the following command:
-```
-flutter run
+```bash
+sudo apt install libmpv-dev mpv   # Debian/Ubuntu
 ```
 
-> **First launch**: the application will automatically display a brief onboarding tour covering each of the main tabs. During the tour you’ll now see small previews and mock‑ups of the features being described (for example, the **Queue** page shows a mini list with status icons) so you get an immediate feel for what the real screen looks like. The tour also exposes a theme toggle which calls back to the host, allowing you to switch between light/dark/auto without leaving the walkthrough. You can revisit the tour at any time via the "Show onboarding" button at the top of the **Guide** tab.
+Without `libmpv`, the app falls back to audio-only mode with a helpful error message.
 
-To wire it up in your own app pass the active `ThemeMode` and handle changes:
+### Windows / macOS
 
-```dart
-OnboardingScreen(
-  onFinish: _markSeen,
-  themeMode: _themeMode,
-  onThemeChanged: (mode) => setState(() => _themeMode = mode),
-)
-```
-
-### Testing
-
-To run the widget tests, use:
-```
-flutter test
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a pull request or open an issue for any suggestions or improvements.
-
-## License
-
-This project is licensed under the GNU GPLv3. See [LICENSE](LICENSE) for details.
-
-## Native library requirements
-
-This application uses [`package:media_kit`](https://pub.dev/packages/media_kit)
-for video playback.  `media_kit` is a thin Dart wrapper around the native
-`libmpv` library – the MPV media player core – which **is not bundled with
-the Dart package**.  You must supply the appropriate `libmpv` binaries for
-each target platform before the player can be used.
+Binaries are bundled automatically by `media_kit_libs_windows_video`. No manual steps required.
 
 ### Android
 
-* **Important:** the `media_kit` Dart package currently does **not** support
-  video playback on Android.  Even if you bundle the native `libmpv.so` files
-  correctly, the plugin throws `Unsupported platform: android` during
-  initialization.  The app has been updated to gracefully disable video and
-  fall back to audio-only behaviour on Android, but you should not expect
-  video playback to work until a future release of `media_kit` adds Android
-  support.
+Video playback is currently audio-only on Android due to `media_kit` platform limitations. The app gracefully handles this and uses `video_player` as a fallback.
 
-* Add the `.so` files for each ABI you intend to support under
-  `android/app/src/main/jniLibs/<abi>/libmpv.so`.  Prebuilt libraries can be
-  downloaded from the [media_kit GitHub releases](https://github.com/media-kit/media-kit/releases)
-  (look for `android-arm64-v8a`, `android-armeabi-v7a`, etc.).  To automate
-  the process you can run one of the helper scripts included in this
-  repository:
+## Contributing
 
-  ```bash
-  # bash (Linux/macOS/WSL)
-  chmod +x scripts/fetch_mpv_android.sh && scripts/fetch_mpv_android.sh
+Contributions are welcome! Please open an issue or submit a pull request.
 
-  # PowerShell (Windows)
-  scripts\fetch_mpv_android.ps1
-  ```
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Ensure code passes analysis: `flutter analyze`
+4. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
 
-  The script downloads the appropriate APKs from the release and extracts the
-  `libmpv.so` into the correct `jniLibs` subfolders.  (This step is harmless
-  on Android and will be necessary once support is added.)
-* When building APKs make sure you either build an Android App Bundle or add
-  `--split-per-abi` to your `flutter build apk` command; the library is large
-  and Gradle will strip it out of fat APKs unless the split is enabled, which
-  leads to the runtime error `Cannot find libmpv.so`.  (The error screen you
-  now see explains the problem.)
-* Our runtime checks will display a friendly error page if the library is
-  missing, rather than crashing to a black screen.
-### Linux
+## License
 
-Install the system packages so that `libmpv` is available at runtime:
-
-```bash
-sudo apt install libmpv-dev mpv  # Debian/Ubuntu
-# or the equivalent for your distro
-```
-The application will catch initialization failures and show an error message
-with these instructions.
-
-Important: video playback on Linux requires the system `libmpv` (mpv) runtime.
-If you want video support, install `mpv` / `libmpv` (examples above) or
-ensure your target distribution bundles `libmpv` alongside the app. Without
-`libmpv` the app will fall back to audio-only behaviour and display a
-helpful message explaining how to install it.
-
-The application will catch initialization failures and show an error message
-with these instructions.
-
-### iOS / macOS / Windows
-
-Binaries for these platforms are currently bundled automatically by the
-`media_kit` plugin (via the `media_kit_video` and
-`media_kit_libs_windows_video` packages), so no manual steps are required.
-
----
+This project is licensed under the **GNU General Public License v3.0** — see the [LICENSE](LICENSE) file for details.
 
 ## Support
 
-Buy me a coffee: https://buymeacoffee.com/orokaconner
-Website: https://quizthespire.com/
+- Buy me a coffee: https://buymeacoffee.com/orokaconner
+- Website: https://quizthespire.com/

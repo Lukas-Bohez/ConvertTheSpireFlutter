@@ -22,10 +22,12 @@ class BulkImportService {
   String _parseTrackLine(String line) {
     const separators = [' - ', ' – ', ' -- ', ' by '];
     for (final sep in separators) {
-      if (line.contains(sep)) {
-        final parts = line.split(sep);
-        if (parts.length >= 2) {
-          return '${parts[0].trim()} ${parts[1].trim()}';
+      final idx = line.indexOf(sep);
+      if (idx > 0) {
+        final before = line.substring(0, idx).trim();
+        final after = line.substring(idx + sep.length).trim();
+        if (before.isNotEmpty && after.isNotEmpty) {
+          return '$before $after';
         }
       }
     }

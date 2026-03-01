@@ -243,6 +243,8 @@ class AppController extends ChangeNotifier {
             final updated = item.copyWith(progress: pct, status: status);
             _updateQueue(item, updated);
           },
+          preferredVideoQuality: settings.preferredVideoQuality,
+          preferredAudioBitrate: settings.preferredAudioBitrate,
         );
         final updated = item.copyWith(
           progress: 100,
@@ -464,7 +466,7 @@ class AppController extends ChangeNotifier {
     final formatLower = format.toLowerCase();
 
     // Non-media formats (images, docs) don't need FFmpeg at all
-    const nonMediaFormats = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'pdf', 'txt', 'zip', 'epub'};
+    const nonMediaFormats = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'pdf', 'txt', 'zip', 'cbz', 'epub'};
     if (nonMediaFormats.contains(formatLower)) {
       return settings.ffmpegPath;
     }

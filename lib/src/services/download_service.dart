@@ -46,6 +46,8 @@ class DownloadService {
     required String? ffmpegPath,
     required void Function(int pct, DownloadStatus status) onProgress,
     required DownloadToken token,
+    String preferredVideoQuality = '720p',
+    int preferredAudioBitrate = 192,
   }) async {
     if (kIsWeb) {
       throw Exception('Downloads are not supported on web. Please use the desktop or mobile app.');
@@ -69,9 +71,15 @@ class DownloadService {
 
     final safeTitle = _sanitizeFileName(video.title);
     final needsConversion = formatLower != 'mp4';
-    if (needsConversion && !await ffmpeg.isAvailable(ffmpegPath)) {
-      throw Exception('FFmpeg is required for $formatLower conversion. Configure it in Settings.');
+    final wantHd = !needsConversion && _qualityToHeight(preferredVideoQuality) > 720;
+    if ((needsConversion || wantHd) && !await ffmpeg.isAvailable(ffmpegPath)) {
+      if (wantHd) {
+        // Fall back to muxed (720p max) if FFmpeg unavailable for HD merge
+      } else {
+        throw Exception('FFmpeg is required for $formatLower conversion. Configure it in Settings.');
+      }
     }
+    final bool ffmpegAvailable = await ffmpeg.isAvailable(ffmpegPath);
 
     // Create output directory
     final outputFolder = (isSafOutput || useMediaStoreOnly)
@@ -88,17 +96,18 @@ class DownloadService {
     if (thumbPath != null) tempFiles.add(thumbPath);
 
     final needsMp4Embed = formatLower == 'mp4' && thumbBytes != null;
-    if (needsMp4Embed && !await ffmpeg.isAvailable(ffmpegPath)) {
-      throw Exception('FFmpeg is required to embed MP4 thumbnails. Configure it in Settings.');
-    }
 
-    // Always download the muxed (video+audio) stream – audio-only streams
-    // from YouTube are unreliable and frequently stall. FFmpeg will extract
-    // the audio track when converting to MP3/M4A.
+    // Determine download strategy:
+    // (a) Audio conversion (MP3/M4A): prefer muxed, fall back audio-only
+    // (b) MP4 1080p+: download separate video+audio and merge via FFmpeg
+    // (c) MP4 720p or below: use muxed stream directly
     final StreamInfo sourceStream;
     final String tempFilePath;
+    StreamInfo? separateAudioStream;  // non-null when doing HD merge
+    String? tempAudioPath;
+
     if (needsConversion) {
-      // Prefer muxed stream (reliable), fall back to audio-only if unavailable
+      // Audio formats: prefer muxed (reliable), fall back to audio-only
       if (streams.muxed.isNotEmpty) {
         sourceStream = streams.muxed.withHighestBitrate();
         tempFilePath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.mp4';
@@ -108,7 +117,16 @@ class DownloadService {
       } else {
         throw Exception('No downloadable streams found for this video. It may be region-restricted or DRM-protected.');
       }
+    } else if (wantHd && ffmpegAvailable && streams.videoOnly.isNotEmpty && streams.audioOnly.isNotEmpty) {
+      // HD MP4: download separate video + audio, then merge
+      final targetHeight = _qualityToHeight(preferredVideoQuality);
+      final videoStream = _pickBestVideoStream(streams.videoOnly, targetHeight);
+      sourceStream = videoStream;
+      tempFilePath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.video.${_containerExt(videoStream)}';
+      separateAudioStream = streams.audioOnly.withHighestBitrate();
+      tempAudioPath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.audio.${_containerExt(separateAudioStream)}';
     } else {
+      // Standard muxed MP4 (720p max)
       if (streams.muxed.isEmpty) {
         throw Exception('No downloadable video streams found for this video. It may be region-restricted or DRM-protected.');
       }
@@ -116,13 +134,29 @@ class DownloadService {
       tempFilePath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.mp4';
     }
     tempFiles.add(tempFilePath);
+    if (tempAudioPath != null) tempFiles.add(tempAudioPath);
 
     try {
-      // Download source stream (0-90%)
-      await _downloadStream(sourceStream, tempFilePath, token, (pct, status) {
-        final adjustedPct = (pct * 0.9).toInt();
-        onProgress(adjustedPct, status);
-      });
+      // Download source stream
+      final bool isHdMerge = separateAudioStream != null;
+      if (isHdMerge) {
+        // Download video (0-60%) then audio (60-80%)
+        await _downloadStream(sourceStream, tempFilePath, token, (pct, status) {
+          final adjustedPct = (pct * 0.6).toInt();
+          onProgress(adjustedPct, status);
+        });
+        if (token.cancelled) throw Exception('Cancelled');
+        await _downloadStream(separateAudioStream, tempAudioPath!, token, (pct, status) {
+          final adjustedPct = 60 + (pct * 0.2).toInt();
+          onProgress(adjustedPct, status);
+        });
+      } else {
+        // Single stream download (0-90%)
+        await _downloadStream(sourceStream, tempFilePath, token, (pct, status) {
+          final adjustedPct = (pct * 0.9).toInt();
+          onProgress(adjustedPct, status);
+        });
+      }
 
       if (token.cancelled) {
         throw Exception('Cancelled');
@@ -145,6 +179,7 @@ class DownloadService {
           title: video.title,
           artist: video.author,
           date: video.uploadDate?.toIso8601String() ?? '',
+          bitrate: preferredAudioBitrate,
         );
         await ffmpeg.run(args, ffmpegPath: ffmpegPath);
 
@@ -155,8 +190,19 @@ class DownloadService {
       } else {
         // ── MP4: keep as video ────────────────────────────────────────
         outputPath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.mp4';
-        onProgress(95, DownloadStatus.converting);
-        if (needsMp4Embed) {
+        onProgress(isHdMerge ? 85 : 95, DownloadStatus.converting);
+        if (isHdMerge) {
+          // Merge separate video + audio streams into final MP4
+          final coverPath = await _writeCoverFile(outputFolder.path, safeTitle, thumbBytes);
+          if (coverPath != null) tempFiles.add(coverPath);
+          await _mergeVideoAudio(
+            videoPath: tempFilePath,
+            audioPath: tempAudioPath!,
+            outputPath: outputPath,
+            coverPath: coverPath,
+            ffmpegPath: ffmpegPath,
+          );
+        } else if (needsMp4Embed) {
           final coverPath = await _writeCoverFile(outputFolder.path, safeTitle, thumbBytes);
           if (coverPath != null) tempFiles.add(coverPath);
           await _embedMp4Cover(tempFilePath, outputPath, coverPath, ffmpegPath: ffmpegPath);
@@ -201,6 +247,7 @@ class DownloadService {
     required String title,
     required String artist,
     required String date,
+    int bitrate = 192,
   }) {
     // Cover embedding support:
     //   MP3 – ID3v2 attached picture (mjpeg + attached_pic)
@@ -222,12 +269,13 @@ class DownloadService {
     }
 
     // Audio codec + container settings
+    final bitrateStr = '${bitrate.clamp(64, 320)}k';
     switch (format) {
       case 'mp3':
-        args.addAll(['-c:a', 'libmp3lame', '-b:a', '192k', '-id3v2_version', '3']);
+        args.addAll(['-c:a', 'libmp3lame', '-b:a', bitrateStr, '-id3v2_version', '3']);
         break;
       case 'm4a':
-        args.addAll(['-c:a', 'aac', '-b:a', '192k']);
+        args.addAll(['-c:a', 'aac', '-b:a', bitrateStr]);
         break;
       default:
         args.addAll(['-c:a', 'copy']);
@@ -529,6 +577,70 @@ class DownloadService {
       mimeType: mimeType,
       subdir: formatLower,
     );
+  }
+
+  /// Convert quality string like '1080p' to pixel height.
+  static int _qualityToHeight(String quality) {
+    switch (quality) {
+      case '360p': return 360;
+      case '480p': return 480;
+      case '720p': return 720;
+      case '1080p': return 1080;
+      case '1440p': return 1440;
+      case '2160p': return 2160;
+      case 'best': return 9999;
+      default: return 720;
+    }
+  }
+
+  /// Pick the best video-only stream whose height is ≤ targetHeight.
+  /// Falls back to the smallest if nothing matches, or the largest if 'best'.
+  VideoOnlyStreamInfo _pickBestVideoStream(
+    Iterable<VideoOnlyStreamInfo> streams,
+    int targetHeight,
+  ) {
+    final sorted = streams.toList()
+      ..sort((a, b) => (b.videoResolution.height).compareTo(a.videoResolution.height));
+    if (targetHeight >= 9999) return sorted.first; // best = highest
+    // Find the highest resolution ≤ target
+    for (final s in sorted) {
+      if (s.videoResolution.height <= targetHeight) return s;
+    }
+    // Nothing ≤ target; return the lowest available
+    return sorted.last;
+  }
+
+  /// Determine a container extension from a StreamInfo's codec/container.
+  String _containerExt(StreamInfo stream) {
+    final mime = stream.container.name.toLowerCase();
+    if (mime.contains('webm')) return 'webm';
+    if (mime.contains('mp4')) return 'mp4';
+    return 'mp4';
+  }
+
+  /// Merge separate video and audio files into a single MP4 using FFmpeg.
+  Future<void> _mergeVideoAudio({
+    required String videoPath,
+    required String audioPath,
+    required String outputPath,
+    required String? coverPath,
+    required String? ffmpegPath,
+  }) async {
+    final args = <String>['-y', '-i', videoPath, '-i', audioPath];
+    if (coverPath != null) {
+      args.addAll(['-i', coverPath]);
+      // Map video from input 0, audio from input 1, cover from input 2
+      args.addAll(['-map', '0:v', '-map', '1:a', '-map', '2:v']);
+      args.addAll(['-c:v:0', 'copy', '-c:a', 'aac', '-c:v:1', 'mjpeg',
+                   '-disposition:v:1', 'attached_pic',
+                   '-metadata:s:v:1', 'title=Album cover',
+                   '-metadata:s:v:1', 'comment=Cover (front)']);
+    } else {
+      args.addAll(['-map', '0:v', '-map', '1:a']);
+      args.addAll(['-c:v', 'copy', '-c:a', 'aac']);
+    }
+    args.addAll(['-movflags', '+faststart', outputPath]);
+    await ffmpeg.run(args, ffmpegPath: ffmpegPath);
   }
 
   String _sanitizeFileName(String value) {

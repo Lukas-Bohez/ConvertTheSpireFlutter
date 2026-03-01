@@ -132,6 +132,8 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
   @override
   void dispose() {
     _addressController.dispose();
+    _winController?.dispose();
+    _winIncognitoController?.dispose();
     super.dispose();
   }
 

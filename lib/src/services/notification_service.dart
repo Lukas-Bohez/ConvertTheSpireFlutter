@@ -10,6 +10,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   bool _initialised = false;
+  int _nextNotificationId = 1;
 
   /// Whether the current platform has a notification implementation.
   static bool get _supported =>
@@ -55,7 +56,7 @@ class NotificationService {
 
     try {
       await _plugin.show(
-        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        id: _nextNotificationId++,
         title: 'Download Complete',
         body: '$title \u2013 $artist',
         notificationDetails: details,

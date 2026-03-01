@@ -49,7 +49,13 @@ class FileOrganizationService {
     await targetDir.create(recursive: true);
 
     final sourceFile = File(sourcePath);
-    await sourceFile.rename(targetPath);
+    try {
+      await sourceFile.rename(targetPath);
+    } on FileSystemException {
+      // rename() fails across filesystems; fall back to copy + delete
+      await sourceFile.copy(targetPath);
+      await sourceFile.delete();
+    }
     return targetPath;
   }
 
@@ -70,11 +76,11 @@ class FileOrganizationService {
     return false;
   }
 
-  /// Calculate MD5 hash of file contents.
+  /// Calculate MD5 hash of file contents (streaming to avoid OOM on large files).
   Future<String> calculateFileHash(String filePath) async {
     final file = File(filePath);
-    final bytes = await file.readAsBytes();
-    return md5.convert(bytes).toString();
+    final digest = await md5.bind(file.openRead()).first;
+    return digest.toString();
   }
 
   /// Check for a content-identical file in [directory].
