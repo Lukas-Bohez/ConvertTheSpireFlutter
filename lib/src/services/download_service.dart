@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
@@ -11,6 +11,7 @@ import '../models/preview_item.dart';
 import '../models/queue_item.dart';
 import 'android_saf.dart';
 import 'ffmpeg_service.dart';
+import 'yt_dlp_service.dart';
 
 class DownloadToken {
   bool _cancelled = false;
@@ -32,9 +33,10 @@ class DownloadResult {
 class DownloadService {
   final YoutubeExplode yt;
   final FfmpegService ffmpeg;
+  final YtDlpService ytDlp;
   final AndroidSaf _saf = AndroidSaf();
 
-  DownloadService({required this.yt, required this.ffmpeg});
+  DownloadService({required this.yt, required this.ffmpeg, required this.ytDlp});
 
   /// Supported download formats.
   static const supportedFormats = {'mp3', 'm4a', 'mp4'};
@@ -46,6 +48,7 @@ class DownloadService {
     required String? ffmpegPath,
     required void Function(int pct, DownloadStatus status) onProgress,
     required DownloadToken token,
+    String? ytDlpPath,
     String preferredVideoQuality = '720p',
     int preferredAudioBitrate = 192,
   }) async {
@@ -65,6 +68,37 @@ class DownloadService {
     final video = await yt.videos.get(item.url)
         .timeout(const Duration(seconds: 30),
             onTimeout: () => throw TimeoutException('Timed out fetching video info'));
+
+    final safeTitle = _sanitizeFileName(video.title);
+
+    // ── yt-dlp fast-path (desktop only) ─────────────────────────────────
+    // yt-dlp handles throttle-token decryption, chunked downloads, and
+    // adaptive stream merging natively — bypassing the youtube_explode_dart
+    // stream issues that cause 403 errors on HD adaptive streams.
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      final resolvedYtDlp = await ytDlp.resolveAvailablePath(ytDlpPath);
+      if (resolvedYtDlp != null) {
+        return _downloadWithYtDlp(
+          video: video,
+          url: item.url,
+          safeTitle: safeTitle,
+          format: formatLower,
+          outputDir: outputDir,
+          ffmpegPath: ffmpegPath,
+          ytDlpPath: resolvedYtDlp,
+          onProgress: onProgress,
+          token: token,
+          videoQuality: preferredVideoQuality,
+          audioBitrate: preferredAudioBitrate,
+          isSafOutput: isSafOutput,
+          useMediaStoreOnly: useMediaStoreOnly,
+        );
+      }
+    }
+
+    // ── Fallback: youtube_explode_dart ───────────────────────────────────
+    // Used on mobile (no yt-dlp binary) or when yt-dlp isn't installed.
+    // Muxed streams (360p max) are reliable; HD adaptive streams may fail.
     // Fetch stream manifest with retry using different YouTube API clients
     StreamManifest streams;
     try {
@@ -80,7 +114,6 @@ class DownloadService {
           onTimeout: () => throw TimeoutException('Timed out fetching stream manifest (retry)'));
     }
 
-    final safeTitle = _sanitizeFileName(video.title);
     final needsConversion = formatLower != 'mp4';
     // Muxed streams are limited to 360p. Anything above 360p requires
     // separate video + audio streams merged via FFmpeg.
@@ -246,6 +279,88 @@ class DownloadService {
       for (final f in tempFiles) {
         await _safeDelete(f);
       }
+      rethrow;
+    }
+  }
+
+  /// ── yt-dlp download path ────────────────────────────────────────────
+  /// Uses the yt-dlp binary for the actual stream download, merging, and
+  /// audio extraction.  yt-dlp handles YouTube's throttle-token decryption
+  /// internally, avoiding the 403 errors that plague adaptive streams via
+  /// youtube_explode_dart.
+  Future<DownloadResult> _downloadWithYtDlp({
+    required dynamic video, // Video from youtube_explode_dart
+    required String url,
+    required String safeTitle,
+    required String format,
+    required String outputDir,
+    required String? ffmpegPath,
+    required String ytDlpPath,
+    required void Function(int pct, DownloadStatus status) onProgress,
+    required DownloadToken token,
+    required String videoQuality,
+    required int audioBitrate,
+    required bool isSafOutput,
+    required bool useMediaStoreOnly,
+  }) async {
+    debugPrint('DownloadService: using yt-dlp path for "$safeTitle"');
+    onProgress(0, DownloadStatus.downloading);
+
+    // Resolve output folder (same structure as normal downloads)
+    final outputFolder = (isSafOutput || useMediaStoreOnly)
+        ? await _resolveTempFolder()
+        : await _resolveOutputFolder(outputDir, format);
+    await outputFolder.create(recursive: true);
+
+    final outputPath =
+        '${outputFolder.path}${Platform.pathSeparator}$safeTitle.$format';
+
+    // Fetch thumbnail via youtube_explode_dart for display in the queue
+    Uint8List? thumbBytes =
+        await _fetchThumbnailBytes(video.thumbnails.highResUrl);
+    thumbBytes = _prepareCoverBytes(thumbBytes);
+
+    try {
+      // Delegate the entire download + merge/conversion to yt-dlp.
+      // yt-dlp's --embed-thumbnail handles cover art embedding internally.
+      await ytDlp.download(
+        url: url,
+        outputPath: outputPath,
+        format: format,
+        ffmpegPath: ffmpegPath,
+        ytDlpPath: ytDlpPath,
+        videoQuality: videoQuality,
+        audioBitrate: audioBitrate,
+        isCancelled: () => token.cancelled,
+        onProgress: (pct) {
+          // Scale yt-dlp's 0-100 into 0-95 (leave room for finalization)
+          final adjusted = (pct * 0.95).toInt();
+          final status = pct >= 100
+              ? DownloadStatus.converting
+              : DownloadStatus.downloading;
+          onProgress(adjusted, status);
+        },
+      );
+
+      if (token.cancelled) {
+        await _safeDelete(outputPath);
+        throw Exception('Cancelled');
+      }
+
+      onProgress(98, DownloadStatus.converting);
+
+      return _finalizeOutput(
+        outputPath: outputPath,
+        outputDir: outputDir,
+        safeTitle: safeTitle,
+        formatLower: format,
+        thumbBytes: thumbBytes,
+        isSafOutput: isSafOutput,
+        useMediaStoreOnly: useMediaStoreOnly,
+        outputFolder: outputFolder,
+      );
+    } catch (e) {
+      await _safeDelete(outputPath);
       rethrow;
     }
   }

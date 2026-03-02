@@ -22,6 +22,7 @@ import 'services/settings_store.dart';
 import 'services/statistics_service.dart';
 import 'services/watched_playlist_service.dart';
 import 'services/youtube_service.dart';
+import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
 
 class MyApp extends StatefulWidget {
@@ -65,7 +66,9 @@ class _MyAppState extends State<MyApp> {
       debugPrint('  created YouTubeService');
       final ffmpeg = FfmpegService();
       debugPrint('  created FfmpegService');
-      final downloadService = DownloadService(yt: ytExplode, ffmpeg: ffmpeg);
+      final ytDlp = YtDlpService();
+      debugPrint('  created YtDlpService');
+      final downloadService = DownloadService(yt: ytExplode, ffmpeg: ffmpeg, ytDlp: ytDlp);
       debugPrint('  created DownloadService');
       final convertService = ConvertService(ffmpeg: ffmpeg);
       debugPrint('  created ConvertService');

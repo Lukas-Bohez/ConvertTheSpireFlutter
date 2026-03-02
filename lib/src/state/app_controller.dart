@@ -86,6 +86,7 @@ class AppController extends ChangeNotifier {
     // Auto-install FFmpeg on boot (desktop only; mobile bundles FFmpegKit)
     if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       _ensureFfmpegOnBoot();
+      _ensureYtDlpOnBoot();
     }
   }
 
@@ -110,6 +111,35 @@ class AppController extends ChangeNotifier {
         logs.add('FFmpeg not found on startup: $e');
       } finally {
         _ffmpegInstall = null;
+      }
+    }).catchError((_) {}));
+  }
+
+  /// Fire-and-forget yt-dlp check at startup so HD downloads work immediately.
+  void _ensureYtDlpOnBoot() {
+    unawaited(Future(() async {
+      final settings = _settings;
+      if (settings == null) return;
+      final resolved = await downloadService.ytDlp.resolveAvailablePath(settings.ytDlpPath);
+      if (resolved != null) {
+        if (settings.ytDlpPath != resolved) {
+          await saveSettings(settings.copyWith(ytDlpPath: resolved));
+        }
+        logs.add('yt-dlp found: $resolved');
+        return;
+      }
+      // Not found – auto-download (Windows/Linux/macOS)
+      try {
+        final path = await downloadService.ytDlp.ensureAvailable(
+          configuredPath: settings.ytDlpPath,
+          onProgress: (pct, message) {
+            if (pct == 0 || pct == 100) logs.add('yt-dlp $message ($pct%)');
+          },
+        );
+        await saveSettings(settings.copyWith(ytDlpPath: path));
+        logs.add('yt-dlp installed: $path');
+      } catch (e) {
+        logs.add('yt-dlp auto-download skipped: $e');
       }
     }).catchError((_) {}));
   }
@@ -239,6 +269,7 @@ class AppController extends ChangeNotifier {
           outputDir: settings.downloadDir,
           ffmpegPath: ffmpegPath,
           token: token,
+          ytDlpPath: settings.ytDlpPath,
           onProgress: (pct, status) {
             final updated = item.copyWith(progress: pct, status: status);
             _updateQueue(item, updated);

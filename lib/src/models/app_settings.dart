@@ -26,6 +26,9 @@ class AppSettings {
   final String preferredVideoQuality; // '360p', '480p', '720p', '1080p', 'best'
   final int preferredAudioBitrate;    // 128, 192, 256, 320 (kbps)
 
+  // ── yt-dlp settings ───────────────────────────────────────────────────
+  final String? ytDlpPath;            // custom binary path (null = auto-resolve)
+
   const AppSettings({
     required this.downloadDir,
     required this.maxWorkers,
@@ -48,6 +51,7 @@ class AppSettings {
     this.soundcloudClientId,
     this.preferredVideoQuality = '720p',
     this.preferredAudioBitrate = 192,
+    this.ytDlpPath,
   });
 
   factory AppSettings.defaults({required String downloadDir}) {
@@ -73,6 +77,7 @@ class AppSettings {
       soundcloudClientId: null,
       preferredVideoQuality: '720p',
       preferredAudioBitrate: 192,
+      ytDlpPath: null,
     );
   }
 
@@ -98,6 +103,7 @@ class AppSettings {
     String? soundcloudClientId,
     String? preferredVideoQuality,
     int? preferredAudioBitrate,
+    String? ytDlpPath,
   }) {
     return AppSettings(
       downloadDir: downloadDir ?? this.downloadDir,
@@ -121,6 +127,7 @@ class AppSettings {
       soundcloudClientId: soundcloudClientId ?? this.soundcloudClientId,
       preferredVideoQuality: preferredVideoQuality ?? this.preferredVideoQuality,
       preferredAudioBitrate: preferredAudioBitrate ?? this.preferredAudioBitrate,
+      ytDlpPath: ytDlpPath ?? this.ytDlpPath,
     );
   }
 
@@ -149,6 +156,7 @@ class AppSettings {
       soundcloudClientId: json['soundcloud_client_id'] as String?,
       preferredVideoQuality: json['preferred_video_quality'] as String? ?? '720p',
       preferredAudioBitrate: (json['preferred_audio_bitrate'] as num?)?.toInt() ?? 192,
+      ytDlpPath: (json['yt_dlp_path'] as String?)?.trim(),
     );
   }
 
@@ -175,6 +183,7 @@ class AppSettings {
       'soundcloud_client_id': soundcloudClientId,
       'preferred_video_quality': preferredVideoQuality,
       'preferred_audio_bitrate': preferredAudioBitrate,
+      'yt_dlp_path': ytDlpPath,
     };
   }
 }

@@ -2095,6 +2095,49 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(height: 16),
+
+          // yt-dlp Settings
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.download_for_offline),
+                      const SizedBox(width: 8),
+                      Text('yt-dlp', style: Theme.of(context).textTheme.titleLarge),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    leading: Icon(
+                      settings.ytDlpPath != null && settings.ytDlpPath!.isNotEmpty
+                          ? Icons.check_circle
+                          : Icons.info_outline,
+                      color: settings.ytDlpPath != null && settings.ytDlpPath!.isNotEmpty
+                          ? Colors.green
+                          : Colors.orange,
+                    ),
+                    title: Text(
+                      settings.ytDlpPath != null && settings.ytDlpPath!.isNotEmpty
+                          ? 'yt-dlp installed'
+                          : 'yt-dlp not configured',
+                    ),
+                    subtitle: Text(
+                      settings.ytDlpPath != null && settings.ytDlpPath!.isNotEmpty
+                          ? settings.ytDlpPath!
+                          : 'Will be downloaded automatically on first launch. '
+                            'Required for HD video downloads.',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           
           // Retry Settings
           Card(

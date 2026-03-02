@@ -71,8 +71,15 @@ include(flutter/generated_plugins.cmake)
 set(BUILD_BUNDLE_DIR "$<TARGET_FILE_DIR:${BINARY_NAME}>")
 # Make the "install" step default, as it's required to run.
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
+# Force install prefix to the build output dir.
+# Generator expressions ($<TARGET_FILE_DIR:...>) cannot be used in
+# CMAKE_INSTALL_PREFIX because cmake_install.cmake (script mode) does not
+# evaluate them.  Compute the concrete path instead.
+if(IS_MULTICONFIG)
+  # Multi-config generators (Visual Studio): config sub-dir added by VS
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/runner/Release" CACHE PATH "..." FORCE)
+else()
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/runner/${CMAKE_BUILD_TYPE}" CACHE PATH "..." FORCE)
 endif()
 
 set(INSTALL_BUNDLE_DATA_DIR "${CMAKE_INSTALL_PREFIX}/data")
