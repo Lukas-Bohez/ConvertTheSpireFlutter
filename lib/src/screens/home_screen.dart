@@ -19,7 +19,7 @@ import 'statistics_screen.dart';
 import 'watched_playlists_screen.dart';
 import 'browser_screen.dart';
 import 'cast_dialog.dart';
-import 'compute_screen.dart';
+import 'support_screen.dart';
 import 'player.dart';  // player player screen
 
 
@@ -57,9 +57,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   bool _expandPlaylist = false;
   String _downloadFormat = 'mp3';
-  String _videoQuality = '720p';
-  int _audioBitrate = 192;
+  String _videoQuality = '1080p';
+  int _audioBitrate = 320;
   bool _settingsInitialized = false;
+  bool _supportEnabled = false;
   late final TabController _mainTabController;
   late final TabController _playlistTabController;
   File? _convertFile;
@@ -111,7 +112,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _NavItem(5, Icons.upload_file, 'Bulk Import', 'Downloads'),
     _NavItem(6, Icons.bar_chart, 'Stats', 'Tools'),
     _NavItem(7, Icons.settings, 'Settings', null),
-    _NavItem(8, Icons.flash_on_rounded, 'Compute', null),
+    _NavItem(8, Icons.volunteer_activism, 'Support', null),
     _NavItem(9, Icons.transform, 'Convert', 'Tools'),
     _NavItem(10, Icons.list_alt, 'Logs', 'Tools'),
     _NavItem(11, Icons.menu_book, 'Guide', null),
@@ -154,7 +155,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       case 7:
         return _buildSettingsTab(settings);
       case 8:
-        return const ComputeScreen(key: ValueKey('compute'));
+        return SupportScreen(
+          key: const ValueKey('support'),
+          enabled: _supportEnabled,
+          onEnabledChanged: (v) => setState(() => _supportEnabled = v),
+        );
       case 9:
         return _buildConvertTab(settings);
       case 10:
@@ -279,7 +284,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Tab(icon: Icon(Icons.upload_file), text: 'Bulk Import'),
                   Tab(icon: Icon(Icons.bar_chart), text: 'Stats'),
                   Tab(icon: Icon(Icons.settings), text: 'Settings'),
-                  Tab(icon: Icon(Icons.flash_on_rounded), text: 'Compute'),
+                  Tab(icon: Icon(Icons.volunteer_activism), text: 'Support'),
                   Tab(icon: Icon(Icons.transform), text: 'Convert'),
                   Tab(icon: Icon(Icons.list_alt), text: 'Logs'),
                   Tab(icon: Icon(Icons.menu_book), text: 'Guide'),
@@ -313,7 +318,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   statisticsService: widget.controller.statisticsService,
                 ),
                 _buildSettingsTab(settings),
-                const ComputeScreen(key: ValueKey('compute')),
+                SupportScreen(
+                  key: const ValueKey('support'),
+                  enabled: _supportEnabled,
+                  onEnabledChanged: (v) => setState(() => _supportEnabled = v),
+                ),
                 _buildConvertTab(settings),
                 _buildLogsTab(),
                 Builder(builder: (_) {
@@ -1639,6 +1648,15 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     tooltip: 'Cast to TV',
                                     color: Colors.teal,
                                   ),
+                                if (item.status == DownloadStatus.completed &&
+                                    item.outputPath != null &&
+                                    !kIsWeb && !Platform.isAndroid)
+                                  IconButton(
+                                    icon: const Icon(Icons.folder_open),
+                                    onPressed: () => _showInFolder(item.outputPath!),
+                                    tooltip: 'Show in folder',
+                                    color: Colors.blue,
+                                  ),
                                 if (item.status != DownloadStatus.downloading &&
                                     item.status != DownloadStatus.converting)
                                   IconButton(
@@ -1690,6 +1708,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   title: item.title,
                                 ),
                               ),
+                            if (item.status == DownloadStatus.completed &&
+                                item.outputPath != null &&
+                                !kIsWeb && !Platform.isAndroid)
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.folder_open, size: 18),
+                                label: const Text('Show in folder'),
+                                onPressed: () => _showInFolder(item.outputPath!),
+                              ),
                             if (item.status != DownloadStatus.downloading &&
                                 item.status != DownloadStatus.converting)
                               OutlinedButton.icon(
@@ -1711,9 +1737,27 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         color: Colors.red.withValues(alpha: 0.1),
-                        child: Text(
-                          item.error!,
-                          style: const TextStyle(color: Colors.red, fontSize: 12),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                item.error!,
+                                style: const TextStyle(color: Colors.red, fontSize: 12),
+                              ),
+                            ),
+                            TextButton.icon(
+                              icon: const Icon(Icons.list_alt, size: 14),
+                              label: const Text('View Logs', style: TextStyle(fontSize: 12)),
+                              onPressed: () => _mainTabController.animateTo(10),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                   ],
@@ -1806,6 +1850,83 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       padding: const EdgeInsets.all(16),
       child: ListView(
         children: [
+          // ── Support the Project ──────────────────────────────────────
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.volunteer_activism,
+                            color: Theme.of(context).colorScheme.primary),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Support the Project',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    )),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Donate idle CPU cycles to academic research — '
+                              'zero risk, runs in sandboxed isolates.',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    value: _supportEnabled,
+                    onChanged: (value) {
+                      setState(() => _supportEnabled = value);
+                    },
+                    title: const Text('Enable Support'),
+                    subtitle: Text(
+                      _supportEnabled
+                          ? 'Contributing idle CPU power'
+                          : 'Tap to volunteer spare cycles',
+                    ),
+                    secondary: Icon(
+                      _supportEnabled ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                      color: _supportEnabled ? Colors.green : null,
+                    ),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.open_in_new, size: 16),
+                      label: const Text('Learn more'),
+                      onPressed: () => _mainTabController.animateTo(8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // Download Settings
           Card(
             child: Padding(
@@ -2285,27 +2406,47 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           fontWeight: FontWeight.bold,
                         ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
+                  Text(
+                    'A Red Bull Basement / SpireAI project',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontStyle: FontStyle.italic,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Cross-platform media toolkit with multi-site downloads, '
+                    'format conversion, DLNA casting, and distributed computing '
+                    'support — built with Flutter.',
+                  ),
+                  const SizedBox(height: 8),
                   const Text('Copyright (c) 2026 Oroka Conner. Licensed under GPLv3.'),
                   const SizedBox(height: 12),
-                  TextButton.icon(
-                    icon: const Icon(Icons.coffee),
-                    label: const Text('Buy me a coffee'),
-                    onPressed: _openBuyMeCoffee,
-                  ),
-                  TextButton.icon(
-                    icon: const Icon(Icons.public),
-                    label: const Text('Visit quizthespire.com'),
-                    onPressed: _openWebsite,
-                  ),
-                  const SizedBox(height: 4),
-                  SelectableText(
-                    _buyMeCoffeeUri.toString(),
-                    style: TextStyle(color: Theme.of(context).colorScheme.primary),
-                  ),
-                  SelectableText(
-                    _websiteUri.toString(),
-                    style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      TextButton.icon(
+                        icon: const Icon(Icons.coffee),
+                        label: const Text('Buy me a coffee'),
+                        onPressed: _openBuyMeCoffee,
+                      ),
+                      TextButton.icon(
+                        icon: const Icon(Icons.public),
+                        label: const Text('Visit quizthespire.com'),
+                        onPressed: _openWebsite,
+                      ),
+                      TextButton.icon(
+                        icon: const Icon(Icons.code),
+                        label: const Text('GitHub'),
+                        onPressed: () => launchUrl(
+                          Uri.parse('https://github.com/Lukas-Bohez/ConvertTheSpireFlutter'),
+                          mode: LaunchMode.externalApplication,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -2329,10 +2470,21 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   defaultAudioFormat: _downloadFormat,
                 );
                 widget.controller.saveSettings(next);
+                ScaffoldMessenger.of(context).clearSnackBars();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Settings saved successfully'),
+                  SnackBar(
+                    content: const Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.white, size: 20),
+                        SizedBox(width: 8),
+                        Text('Settings saved'),
+                      ],
+                    ),
                     backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    margin: const EdgeInsets.all(16),
                   ),
                 );
               },
@@ -2362,6 +2514,26 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open the website.')),
       );
+    }
+  }
+
+  Future<void> _showInFolder(String filePath) async {
+    try {
+      final file = File(filePath);
+      final dir = file.parent.path;
+      if (Platform.isWindows) {
+        await Process.run('explorer.exe', ['/select,', filePath]);
+      } else if (Platform.isMacOS) {
+        await Process.run('open', ['-R', filePath]);
+      } else if (Platform.isLinux) {
+        await Process.run('xdg-open', [dir]);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open folder: $e')),
+        );
+      }
     }
   }
 

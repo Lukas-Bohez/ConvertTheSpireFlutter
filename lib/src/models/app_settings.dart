@@ -49,8 +49,8 @@ class AppSettings {
     this.minimumBitrate = 0,
     this.namingTemplate = '{artist}/{title}',
     this.soundcloudClientId,
-    this.preferredVideoQuality = '720p',
-    this.preferredAudioBitrate = 192,
+    this.preferredVideoQuality = '1080p',
+    this.preferredAudioBitrate = 320,
     this.ytDlpPath,
   });
 
@@ -75,8 +75,8 @@ class AppSettings {
       minimumBitrate: 0,
       namingTemplate: '{artist}/{title}',
       soundcloudClientId: null,
-      preferredVideoQuality: '720p',
-      preferredAudioBitrate: 192,
+      preferredVideoQuality: '1080p',
+      preferredAudioBitrate: 320,
       ytDlpPath: null,
     );
   }
@@ -154,8 +154,8 @@ class AppSettings {
       minimumBitrate: (json['minimum_bitrate'] as num?)?.toInt() ?? 0,
       namingTemplate: json['naming_template'] as String? ?? '{artist}/{title}',
       soundcloudClientId: json['soundcloud_client_id'] as String?,
-      preferredVideoQuality: json['preferred_video_quality'] as String? ?? '720p',
-      preferredAudioBitrate: (json['preferred_audio_bitrate'] as num?)?.toInt() ?? 192,
+      preferredVideoQuality: json['preferred_video_quality'] as String? ?? '1080p',
+      preferredAudioBitrate: (json['preferred_audio_bitrate'] as num?)?.toInt() ?? 320,
       ytDlpPath: (json['yt_dlp_path'] as String?)?.trim(),
     );
   }

@@ -32,11 +32,14 @@ class CoordinatorService {
   StreamSubscription? _resultSub;
   Timer? _heartbeatTimer;
   Timer? _reconnectTimer;
+  Timer? _localJobTimer;
 
   bool _connected = false;
   bool _enabled = false;
+  bool _localMode = false;
   int _reconnectAttempts = 0;
   static const _maxBackoff = Duration(seconds: 120);
+  static const _maxLocalRetries = 2;
 
   /// Messages queued while offline, drained on reconnect.
   final List<Map<String, dynamic>> _offlineQueue = [];
@@ -50,8 +53,9 @@ class CoordinatorService {
   /// Last error, if any.
   String? lastError;
 
-  bool get connected => _connected;
+  bool get connected => _connected || _localMode;
   bool get enabled => _enabled;
+  bool get localMode => _localMode;
   String get serverUrl => _serverUrl;
   String get deviceId => _deviceId;
 
@@ -69,12 +73,11 @@ class CoordinatorService {
     return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
   }
 
-  /// Update the coordinator URL and reconnect.
+  /// Update the coordinator URL and reconnect via the server path.
   void setServerUrl(String url) {
     _serverUrl = url;
     if (_enabled) {
-      disconnect();
-      connect();
+      connectToServer(url);
     }
     onStateChanged?.call();
   }
@@ -91,12 +94,30 @@ class CoordinatorService {
     onStateChanged?.call();
   }
 
-  /// Connect to the coordinator server.
+  /// Start contributing.
+  ///
+  /// When no custom server URL has been set the service goes straight into
+  /// local demo mode (tasks are generated on-device).  This avoids spamming
+  /// WS connection errors when no coordinator server is running.
+  ///
+  /// Call [connectToServer] explicitly to attempt a remote connection.
   void connect() {
-    if (_channel != null) return;
+    if (_localMode || _connected) return;
     if (!_enabled) return;
 
-    connectionStatus = 'Connecting…';
+    // Go directly to local mode — there is no public coordinator server yet.
+    _activateLocalMode();
+  }
+
+  /// Try to connect to a remote coordinator server (Advanced Settings).
+  /// Falls back to local mode after [_maxLocalRetries] failed attempts.
+  void connectToServer([String? url]) {
+    if (url != null && url.isNotEmpty) _serverUrl = url;
+    if (_channel != null) disconnect();
+    if (!_enabled) return;
+    _localMode = false;
+
+    connectionStatus = 'Connecting\u2026';
     lastError = null;
     onStateChanged?.call();
 
@@ -116,18 +137,17 @@ class CoordinatorService {
         },
       );
 
-      // Register — connection is confirmed when stream starts delivering
+      // Register — real connection is confirmed when the server responds.
       _send({
         'type': 'register',
         'device_id': _deviceId,
         'capabilities': ComputeJobType.values.map((e) => e.name).toList(),
       });
 
-      // Mark connected after registering (stream listener is active)
-      _connected = true;
-      _reconnectAttempts = 0;
-      connectionStatus = 'Connected to $_serverUrl';
-      lastError = null;
+      // NOTE: we do NOT set _connected=true here — it is set once a
+      // server message arrives (see _onMessage), avoiding the premature-
+      // reset-of-_reconnectAttempts bug.
+      connectionStatus = 'Waiting for server\u2026';
       onStateChanged?.call();
 
       // Start heartbeat
@@ -151,7 +171,8 @@ class CoordinatorService {
 
       // Drain offline queue
       if (_offlineQueue.isNotEmpty) {
-        debugPrint('CoordinatorService: draining ${_offlineQueue.length} queued messages');
+        debugPrint(
+            'CoordinatorService: draining ${_offlineQueue.length} queued messages');
         for (final msg in _offlineQueue) {
           _send(msg);
         }
@@ -167,12 +188,93 @@ class CoordinatorService {
     }
   }
 
+  // ── Local demo mode ──────────────────────────────────────────────────────
+
+  /// Activate local mode: generates lightweight academic tasks on-device
+  /// so the volunteer feature works without a coordinator server.
+  void _activateLocalMode() {
+    if (_localMode) return;
+    _localMode = true;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    connectionStatus = 'Running locally (standalone)';
+    lastError = null;
+    onStateChanged?.call();
+    debugPrint('CoordinatorService: switched to local demo mode');
+    _startLocalJobGeneration();
+  }
+
+  void _startLocalJobGeneration() {
+    _localJobTimer?.cancel();
+    _localJobTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+      if (!_enabled || !_localMode) {
+        _localJobTimer?.cancel();
+        _localJobTimer = null;
+        return;
+      }
+      if (_compute.queuedCount + _compute.activeCount >= _compute.maxConcurrent * 2) {
+        return; // don't over-fill
+      }
+      _compute.enqueue(_generateLocalJob());
+    });
+    // Also enqueue one right now
+    if (_enabled) {
+      _compute.enqueue(_generateLocalJob());
+    }
+  }
+
+  int _localJobCounter = 0;
+
+  ComputeJob _generateLocalJob() {
+    _localJobCounter++;
+    final rng = Random();
+    final types = ComputeJobType.values;
+    final type = types[rng.nextInt(types.length)];
+
+    Map<String, dynamic> payload;
+    switch (type) {
+      case ComputeJobType.sha256Batch:
+        final inputs = List.generate(
+          50 + rng.nextInt(150),
+          (i) => 'data_block_${_localJobCounter}_$i\_${rng.nextInt(999999)}',
+        );
+        payload = {'inputs': inputs};
+        break;
+      case ComputeJobType.primeSearch:
+        final start = 1000 + rng.nextInt(90000);
+        payload = {'start': start, 'end': start + 500 + rng.nextInt(2000)};
+        break;
+      case ComputeJobType.matrixMultiply:
+        final n = 10 + rng.nextInt(20);
+        payload = {
+          'a': List.generate(n, (_) => List.generate(n, (_) => rng.nextDouble() * 10)),
+          'b': List.generate(n, (_) => List.generate(n, (_) => rng.nextDouble() * 10)),
+        };
+        break;
+      case ComputeJobType.crc32Verify:
+        final data = List.generate(200 + rng.nextInt(800), (_) => rng.nextInt(128))
+            .map((c) => String.fromCharCode(c + 32))
+            .join();
+        payload = {'data': data};
+        break;
+    }
+
+    return ComputeJob(
+      id: 'local_${_localJobCounter}_${rng.nextInt(0xFFFF).toRadixString(16)}',
+      type: type,
+      payload: payload,
+      receivedAt: DateTime.now(),
+    );
+  }
+
   /// Disconnect from the coordinator.
   void disconnect() {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _localJobTimer?.cancel();
+    _localJobTimer = null;
     _messageSub?.cancel();
     _messageSub = null;
     _resultSub?.cancel();
@@ -184,6 +286,7 @@ class CoordinatorService {
     _channel = null;
 
     _connected = false;
+    _localMode = false;
     connectionStatus = _enabled ? 'Disconnected (will retry)' : 'Disconnected';
     onStateChanged?.call();
   }
@@ -192,6 +295,15 @@ class CoordinatorService {
     try {
       final msg = jsonDecode(raw as String) as Map<String, dynamic>;
       final type = msg['type'] as String?;
+
+      // First real message confirms the server connection is alive.
+      if (!_connected) {
+        _connected = true;
+        _reconnectAttempts = 0;
+        connectionStatus = 'Connected to $_serverUrl';
+        lastError = null;
+        onStateChanged?.call();
+      }
 
       switch (type) {
         case 'job':
@@ -225,7 +337,7 @@ class CoordinatorService {
     connectionStatus = 'Disconnected';
     onStateChanged?.call();
 
-    if (_enabled) {
+    if (_enabled && !_localMode) {
       _scheduleReconnect();
     }
   }
@@ -235,6 +347,13 @@ class CoordinatorService {
     if (!_enabled) return;
 
     _reconnectAttempts++;
+
+    // After a few failed attempts, switch to local standalone mode
+    if (_reconnectAttempts > _maxLocalRetries) {
+      _activateLocalMode();
+      return;
+    }
+
     final delay = Duration(
       seconds: min(
         pow(2, _reconnectAttempts).toInt(),
@@ -265,6 +384,8 @@ class CoordinatorService {
   }
 
   void dispose() {
+    onStateChanged = null; // prevent setState on defunct widget
+    _localJobTimer?.cancel();
     disconnect();
     _compute.dispose();
   }

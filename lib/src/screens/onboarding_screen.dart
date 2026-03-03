@@ -1,22 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// A simple multi-page onboarding flow that explains each of the main tabs.
+/// A multi-page onboarding flow that introduces the app's features.
 ///
-/// The widget is used in two places:
-///  * Automatically when the app is launched for the first time (after
-///    installation) – the caller should mark the "seenOnboarding" flag when
-///    [onFinish] is invoked.
-///  * Manually from the guide screen via a button. In that case the caller can
-///    just pop the route when the user finishes the tour.
+/// Used in two places:
+///  * Automatically on first launch – the caller marks "seenOnboarding" when
+///    [onFinish] fires.
+///  * Manually from the Guide screen via a button.
 class OnboardingScreen extends StatefulWidget {
-  /// Called when the user completes or skips the tour.
   final VoidCallback onFinish;
-
-  /// Called when the user toggles the theme inside onboarding.
-  /// The host app should rebuild with the new [ThemeMode].
   final ValueChanged<ThemeMode>? onThemeChanged;
-
-  /// The current theme mode, so the toggle reflects the real state.
   final ThemeMode themeMode;
 
   const OnboardingScreen({
@@ -39,94 +31,166 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late ThemeMode _themeMode;
   int _page = 0;
 
+  // ─── Pages ───────────────────────────────────────────────────────────────
+
   static const _pages = <_OnboardingPage>[
+    // Welcome
+    _OnboardingPage(
+      icon: Icons.download_rounded,
+      title: 'Welcome',
+      detail:
+          'Convert the Spire Reborn is a cross-platform media toolkit. '
+          'Download audio & video from dozens of sites, convert formats, '
+          'cast to your TV, and more \u2014 all from one app.',
+      color: Color(0xFF00897B),
+      preview: _WelcomePreview(),
+    ),
+
+    // Supported Platforms
+    _OnboardingPage(
+      icon: Icons.language_rounded,
+      title: 'Supported Platforms',
+      detail:
+          'Not just YouTube! This app uses yt-dlp under the hood, '
+          'supporting 1\u202F000+ websites. Here are some popular ones:',
+      color: Color(0xFFFF6D00),
+      preview: _PlatformsPreview(),
+    ),
+
+    // Search
     _OnboardingPage(
       icon: Icons.search_rounded,
       title: 'Search',
       detail:
-          'Look up a YouTube video by keyword or paste a link. Preview the result and pick a format before adding to the queue.',
+          'Look up a video by keyword or paste a link from any supported '
+          'site. Preview the result and pick a format before downloading.',
       color: Color(0xFF6C63FF),
       preview: _SearchPreview(),
     ),
+
+    // Multi-Search
     _OnboardingPage(
       icon: Icons.travel_explore_rounded,
-      title: 'Multi‑Search',
+      title: 'Multi-Search',
       detail:
-          'Fetch results from multiple sources simultaneously. Tap a row to hear a preview.',
+          'Fetch results from YouTube and SoundCloud simultaneously. '
+          'Tap a row to hear a preview.',
       color: Color(0xFF43CFBB),
     ),
+
+    // Browser
     _OnboardingPage(
       icon: Icons.open_in_browser_rounded,
       title: 'Browser',
       detail:
-          'Browse the web in the built‑in view and add videos directly to the queue without leaving the app.',
+          'Browse the web in the built-in view and add videos directly '
+          'to the queue without leaving the app.',
       color: Color(0xFF4A90D9),
     ),
+
+    // Queue
     _OnboardingPage(
       icon: Icons.queue_music_rounded,
       title: 'Queue',
       detail:
-          'Manage your pending downloads. Start all, cancel items, retry failures, or remove tracks you no longer need.',
+          'Manage your downloads. Start all, cancel, retry failures, '
+          'cast to your TV, or show completed files in your file manager.',
       color: Color(0xFFE07B54),
       preview: _QueuePreview(),
     ),
+
+    // Playlists
     _OnboardingPage(
       icon: Icons.playlist_play_rounded,
       title: 'Playlists',
       detail:
-          'Load a YouTube playlist, compare it against a local folder to spot missing tracks, and batch‑download.',
+          'Load a playlist, compare against a local folder to spot '
+          'missing tracks, and batch-download.',
       color: Color(0xFFAB6BD9),
     ),
+
+    // Bulk Import
     _OnboardingPage(
       icon: Icons.upload_file_rounded,
       title: 'Bulk Import',
       detail:
-          'Paste a list of names or import a text/CSV file to enqueue many items at once.',
+          'Paste a list of names or import a text/CSV file to enqueue '
+          'many items at once.',
       color: Color(0xFF5BA85A),
     ),
+
+    // Stats
     _OnboardingPage(
       icon: Icons.bar_chart_rounded,
       title: 'Stats',
       detail:
-          'See download totals, success rate, format breakdown, top artists, and trends over time.',
+          'See download totals, success rate, format breakdown, top '
+          'artists, and trends over time.',
       color: Color(0xFFD4A017),
     ),
+
+    // Settings
     _OnboardingPage(
       icon: Icons.settings_rounded,
       title: 'Settings',
       detail:
-          'Choose download folder, workers, FFmpeg options, retry behavior, and notification preferences.',
+          'Choose download folder, quality defaults (1080p video, '
+          '320\u202Fkbps audio), FFmpeg options, retry behaviour, and '
+          'appearance.',
       color: Color(0xFF607D8B),
     ),
+
+    // Convert
     _OnboardingPage(
       icon: Icons.transform_rounded,
       title: 'Convert',
       detail:
-          'Convert any local audio/video file between popular formats using FFmpeg.',
+          'Convert any local audio/video file between popular formats '
+          'using FFmpeg.',
       color: Color(0xFFE57373),
     ),
+
+    // Logs
     _OnboardingPage(
       icon: Icons.list_alt_rounded,
       title: 'Logs',
-      detail:
-          'Inspect the internal application log. Copy it or clear it if needed.',
+      detail: 'Inspect the internal application log. Copy or clear at any time.',
       color: Color(0xFF78909C),
     ),
+
+    // Guide
     _OnboardingPage(
       icon: Icons.menu_book_rounded,
       title: 'Guide',
-      detail:
-          'This help screen you are currently looking at. Revisit it any time from the Guide tab.',
+      detail: 'A help screen you can revisit from the Guide tab.',
       color: Color(0xFF26A69A),
     ),
+
+    // Player
     _OnboardingPage(
       icon: Icons.music_note_rounded,
       title: 'Player',
       detail:
-          'Built‑in media player for your own files. Control playback, shuffle, repeat, and manage a simple library. On Linux the app requires the system libmpv (mpv) runtime for video playback — install it via your package manager (for example `sudo apt install mpv libmpv-dev`) to enable video. On Android the app uses a fallback player for video (ExoPlayer) when available.',
+          'Built-in media player for your files. Playback, shuffle, '
+          'repeat, and a simple library.',
       color: Color(0xFF7E57C2),
     ),
+
+    // Support CTA (last page)
+    _OnboardingPage(
+      icon: Icons.volunteer_activism_rounded,
+      title: 'Support Us',
+      detail:
+          'You can help the project by donating idle CPU cycles to '
+          'academic research. It\u2019s 100\u202F% opt-in, battery-aware, '
+          'and runs in sandboxed isolates \u2014 zero risk.\n\n'
+          'Enable it now or later from Settings. Every bit helps!',
+      color: Color(0xFFE91E63),
+      preview: _SupportPreview(),
+    ),
   ];
+
+  // ─── Lifecycle ───────────────────────────────────────────────────────────
 
   @override
   void initState() {
@@ -202,7 +266,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ThemeMode.system => 'Auto',
       };
 
-  // ─── Sub-builders ──────────────────────────────────────────────────────────
+  // ─── Sub-builders ───────────────────────────────────────────────────────
 
   Widget _buildProgressBar(ThemeData theme) {
     final progress = (_page + 1) / _pages.length;
@@ -275,7 +339,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildThemeToggle(ThemeData theme) {
     final pageColor = _pages[_page].color;
     return Tooltip(
-      message: 'Theme: $_themeLabel — tap to cycle',
+      message: 'Theme: $_themeLabel \u2014 tap to cycle',
       child: InkWell(
         onTap: _cycleTheme,
         borderRadius: BorderRadius.circular(20),
@@ -395,7 +459,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // ─── Build ─────────────────────────────────────────────────────────────────
+  // ─── Build ──────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -477,7 +541,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                 ),
                               ),
 
-                              // Optional live preview
+                              // Optional preview
                               if (p.preview != null) ...[
                                 const SizedBox(height: 20),
                                 p.preview!,
@@ -527,15 +591,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 }
 
-// ─── Data model ──────────────────────────────────────────────────────────────
+// ─── Data model ─────────────────────────────────────────────────────────────
 
 class _OnboardingPage {
   final IconData icon;
   final String title;
   final String detail;
   final Color color;
-
-  /// Optional widget shown below the icon card as a visual preview.
   final Widget? preview;
 
   const _OnboardingPage({
@@ -547,9 +609,116 @@ class _OnboardingPage {
   });
 }
 
-// ─── Preview widgets ─────────────────────────────────────────────────────────
+// ─── Preview widgets ────────────────────────────────────────────────────────
 
-/// Static mock of the Search tab UI.
+/// Welcome page — shows a brief feature overview.
+class _WelcomePreview extends StatelessWidget {
+  const _WelcomePreview();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final border = isDark ? const Color(0xFF3A3A3A) : const Color(0xFFDDDDDD);
+
+    const features = [
+      (Icons.download_rounded, 'Multi-site downloads'),
+      (Icons.transform_rounded, 'Format conversion'),
+      (Icons.cast_rounded, 'DLNA / Cast to TV'),
+      (Icons.volunteer_activism_rounded, 'Support via idle CPU'),
+    ];
+
+    return Container(
+      width: 280,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: features
+            .map((f) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Icon(f.$1, size: 20, color: const Color(0xFF00897B)),
+                      const SizedBox(width: 10),
+                      Text(f.$2,
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ))
+            .toList(),
+      ),
+    );
+  }
+}
+
+/// Supported platforms grid.
+class _PlatformsPreview extends StatelessWidget {
+  const _PlatformsPreview();
+
+  static const _platforms = [
+    'YouTube',
+    'SoundCloud',
+    'Vimeo',
+    'Dailymotion',
+    'Twitch',
+    'Bandcamp',
+    'Reddit',
+    'Twitter / X',
+    'Facebook',
+    'Instagram',
+    'TikTok',
+    'Bilibili',
+    'Rumble',
+    'Mixcloud',
+    'Odysee',
+    '1000+ more',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = const Color(0xFFFF6D00);
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      alignment: WrapAlignment.center,
+      children: _platforms.map((name) {
+        final isMore = name.startsWith('1000');
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: isMore
+                ? accent.withValues(alpha: 0.15)
+                : (isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.grey.withValues(alpha: 0.10)),
+            borderRadius: BorderRadius.circular(16),
+            border: isMore
+                ? Border.all(color: accent.withValues(alpha: 0.4))
+                : null,
+          ),
+          child: Text(
+            name,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isMore ? FontWeight.bold : FontWeight.w500,
+              color: isMore ? accent : null,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+/// Search tab preview.
 class _SearchPreview extends StatelessWidget {
   const _SearchPreview();
 
@@ -585,7 +754,7 @@ class _SearchPreview extends StatelessWidget {
               isDense: true,
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              hintText: 'Search or paste a link…',
+              hintText: 'Search or paste a link\u2026',
               hintStyle: TextStyle(
                   fontSize: 13,
                   color: Colors.grey.withValues(alpha: 0.7)),
@@ -616,7 +785,7 @@ class _SearchPreview extends StatelessWidget {
             ),
             title: const Text('Example video title',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            subtitle: const Text('3:42 · MP3 320 kbps',
+            subtitle: const Text('3:42 \u00b7 MP3 320 kbps',
                 style: TextStyle(fontSize: 11)),
             trailing: const Icon(Icons.add_circle_outline_rounded, size: 20),
           ),
@@ -626,7 +795,7 @@ class _SearchPreview extends StatelessWidget {
   }
 }
 
-/// Static mock of the Queue tab showing a few download rows.
+/// Queue tab preview.
 class _QueuePreview extends StatelessWidget {
   const _QueuePreview();
 
@@ -641,7 +810,7 @@ class _QueuePreview extends StatelessWidget {
       label: 'Tutorial Walkthrough',
       icon: Icons.download_rounded,
       color: Color(0xFF43CFBB),
-      status: 'Downloading…',
+      status: 'Downloading\u2026',
     ),
     (
       label: 'Broken link example',
@@ -675,34 +844,110 @@ class _QueuePreview extends StatelessWidget {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: _items.map((item) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(
-              children: [
-                Icon(item.icon, size: 20, color: item.color),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        children: _items
+            .map((item) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 5),
+                  child: Row(
                     children: [
-                      Text(
-                        item.label,
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w500),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        item.status,
-                        style: TextStyle(fontSize: 11, color: item.color),
+                      Icon(item.icon, size: 20, color: item.color),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item.label,
+                                style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500),
+                                overflow: TextOverflow.ellipsis),
+                            Text(item.status,
+                                style: TextStyle(
+                                    fontSize: 11, color: item.color)),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                ))
+            .toList(),
+      ),
+    );
+  }
+}
+
+/// Support CTA preview shown on the last onboarding page.
+class _SupportPreview extends StatelessWidget {
+  const _SupportPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final border = isDark ? const Color(0xFF3A3A3A) : const Color(0xFFDDDDDD);
+    const accent = Color(0xFFE91E63);
+
+    return Container(
+      width: 280,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.shield_outlined, size: 18, color: Colors.green.shade600),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('Runs in sandboxed isolates',
+                    style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(Icons.battery_charging_full, size: 18, color: Colors.green.shade600),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('Auto-pauses below 30% battery',
+                    style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(Icons.pause_circle_outline, size: 18, color: Colors.green.shade600),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('One tap to stop, instantly',
+                    style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
             ),
-          );
-        }).toList(),
+            child: const Center(
+              child: Text(
+                'Enable in Settings \u2192 Support the Project',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: accent),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

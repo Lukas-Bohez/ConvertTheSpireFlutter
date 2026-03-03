@@ -12,14 +12,23 @@ import '../services/coordinator_service.dart';
 ///
 /// Designed to be enticing — uses gamification, social proof, and clear
 /// transparency to convince users to opt in.
-class ComputeScreen extends StatefulWidget {
-  const ComputeScreen({super.key});
+class SupportScreen extends StatefulWidget {
+  /// When true the coordinator auto-enables on first build.
+  final bool enabled;
+  /// Fires when the screen's own start/stop button changes state.
+  final ValueChanged<bool>? onEnabledChanged;
+
+  const SupportScreen({
+    super.key,
+    this.enabled = false,
+    this.onEnabledChanged,
+  });
 
   @override
-  State<ComputeScreen> createState() => ComputeScreenState();
+  State<SupportScreen> createState() => SupportScreenState();
 }
 
-class ComputeScreenState extends State<ComputeScreen>
+class SupportScreenState extends State<SupportScreen>
     with SingleTickerProviderStateMixin {
   late final ComputationService _compute;
   late final CoordinatorService _coordinator;
@@ -47,12 +56,28 @@ class ComputeScreenState extends State<ComputeScreen>
 
     _urlController.text = _coordinator.serverUrl;
 
+    // Honour the initial enabled flag from Settings.
+    if (widget.enabled && !_coordinator.enabled) {
+      _coordinator.setEnabled(true);
+      _compute.setEnabled(true);
+    }
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
     _startBatteryMonitoring();
+  }
+
+  @override
+  void didUpdateWidget(covariant SupportScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.enabled != oldWidget.enabled) {
+      _batteryPaused = false;
+      _coordinator.setEnabled(widget.enabled);
+      _compute.setEnabled(widget.enabled);
+    }
   }
 
   void _startBatteryMonitoring() {
@@ -80,13 +105,13 @@ class ComputeScreenState extends State<ComputeScreen>
       if (!_batteryPaused) {
         _batteryPaused = true;
         _compute.setEnabled(false);
-        debugPrint('ComputeScreen: paused compute (battery $_batteryLevel%)');
+        debugPrint('SupportScreen: paused compute (battery $_batteryLevel%)');
       }
     } else if (_batteryPaused && (!isOnBattery || !isLow)) {
       if (_coordinator.enabled) {
         _batteryPaused = false;
         _compute.setEnabled(true);
-        debugPrint('ComputeScreen: resumed compute (power restored)');
+        debugPrint('SupportScreen: resumed compute (power restored)');
       }
     }
 
@@ -98,6 +123,9 @@ class ComputeScreenState extends State<ComputeScreen>
     _batteryTimer?.cancel();
     _urlController.dispose();
     _pulseController.dispose();
+    // Null callbacks before dispose to avoid setState on defunct widget.
+    _compute.onStateChanged = null;
+    _coordinator.onStateChanged = null;
     _coordinator.dispose();
     super.dispose();
   }
@@ -186,7 +214,87 @@ class ComputeScreenState extends State<ComputeScreen>
           const SizedBox(height: 12),
         ],
 
-        // ── Support ──────────────────────────────────────────────────
+        // ── FAQ ───────────────────────────────────────────────────────
+        if (!isEnabled) ...[
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.help_outline, color: cs.primary),
+                      const SizedBox(width: 8),
+                      const Text('Frequently Asked Questions',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _faqItem(
+                    'Will this slow down my device?',
+                    'No. Tasks run on idle CPU only and are automatically throttled '
+                    'so your downloads, media playback, and other apps are unaffected.',
+                  ),
+                  _faqItem(
+                    'What kind of work does it do?',
+                    'Lightweight academic computations: SHA-256 hashing, prime factorisation, '
+                    'matrix multiplication, and data integrity checks.',
+                  ),
+                  _faqItem(
+                    'Can I stop at any time?',
+                    'Yes — one tap stops all work instantly. Your contribution data is '
+                    'not stored on any server.',
+                  ),
+                  _faqItem(
+                    'Is this crypto mining?',
+                    'Absolutely not. All workloads are verifiable academic tasks. '
+                    'The source code is fully open for audit.',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // ── Thank you message (when active) ──────────────────────────
+        if (isEnabled) ...[
+          Card(
+            color: Colors.green.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.favorite, color: Colors.red.shade300, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Thank You!',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 15)),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Every task you complete contributes to real academic research. '
+                          'You\'re part of a community making a difference.',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.green.shade800),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // ── Buy Me a Coffee ──────────────────────────────────────────
         Card(
           child: ListTile(
             leading: const Icon(Icons.coffee, color: Colors.brown),
@@ -206,6 +314,23 @@ class ComputeScreenState extends State<ComputeScreen>
         ),
         const SizedBox(height: 32),
       ],
+    );
+  }
+
+  Widget _faqItem(String question, String answer) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(question,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w600, fontSize: 14)),
+          const SizedBox(height: 4),
+          Text(answer,
+              style: const TextStyle(fontSize: 13, height: 1.4)),
+        ],
+      ),
     );
   }
 
@@ -272,7 +397,7 @@ class ComputeScreenState extends State<ComputeScreen>
                       Text(
                         isEnabled
                             ? 'You\'re Making a Difference!'
-                            : 'Lend Your Compute Power',
+                            : 'Support the Project',
                         style: TextStyle(
                           fontSize: 19,
                           fontWeight: FontWeight.bold,
@@ -285,7 +410,7 @@ class ComputeScreenState extends State<ComputeScreen>
                       Text(
                         isEnabled
                             ? '$_totalCompleted tasks completed this session'
-                            : 'Help academic research with idle CPU cycles',
+                            : 'Donate idle CPU cycles to help academic research',
                         style: TextStyle(
                           fontSize: 13,
                           color: cs.onSurfaceVariant,
@@ -314,6 +439,7 @@ class ComputeScreenState extends State<ComputeScreen>
                       onPressed: () {
                         _batteryPaused = false;
                         _coordinator.setEnabled(false);
+                        widget.onEnabledChanged?.call(false);
                       },
                       icon: const Icon(Icons.pause),
                       label: const Text('Stop Contributing'),
@@ -327,6 +453,7 @@ class ComputeScreenState extends State<ComputeScreen>
                         _batteryPaused = false;
                         _coordinator.setEnabled(true);
                         _compute.setEnabled(true);
+                        widget.onEnabledChanged?.call(true);
                       },
                       icon: const Icon(Icons.flash_on_rounded),
                       label: const Text('Start Contributing'),
@@ -509,14 +636,20 @@ class ComputeScreenState extends State<ComputeScreen>
   }
 
   Widget _buildConnectionCard(ColorScheme cs) {
+    final isLocal = _coordinator.localMode;
+    final isConnected = _coordinator.connected;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
             Icon(
-              _coordinator.connected ? Icons.cloud_done : Icons.cloud_off,
-              color: _coordinator.connected ? Colors.green : cs.error,
+              isLocal
+                  ? Icons.computer
+                  : isConnected
+                      ? Icons.cloud_done
+                      : Icons.cloud_off,
+              color: (isLocal || isConnected) ? Colors.green : cs.error,
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -525,13 +658,18 @@ class ComputeScreenState extends State<ComputeScreen>
                 children: [
                   Text(_coordinator.connectionStatus,
                       style: const TextStyle(fontWeight: FontWeight.w500)),
-                  if (_coordinator.lastError != null)
+                  if (isLocal)
+                    Text(
+                      'Tasks are generated on-device. No server needed.',
+                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+                    ),
+                  if (_coordinator.lastError != null && !isLocal)
                     Text(_coordinator.lastError!,
                         style: TextStyle(color: cs.error, fontSize: 12)),
                 ],
               ),
             ),
-            if (!_coordinator.connected && _coordinator.enabled)
+            if (!isConnected && !isLocal && _coordinator.enabled)
               TextButton(
                 onPressed: () => _coordinator.connect(),
                 child: const Text('Retry'),
@@ -699,10 +837,10 @@ class ComputeScreenState extends State<ComputeScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Compute Paused',
+                  const Text('Support Paused',
                       style: TextStyle(fontWeight: FontWeight.w600)),
                   Text(
-                      'Battery is at $_batteryLevel%. Computing will '
+                      'Battery is at $_batteryLevel%. Support will '
                       'resume automatically when plugged in.',
                       style: const TextStyle(fontSize: 13)),
                 ],
