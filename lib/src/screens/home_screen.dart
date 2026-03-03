@@ -18,6 +18,8 @@ import 'guide_screen.dart';
 import 'statistics_screen.dart';
 import 'watched_playlists_screen.dart';
 import 'browser_screen.dart';
+import 'cast_dialog.dart';
+import 'compute_screen.dart';
 import 'player.dart';  // player player screen
 
 
@@ -77,7 +79,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _mainTabController = TabController(length: 12, vsync: this);
+    _mainTabController = TabController(length: 13, vsync: this);
     _mainTabController.addListener(() {
       if (!_mainTabController.indexIsChanging) {
         setState(() => _selectedPageIndex = _mainTabController.index);
@@ -109,10 +111,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _NavItem(5, Icons.upload_file, 'Bulk Import', 'Downloads'),
     _NavItem(6, Icons.bar_chart, 'Stats', 'Tools'),
     _NavItem(7, Icons.settings, 'Settings', null),
-    _NavItem(8, Icons.transform, 'Convert', 'Tools'),
-    _NavItem(9, Icons.list_alt, 'Logs', 'Tools'),
-    _NavItem(10, Icons.menu_book, 'Guide', null),
-    _NavItem(11, Icons.music_note, 'Player', 'Tools'),
+    _NavItem(8, Icons.flash_on_rounded, 'Compute', null),
+    _NavItem(9, Icons.transform, 'Convert', 'Tools'),
+    _NavItem(10, Icons.list_alt, 'Logs', 'Tools'),
+    _NavItem(11, Icons.menu_book, 'Guide', null),
+    _NavItem(12, Icons.music_note, 'Player', 'Tools'),
   ];
 
   Widget _buildPageContent(int index, AppSettings? settings) {
@@ -151,17 +154,19 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       case 7:
         return _buildSettingsTab(settings);
       case 8:
-        return _buildConvertTab(settings);
+        return const ComputeScreen(key: ValueKey('compute'));
       case 9:
-        return _buildLogsTab();
+        return _buildConvertTab(settings);
       case 10:
+        return _buildLogsTab();
+      case 11:
         final tm = _resolveThemeMode(widget.controller.settings?.themeMode);
         return GuideScreen(
           key: const ValueKey('guide'),
           themeMode: tm,
           onThemeChanged: (mode) => widget.controller.setThemeMode(mode),
         );
-      case 11:
+      case 12:
         return const playerPlayerPage(key: ValueKey('player-player'));
       default:
         return _buildSearchTab(settings);
@@ -274,6 +279,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Tab(icon: Icon(Icons.upload_file), text: 'Bulk Import'),
                   Tab(icon: Icon(Icons.bar_chart), text: 'Stats'),
                   Tab(icon: Icon(Icons.settings), text: 'Settings'),
+                  Tab(icon: Icon(Icons.flash_on_rounded), text: 'Compute'),
                   Tab(icon: Icon(Icons.transform), text: 'Convert'),
                   Tab(icon: Icon(Icons.list_alt), text: 'Logs'),
                   Tab(icon: Icon(Icons.menu_book), text: 'Guide'),
@@ -307,6 +313,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   statisticsService: widget.controller.statisticsService,
                 ),
                 _buildSettingsTab(settings),
+                const ComputeScreen(key: ValueKey('compute')),
                 _buildConvertTab(settings),
                 _buildLogsTab(),
                 Builder(builder: (_) {
@@ -1620,6 +1627,18 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     tooltip: 'Resume',
                                     color: Colors.green,
                                   ),
+                                if (item.status == DownloadStatus.completed &&
+                                    item.outputPath != null)
+                                  IconButton(
+                                    icon: const Icon(Icons.cast),
+                                    onPressed: () => CastDialog.show(
+                                      context: context,
+                                      filePath: item.outputPath!,
+                                      title: item.title,
+                                    ),
+                                    tooltip: 'Cast to TV',
+                                    color: Colors.teal,
+                                  ),
                                 if (item.status != DownloadStatus.downloading &&
                                     item.status != DownloadStatus.converting)
                                   IconButton(
@@ -1659,6 +1678,17 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 icon: const Icon(Icons.play_circle, size: 18),
                                 label: const Text('Resume'),
                                 onPressed: () => widget.controller.resumeDownload(item),
+                              ),
+                            if (item.status == DownloadStatus.completed &&
+                                item.outputPath != null)
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.cast, size: 18),
+                                label: const Text('Cast'),
+                                onPressed: () => CastDialog.show(
+                                  context: context,
+                                  filePath: item.outputPath!,
+                                  title: item.title,
+                                ),
                               ),
                             if (item.status != DownloadStatus.downloading &&
                                 item.status != DownloadStatus.converting)

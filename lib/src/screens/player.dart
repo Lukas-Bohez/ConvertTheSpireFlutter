@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:video_player/video_player.dart';
 import '../services/platform_dirs.dart';
+import 'cast_dialog.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // IMPORTANT: In your main.dart add these two lines before runApp():
@@ -1081,6 +1082,20 @@ class _PlayerScreenState extends State<PlayerScreen>
           },
           active: state.repeatMode != RepeatMode.off,
           onTap: state.cycleRepeat,
+        ),
+        const SizedBox(width: 8),
+        _iconBtn(
+          Icons.cast,
+          state.currentItem == null
+              ? () {}
+              : () {
+                  CastDialog.show(
+                    context: context,
+                    filePath: state.currentItem!.path,
+                    title: state.currentItem!.title ?? 'Media',
+                  );
+                },
+          size: 22,
         ),
       ],
     );

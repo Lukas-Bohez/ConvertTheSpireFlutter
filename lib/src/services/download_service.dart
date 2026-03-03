@@ -41,6 +41,133 @@ class DownloadService {
   /// Supported download formats.
   static const supportedFormats = {'mp3', 'm4a', 'mp4'};
 
+  /// Download a non-YouTube URL using yt-dlp exclusively.
+  ///
+  /// This is the entry point for generic sites (Vimeo, Dailymotion, anime
+  /// sites, etc.).  YouTube URLs should still use [download] which goes
+  /// through youtube_explode_dart first with a yt-dlp fast-path.
+  Future<DownloadResult> downloadGeneric(
+    PreviewItem item, {
+    required String format,
+    required String outputDir,
+    required String? ffmpegPath,
+    required void Function(int pct, DownloadStatus status) onProgress,
+    required DownloadToken token,
+    String? ytDlpPath,
+    String preferredVideoQuality = '720p',
+    int preferredAudioBitrate = 192,
+  }) async {
+    if (kIsWeb) {
+      throw Exception('Downloads are not supported on web.');
+    }
+    final formatLower = format.toLowerCase();
+    if (!supportedFormats.contains(formatLower)) {
+      throw Exception('Unsupported format: $format. Use MP3, M4A, or MP4.');
+    }
+
+    // yt-dlp is required for non-YouTube downloads
+    final resolvedYtDlp = await ytDlp.resolveAvailablePath(ytDlpPath);
+    if (resolvedYtDlp == null) {
+      throw Exception(
+        'yt-dlp is required to download from this site but was not found. '
+        'Go to Settings and ensure yt-dlp is installed.',
+      );
+    }
+
+    final isAndroid = !kIsWeb && Platform.isAndroid;
+    final useMediaStoreOnly = isAndroid && outputDir.trim().isEmpty;
+    if (outputDir.trim().isEmpty && !useMediaStoreOnly) {
+      throw Exception('Download folder is not configured. Set one in Settings.');
+    }
+    final isSafOutput = _isSafOutput(outputDir);
+
+    final safeTitle = _sanitizeFileName(item.title);
+
+    onProgress(0, DownloadStatus.downloading);
+
+    // Resolve output folder
+    final outputFolder = (isSafOutput || useMediaStoreOnly)
+        ? await _resolveTempFolder()
+        : await _resolveOutputFolder(outputDir, formatLower);
+    await outputFolder.create(recursive: true);
+
+    final outputPath =
+        '${outputFolder.path}${Platform.pathSeparator}$safeTitle.$formatLower';
+
+    try {
+      await ytDlp.download(
+        url: item.url,
+        outputPath: outputPath,
+        format: formatLower,
+        ffmpegPath: ffmpegPath,
+        ytDlpPath: resolvedYtDlp,
+        videoQuality: preferredVideoQuality,
+        audioBitrate: preferredAudioBitrate,
+        isCancelled: () => token.cancelled,
+        onProgress: (pct) {
+          final adjusted = (pct * 0.95).toInt();
+          final status = pct >= 100
+              ? DownloadStatus.converting
+              : DownloadStatus.downloading;
+          onProgress(adjusted, status);
+        },
+      );
+
+      if (token.cancelled) {
+        await _safeDelete(outputPath);
+        throw Exception('Cancelled');
+      }
+
+      onProgress(98, DownloadStatus.converting);
+
+      return _finalizeOutput(
+        outputPath: outputPath,
+        outputDir: outputDir,
+        safeTitle: safeTitle,
+        formatLower: formatLower,
+        thumbBytes: null,
+        isSafOutput: isSafOutput,
+        useMediaStoreOnly: useMediaStoreOnly,
+        outputFolder: outputFolder,
+      );
+    } catch (e) {
+      await _safeDelete(outputPath);
+      final msg = e.toString();
+      // Provide clear user-facing errors for common yt-dlp failures
+      if (msg.contains('Unsupported URL') ||
+          msg.contains('is not a valid URL') ||
+          msg.contains('No video formats found')) {
+        throw Exception(
+          'yt-dlp could not extract media from this URL. '
+          'The site may be unsupported, or the content is private/restricted.',
+        );
+      }
+      if (msg.contains('geographic restriction') ||
+          msg.contains('not available in your country') ||
+          msg.contains('geo')) {
+        throw Exception(
+          'This content is geo-restricted and not available in your region.',
+        );
+      }
+      if (msg.contains('Private video') ||
+          msg.contains('private') ||
+          msg.contains('Sign in') ||
+          msg.contains('login required')) {
+        throw Exception(
+          'This content is private or requires authentication.',
+        );
+      }
+      if (msg.contains('429') ||
+          msg.contains('Too Many Requests') ||
+          msg.contains('rate limit')) {
+        throw Exception(
+          'Rate limited by the server. Please wait a minute and try again.',
+        );
+      }
+      rethrow;
+    }
+  }
+
   Future<DownloadResult> download(
     PreviewItem item, {
     required String format,

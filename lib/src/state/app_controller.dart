@@ -221,7 +221,9 @@ class AppController extends ChangeNotifier {
     }
 
     // Resolve title if it's still a raw URL (user downloaded without preview)
-    if (item.title.startsWith('http://') || item.title.startsWith('https://')) {
+    // Only attempt YouTube metadata fetch for YouTube URLs
+    final isYouTube = _isYouTubeUrl(item.url);
+    if (isYouTube && (item.title.startsWith('http://') || item.title.startsWith('https://'))) {
       try {
         final video = await downloadService.yt.videos.get(item.url)
             .timeout(const Duration(seconds: 15));
@@ -263,20 +265,41 @@ class AppController extends ChangeNotifier {
           duration: null,
           thumbnailUrl: null,
         );
-        final result = await downloadService.download(
-          previewItem,
-          format: item.format,
-          outputDir: settings.downloadDir,
-          ffmpegPath: ffmpegPath,
-          token: token,
-          ytDlpPath: settings.ytDlpPath,
-          onProgress: (pct, status) {
-            final updated = item.copyWith(progress: pct, status: status);
-            _updateQueue(item, updated);
-          },
-          preferredVideoQuality: settings.preferredVideoQuality,
-          preferredAudioBitrate: settings.preferredAudioBitrate,
-        );
+
+        DownloadResult result;
+        if (isYouTube) {
+          // YouTube → use youtube_explode_dart (with yt-dlp fast-path on desktop)
+          result = await downloadService.download(
+            previewItem,
+            format: item.format,
+            outputDir: settings.downloadDir,
+            ffmpegPath: ffmpegPath,
+            token: token,
+            ytDlpPath: settings.ytDlpPath,
+            onProgress: (pct, status) {
+              final updated = item.copyWith(progress: pct, status: status);
+              _updateQueue(item, updated);
+            },
+            preferredVideoQuality: settings.preferredVideoQuality,
+            preferredAudioBitrate: settings.preferredAudioBitrate,
+          );
+        } else {
+          // Non-YouTube → route to yt-dlp generic download
+          result = await downloadService.downloadGeneric(
+            previewItem,
+            format: item.format,
+            outputDir: settings.downloadDir,
+            ffmpegPath: ffmpegPath,
+            token: token,
+            ytDlpPath: settings.ytDlpPath,
+            onProgress: (pct, status) {
+              final updated = item.copyWith(progress: pct, status: status);
+              _updateQueue(item, updated);
+            },
+            preferredVideoQuality: settings.preferredVideoQuality,
+            preferredAudioBitrate: settings.preferredAudioBitrate,
+          );
+        }
         final updated = item.copyWith(
           progress: 100,
           status: DownloadStatus.completed,
@@ -580,14 +603,37 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  /// Detect whether a URL is a YouTube video/playlist.
+  static bool _isYouTubeUrl(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final host = uri.host.toLowerCase();
+      return host.contains('youtube.com') ||
+          host.contains('youtu.be') ||
+          host.contains('music.youtube.com');
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Add a SearchResult to the download queue.
+  ///
+  /// YouTube results are queued with a `youtube.com/watch?v=` URL.
+  /// Generic (non-YouTube) results are queued with the raw URL stored in [id].
   void addSearchResultToQueue(models.SearchResult result, {String? format}) {
     final fmt = format ?? _settings?.defaultAudioFormat ?? 'mp3';
+
+    // If source is 'generic', the ID *is* the URL (set by BrowserScreen)
+    final isGeneric = result.source == 'generic';
+    final url = isGeneric
+        ? result.id
+        : 'https://www.youtube.com/watch?v=${result.id}';
+
     addToQueue(
       PreviewItem(
         id: result.id,
         title: result.title,
-        url: 'https://www.youtube.com/watch?v=${result.id}',
+        url: url,
         uploader: result.artist,
         duration: result.duration,
         thumbnailUrl: result.thumbnailUrl,

@@ -119,3 +119,25 @@ install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
 install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   CONFIGURATIONS Profile;Release
   COMPONENT Runtime)
+
+# Multi-config generators (Visual Studio) always install to runner/Release/ but
+# flutter run expects the bundle next to the exe in runner/<Config>/.  Mirror
+# the installed bundle to the actual config output directory so that both
+# flutter run (Debug) and flutter build (Release) work correctly.
+if(IS_MULTICONFIG)
+  install(CODE "
+    if(NOT \"\${CMAKE_INSTALL_CONFIG_NAME}\" STREQUAL \"Release\")
+      set(_src \"${CMAKE_BINARY_DIR}/runner/Release\")
+      set(_dst \"${CMAKE_BINARY_DIR}/runner/\${CMAKE_INSTALL_CONFIG_NAME}\")
+      file(GLOB _items \"\${_src}/*\")
+      foreach(_item \${_items})
+        if(IS_DIRECTORY \"\${_item}\")
+          file(COPY \"\${_item}\" DESTINATION \"\${_dst}\")
+        else()
+          file(COPY \"\${_item}\" DESTINATION \"\${_dst}\")
+        endif()
+      endforeach()
+      message(STATUS \"Mirrored bundle to \${_dst}\")
+    endif()
+  " COMPONENT Runtime)
+endif()

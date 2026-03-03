@@ -251,14 +251,55 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
     return (_isIncognito ? _incognitoController : _normalController);
   }
 
+  /// Normalize user input into a loadable URL.
+  ///
+  /// - Full URLs (`https://example.com`) are returned as-is.
+  /// - Bare domains (`hianime.to`, `vimeo.com/123`) get `https://` prepended.
+  /// - Everything else is treated as a search query and turned into a
+  ///   DuckDuckGo search URL.
+  static String _normalizeInput(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return 'https://www.youtube.com/';
+
+    // Already has a scheme
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+
+    // Looks like a domain (contains a dot, no spaces, has a valid TLD-ish
+    // segment after the last dot).  This catches `hianime.to`,
+    // `www.google.com/search?q=test`, `example.com:8080`, etc.
+    final domainPattern = RegExp(
+      r'^[^\s]+\.[a-zA-Z]{2,}(:\d+)?([/?#].*)?$',
+    );
+    if (domainPattern.hasMatch(trimmed)) {
+      return 'https://$trimmed';
+    }
+
+    // Also catch IP-address style URLs (e.g. 192.168.1.1)
+    final ipPattern = RegExp(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?(/.*)?$');
+    if (ipPattern.hasMatch(trimmed)) {
+      return 'https://$trimmed';
+    }
+
+    // Looks like `localhost` or `localhost:8080`
+    if (trimmed.startsWith('localhost')) {
+      return 'http://$trimmed';
+    }
+
+    // Fallback: treat as a search query
+    final encoded = Uri.encodeComponent(trimmed);
+    return 'https://duckduckgo.com/?q=$encoded';
+  }
+
   void _navigateTo(String urlStr) {
-    final uri = Uri.parse(urlStr);
-    _addressController.text = urlStr;
+    final normalized = _normalizeInput(urlStr);
+    _addressController.text = normalized;
     if (_usingWindows) {
       final ctrl = _isIncognito ? _winIncognitoController : _winController;
-      ctrl?.loadUrl(urlStr);
+      ctrl?.loadUrl(normalized);
     } else {
-      _activeController?.loadRequest(uri);
+      _activeController?.loadRequest(Uri.parse(normalized));
     }
   }
 
@@ -327,17 +368,13 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.go,
               onSubmitted: (str) {
-                final uri = Uri.parse(str);
-                if (_usingWindows) {
-                  final ctrl = _isIncognito ? _winIncognitoController : _winController;
-                  ctrl?.loadUrl(uri.toString());
-                } else {
-                  _activeController?.loadRequest(uri);
-                }
+                _navigateTo(str);
               },
-              decoration: const InputDecoration(
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                border: const OutlineInputBorder(),
+                hintText: 'Enter URL or search…',
+                hintStyle: TextStyle(color: iconColor.withValues(alpha: 0.5)),
               ),
             ),
           ),
@@ -410,31 +447,69 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
   }
 
 
-  /// Enqueue the current URL (if it is a YouTube video) for download.
+  /// Enqueue the current URL for download.
+  ///
+  /// YouTube URLs are parsed into a video ID and sent as a YouTube result.
+  /// All other URLs are sent as generic results that will be routed to yt-dlp.
   void _addCurrentToQueue() {
     final url = _addressController.text.trim();
     if (url.isEmpty) return;
+
     String? id;
     Uri? uri;
     try {
       uri = Uri.parse(url);
-      if (uri.host.contains('youtube.com')) {
+      final host = uri.host.toLowerCase();
+      if (host.contains('youtube.com') || host.contains('youtu.be') ||
+          host.contains('music.youtube.com')) {
+        // Standard watch URL: youtube.com/watch?v=ID
         id = uri.queryParameters['v'];
-      } else if (uri.host == 'youtu.be' && uri.pathSegments.isNotEmpty) {
-        id = uri.pathSegments[0];
+        // Short-link: youtu.be/ID
+        if (id == null && host == 'youtu.be' && uri.pathSegments.isNotEmpty) {
+          id = uri.pathSegments[0];
+        }
+        // Shorts: youtube.com/shorts/ID
+        if (id == null && uri.pathSegments.length >= 2 &&
+            uri.pathSegments[0] == 'shorts') {
+          id = uri.pathSegments[1];
+        }
+        // Embed: youtube.com/embed/ID
+        if (id == null && uri.pathSegments.length >= 2 &&
+            uri.pathSegments[0] == 'embed') {
+          id = uri.pathSegments[1];
+        }
+        // Live: youtube.com/live/ID
+        if (id == null && uri.pathSegments.length >= 2 &&
+            uri.pathSegments[0] == 'live') {
+          id = uri.pathSegments[1];
+        }
       }
     } catch (_) {}
-    if (id == null) return;
 
-    final result = SearchResult(
-      id: id,
-      title: uri?.pathSegments.isNotEmpty == true ? uri!.pathSegments.last : url,
-      artist: 'YouTube',
-      duration: Duration.zero,
-      thumbnailUrl: 'https://img.youtube.com/vi/$id/default.jpg',
-      source: 'youtube',
-    );
-    widget.onAddToQueue(result);
+    if (id != null) {
+      // YouTube video — use existing YouTube pipeline
+      final result = SearchResult(
+        id: id,
+        title: uri?.pathSegments.isNotEmpty == true ? uri!.pathSegments.last : url,
+        artist: 'YouTube',
+        duration: Duration.zero,
+        thumbnailUrl: 'https://img.youtube.com/vi/$id/default.jpg',
+        source: 'youtube',
+      );
+      widget.onAddToQueue(result);
+    } else {
+      // Non-YouTube URL — will be routed to yt-dlp by the download service
+      final displayTitle = uri?.host ?? url;
+      final result = SearchResult(
+        id: url,  // use the full URL as the ID for non-YouTube
+        title: displayTitle,
+        artist: uri?.host ?? 'Web',
+        duration: Duration.zero,
+        thumbnailUrl: '',
+        source: 'generic',
+      );
+      widget.onAddToQueue(result);
+    }
   }
 
   void _showBookmarksDialog() {
