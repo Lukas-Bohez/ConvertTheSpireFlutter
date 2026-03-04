@@ -672,8 +672,21 @@ class DownloadService {
   /// YouTube's CDN expects `&range=START-END&rn=N&rbuf=0` as URL query params,
   /// NOT as HTTP Range headers.  Using HTTP Range headers triggers 403 blocks
   /// after a few requests.  This mirrors how yt-dlp downloads adaptive streams.
+  ///
+  /// We strip any pre-existing `range`, `rn` and `rbuf` params from the base
+  /// URL first, because youtube_explode_dart may embed its own values which
+  /// would conflict with ours and cause the CDN to reject requests after the
+  /// first couple of chunks (especially on Android).
   Uri _buildChunkUrl(Uri baseUrl, int start, int end, int requestNum) {
-    final urlStr = baseUrl.toString();
+    // Remove conflicting params from the original URL
+    final params = Map<String, List<String>>.from(baseUrl.queryParametersAll);
+    params.remove('range');
+    params.remove('rn');
+    params.remove('rbuf');
+    final cleaned = baseUrl.replace(
+      queryParameters: params.map((k, v) => MapEntry(k, v.length == 1 ? v.first : v.join(','))),
+    );
+    final urlStr = cleaned.toString();
     final sep = urlStr.contains('?') ? '&' : '?';
     return Uri.parse('$urlStr${sep}range=$start-$end&rn=$requestNum&rbuf=0');
   }

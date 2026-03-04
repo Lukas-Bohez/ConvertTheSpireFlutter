@@ -56,9 +56,9 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
 
   /// Whether we should attempt to create a WebView controller.  After
   /// installing the proper federated plugins this will be true on every
-  /// platform except pure web; the only remaining case where the widget
-  /// should fall back to a placeholder is when running in the browser itself.
-  bool get _webViewSupported => !kIsWeb;
+  /// platform except pure web and Linux (no webview_flutter_linux package
+  /// exists, so attempting to create a controller crashes the app).
+  bool get _webViewSupported => !kIsWeb && !Platform.isLinux;
 
   bool get _usingWindows => !kIsWeb && Platform.isWindows;
 
@@ -593,8 +593,35 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
                           child: Webview(_winController!),
                         )))
               : (!_webViewSupported)
-                  ? const Center(
-                      child: Text('WebView not supported in this environment'),
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.public, size: 64,
+                                color: Theme.of(context).colorScheme.primary),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'In-app browser is not available on this platform.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 16),
+                            ),
+                            const SizedBox(height: 24),
+                            FilledButton.icon(
+                              onPressed: () {
+                                final url = _addressController.text.isNotEmpty
+                                    ? _addressController.text
+                                    : 'https://www.youtube.com/';
+                                launchUrl(Uri.parse(url),
+                                    mode: LaunchMode.externalApplication);
+                              },
+                              icon: const Icon(Icons.open_in_browser),
+                              label: const Text('Open in External Browser'),
+                            ),
+                          ],
+                        ),
+                      ),
                     )
                   : (_activeController == null
                       ? (_genericInitError

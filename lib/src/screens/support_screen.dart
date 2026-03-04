@@ -61,7 +61,9 @@ class SupportScreenState extends State<SupportScreen>
     };
 
     // Honour the initial enabled flag from Settings.
-    if (widget.enabled && !_coordinator.enabled) {
+    // On Android native mining is unsupported, so never auto-enable.
+    final _isAndroid = !kIsWeb && Platform.isAndroid;
+    if (!_isAndroid && widget.enabled && !_coordinator.enabled) {
       _coordinator.setEnabled(true);
       _compute.setEnabled(true);
     }
@@ -88,6 +90,8 @@ class SupportScreenState extends State<SupportScreen>
   void didUpdateWidget(covariant SupportScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.enabled != oldWidget.enabled) {
+      final _isAndroid = !kIsWeb && Platform.isAndroid;
+      if (_isAndroid) return; // never enable on Android
       _batteryPaused = false;
       _coordinator.setEnabled(widget.enabled);
       _compute.setEnabled(widget.enabled);
@@ -490,21 +494,55 @@ class SupportScreenState extends State<SupportScreen>
                         foregroundColor: Colors.red.shade400,
                       ),
                     )
-                  : FilledButton.icon(
-                      onPressed: () {
-                        _batteryPaused = false;
-                        _coordinator.setEnabled(true);
-                        _compute.setEnabled(true);
-                        widget.onEnabledChanged?.call(true);
-                      },
-                      icon: const Icon(Icons.flash_on_rounded),
-                      label: const Text('Start Contributing'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        textStyle: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
+                  : (!kIsWeb && Platform.isAndroid)
+                      ? Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 14, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(Icons.info_outline,
+                                  color: cs.onSurfaceVariant),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Not available on Android',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: cs.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Support us on Windows and Linux instead!',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : FilledButton.icon(
+                          onPressed: () {
+                            _batteryPaused = false;
+                            _coordinator.setEnabled(true);
+                            _compute.setEnabled(true);
+                            widget.onEnabledChanged?.call(true);
+                          },
+                          icon: const Icon(Icons.flash_on_rounded),
+                          label: const Text('Start Contributing'),
+                          style: FilledButton.styleFrom(
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                            textStyle: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ),
             ),
           ],
         ),

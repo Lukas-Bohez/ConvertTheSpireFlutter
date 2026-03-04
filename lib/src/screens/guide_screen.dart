@@ -307,7 +307,7 @@ class GuideScreen extends StatelessWidget {
               children: [
                 _InfoRow(label: 'Platform', value: _platformName()),
                 const SizedBox(height: 4),
-                _InfoRow(label: 'Dart version', value: Platform.version.split(' ').first),
+                _InfoRow(label: 'Dart version', value: kIsWeb ? 'N/A' : Platform.version.split(' ').first),
               ],
             ),
           ),

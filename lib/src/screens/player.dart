@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
@@ -170,7 +172,7 @@ class PlayerState with ChangeNotifier {
   // media_kit is used on Windows/Linux/macOS/iOS.
   // On Android we use the `video_player` plugin (ExoPlayer) instead, because
   // media_kit throws "Unsupported platform: android" at runtime.
-  final bool _videoSupported = !Platform.isAndroid;
+  final bool _videoSupported = kIsWeb || !Platform.isAndroid;
 
   // Created once and reused — never recreate, the Video widget holds a ref.
   Player? _mkPlayer;
@@ -190,6 +192,8 @@ class PlayerState with ChangeNotifier {
 
   bool _videoCompletionFired = false;
   bool _loadingTrack = false;
+  bool _disposed = false;
+  final List<StreamSubscription> _subs = [];
 
   Duration position = Duration.zero;
   Duration? duration;
@@ -217,63 +221,71 @@ class PlayerState with ChangeNotifier {
     _loadPrefs().then((_) => _applyVolume());
 
     // ── Audio streams ──
-    _audio.positionStream.listen((pos) {
+    _subs.add(_audio.positionStream.listen((pos) {
+      if (_disposed) return;
       if (currentItem?.type == MediaType.audio) {
         position = pos;
         notifyListeners();
       }
-    });
-    _audio.durationStream.listen((dur) {
+    }));
+    _subs.add(_audio.durationStream.listen((dur) {
+      if (_disposed) return;
       if (currentItem?.type == MediaType.audio) {
         duration = dur;
         notifyListeners();
       }
-    });
-    _audio.playerStateStream.listen((ps) {
+    }));
+    _subs.add(_audio.playerStateStream.listen((ps) {
+      if (_disposed) return;
       if (ps.processingState == ProcessingState.completed) {
         _handleCompletion();
       }
       notifyListeners();
-    });
+    }));
 
     // ── Video streams (media_kit, non-Android only) ──
     if (_videoSupported && _mkPlayer != null) {
-      _mkPlayer!.stream.position.listen((pos) {
+      _subs.add(_mkPlayer!.stream.position.listen((pos) {
+        if (_disposed) return;
         if (currentItem?.type == MediaType.video) {
           position = pos;
           notifyListeners();
         }
-      });
-      _mkPlayer!.stream.duration.listen((dur) {
+      }));
+      _subs.add(_mkPlayer!.stream.duration.listen((dur) {
+        if (_disposed) return;
         if (currentItem?.type == MediaType.video) {
           duration = dur;
           notifyListeners();
         }
-      });
-      _mkPlayer!.stream.volume.listen((v) {
+      }));
+      _subs.add(_mkPlayer!.stream.volume.listen((v) {
+        if (_disposed) return;
         final vol = (v / 100).clamp(0.0, 1.0);
         if (vol != volume) {
           volume = vol;
           prefs.setDouble('volume', volume);
           notifyListeners();
         }
-      });
-      _mkPlayer!.stream.width.listen((w) {
+      }));
+      _subs.add(_mkPlayer!.stream.width.listen((w) {
+        if (_disposed) return;
         if (currentItem?.type == MediaType.video && (w ?? 0) > 0) {
           if (!_videoReady) {
             _videoReady = true;
             notifyListeners();
           }
         }
-      });
-      _mkPlayer!.stream.completed.listen((done) {
+      }));
+      _subs.add(_mkPlayer!.stream.completed.listen((done) {
+        if (_disposed) return;
         if (done &&
             currentItem?.type == MediaType.video &&
             !_videoCompletionFired) {
           _videoCompletionFired = true;
           _handleCompletion();
         }
-      });
+      }));
     }
   }
 
@@ -768,6 +780,11 @@ class PlayerState with ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
+    for (final sub in _subs) {
+      sub.cancel();
+    }
+    _subs.clear();
     _audio.dispose();
     if (_videoSupported && _mkPlayer != null) {
       _mkPlayer!.dispose();
@@ -1387,7 +1404,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Future<void> _pickFolder() async {
     String? result;
-    if (Platform.isAndroid) {
+    if (!kIsWeb && Platform.isAndroid) {
       result = await PlatformDirs.pickTree();
       debugPrint('SAF pickTree returned: $result');
     }
