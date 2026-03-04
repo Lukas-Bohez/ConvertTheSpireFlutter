@@ -522,6 +522,7 @@ class PlayerState with ChangeNotifier {
 
   Future<void> _loadCurrent() async {
     if (currentItem == null || _loadingTrack) return;
+    final item = currentItem!; // Capture once – library may change across awaits
     _loadingTrack = true;
     _videoCompletionFired = false;
     _videoReady = false;
@@ -530,13 +531,13 @@ class PlayerState with ChangeNotifier {
     _applyVolume();
 
     try {
-      if (currentItem!.type == MediaType.audio) {
+      if (item.type == MediaType.audio) {
         if (_videoSupported && _mkPlayer != null) {
           await _mkPlayer!.stop();
         }
         await _disposeAndroidController();
         try {
-          final path = currentItem!.path;
+          final path = item.path;
           if (path.startsWith('content://')) {
             await _audio.setUrl(path);
           } else {
@@ -547,20 +548,20 @@ class PlayerState with ChangeNotifier {
           position = Duration.zero;
           await _audio.play();
         } catch (e) {
-          debugPrint('audio load error ($currentItem): $e');
+          debugPrint('audio load error ($item): $e');
         }
       } else {
         await _audio.stop();
         try {
           if (_videoSupported && _mkPlayer != null) {
             // ── Desktop / iOS: media_kit ──
-            await _mkPlayer!.open(Media(_toUri(currentItem!.path)), play: true);
+            await _mkPlayer!.open(Media(_toUri(item.path)), play: true);
             await _mkPlayer!.setVolume(volume * 100);
           } else {
             // ── Android: video_player (ExoPlayer) ──
             await _disposeAndroidController();
 
-            final path = currentItem!.path;
+            final path = item.path;
             VideoPlayerController? ctrl;
 
             // Try 1: content:// URI directly — ExoPlayer handles SAF URIs natively.

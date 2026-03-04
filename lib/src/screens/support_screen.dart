@@ -480,51 +480,51 @@ class SupportScreenState extends State<SupportScreen>
             ],
             SizedBox(
               width: double.infinity,
-              child: isEnabled
-                  ? OutlinedButton.icon(
-                      onPressed: () {
-                        _batteryPaused = false;
-                        _coordinator.setEnabled(false);
-                        widget.onEnabledChanged?.call(false);
-                      },
-                      icon: const Icon(Icons.pause),
-                      label: const Text('Stop Contributing'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        foregroundColor: Colors.red.shade400,
+              child: (!kIsWeb && Platform.isAndroid)
+                  ? Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 14, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.info_outline,
+                              color: cs.onSurfaceVariant),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Not available on Android',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: cs.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Support us on Windows and Linux instead!',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ),
                     )
-                  : (!kIsWeb && Platform.isAndroid)
-                      ? Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 14, horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: cs.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(Icons.info_outline,
-                                  color: cs.onSurfaceVariant),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Not available on Android',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: cs.onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Support us on Windows and Linux instead!',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: cs.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
+                  : isEnabled
+                      ? OutlinedButton.icon(
+                          onPressed: () {
+                            _batteryPaused = false;
+                            _coordinator.setEnabled(false);
+                            widget.onEnabledChanged?.call(false);
+                          },
+                          icon: const Icon(Icons.pause),
+                          label: const Text('Stop Contributing'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            foregroundColor: Colors.red.shade400,
                           ),
                         )
                       : FilledButton.icon(

@@ -50,16 +50,21 @@ class PreviewPlayerService {
     _autoStopTimer?.cancel();
     _autoStopTimer = null;
     _isPlaying = false;
-    try {
-      await _player?.stop();
-      await _player?.dispose();
-    } catch (_) {}
+    // Capture and null-out before any await to prevent a stale timer
+    // callback from disposing a newly created player.
+    final player = _player;
     _player = null;
+    try {
+      await player?.stop();
+      await player?.dispose();
+    } catch (_) {}
   }
 
   void dispose() {
     _autoStopTimer?.cancel();
-    _player?.stop();
-    _player?.dispose();
+    final player = _player;
+    _player = null;
+    player?.stop();
+    player?.dispose();
   }
 }

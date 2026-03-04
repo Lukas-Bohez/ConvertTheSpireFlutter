@@ -1,11 +1,12 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 
 class AndroidSaf {
   static const MethodChannel _channel = MethodChannel('convert_the_spire/saf');
 
-  bool get isSupported => Platform.isAndroid;
+  bool get isSupported => !kIsWeb && Platform.isAndroid;
 
   Future<String?> pickTree() async {
     if (!isSupported) return null;

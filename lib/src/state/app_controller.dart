@@ -384,6 +384,10 @@ class AppController extends ChangeNotifier {
   }
 
   void resumeDownload(QueueItem item) {
+    // Guard against duplicate concurrent downloads (downloadAll may pick this
+    // item up before downloadSingle progresses past its first await).
+    final key = '${item.url}|${item.format}';
+    if (_tokens.containsKey(key) && !_tokens[key]!.cancelled) return;
     final reset = item.copyWith(status: DownloadStatus.queued, progress: 0, error: null);
     _updateQueue(item, reset);
     downloadSingle(reset);

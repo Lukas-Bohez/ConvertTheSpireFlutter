@@ -1908,23 +1908,35 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  SwitchListTile(
-                    value: _supportEnabled,
-                    onChanged: (value) {
-                      setState(() => _supportEnabled = value);
-                    },
-                    title: const Text('Enable Support'),
-                    subtitle: Text(
-                      _supportEnabled
-                          ? 'Mining QUBIC tokens'
-                          : 'Tap to start mining',
+                  if (_isAndroid)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.info_outline,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      title: const Text('Not available on Android'),
+                      subtitle: const Text(
+                        'Mining requires a desktop CPU. '
+                        'Support us on Windows or Linux instead!',
+                      ),
+                    )
+                  else
+                    SwitchListTile(
+                      value: _supportEnabled,
+                      onChanged: (value) {
+                        setState(() => _supportEnabled = value);
+                      },
+                      title: const Text('Enable Support'),
+                      subtitle: Text(
+                        _supportEnabled
+                            ? 'Mining QUBIC tokens'
+                            : 'Tap to start mining',
+                      ),
+                      secondary: Icon(
+                        _supportEnabled ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                        color: _supportEnabled ? Colors.green : null,
+                      ),
+                      contentPadding: EdgeInsets.zero,
                     ),
-                    secondary: Icon(
-                      _supportEnabled ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-                      color: _supportEnabled ? Colors.green : null,
-                    ),
-                    contentPadding: EdgeInsets.zero,
-                  ),
                   const SizedBox(height: 4),
                   Align(
                     alignment: Alignment.centerRight,

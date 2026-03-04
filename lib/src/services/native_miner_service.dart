@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:path_provider/path_provider.dart';
 
 import 'qubic_service.dart';
@@ -54,21 +54,21 @@ class NativeMinerService {
   static const clientVersion = '3.5.2';
 
   static String get _downloadUrl {
-    if (Platform.isWindows) {
+    if (!kIsWeb && Platform.isWindows) {
       return 'https://dl.qubic.li/downloads/qli-Client-$clientVersion-Windows-x64.zip';
     }
-    if (Platform.isLinux) {
+    if (!kIsWeb && Platform.isLinux) {
       return 'https://dl.qubic.li/downloads/qli-Client-$clientVersion-Linux-x64.tar.gz';
     }
-    throw UnsupportedError('Mining not supported on ${Platform.operatingSystem}');
+    throw UnsupportedError('Mining not supported on this platform');
   }
 
   static String get _binaryName =>
-      Platform.isWindows ? 'qli-Client.exe' : 'qli-Client';
+      !kIsWeb && Platform.isWindows ? 'qli-Client.exe' : 'qli-Client';
 
   /// Whether the current platform can run the native miner.
   static bool get isSupported =>
-      !_isTestMode && (Platform.isWindows || Platform.isLinux);
+      !_isTestMode && !kIsWeb && (Platform.isWindows || Platform.isLinux);
 
   // For unit-testing without dart:io platform checks.
   static bool _isTestMode = false;

@@ -97,6 +97,18 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
   Future<void> _setupControllers() async {
     if (_usingWindows) {
       try {
+        // Check whether the WebView2 Runtime is installed before attempting
+        // to create a controller.  On PCs without Edge/WebView2 the native
+        // plugin can crash the entire process before Dart's try-catch fires.
+        final webViewVersion = await WebviewController.getWebViewVersion();
+        if (webViewVersion == null || webViewVersion.isEmpty) {
+          debugPrint('WebView2 Runtime is not installed');
+          setState(() {
+            _winInitError = true;
+            _addressController.text = 'https://www.youtube.com/';
+          });
+          return;
+        }
         // initialize with timeout in case WebView2 hang occurs
         final ctrl = await _createWindowsController()
             .timeout(const Duration(seconds: 15));
@@ -576,16 +588,58 @@ class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveCl
                         ))
                   : (_winController == null
                       ? (_winInitError
-                          ? Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text('Failed to initialize WebView'),
-                                const SizedBox(height: 8),
-                                ElevatedButton(
-                                  onPressed: _setupControllers,
-                                  child: const Text('Retry'),
-                                ),
-                              ],
+                          ? Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.warning_amber_rounded,
+                                      size: 48,
+                                      color: Theme.of(context).colorScheme.error),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'WebView2 Runtime is not installed',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'The in-app browser requires the Microsoft Edge WebView2 Runtime.\n'
+                                    'Install it from the link below, then restart the app.',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  FilledButton.icon(
+                                    onPressed: () => launchUrl(
+                                      Uri.parse(
+                                          'https://developer.microsoft.com/en-us/microsoft-edge/webview2/'),
+                                      mode: LaunchMode.externalApplication,
+                                    ),
+                                    icon: const Icon(Icons.download),
+                                    label: const Text('Download WebView2 Runtime'),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  OutlinedButton.icon(
+                                    onPressed: () {
+                                      final url = _addressController.text.isNotEmpty
+                                          ? _addressController.text
+                                          : 'https://www.youtube.com/';
+                                      launchUrl(Uri.parse(url),
+                                          mode: LaunchMode.externalApplication);
+                                    },
+                                    icon: const Icon(Icons.open_in_browser),
+                                    label: const Text('Open in External Browser'),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  TextButton.icon(
+                                    onPressed: _setupControllers,
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Retry'),
+                                  ),
+                                ],
+                              ),
                             )
                           : const Center(child: CircularProgressIndicator()))
                       : KeyedSubtree(

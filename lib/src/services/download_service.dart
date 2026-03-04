@@ -624,6 +624,17 @@ class DownloadService {
       return;
     }
 
+    // On Android, always use youtube_explode_dart's own streaming API.
+    // The chunked HTTP approach with custom range params consistently fails
+    // after 2-3 chunks because Android's HTTP engine (Cronet/OkHttp) handles
+    // YouTube CDN signatures differently and the URLs expire faster.
+    // youtube_explode_dart's StreamClient.get() handles throttling and range
+    // negotiation internally, so it works reliably.
+    if (!kIsWeb && Platform.isAndroid) {
+      await _downloadStreamLegacy(stream, outputPath, token, onProgress);
+      return;
+    }
+
     const chunkSize = 10 * 1024 * 1024; // 10 MB per chunk
     const maxRetries = 5;
     final client = http.Client();
