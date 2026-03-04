@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'qubic_service.dart';
 
@@ -114,6 +115,31 @@ class NativeMinerService {
 
   void setCpuThreads(int threads) {
     _cpuThreads = threads.clamp(1, Platform.numberOfProcessors);
+    _persistThreads();
+  }
+
+  static const _threadsKey = 'miner_cpu_threads';
+
+  Future<void> _persistThreads() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_threadsKey, _cpuThreads);
+    } catch (e) {
+      debugPrint('Failed to persist thread count: $e');
+    }
+  }
+
+  /// Load persisted settings (thread count, etc.) from SharedPreferences.
+  Future<void> loadSavedSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getInt(_threadsKey);
+      if (saved != null) {
+        _cpuThreads = saved.clamp(1, Platform.numberOfProcessors);
+      }
+    } catch (e) {
+      debugPrint('Failed to load saved miner settings: $e');
+    }
   }
 
   // ── Miner directory ──────────────────────────────────────────────────────

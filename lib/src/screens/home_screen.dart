@@ -73,6 +73,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool get _isAndroid => !kIsWeb && Platform.isAndroid;
   bool _isNarrowLayout(BuildContext context) => MediaQuery.of(context).size.width < 600;
 
+  /// Pages that have been visited at least once in the narrow (mobile) layout.
+  /// Used by IndexedStack to lazily build pages while keeping them alive.
+  final Set<int> _visitedPages = {0};
+
   // Range selector for adding subset of preview results to queue
   int _addRangeFrom = 1;
   int _addRangeTo = 1;
@@ -259,12 +263,23 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
 
         if (_isNarrowLayout(context)) {
+          // Use IndexedStack so visited pages stay alive (preserves
+          // search results, miner settings, etc. across tab switches).
+          _visitedPages.add(_selectedPageIndex);
           return Scaffold(
             appBar: AppBar(title: const Text('Convert the Spire')),
             drawer: _buildNavigationDrawer(),
             body: SafeArea(
               top: false,
-              child: _buildPageContent(_selectedPageIndex, settings),
+              child: IndexedStack(
+                index: _selectedPageIndex,
+                children: List.generate(13, (i) {
+                  if (!_visitedPages.contains(i)) {
+                    return const SizedBox.shrink();
+                  }
+                  return _buildPageContent(i, settings);
+                }),
+              ),
             ),
           );
         }
@@ -1864,6 +1879,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
 
           // â”€â”€ Support the Project â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          // Mining support – hidden entirely on Android.
+          if (!_isAndroid) ...[
           Card(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -1908,19 +1925,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  if (_isAndroid)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.info_outline,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant),
-                      title: const Text('Not available on Android'),
-                      subtitle: const Text(
-                        'Mining requires a desktop CPU. '
-                        'Support us on Windows or Linux instead!',
-                      ),
-                    )
-                  else
-                    SwitchListTile(
+                  // Mining toggle – never shown on Android
+                  SwitchListTile(
                       value: _supportEnabled,
                       onChanged: (value) {
                         setState(() => _supportEnabled = value);
@@ -1951,6 +1957,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(height: 16),
+          ], // end if (!_isAndroid) mining card
 
           // Download Settings
           Card(

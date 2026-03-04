@@ -318,18 +318,18 @@ class DownloadService {
         await _downloadStream(sourceStream, tempFilePath, token, (pct, status) {
           final adjustedPct = (pct * 0.6).toInt();
           onProgress(adjustedPct, status);
-        });
+        }, videoId: video.id);
         if (token.cancelled) throw Exception('Cancelled');
         await _downloadStream(separateAudioStream, tempAudioPath!, token, (pct, status) {
           final adjustedPct = 60 + (pct * 0.2).toInt();
           onProgress(adjustedPct, status);
-        });
+        }, videoId: video.id);
       } else {
         // Single stream download (0-90%)
         await _downloadStream(sourceStream, tempFilePath, token, (pct, status) {
           final adjustedPct = (pct * 0.9).toInt();
           onProgress(adjustedPct, status);
-        });
+        }, videoId: video.id);
       }
 
       if (token.cancelled) {
@@ -604,19 +604,20 @@ class DownloadService {
 
   /// Download a stream using YouTube-native chunked range parameters.
   ///
-  /// YouTube blocks standard HTTP Range headers after a few requests (403).
-  /// Instead, we use YouTube's own `&range=START-END` and `&rn=N` URL query
-  /// parameters — the same mechanism used by YouTube's player and yt-dlp.
-  /// The `rn` (request number) parameter tells YouTube the requests are part
-  /// of a legitimate sequential download, and `rbuf=0` signals zero buffering.
+  /// On desktop, uses YouTube's own `&range=START-END` and `&rn=N` URL query
+  /// parameters.  On Android, uses HTTP Range headers with smaller chunks and
+  /// automatic manifest refresh on 403/429 — the URL-param approach fails on
+  /// Android's HTTP stack after 2-3 chunks.
   ///
-  /// Each chunk (~10 MB) is retried up to 5 times before giving up.
+  /// [videoId] is used on Android to refresh the stream manifest when the CDN
+  /// returns 403 (expired signature).
   Future<void> _downloadStream(
     StreamInfo stream,
     String outputPath,
     DownloadToken token,
-    void Function(int pct, DownloadStatus status) onProgress,
-  ) async {
+    void Function(int pct, DownloadStatus status) onProgress, {
+    dynamic videoId,
+  }) async {
     final total = stream.size.totalBytes;
     if (total <= 0) {
       // Unknown size – fall back to the library's own streaming API
@@ -624,14 +625,12 @@ class DownloadService {
       return;
     }
 
-    // On Android, always use youtube_explode_dart's own streaming API.
-    // The chunked HTTP approach with custom range params consistently fails
-    // after 2-3 chunks because Android's HTTP engine (Cronet/OkHttp) handles
-    // YouTube CDN signatures differently and the URLs expire faster.
-    // youtube_explode_dart's StreamClient.get() handles throttling and range
-    // negotiation internally, so it works reliably.
+    // On Android, use HTTP Range headers with smaller chunks.
     if (!kIsWeb && Platform.isAndroid) {
-      await _downloadStreamLegacy(stream, outputPath, token, onProgress);
+      await _downloadStreamAndroid(
+        stream, outputPath, token, onProgress,
+        videoId: videoId,
+      );
       return;
     }
 
@@ -795,6 +794,161 @@ class DownloadService {
       try { await sink.close(); } catch (_) {}
       rethrow;
     }
+  }
+
+  /// Robust Android download using HTTP Range headers with small chunks.
+  ///
+  /// YouTube's URL-param range approach (`&range=START-END`) fails after 2-3
+  /// chunks on Android.  Instead, this method uses standard HTTP Range headers
+  /// with 2 MB chunks, a mobile User-Agent, and automatic manifest refresh
+  /// when the CDN returns 403 (signature expired).
+  Future<void> _downloadStreamAndroid(
+    StreamInfo originalStream,
+    String outputPath,
+    DownloadToken token,
+    void Function(int pct, DownloadStatus status) onProgress, {
+    dynamic videoId,
+  }) async {
+    final total = originalStream.size.totalBytes;
+    if (total <= 0) {
+      await _downloadStreamLegacy(originalStream, outputPath, token, onProgress);
+      return;
+    }
+
+    const chunkSize = 2 * 1024 * 1024; // 2 MB (small to stay under throttle thresholds)
+    const maxRetries = 12;
+    final file = File(outputPath);
+    int received = 0;
+    Uri currentUrl = originalStream.url;
+    final originalTag = originalStream.tag; // itag for matching on refresh
+    onProgress(0, DownloadStatus.downloading);
+
+    // Strip pre-existing range / rn params from the URL
+    currentUrl = _stripRangeParams(currentUrl);
+
+    try {
+      await file.writeAsBytes([], flush: true);
+
+      while (received < total) {
+        if (token.cancelled) {
+          await _safeDelete(outputPath);
+          throw Exception('Cancelled');
+        }
+
+        final start = received;
+        final end = (start + chunkSize - 1).clamp(0, total - 1);
+        Uint8List? chunkBytes;
+        Exception? lastError;
+
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+          if (token.cancelled) throw Exception('Cancelled');
+
+          try {
+            final client = http.Client();
+            try {
+              final request = http.Request('GET', currentUrl);
+              request.headers['Range'] = 'bytes=$start-$end';
+              request.headers['User-Agent'] =
+                  'com.google.android.youtube/19.09.37 (Linux; U; Android 14; en_US) gzip';
+
+              final response = await client.send(request).timeout(
+                const Duration(seconds: 30),
+                onTimeout: () => throw TimeoutException('Chunk request timed out'),
+              );
+
+              if (response.statusCode == 403 || response.statusCode == 429) {
+                // Signature expired or rate-limited – refresh stream URL
+                if (videoId != null) {
+                  debugPrint('Android download: HTTP ${response.statusCode} on chunk $start-$end, refreshing manifest...');
+                  try {
+                    final fresh = await yt.videos.streamsClient.getManifest(
+                      videoId,
+                      ytClients: [YoutubeApiClient.safari, YoutubeApiClient.androidVr],
+                    ).timeout(const Duration(seconds: 30));
+                    final match = _findStreamByTag(fresh, originalTag);
+                    if (match != null) {
+                      currentUrl = _stripRangeParams(match.url);
+                      debugPrint('Android download: refreshed stream URL');
+                    }
+                  } catch (e2) {
+                    debugPrint('Android download: manifest refresh failed: $e2');
+                  }
+                }
+                throw Exception('HTTP ${response.statusCode}');
+              }
+
+              if (response.statusCode >= 400) {
+                throw Exception('HTTP ${response.statusCode} for range $start-$end');
+              }
+
+              final buffer = BytesBuilder(copy: false);
+              await for (final data in response.stream.timeout(
+                const Duration(seconds: 30),
+                onTimeout: (eventSink) {
+                  eventSink.addError(TimeoutException('Chunk data stalled'));
+                  eventSink.close();
+                },
+              )) {
+                if (token.cancelled) throw Exception('Cancelled');
+                buffer.add(data);
+              }
+              chunkBytes = buffer.toBytes();
+              break; // Success
+            } finally {
+              client.close();
+            }
+          } on Exception catch (e) {
+            lastError = e;
+            if (token.cancelled || e.toString().contains('Cancelled')) rethrow;
+            if (attempt < maxRetries - 1) {
+              final delay = Duration(seconds: (2 * (attempt + 1)).clamp(2, 20));
+              debugPrint('Android download: chunk $start-$end attempt ${attempt + 1} failed: $e, retrying in ${delay.inSeconds}s');
+              await Future.delayed(delay);
+            }
+          }
+        }
+
+        if (chunkBytes == null) {
+          throw lastError ?? Exception('Download failed after $maxRetries retries at byte $received');
+        }
+
+        await file.writeAsBytes(chunkBytes, mode: FileMode.writeOnlyAppend, flush: true);
+        received += chunkBytes.length;
+
+        final pct = ((received / total) * 100).clamp(0, 100).toInt();
+        onProgress(pct, DownloadStatus.downloading);
+      }
+    } catch (e) {
+      await _safeDelete(outputPath);
+      rethrow;
+    }
+  }
+
+  /// Strip pre-existing range/rn/rbuf params from a YouTube CDN URL.
+  Uri _stripRangeParams(Uri url) {
+    final params = Map<String, List<String>>.from(url.queryParametersAll);
+    params.remove('range');
+    params.remove('rn');
+    params.remove('rbuf');
+    return url.replace(
+      queryParameters: params.map(
+        (k, v) => MapEntry(k, v.length == 1 ? v.first : v.join(',')),
+      ),
+    );
+  }
+
+  /// Find a stream in a manifest that matches the given itag.
+  StreamInfo? _findStreamByTag(StreamManifest manifest, int tag) {
+    for (final s in manifest.muxed) {
+      if (s.tag == tag) return s;
+    }
+    for (final s in manifest.videoOnly) {
+      if (s.tag == tag) return s;
+    }
+    for (final s in manifest.audioOnly) {
+      if (s.tag == tag) return s;
+    }
+    return null;
   }
 
   Future<Uint8List?> _fetchThumbnailBytes(String? url) async {

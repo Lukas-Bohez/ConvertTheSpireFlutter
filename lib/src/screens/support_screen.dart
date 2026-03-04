@@ -53,6 +53,11 @@ class SupportScreenState extends State<SupportScreen>
     _compute = ComputationService(maxConcurrent: 2);
     _coordinator = CoordinatorService(compute: _compute);
 
+    // Restore persisted miner settings (thread count, etc.)
+    _coordinator.nativeMiner.loadSavedSettings().then((_) {
+      if (mounted) setState(() {});
+    });
+
     _compute.onStateChanged = () {
       if (mounted) setState(() {});
     };

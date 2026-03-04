@@ -192,6 +192,7 @@ class PlayerState with ChangeNotifier {
 
   bool _videoCompletionFired = false;
   bool _loadingTrack = false;
+  bool _pendingReload = false;
   bool _disposed = false;
   final List<StreamSubscription> _subs = [];
 
@@ -521,9 +522,16 @@ class PlayerState with ChangeNotifier {
   }
 
   Future<void> _loadCurrent() async {
-    if (currentItem == null || _loadingTrack) return;
+    if (currentItem == null) return;
+    if (_loadingTrack) {
+      // Another load is in progress – mark pending so we reload
+      // the (now-updated) currentIndex once it finishes.
+      _pendingReload = true;
+      return;
+    }
     final item = currentItem!; // Capture once – library may change across awaits
     _loadingTrack = true;
+    _pendingReload = false;
     _videoCompletionFired = false;
     _videoReady = false;
     notifyListeners();
@@ -646,6 +654,11 @@ class PlayerState with ChangeNotifier {
     } finally {
       _loadingTrack = false;
       notifyListeners();
+      // If another track was requested while we were busy, load it now.
+      if (_pendingReload) {
+        _pendingReload = false;
+        await _loadCurrent();
+      }
     }
   }
 
