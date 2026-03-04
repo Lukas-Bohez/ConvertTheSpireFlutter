@@ -38,6 +38,8 @@ class _MyAppState extends State<MyApp> {
   AppController? _controller;
   YoutubeExplode? _ytExplode;
   String? _initError;
+  bool _dismissedMediaKitError = false;
+  late final Future<SharedPreferences> _prefsFuture = SharedPreferences.getInstance();
 
   @override
   void initState() {
@@ -171,7 +173,7 @@ class _MyAppState extends State<MyApp> {
             useMaterial3: true,
           ),
           themeMode: themeMode,
-          home: widget.mediaKitInitError != null
+          home: widget.mediaKitInitError != null && !_dismissedMediaKitError
               ? Scaffold(
                   body: Center(
                     child: Padding(
@@ -186,7 +188,7 @@ class _MyAppState extends State<MyApp> {
                           const SizedBox(height: 8),
                           Text(widget.mediaKitInitError!, textAlign: TextAlign.center),
                           const SizedBox(height: 16),
-                                          if (widget.mediaKitInitError!.contains('Unsupported platform'))
+                          if (widget.mediaKitInitError!.contains('Unsupported platform'))
                             const Text(
                               'Video playback is not supported on this platform. '
                               'Only audio will be available.',
@@ -198,6 +200,16 @@ class _MyAppState extends State<MyApp> {
                               'Please follow the README to bundle libmpv or enable split-per-abi.',
                               textAlign: TextAlign.center,
                             ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              // Bypass the error and continue without video.
+                              setState(() {
+                                _dismissedMediaKitError = true;
+                              });
+                            },
+                            child: const Text('Continue without video'),
+                          ),
                         ],
                       ),
                     ),
@@ -232,7 +244,7 @@ class _MyAppState extends State<MyApp> {
                   : _controller == null
                       ? const Scaffold(body: Center(child: CircularProgressIndicator()))
                       : FutureBuilder<SharedPreferences>(
-                          future: SharedPreferences.getInstance(),
+                          future: _prefsFuture,
                       builder: (context, snap) {
                         if (!snap.hasData) {
                           return const Scaffold(body: Center(child: CircularProgressIndicator()));

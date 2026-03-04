@@ -3,15 +3,17 @@ import 'dart:async';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/computation_service.dart';
 import '../services/coordinator_service.dart';
+import '../services/qubic_service.dart';
 
-/// Full-page screen for the distributed computing volunteer feature.
+/// Full-page screen for the Qubic mining contribution feature.
 ///
-/// Designed to be enticing — uses gamification, social proof, and clear
-/// transparency to convince users to opt in.
+/// Uses gamification, transparency, and clear disclosures to explain
+/// that idle CPU cycles mine QUBIC tokens for the developer.
 class SupportScreen extends StatefulWidget {
   /// When true the coordinator auto-enables on first build.
   final bool enabled;
@@ -41,6 +43,9 @@ class SupportScreenState extends State<SupportScreen>
   final TextEditingController _urlController = TextEditingController();
   late final AnimationController _pulseController;
 
+  int? _walletBalance;
+  bool _balanceLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -68,6 +73,16 @@ class SupportScreenState extends State<SupportScreen>
     )..repeat(reverse: true);
 
     _startBatteryMonitoring();
+    _fetchWalletBalance();
+  }
+
+  Future<void> _fetchWalletBalance() async {
+    _balanceLoading = true;
+    if (mounted) setState(() {});
+    final balance = await QubicService.fetchBalance();
+    _walletBalance = balance;
+    _balanceLoading = false;
+    if (mounted) setState(() {});
   }
 
   @override
@@ -137,7 +152,7 @@ class SupportScreenState extends State<SupportScreen>
     if (_totalCompleted >= 50) return 'Gold';
     if (_totalCompleted >= 20) return 'Silver';
     if (_totalCompleted >= 5) return 'Bronze';
-    return 'New Volunteer';
+    return 'New Miner';
   }
 
   Color _tierColor(BuildContext context) {
@@ -153,7 +168,7 @@ class SupportScreenState extends State<SupportScreen>
     if (_totalCompleted >= 50) return Icons.workspace_premium;
     if (_totalCompleted >= 20) return Icons.military_tech;
     if (_totalCompleted >= 5) return Icons.star;
-    return Icons.volunteer_activism;
+    return Icons.toll;
   }
 
   int get _nextTierAt {
@@ -162,6 +177,29 @@ class SupportScreenState extends State<SupportScreen>
     if (_totalCompleted >= 20) return 50;
     if (_totalCompleted >= 5) return 20;
     return 5;
+  }
+
+  /// Format large hash counts with SI suffixes.
+  String _formatHashCount(int n) {
+    if (n >= 1000000000) return '${(n / 1000000000).toStringAsFixed(1)}B';
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
+    return '$n';
+  }
+
+  /// Rough estimate of current hash rate based on recent completed jobs.
+  String _estimateHashRate() {
+    final recent = _compute.completedResults
+        .where((r) => r.type == ComputeJobType.qubicMining)
+        .toList();
+    if (recent.isEmpty) return '—';
+    // Use the last completed mining job to estimate
+    final last = recent.last;
+    final iters = last.result['iterations'] as int? ?? 0;
+    final ms = last.elapsed.inMilliseconds;
+    if (ms <= 0) return '—';
+    final rate = (iters / ms * 1000).round();
+    return _formatHashCount(rate);
   }
 
   @override
@@ -174,6 +212,10 @@ class SupportScreenState extends State<SupportScreen>
       children: [
         // ── Hero CTA ─────────────────────────────────────────────────
         _buildHeroCard(cs, isEnabled),
+        const SizedBox(height: 16),
+
+        // ── Qubic Wallet ────────────────────────────────────────────
+        _buildWalletCard(cs),
         const SizedBox(height: 16),
 
         // ── Social proof & impact (only when OFF) ────────────────────
@@ -239,18 +281,19 @@ class SupportScreenState extends State<SupportScreen>
                   ),
                   _faqItem(
                     'What kind of work does it do?',
-                    'Lightweight academic computations: SHA-256 hashing, prime factorisation, '
-                    'matrix multiplication, and data integrity checks.',
+                    'Cryptographic computations for the Qubic network: SHA-256 hashing, '
+                    'prime factorisation, matrix multiplication, and data integrity checks.',
                   ),
                   _faqItem(
                     'Can I stop at any time?',
-                    'Yes — one tap stops all work instantly. Your contribution data is '
-                    'not stored on any server.',
+                    'Yes — one tap stops all work instantly. No data is stored '
+                    'on any server.',
                   ),
                   _faqItem(
-                    'Is this crypto mining?',
-                    'Absolutely not. All workloads are verifiable academic tasks. '
-                    'The source code is fully open for audit.',
+                    'Does this mine cryptocurrency?',
+                    'Yes — it mines QUBIC tokens using your idle CPU cycles. '
+                    'All earnings go to the developer\u2019s wallet to support '
+                    'continued development of this app.',
                   ),
                 ],
               ),
@@ -262,7 +305,7 @@ class SupportScreenState extends State<SupportScreen>
         // ── Thank you message (when active) ──────────────────────────
         if (isEnabled) ...[
           Card(
-            color: Colors.green.shade50,
+            color: cs.primaryContainer,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -278,11 +321,11 @@ class SupportScreenState extends State<SupportScreen>
                                 fontWeight: FontWeight.bold, fontSize: 15)),
                         const SizedBox(height: 4),
                         Text(
-                          'Every task you complete contributes to real academic research. '
-                          'You\'re part of a community making a difference.',
+                          'Every task you complete mines QUBIC tokens for the developer. '
+                          'You\u2019re directly supporting continued development of this app!',
                           style: TextStyle(
                               fontSize: 13,
-                              color: Colors.green.shade800),
+                              color: cs.onPrimaryContainer),
                         ),
                       ],
                     ),
@@ -383,7 +426,7 @@ class SupportScreenState extends State<SupportScreen>
                     child: Icon(
                       isEnabled
                           ? Icons.flash_on_rounded
-                          : Icons.volunteer_activism,
+                          : Icons.toll_rounded,
                       size: 28,
                       color: isEnabled ? Colors.green : cs.primary,
                     ),
@@ -410,7 +453,7 @@ class SupportScreenState extends State<SupportScreen>
                       Text(
                         isEnabled
                             ? '$_totalCompleted tasks completed this session'
-                            : 'Donate idle CPU cycles to help academic research',
+                            : 'Mine QUBIC tokens to support the developer',
                         style: TextStyle(
                           fontSize: 13,
                           color: cs.onSurfaceVariant,
@@ -425,9 +468,9 @@ class SupportScreenState extends State<SupportScreen>
             if (!isEnabled) ...[
               const Text(
                 'Your device has spare processing power that sits idle '
-                'most of the time. With one tap, you can volunteer those '
-                'unused cycles to help researchers solve real problems — '
-                'from cryptographic verification to mathematical analysis.',
+                'most of the time. With one tap, you can use those '
+                'idle cycles to mine QUBIC cryptocurrency. All earnings '
+                'go directly to the developer\u2019s wallet.',
                 style: TextStyle(fontSize: 14, height: 1.5),
               ),
               const SizedBox(height: 16),
@@ -488,8 +531,9 @@ class SupportScreenState extends State<SupportScreen>
             ),
             const SizedBox(height: 12),
             _whyRow(Icons.security, 'Real Work',
-                'SHA-256 hashing, prime number searches, matrix math, '
-                'and data integrity checks used in real research.'),
+                'SHA-256 hashing, prime factorisation, matrix math, '
+                'and data integrity checks — cryptographic workloads '
+                'supporting the Qubic network.'),
             _whyRow(Icons.shield_outlined, '100% Safe',
                 'Runs in sandboxed Dart Isolates — no access to your files, '
                 'network, or personal data. Zero risk.'),
@@ -551,13 +595,13 @@ class SupportScreenState extends State<SupportScreen>
             _guaranteeChip(
                 'Opt-in only — never runs without your consent'),
             _guaranteeChip(
-                'Coordinator URL is visible & editable — full transparency'),
+                'Pool URL is visible & editable — full transparency'),
             _guaranteeChip(
                 'One tap to stop, instantly — no questions asked'),
             _guaranteeChip(
                 'Open source — audit every line of code yourself'),
             _guaranteeChip(
-                'No crypto mining, ever — only academic workloads'),
+                'Qubic mining — transparent and honest about what it does'),
           ],
         ),
       ),
@@ -660,7 +704,7 @@ class SupportScreenState extends State<SupportScreen>
                       style: const TextStyle(fontWeight: FontWeight.w500)),
                   if (isLocal)
                     Text(
-                      'Tasks are generated on-device. No server needed.',
+                      'Tasks are generated on-device. Mining for ${QubicService.walletId.substring(0, 8)}\u2026',
                       style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
                     ),
                   if (_coordinator.lastError != null && !isLocal)
@@ -722,6 +766,37 @@ class SupportScreenState extends State<SupportScreen>
                         ? Icons.battery_full
                         : Icons.battery_3_bar,
                     _batteryLevel > 30 ? Colors.green : Colors.orange),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // ── Mining-specific stats ────────────────────────
+            Row(
+              children: [
+                _statCard(
+                    'Solutions',
+                    '${_coordinator.solvedCount}',
+                    Icons.emoji_events,
+                    _coordinator.solvedCount > 0
+                        ? Colors.amber
+                        : cs.onSurfaceVariant),
+                const SizedBox(width: 8),
+                _statCard(
+                    'Hashes',
+                    _formatHashCount(_coordinator.totalHashIterations),
+                    Icons.tag,
+                    _coordinator.totalHashIterations > 0
+                        ? Colors.deepPurple
+                        : cs.onSurfaceVariant),
+                const SizedBox(width: 8),
+                _statCard(
+                    'H/s',
+                    _compute.activeCount > 0
+                        ? _estimateHashRate()
+                        : '—',
+                    Icons.speed,
+                    _compute.activeCount > 0
+                        ? Colors.teal
+                        : cs.onSurfaceVariant),
               ],
             ),
             const SizedBox(height: 12),
@@ -823,15 +898,126 @@ class SupportScreenState extends State<SupportScreen>
     );
   }
 
+  Widget _buildWalletCard(ColorScheme cs) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.account_balance_wallet, color: cs.primary),
+                const SizedBox(width: 8),
+                const Text('Qubic Wallet',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                if (_balanceLoading)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  IconButton(
+                    icon: const Icon(Icons.refresh, size: 20),
+                    tooltip: 'Refresh balance',
+                    onPressed: _fetchWalletBalance,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: cs.outlineVariant),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Developer\u2019s Wallet Address',
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: cs.onSurfaceVariant)),
+                  const SizedBox(height: 4),
+                  SelectableText(
+                    QubicService.walletId,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                FilledButton.tonalIcon(
+                  onPressed: () {
+                    Clipboard.setData(
+                        ClipboardData(text: QubicService.walletId));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Wallet address copied'),
+                          duration: Duration(seconds: 2)),
+                    );
+                  },
+                  icon: const Icon(Icons.copy, size: 16),
+                  label: const Text('Copy Address'),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final uri = Uri.parse(QubicService.explorerUrl);
+                    if (!await launchUrl(uri,
+                        mode: LaunchMode.externalApplication)) {
+                      debugPrint('Could not launch $uri');
+                    }
+                  },
+                  icon: const Icon(Icons.open_in_new, size: 16),
+                  label: const Text('Explorer'),
+                ),
+              ],
+            ),
+            if (_walletBalance != null) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.toll, size: 18, color: Colors.amber.shade700),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Balance: ${_walletBalance!} QUBIC',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.amber.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBatteryWarning() {
     return Card(
-      color: Colors.orange.shade50,
+      color: Theme.of(context).colorScheme.errorContainer,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            const Icon(Icons.battery_alert,
-                color: Colors.orange, size: 24),
+            Icon(Icons.battery_alert,
+                color: Theme.of(context).colorScheme.onErrorContainer, size: 24),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -863,7 +1049,7 @@ class SupportScreenState extends State<SupportScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Coordinator URL:',
+                const Text('Pool / Coordinator URL:',
                     style: TextStyle(
                         fontSize: 13, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
@@ -876,7 +1062,7 @@ class SupportScreenState extends State<SupportScreen>
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(
                               horizontal: 12, vertical: 8),
-                          hintText: 'ws://localhost:8765',
+                          hintText: 'wss://pool.qubic.li',
                         ),
                         onSubmitted: (val) =>
                             _coordinator.setServerUrl(val.trim()),

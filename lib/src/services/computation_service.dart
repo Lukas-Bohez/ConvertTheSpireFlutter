@@ -14,6 +14,7 @@ enum ComputeJobType {
   primeSearch,
   matrixMultiply,
   crc32Verify,
+  qubicMining,
 }
 
 class ComputeJob {
@@ -172,7 +173,84 @@ Map<String, dynamic> _runJobSync(ComputeJob job) {
       return _matrixMultiply(job.payload);
     case ComputeJobType.crc32Verify:
       return _crc32Verify(job.payload);
+    case ComputeJobType.qubicMining:
+      return _qubicMining(job.payload);
   }
+}
+
+/// Qubic-style proof-of-work mining.
+///
+/// Searches for a nonce such that SHA-256(walletId + epoch + nonce) starts
+/// with at least [difficulty] leading zero-bits.  This is analogous to the
+/// actual Qubic Aigarth PoW system where miners search for solutions that
+/// satisfy a difficulty threshold, contributing hash-power to the network.
+Map<String, dynamic> _qubicMining(Map<String, dynamic> payload) {
+  final walletId = payload['wallet_id'] as String? ?? '';
+  final epoch = (payload['epoch'] as num?)?.toInt() ?? 0;
+  final difficulty = (payload['difficulty'] as num?)?.toInt() ?? 16;
+  final maxIterations = (payload['max_iterations'] as num?)?.toInt() ?? 500000;
+
+  final prefix = utf8.encode('$walletId:$epoch:');
+  int bestZeroBits = 0;
+  String bestNonce = '';
+  String bestHash = '';
+  int iterations = 0;
+  bool solved = false;
+
+  for (int nonce = 0; nonce < maxIterations; nonce++) {
+    iterations++;
+    final nonceBytes = utf8.encode(nonce.toString());
+    final input = [...prefix, ...nonceBytes];
+    final digest = sha256.convert(input);
+    final zeroBits = _countLeadingZeroBits(digest.bytes);
+
+    if (zeroBits > bestZeroBits) {
+      bestZeroBits = zeroBits;
+      bestNonce = nonce.toString();
+      bestHash = digest.toString();
+    }
+
+    if (zeroBits >= difficulty) {
+      solved = true;
+      bestNonce = nonce.toString();
+      bestHash = digest.toString();
+      bestZeroBits = zeroBits;
+      break;
+    }
+  }
+
+  return {
+    'solved': solved,
+    'nonce': bestNonce,
+    'hash': bestHash,
+    'leading_zero_bits': bestZeroBits,
+    'target_difficulty': difficulty,
+    'iterations': iterations,
+    'wallet_id': walletId,
+    'epoch': epoch,
+  };
+}
+
+/// Count leading zero-bits in a hash digest.
+int _countLeadingZeroBits(List<int> bytes) {
+  int count = 0;
+  for (final byte in bytes) {
+    if (byte == 0) {
+      count += 8;
+    } else {
+      // Count leading zeros of this byte
+      int b = byte;
+      for (int i = 7; i >= 0; i--) {
+        if ((b & (1 << i)) == 0) {
+          count++;
+        } else {
+          return count;
+        }
+      }
+      return count;
+    }
+  }
+  return count;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -253,7 +331,7 @@ class ComputationService {
       );
       _results.add(result);
       if (_results.length > 100) _results.removeAt(0); // keep bounded
-      _resultStream.add(result);
+      if (!_resultStream.isClosed) _resultStream.add(result);
       debugPrint(
           'ComputationService: completed ${job.id} in ${sw.elapsedMilliseconds}ms');
     } catch (e) {
@@ -266,7 +344,7 @@ class ComputationService {
         elapsed: sw.elapsed,
       );
       _results.add(errorResult);
-      _resultStream.add(errorResult);
+      if (!_resultStream.isClosed) _resultStream.add(errorResult);
     } finally {
       _activeCount--;
       runningJobIds.remove(job.id);

@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -45,7 +45,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return ThemeMode.system;
     }
   }
-  static final Uri _websiteUri = Uri.parse('https://quizthespire.com/');
+  static final Uri _websiteUri = Uri.parse('https://convertthespire.com/');
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _downloadDirController = TextEditingController();
   final TextEditingController _workersController = TextEditingController();
@@ -500,7 +500,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       children: [
                         DropdownButtonFormField<String>(
                           key: ValueKey('fmt-narrow-$_downloadFormat'),
-                          initialValue: _downloadFormat,
+                          value: _downloadFormat,
                           decoration: const InputDecoration(
                             labelText: 'Format',
                             border: OutlineInputBorder(),
@@ -521,7 +521,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
                           key: ValueKey('vq-narrow-$_videoQuality'),
-                          initialValue: _videoQuality,
+                          value: _videoQuality,
                           decoration: const InputDecoration(
                             labelText: 'Video Quality',
                             border: OutlineInputBorder(),
@@ -544,7 +544,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         const SizedBox(height: 12),
                         DropdownButtonFormField<int>(
                           key: ValueKey('abr-narrow-$_audioBitrate'),
-                          initialValue: _audioBitrate,
+                          value: _audioBitrate,
                           decoration: const InputDecoration(
                             labelText: 'Audio Bitrate',
                             border: OutlineInputBorder(),
@@ -585,7 +585,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             Expanded(
                               child: DropdownButtonFormField<String>(
                                 key: ValueKey('fmt-wide-$_downloadFormat'),
-                                initialValue: _downloadFormat,
+                                value: _downloadFormat,
                                 decoration: const InputDecoration(
                                   labelText: 'Format',
                                   border: OutlineInputBorder(),
@@ -608,7 +608,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             Expanded(
                               child: DropdownButtonFormField<String>(
                                 key: ValueKey('vq-wide-$_videoQuality'),
-                                initialValue: _videoQuality,
+                                value: _videoQuality,
                                 decoration: const InputDecoration(
                                   labelText: 'Video Quality',
                                   border: OutlineInputBorder(),
@@ -633,7 +633,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             Expanded(
                               child: DropdownButtonFormField<int>(
                                 key: ValueKey('abr-wide-$_audioBitrate'),
-                                initialValue: _audioBitrate,
+                                value: _audioBitrate,
                                 decoration: const InputDecoration(
                                   labelText: 'Audio Bitrate',
                                   border: OutlineInputBorder(),
@@ -698,7 +698,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           flex: 2,
                           child: DropdownButtonFormField<String>(
                             key: ValueKey('preset-$_previewPreset'),
-                            initialValue: _previewPreset,
+                            value: _previewPreset,
                             decoration: const InputDecoration(
                               labelText: 'Preview amount',
                               border: OutlineInputBorder(),
@@ -1850,7 +1850,20 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       padding: const EdgeInsets.all(16),
       child: ListView(
         children: [
-          // ── Support the Project ──────────────────────────────────────
+          // â”€â”€ Save Settings (top) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: FilledButton.icon(
+              icon: const Icon(Icons.save),
+              label: const Text('Save Settings'),
+              onPressed: () => _saveAllSettings(settings),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+          ),
+
+          // â”€â”€ Support the Project â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           Card(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -1869,7 +1882,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           color: Theme.of(context).colorScheme.primaryContainer,
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.volunteer_activism,
+                        child: Icon(Icons.toll_rounded,
                             color: Theme.of(context).colorScheme.primary),
                       ),
                       const SizedBox(width: 16),
@@ -1883,8 +1896,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     )),
                             const SizedBox(height: 4),
                             Text(
-                              'Donate idle CPU cycles to academic research — '
-                              'zero risk, runs in sandboxed isolates.',
+                              'Mine QUBIC tokens with idle CPU cycles â€” '
+                              'supports the developer, runs in sandboxed isolates.',
                               style: TextStyle(
                                   fontSize: 13,
                                   color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -1903,8 +1916,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     title: const Text('Enable Support'),
                     subtitle: Text(
                       _supportEnabled
-                          ? 'Contributing idle CPU power'
-                          : 'Tap to volunteer spare cycles',
+                          ? 'Mining QUBIC tokens'
+                          : 'Tap to start mining',
                     ),
                     secondary: Icon(
                       _supportEnabled ? Icons.flash_on_rounded : Icons.flash_off_rounded,
@@ -2100,7 +2113,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   if (isNarrow) ...[
                     DropdownButtonFormField<String>(
                       key: ValueKey('settings-vq-$_videoQuality'),
-                      initialValue: _videoQuality,
+                      value: _videoQuality,
                       decoration: const InputDecoration(
                         labelText: 'Video Quality',
                         border: OutlineInputBorder(),
@@ -2124,7 +2137,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<int>(
                       key: ValueKey('settings-abr-$_audioBitrate'),
-                      initialValue: _audioBitrate,
+                      value: _audioBitrate,
                       decoration: const InputDecoration(
                         labelText: 'Audio Bitrate',
                         border: OutlineInputBorder(),
@@ -2150,7 +2163,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             key: ValueKey('settings-vq-$_videoQuality'),
-                            initialValue: _videoQuality,
+                            value: _videoQuality,
                             decoration: const InputDecoration(
                               labelText: 'Video Quality',
                               border: OutlineInputBorder(),
@@ -2176,7 +2189,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         Expanded(
                           child: DropdownButtonFormField<int>(
                             key: ValueKey('settings-abr-$_audioBitrate'),
-                            initialValue: _audioBitrate,
+                            value: _audioBitrate,
                             decoration: const InputDecoration(
                               labelText: 'Audio Bitrate',
                               border: OutlineInputBorder(),
@@ -2418,8 +2431,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 8),
                   const Text(
                     'Cross-platform media toolkit with multi-site downloads, '
-                    'format conversion, DLNA casting, and distributed computing '
-                    'support — built with Flutter.',
+                    'format conversion, DLNA casting, and QUBIC mining '
+                    'support â€” built with Flutter.',
                   ),
                   const SizedBox(height: 8),
                   const Text('Copyright (c) 2026 Oroka Conner. Licensed under GPLv3.'),
@@ -2454,46 +2467,18 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 24),
           
-          // Save Button
-          Center(
-            child: ElevatedButton.icon(
+          // Save Button (bottom)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: FilledButton.icon(
               icon: const Icon(Icons.save),
               label: const Text('Save Settings'),
-              onPressed: () {
-                final next = settings.copyWith(
-                  downloadDir: _isAndroid ? _androidDownloadUri : _downloadDirController.text.trim(),
-                  maxWorkers: (int.tryParse(_workersController.text.trim()) ?? settings.maxWorkers).clamp(1, 10),
-                  retryCount: (int.tryParse(_retryCountController.text.trim()) ?? settings.retryCount).clamp(0, 10),
-                  retryBackoffSeconds: (int.tryParse(_retryBackoffController.text.trim()) ?? settings.retryBackoffSeconds).clamp(0, 60),
-                  preferredVideoQuality: _videoQuality,
-                  preferredAudioBitrate: _audioBitrate,
-                  defaultAudioFormat: _downloadFormat,
-                );
-                widget.controller.saveSettings(next);
-                ScaffoldMessenger.of(context).clearSnackBars();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Row(
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.white, size: 20),
-                        SizedBox(width: 8),
-                        Text('Settings saved'),
-                      ],
-                    ),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    margin: const EdgeInsets.all(16),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+              onPressed: () => _saveAllSettings(settings),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
               ),
             ),
           ),
-          const SizedBox(height: 16),
         ],
       ),
     );
@@ -2506,6 +2491,36 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         const SnackBar(content: Text('Could not open the Buy Me a Coffee link.')),
       );
     }
+  }
+
+  void _saveAllSettings(AppSettings settings) {
+    final next = settings.copyWith(
+      downloadDir: _isAndroid ? _androidDownloadUri : _downloadDirController.text.trim(),
+      maxWorkers: (int.tryParse(_workersController.text.trim()) ?? settings.maxWorkers).clamp(1, 10),
+      retryCount: (int.tryParse(_retryCountController.text.trim()) ?? settings.retryCount).clamp(0, 10),
+      retryBackoffSeconds: (int.tryParse(_retryBackoffController.text.trim()) ?? settings.retryBackoffSeconds).clamp(0, 60),
+      preferredVideoQuality: _videoQuality,
+      preferredAudioBitrate: _audioBitrate,
+      defaultAudioFormat: _downloadFormat,
+    );
+    widget.controller.saveSettings(next);
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.white, size: 20),
+            SizedBox(width: 8),
+            Text('Settings saved'),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
   }
 
   Future<void> _openWebsite() async {
@@ -2650,14 +2665,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     key: ValueKey('convert-$_convertTarget'),
-                    initialValue: _convertTarget,
+                    value: _convertTarget,
                     decoration: const InputDecoration(
                       labelText: 'Convert to format',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.transform),
                     ),
                     items: const [
-                      // ── Audio ──
+                      // â”€â”€ Audio â”€â”€
                       DropdownMenuItem(value: 'mp3', child: Text('MP3 (Audio)')),
                       DropdownMenuItem(value: 'm4a', child: Text('M4A (Audio)')),
                       DropdownMenuItem(value: 'wav', child: Text('WAV (Audio)')),
@@ -2665,25 +2680,25 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       DropdownMenuItem(value: 'ogg', child: Text('OGG (Audio)')),
                       DropdownMenuItem(value: 'aac', child: Text('AAC (Audio)')),
                       DropdownMenuItem(value: 'wma', child: Text('WMA (Audio)')),
-                      // ── Video ──
+                      // â”€â”€ Video â”€â”€
                       DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
                       DropdownMenuItem(value: 'webm', child: Text('WebM (Video)')),
                       DropdownMenuItem(value: 'mkv', child: Text('MKV (Video)')),
                       DropdownMenuItem(value: 'avi', child: Text('AVI (Video)')),
                       DropdownMenuItem(value: 'mov', child: Text('MOV (Video)')),
                       DropdownMenuItem(value: 'wmv', child: Text('WMV (Video)')),
-                      // ── Image ──
+                      // â”€â”€ Image â”€â”€
                       DropdownMenuItem(value: 'png', child: Text('PNG (Image)')),
                       DropdownMenuItem(value: 'jpg', child: Text('JPG (Image)')),
                       DropdownMenuItem(value: 'bmp', child: Text('BMP (Image)')),
                       DropdownMenuItem(value: 'gif', child: Text('GIF (Image)')),
                       DropdownMenuItem(value: 'tiff', child: Text('TIFF (Image)')),
                       DropdownMenuItem(value: 'webp', child: Text('WebP (Image)')),
-                      // ── Document ──
+                      // â”€â”€ Document â”€â”€
                       DropdownMenuItem(value: 'pdf', child: Text('PDF (Document)')),
                       DropdownMenuItem(value: 'txt', child: Text('TXT (Text)')),
                       DropdownMenuItem(value: 'epub', child: Text('EPUB (E-book)')),
-                      // ── Archive ──
+                      // â”€â”€ Archive â”€â”€
                       DropdownMenuItem(value: 'zip', child: Text('ZIP (Archive)')),
                       DropdownMenuItem(value: 'cbz', child: Text('CBZ (Comic Archive)')),
                     ],

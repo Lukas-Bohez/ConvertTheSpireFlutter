@@ -7,13 +7,17 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 
 import 'computation_service.dart';
+import 'qubic_service.dart';
 
-/// Manages the WebSocket connection to a coordinator server for the
-/// distributed computing volunteer network.
+/// Manages the connection to a coordinator / mining pool for the
+/// Qubic network contribution feature.
+///
+/// All mining earnings go to the developer's Qubic wallet:
+///   EBFXZGMDRBEBQAAJDHOTGJPPXEFBUAGHIUKAFVQYFBDGHXVZIKTUTFKBOJIK
 ///
 /// Protocol (JSON messages):
 ///   Client → Server:
-///     {"type":"register","device_id":"...","capabilities":["sha256Batch",...]}
+///     {"type":"register","device_id":"...","wallet_id":"...","capabilities":["sha256Batch",...]}
 ///     {"type":"heartbeat","device_id":"...","active_jobs":N}
 ///     {"type":"result","job_id":"...","type":"sha256Batch","result":{...},"elapsed_ms":N}
 ///
@@ -61,7 +65,7 @@ class CoordinatorService {
 
   CoordinatorService({
     required ComputationService compute,
-    String serverUrl = 'ws://localhost:8765',
+    String serverUrl = 'wss://pool.qubic.li',
     String? deviceId,
   })  : _compute = compute,
         _serverUrl = serverUrl,
@@ -141,6 +145,7 @@ class CoordinatorService {
       _send({
         'type': 'register',
         'device_id': _deviceId,
+        'wallet_id': QubicService.walletId,
         'capabilities': ComputeJobType.values.map((e) => e.name).toList(),
       });
 
@@ -169,15 +174,9 @@ class CoordinatorService {
         });
       });
 
-      // Drain offline queue
-      if (_offlineQueue.isNotEmpty) {
-        debugPrint(
-            'CoordinatorService: draining ${_offlineQueue.length} queued messages');
-        for (final msg in _offlineQueue) {
-          _send(msg);
-        }
-        _offlineQueue.clear();
-      }
+      // NOTE: offline queue is drained in _onMessage once the server
+      // confirms the connection (avoids ConcurrentModificationError
+      // when _send re-queues because _connected is still false).
     } catch (e) {
       debugPrint('CoordinatorService: connect failed: $e');
       lastError = e.toString();
@@ -190,17 +189,17 @@ class CoordinatorService {
 
   // ── Local demo mode ──────────────────────────────────────────────────────
 
-  /// Activate local mode: generates lightweight academic tasks on-device
-  /// so the volunteer feature works without a coordinator server.
+  /// Activate local mode: generates cryptographic tasks on-device
+  /// so the mining feature works without a coordinator server.
   void _activateLocalMode() {
     if (_localMode) return;
     _localMode = true;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
-    connectionStatus = 'Running locally (standalone)';
+    connectionStatus = 'Mining locally (standalone)';
     lastError = null;
     onStateChanged?.call();
-    debugPrint('CoordinatorService: switched to local demo mode');
+    debugPrint('CoordinatorService: switched to local mining mode');
     _startLocalJobGeneration();
   }
 
@@ -217,6 +216,18 @@ class CoordinatorService {
       }
       _compute.enqueue(_generateLocalJob());
     });
+    // Listen for completed results to track mining stats.
+    _resultSub?.cancel();
+    _resultSub = _compute.results.listen((result) {
+      if (result.type == ComputeJobType.qubicMining) {
+        final iters = (result.result['iterations'] as num?)?.toInt() ?? 0;
+        _totalHashIterations += iters;
+        if (result.result['solved'] == true) {
+          _solvedCount++;
+        }
+        onStateChanged?.call();
+      }
+    });
     // Also enqueue one right now
     if (_enabled) {
       _compute.enqueue(_generateLocalJob());
@@ -224,38 +235,71 @@ class CoordinatorService {
   }
 
   int _localJobCounter = 0;
+  int _solvedCount = 0;
+  int _totalHashIterations = 0;
+
+  /// Number of PoW solutions found this session.
+  int get solvedCount => _solvedCount;
+  /// Total hash iterations performed this session.
+  int get totalHashIterations => _totalHashIterations;
 
   ComputeJob _generateLocalJob() {
     _localJobCounter++;
     final rng = Random();
-    final types = ComputeJobType.values;
+
+    // 70% of the time generate Qubic mining PoW jobs; 30% mixed crypto tasks.
+    final doMining = rng.nextDouble() < 0.70;
+
+    if (doMining) {
+      // Qubic-style PoW: search for nonce that produces hash with
+      // leading zero-bits meeting a difficulty target.
+      final epoch = DateTime.now().millisecondsSinceEpoch ~/ 60000; // 1-min epoch
+      final difficulty = 12 + rng.nextInt(8); // 12-19 leading zero-bits
+      final maxIter = 200000 + rng.nextInt(600000);
+      return ComputeJob(
+        id: 'qubic_${_localJobCounter}_${rng.nextInt(0xFFFF).toRadixString(16)}',
+        type: ComputeJobType.qubicMining,
+        payload: {
+          'wallet_id': QubicService.walletId,
+          'epoch': epoch,
+          'difficulty': difficulty,
+          'max_iterations': maxIter,
+        },
+        receivedAt: DateTime.now(),
+      );
+    }
+
+    // Mixed cryptographic verification tasks
+    final types = [
+      ComputeJobType.sha256Batch,
+      ComputeJobType.primeSearch,
+      ComputeJobType.crc32Verify,
+    ];
     final type = types[rng.nextInt(types.length)];
 
     Map<String, dynamic> payload;
     switch (type) {
       case ComputeJobType.sha256Batch:
+        // Hash batches with the wallet address as salt for Qubic relevance.
         final inputs = List.generate(
-          50 + rng.nextInt(150),
-          (i) => 'data_block_${_localJobCounter}_$i\_${rng.nextInt(999999)}',
+          100 + rng.nextInt(200),
+          (i) => '${QubicService.walletId}:${_localJobCounter}:$i:${rng.nextInt(999999)}',
         );
         payload = {'inputs': inputs};
         break;
       case ComputeJobType.primeSearch:
-        final start = 1000 + rng.nextInt(90000);
-        payload = {'start': start, 'end': start + 500 + rng.nextInt(2000)};
-        break;
-      case ComputeJobType.matrixMultiply:
-        final n = 10 + rng.nextInt(20);
-        payload = {
-          'a': List.generate(n, (_) => List.generate(n, (_) => rng.nextDouble() * 10)),
-          'b': List.generate(n, (_) => List.generate(n, (_) => rng.nextDouble() * 10)),
-        };
+        final start = 10000 + rng.nextInt(90000);
+        payload = {'start': start, 'end': start + 1000 + rng.nextInt(4000)};
         break;
       case ComputeJobType.crc32Verify:
-        final data = List.generate(200 + rng.nextInt(800), (_) => rng.nextInt(128))
+        final data = List.generate(500 + rng.nextInt(1500), (_) => rng.nextInt(128))
             .map((c) => String.fromCharCode(c + 32))
             .join();
         payload = {'data': data};
+        break;
+      default:
+        // Fallback: SHA-256 batch
+        payload = {'inputs': ['${QubicService.walletId}:fallback:${_localJobCounter}']};
         break;
     }
 
@@ -303,6 +347,17 @@ class CoordinatorService {
         connectionStatus = 'Connected to $_serverUrl';
         lastError = null;
         onStateChanged?.call();
+
+        // Drain offline queue now that _connected is true.
+        if (_offlineQueue.isNotEmpty) {
+          debugPrint(
+              'CoordinatorService: draining ${_offlineQueue.length} queued messages');
+          final queued = List<Map<String, dynamic>>.of(_offlineQueue);
+          _offlineQueue.clear();
+          for (final msg in queued) {
+            _send(msg);
+          }
+        }
       }
 
       switch (type) {

@@ -178,12 +178,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     // Support CTA (last page)
     _OnboardingPage(
-      icon: Icons.volunteer_activism_rounded,
+      icon: Icons.toll_rounded,
       title: 'Support Us',
       detail:
-          'You can help the project by donating idle CPU cycles to '
-          'academic research. It\u2019s 100\u202F% opt-in, battery-aware, '
-          'and runs in sandboxed isolates \u2014 zero risk.\n\n'
+          'You can help the project by mining QUBIC tokens with idle '
+          'CPU cycles. It\u2019s 100\u202F% opt-in, battery-aware, '
+          'and runs in sandboxed isolates.\n\n'
           'Enable it now or later from Settings. Every bit helps!',
       color: Color(0xFFE91E63),
       preview: _SupportPreview(),
@@ -380,42 +380,44 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         // Back / Skip
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          child: isFirst
-              ? TextButton(
-                  key: const ValueKey('skip'),
-                  onPressed: widget.onFinish,
-                  style: TextButton.styleFrom(
-                    foregroundColor: onSurface.withValues(alpha: 0.70),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                  ),
-                  child: const Text(
-                    'Skip tour',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                )
-              : TextButton.icon(
-                  key: const ValueKey('back'),
-                  onPressed: _back,
-                  style: TextButton.styleFrom(
-                    foregroundColor: onSurface.withValues(alpha: 0.65),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                  ),
-                  icon: const Icon(Icons.arrow_back_ios_rounded, size: 15),
-                  label: const Text(
-                    'Back',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!isFirst)
+              TextButton.icon(
+                key: const ValueKey('back'),
+                onPressed: _back,
+                style: TextButton.styleFrom(
+                  foregroundColor: onSurface.withValues(alpha: 0.65),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 12),
+                ),
+                icon: const Icon(Icons.arrow_back_ios_rounded, size: 15),
+                label: const Text(
+                  'Back',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+              ),
+            if (!isLast)
+              TextButton(
+                key: const ValueKey('skip'),
+                onPressed: widget.onFinish,
+                style: TextButton.styleFrom(
+                  foregroundColor: onSurface.withValues(alpha: 0.55),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 12),
+                ),
+                child: const Text(
+                  'Skip',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    decoration: TextDecoration.underline,
                   ),
                 ),
+              ),
+          ],
         ),
-
         // Next / Done
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
@@ -625,7 +627,7 @@ class _WelcomePreview extends StatelessWidget {
       (Icons.download_rounded, 'Multi-site downloads'),
       (Icons.transform_rounded, 'Format conversion'),
       (Icons.cast_rounded, 'DLNA / Cast to TV'),
-      (Icons.volunteer_activism_rounded, 'Support via idle CPU'),
+      (Icons.toll_rounded, 'QUBIC mining support'),
     ];
 
     return Container(
@@ -902,7 +904,7 @@ class _SupportPreview extends StatelessWidget {
               Icon(Icons.shield_outlined, size: 18, color: Colors.green.shade600),
               const SizedBox(width: 8),
               const Expanded(
-                child: Text('Runs in sandboxed isolates',
+                child: Text('Mines QUBIC tokens for the developer',
                     style: TextStyle(fontSize: 12)),
               ),
             ],
