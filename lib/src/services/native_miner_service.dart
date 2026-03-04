@@ -15,7 +15,11 @@ enum MinerState { stopped, downloading, extracting, starting, running, error }
 
 class MinerStats {
   final double hashRate;
+  final double avgHashRate;
   final int solutionsFound;
+  final int solutionsSubmitted;
+  final int solutionsRejected;
+  final int epoch;
   final String statusMessage;
   final MinerState state;
   final double downloadProgress;
@@ -23,7 +27,11 @@ class MinerStats {
 
   const MinerStats({
     this.hashRate = 0,
+    this.avgHashRate = 0,
     this.solutionsFound = 0,
+    this.solutionsSubmitted = 0,
+    this.solutionsRejected = 0,
+    this.epoch = 0,
     this.statusMessage = 'Stopped',
     this.state = MinerState.stopped,
     this.downloadProgress = 0,
@@ -69,7 +77,11 @@ class NativeMinerService {
   Process? _process;
   MinerState _state = MinerState.stopped;
   double _hashRate = 0;
+  double _avgHashRate = 0;
   int _solutionsFound = 0;
+  int _solutionsSubmitted = 0;
+  int _solutionsRejected = 0;
+  int _epoch = 0;
   String? _lastError;
   String _statusMessage = 'Stopped';
   double _downloadProgress = 0;
@@ -84,7 +96,11 @@ class NativeMinerService {
 
   MinerState get state => _state;
   double get hashRate => _hashRate;
+  double get avgHashRate => _avgHashRate;
   int get solutionsFound => _solutionsFound;
+  int get solutionsSubmitted => _solutionsSubmitted;
+  int get solutionsRejected => _solutionsRejected;
+  int get epoch => _epoch;
   String? get lastError => _lastError;
   String get statusMessage => _statusMessage;
   double get downloadProgress => _downloadProgress;
@@ -297,42 +313,89 @@ class NativeMinerService {
 
   // ── Output parsing ──────────────────────────────────────────────────────
 
+  // Matches: "167 it/s" (first occurrence = current rate)
   static final _hashRateRe =
       RegExp(r'(\d+(?:[.,]\d+)?)\s*(?:it/s|iterations/s|sol/s)', caseSensitive: false);
+  // Matches: "163 avg it/s"
   static final _avgRateRe =
-      RegExp(r'avg[:\s]+(\d+(?:[.,]\d+)?)\s*(?:it/s)?', caseSensitive: false);
+      RegExp(r'(\d+(?:[.,]\d+)?)\s*avg\s*it/s', caseSensitive: false);
+  // Matches: "SOLS: 0/0 (R:0)" → found/submitted (rejected)
+  static final _solsRe =
+      RegExp(r'SOLS:\s*(\d+)/(\d+)\s*\(R:(\d+)\)');
+  // Matches: "E:202 |" → epoch number
+  static final _epochRe = RegExp(r'E:(\d+)\s*\|');
+  // Matches explicit solution messages from qli-Client
   static final _solutionRe =
       RegExp(r'solution\s+(?:found|submitted|accepted)', caseSensitive: false);
+
+  // Known XMRig/qli-Client warnings that are NOT fatal errors
+  static const _ignoredWarnings = [
+    'failed to apply msr mod',
+    'huge pages',
+    'hashrate will be low',
+    'msr kernel module',
+    'randomx init',
+  ];
 
   void _parseLine(String line) {
     if (_disposed) return;
     debugPrint('MINER: $line');
 
-    // Hash rate
-    final hashMatch = _hashRateRe.firstMatch(line) ?? _avgRateRe.firstMatch(line);
+    // ── Parse epoch line: E:202 | SOLS: 0/0 (R:0) | 167 it/s | 163 avg it/s
+    final epochMatch = _epochRe.firstMatch(line);
+    if (epochMatch != null) {
+      _epoch = int.tryParse(epochMatch.group(1)!) ?? _epoch;
+    }
+
+    // ── Parse SOLS: X/Y (R:Z)
+    final solsMatch = _solsRe.firstMatch(line);
+    if (solsMatch != null) {
+      _solutionsFound = int.tryParse(solsMatch.group(1)!) ?? _solutionsFound;
+      _solutionsSubmitted = int.tryParse(solsMatch.group(2)!) ?? _solutionsSubmitted;
+      _solutionsRejected = int.tryParse(solsMatch.group(3)!) ?? _solutionsRejected;
+    }
+
+    // ── Parse hash rate: current it/s
+    final hashMatch = _hashRateRe.firstMatch(line);
     if (hashMatch != null) {
       final raw = hashMatch.group(1)!.replaceAll(',', '.');
       _hashRate = double.tryParse(raw) ?? _hashRate;
     }
 
-    // Solutions
+    // ── Parse average hash rate: avg it/s
+    final avgMatch = _avgRateRe.firstMatch(line);
+    if (avgMatch != null) {
+      final raw = avgMatch.group(1)!.replaceAll(',', '.');
+      _avgHashRate = double.tryParse(raw) ?? _avgHashRate;
+    }
+
+    // ── Explicit solution messages
     if (_solutionRe.hasMatch(line)) {
       _solutionsFound++;
     }
 
-    // Connection / status messages
+    // ── Connection / status messages
     final lower = line.toLowerCase();
-    if (lower.contains('connected')) {
-      _statusMessage = 'Mining (connected to pool)';
-    } else if (lower.contains('training') || lower.contains('running')) {
-      _statusMessage = 'Mining\u2026';
+
+    // Epoch line with it/s = actively mining
+    if (epochMatch != null && _hashRate > 0) {
+      _statusMessage = 'Mining \u2022 Epoch $_epoch \u2022 ${_hashRate.round()} it/s';
+    } else if (epochMatch != null) {
+      _statusMessage = 'Mining \u2022 Epoch $_epoch \u2022 initializing\u2026';
+    } else if (lower.contains('use pool') || lower.contains('connected')) {
+      _statusMessage = 'Connected to pool';
+    } else if (lower.contains('cpu') && lower.contains('ready')) {
+      _statusMessage = 'XMR trainer ready, mining\u2026';
     } else if (lower.contains('idle') || lower.contains('waiting')) {
       _statusMessage = 'Idle (epoch gap)';
     } else if (lower.contains('error') || lower.contains('fail')) {
-      // Surface errors but don't change state for transient issues.
-      _lastError = line.length > 120 ? '${line.substring(0, 120)}\u2026' : line;
-      if (lower.contains('authentication')) {
-        _statusMessage = 'Auth error \u2014 check pool settings';
+      // Filter known XMRig performance warnings
+      final isKnownWarning = _ignoredWarnings.any((w) => lower.contains(w));
+      if (!isKnownWarning) {
+        _lastError = line.length > 120 ? '${line.substring(0, 120)}\u2026' : line;
+        if (lower.contains('authentication')) {
+          _statusMessage = 'Auth error \u2014 check pool settings';
+        }
       }
     }
 
@@ -351,7 +414,11 @@ class NativeMinerService {
     if (_disposed || _statsController.isClosed) return;
     _statsController.add(MinerStats(
       hashRate: _hashRate,
+      avgHashRate: _avgHashRate,
       solutionsFound: _solutionsFound,
+      solutionsSubmitted: _solutionsSubmitted,
+      solutionsRejected: _solutionsRejected,
+      epoch: _epoch,
       statusMessage: _statusMessage,
       state: _state,
       downloadProgress: _downloadProgress,

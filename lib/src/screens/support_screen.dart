@@ -839,13 +839,35 @@ class SupportScreenState extends State<SupportScreen>
                           : cs.onSurfaceVariant),
                   const SizedBox(width: 8),
                   _statCard(
+                      'Avg it/s',
+                      miner.avgHashRate > 0
+                          ? _formatHashCount(miner.avgHashRate.round())
+                          : '\u2014',
+                      Icons.trending_up,
+                      miner.avgHashRate > 0
+                          ? Colors.blue
+                          : cs.onSurfaceVariant),
+                  const SizedBox(width: 8),
+                  _statCard(
+                      'Epoch',
+                      miner.epoch > 0 ? '${miner.epoch}' : '\u2014',
+                      Icons.calendar_today,
+                      miner.epoch > 0
+                          ? Colors.deepPurple
+                          : cs.onSurfaceVariant),
+                  const SizedBox(width: 8),
+                  _statCard(
                       'Solutions',
                       '${miner.solutionsFound}',
                       Icons.emoji_events,
                       miner.solutionsFound > 0
                           ? Colors.amber
                           : cs.onSurfaceVariant),
-                  const SizedBox(width: 8),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
                   _statCard(
                       'Battery',
                       '$_batteryLevel%',
@@ -866,7 +888,7 @@ class SupportScreenState extends State<SupportScreen>
               InkWell(
                 onTap: () async {
                   final uri = Uri.parse(
-                      '${QubicService.poolDashboardUrl}/en-US/mining/overview');
+                      '${QubicService.poolDashboardUrl}/en-US/mining/overview?payoutId=${QubicService.walletId}');
                   if (!await launchUrl(uri,
                       mode: LaunchMode.externalApplication)) {
                     debugPrint('Could not launch $uri');
