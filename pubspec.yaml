@@ -62,9 +62,6 @@ dependencies:
   # Battery detection (for distributed computing)
   battery_plus: ^6.0.3
 
-  # WebSocket (for distributed computing coordinator)
-  web_socket_channel: ^3.0.1
-
 dependency_overrides:
   win32: '<5.13.0'
   fl_chart: 0.65.0

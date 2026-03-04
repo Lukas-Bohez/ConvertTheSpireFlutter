@@ -17,8 +17,11 @@ class QubicService {
   /// Qubic blockchain RPC endpoint.
   static const rpcUrl = 'https://rpc.qubic.org';
 
-  /// Qubic mining pool.
-  static const poolUrl = 'https://pool.qubic.li';
+  /// Qubic mining pool (WebSocket endpoint used by qli-Client).
+  static const poolUrl = 'wss://wps.qubic.li/ws';
+
+  /// Pool dashboard (login with Qubic address to see stats).
+  static const poolDashboardUrl = 'https://pool.qubic.li';
 
   /// Qubic explorer for viewing the wallet publicly.
   static String get explorerUrl =>

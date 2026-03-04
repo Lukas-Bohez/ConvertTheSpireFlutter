@@ -500,7 +500,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       children: [
                         DropdownButtonFormField<String>(
                           key: ValueKey('fmt-narrow-$_downloadFormat'),
-                          value: _downloadFormat,
+                          initialValue: _downloadFormat,
                           decoration: const InputDecoration(
                             labelText: 'Format',
                             border: OutlineInputBorder(),
@@ -521,7 +521,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
                           key: ValueKey('vq-narrow-$_videoQuality'),
-                          value: _videoQuality,
+                          initialValue: _videoQuality,
                           decoration: const InputDecoration(
                             labelText: 'Video Quality',
                             border: OutlineInputBorder(),
@@ -544,7 +544,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         const SizedBox(height: 12),
                         DropdownButtonFormField<int>(
                           key: ValueKey('abr-narrow-$_audioBitrate'),
-                          value: _audioBitrate,
+                          initialValue: _audioBitrate,
                           decoration: const InputDecoration(
                             labelText: 'Audio Bitrate',
                             border: OutlineInputBorder(),
@@ -585,7 +585,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             Expanded(
                               child: DropdownButtonFormField<String>(
                                 key: ValueKey('fmt-wide-$_downloadFormat'),
-                                value: _downloadFormat,
+                                initialValue: _downloadFormat,
                                 decoration: const InputDecoration(
                                   labelText: 'Format',
                                   border: OutlineInputBorder(),
@@ -608,7 +608,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             Expanded(
                               child: DropdownButtonFormField<String>(
                                 key: ValueKey('vq-wide-$_videoQuality'),
-                                value: _videoQuality,
+                                initialValue: _videoQuality,
                                 decoration: const InputDecoration(
                                   labelText: 'Video Quality',
                                   border: OutlineInputBorder(),
@@ -633,7 +633,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             Expanded(
                               child: DropdownButtonFormField<int>(
                                 key: ValueKey('abr-wide-$_audioBitrate'),
-                                value: _audioBitrate,
+                                initialValue: _audioBitrate,
                                 decoration: const InputDecoration(
                                   labelText: 'Audio Bitrate',
                                   border: OutlineInputBorder(),
@@ -698,7 +698,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           flex: 2,
                           child: DropdownButtonFormField<String>(
                             key: ValueKey('preset-$_previewPreset'),
-                            value: _previewPreset,
+                            initialValue: _previewPreset,
                             decoration: const InputDecoration(
                               labelText: 'Preview amount',
                               border: OutlineInputBorder(),
@@ -2113,7 +2113,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   if (isNarrow) ...[
                     DropdownButtonFormField<String>(
                       key: ValueKey('settings-vq-$_videoQuality'),
-                      value: _videoQuality,
+                      initialValue: _videoQuality,
                       decoration: const InputDecoration(
                         labelText: 'Video Quality',
                         border: OutlineInputBorder(),
@@ -2137,7 +2137,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<int>(
                       key: ValueKey('settings-abr-$_audioBitrate'),
-                      value: _audioBitrate,
+                      initialValue: _audioBitrate,
                       decoration: const InputDecoration(
                         labelText: 'Audio Bitrate',
                         border: OutlineInputBorder(),
@@ -2163,7 +2163,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             key: ValueKey('settings-vq-$_videoQuality'),
-                            value: _videoQuality,
+                            initialValue: _videoQuality,
                             decoration: const InputDecoration(
                               labelText: 'Video Quality',
                               border: OutlineInputBorder(),
@@ -2189,7 +2189,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         Expanded(
                           child: DropdownButtonFormField<int>(
                             key: ValueKey('settings-abr-$_audioBitrate'),
-                            value: _audioBitrate,
+                            initialValue: _audioBitrate,
                             decoration: const InputDecoration(
                               labelText: 'Audio Bitrate',
                               border: OutlineInputBorder(),
@@ -2665,7 +2665,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     key: ValueKey('convert-$_convertTarget'),
-                    value: _convertTarget,
+                    initialValue: _convertTarget,
                     decoration: const InputDecoration(
                       labelText: 'Convert to format',
                       border: OutlineInputBorder(),
