@@ -46,7 +46,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return ThemeMode.system;
     }
   }
-  static final Uri _websiteUri = Uri.parse('https://convertthespire.com/');
+  static final Uri _websiteUri = Uri.parse('https://quizthespire.com/');
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _downloadDirController = TextEditingController();
   final TextEditingController _workersController = TextEditingController();
@@ -994,8 +994,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           limit = 999999;
           break;
         case 'custom':
-          final from = int.tryParse(_rangeFromController.text.trim()) ?? 1;
-          final to = int.tryParse(_rangeToController.text.trim()) ?? 50;
+          var from = int.tryParse(_rangeFromController.text.trim()) ?? 1;
+          var to = int.tryParse(_rangeToController.text.trim()) ?? 50;
+          if (from > to) {
+            final tmp = from;
+            from = to;
+            to = tmp;
+          }
           startIndex = (from - 1).clamp(0, 999999);
           limit = (to - from + 1).clamp(1, 999999);
           break;
@@ -1839,7 +1844,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             TextButton.icon(
                               icon: const Icon(Icons.list_alt, size: 14),
                               label: const Text('View Logs', style: TextStyle(fontSize: 12)),
-                              onPressed: () => _mainTabController.animateTo(10),
+                              onPressed: () {
+                                setState(() {
+                                  _selectedPageIndex = 10;
+                                  _mainTabController.index = 10;
+                                  _visitedPages.add(10);
+                                });
+                              },
                               style: TextButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
                                 minimumSize: Size.zero,
@@ -2023,7 +2034,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: TextButton.icon(
                       icon: const Icon(Icons.open_in_new, size: 16),
                       label: const Text('Learn more'),
-                      onPressed: () => _mainTabController.animateTo(8),
+                      onPressed: () {
+                        setState(() {
+                          _selectedPageIndex = 8;
+                          _mainTabController.index = 8;
+                          _visitedPages.add(8);
+                        });
+                      },
                     ),
                   ),
                 ],
@@ -2612,16 +2629,23 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                       TextButton.icon(
                         icon: const Icon(Icons.public),
-                        label: const Text('Visit convertthespire.com'),
+                        label: const Text('Visit quizthespire.com'),
                         onPressed: _openWebsite,
                       ),
                       TextButton.icon(
                         icon: const Icon(Icons.code),
                         label: const Text('GitHub'),
-                        onPressed: () => launchUrl(
-                          Uri.parse('https://github.com/Lukas-Bohez/ConvertTheSpireFlutter'),
-                          mode: LaunchMode.externalApplication,
-                        ),
+                        onPressed: () async {
+                          final launched = await launchUrl(
+                            Uri.parse('https://github.com/Lukas-Bohez/ConvertTheSpireFlutter'),
+                            mode: LaunchMode.externalApplication,
+                          );
+                          if (!launched && mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Could not open the GitHub link.')),
+                            );
+                          }
+                        },
                       ),
                     ],
                   ),
@@ -2657,7 +2681,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _saveAllSettings(AppSettings settings) {
+  Future<void> _saveAllSettings(AppSettings settings) async {
     final ffmpegText = _ffmpegPathController.text.trim();
     final ytDlpText = _ytDlpPathController.text.trim();
     final next = settings.copyWith(
@@ -2669,10 +2693,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       preferredAudioBitrate: _audioBitrate,
       defaultAudioFormat: _downloadFormat,
       previewExpandPlaylist: _expandPlaylist,
-      ffmpegPath: ffmpegText,
-      ytDlpPath: ytDlpText,
+      ffmpegPath: ffmpegText.isEmpty ? null : ffmpegText,
+      ytDlpPath: ytDlpText.isEmpty ? null : ytDlpText,
     );
-    widget.controller.saveSettings(next);
+    await widget.controller.saveSettings(next);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -2769,6 +2794,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       }
                       final path = result.files.single.path;
                       if (path == null) return;
+                      if (!mounted) return;
                       setState(() {
                         _convertFile = File(path);
                       });
