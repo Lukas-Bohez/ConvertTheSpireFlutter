@@ -32,6 +32,11 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
 
+# Force the MSVC runtime library selection so that stale CMake caches can never
+# accidentally produce debug-CRT binaries in a Release build.  This policy is
+# inherited by all targets including plugins.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>")
+
 # Silence MSVC warning C4821 (BOM/unicode encoding detection) treated as error
 # Some Windows SDK headers can trigger C4821; disable it globally for MSVC.
 if(MSVC)
@@ -62,6 +67,13 @@ add_subdirectory("runner")
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)
+
+# The ANGLE archive bundled by media_kit_libs_windows_video includes a zlib.dll
+# built against the debug CRT (VCRUNTIME140D.dll / ucrtbased.dll).  Nothing in
+# the release folder depends on it (verified with dumpbin /dependents), and its
+# debug-CRT dependency causes missing-DLL errors on end-user machines.  Strip it
+# from the install list.
+list(FILTER PLUGIN_BUNDLED_LIBRARIES EXCLUDE REGEX "zlib\\.dll$")
 
 
 # === Installation ===

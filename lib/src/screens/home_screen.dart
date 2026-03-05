@@ -490,6 +490,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 icon: const Icon(Icons.content_paste),
                 onPressed: () async {
                   final clipboardData = await Clipboard.getData('text/plain');
+                  if (!mounted) return;
                   if (clipboardData != null && clipboardData.text != null) {
                     setState(() {
                       _urlController.text = clipboardData.text!;
@@ -948,9 +949,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final url = _urlController.text.trim();
     if (url.isEmpty) return;
     final item = widget.controller.previewItems.isNotEmpty
-        ? widget.controller.previewItems.firstWhere(
-            (p) => p.url == url,
-            orElse: () => widget.controller.previewItems.first,
+        ? widget.controller.previewItems.cast<PreviewItem?>().firstWhere(
+            (p) => p!.url == url,
+            orElse: () => null,
           )
         : null;
     if (item != null) {
@@ -1039,19 +1040,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
-    // Ensure range sliders stay in bounds (computed locally, not mutating state)
-    final clampedFrom = _addRangeFrom.clamp(1, items.length);
-    final clampedTo = _addRangeTo.clamp(clampedFrom, items.length);
-    if (clampedFrom != _addRangeFrom || clampedTo != _addRangeTo) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _addRangeFrom = clampedFrom;
-            _addRangeTo = clampedTo;
-          });
-        }
-      });
-    }
+    // Ensure range sliders stay in bounds.  Mutate eagerly so that
+    // the dropdown widgets below use valid values on *this* frame.
+    _addRangeFrom = _addRangeFrom.clamp(1, items.length);
+    _addRangeTo = _addRangeTo.clamp(_addRangeFrom, items.length);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1680,7 +1672,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     item.status == DownloadStatus.cancelled)
                                   IconButton(
                                     icon: const Icon(Icons.download),
-                                    onPressed: () => widget.controller.downloadSingle(item),
+                                    onPressed: () {
+                                      final s = widget.controller.settings;
+                                      if (s != null && !_ensureDownloadFolder(s)) return;
+                                      widget.controller.downloadSingle(item);
+                                    },
                                     tooltip: 'Download',
                                     color: Colors.blue,
                                   ),
@@ -1696,7 +1692,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     item.status == DownloadStatus.failed)
                                   IconButton(
                                     icon: const Icon(Icons.play_circle),
-                                    onPressed: () => widget.controller.resumeDownload(item),
+                                    onPressed: () {
+                                      final s = widget.controller.settings;
+                                      if (s != null && !_ensureDownloadFolder(s)) return;
+                                      widget.controller.resumeDownload(item);
+                                    },
                                     tooltip: 'Resume',
                                     color: Colors.green,
                                   ),
@@ -1754,7 +1754,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               OutlinedButton.icon(
                                 icon: const Icon(Icons.download, size: 18),
                                 label: const Text('Download'),
-                                onPressed: () => widget.controller.downloadSingle(item),
+                                onPressed: () {
+                                  final s = widget.controller.settings;
+                                  if (s != null && !_ensureDownloadFolder(s)) return;
+                                  widget.controller.downloadSingle(item);
+                                },
                               ),
                             if (item.status == DownloadStatus.downloading ||
                                 item.status == DownloadStatus.converting)
@@ -1768,7 +1772,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               OutlinedButton.icon(
                                 icon: const Icon(Icons.play_circle, size: 18),
                                 label: const Text('Resume'),
-                                onPressed: () => widget.controller.resumeDownload(item),
+                                onPressed: () {
+                                  final s = widget.controller.settings;
+                                  if (s != null && !_ensureDownloadFolder(s)) return;
+                                  widget.controller.resumeDownload(item);
+                                },
                               ),
                             if (item.status == DownloadStatus.completed &&
                                 item.outputPath != null)
@@ -2358,6 +2366,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               setState(() {
                                 _ffmpegPathController.text = result.files.single.path!;
                               });
+                              final s = widget.controller.settings;
+                              if (s != null) {
+                                widget.controller.saveSettings(s.copyWith(ffmpegPath: result.files.single.path!));
+                              }
                             }
                           },
                         ),
@@ -2431,6 +2443,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               setState(() {
                                 _ytDlpPathController.text = result.files.single.path!;
                               });
+                              final s = widget.controller.settings;
+                              if (s != null) {
+                                widget.controller.saveSettings(s.copyWith(ytDlpPath: result.files.single.path!));
+                              }
                             }
                           },
                         ),
@@ -2596,7 +2612,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                       TextButton.icon(
                         icon: const Icon(Icons.public),
-                        label: const Text('Visit quizthespire.com'),
+                        label: const Text('Visit convertthespire.com'),
                         onPressed: _openWebsite,
                       ),
                       TextButton.icon(
@@ -2652,6 +2668,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       preferredVideoQuality: _videoQuality,
       preferredAudioBitrate: _audioBitrate,
       defaultAudioFormat: _downloadFormat,
+      previewExpandPlaylist: _expandPlaylist,
       ffmpegPath: ffmpegText,
       ytDlpPath: ytDlpText,
     );
