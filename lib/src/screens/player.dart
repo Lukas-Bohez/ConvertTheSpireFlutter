@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+import 'package:audio_service/audio_service.dart' as audio_svc;
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:path/path.dart' as p;
@@ -17,6 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:video_player/video_player.dart';
 import '../services/platform_dirs.dart';
+import '../services/audio_handler.dart';
 import 'cast_dialog.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -169,6 +171,9 @@ class PlayerState with ChangeNotifier {
   // Audio — just_audio works fine on all platforms
   final AudioPlayer _audio = AudioPlayer();
 
+  // Android background audio service (media notification + background playback).
+  AppAudioHandler? _audioHandler;
+
   // media_kit is used on Windows/Linux/macOS/iOS.
   // On Android we use the `video_player` plugin (ExoPlayer) instead, because
   // media_kit throws "Unsupported platform: android" at runtime.
@@ -220,6 +225,11 @@ class PlayerState with ChangeNotifier {
     }
 
     _loadPrefs().then((_) => _applyVolume());
+
+    // Android: initialise background audio service for media notification.
+    if (!kIsWeb && Platform.isAndroid) {
+      _initAudioHandler();
+    }
 
     // ── Audio streams ──
     _subs.add(_audio.positionStream.listen((pos) {
@@ -288,6 +298,28 @@ class PlayerState with ChangeNotifier {
         }
       }));
     }
+  }
+
+  Future<void> _initAudioHandler() async {
+    _audioHandler = await initAudioService(_audio);
+    if (_audioHandler != null) {
+      // Wire skip events from the notification back into PlayerState.
+      _audioHandler!.onSkipToNext = () => next(only: MediaType.audio);
+      _audioHandler!.onSkipToPrevious = () => previous(only: MediaType.audio);
+    }
+  }
+
+  /// Push the current track's metadata to the Android media notification.
+  void _updateMediaNotification() {
+    if (_audioHandler == null) return;
+    final item = currentItem;
+    if (item == null) return;
+    _audioHandler!.updateMediaItem(audio_svc.MediaItem(
+      id: item.path,
+      title: item.title ?? p.basenameWithoutExtension(item.path),
+      artist: item.artist ?? '',
+      duration: duration,
+    ));
   }
 
   // ── Getters ──
@@ -555,6 +587,7 @@ class PlayerState with ChangeNotifier {
           duration = _audio.duration;
           position = Duration.zero;
           await _audio.play();
+          _updateMediaNotification();
         } catch (e) {
           debugPrint('audio load error ($item): $e');
         }

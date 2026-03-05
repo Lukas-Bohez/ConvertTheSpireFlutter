@@ -11,6 +11,10 @@ import '../models/app_settings.dart';
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
 import '../services/android_saf.dart';
+import '../services/computation_service.dart';
+import '../services/coordinator_service.dart';
+import '../services/shortcut_service.dart';
+import '../services/tray_service.dart';
 import '../state/app_controller.dart';
 import 'bulk_import_screen.dart';
 import 'playlist_screen.dart';
@@ -71,6 +75,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   String _androidDownloadUri = '';
   int _selectedPageIndex = 0;
 
+  /// Mining services — owned here so they survive tab switches.
+  late final ComputationService _computeService;
+  late final CoordinatorService _coordinatorService;
+
+  /// System-tray close-to-tray logic (desktop only).
+  TrayService? _trayService;
+
   /// Playlist preview amount: '10', '25', '50', '100', 'all', 'custom'
   String _previewPreset = '25';
   bool get _isAndroid => !kIsWeb && Platform.isAndroid;
@@ -94,10 +105,50 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       }
     });
     _playlistTabController = TabController(length: 2, vsync: this);
+
+    // Mining services — survive tab switches.
+    _computeService = ComputationService(maxConcurrent: 2);
+    _coordinatorService = CoordinatorService(compute: _computeService);
+    _coordinatorService.nativeMiner.loadSavedSettings();
+
+    // Desktop: system-tray & shortcut.
+    _initDesktopFeatures();
+  }
+
+  /// True when the app has active downloads or conversions.
+  bool get _hasActiveWork {
+    return widget.controller.queue.any((q) =>
+        q.status == DownloadStatus.downloading ||
+        q.status == DownloadStatus.converting ||
+        q.status == DownloadStatus.queued);
+  }
+
+  Future<void> _initDesktopFeatures() async {
+    if (kIsWeb || (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS)) return;
+
+    // System tray.
+    _trayService = TrayService(
+      shouldMinimiseToTray: () => _supportEnabled || _hasActiveWork,
+    );
+    _trayService!.onTrayShow = () {
+      // no-op — window_manager.show() is handled by TrayService itself.
+    };
+    _trayService!.onTrayQuit = () async {
+      // Stop mining before quitting.
+      _coordinatorService.dispose();
+      await _trayService?.destroy();
+      exit(0);
+    };
+    await _trayService!.init();
+
+    // Desktop shortcut.
+    await ShortcutService.ensureDesktopShortcut();
   }
 
   @override
   void dispose() {
+    _coordinatorService.dispose();
+    _trayService?.destroy();
     _mainTabController.dispose();
     _playlistTabController.dispose();
     _urlController.dispose();
@@ -167,7 +218,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return SupportScreen(
           key: const ValueKey('support'),
           enabled: _supportEnabled,
-          onEnabledChanged: (v) => setState(() => _supportEnabled = v),
+          onEnabledChanged: (v) => _setSupportEnabled(v),
+          compute: _computeService,
+          coordinator: _coordinatorService,
         );
       case 9:
         return _buildConvertTab(settings);
@@ -341,7 +394,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 SupportScreen(
                   key: const ValueKey('support'),
                   enabled: _supportEnabled,
-                  onEnabledChanged: (v) => setState(() => _supportEnabled = v),
+                  onEnabledChanged: (v) => _setSupportEnabled(v),
+                  compute: _computeService,
+                  coordinator: _coordinatorService,
                 ),
                 _buildConvertTab(settings),
                 _buildLogsTab(),
@@ -2014,7 +2069,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   SwitchListTile(
                       value: _supportEnabled,
                       onChanged: (value) {
-                        setState(() => _supportEnabled = value);
+                        _setSupportEnabled(value);
                       },
                       title: const Text('Enable Support'),
                       subtitle: Text(
@@ -2679,6 +2734,15 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         const SnackBar(content: Text('Could not open the Buy Me a Coffee link.')),
       );
     }
+  }
+
+  /// Toggle support mining on/off and update the coordinator services.
+  void _setSupportEnabled(bool value) {
+    setState(() => _supportEnabled = value);
+    final isAndroid = !kIsWeb && Platform.isAndroid;
+    if (isAndroid) return;
+    _coordinatorService.setEnabled(value);
+    _computeService.setEnabled(value);
   }
 
   Future<void> _saveAllSettings(AppSettings settings) async {

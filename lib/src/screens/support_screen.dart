@@ -22,10 +22,16 @@ class SupportScreen extends StatefulWidget {
   /// Fires when the screen's own start/stop button changes state.
   final ValueChanged<bool>? onEnabledChanged;
 
+  /// Externally-managed services that survive tab switches.
+  final ComputationService compute;
+  final CoordinatorService coordinator;
+
   const SupportScreen({
     super.key,
     this.enabled = false,
     this.onEnabledChanged,
+    required this.compute,
+    required this.coordinator,
   });
 
   @override
@@ -34,8 +40,8 @@ class SupportScreen extends StatefulWidget {
 
 class SupportScreenState extends State<SupportScreen>
     with SingleTickerProviderStateMixin {
-  late final ComputationService _compute;
-  late final CoordinatorService _coordinator;
+  ComputationService get _compute => widget.compute;
+  CoordinatorService get _coordinator => widget.coordinator;
   final Battery _battery = Battery();
 
   int _batteryLevel = 100;
@@ -50,28 +56,14 @@ class SupportScreenState extends State<SupportScreen>
   @override
   void initState() {
     super.initState();
-    _compute = ComputationService(maxConcurrent: 2);
-    _coordinator = CoordinatorService(compute: _compute);
 
-    // Restore persisted miner settings (thread count, etc.)
-    _coordinator.nativeMiner.loadSavedSettings().then((_) {
-      if (mounted) setState(() {});
-    });
-
+    // Wire UI refresh callbacks (safe to reassign on each mount).
     _compute.onStateChanged = () {
       if (mounted) setState(() {});
     };
     _coordinator.onStateChanged = () {
       if (mounted) setState(() {});
     };
-
-    // Honour the initial enabled flag from Settings.
-    // On Android native mining is unsupported, so never auto-enable.
-    final _isAndroid = !kIsWeb && Platform.isAndroid;
-    if (!_isAndroid && widget.enabled && !_coordinator.enabled) {
-      _coordinator.setEnabled(true);
-      _compute.setEnabled(true);
-    }
 
     _pulseController = AnimationController(
       vsync: this,
@@ -145,10 +137,10 @@ class SupportScreenState extends State<SupportScreen>
   void dispose() {
     _batteryTimer?.cancel();
     _pulseController.dispose();
-    // Null callbacks before dispose to avoid setState on defunct widget.
+    // Null callbacks to avoid setState on defunct widget.
+    // Services are NOT disposed here — they are owned by HomeScreenState.
     _compute.onStateChanged = null;
     _coordinator.onStateChanged = null;
-    _coordinator.dispose();
     super.dispose();
   }
 

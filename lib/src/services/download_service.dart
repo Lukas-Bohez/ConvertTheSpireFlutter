@@ -815,12 +815,13 @@ class DownloadService {
       return;
     }
 
-    const chunkSize = 2 * 1024 * 1024; // 2 MB (small to stay under throttle thresholds)
-    const maxRetries = 12;
+    const chunkSize = 1 * 1024 * 1024; // 1 MB — smaller chunks reduce stall window
+    const maxRetries = 20; // more retries for flaky mobile networks
     final file = File(outputPath);
     int received = 0;
     Uri currentUrl = originalStream.url;
     final originalTag = originalStream.tag; // itag for matching on refresh
+    int consecutiveFailures = 0;
     onProgress(0, DownloadStatus.downloading);
 
     // Strip pre-existing range / rn params from the URL
@@ -850,9 +851,11 @@ class DownloadService {
               request.headers['Range'] = 'bytes=$start-$end';
               request.headers['User-Agent'] =
                   'com.google.android.youtube/19.09.37 (Linux; U; Android 14; en_US) gzip';
+              // Keep-alive helps mobile connections
+              request.headers['Connection'] = 'keep-alive';
 
               final response = await client.send(request).timeout(
-                const Duration(seconds: 30),
+                const Duration(seconds: 45),
                 onTimeout: () => throw TimeoutException('Chunk request timed out'),
               );
 
@@ -883,7 +886,7 @@ class DownloadService {
 
               final buffer = BytesBuilder(copy: false);
               await for (final data in response.stream.timeout(
-                const Duration(seconds: 30),
+                const Duration(seconds: 45),
                 onTimeout: (eventSink) {
                   eventSink.addError(TimeoutException('Chunk data stalled'));
                   eventSink.close();
@@ -893,6 +896,7 @@ class DownloadService {
                 buffer.add(data);
               }
               chunkBytes = buffer.toBytes();
+              consecutiveFailures = 0; // reset on success
               break; // Success
             } finally {
               client.close();
@@ -900,10 +904,28 @@ class DownloadService {
           } on Exception catch (e) {
             lastError = e;
             if (token.cancelled || e.toString().contains('Cancelled')) rethrow;
+            consecutiveFailures++;
             if (attempt < maxRetries - 1) {
-              final delay = Duration(seconds: (2 * (attempt + 1)).clamp(2, 20));
+              // Exponential back-off: 2s, 4s, 6s, ... up to 30s
+              final delay = Duration(seconds: (2 * (attempt + 1)).clamp(2, 30));
               debugPrint('Android download: chunk $start-$end attempt ${attempt + 1} failed: $e, retrying in ${delay.inSeconds}s');
               await Future.delayed(delay);
+              // After 3 consecutive failures, try refreshing the manifest
+              if (consecutiveFailures >= 3 && videoId != null) {
+                debugPrint('Android download: $consecutiveFailures consecutive failures, refreshing manifest...');
+                try {
+                  final fresh = await yt.videos.streamsClient.getManifest(
+                    videoId,
+                    ytClients: [YoutubeApiClient.safari, YoutubeApiClient.androidVr],
+                  ).timeout(const Duration(seconds: 30));
+                  final match = _findStreamByTag(fresh, originalTag);
+                  if (match != null) {
+                    currentUrl = _stripRangeParams(match.url);
+                    debugPrint('Android download: refreshed stream URL after consecutive failures');
+                    consecutiveFailures = 0;
+                  }
+                } catch (_) {}
+              }
             }
           }
         }
@@ -917,6 +939,11 @@ class DownloadService {
 
         final pct = ((received / total) * 100).clamp(0, 100).toInt();
         onProgress(pct, DownloadStatus.downloading);
+
+        // Small delay between chunks to avoid YouTube throttle detection
+        if (received < total) {
+          await Future.delayed(const Duration(milliseconds: 150));
+        }
       }
     } catch (e) {
       await _safeDelete(outputPath);
