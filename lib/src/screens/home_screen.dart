@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/app_settings.dart';
@@ -51,6 +52,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final TextEditingController _workersController = TextEditingController();
   final TextEditingController _retryCountController = TextEditingController();
   final TextEditingController _retryBackoffController = TextEditingController();
+  final TextEditingController _ffmpegPathController = TextEditingController();
+  final TextEditingController _ytDlpPathController = TextEditingController();
   final TextEditingController _rangeFromController = TextEditingController();
   final TextEditingController _rangeToController = TextEditingController();
   final AndroidSaf _androidSaf = AndroidSaf();
@@ -102,6 +105,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _workersController.dispose();
     _retryCountController.dispose();
     _retryBackoffController.dispose();
+    _ffmpegPathController.dispose();
+    _ytDlpPathController.dispose();
     _rangeFromController.dispose();
     _rangeToController.dispose();
     super.dispose();
@@ -367,6 +372,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _workersController.text = settings.maxWorkers.toString();
       _retryCountController.text = settings.retryCount.toString();
       _retryBackoffController.text = settings.retryBackoffSeconds.toString();
+      _ffmpegPathController.text = settings.ffmpegPath ?? '';
+      _ytDlpPathController.text = settings.ytDlpPath ?? '';
       _expandPlaylist = settings.previewExpandPlaylist;
       _downloadFormat = settings.defaultAudioFormat;
       _videoQuality = settings.preferredVideoQuality;
@@ -831,32 +838,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     label: const Text('Download'),
                     onPressed: settings == null || _urlController.text.trim().isEmpty
                         ? null
-                        : () {
-                            final url = _urlController.text.trim();
-                            if (url.isEmpty) return;
-                            final item = widget.controller.previewItems.isNotEmpty
-                                ? widget.controller.previewItems.firstWhere(
-                                    (p) => p.url == url,
-                                    orElse: () => widget.controller.previewItems.first,
-                                  )
-                                : null;
-                            if (item != null) {
-                              widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
-                            } else {
-                              widget.controller.addToQueue(
-                                PreviewItem(
-                                  id: url,
-                                  title: url,
-                                  url: url,
-                                  uploader: '',
-                                  duration: null,
-                                  thumbnailUrl: null,
-                                ),
-                                _downloadFormat.toLowerCase(),
-                              );
-                            }
-                            widget.controller.downloadAll();
-                          },
+                        : () => _downloadUrl(settings),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -886,32 +868,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     label: const Text('Download'),
                     onPressed: settings == null || _urlController.text.trim().isEmpty
                         ? null
-                        : () {
-                            final url = _urlController.text.trim();
-                            if (url.isEmpty) return;
-                            final item = widget.controller.previewItems.isNotEmpty
-                                ? widget.controller.previewItems.firstWhere(
-                                    (p) => p.url == url,
-                                    orElse: () => widget.controller.previewItems.first,
-                                  )
-                                : null;
-                            if (item != null) {
-                              widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
-                            } else {
-                              widget.controller.addToQueue(
-                                PreviewItem(
-                                  id: url,
-                                  title: url,
-                                  url: url,
-                                  uploader: '',
-                                  duration: null,
-                                  thumbnailUrl: null,
-                                ),
-                                _downloadFormat.toLowerCase(),
-                              );
-                            }
-                            widget.controller.downloadAll();
-                          },
+                        : () => _downloadUrl(settings),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -938,6 +895,80 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ],
       ),
     );
+  }
+
+  /// Returns true if a download folder is configured (or Android, where the
+  /// default fallback works), otherwise shows a snackbar and navigates to Settings.
+  bool _ensureDownloadFolder(AppSettings settings) {
+    // On Android, downloads always go to a default folder even without user
+    // selection, so no redirect is needed.
+    if (_isAndroid) return true;
+    final dir = settings.downloadDir.trim();
+    if (dir.isNotEmpty) return true;
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+            SizedBox(width: 8),
+            Expanded(child: Text('Please select a download folder in Settings first.')),
+          ],
+        ),
+        backgroundColor: Colors.orange.shade700,
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        margin: const EdgeInsets.all(16),
+        action: SnackBarAction(
+          label: 'Go to Settings',
+          textColor: Colors.white,
+          onPressed: () {
+            setState(() {
+              _selectedPageIndex = 7;
+              _mainTabController.index = 7;
+              _visitedPages.add(7);
+            });
+          },
+        ),
+      ),
+    );
+    // Navigate to settings
+    setState(() {
+      _selectedPageIndex = 7;
+      _mainTabController.index = 7;
+      _visitedPages.add(7);
+    });
+    return false;
+  }
+
+  /// Queue a URL for download and start downloading.
+  void _downloadUrl(AppSettings settings) {
+    if (!_ensureDownloadFolder(settings)) return;
+    final url = _urlController.text.trim();
+    if (url.isEmpty) return;
+    final item = widget.controller.previewItems.isNotEmpty
+        ? widget.controller.previewItems.firstWhere(
+            (p) => p.url == url,
+            orElse: () => widget.controller.previewItems.first,
+          )
+        : null;
+    if (item != null) {
+      widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+    } else {
+      widget.controller.addToQueue(
+        PreviewItem(
+          id: url,
+          title: url,
+          url: url,
+          uploader: '',
+          duration: null,
+          thumbnailUrl: null,
+        ),
+        _downloadFormat.toLowerCase(),
+      );
+    }
+    widget.controller.downloadAll();
   }
 
   void _onSearch() {
@@ -1065,6 +1096,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     icon: const Icon(Icons.download),
                     label: const Text('Download All'),
                     onPressed: () {
+                      final s = widget.controller.settings;
+                      if (s != null && !_ensureDownloadFolder(s)) return;
                       for (final item in items) {
                         widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
                       }
@@ -1110,6 +1143,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     icon: const Icon(Icons.download),
                     label: const Text('Download All'),
                     onPressed: () {
+                      final s = widget.controller.settings;
+                      if (s != null && !_ensureDownloadFolder(s)) return;
                       for (final item in items) {
                         widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
                       }
@@ -1201,6 +1236,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         icon: const Icon(Icons.download, size: 18),
                         label: Text('Download ${_addRangeTo - _addRangeFrom + 1}'),
                         onPressed: () {
+                          final s = widget.controller.settings;
+                          if (s != null && !_ensureDownloadFolder(s)) return;
                           final subset = items.sublist(_addRangeFrom - 1, _addRangeTo);
                           for (final item in subset) {
                             widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
@@ -1293,6 +1330,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 icon: const Icon(Icons.download, size: 18),
                                 label: const Text('Download'),
                                 onPressed: () {
+                                  final s = widget.controller.settings;
+                                  if (s != null && !_ensureDownloadFolder(s)) return;
                                   widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
                                   widget.controller.downloadAll();
                                 },
@@ -1321,6 +1360,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             icon: const Icon(Icons.download, size: 18),
                             label: const Text('Download'),
                             onPressed: () {
+                              final s = widget.controller.settings;
+                              if (s != null && !_ensureDownloadFolder(s)) return;
                               widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
                               widget.controller.downloadAll();
                             },
@@ -1438,7 +1479,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         OutlinedButton.icon(
                           icon: const Icon(Icons.download_for_offline),
                           label: const Text('Download All'),
-                          onPressed: items.isEmpty ? null : () => widget.controller.downloadAll(),
+                          onPressed: items.isEmpty ? null : () {
+                            final s = widget.controller.settings;
+                            if (s != null && !_ensureDownloadFolder(s)) return;
+                            widget.controller.downloadAll();
+                          },
                         ),
                         OutlinedButton.icon(
                           icon: const Icon(Icons.clear_all),
@@ -1514,7 +1559,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         OutlinedButton.icon(
                           icon: const Icon(Icons.download_for_offline),
                           label: const Text('Download All'),
-                          onPressed: items.isEmpty ? null : () => widget.controller.downloadAll(),
+                          onPressed: items.isEmpty ? null : () {
+                            final s = widget.controller.settings;
+                            if (s != null && !_ensureDownloadFolder(s)) return;
+                            widget.controller.downloadAll();
+                          },
                         ),
                         OutlinedButton.icon(
                           icon: const Icon(Icons.clear_all),
@@ -1672,6 +1721,15 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     tooltip: 'Show in folder',
                                     color: Colors.blue,
                                   ),
+                                if (item.status == DownloadStatus.completed &&
+                                    item.outputPath != null &&
+                                    !kIsWeb && Platform.isAndroid)
+                                  IconButton(
+                                    icon: const Icon(Icons.share),
+                                    onPressed: () => _shareFile(item.outputPath!, item.title),
+                                    tooltip: 'Share',
+                                    color: Colors.blue,
+                                  ),
                                 if (item.status != DownloadStatus.downloading &&
                                     item.status != DownloadStatus.converting)
                                   IconButton(
@@ -1730,6 +1788,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 icon: const Icon(Icons.folder_open, size: 18),
                                 label: const Text('Show in folder'),
                                 onPressed: () => _showInFolder(item.outputPath!),
+                              ),
+                            if (item.status == DownloadStatus.completed &&
+                                item.outputPath != null &&
+                                !kIsWeb && Platform.isAndroid)
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.share, size: 18),
+                                label: const Text('Share'),
+                                onPressed: () => _shareFile(item.outputPath!, item.title),
                               ),
                             if (item.status != DownloadStatus.downloading &&
                                 item.status != DownloadStatus.converting)
@@ -2238,89 +2304,152 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           const SizedBox(height: 16),
           
           // FFmpeg Settings
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.code),
-                      const SizedBox(width: 8),
-                      Text('FFmpeg', style: Theme.of(context).textTheme.titleLarge),
-                    ],
-                  ),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    leading: Icon(
-                      settings.ffmpegPath != null && settings.ffmpegPath!.isNotEmpty
-                          ? Icons.check_circle
-                          : Icons.info_outline,
-                      color: settings.ffmpegPath != null && settings.ffmpegPath!.isNotEmpty
-                          ? Colors.green
-                          : Colors.orange,
+          if (!_isAndroid) ...[
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.code,
+                          color: _ffmpegPathController.text.isNotEmpty
+                              ? Colors.green
+                              : Colors.orange,
+                        ),
+                        const SizedBox(width: 8),
+                        Text('FFmpeg', style: Theme.of(context).textTheme.titleLarge),
+                        if (_ffmpegPathController.text.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                        ],
+                      ],
                     ),
-                    title: Text(
-                      settings.ffmpegPath != null && settings.ffmpegPath!.isNotEmpty
-                          ? 'FFmpeg installed'
-                          : 'FFmpeg not configured',
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _ffmpegPathController,
+                            decoration: InputDecoration(
+                              labelText: 'FFmpeg path',
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.terminal),
+                              hintText: _ffmpegPathController.text.isEmpty
+                                  ? 'Auto-installed on first use, or browse to set manually'
+                                  : null,
+                            ),
+                            readOnly: true,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.folder_open),
+                          label: const Text('Browse'),
+                          onPressed: () async {
+                            final result = await FilePicker.platform.pickFiles(
+                              type: FileType.any,
+                              dialogTitle: 'Select FFmpeg executable',
+                            );
+                            if (result != null && result.files.single.path != null && mounted) {
+                              setState(() {
+                                _ffmpegPathController.text = result.files.single.path!;
+                              });
+                            }
+                          },
+                        ),
+                      ],
                     ),
-                    subtitle: Text(
-                      settings.ffmpegPath != null && settings.ffmpegPath!.isNotEmpty
-                          ? settings.ffmpegPath!
-                          : 'Will be installed automatically on Windows when needed',
-                    ),
-                  ),
-                ],
+                    if (_ffmpegPathController.text.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Will be installed automatically when needed. Use Browse to set a custom path.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          // yt-dlp Settings
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.download_for_offline),
-                      const SizedBox(width: 8),
-                      Text('yt-dlp', style: Theme.of(context).textTheme.titleLarge),
-                    ],
-                  ),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    leading: Icon(
-                      settings.ytDlpPath != null && settings.ytDlpPath!.isNotEmpty
-                          ? Icons.check_circle
-                          : Icons.info_outline,
-                      color: settings.ytDlpPath != null && settings.ytDlpPath!.isNotEmpty
-                          ? Colors.green
-                          : Colors.orange,
+            // yt-dlp Settings
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.download_for_offline,
+                          color: _ytDlpPathController.text.isNotEmpty
+                              ? Colors.green
+                              : Colors.orange,
+                        ),
+                        const SizedBox(width: 8),
+                        Text('yt-dlp', style: Theme.of(context).textTheme.titleLarge),
+                        if (_ytDlpPathController.text.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                        ],
+                      ],
                     ),
-                    title: Text(
-                      settings.ytDlpPath != null && settings.ytDlpPath!.isNotEmpty
-                          ? 'yt-dlp installed'
-                          : 'yt-dlp not configured',
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _ytDlpPathController,
+                            decoration: InputDecoration(
+                              labelText: 'yt-dlp path',
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.terminal),
+                              hintText: _ytDlpPathController.text.isEmpty
+                                  ? 'Auto-downloaded on first use, or browse to set manually'
+                                  : null,
+                            ),
+                            readOnly: true,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.folder_open),
+                          label: const Text('Browse'),
+                          onPressed: () async {
+                            final result = await FilePicker.platform.pickFiles(
+                              type: FileType.any,
+                              dialogTitle: 'Select yt-dlp executable',
+                            );
+                            if (result != null && result.files.single.path != null && mounted) {
+                              setState(() {
+                                _ytDlpPathController.text = result.files.single.path!;
+                              });
+                            }
+                          },
+                        ),
+                      ],
                     ),
-                    subtitle: Text(
-                      settings.ytDlpPath != null && settings.ytDlpPath!.isNotEmpty
-                          ? settings.ytDlpPath!
-                          : 'Will be downloaded automatically on first launch. '
-                            'Required for HD video downloads.',
-                    ),
-                  ),
-                ],
+                    if (_ytDlpPathController.text.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Will be downloaded automatically on first launch. Required for HD video downloads.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
+          ],
           
           // Retry Settings
           Card(
@@ -2513,6 +2642,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _saveAllSettings(AppSettings settings) {
+    final ffmpegText = _ffmpegPathController.text.trim();
+    final ytDlpText = _ytDlpPathController.text.trim();
     final next = settings.copyWith(
       downloadDir: _isAndroid ? _androidDownloadUri : _downloadDirController.text.trim(),
       maxWorkers: (int.tryParse(_workersController.text.trim()) ?? settings.maxWorkers).clamp(1, 10),
@@ -2521,6 +2652,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       preferredVideoQuality: _videoQuality,
       preferredAudioBitrate: _audioBitrate,
       defaultAudioFormat: _downloadFormat,
+      ffmpegPath: ffmpegText,
+      ytDlpPath: ytDlpText,
     );
     widget.controller.saveSettings(next);
     ScaffoldMessenger.of(context).clearSnackBars();
@@ -2566,6 +2699,20 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not open folder: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _shareFile(String filePath, String title) async {
+    try {
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(filePath)], title: title),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not share file: $e')),
         );
       }
     }
