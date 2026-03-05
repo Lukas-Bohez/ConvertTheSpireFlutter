@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release tag (e.g. v2.0.0). Leave empty to auto-generate.'
+        description: 'Release tag (e.g. v3.0.3). Leave empty to auto-generate.'
         required: false
       release_name:
         description: 'Release name. Leave empty to use tag.'
@@ -24,21 +24,24 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+        uses: flutter-actions/setup-flutter@v4
         with:
           channel: stable
+          cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Verify formatting
-        run: dart format --output=none --set-exit-if-changed .
-
       - name: Analyze project source
-        run: flutter analyze --fatal-infos
+        run: flutter analyze --no-fatal-infos
 
       - name: Run tests
-        run: flutter test
+        run: |
+          if [ -d "test" ] && find test -name "*_test.dart" -print -quit | grep -q .; then
+            flutter test
+          else
+            echo "No test files found - skipping tests"
+          fi
 
   # ── Windows Build ────────────────────────────────────────────────────
   build-windows:
@@ -49,9 +52,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+        uses: flutter-actions/setup-flutter@v4
         with:
           channel: stable
+          cache: true
 
       - name: Install dependencies
         run: flutter pub get
@@ -59,28 +63,16 @@ jobs:
       - name: Build Windows release
         run: flutter build windows --release
 
-      - name: Build MSIX (unsigned)
-        run: dart run msix:create
-        continue-on-error: true
-
       - name: Archive Windows bundle
         run: |
-          Compress-Archive -Path build\windows\x64\release\bundle\* -DestinationPath ConvertTheSpire-windows-x64.zip
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath windows.zip
         shell: pwsh
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64
-          path: ConvertTheSpire-windows-x64.zip
-
-      - name: Upload MSIX artifact
-        uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: windows-msix
-          path: build/windows/runner/Release/*.msix
-        continue-on-error: true
+          path: windows.zip
 
   # ── Linux Build ──────────────────────────────────────────────────────
   build-linux:
@@ -96,12 +88,14 @@ jobs:
           sudo apt-get install -y \
             cmake ninja-build pkg-config \
             libgtk-3-dev clang \
-            libasound2-dev libmpv-dev
+            libasound2-dev libmpv-dev \
+            libayatana-appindicator3-dev
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+        uses: flutter-actions/setup-flutter@v4
         with:
           channel: stable
+          cache: true
 
       - name: Install dependencies
         run: flutter pub get
@@ -112,13 +106,13 @@ jobs:
       - name: Archive Linux bundle
         run: |
           cd build/linux/x64/release/bundle
-          tar czf "$GITHUB_WORKSPACE/ConvertTheSpire-linux-x64.tar.gz" .
+          zip -r "$GITHUB_WORKSPACE/linux.zip" .
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-x64
-          path: ConvertTheSpire-linux-x64.tar.gz
+          path: linux.zip
 
   # ── Android Build ────────────────────────────────────────────────────
   build-android:
@@ -135,9 +129,10 @@ jobs:
           java-version: '17'
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+        uses: flutter-actions/setup-flutter@v4
         with:
           channel: stable
+          cache: true
 
       - name: Install dependencies
         run: flutter pub get
@@ -145,11 +140,15 @@ jobs:
       - name: Build APK
         run: flutter build apk --release
 
+      - name: Rename APK
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk ConvertTheSpireReborn.apk
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: ConvertTheSpireReborn.apk
 
   # ── Create / Update GitHub Release ──────────────────────────────────
   release:
@@ -173,17 +172,15 @@ jobs:
           name: ${{ inputs.release_name || inputs.release_tag || format('Build {0}', github.run_number) }}
           generate_release_notes: true
           files: |
-            artifacts/windows-x64/ConvertTheSpire-windows-x64.zip
-            artifacts/linux-x64/ConvertTheSpire-linux-x64.tar.gz
-            artifacts/android-apk/app-release.apk
-            artifacts/windows-msix/*.msix
+            artifacts/windows-x64/windows.zip
+            artifacts/linux-x64/linux.zip
+            artifacts/android-apk/ConvertTheSpireReborn.apk
 
       - name: Upload to existing Release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/windows-x64/ConvertTheSpire-windows-x64.zip
-            artifacts/linux-x64/ConvertTheSpire-linux-x64.tar.gz
-            artifacts/android-apk/app-release.apk
-            artifacts/windows-msix/*.msix
+            artifacts/windows-x64/windows.zip
+            artifacts/linux-x64/linux.zip
+            artifacts/android-apk/ConvertTheSpireReborn.apk

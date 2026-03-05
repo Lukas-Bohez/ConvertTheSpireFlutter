@@ -49,4 +49,8 @@ void main() {
     // Search text should be present on the first page
     expect(find.text('Search'), findsWidgets);
   });
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> f0f6ebdc3e10610c410b127e1898bf7aba1736a9
