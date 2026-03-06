@@ -229,6 +229,9 @@ class PlayerState with ChangeNotifier {
 
   // Auxiliary player for thumbnail screenshots (desktop/iOS only).
   Player? _thumbPlayer;
+  // Attached to _thumbPlayer so mpv decodes video frames for screenshots.
+  // ignore: unused_field
+  VideoController? _thumbVideoCtl;
 
   // True once the first video frame has arrived (media_kit) or initialize()
   // has completed (video_player on Android).
@@ -251,6 +254,7 @@ class PlayerState with ChangeNotifier {
         _mkPlayer = Player();
         _mkController = VideoController(_mkPlayer!);
         _thumbPlayer = Player();
+        _thumbVideoCtl = VideoController(_thumbPlayer!);
       } catch (e, st) {
         debugPrint('media_kit player creation failed: $e');
         debugPrint('$st');
@@ -258,6 +262,7 @@ class PlayerState with ChangeNotifier {
         _mkPlayer = null;
         _mkController = null;
         _thumbPlayer = null;
+        _thumbVideoCtl = null;
       }
     } else {
       debugPrint('media_kit disabled on Android — using video_player fallback');
@@ -668,7 +673,7 @@ class PlayerState with ChangeNotifier {
           await _thumbPlayer!.seek(Duration(milliseconds: seekMs));
         }
 
-        await Future.delayed(const Duration(milliseconds: 400));
+        await Future.delayed(const Duration(milliseconds: 800));
         snap = await _thumbPlayer!.screenshot();
         debugPrint(
             'screenshot() returned ${snap?.length ?? 0} bytes for $filePath');
@@ -1764,35 +1769,43 @@ class _PlayerScreenState extends State<PlayerScreen>
                         color: _accent,
                         letterSpacing: 0.5)),
                 const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: PlaybackMode.values.map((mode) {
-                    final selected = state.playbackMode == mode;
-                    final label = switch (mode) {
-                      PlaybackMode.all => 'All',
-                      PlaybackMode.songs => 'Songs',
-                      PlaybackMode.videos => 'Videos',
-                      PlaybackMode.favourites => 'Favourites',
-                    };
-                    final icon = switch (mode) {
-                      PlaybackMode.all => Icons.library_music,
-                      PlaybackMode.songs => Icons.audiotrack,
-                      PlaybackMode.videos => Icons.videocam,
-                      PlaybackMode.favourites => Icons.favorite,
-                    };
-                    return ChoiceChip(
-                      avatar: Icon(icon,
-                          size: 16,
-                          color: selected ? Colors.white : _sub),
-                      label: Text(label),
-                      selected: selected,
-                      selectedColor: _accent,
-                      labelStyle: TextStyle(
-                          color: selected ? Colors.white : _text,
-                          fontSize: 12),
-                      onSelected: (_) => state.setPlaybackMode(mode),
+                Selector<PlayerState, PlaybackMode>(
+                  selector: (_, s) => s.playbackMode,
+                  builder: (_, selectedMode, __) {
+                    return Wrap(
+                      spacing: 8,
+                      children: PlaybackMode.values.map((mode) {
+                        final selected = selectedMode == mode;
+                        final label = switch (mode) {
+                          PlaybackMode.all => 'All',
+                          PlaybackMode.songs => 'Songs',
+                          PlaybackMode.videos => 'Videos',
+                          PlaybackMode.favourites => 'Favourites',
+                        };
+                        final icon = switch (mode) {
+                          PlaybackMode.all => Icons.library_music,
+                          PlaybackMode.songs => Icons.audiotrack,
+                          PlaybackMode.videos => Icons.videocam,
+                          PlaybackMode.favourites => Icons.favorite,
+                        };
+                        return ChoiceChip(
+                          key: ValueKey(mode),
+                          avatar: Icon(icon,
+                              size: 16,
+                              color: selected ? Colors.white : _sub),
+                          label: Text(label),
+                          selected: selected,
+                          selectedColor: _accent,
+                          showCheckmark: false,
+                          labelStyle: TextStyle(
+                              color: selected ? Colors.white : _text,
+                              fontSize: 12),
+                          onSelected: (_) =>
+                              context.read<PlayerState>().setPlaybackMode(mode),
+                        );
+                      }).toList(),
                     );
-                  }).toList(),
+                  },
                 ),
               ],
             ),

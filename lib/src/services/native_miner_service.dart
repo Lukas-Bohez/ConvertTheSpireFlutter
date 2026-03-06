@@ -88,6 +88,8 @@ class NativeMinerService {
   double _downloadProgress = 0;
   int _cpuThreads = 2;
   bool _disposed = false;
+  Timer? _statsThrottle;
+  bool _statsPending = false;
 
   final StreamController<MinerStats> _statsController =
       StreamController<MinerStats>.broadcast();
@@ -515,11 +517,29 @@ class NativeMinerService {
   void _setState(MinerState s, {String? msg}) {
     _state = s;
     if (msg != null) _statusMessage = msg;
-    _emitStats();
+    // State transitions are important — emit immediately.
+    _emitStatsNow();
   }
 
+  /// Throttled emit: batches rapid updates into at most one per second.
   void _emitStats() {
     if (_disposed || _statsController.isClosed) return;
+    if (_statsThrottle?.isActive ?? false) {
+      _statsPending = true;
+      return;
+    }
+    _emitStatsNow();
+    _statsThrottle = Timer(const Duration(seconds: 1), () {
+      if (_statsPending) {
+        _statsPending = false;
+        _emitStatsNow();
+      }
+    });
+  }
+
+  void _emitStatsNow() {
+    if (_disposed || _statsController.isClosed) return;
+    _statsPending = false;
     _statsController.add(MinerStats(
       hashRate: _hashRate,
       avgHashRate: _avgHashRate,
@@ -537,6 +557,7 @@ class NativeMinerService {
 
   void dispose() {
     _disposed = true;
+    _statsThrottle?.cancel();
     // Use synchronous kill for dispose — can't await here.
     final proc = _process;
     _process = null;

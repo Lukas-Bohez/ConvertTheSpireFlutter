@@ -5,6 +5,7 @@ import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/computation_service.dart';
@@ -53,6 +54,11 @@ class SupportScreenState extends State<SupportScreen>
   int? _walletBalance;
   bool _balanceLoading = false;
 
+  // Mining time tracking
+  DateTime? _miningStart;
+  int _totalMinedMinutes = 0; // cumulative across sessions
+  Timer? _miningTimer;
+
   @override
   void initState() {
     super.initState();
@@ -62,7 +68,10 @@ class SupportScreenState extends State<SupportScreen>
       if (mounted) setState(() {});
     };
     _coordinator.onStateChanged = () {
-      if (mounted) setState(() {});
+      if (mounted) {
+        _syncMiningTimer();
+        setState(() {});
+      }
     };
 
     _pulseController = AnimationController(
@@ -72,6 +81,8 @@ class SupportScreenState extends State<SupportScreen>
 
     _startBatteryMonitoring();
     _fetchWalletBalance();
+    _loadMinedMinutes();
+    _syncMiningTimer();
   }
 
   Future<void> _fetchWalletBalance() async {
@@ -81,6 +92,37 @@ class SupportScreenState extends State<SupportScreen>
     _walletBalance = balance;
     _balanceLoading = false;
     if (mounted) setState(() {});
+  }
+
+  Future<void> _loadMinedMinutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    _totalMinedMinutes = prefs.getInt('mining_total_minutes') ?? 0;
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _saveMinedMinutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('mining_total_minutes', _totalMinedMinutes);
+  }
+
+  /// Start or stop the per-minute mining timer based on mining state.
+  void _syncMiningTimer() {
+    final isMining = _coordinator.enabled &&
+        (_coordinator.connected || _coordinator.nativeMiner.isRunning);
+    if (isMining && _miningStart == null) {
+      _miningStart = DateTime.now();
+      _miningTimer ??= Timer.periodic(const Duration(minutes: 1), (_) {
+        if (_miningStart != null) {
+          _totalMinedMinutes++;
+          _saveMinedMinutes();
+          if (mounted) setState(() {});
+        }
+      });
+    } else if (!isMining && _miningStart != null) {
+      _miningStart = null;
+      _miningTimer?.cancel();
+      _miningTimer = null;
+    }
   }
 
   @override
@@ -136,6 +178,7 @@ class SupportScreenState extends State<SupportScreen>
   @override
   void dispose() {
     _batteryTimer?.cancel();
+    _miningTimer?.cancel();
     _pulseController.dispose();
     // Null callbacks to avoid setState on defunct widget.
     // Services are NOT disposed here — they are owned by HomeScreenState.
@@ -146,36 +189,46 @@ class SupportScreenState extends State<SupportScreen>
 
   int get _totalCompleted => _compute.completedResults.length;
 
+  double get _totalMinedHours => _totalMinedMinutes / 60.0;
+
+  String get _minedTimeLabel {
+    final h = _totalMinedMinutes ~/ 60;
+    final m = _totalMinedMinutes % 60;
+    if (h > 0) return '$h h $m min mined';
+    return '$m min mined';
+  }
+
   String get _contributorTier {
-    if (_totalCompleted >= 100) return 'Diamond';
-    if (_totalCompleted >= 50) return 'Gold';
-    if (_totalCompleted >= 20) return 'Silver';
-    if (_totalCompleted >= 5) return 'Bronze';
+    if (_totalMinedHours >= 100) return 'Diamond';
+    if (_totalMinedHours >= 24) return 'Gold';
+    if (_totalMinedHours >= 5) return 'Silver';
+    if (_totalMinedHours >= 1) return 'Bronze';
     return 'New Miner';
   }
 
   Color _tierColor(BuildContext context) {
-    if (_totalCompleted >= 100) return Colors.cyanAccent;
-    if (_totalCompleted >= 50) return Colors.amber;
-    if (_totalCompleted >= 20) return Colors.grey.shade400;
-    if (_totalCompleted >= 5) return Colors.brown.shade300;
+    if (_totalMinedHours >= 100) return Colors.cyanAccent;
+    if (_totalMinedHours >= 24) return Colors.amber;
+    if (_totalMinedHours >= 5) return Colors.grey.shade400;
+    if (_totalMinedHours >= 1) return Colors.brown.shade300;
     return Theme.of(context).colorScheme.primary;
   }
 
   IconData get _tierIcon {
-    if (_totalCompleted >= 100) return Icons.diamond;
-    if (_totalCompleted >= 50) return Icons.workspace_premium;
-    if (_totalCompleted >= 20) return Icons.military_tech;
-    if (_totalCompleted >= 5) return Icons.star;
+    if (_totalMinedHours >= 100) return Icons.diamond;
+    if (_totalMinedHours >= 24) return Icons.workspace_premium;
+    if (_totalMinedHours >= 5) return Icons.military_tech;
+    if (_totalMinedHours >= 1) return Icons.star;
     return Icons.toll;
   }
 
-  int get _nextTierAt {
-    if (_totalCompleted >= 100) return _totalCompleted;
-    if (_totalCompleted >= 50) return 100;
-    if (_totalCompleted >= 20) return 50;
-    if (_totalCompleted >= 5) return 20;
-    return 5;
+  /// Next tier threshold in minutes.
+  int get _nextTierMinutes {
+    if (_totalMinedMinutes >= 6000) return _totalMinedMinutes; // Diamond (100h)
+    if (_totalMinedMinutes >= 1440) return 6000; // → Diamond
+    if (_totalMinedMinutes >= 300) return 1440;  // → Gold (24h)
+    if (_totalMinedMinutes >= 60) return 300;    // → Silver (5h)
+    return 60;                                    // → Bronze (1h)
   }
 
   /// Format large hash counts with SI suffixes.
@@ -474,7 +527,7 @@ class SupportScreenState extends State<SupportScreen>
                       const SizedBox(height: 2),
                       Text(
                         isEnabled
-                            ? '$_totalCompleted tasks completed this session'
+                            ? _minedTimeLabel
                             : 'Mine QUBIC tokens to support the developer',
                         style: TextStyle(
                           fontSize: 13,
@@ -680,7 +733,13 @@ class SupportScreenState extends State<SupportScreen>
   }
 
   Widget _buildTierCard(ColorScheme cs) {
-    final progress = _nextTierAt > 0 ? _totalCompleted / _nextTierAt : 1.0;
+    final nextMin = _nextTierMinutes;
+    final progress = nextMin > 0 ? _totalMinedMinutes / nextMin : 1.0;
+    final remaining = nextMin - _totalMinedMinutes;
+    final remainLabel = remaining > 60
+        ? '${(remaining / 60).ceil()} h to next tier'
+        : '$remaining min to next tier';
+    final atMax = _totalMinedMinutes >= 6000;
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -705,19 +764,19 @@ class SupportScreenState extends State<SupportScreen>
                           fontWeight: FontWeight.bold,
                           color: _tierColor(context),
                         )),
-                    Text('$_totalCompleted tasks completed',
+                    Text(_minedTimeLabel,
                         style: TextStyle(
                             fontSize: 12, color: cs.onSurfaceVariant)),
                   ],
                 ),
                 const Spacer(),
-                if (_totalCompleted < 100)
-                  Text('${_nextTierAt - _totalCompleted} to next tier',
+                if (!atMax)
+                  Text(remainLabel,
                       style: TextStyle(
                           fontSize: 12, color: cs.onSurfaceVariant)),
               ],
             ),
-            if (_totalCompleted < 100) ...[
+            if (!atMax) ...[
               const SizedBox(height: 10),
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
@@ -1270,7 +1329,10 @@ class SupportScreenState extends State<SupportScreen>
     final isNative = _coordinator.nativeMinerSupported;
 
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
+        backgroundColor: Theme.of(context).cardColor,
+        collapsedBackgroundColor: Theme.of(context).cardColor,
         leading: Icon(Icons.settings, color: cs.primary),
         title: const Text('Advanced Settings'),
         children: [

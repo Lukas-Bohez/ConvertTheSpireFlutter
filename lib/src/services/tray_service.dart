@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show VoidCallback, debugPrint, kIsWeb;
+import 'package:path/path.dart' as p;
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -31,13 +32,20 @@ class TrayService with TrayListener, WindowListener {
   }
 
   Future<void> _setupTray() async {
-    // Use the app icon for the tray. On Windows .ico is ideal; we fall back
-    // to the PNG icon bundled in the assets.
+    // Use the app icon for the tray. Resolve the PNG icon bundled in
+    // flutter_assets next to the executable.
     String iconPath;
     if (Platform.isWindows) {
-      // The runner embeds an ICO as the exe resource; tray_manager on
-      // Windows can use the exe path directly to pick up the embedded icon.
-      iconPath = Platform.resolvedExecutable;
+      // The .ico embedded in the exe can't be read by tray_manager; use
+      // the bundled PNG from the flutter_assets folder instead.
+      final exeDir = p.dirname(Platform.resolvedExecutable);
+      final png = p.join(exeDir, 'data', 'flutter_assets', 'assets',
+          'icons', 'favicon-192x192.png');
+      // Fall back to runner resources .ico if the PNG doesn't exist.
+      iconPath = File(png).existsSync()
+          ? png
+          : p.join(exeDir, 'data', 'flutter_assets', 'assets', 'icons',
+              'favicon-192x192.png');
     } else {
       iconPath = 'assets/icons/favicon-192x192.png';
     }
