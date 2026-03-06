@@ -13,6 +13,7 @@ import 'package:audio_service/audio_service.dart' as audio_svc;
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
@@ -45,6 +46,9 @@ class playerPlayerPage extends StatelessWidget {
 enum MediaType { audio, video }
 
 enum RepeatMode { off, one, all }
+
+/// Determines which subset of the library is used for playback.
+enum PlaybackMode { all, songs, videos, favourites }
 
 class MediaItem {
   final String path;
@@ -174,6 +178,18 @@ class PlayerState with ChangeNotifier {
 
   /// Whether playback is restricted to favourite items only.
   bool favouritesOnly = false;
+
+  /// The user-selected playback mode (persisted & shown in Queue tab).
+  PlaybackMode playbackMode = PlaybackMode.all;
+
+  /// Manual queue: indices of library items queued to play next.
+  final List<int> manualQueue = [];
+
+  /// Whether the player is currently playing.
+  bool get isActuallyPlaying => isPlaying;
+
+  /// Thumbnail cache directory (lazy-init).
+  Directory? _thumbCacheDir;
 
   /// Paths marked as favourites (persisted).
   Set<String> _favourites = {};
@@ -401,9 +417,51 @@ class PlayerState with ChangeNotifier {
       if (item != null) {
         // tab-separated: path \t type \t title \t artist
         list.add('${item.path}\t${item.type == MediaType.video ? 'v' : 'a'}\t${item.title ?? ''}\t${item.artist ?? ''}');
+        // Persist thumbnail to disk if available.
+        if (item.thumbnailData != null) {
+          _saveThumbToCache(path, item.thumbnailData!);
+        }
       }
     }
     prefs.setStringList('player_favourites_cache', list);
+  }
+
+  /// Get or create the thumbnail cache directory.
+  Future<Directory> _getThumbCacheDir() async {
+    if (_thumbCacheDir != null) return _thumbCacheDir!;
+    final appDir = await getApplicationSupportDirectory();
+    _thumbCacheDir = Directory('${appDir.path}${Platform.pathSeparator}thumb_cache');
+    if (!_thumbCacheDir!.existsSync()) {
+      _thumbCacheDir!.createSync(recursive: true);
+    }
+    return _thumbCacheDir!;
+  }
+
+  String _thumbCacheKey(String path) {
+    // Simple hash of the path to create a filename.
+    final hash = path.hashCode.toUnsigned(32).toRadixString(16).padLeft(8, '0');
+    return hash;
+  }
+
+  Future<void> _saveThumbToCache(String itemPath, Uint8List data) async {
+    try {
+      final dir = await _getThumbCacheDir();
+      final file = File('${dir.path}${Platform.pathSeparator}${_thumbCacheKey(itemPath)}.png');
+      await file.writeAsBytes(data);
+    } catch (e) {
+      debugPrint('thumb cache write error: $e');
+    }
+  }
+
+  Future<Uint8List?> _loadThumbFromCache(String itemPath) async {
+    try {
+      final dir = await _getThumbCacheDir();
+      final file = File('${dir.path}${Platform.pathSeparator}${_thumbCacheKey(itemPath)}.png');
+      if (await file.exists()) return await file.readAsBytes();
+    } catch (e) {
+      debugPrint('thumb cache read error: $e');
+    }
+    return null;
   }
 
   List<MapEntry<int, MediaItem>> get favouriteEntries => library
@@ -961,6 +1019,9 @@ class PlayerState with ChangeNotifier {
     shuffle = prefs.getBool('shuffle') ?? false;
     repeatMode = RepeatMode.values[
         (prefs.getInt('repeat') ?? 0).clamp(0, RepeatMode.values.length - 1)];
+    playbackMode = PlaybackMode.values[
+        (prefs.getInt('playbackMode') ?? 0).clamp(0, PlaybackMode.values.length - 1)];
+    _applyPlaybackMode();
     _favourites = (prefs.getStringList('player_favourites') ?? []).toSet();
 
     // Restore favourite metadata cache.
@@ -976,10 +1037,94 @@ class PlayerState with ChangeNotifier {
             title: title, artist: artist);
       }
     }
+    // Load cached thumbnails from disk for favourites.
+    _loadFavouriteThumbsFromDisk();
+    notifyListeners();
+  }
+
+  /// Load persisted thumbnail images for all favourites in the background.
+  Future<void> _loadFavouriteThumbsFromDisk() async {
+    for (final path in _favouriteCache.keys.toList()) {
+      final cached = _favouriteCache[path];
+      if (cached == null || cached.thumbnailData != null) continue;
+      final bytes = await _loadThumbFromCache(path);
+      if (bytes != null && _favouriteCache.containsKey(path)) {
+        _favouriteCache[path] = cached.copyWith(thumbnailData: bytes);
+        // Also update library item if present.
+        final idx = library.indexWhere((item) => item.path == path);
+        if (idx >= 0 && library[idx].thumbnailData == null) {
+          library[idx] = library[idx].copyWith(thumbnailData: bytes);
+        }
+        notifyListeners();
+      }
+    }
+  }
+
+  /// Apply playback mode to the activeTabFilter and favouritesOnly flags.
+  void _applyPlaybackMode() {
+    switch (playbackMode) {
+      case PlaybackMode.songs:
+        activeTabFilter = MediaType.audio;
+        favouritesOnly = false;
+      case PlaybackMode.videos:
+        activeTabFilter = MediaType.video;
+        favouritesOnly = false;
+      case PlaybackMode.favourites:
+        activeTabFilter = null;
+        favouritesOnly = true;
+      case PlaybackMode.all:
+        activeTabFilter = null;
+        favouritesOnly = false;
+    }
+  }
+
+  void setPlaybackMode(PlaybackMode mode) {
+    playbackMode = mode;
+    prefs.setInt('playbackMode', mode.index);
+    _applyPlaybackMode();
+    notifyListeners();
+  }
+
+  // ── Queue management ──
+
+  /// Add a library index to the manual play-next queue.
+  void enqueue(int index) {
+    if (index < 0 || index >= library.length) return;
+    manualQueue.add(index);
+    notifyListeners();
+  }
+
+  /// Remove a specific position from the manual queue.
+  void dequeue(int queuePosition) {
+    if (queuePosition < 0 || queuePosition >= manualQueue.length) return;
+    manualQueue.removeAt(queuePosition);
+    notifyListeners();
+  }
+
+  /// Move a queue item from one position to another.
+  void reorderQueue(int oldIndex, int newIndex) {
+    if (oldIndex < 0 || oldIndex >= manualQueue.length) return;
+    if (newIndex < 0) newIndex = 0;
+    if (newIndex > manualQueue.length) newIndex = manualQueue.length;
+    final item = manualQueue.removeAt(oldIndex);
+    if (newIndex > oldIndex) newIndex--;
+    manualQueue.insert(newIndex, item);
+    notifyListeners();
+  }
+
+  void clearQueue() {
+    manualQueue.clear();
     notifyListeners();
   }
 
   Future<void> _handleCompletion() async {
+    // Manual queue takes priority.
+    if (manualQueue.isNotEmpty) {
+      currentIndex = manualQueue.removeAt(0);
+      await _loadCurrent();
+      notifyListeners();
+      return;
+    }
     if (repeatMode == RepeatMode.one) {
       _videoCompletionFired = false;
       await _loadCurrent();
@@ -1032,6 +1177,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   late final ScrollController _songsScrollController;
   late final ScrollController _videosScrollController;
   late final ScrollController _favouritesScrollController;
+  late final ScrollController _queueScrollController;
 
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -1052,37 +1198,22 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _allScrollController = ScrollController();
     _songsScrollController = ScrollController();
     _videosScrollController = ScrollController();
     _favouritesScrollController = ScrollController();
+    _queueScrollController = ScrollController();
 
     // Update activeTabFilter on the PlayerState when tabs change.
     _tabController.addListener(_onTabChanged);
   }
 
   void _onTabChanged() {
+    // Playback mode is now managed from the Queue tab's mode selector.
+    // Tab switching only triggers a rebuild to update the UI.
     if (!_tabController.indexIsChanging) {
-      final state = context.read<PlayerState>();
-      switch (_tabController.index) {
-        case 1:
-          state.activeTabFilter = MediaType.audio;
-          state.favouritesOnly = false;
-          break;
-        case 2:
-          state.activeTabFilter = MediaType.video;
-          state.favouritesOnly = false;
-          break;
-        case 3:
-          state.activeTabFilter = null;
-          state.favouritesOnly = true;
-          break;
-        default:
-          state.activeTabFilter = null;
-          state.favouritesOnly = false;
-          break;
-      }
+      setState(() {});
     }
   }
 
@@ -1091,6 +1222,10 @@ class _PlayerScreenState extends State<PlayerScreen>
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _allScrollController.dispose();
+    _songsScrollController.dispose();
+    _videosScrollController.dispose();
+    _favouritesScrollController.dispose();
+    _queueScrollController.dispose();
     _songsScrollController.dispose();
     _videosScrollController.dispose();
     _favouritesScrollController.dispose();
@@ -1152,6 +1287,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                         Tab(text: '♪ Songs (${state.audioEntries.length})'),
                         Tab(text: '▶ Videos (${state.videoEntries.length})'),
                         Tab(text: '★ Favourites (${state.favouriteEntries.length})'),
+                        Tab(text: '⏭ Queue (${state.manualQueue.length})'),
                       ],
                     ),
                     bg: _bg,
@@ -1195,6 +1331,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       _songsTab(state),
                       _videosTab(state),
                       _favouritesTab(state),
+                      _queueTab(state),
                     ],
                   ),
                 ),
@@ -1331,6 +1468,8 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   Widget _controls(PlayerState state) {
+    final isFav = state.currentItem != null &&
+        state.isFavourite(state.currentItem!.path);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -1340,7 +1479,26 @@ class _PlayerScreenState extends State<PlayerScreen>
           active: state.shuffle,
           onTap: state.toggleShuffle,
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
+        // Queue button — queue current song to play again
+        _iconBtn(
+          Icons.queue_music,
+          state.currentItem == null
+              ? () {}
+              : () {
+                  state.enqueue(state.currentIndex);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Queued: ${state.currentItem!.title ?? p.basenameWithoutExtension(state.currentItem!.path)}',
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+          size: 20,
+        ),
+        const SizedBox(width: 4),
         _iconBtn(
           Icons.skip_previous_rounded,
           () {
@@ -1373,7 +1531,7 @@ class _PlayerScreenState extends State<PlayerScreen>
           },
           size: 30,
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
         _toggleBtn(
           icon: state.repeatMode == RepeatMode.one
               ? Icons.repeat_one
@@ -1386,7 +1544,23 @@ class _PlayerScreenState extends State<PlayerScreen>
           active: state.repeatMode != RepeatMode.off,
           onTap: state.cycleRepeat,
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
+        // Favourite button for current track
+        InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: state.currentItem == null
+              ? null
+              : () => state.toggleFavourite(state.currentItem!.path),
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Icon(
+              isFav ? Icons.favorite : Icons.favorite_border,
+              size: 22,
+              color: isFav ? Colors.redAccent : _sub,
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
         _iconBtn(
           Icons.cast,
           state.currentItem == null
@@ -1570,6 +1744,173 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
+  Widget _queueTab(PlayerState state) {
+    return Scrollbar(
+      controller: _queueScrollController,
+      child: ListView(
+        controller: _queueScrollController,
+        primary: false,
+        children: [
+          // ── Playback mode selector ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Playback Mode',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: _accent,
+                        letterSpacing: 0.5)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: PlaybackMode.values.map((mode) {
+                    final selected = state.playbackMode == mode;
+                    final label = switch (mode) {
+                      PlaybackMode.all => 'All',
+                      PlaybackMode.songs => 'Songs',
+                      PlaybackMode.videos => 'Videos',
+                      PlaybackMode.favourites => 'Favourites',
+                    };
+                    final icon = switch (mode) {
+                      PlaybackMode.all => Icons.library_music,
+                      PlaybackMode.songs => Icons.audiotrack,
+                      PlaybackMode.videos => Icons.videocam,
+                      PlaybackMode.favourites => Icons.favorite,
+                    };
+                    return ChoiceChip(
+                      avatar: Icon(icon,
+                          size: 16,
+                          color: selected ? Colors.white : _sub),
+                      label: Text(label),
+                      selected: selected,
+                      selectedColor: _accent,
+                      labelStyle: TextStyle(
+                          color: selected ? Colors.white : _text,
+                          fontSize: 12),
+                      onSelected: (_) => state.setPlaybackMode(mode),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          Divider(color: _div, indent: 16, endIndent: 16),
+          // ── Queue header ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Row(
+              children: [
+                Text('Up Next',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: _accent,
+                        letterSpacing: 0.5)),
+                const Spacer(),
+                if (state.manualQueue.isNotEmpty)
+                  TextButton.icon(
+                    onPressed: state.clearQueue,
+                    icon: const Icon(Icons.clear_all, size: 16),
+                    label: const Text('Clear', style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                        padding: const EdgeInsets.symmetric(horizontal: 8)),
+                  ),
+              ],
+            ),
+          ),
+          if (state.manualQueue.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.queue_music,
+                        size: 48, color: _sub.withValues(alpha: 0.4)),
+                    const SizedBox(height: 12),
+                    Text('Queue is empty',
+                        style: TextStyle(color: _sub, fontSize: 14)),
+                    const SizedBox(height: 4),
+                    Text('Tap the queue button to add songs',
+                        style: TextStyle(
+                            color: _sub.withValues(alpha: 0.6),
+                            fontSize: 12)),
+                  ],
+                ),
+              ),
+            )
+          else
+            ReorderableListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: state.manualQueue.length,
+              onReorder: state.reorderQueue,
+              itemBuilder: (_, i) {
+                final libIdx = state.manualQueue[i];
+                final item = libIdx < state.library.length
+                    ? state.library[libIdx]
+                    : null;
+                if (item == null) {
+                  return ListTile(
+                    key: ValueKey('q_$i'),
+                    title: Text('(removed)',
+                        style: TextStyle(color: _sub, fontSize: 13)),
+                  );
+                }
+                return Material(
+                  key: ValueKey('q_$i'),
+                  color: Colors.transparent,
+                  child: ListTile(
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    leading: _thumb(item, 40,
+                        item.type == MediaType.video
+                            ? Icons.videocam
+                            : Icons.audiotrack),
+                    title: Text(
+                      item.title ?? p.basenameWithoutExtension(item.path),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, color: _text),
+                    ),
+                    subtitle: item.artist != null
+                        ? Text(item.artist!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 11, color: _sub))
+                        : null,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.remove_circle_outline,
+                              size: 18, color: Colors.redAccent),
+                          onPressed: () => state.dequeue(i),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(Icons.drag_handle, size: 18, color: _sub),
+                      ],
+                    ),
+                    onTap: () {
+                      // Play this queued item immediately and remove from queue.
+                      final idx = state.manualQueue.removeAt(i);
+                      state.select(idx);
+                    },
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _empty() {
     return Center(
       child: Column(
@@ -1639,6 +1980,21 @@ class _PlayerScreenState extends State<PlayerScreen>
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                state.enqueue(index);
+                ScaffoldMessenger.of(context)
+                  ..clearSnackBars()
+                  ..showSnackBar(SnackBar(
+                      content: Text('Added to queue'),
+                      duration: const Duration(seconds: 1)));
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Icon(Icons.queue_music, size: 18, color: _sub),
+              ),
+            ),
             InkWell(
               borderRadius: BorderRadius.circular(16),
               onTap: () => state.toggleFavourite(item.path),
@@ -1728,6 +2084,32 @@ class _PlayerScreenState extends State<PlayerScreen>
                             isFav ? Icons.favorite : Icons.favorite_border,
                             size: 14,
                             color: isFav ? Colors.redAccent : Colors.white70,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 2,
+                      right: 2,
+                      child: GestureDetector(
+                        onTap: () {
+                          state.enqueue(idx);
+                          ScaffoldMessenger.of(context)
+                            ..clearSnackBars()
+                            ..showSnackBar(SnackBar(
+                                content: Text('Added to queue'),
+                                duration: const Duration(seconds: 1)));
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.queue_music,
+                            size: 14,
+                            color: Colors.white70,
                           ),
                         ),
                       ),

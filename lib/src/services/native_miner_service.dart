@@ -255,6 +255,9 @@ class NativeMinerService {
       _process = null;
     }
 
+    // Kill ALL lingering qli-Client instances before starting fresh.
+    await killAllInstances();
+
     final wallet = walletId ?? QubicService.walletId;
     final t = threads ?? _cpuThreads;
 
@@ -299,6 +302,23 @@ class NativeMinerService {
         mode: ProcessStartMode.normal,
       );
 
+      // Boost process priority on Windows so it actually uses the CPU.
+      if (Platform.isWindows) {
+        final priorityClass = t >= (_cpuThreads * 0.7).ceil()
+            ? 'AboveNormal'
+            : 'Normal';
+        try {
+          await Process.run('wmic', [
+            'process',
+            'where',
+            'ProcessId=${_process!.pid}',
+            'CALL',
+            'SetPriority',
+            priorityClass == 'AboveNormal' ? '32768' : '32',
+          ]);
+        } catch (_) {}
+      }
+
       _setState(MinerState.running, msg: 'Connecting to pool\u2026');
 
       // Listen to stdout / stderr.
@@ -336,7 +356,23 @@ class NativeMinerService {
     if (proc != null) {
       await _killProcess(proc);
     }
+    // Kill any orphaned instances that weren't tracked by this service.
+    await killAllInstances();
     _setState(MinerState.stopped, msg: 'Stopped');
+  }
+
+  /// Kill ALL qli-Client processes on the system, not just the tracked one.
+  /// This handles orphaned processes from previous runs or restarts.
+  static Future<void> killAllInstances() async {
+    try {
+      if (!kIsWeb && Platform.isWindows) {
+        await Process.run('taskkill', ['/F', '/IM', 'qli-Client.exe']);
+      } else if (!kIsWeb && Platform.isLinux) {
+        await Process.run('pkill', ['-f', 'qli-Client']);
+      }
+    } catch (e) {
+      debugPrint('killAllInstances: $e');
+    }
   }
 
   /// Force-kill a miner process and all its children.
@@ -513,6 +549,8 @@ class NativeMinerService {
         }
       } catch (_) {}
     }
+    // Kill all orphaned instances too.
+    killAllInstances();
     _hashRate = 0;
     _state = MinerState.stopped;
     if (!_statsController.isClosed) _statsController.close();

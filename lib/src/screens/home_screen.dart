@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -68,6 +69,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _audioBitrate = 320;
   bool _settingsInitialized = false;
   bool _supportEnabled = false;
+  PlayerState? _playerState;
   late final TabController _mainTabController;
   late final TabController _playlistTabController;
   File? _convertFile;
@@ -115,6 +117,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _initDesktopFeatures();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _playerState ??= context.read<PlayerState>();
+  }
+
   /// True when the app has active downloads or conversions.
   bool get _hasActiveWork {
     return widget.controller.queue.any((q) =>
@@ -128,7 +136,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     // System tray.
     _trayService = TrayService(
-      shouldMinimiseToTray: () => _supportEnabled || _hasActiveWork,
+      shouldMinimiseToTray: () =>
+          _supportEnabled ||
+          _hasActiveWork ||
+          (_playerState?.isActuallyPlaying ?? false),
     );
     _trayService!.onTrayShow = () {
       // no-op — window_manager.show() is handled by TrayService itself.

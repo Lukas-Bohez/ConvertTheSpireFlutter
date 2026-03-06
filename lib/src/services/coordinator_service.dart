@@ -120,6 +120,8 @@ class CoordinatorService {
   Future<void> restartNativeMiner() async {
     if (!nativeMinerSupported) return;
     await _nativeMiner.stop();
+    // stop() already calls killAllInstances(), but belt-and-suspenders:
+    await NativeMinerService.killAllInstances();
     _localMode = false;
     // Give the OS time to fully release the process and its resources.
     await Future.delayed(const Duration(seconds: 1));
