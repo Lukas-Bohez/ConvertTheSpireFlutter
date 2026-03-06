@@ -181,6 +181,7 @@ class PlayerState with ChangeNotifier {
   /// Number of items from the currently loaded folder (excludes appended
   /// cached favourites from other folders).
   int _folderItemCount = 0;
+  int _loadVersion = 0;
 
   int get folderItemCount => _folderItemCount;
 
@@ -286,20 +287,6 @@ class PlayerState with ChangeNotifier {
         if (_disposed) return;
         if (currentItem?.type == MediaType.video) {
           duration = dur;
-          notifyListeners();
-        }
-      }));
-      _subs.add(_mkPlayer!.stream.volume.listen((v) {
-        if (_disposed) return;
-        // media_kit reports the boosted volume — reverse the boost to get the
-        // user-facing value.
-        final raw = (v / 100).clamp(0.0, 1.0);
-        final unboosted = currentItem?.type == MediaType.video
-            ? (raw / _videoVolumeBoost).clamp(0.0, 1.0)
-            : raw;
-        if ((unboosted - volume).abs() > 0.01) {
-          volume = unboosted;
-          prefs.setDouble('volume', volume);
           notifyListeners();
         }
       }));
@@ -433,29 +420,42 @@ class PlayerState with ChangeNotifier {
   }
 
   Future<void> setLibrary(List<MediaItem> items) async {
+    final version = ++_loadVersion;
     isLoading = true;
+    _folderItemCount = 0;
+
+    // Stop any currently playing media to avoid stream listener interference.
+    try { await _audio.stop(); } catch (_) {}
+    if (_videoSupported && _mkPlayer != null) {
+      try { await _mkPlayer!.stop(); } catch (_) {}
+    }
+    await _disposeAndroidController();
+
     library = List.from(items);
     currentIndex = 0;
+    position = Duration.zero;
+    duration = null;
     notifyListeners();
 
     // ── Process audio metadata in parallel batches for speed ──
+    final lib = library; // capture reference for safe concurrent access
     const batchSize = 6;
-    for (int start = 0; start < library.length; start += batchSize) {
-      final end = start + batchSize > library.length
-          ? library.length
-          : start + batchSize;
+    for (int start = 0; start < lib.length; start += batchSize) {
+      if (_loadVersion != version) return;
+      final end = (start + batchSize).clamp(0, lib.length);
       await Future.wait(
-        List.generate(end - start, (j) => _enrichMetadata(start + j)),
+        List.generate(end - start, (j) => _enrichMetadata(start + j, lib)),
       );
+      if (_loadVersion != version) return;
       notifyListeners();
     }
 
     // Mark how many items came from this folder.
-    _folderItemCount = library.length;
+    _folderItemCount = lib.length;
 
     // Append cached favourites that are NOT in the current folder so the
     // Favourites tab still shows them.
-    final folderPaths = library.map((e) => e.path).toSet();
+    final folderPaths = lib.map((e) => e.path).toSet();
     for (final path in _favourites) {
       if (!folderPaths.contains(path) && _favouriteCache.containsKey(path)) {
         library.add(_favouriteCache[path]!);
@@ -464,8 +464,8 @@ class PlayerState with ChangeNotifier {
 
     // Update the favourite cache with fresher metadata from this folder.
     for (int i = 0; i < _folderItemCount; i++) {
-      if (_favourites.contains(library[i].path)) {
-        _favouriteCache[library[i].path] = library[i];
+      if (_favourites.contains(lib[i].path)) {
+        _favouriteCache[lib[i].path] = lib[i];
       }
     }
     _saveFavouriteCache();
@@ -474,28 +474,32 @@ class PlayerState with ChangeNotifier {
     isLoading = false;
     notifyListeners();
 
-    // ── Generate video thumbnails lazily in background ──
+    // ── Generate video thumbnails sequentially in background ──
+    _generateThumbnailsInBackground(version);
+  }
+
+  /// Sequential thumbnail generation — avoids races on shared _thumbPlayer.
+  Future<void> _generateThumbnailsInBackground(int version) async {
     for (int i = 0; i < _folderItemCount; i++) {
-      if (library[i].type == MediaType.video &&
-          library[i].thumbnailData == null) {
-        final idx = i;
-        final path = library[i].path;
-        _generateVideoThumbnail(path).then((thumb) {
-          if (thumb != null &&
-              idx < library.length &&
-              library[idx].path == path) {
-            library[idx] = library[idx].copyWith(thumbnailData: thumb);
-            notifyListeners();
-          }
-        });
+      if (_loadVersion != version || i >= library.length) return;
+      if (library[i].type != MediaType.video ||
+          library[i].thumbnailData != null) {
+        continue;
+      }
+      final path = library[i].path;
+      final thumb = await _generateVideoThumbnail(path);
+      if (_loadVersion != version) return;
+      if (thumb != null && i < library.length && library[i].path == path) {
+        library[i] = library[i].copyWith(thumbnailData: thumb);
+        notifyListeners();
       }
     }
   }
 
   /// Read audio metadata + embedded art for a single library item.
-  Future<void> _enrichMetadata(int i) async {
-    if (i >= library.length) return;
-    final item = library[i];
+  Future<void> _enrichMetadata(int i, List<MediaItem> lib) async {
+    if (i >= lib.length) return;
+    final item = lib[i];
     try {
       final metaPath = await _resolveLocalPath(item.path);
       final tag = await readMetadata(File(metaPath), getImage: true);
@@ -508,7 +512,7 @@ class PlayerState with ChangeNotifier {
           if (safePng != null) break;
         }
       }
-      library[i] = item.copyWith(
+      lib[i] = item.copyWith(
         title: tag.title?.trim().isNotEmpty == true
             ? tag.title!.trim()
             : item.title,
@@ -619,12 +623,14 @@ class PlayerState with ChangeNotifier {
 
   void _applyVolume() {
     _audio.setVolume(volume);
-    // Videos are often mastered quieter than music — apply a boost.
-    final videoVol = (volume * _videoVolumeBoost).clamp(0.0, 1.0);
-    if (_videoSupported && _mkPlayer != null) {
-      _mkPlayer!.setVolume(videoVol * 100);
+    if (currentItem?.type == MediaType.video) {
+      // media_kit (mpv) supports volume > 100 for amplification.
+      if (_videoSupported && _mkPlayer != null) {
+        _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+      }
+      _androidController?.setVolume(
+          (volume * _videoVolumeBoost).clamp(0.0, 1.0));
     }
-    _androidController?.setVolume(videoVol);
   }
 
   // ── Playback ──
@@ -695,8 +701,7 @@ class PlayerState with ChangeNotifier {
           if (_videoSupported && _mkPlayer != null) {
             // ── Desktop / iOS: media_kit ──
             await _mkPlayer!.open(Media(_toUri(item.path)), play: true);
-            final videoVol = (volume * _videoVolumeBoost).clamp(0.0, 1.0);
-            await _mkPlayer!.setVolume(videoVol * 100);
+            await _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
           } else {
             // ── Android: video_player (ExoPlayer) ──
             await _disposeAndroidController();
@@ -1835,7 +1840,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       }
     }
 
-    if (mounted) context.read<PlayerState>().setLibrary(files);
+    if (mounted) await context.read<PlayerState>().setLibrary(files);
   }
 }
 
