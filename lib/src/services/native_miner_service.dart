@@ -369,12 +369,15 @@ class NativeMinerService {
 
   // ── Output parsing ──────────────────────────────────────────────────────
 
-  // Matches: "167 it/s" (first occurrence = current rate)
+  // Strip ANSI escape codes (coloured output from qli-Client)
+  static final _ansiRe = RegExp(r'\x1B\[[0-9;]*[A-Za-z]');
+
+  // Matches: "167 it/s", "13.1K it/s" (first occurrence = current rate)
   static final _hashRateRe =
-      RegExp(r'(\d+(?:[.,]\d+)?)\s*(?:it/s|iterations/s|sol/s)', caseSensitive: false);
-  // Matches: "163 avg it/s"
+      RegExp(r'(\d+(?:[.,]\d+)?)\s*([KkMmGg])?\s*(?:it/s|iterations/s|sol/s|h/s)', caseSensitive: false);
+  // Matches: "163 avg it/s", "13.1K avg it/s"
   static final _avgRateRe =
-      RegExp(r'(\d+(?:[.,]\d+)?)\s*avg\s*it/s', caseSensitive: false);
+      RegExp(r'(\d+(?:[.,]\d+)?)\s*([KkMmGg])?\s*avg\s*(?:it/s|h/s)', caseSensitive: false);
   // Matches: "SOLS: 0/0 (R:0)" → found/submitted (rejected)
   static final _solsRe =
       RegExp(r'SOLS:\s*(\d+)/(\d+)\s*\(R:(\d+)\)');
@@ -393,8 +396,21 @@ class NativeMinerService {
     'randomx init',
   ];
 
+  /// Parse a rate match that may contain K/M/G suffix.
+  static double _parseRateMatch(Match m) {
+    final raw = m.group(1)!.replaceAll(',', '.');
+    var value = double.tryParse(raw) ?? 0;
+    final suffix = m.group(2)?.toUpperCase();
+    if (suffix == 'K') value *= 1000;
+    else if (suffix == 'M') value *= 1000000;
+    else if (suffix == 'G') value *= 1000000000;
+    return value;
+  }
+
   void _parseLine(String line) {
     if (_disposed) return;
+    // Strip ANSI escape codes that break regex parsing.
+    line = line.replaceAll(_ansiRe, '');
     debugPrint('MINER: $line');
 
     // ── Parse epoch line: E:202 | SOLS: 0/0 (R:0) | 167 it/s | 163 avg it/s
@@ -411,18 +427,16 @@ class NativeMinerService {
       _solutionsRejected = int.tryParse(solsMatch.group(3)!) ?? _solutionsRejected;
     }
 
-    // ── Parse hash rate: current it/s
+    // ── Parse hash rate: current it/s (handles K/M/G suffixes)
     final hashMatch = _hashRateRe.firstMatch(line);
     if (hashMatch != null) {
-      final raw = hashMatch.group(1)!.replaceAll(',', '.');
-      _hashRate = double.tryParse(raw) ?? _hashRate;
+      _hashRate = _parseRateMatch(hashMatch);
     }
 
     // ── Parse average hash rate: avg it/s
     final avgMatch = _avgRateRe.firstMatch(line);
     if (avgMatch != null) {
-      final raw = avgMatch.group(1)!.replaceAll(',', '.');
-      _avgHashRate = double.tryParse(raw) ?? _avgHashRate;
+      _avgHashRate = _parseRateMatch(avgMatch);
     }
 
     // ── Explicit solution messages
@@ -433,17 +447,19 @@ class NativeMinerService {
     // ── Connection / status messages
     final lower = line.toLowerCase();
 
-    // Epoch line with it/s = actively mining
+    // Epoch line — actively mining if any rate > 0
     if (epochMatch != null && _hashRate > 0) {
       _statusMessage = 'Mining \u2022 Epoch $_epoch \u2022 ${_hashRate.round()} it/s';
+    } else if (epochMatch != null && _avgHashRate > 0) {
+      _statusMessage = 'Mining \u2022 Epoch $_epoch \u2022 warming up';
     } else if (epochMatch != null) {
       _statusMessage = 'Mining \u2022 Epoch $_epoch \u2022 initializing\u2026';
     } else if (lower.contains('use pool') || lower.contains('connected')) {
       _statusMessage = 'Connected to pool';
     } else if (lower.contains('cpu') && lower.contains('ready')) {
-      _statusMessage = 'XMR trainer ready, mining\u2026';
+      _statusMessage = 'CPU trainer ready, mining\u2026';
     } else if (lower.contains('idle') || lower.contains('waiting')) {
-      _statusMessage = 'Idle (epoch gap)';
+      _statusMessage = 'Idle (waiting for next round)';
     } else if (lower.contains('error') || lower.contains('fail')) {
       // Filter known XMRig performance warnings
       final isKnownWarning = _ignoredWarnings.any((w) => lower.contains(w));

@@ -172,6 +172,9 @@ class PlayerState with ChangeNotifier {
   /// Set by the UI based on which tab is active (null = all).
   MediaType? activeTabFilter;
 
+  /// Whether playback is restricted to favourite items only.
+  bool favouritesOnly = false;
+
   /// Paths marked as favourites (persisted).
   Set<String> _favourites = {};
 
@@ -437,14 +440,14 @@ class PlayerState with ChangeNotifier {
     duration = null;
     notifyListeners();
 
-    // ── Process audio metadata in parallel batches for speed ──
+    // ── Fast pass: read title & artist only (no images) ──
     final lib = library; // capture reference for safe concurrent access
-    const batchSize = 6;
+    const batchSize = 20;
     for (int start = 0; start < lib.length; start += batchSize) {
       if (_loadVersion != version) return;
       final end = (start + batchSize).clamp(0, lib.length);
       await Future.wait(
-        List.generate(end - start, (j) => _enrichMetadata(start + j, lib)),
+        List.generate(end - start, (j) => _enrichMetadataFast(start + j, lib)),
       );
       if (_loadVersion != version) return;
       notifyListeners();
@@ -474,44 +477,46 @@ class PlayerState with ChangeNotifier {
     isLoading = false;
     notifyListeners();
 
-    // ── Generate video thumbnails sequentially in background ──
+    // ── Background: load thumbnails for all items ──
+    _loadAudioThumbnailsInBackground(version);
     _generateThumbnailsInBackground(version);
   }
 
   /// Sequential thumbnail generation — avoids races on shared _thumbPlayer.
   Future<void> _generateThumbnailsInBackground(int version) async {
-    for (int i = 0; i < _folderItemCount; i++) {
+    for (int i = 0; i < library.length; i++) {
       if (_loadVersion != version || i >= library.length) return;
       if (library[i].type != MediaType.video ||
           library[i].thumbnailData != null) {
         continue;
       }
       final path = library[i].path;
+      // Skip files that don't exist (cached favourites from other folders)
+      if (!path.startsWith('content://')) {
+        try {
+          if (!await File(path).exists()) continue;
+        } catch (_) { continue; }
+      }
       final thumb = await _generateVideoThumbnail(path);
       if (_loadVersion != version) return;
       if (thumb != null && i < library.length && library[i].path == path) {
         library[i] = library[i].copyWith(thumbnailData: thumb);
+        if (_favourites.contains(path)) {
+          _favouriteCache[path] = library[i];
+        }
         notifyListeners();
       }
     }
   }
 
-  /// Read audio metadata + embedded art for a single library item.
-  Future<void> _enrichMetadata(int i, List<MediaItem> lib) async {
+  /// Read only title/artist (no images) for fast initial loading.
+  Future<void> _enrichMetadataFast(int i, List<MediaItem> lib) async {
     if (i >= lib.length) return;
     final item = lib[i];
+    if (item.type == MediaType.video) return;
     try {
       final metaPath = await _resolveLocalPath(item.path);
-      final tag = await readMetadata(File(metaPath), getImage: true);
-      Uint8List? safePng;
-      if (tag.pictures.isNotEmpty) {
-        for (final pic in tag.pictures) {
-          final raw = pic.bytes;
-          if (raw.isEmpty) continue;
-          safePng = await _transcodeToSafePng(raw, mimeType: pic.mimetype);
-          if (safePng != null) break;
-        }
-      }
+      final tag = await readMetadata(File(metaPath), getImage: false);
       lib[i] = item.copyWith(
         title: tag.title?.trim().isNotEmpty == true
             ? tag.title!.trim()
@@ -519,10 +524,46 @@ class PlayerState with ChangeNotifier {
         artist: tag.artist?.trim().isNotEmpty == true
             ? tag.artist!.trim()
             : item.artist,
-        thumbnailData: safePng ?? item.thumbnailData,
       );
     } catch (e) {
-      debugPrint('metadata error for ${item.path}: $e');
+      debugPrint('metadata fast error for ${item.path}: $e');
+    }
+  }
+
+  /// Background: load audio cover art from metadata for all library items.
+  Future<void> _loadAudioThumbnailsInBackground(int version) async {
+    for (int i = 0; i < library.length; i++) {
+      if (_loadVersion != version || i >= library.length) return;
+      if (library[i].type != MediaType.audio) continue;
+      if (library[i].thumbnailData != null) continue;
+      final path = library[i].path;
+      if (!path.startsWith('content://')) {
+        try {
+          if (!await File(path).exists()) continue;
+        } catch (_) { continue; }
+      }
+      try {
+        final metaPath = await _resolveLocalPath(path);
+        final tag = await readMetadata(File(metaPath), getImage: true);
+        if (_loadVersion != version || i >= library.length) return;
+        if (tag.pictures.isNotEmpty) {
+          for (final pic in tag.pictures) {
+            if (pic.bytes.isEmpty) continue;
+            final safePng = await _transcodeToSafePng(pic.bytes, mimeType: pic.mimetype);
+            if (_loadVersion != version || i >= library.length) return;
+            if (safePng != null) {
+              library[i] = library[i].copyWith(thumbnailData: safePng);
+              if (_favourites.contains(path)) {
+                _favouriteCache[path] = library[i];
+              }
+              notifyListeners();
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('thumbnail bg error for $path: $e');
+      }
     }
   }
 
@@ -634,6 +675,24 @@ class PlayerState with ChangeNotifier {
   }
 
   // ── Playback ──
+
+  /// Get valid playback indices based on current mode and filters.
+  List<int> _getPlaybackCandidates({MediaType? only}) {
+    final scope = _folderItemCount > 0 ? _folderItemCount : library.length;
+    return library.asMap().entries
+        .where((e) {
+          if (favouritesOnly) {
+            if (!_favourites.contains(e.value.path)) return false;
+          } else {
+            if (e.key >= scope) return false;
+          }
+          if (only != null && e.value.type != only) return false;
+          if (!_videoSupported && !Platform.isAndroid && e.value.type != MediaType.audio) return false;
+          return true;
+        })
+        .map((e) => e.key)
+        .toList();
+  }
 
   Future<void> select(int index) async {
     if (index < 0 || index >= library.length) return;
@@ -839,53 +898,42 @@ class PlayerState with ChangeNotifier {
 
   Future<void> next({MediaType? only}) async {
     if (library.isEmpty) return;
-    final scope = _folderItemCount > 0 ? _folderItemCount : library.length;
-    int start = currentIndex;
-    int visited = 0;
-    do {
-      currentIndex = shuffle
-          ? _randomOther(scope)
-          : (currentIndex + 1) % scope;
-      visited++;
-      final item = library[currentIndex];
-      if (only != null) {
-        if (item.type == only) break;
-      } else {
-        if (_videoSupported || Platform.isAndroid || item.type == MediaType.audio) break;
-      }
-    } while (currentIndex != start && visited < scope);
+    final candidates = _getPlaybackCandidates(only: only);
+    if (candidates.isEmpty) return;
+
+    if (shuffle) {
+      final others = candidates.where((i) => i != currentIndex).toList();
+      currentIndex = others.isEmpty
+          ? candidates.first
+          : others[_random.nextInt(others.length)];
+    } else {
+      final pos = candidates.indexOf(currentIndex);
+      currentIndex = pos >= 0
+          ? candidates[(pos + 1) % candidates.length]
+          : candidates.first;
+    }
     await _loadCurrent();
     notifyListeners();
   }
 
   Future<void> previous({MediaType? only}) async {
     if (library.isEmpty) return;
-    final scope = _folderItemCount > 0 ? _folderItemCount : library.length;
-    int start = currentIndex;
-    int visited = 0;
-    do {
-      currentIndex = shuffle
-          ? _randomOther(scope)
-          : (currentIndex - 1 + scope) % scope;
-      visited++;
-      final item = library[currentIndex];
-      if (only != null) {
-        if (item.type == only) break;
-      } else {
-        if (_videoSupported || Platform.isAndroid || item.type == MediaType.audio) break;
-      }
-    } while (currentIndex != start && visited < scope);
+    final candidates = _getPlaybackCandidates(only: only);
+    if (candidates.isEmpty) return;
+
+    if (shuffle) {
+      final others = candidates.where((i) => i != currentIndex).toList();
+      currentIndex = others.isEmpty
+          ? candidates.first
+          : others[_random.nextInt(others.length)];
+    } else {
+      final pos = candidates.indexOf(currentIndex);
+      currentIndex = pos >= 0
+          ? candidates[(pos - 1 + candidates.length) % candidates.length]
+          : candidates.last;
+    }
     await _loadCurrent();
     notifyListeners();
-  }
-
-  int _randomOther(int scope) {
-    if (scope <= 1) return 0;
-    int idx;
-    do {
-      idx = _random.nextInt(scope);
-    } while (idx == currentIndex);
-    return idx;
   }
 
   void setVolume(double v) {
@@ -941,9 +989,10 @@ class PlayerState with ChangeNotifier {
       await next(only: activeTabFilter);
       return;
     }
-    // RepeatMode.off
-    final scope = _folderItemCount > 0 ? _folderItemCount : library.length;
-    if (shuffle || currentIndex < scope - 1) {
+    // RepeatMode.off — advance unless at end of candidates
+    final candidates = _getPlaybackCandidates(only: activeTabFilter);
+    final pos = candidates.indexOf(currentIndex);
+    if (shuffle || (pos >= 0 && pos < candidates.length - 1)) {
       await next(only: activeTabFilter);
     }
   }
@@ -1019,12 +1068,19 @@ class _PlayerScreenState extends State<PlayerScreen>
       switch (_tabController.index) {
         case 1:
           state.activeTabFilter = MediaType.audio;
+          state.favouritesOnly = false;
           break;
         case 2:
           state.activeTabFilter = MediaType.video;
+          state.favouritesOnly = false;
+          break;
+        case 3:
+          state.activeTabFilter = null;
+          state.favouritesOnly = true;
           break;
         default:
           state.activeTabFilter = null;
+          state.favouritesOnly = false;
           break;
       }
     }

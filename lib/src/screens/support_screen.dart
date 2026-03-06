@@ -201,6 +201,28 @@ class SupportScreenState extends State<SupportScreen>
     return _formatHashCount(rate);
   }
 
+  // ── Support level helpers (1-10 scale ↔ CPU threads) ───────────
+
+  int get _maxThreads =>
+      !kIsWeb && !_isWeb() ? Platform.numberOfProcessors : 4;
+
+  int _levelForThreads(int threads) {
+    if (_maxThreads <= 1) return 1;
+    return ((threads / _maxThreads) * 10).round().clamp(1, 10);
+  }
+
+  int _threadsForLevel(int level) {
+    return ((level / 10) * _maxThreads).ceil().clamp(1, _maxThreads);
+  }
+
+  String _levelLabel(int level) {
+    if (level <= 2) return 'Minimal';
+    if (level <= 4) return 'Light';
+    if (level <= 6) return 'Medium';
+    if (level <= 8) return 'High';
+    return 'Maximum';
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -864,7 +886,7 @@ class SupportScreenState extends State<SupportScreen>
               Row(
                 children: [
                   _statCard(
-                      'it/s',
+                      'Speed',
                       miner.hashRate > 0
                           ? _formatHashCount(miner.hashRate.round())
                           : '\u2014',
@@ -874,7 +896,7 @@ class SupportScreenState extends State<SupportScreen>
                           : cs.onSurfaceVariant),
                   const SizedBox(width: 8),
                   _statCard(
-                      'Avg it/s',
+                      'Avg Speed',
                       miner.avgHashRate > 0
                           ? _formatHashCount(miner.avgHashRate.round())
                           : '\u2014',
@@ -884,7 +906,7 @@ class SupportScreenState extends State<SupportScreen>
                           : cs.onSurfaceVariant),
                   const SizedBox(width: 8),
                   _statCard(
-                      'Epoch',
+                      'Round',
                       miner.epoch > 0 ? '${miner.epoch}' : '\u2014',
                       Icons.calendar_today,
                       miner.epoch > 0
@@ -912,9 +934,9 @@ class SupportScreenState extends State<SupportScreen>
                       _batteryLevel > 30 ? Colors.green : Colors.orange),
                   const SizedBox(width: 8),
                   _statCard(
-                      'Threads',
-                      '${miner.cpuThreads}',
-                      Icons.memory,
+                      'Support',
+                      '${_levelForThreads(miner.cpuThreads)}/10',
+                      Icons.favorite,
                       cs.primary),
                 ],
               ),
@@ -1246,7 +1268,6 @@ class SupportScreenState extends State<SupportScreen>
   Widget _buildAdvancedSettings(ColorScheme cs) {
     final miner = _coordinator.nativeMiner;
     final isNative = _coordinator.nativeMinerSupported;
-    final maxThreads = !kIsWeb && !_isWeb() ? Platform.numberOfProcessors : 4;
 
     return Card(
       child: ExpansionTile(
@@ -1309,44 +1330,75 @@ class SupportScreenState extends State<SupportScreen>
                   const SizedBox(height: 12),
                 ],
 
-                // ── CPU threads slider ────────────────────────────
-                Row(
-                  children: [
-                    Text(
-                        isNative
-                            ? 'Mining threads: ${miner.cpuThreads}'
-                            : 'Parallel workers: ${_compute.maxConcurrent}',
-                        style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500)),
-                    const Spacer(),
-                    Text(
-                        isNative
-                            ? '(max $maxThreads on this CPU)'
-                            : '(1 = minimal, 4 = max throughput)',
-                        style:
-                            TextStyle(fontSize: 11, color: cs.outline)),
-                  ],
-                ),
-                Slider(
-                  value: isNative
-                      ? miner.cpuThreads.toDouble()
-                      : _compute.maxConcurrent.toDouble(),
-                  min: 1,
-                  max: isNative ? maxThreads.toDouble() : 4,
-                  divisions: isNative ? (maxThreads - 1).clamp(1, 64) : 3,
-                  label: isNative
-                      ? '${miner.cpuThreads}'
-                      : '${_compute.maxConcurrent}',
-                  onChanged: (val) {
-                    if (isNative) {
-                      miner.setCpuThreads(val.toInt());
-                    } else {
+                // ── Support level slider (1-10) ──────────────────
+                if (isNative) ...[
+                  Text(
+                    'How much would you like to support?',
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Level ${_levelForThreads(miner.cpuThreads)} \u2014 ${_levelLabel(_levelForThreads(miner.cpuThreads))}',
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: cs.primary),
+                        ),
+                      ),
+                      Text(
+                        'Using ${miner.cpuThreads} of $_maxThreads cores',
+                        style: TextStyle(fontSize: 11, color: cs.outline),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: _levelForThreads(miner.cpuThreads).toDouble(),
+                    min: 1,
+                    max: 10,
+                    divisions: 9,
+                    label: '${_levelForThreads(miner.cpuThreads)}',
+                    onChanged: (val) {
+                      final threads = _threadsForLevel(val.round());
+                      miner.setCpuThreads(threads);
+                      setState(() {});
+                    },
+                  ),
+                  Text(
+                    'Higher = more support, uses more of your computer\u2019s power.\n'
+                    '1 = barely noticeable, 10 = full power.',
+                    style: TextStyle(fontSize: 11, color: cs.outline),
+                  ),
+                ] else ...[
+                  Row(
+                    children: [
+                      Text(
+                          'Parallel workers: ${_compute.maxConcurrent}',
+                          style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500)),
+                      const Spacer(),
+                      Text(
+                          '(1 = minimal, 4 = max throughput)',
+                          style:
+                              TextStyle(fontSize: 11, color: cs.outline)),
+                    ],
+                  ),
+                  Slider(
+                    value: _compute.maxConcurrent.toDouble(),
+                    min: 1,
+                    max: 4,
+                    divisions: 3,
+                    label: '${_compute.maxConcurrent}',
+                    onChanged: (val) {
                       _compute.setMaxConcurrent(val.toInt());
-                    }
-                    setState(() {});
-                  },
-                ),
+                      setState(() {});
+                    },
+                  ),
+                ],
 
                 // ── Restart miner button (native only) ────────────
                 if (isNative && miner.isRunning) ...[
@@ -1359,7 +1411,7 @@ class SupportScreenState extends State<SupportScreen>
                         if (mounted) setState(() {});
                       },
                       icon: const Icon(Icons.refresh, size: 18),
-                      label: const Text('Restart Miner (apply thread change)'),
+                      label: const Text('Apply changes'),
                     ),
                   ),
                   const SizedBox(height: 8),
