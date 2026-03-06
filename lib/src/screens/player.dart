@@ -175,6 +175,15 @@ class PlayerState with ChangeNotifier {
   /// Paths marked as favourites (persisted).
   Set<String> _favourites = {};
 
+  /// Cached metadata for favourite items (survives folder changes).
+  Map<String, MediaItem> _favouriteCache = {};
+
+  /// Number of items from the currently loaded folder (excludes appended
+  /// cached favourites from other folders).
+  int _folderItemCount = 0;
+
+  int get folderItemCount => _folderItemCount;
+
   /// Volume boost multiplier for video playback (videos are often quieter).
   static const double _videoVolumeBoost = 1.8;
 
@@ -370,13 +379,13 @@ class PlayerState with ChangeNotifier {
   List<MapEntry<int, MediaItem>> get audioEntries => library
       .asMap()
       .entries
-      .where((e) => e.value.type == MediaType.audio)
+      .where((e) => e.key < _folderItemCount && e.value.type == MediaType.audio)
       .toList();
 
   List<MapEntry<int, MediaItem>> get videoEntries => library
       .asMap()
       .entries
-      .where((e) => e.value.type == MediaType.video)
+      .where((e) => e.key < _folderItemCount && e.value.type == MediaType.video)
       .toList();
 
   bool isFavourite(String path) => _favourites.contains(path);
@@ -384,11 +393,27 @@ class PlayerState with ChangeNotifier {
   void toggleFavourite(String path) {
     if (_favourites.contains(path)) {
       _favourites.remove(path);
+      _favouriteCache.remove(path);
     } else {
       _favourites.add(path);
+      final idx = library.indexWhere((item) => item.path == path);
+      if (idx >= 0) _favouriteCache[path] = library[idx];
     }
     prefs.setStringList('player_favourites', _favourites.toList());
+    _saveFavouriteCache();
     notifyListeners();
+  }
+
+  void _saveFavouriteCache() {
+    final list = <String>[];
+    for (final path in _favourites) {
+      final item = _favouriteCache[path];
+      if (item != null) {
+        // tab-separated: path \t type \t title \t artist
+        list.add('${item.path}\t${item.type == MediaType.video ? 'v' : 'a'}\t${item.title ?? ''}\t${item.artist ?? ''}');
+      }
+    }
+    prefs.setStringList('player_favourites_cache', list);
   }
 
   List<MapEntry<int, MediaItem>> get favouriteEntries => library
@@ -413,50 +438,88 @@ class PlayerState with ChangeNotifier {
     currentIndex = 0;
     notifyListeners();
 
-    for (int i = 0; i < library.length; i++) {
-      final item = library[i];
-
-      try {
-        final metaPath = await _resolveLocalPath(item.path);
-        final tag = await readMetadata(File(metaPath), getImage: true);
-        Uint8List? safePng;
-
-        if (tag.pictures.isNotEmpty) {
-          for (final pic in tag.pictures) {
-            final raw = pic.bytes;
-            if (raw.isEmpty) continue;
-            final String? mimeHint = pic.mimetype;
-            safePng = await _transcodeToSafePng(raw, mimeType: mimeHint);
-            if (safePng != null) break;
-          }
-        }
-
-        library[i] = item.copyWith(
-          title: tag.title?.trim().isNotEmpty == true
-              ? tag.title!.trim()
-              : item.title,
-          artist: tag.artist?.trim().isNotEmpty == true
-              ? tag.artist!.trim()
-              : item.artist,
-          thumbnailData: safePng ?? item.thumbnailData,
-        );
-      } catch (e) {
-        debugPrint('metadata error for ${item.path}: $e');
-      }
-
-      if (item.type == MediaType.video && library[i].thumbnailData == null) {
-        final thumb = await _generateVideoThumbnail(item.path);
-        if (thumb != null) {
-          library[i] = library[i].copyWith(thumbnailData: thumb);
-        }
-      }
-
-      if (i % 4 == 0) notifyListeners();
+    // ── Process audio metadata in parallel batches for speed ──
+    const batchSize = 6;
+    for (int start = 0; start < library.length; start += batchSize) {
+      final end = start + batchSize > library.length
+          ? library.length
+          : start + batchSize;
+      await Future.wait(
+        List.generate(end - start, (j) => _enrichMetadata(start + j)),
+      );
+      notifyListeners();
     }
+
+    // Mark how many items came from this folder.
+    _folderItemCount = library.length;
+
+    // Append cached favourites that are NOT in the current folder so the
+    // Favourites tab still shows them.
+    final folderPaths = library.map((e) => e.path).toSet();
+    for (final path in _favourites) {
+      if (!folderPaths.contains(path) && _favouriteCache.containsKey(path)) {
+        library.add(_favouriteCache[path]!);
+      }
+    }
+
+    // Update the favourite cache with fresher metadata from this folder.
+    for (int i = 0; i < _folderItemCount; i++) {
+      if (_favourites.contains(library[i].path)) {
+        _favouriteCache[library[i].path] = library[i];
+      }
+    }
+    _saveFavouriteCache();
 
     currentIndex = 0;
     isLoading = false;
     notifyListeners();
+
+    // ── Generate video thumbnails lazily in background ──
+    for (int i = 0; i < _folderItemCount; i++) {
+      if (library[i].type == MediaType.video &&
+          library[i].thumbnailData == null) {
+        final idx = i;
+        final path = library[i].path;
+        _generateVideoThumbnail(path).then((thumb) {
+          if (thumb != null &&
+              idx < library.length &&
+              library[idx].path == path) {
+            library[idx] = library[idx].copyWith(thumbnailData: thumb);
+            notifyListeners();
+          }
+        });
+      }
+    }
+  }
+
+  /// Read audio metadata + embedded art for a single library item.
+  Future<void> _enrichMetadata(int i) async {
+    if (i >= library.length) return;
+    final item = library[i];
+    try {
+      final metaPath = await _resolveLocalPath(item.path);
+      final tag = await readMetadata(File(metaPath), getImage: true);
+      Uint8List? safePng;
+      if (tag.pictures.isNotEmpty) {
+        for (final pic in tag.pictures) {
+          final raw = pic.bytes;
+          if (raw.isEmpty) continue;
+          safePng = await _transcodeToSafePng(raw, mimeType: pic.mimetype);
+          if (safePng != null) break;
+        }
+      }
+      library[i] = item.copyWith(
+        title: tag.title?.trim().isNotEmpty == true
+            ? tag.title!.trim()
+            : item.title,
+        artist: tag.artist?.trim().isNotEmpty == true
+            ? tag.artist!.trim()
+            : item.artist,
+        thumbnailData: safePng ?? item.thumbnailData,
+      );
+    } catch (e) {
+      debugPrint('metadata error for ${item.path}: $e');
+    }
   }
 
   Future<Uint8List?> _generateVideoThumbnail(String filePath) async {
@@ -771,12 +834,13 @@ class PlayerState with ChangeNotifier {
 
   Future<void> next({MediaType? only}) async {
     if (library.isEmpty) return;
+    final scope = _folderItemCount > 0 ? _folderItemCount : library.length;
     int start = currentIndex;
     int visited = 0;
     do {
       currentIndex = shuffle
-          ? _randomOther()
-          : (currentIndex + 1) % library.length;
+          ? _randomOther(scope)
+          : (currentIndex + 1) % scope;
       visited++;
       final item = library[currentIndex];
       if (only != null) {
@@ -784,19 +848,20 @@ class PlayerState with ChangeNotifier {
       } else {
         if (_videoSupported || Platform.isAndroid || item.type == MediaType.audio) break;
       }
-    } while (currentIndex != start && visited < library.length);
+    } while (currentIndex != start && visited < scope);
     await _loadCurrent();
     notifyListeners();
   }
 
   Future<void> previous({MediaType? only}) async {
     if (library.isEmpty) return;
+    final scope = _folderItemCount > 0 ? _folderItemCount : library.length;
     int start = currentIndex;
     int visited = 0;
     do {
       currentIndex = shuffle
-          ? _randomOther()
-          : (currentIndex - 1 + library.length) % library.length;
+          ? _randomOther(scope)
+          : (currentIndex - 1 + scope) % scope;
       visited++;
       final item = library[currentIndex];
       if (only != null) {
@@ -804,16 +869,16 @@ class PlayerState with ChangeNotifier {
       } else {
         if (_videoSupported || Platform.isAndroid || item.type == MediaType.audio) break;
       }
-    } while (currentIndex != start && visited < library.length);
+    } while (currentIndex != start && visited < scope);
     await _loadCurrent();
     notifyListeners();
   }
 
-  int _randomOther() {
-    if (library.length <= 1) return 0;
+  int _randomOther(int scope) {
+    if (scope <= 1) return 0;
     int idx;
     do {
-      idx = _random.nextInt(library.length);
+      idx = _random.nextInt(scope);
     } while (idx == currentIndex);
     return idx;
   }
@@ -844,6 +909,20 @@ class PlayerState with ChangeNotifier {
     repeatMode = RepeatMode.values[
         (prefs.getInt('repeat') ?? 0).clamp(0, RepeatMode.values.length - 1)];
     _favourites = (prefs.getStringList('player_favourites') ?? []).toSet();
+
+    // Restore favourite metadata cache.
+    _favouriteCache.clear();
+    for (final raw in prefs.getStringList('player_favourites_cache') ?? []) {
+      final parts = raw.split('\t');
+      if (parts.length >= 2) {
+        final path = parts[0];
+        final type = parts[1] == 'v' ? MediaType.video : MediaType.audio;
+        final title = parts.length > 2 && parts[2].isNotEmpty ? parts[2] : null;
+        final artist = parts.length > 3 && parts[3].isNotEmpty ? parts[3] : null;
+        _favouriteCache[path] = MediaItem(path, type,
+            title: title, artist: artist);
+      }
+    }
     notifyListeners();
   }
 
@@ -858,7 +937,8 @@ class PlayerState with ChangeNotifier {
       return;
     }
     // RepeatMode.off
-    if (shuffle || currentIndex < library.length - 1) {
+    final scope = _folderItemCount > 0 ? _folderItemCount : library.length;
+    if (shuffle || currentIndex < scope - 1) {
       await next(only: activeTabFilter);
     }
   }
@@ -1007,7 +1087,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       isScrollable: true,
                       tabAlignment: TabAlignment.start,
                       tabs: [
-                        Tab(text: 'All (${state.library.length})'),
+                        Tab(text: 'All (${state.folderItemCount})'),
                         Tab(text: '♪ Songs (${state.audioEntries.length})'),
                         Tab(text: '▶ Videos (${state.videoEntries.length})'),
                         Tab(text: '★ Favourites (${state.favouriteEntries.length})'),
