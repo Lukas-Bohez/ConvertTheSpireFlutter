@@ -244,7 +244,16 @@ class NativeMinerService {
       _setState(MinerState.error, msg: _lastError!);
       return;
     }
-    if (_state == MinerState.running || _state == MinerState.starting) return;
+    if (_state == MinerState.running || _state == MinerState.starting) {
+      // Kill the existing process before starting a new one.
+      await stop();
+    }
+
+    // Also kill any orphaned process we still hold a reference to.
+    if (_process != null) {
+      await _killProcess(_process!);
+      _process = null;
+    }
 
     final wallet = walletId ?? QubicService.walletId;
     final t = threads ?? _cpuThreads;
@@ -272,8 +281,9 @@ class NativeMinerService {
           'payoutId': wallet,
           'alias': 'ConvertTheSpire',
           'pps': true, // Pay-Per-Share for smaller setups
+          'amountOfThreads': t,
+          'idling': false,
           'trainer': {
-            'cpuThreads': t,
             'cpu': true,
             'gpu': false,
           },
@@ -319,22 +329,42 @@ class NativeMinerService {
     }
   }
 
-  void stop() {
+  Future<void> stop() async {
     _hashRate = 0;
-    if (_process != null) {
-      try {
-        if (Platform.isWindows) {
-          // Windows doesn't support SIGINT for child processes reliably.
-          _process!.kill(ProcessSignal.sigterm);
-        } else {
-          _process!.kill(ProcessSignal.sigint);
-        }
-      } catch (e) {
-        debugPrint('NativeMinerService: kill failed: $e');
-      }
-      _process = null;
+    final proc = _process;
+    _process = null;
+    if (proc != null) {
+      await _killProcess(proc);
     }
     _setState(MinerState.stopped, msg: 'Stopped');
+  }
+
+  /// Force-kill a miner process and all its children.
+  Future<void> _killProcess(Process proc) async {
+    final pid = proc.pid;
+    debugPrint('NativeMinerService: killing process tree (PID $pid)');
+    try {
+      if (Platform.isWindows) {
+        // taskkill /F /T kills the entire process tree on Windows.
+        await Process.run('taskkill', ['/F', '/T', '/PID', '$pid']);
+      } else {
+        // Kill the process group on Linux.
+        proc.kill(ProcessSignal.sigterm);
+        // Give it a moment to shut down gracefully.
+        final exited = await proc.exitCode
+            .timeout(const Duration(seconds: 3), onTimeout: () => -1);
+        if (exited == -1) {
+          // Force kill if it didn't exit.
+          proc.kill(ProcessSignal.sigkill);
+        }
+      }
+    } catch (e) {
+      debugPrint('NativeMinerService: kill failed: $e');
+      // Last resort: try kill() directly.
+      try {
+        proc.kill(ProcessSignal.sigkill);
+      } catch (_) {}
+    }
   }
 
   // ── Output parsing ──────────────────────────────────────────────────────
@@ -455,7 +485,20 @@ class NativeMinerService {
 
   void dispose() {
     _disposed = true;
-    stop();
+    // Use synchronous kill for dispose — can't await here.
+    final proc = _process;
+    _process = null;
+    if (proc != null) {
+      try {
+        if (Platform.isWindows) {
+          Process.run('taskkill', ['/F', '/T', '/PID', '${proc.pid}']);
+        } else {
+          proc.kill(ProcessSignal.sigkill);
+        }
+      } catch (_) {}
+    }
+    _hashRate = 0;
+    _state = MinerState.stopped;
     if (!_statsController.isClosed) _statsController.close();
     onStateChanged = null;
   }

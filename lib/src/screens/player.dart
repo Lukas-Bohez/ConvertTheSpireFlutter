@@ -168,6 +168,16 @@ class PlayerState with ChangeNotifier {
   double volume = 0.5;
   bool isLoading = false;
 
+  /// Which media type the player should stick to when auto-advancing.
+  /// Set by the UI based on which tab is active (null = all).
+  MediaType? activeTabFilter;
+
+  /// Paths marked as favourites (persisted).
+  Set<String> _favourites = {};
+
+  /// Volume boost multiplier for video playback (videos are often quieter).
+  static const double _videoVolumeBoost = 1.8;
+
   // Audio — just_audio works fine on all platforms
   final AudioPlayer _audio = AudioPlayer();
 
@@ -272,9 +282,14 @@ class PlayerState with ChangeNotifier {
       }));
       _subs.add(_mkPlayer!.stream.volume.listen((v) {
         if (_disposed) return;
-        final vol = (v / 100).clamp(0.0, 1.0);
-        if (vol != volume) {
-          volume = vol;
+        // media_kit reports the boosted volume — reverse the boost to get the
+        // user-facing value.
+        final raw = (v / 100).clamp(0.0, 1.0);
+        final unboosted = currentItem?.type == MediaType.video
+            ? (raw / _videoVolumeBoost).clamp(0.0, 1.0)
+            : raw;
+        if ((unboosted - volume).abs() > 0.01) {
+          volume = unboosted;
           prefs.setDouble('volume', volume);
           notifyListeners();
         }
@@ -362,6 +377,24 @@ class PlayerState with ChangeNotifier {
       .asMap()
       .entries
       .where((e) => e.value.type == MediaType.video)
+      .toList();
+
+  bool isFavourite(String path) => _favourites.contains(path);
+
+  void toggleFavourite(String path) {
+    if (_favourites.contains(path)) {
+      _favourites.remove(path);
+    } else {
+      _favourites.add(path);
+    }
+    prefs.setStringList('player_favourites', _favourites.toList());
+    notifyListeners();
+  }
+
+  List<MapEntry<int, MediaItem>> get favouriteEntries => library
+      .asMap()
+      .entries
+      .where((e) => _favourites.contains(e.value.path))
       .toList();
 
   // ── Library loading ──
@@ -523,10 +556,12 @@ class PlayerState with ChangeNotifier {
 
   void _applyVolume() {
     _audio.setVolume(volume);
+    // Videos are often mastered quieter than music — apply a boost.
+    final videoVol = (volume * _videoVolumeBoost).clamp(0.0, 1.0);
     if (_videoSupported && _mkPlayer != null) {
-      _mkPlayer!.setVolume(volume * 100);
+      _mkPlayer!.setVolume(videoVol * 100);
     }
-    _androidController?.setVolume(volume);
+    _androidController?.setVolume(videoVol);
   }
 
   // ── Playback ──
@@ -597,7 +632,8 @@ class PlayerState with ChangeNotifier {
           if (_videoSupported && _mkPlayer != null) {
             // ── Desktop / iOS: media_kit ──
             await _mkPlayer!.open(Media(_toUri(item.path)), play: true);
-            await _mkPlayer!.setVolume(volume * 100);
+            final videoVol = (volume * _videoVolumeBoost).clamp(0.0, 1.0);
+            await _mkPlayer!.setVolume(videoVol * 100);
           } else {
             // ── Android: video_player (ExoPlayer) ──
             await _disposeAndroidController();
@@ -648,7 +684,8 @@ class PlayerState with ChangeNotifier {
               _androidController = ctrl;
               duration = ctrl.value.duration;
               position = Duration.zero;
-              await ctrl.setVolume(volume);
+              final videoVol = (volume * _videoVolumeBoost).clamp(0.0, 1.0);
+              await ctrl.setVolume(videoVol);
               await ctrl.play();
               // initialize() completes synchronously once the codec is ready,
               // so the widget can be shown immediately.
@@ -806,6 +843,7 @@ class PlayerState with ChangeNotifier {
     shuffle = prefs.getBool('shuffle') ?? false;
     repeatMode = RepeatMode.values[
         (prefs.getInt('repeat') ?? 0).clamp(0, RepeatMode.values.length - 1)];
+    _favourites = (prefs.getStringList('player_favourites') ?? []).toSet();
     notifyListeners();
   }
 
@@ -816,12 +854,12 @@ class PlayerState with ChangeNotifier {
       return;
     }
     if (repeatMode == RepeatMode.all) {
-      await next();
+      await next(only: activeTabFilter);
       return;
     }
     // RepeatMode.off
     if (shuffle || currentIndex < library.length - 1) {
-      await next();
+      await next(only: activeTabFilter);
     }
   }
 
@@ -859,6 +897,10 @@ class _PlayerScreenState extends State<PlayerScreen>
   late final ScrollController _allScrollController;
   late final ScrollController _songsScrollController;
   late final ScrollController _videosScrollController;
+  late final ScrollController _favouritesScrollController;
+
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   static const _accent = Color(0xFF4A7EDB);
 
@@ -876,19 +918,52 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _allScrollController = ScrollController();
     _songsScrollController = ScrollController();
     _videosScrollController = ScrollController();
+    _favouritesScrollController = ScrollController();
+
+    // Update activeTabFilter on the PlayerState when tabs change.
+    _tabController.addListener(_onTabChanged);
+  }
+
+  void _onTabChanged() {
+    if (!_tabController.indexIsChanging) {
+      final state = context.read<PlayerState>();
+      switch (_tabController.index) {
+        case 1:
+          state.activeTabFilter = MediaType.audio;
+          break;
+        case 2:
+          state.activeTabFilter = MediaType.video;
+          break;
+        default:
+          state.activeTabFilter = null;
+          break;
+      }
+    }
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _allScrollController.dispose();
     _songsScrollController.dispose();
     _videosScrollController.dispose();
+    _favouritesScrollController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  /// Filter entries by search query.
+  bool _matchesSearch(MediaItem item) {
+    if (_searchQuery.isEmpty) return true;
+    final q = _searchQuery.toLowerCase();
+    final title = (item.title ?? p.basenameWithoutExtension(item.path)).toLowerCase();
+    final artist = (item.artist ?? '').toLowerCase();
+    return title.contains(q) || artist.contains(q);
   }
 
   @override
@@ -929,13 +1004,45 @@ class _PlayerScreenState extends State<PlayerScreen>
                       labelColor: _accent,
                       unselectedLabelColor: _sub,
                       indicatorColor: _accent,
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
                       tabs: [
                         Tab(text: 'All (${state.library.length})'),
                         Tab(text: '♪ Songs (${state.audioEntries.length})'),
                         Tab(text: '▶ Videos (${state.videoEntries.length})'),
+                        Tab(text: '★ Favourites (${state.favouriteEntries.length})'),
                       ],
                     ),
                     bg: _bg,
+                  ),
+                ),
+                // ── Search bar ──
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search library…',
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              )
+                            : null,
+                        isDense: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8, horizontal: 12),
+                      ),
+                      onChanged: (v) => setState(() => _searchQuery = v.trim()),
+                    ),
                   ),
                 ),
                 SliverFillRemaining(
@@ -946,6 +1053,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       _allTab(state),
                       _songsTab(state),
                       _videosTab(state),
+                      _favouritesTab(state),
                     ],
                   ),
                 ),
@@ -1095,12 +1203,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         _iconBtn(
           Icons.skip_previous_rounded,
           () {
-            final filter = _tabController.index == 1
-                ? MediaType.audio
-                : _tabController.index == 2
-                    ? MediaType.video
-                    : null;
-            state.previous(only: filter);
+            state.previous(only: state.activeTabFilter);
           },
           size: 30,
         ),
@@ -1125,12 +1228,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         _iconBtn(
           Icons.skip_next_rounded,
           () {
-            final filter = _tabController.index == 1
-                ? MediaType.audio
-                : _tabController.index == 2
-                    ? MediaType.video
-                    : null;
-            state.next(only: filter);
+            state.next(only: state.activeTabFilter);
           },
           size: 30,
         ),
@@ -1226,19 +1324,26 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Widget _allTab(PlayerState state) {
     if (state.library.isEmpty) return _empty();
+    final filteredAudio = state.audioEntries
+        .where((e) => _matchesSearch(e.value))
+        .toList();
+    final filteredVideo = state.videoEntries
+        .where((e) => _matchesSearch(e.value))
+        .toList();
+    if (filteredAudio.isEmpty && filteredVideo.isEmpty) return _noResults();
     return Scrollbar(
       controller: _allScrollController,
       child: ListView(
         controller: _allScrollController,
         primary: false,
         children: [
-          if (state.audioEntries.isNotEmpty) ...[
+          if (filteredAudio.isNotEmpty) ...[
             _sectionHeader('♪ Songs'),
-            ...state.audioEntries.map((e) => _songTile(state, e.key, e.value)),
+            ...filteredAudio.map((e) => _songTile(state, e.key, e.value)),
           ],
-          if (state.videoEntries.isNotEmpty) ...[
+          if (filteredVideo.isNotEmpty) ...[
             _sectionHeader('▶ Videos'),
-            _videoGrid(state, state.videoEntries),
+            _videoGrid(state, filteredVideo),
           ],
         ],
       ),
@@ -1247,14 +1352,18 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Widget _songsTab(PlayerState state) {
     if (state.audioEntries.isEmpty) return _empty();
+    final filtered = state.audioEntries
+        .where((e) => _matchesSearch(e.value))
+        .toList();
+    if (filtered.isEmpty) return _noResults();
     return Scrollbar(
       controller: _songsScrollController,
       child: ListView.builder(
         controller: _songsScrollController,
         primary: false,
-        itemCount: state.audioEntries.length,
+        itemCount: filtered.length,
         itemBuilder: (_, i) {
-          final e = state.audioEntries[i];
+          final e = filtered[i];
           return _songTile(state, e.key, e.value);
         },
       ),
@@ -1263,12 +1372,59 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Widget _videosTab(PlayerState state) {
     if (state.videoEntries.isEmpty) return _empty();
+    final filtered = state.videoEntries
+        .where((e) => _matchesSearch(e.value))
+        .toList();
+    if (filtered.isEmpty) return _noResults();
     return Scrollbar(
       controller: _videosScrollController,
       child: ListView(
         controller: _videosScrollController,
         primary: false,
-        children: [_videoGrid(state, state.videoEntries)],
+        children: [_videoGrid(state, filtered)],
+      ),
+    );
+  }
+
+  Widget _favouritesTab(PlayerState state) {
+    final favs = state.favouriteEntries
+        .where((e) => _matchesSearch(e.value))
+        .toList();
+    if (favs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.favorite_border,
+                size: 64, color: _sub.withValues(alpha: 0.4)),
+            const SizedBox(height: 12),
+            Text('No favourites yet',
+                style: TextStyle(color: _sub, fontSize: 14)),
+            const SizedBox(height: 4),
+            Text('Tap the heart icon on any track',
+                style: TextStyle(color: _sub.withValues(alpha: 0.6),
+                    fontSize: 12)),
+          ],
+        ),
+      );
+    }
+    final favAudio = favs.where((e) => e.value.type == MediaType.audio).toList();
+    final favVideo = favs.where((e) => e.value.type == MediaType.video).toList();
+    return Scrollbar(
+      controller: _favouritesScrollController,
+      child: ListView(
+        controller: _favouritesScrollController,
+        primary: false,
+        children: [
+          if (favAudio.isNotEmpty) ...[
+            _sectionHeader('♪ Songs'),
+            ...favAudio.map((e) => _songTile(state, e.key, e.value)),
+          ],
+          if (favVideo.isNotEmpty) ...[
+            _sectionHeader('▶ Videos'),
+            _videoGrid(state, favVideo),
+          ],
+        ],
       ),
     );
   }
@@ -1282,6 +1438,21 @@ class _PlayerScreenState extends State<PlayerScreen>
               size: 64, color: _sub.withValues(alpha: 0.4)),
           const SizedBox(height: 12),
           Text('Open a folder to load media',
+              style: TextStyle(color: _sub, fontSize: 14)),
+        ],
+      ),
+    );
+  }
+
+  Widget _noResults() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.search_off,
+              size: 64, color: _sub.withValues(alpha: 0.4)),
+          const SizedBox(height: 12),
+          Text('No matches found',
               style: TextStyle(color: _sub, fontSize: 14)),
         ],
       ),
@@ -1302,6 +1473,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Widget _songTile(PlayerState state, int index, MediaItem item) {
     final sel = index == state.currentIndex;
+    final isFav = state.isFavourite(item.path);
     return Material(
       color: sel ? _a(0.1) : Colors.transparent,
       child: ListTile(
@@ -1323,9 +1495,25 @@ class _PlayerScreenState extends State<PlayerScreen>
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 11, color: _sub))
             : null,
-        trailing: sel
-            ? const Icon(Icons.equalizer, color: _accent, size: 18)
-            : null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => state.toggleFavourite(item.path),
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  isFav ? Icons.favorite : Icons.favorite_border,
+                  size: 18,
+                  color: isFav ? Colors.redAccent : _sub,
+                ),
+              ),
+            ),
+            if (sel)
+              const Icon(Icons.equalizer, color: _accent, size: 18),
+          ],
+        ),
         onTap: () => state.select(index),
       ),
     );
@@ -1349,6 +1537,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         final idx = entries[i].key;
         final item = entries[i].value;
         final sel = idx == state.currentIndex;
+        final isFav = state.isFavourite(item.path);
 
         return GestureDetector(
           onTap: () => state.select(idx),
@@ -1380,6 +1569,25 @@ class _PlayerScreenState extends State<PlayerScreen>
                               : Icons.play_arrow_rounded,
                           color: Colors.white,
                           size: 20,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 2,
+                      right: 2,
+                      child: GestureDetector(
+                        onTap: () => state.toggleFavourite(item.path),
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isFav ? Icons.favorite : Icons.favorite_border,
+                            size: 14,
+                            color: isFav ? Colors.redAccent : Colors.white70,
+                          ),
                         ),
                       ),
                     ),

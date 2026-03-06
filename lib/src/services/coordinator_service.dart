@@ -82,7 +82,7 @@ class CoordinatorService {
     if (value) {
       _start();
     } else {
-      _stop();
+      _stop();  // fire-and-forget; _stop is now async
     }
     onStateChanged?.call();
   }
@@ -119,9 +119,10 @@ class CoordinatorService {
   /// Restart the miner (e.g. after changing thread count).
   Future<void> restartNativeMiner() async {
     if (!nativeMinerSupported) return;
-    _nativeMiner.stop();
+    await _nativeMiner.stop();
     _localMode = false;
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Give the OS time to fully release the process and its resources.
+    await Future.delayed(const Duration(seconds: 1));
     if (_enabled) {
       await _startNativeMiner();
     }
@@ -255,7 +256,7 @@ class CoordinatorService {
 
   // ── Disconnect / dispose ────────────────────────────────────────────────
 
-  void _stop() {
+  Future<void> _stop() async {
     _localJobTimer?.cancel();
     _localJobTimer = null;
     _resultSub?.cancel();
@@ -263,7 +264,7 @@ class CoordinatorService {
     _minerSub?.cancel();
     _minerSub = null;
 
-    _nativeMiner.stop();
+    await _nativeMiner.stop();
 
     _localMode = false;
     connectionStatus = 'Disconnected';
