@@ -127,8 +127,7 @@ class _ScreencastScreenState extends State<ScreencastScreen>
                       ?.copyWith(color: cs.onSurfaceVariant)),
               const SizedBox(height: 8),
               Text(
-                'Screen casting requires a desktop platform (Windows or Linux) '
-                'with FFmpeg installed.',
+                'Screen casting is available on Android, Windows, and Linux.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium
                     ?.copyWith(color: cs.outline),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter/services.dart';
 
 import 'dlna_control_service.dart';
 import 'dlna_discovery_service.dart';
@@ -16,6 +17,7 @@ enum ScreencastState { idle, starting, streaming, stopping, error }
 /// Desktop-only (Windows / Linux).  On Android the platform lacks a
 /// command-line FFmpeg with screen-capture capabilities.
 class ScreencastService {
+  static const _channel = MethodChannel('convert_the_spire/screencast');
   final DlnaDiscoveryService _discovery = DlnaDiscoveryService();
   final DlnaControlService _control = DlnaControlService();
 
@@ -36,7 +38,7 @@ class ScreencastService {
 
   /// Whether screencast is supported on the current platform.
   static bool get isSupported =>
-      !kIsWeb && (Platform.isWindows || Platform.isLinux);
+      !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isAndroid);
 
   /// Callback for UI refresh.
   void Function()? onStateChanged;
@@ -61,13 +63,82 @@ class ScreencastService {
     int framerate = 30,
   }) async {
     if (!isSupported) {
-      _lastError = 'Screen casting is only supported on Windows and Linux';
+      _lastError = 'Screen casting is not supported on this platform';
       _setState(ScreencastState.error);
       return;
     }
 
-    await stopCast(); // Clean up any previous session
+    if (!kIsWeb && Platform.isAndroid) {
+      return _startAndroidCast(
+        device: device, width: width, height: height, framerate: framerate);
+    }
 
+    await _startDesktopCast(
+      device: device, width: width, height: height, framerate: framerate);
+  }
+
+  /// Android: use native MediaProjection via MethodChannel.
+  Future<void> _startAndroidCast({
+    required DlnaDevice device,
+    int width = 1920,
+    int height = 1080,
+    int framerate = 30,
+  }) async {
+    await stopCast();
+    _setState(ScreencastState.starting);
+    _castingTo = device;
+    _lastError = null;
+
+    try {
+      // 1. Request screen capture + audio permission
+      final perm = await _channel.invokeMethod<Map>('requestPermission');
+      if (perm == null || perm['granted'] != true) {
+        throw Exception('Screen capture permission denied');
+      }
+
+      // 2. Determine local IP
+      _localIp = await LocalMediaServer.getLocalIp();
+      if (_localIp == null) {
+        throw Exception('Could not determine local IP. Connect to Wi-Fi.');
+      }
+
+      // 3. Start native capture service → returns HTTP port
+      final port = await _channel.invokeMethod<int>('startCapture', {
+        'width': width,
+        'height': height,
+        'fps': framerate,
+      });
+      if (port == null || port == 0) {
+        throw Exception('Failed to start capture service');
+      }
+      _streamPort = port;
+      _setState(ScreencastState.streaming);
+
+      // 4. Tell the DLNA renderer to play our stream
+      final streamUrl = 'http://$_localIp:$_streamPort/stream';
+      await _control.playMedia(
+        device: device,
+        mediaUrl: streamUrl,
+        title: 'Screen Cast',
+        mimeType: 'video/mp2t',
+      );
+    } catch (e) {
+      _lastError = e.toString()
+          .replaceAll('Exception: ', '')
+          .replaceAll(RegExp(r'PlatformException\([^,]+, '), '');
+      _setState(ScreencastState.error);
+      try { await _channel.invokeMethod('stopCapture'); } catch (_) {}
+    }
+  }
+
+  /// Desktop (Windows/Linux): FFmpeg screen capture.
+  Future<void> _startDesktopCast({
+    required DlnaDevice device,
+    int width = 1920,
+    int height = 1080,
+    int framerate = 30,
+  }) async {
+    await stopCast();
     _setState(ScreencastState.starting);
     _castingTo = device;
     _lastError = null;
@@ -187,7 +258,12 @@ class ScreencastService {
       } catch (_) {}
     }
 
-    await _cleanup();
+    if (!kIsWeb && Platform.isAndroid) {
+      try { await _channel.invokeMethod('stopCapture'); } catch (_) {}
+    } else {
+      await _cleanup();
+    }
+
     _castingTo = null;
     _setState(ScreencastState.idle);
   }
