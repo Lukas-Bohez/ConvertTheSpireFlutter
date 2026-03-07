@@ -68,12 +68,21 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
 
   Future<void> _checkNow() async {
     setState(() => _checking = true);
-    final found = await widget.watchedService.checkAllPlaylists();
-    if (mounted) {
-      setState(() => _checking = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$found new track(s) queued for download')),
-      );
+    try {
+      final found = await widget.watchedService.checkAllPlaylists();
+      if (mounted) {
+        setState(() => _checking = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$found new track(s) queued for download')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _checking = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to check playlists: $e')),
+        );
+      }
     }
   }
 

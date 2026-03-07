@@ -26,7 +26,7 @@ import 'watched_playlists_screen.dart';
 import 'browser_screen.dart';
 import 'cast_dialog.dart';
 import 'support_screen.dart';
-import 'player.dart';  // player player screen
+import 'player.dart';
 
 
 class HomeScreen extends StatefulWidget {

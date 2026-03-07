@@ -4,7 +4,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
@@ -578,7 +578,7 @@ class PlayerState with ChangeNotifier {
             if (pic.bytes.isEmpty) continue;
             thumb = await _transcodeToSafePng(pic.bytes, mimeType: pic.mimetype);
             if (thumb != null) {
-              debugPrint('video embedded art found for $path (${pic.bytes.length} bytes)');
+              if (kDebugMode) debugPrint('video embedded art found for $path (${pic.bytes.length} bytes)');
               break;
             }
           }
@@ -664,7 +664,7 @@ class PlayerState with ChangeNotifier {
   }
 
   Future<Uint8List?> _generateVideoThumbnail(String filePath) async {
-    debugPrint('generating thumbnail for $filePath');
+    if (kDebugMode) debugPrint('generating thumbnail for $filePath');
 
     final resolved = await _resolveLocalPath(filePath);
 
@@ -751,7 +751,7 @@ class PlayerState with ChangeNotifier {
       } catch (_) {}
     }
 
-    debugPrint('all thumbnail strategies failed for $filePath');
+    if (kDebugMode) debugPrint('all thumbnail strategies failed for $filePath');
     return null;
   }
 

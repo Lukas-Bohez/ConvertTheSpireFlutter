@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -55,54 +56,34 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _initController() async {
-    debugPrint('MyApp: starting controller initialization');
+    if (kDebugMode) debugPrint('MyApp: starting controller initialization');
     try {
       final logs = LogService();
-      debugPrint('  created LogService');
       final settingsStore = SettingsStore();
-      debugPrint('  created SettingsStore');
       final ytExplode = YoutubeExplode();
-      debugPrint('  created YoutubeExplode');
       _ytExplode = ytExplode;
       final youtube = YouTubeService(yt: ytExplode);
-      debugPrint('  created YouTubeService');
       final ffmpeg = FfmpegService();
-      debugPrint('  created FfmpegService');
       final ytDlp = YtDlpService();
-      debugPrint('  created YtDlpService');
       final downloadService = DownloadService(yt: ytExplode, ffmpeg: ffmpeg, ytDlp: ytDlp);
-      debugPrint('  created DownloadService');
       final convertService = ConvertService(ffmpeg: ffmpeg);
-      debugPrint('  created ConvertService');
       final installerService = InstallerService();
-      debugPrint('  created InstallerService');
 
       // ── New services ──────────────────────────────────────────────
       final youtubeSearcher = YouTubeSearcher(yt: ytExplode);
-      debugPrint('  created YouTubeSearcher');
       final soundcloudSearcher = SoundCloudSearcher();
-      debugPrint('  created SoundCloudSearcher');
       final searchService = MultiSourceSearchService(
         youtubeSearcher: youtubeSearcher,
         soundcloudSearcher: soundcloudSearcher,
       );
-      debugPrint('  created MultiSourceSearchService');
       final previewPlayer = PreviewPlayerService();
-      debugPrint('  created PreviewPlayerService');
       final playlistService = PlaylistService(yt: ytExplode);
-      debugPrint('  created PlaylistService');
       final bulkImportService = BulkImportService();
-      debugPrint('  created BulkImportService');
       final musicBrainzService = MusicBrainzService();
-      debugPrint('  created MusicBrainzService');
       final lyricsService = LyricsService();
-      debugPrint('  created LyricsService');
       final fileOrganizationService = FileOrganizationService();
-      debugPrint('  created FileOrganizationService');
       final statisticsService = StatisticsService();
-      debugPrint('  created StatisticsService');
       final notificationService = NotificationService();
-      debugPrint('  created NotificationService');
 
       // WatchedPlaylistService needs callbacks referencing the controller,
       // so we create a placeholder and assign later.
@@ -114,8 +95,6 @@ class _MyAppState extends State<MyApp> {
         },
         logs: logs,
       );
-      debugPrint('  created WatchedPlaylistService');
-
       controller = AppController(
         settingsStore: settingsStore,
         youtube: youtube,
@@ -134,9 +113,9 @@ class _MyAppState extends State<MyApp> {
         statisticsService: statisticsService,
         notificationService: notificationService,
       );
-      debugPrint('  created AppController, calling init()');
+      if (kDebugMode) debugPrint('MyApp: all services created, calling init()');
       await controller.init();
-      debugPrint('  AppController.init() completed');
+      if (kDebugMode) debugPrint('MyApp: init() completed');
       if (mounted) {
         setState(() {
           _controller = controller;

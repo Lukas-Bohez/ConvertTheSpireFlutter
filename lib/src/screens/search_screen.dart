@@ -136,10 +136,18 @@ class _SearchScreenState extends State<SearchScreen>
           ),
         ),
         if (_loading) const LinearProgressIndicator(),
+        if (_loading)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Text('Searching across all sources\u2026',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          ),
         if (_error != null)
           Padding(
             padding: const EdgeInsets.all(8),
-            child: Text(_error!, style: const TextStyle(color: Colors.red)),
+            child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ),
         Expanded(
           child: ListView.separated(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:media_kit/media_kit.dart';
 
 import 'src/app.dart';
@@ -20,19 +20,20 @@ void main() async {
     // plugin itself checks `Platform.isAndroid` and will emit
     // "Unsupported platform: android".
     if (Platform.isAndroid) {
-      debugPrint('Skipping MediaKit initialization on Android (unsupported)');
+      if (kDebugMode) debugPrint('Skipping MediaKit initialization on Android (unsupported)');
     } else {
       try {
         MediaKit.ensureInitialized(); // required by media_kit (synchronous)
       } catch (e, st) {
         final msg = '$e';
         if (msg.contains('Unsupported platform')) {
-          // treat as non‑fatal; video will simply stay disabled
-          debugPrint('MediaKit not supported: $msg');
+          if (kDebugMode) debugPrint('MediaKit not supported: $msg');
         } else {
           mediaKitError = msg;
-          debugPrint('MediaKit initialization failed: $e');
-          debugPrint('$st');
+          if (kDebugMode) {
+            debugPrint('MediaKit initialization failed: $e');
+            debugPrint('$st');
+          }
         }
       }
     }

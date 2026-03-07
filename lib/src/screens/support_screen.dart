@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:battery_plus/battery_plus.dart';
-import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -156,7 +156,7 @@ class SupportScreenState extends State<SupportScreen>
       _batteryLevel = await _battery.batteryLevel;
       _batteryState = await _battery.batteryState;
     } catch (e) {
-      debugPrint('Battery check failed: $e');
+      if (kDebugMode) debugPrint('Battery check failed: $e');
       _batteryLevel = 100;
       _batteryState = BatteryState.full;
     }
@@ -168,13 +168,13 @@ class SupportScreenState extends State<SupportScreen>
       if (!_batteryPaused) {
         _batteryPaused = true;
         _compute.setEnabled(false);
-        debugPrint('SupportScreen: paused compute (battery $_batteryLevel%)');
+        if (kDebugMode) debugPrint('SupportScreen: paused compute (battery $_batteryLevel%)');
       }
     } else if (_batteryPaused && (!isOnBattery || !isLow)) {
       if (_coordinator.enabled) {
         _batteryPaused = false;
         _compute.setEnabled(true);
-        debugPrint('SupportScreen: resumed compute (power restored)');
+        if (kDebugMode) debugPrint('SupportScreen: resumed compute (power restored)');
       }
     }
 
