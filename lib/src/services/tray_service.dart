@@ -46,15 +46,27 @@ class TrayService with TrayListener, WindowListener {
       iconPath = 'assets/icons/favicon-192x192.png';
     }
 
-    await trayManager.setIcon(iconPath);
-    await trayManager.setToolTip('Convert the Spire Reborn');
+    try {
+      await trayManager.setIcon(iconPath);
+    } catch (e) {
+      debugPrint('TrayService: setIcon failed ($iconPath): $e');
+    }
+    try {
+      await trayManager.setToolTip('Convert the Spire Reborn');
+    } catch (e) {
+      debugPrint('TrayService: setToolTip failed: $e');
+    }
 
     final menu = Menu(items: [
       MenuItem(key: 'show', label: 'Show'),
       MenuItem.separator(),
       MenuItem(key: 'quit', label: 'Quit'),
     ]);
-    await trayManager.setContextMenu(menu);
+    try {
+      await trayManager.setContextMenu(menu);
+    } catch (e) {
+      debugPrint('TrayService: setContextMenu failed: $e');
+    }
     trayManager.addListener(this);
   }
 

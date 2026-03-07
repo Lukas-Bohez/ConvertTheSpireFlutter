@@ -25,25 +25,25 @@ class ShortcutService {
   // ── Windows (.lnk via PowerShell) ─────────────────────────────────────
 
   static Future<void> _ensureWindowsShortcut() async {
-    final desktop = _windowsDesktopPath();
-    if (desktop == null) return;
-
-    final shortcutPath = '$desktop\\Convert the Spire Reborn.lnk';
-    if (await File(shortcutPath).exists()) {
-      debugPrint('ShortcutService: shortcut already exists');
-      return;
-    }
-
     final exePath = Platform.resolvedExecutable;
     final workingDir = File(exePath).parent.path;
 
-    // Use PowerShell COM to create a proper .lnk shortcut
+    // Use PowerShell to resolve the real Desktop path (locale-independent)
+    // and create the shortcut in one script.  All Dart values are injected
+    // via single-quoted PowerShell strings with internal quotes escaped.
+    final safeExe = exePath.replaceAll("'", "''");
+    final safeWork = workingDir.replaceAll("'", "''");
+
     final script = '''
+\$desktop = [Environment]::GetFolderPath('Desktop')
+if (-not \$desktop) { exit 1 }
+\$lnk = Join-Path \$desktop 'Convert the Spire Reborn.lnk'
+if (Test-Path \$lnk) { exit 0 }
 \$ws = New-Object -ComObject WScript.Shell
-\$s = \$ws.CreateShortcut('$shortcutPath')
-\$s.TargetPath = '$exePath'
-\$s.WorkingDirectory = '$workingDir'
-\$s.Description = 'Convert the Spire Reborn'
+\$s  = \$ws.CreateShortcut(\$lnk)
+\$s.TargetPath       = '$safeExe'
+\$s.WorkingDirectory  = '$safeWork'
+\$s.Description       = 'Convert the Spire Reborn'
 \$s.Save()
 ''';
 
@@ -53,24 +53,11 @@ class ShortcutService {
     );
 
     if (result.exitCode == 0) {
-      debugPrint('ShortcutService: created Windows desktop shortcut');
+      debugPrint('ShortcutService: desktop shortcut OK');
     } else {
-      debugPrint('ShortcutService: PowerShell shortcut creation failed: ${result.stderr}');
+      debugPrint('ShortcutService: PowerShell shortcut failed: '
+          '${result.stderr}');
     }
-  }
-
-  static String? _windowsDesktopPath() {
-    final userProfile = Platform.environment['USERPROFILE'];
-    if (userProfile == null) return null;
-    final desktop = '$userProfile\\Desktop';
-    if (Directory(desktop).existsSync()) return desktop;
-    // Fallback: OneDrive desktop
-    final oneDrive = Platform.environment['OneDrive'];
-    if (oneDrive != null) {
-      final odDesktop = '$oneDrive\\Desktop';
-      if (Directory(odDesktop).existsSync()) return odDesktop;
-    }
-    return null;
   }
 
   // ── Linux (.desktop file) ─────────────────────────────────────────────

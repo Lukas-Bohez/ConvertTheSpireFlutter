@@ -310,15 +310,17 @@ class NativeMinerService {
       // Set miner to BelowNormal priority so downloads and app stay responsive.
       if (Platform.isWindows) {
         try {
-          await Process.run('wmic', [
-            'process',
-            'where',
-            'ProcessId=${_process!.pid}',
-            'CALL',
-            'SetPriority',
-            '16384',  // BelowNormal
+          final pid = _process!.pid;
+          final r = await Process.run('powershell', [
+            '-NoProfile', '-NonInteractive', '-Command',
+            '(Get-Process -Id $pid).PriorityClass = [System.Diagnostics.ProcessPriorityClass]::BelowNormal',
           ]);
-        } catch (_) {}
+          if (r.exitCode != 0) {
+            debugPrint('NativeMinerService: priority set failed: ${r.stderr}');
+          }
+        } catch (e) {
+          debugPrint('NativeMinerService: priority set error: $e');
+        }
       }
 
       _setState(MinerState.running, msg: 'Connecting to pool\u2026');

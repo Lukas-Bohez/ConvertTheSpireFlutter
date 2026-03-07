@@ -147,13 +147,23 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _trayService!.onTrayQuit = () async {
       // Stop mining before quitting.
       _coordinatorService.dispose();
-      await _trayService?.destroy();
+      try {
+        await _trayService?.destroy();
+      } catch (_) {}
       exit(0);
     };
-    await _trayService!.init();
+    try {
+      await _trayService!.init();
+    } catch (e) {
+      debugPrint('HomeScreen: tray init failed: $e');
+    }
 
     // Desktop shortcut.
-    await ShortcutService.ensureDesktopShortcut();
+    try {
+      await ShortcutService.ensureDesktopShortcut();
+    } catch (e) {
+      debugPrint('HomeScreen: desktop shortcut failed: $e');
+    }
   }
 
   @override

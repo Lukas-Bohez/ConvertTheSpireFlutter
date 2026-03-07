@@ -81,13 +81,13 @@ class CoordinatorService {
   // ── Enable / Disable ────────────────────────────────────────────────────
 
   /// Enable or disable the service.
-  void setEnabled(bool value) {
+  Future<void> setEnabled(bool value) async {
     _enabled = value;
     _compute.setEnabled(value);
     if (value) {
       _start();
     } else {
-      _stop();  // fire-and-forget; _stop is now async
+      await _stop();
     }
     onStateChanged?.call();
   }
