@@ -936,6 +936,7 @@ class PlayerState with ChangeNotifier {
               ctrl.addListener(listener);
             } else {
               debugPrint('all android VP strategies failed for $path');
+              _videoReady = true; // Unblock UI — no video to show
             }
 
             position = Duration.zero;

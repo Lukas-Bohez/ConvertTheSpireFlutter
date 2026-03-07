@@ -114,11 +114,18 @@ class CoordinatorService {
     _minerSub?.cancel();
     _minerSub = _nativeMiner.statsStream.listen((stats) {
       connectionStatus = stats.statusMessage;
+      // Only propagate errors when they're set; clear when miner clears them.
       lastError = stats.lastError;
       onStateChanged?.call();
     });
 
-    await _nativeMiner.start();
+    try {
+      await _nativeMiner.start();
+    } catch (e) {
+      lastError = e.toString();
+      connectionStatus = 'Failed to start miner';
+      onStateChanged?.call();
+    }
   }
 
   /// Restart the miner (e.g. after changing thread count).

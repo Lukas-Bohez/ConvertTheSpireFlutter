@@ -204,7 +204,7 @@ class YtDlpService {
 
     try {
       // Parse stdout for progress
-      process.stdout
+      final stdoutSub = process.stdout
           .transform(utf8.decoder)
           .transform(const LineSplitter())
           .listen((line) {
@@ -219,7 +219,7 @@ class YtDlpService {
       // Capture stderr
       final stderrBuffer = StringBuffer();
       String? lastError;
-      process.stderr
+      final stderrSub = process.stderr
           .transform(utf8.decoder)
           .transform(const LineSplitter())
           .listen((line) {
@@ -231,6 +231,8 @@ class YtDlpService {
       });
 
       final exitCode = await process.exitCode;
+      await stdoutSub.cancel();
+      await stderrSub.cancel();
 
       if (isCancelled?.call() ?? false) {
         // Clean up partial output

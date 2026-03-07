@@ -88,11 +88,14 @@ class NativeMinerService {
   double _downloadProgress = 0;
   int _cpuThreads = 2;
   bool _disposed = false;
+  bool _isStarting = false;
   Timer? _statsThrottle;
   bool _statsPending = false;
   Timer? _connectionTimeout;
   int _restartCount = 0;
   bool _everConnected = false;
+  StreamSubscription? _stdoutSub;
+  StreamSubscription? _stderrSub;
 
   final StreamController<MinerStats> _statsController =
       StreamController<MinerStats>.broadcast();
@@ -249,46 +252,45 @@ class NativeMinerService {
       _setState(MinerState.error, msg: _lastError!);
       return;
     }
-    if (_state == MinerState.running || _state == MinerState.starting) {
-      // Kill the existing process before starting a new one.
-      await stop();
-    }
-
-    // Also kill any orphaned process we still hold a reference to.
-    if (_process != null) {
-      await _killProcess(_process!);
-      _process = null;
-    }
-
-    // Kill ALL lingering qli-Client instances before starting fresh.
-    await killAllInstances();
-
-    final wallet = walletId ?? QubicService.walletId;
-    final t = threads ?? _cpuThreads;
-
-    // Ensure the binary is present.
-    if (!await isMinerInstalled()) {
-      try {
-        await downloadMiner();
-      } catch (_) {
-        return; // state already set to error
-      }
-    }
-
-    _setState(MinerState.starting, msg: 'Starting miner\u2026');
-    _solutionsFound = 0;
-    _hashRate = 0;
+    if (_isStarting) return; // Prevent concurrent start() calls
+    _isStarting = true;
 
     try {
+      if (_state == MinerState.running || _state == MinerState.starting) {
+        await stop();
+      }
+
+      if (_process != null) {
+        await _killProcess(_process!);
+        _process = null;
+      }
+
+      await killAllInstances();
+
+      final wallet = walletId ?? QubicService.walletId;
+      final t = threads ?? _cpuThreads;
+
+      if (!await isMinerInstalled()) {
+        try {
+          await downloadMiner();
+        } catch (_) {
+          return; // state already set to error
+        }
+      }
+
+      _setState(MinerState.starting, msg: 'Starting miner\u2026');
+      _solutionsFound = 0;
+      _hashRate = 0;
+      _lastError = null;
+
       final dir = await _getMinerDir();
       final binaryPath = '$dir${Platform.pathSeparator}$_binaryName';
 
-      // Write an appsettings.json for registerless pool mining.
       final settings = const JsonEncoder.withIndent('  ').convert({
         'Settings': {
           'payoutId': wallet,
           'alias': 'ConvertTheSpire',
-          'pps': true, // Pay-Per-Share for smaller setups
+          'pps': true,
           'amountOfThreads': t,
           'idling': false,
           'trainer': {
@@ -300,17 +302,18 @@ class NativeMinerService {
       File('$dir${Platform.pathSeparator}appsettings.json')
           .writeAsStringSync(settings);
 
-      _process = await Process.start(
+      final proc = await Process.start(
         binaryPath,
         [],
         workingDirectory: dir,
         mode: ProcessStartMode.normal,
       );
+      _process = proc;
 
-      // Set miner to BelowNormal priority so downloads and app stay responsive.
+      // Set miner to BelowNormal priority (may yield, so use local `proc`).
       if (Platform.isWindows) {
         try {
-          final pid = _process!.pid;
+          final pid = proc.pid;
           final r = await Process.run('powershell', [
             '-NoProfile', '-NonInteractive', '-Command',
             '(Get-Process -Id $pid).PriorityClass = [System.Diagnostics.ProcessPriorityClass]::BelowNormal',
@@ -323,9 +326,14 @@ class NativeMinerService {
         }
       }
 
+      // Guard: if we were stopped/restarted during the priority await, bail out.
+      if (_disposed || _process != proc) {
+        _killProcess(proc);
+        return;
+      }
+
       _setState(MinerState.running, msg: 'Connecting to pool\u2026');
 
-      // Start a connection timeout — restart if stuck on "starting" for too long.
       _connectionTimeout?.cancel();
       _connectionTimeout = Timer(const Duration(seconds: 90), () {
         if (_disposed) return;
@@ -342,19 +350,25 @@ class NativeMinerService {
         }
       });
 
-      // Listen to stdout / stderr.
-      _process!.stdout
+      // Cancel previous stdout/stderr subs before creating new ones.
+      _stdoutSub?.cancel();
+      _stderrSub?.cancel();
+
+      // Use local `proc` (not `_process!`) to avoid race if _process
+      // is reassigned during an earlier await.
+      _stdoutSub = proc.stdout
           .transform(utf8.decoder)
           .transform(const LineSplitter())
           .listen(_parseLine, onError: (_) {});
-      _process!.stderr
+      _stderrSub = proc.stderr
           .transform(utf8.decoder)
           .transform(const LineSplitter())
           .listen(_parseLine, onError: (_) {});
 
-      // Handle process exit.
-      _process!.exitCode.then((code) {
+      proc.exitCode.then((code) {
         if (_disposed) return;
+        // Ignore exit from a process we've already replaced.
+        if (_process != proc) return;
         debugPrint('NativeMinerService: process exited with code $code');
         _hashRate = 0;
         if (_state != MinerState.stopped) {
@@ -367,12 +381,19 @@ class NativeMinerService {
     } catch (e) {
       _lastError = e.toString();
       _setState(MinerState.error, msg: 'Failed to start');
+    } finally {
+      _isStarting = false;
     }
   }
 
   /// Auto-restart the miner after a connection timeout.
   Future<void> _autoRestart() async {
+    if (_isStarting) return; // Prevent overlapping restarts
     _connectionTimeout?.cancel();
+    _stdoutSub?.cancel();
+    _stderrSub?.cancel();
+    _stdoutSub = null;
+    _stderrSub = null;
     final proc = _process;
     _process = null;
     if (proc != null) {
@@ -381,6 +402,7 @@ class NativeMinerService {
     await killAllInstances();
     _hashRate = 0;
     _avgHashRate = 0;
+    _lastError = null;
     _setState(MinerState.starting, msg: 'Restarting miner\u2026');
     await Future.delayed(const Duration(seconds: 3));
     if (_disposed || _state == MinerState.stopped) return;
@@ -389,6 +411,10 @@ class NativeMinerService {
 
   Future<void> stop() async {
     _connectionTimeout?.cancel();
+    _stdoutSub?.cancel();
+    _stderrSub?.cancel();
+    _stdoutSub = null;
+    _stderrSub = null;
     _hashRate = 0;
     _restartCount = 0;
     _everConnected = false;
@@ -397,7 +423,6 @@ class NativeMinerService {
     if (proc != null) {
       await _killProcess(proc);
     }
-    // Kill any orphaned instances that weren't tracked by this service.
     await killAllInstances();
     _setState(MinerState.stopped, msg: 'Stopped');
   }
@@ -580,7 +605,7 @@ class NativeMinerService {
     _emitStatsNow();
   }
 
-  /// Throttled emit: batches rapid updates into at most one per second.
+  /// Throttled emit: batches rapid updates into at most 2 per second.
   void _emitStats() {
     if (_disposed || _statsController.isClosed) return;
     if (_statsThrottle?.isActive ?? false) {
@@ -588,7 +613,7 @@ class NativeMinerService {
       return;
     }
     _emitStatsNow();
-    _statsThrottle = Timer(const Duration(seconds: 1), () {
+    _statsThrottle = Timer(const Duration(milliseconds: 500), () {
       if (_statsPending) {
         _statsPending = false;
         _emitStatsNow();
@@ -618,7 +643,10 @@ class NativeMinerService {
     _disposed = true;
     _statsThrottle?.cancel();
     _connectionTimeout?.cancel();
-    // Use synchronous kill for dispose — can't await here.
+    _stdoutSub?.cancel();
+    _stderrSub?.cancel();
+    _stdoutSub = null;
+    _stderrSub = null;
     final proc = _process;
     _process = null;
     if (proc != null) {
@@ -630,7 +658,6 @@ class NativeMinerService {
         }
       } catch (_) {}
     }
-    // Kill all orphaned instances too.
     killAllInstances();
     _hashRate = 0;
     _state = MinerState.stopped;

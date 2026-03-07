@@ -50,6 +50,7 @@ class SupportScreenState extends State<SupportScreen>
   bool _batteryPaused = false;
   Timer? _batteryTimer;
   late final AnimationController _pulseController;
+  StreamSubscription? _minerStatsSub;
 
   int? _walletBalance;
   bool _balanceLoading = false;
@@ -73,6 +74,11 @@ class SupportScreenState extends State<SupportScreen>
         setState(() {});
       }
     };
+
+    // Subscribe to miner stats stream for direct UI updates.
+    _minerStatsSub = _coordinator.nativeMiner.statsStream.listen((_) {
+      if (mounted) setState(() {});
+    });
 
     _pulseController = AnimationController(
       vsync: this,
@@ -179,6 +185,7 @@ class SupportScreenState extends State<SupportScreen>
   void dispose() {
     _batteryTimer?.cancel();
     _miningTimer?.cancel();
+    _minerStatsSub?.cancel();
     _pulseController.dispose();
     // Null callbacks to avoid setState on defunct widget.
     // Services are NOT disposed here — they are owned by HomeScreenState.
@@ -1017,7 +1024,9 @@ class SupportScreenState extends State<SupportScreen>
                       style:
                           TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
                     ),
-                  if (_coordinator.lastError != null && !isRunning && !isLocal)
+                  if (_coordinator.lastError != null &&
+                      _coordinator.lastError!.isNotEmpty &&
+                      !isRunning && !isStarting && !isLocal)
                     Text(_coordinator.lastError!,
                         style: TextStyle(color: cs.error, fontSize: 12)),
                 ],
@@ -1030,8 +1039,10 @@ class SupportScreenState extends State<SupportScreen>
   }
 
   Widget _buildDashboard(ColorScheme cs) {
-    final isNative = _coordinator.nativeMinerSupported && _coordinator.nativeMiner.isRunning;
     final miner = _coordinator.nativeMiner;
+    // Show native dashboard whenever native mining is supported and we're not
+    // in local-fallback mode (covers starting, running, error states).
+    final isNative = _coordinator.nativeMinerSupported && !_coordinator.localMode;
 
     return Card(
       child: Padding(
@@ -1473,6 +1484,8 @@ class SupportScreenState extends State<SupportScreen>
       child: ExpansionTile(
         backgroundColor: Theme.of(context).cardColor,
         collapsedBackgroundColor: Theme.of(context).cardColor,
+        shape: const Border(),
+        collapsedShape: const Border(),
         leading: Icon(Icons.settings, color: cs.primary),
         title: const Text('Advanced Settings'),
         children: [
