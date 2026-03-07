@@ -142,39 +142,91 @@ class _SearchScreenState extends State<SearchScreen>
             child: Text(_error!, style: const TextStyle(color: Colors.red)),
           ),
         Expanded(
-          child: ListView.builder(
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            separatorBuilder: (_, __) => const SizedBox(height: 6),
             itemCount: _results.length,
             itemBuilder: (context, index) {
               final r = _results[index];
+              final cs = Theme.of(context).colorScheme;
               final leadingWidget = r.thumbnailUrl.isNotEmpty
                   ? ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: Image.network(r.thumbnailUrl, width: 48, height: 48, fit: BoxFit.cover),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.network(r.thumbnailUrl,
+                          width: 56, height: 56, fit: BoxFit.cover),
                     )
-                  : const Icon(Icons.music_note, size: 48);
+                  : Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(Icons.music_note,
+                          size: 28, color: cs.onSurfaceVariant),
+                    );
 
-              final previewButton = IconButton(
-                icon: const Icon(Icons.play_arrow),
-                tooltip: 'Preview in browser',
-                onPressed: () => _launchPreview(r.id),
-              );
-
-              final downloadButton = IconButton(
-                icon: const Icon(Icons.download),
-                tooltip: 'Download',
-                onPressed: () => widget.onDownload(r, _selectedFormat),
-              );
-
-              return ListTile(
-                leading: leadingWidget,
-                title: Text(r.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text(
-                  '${r.artist}  •  ${_formatDuration(r.duration)}  •  ${r.source}',
-                  maxLines: 1,
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [previewButton, downloadButton],
+              return Card(
+                margin: EdgeInsets.zero,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => widget.onDownload(r, _selectedFormat),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Row(
+                      children: [
+                        leadingWidget,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(r.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500)),
+                              const SizedBox(height: 3),
+                              Text(
+                                '${r.artist}  \u2022  ${_formatDuration(r.duration)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: cs.onSurfaceVariant),
+                              ),
+                              const SizedBox(height: 2),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: cs.primaryContainer
+                                      .withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(r.source,
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        color: cs.onPrimaryContainer)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.play_arrow),
+                          tooltip: 'Preview in browser',
+                          onPressed: () => _launchPreview(r.id),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.download),
+                          tooltip: 'Download',
+                          onPressed: () =>
+                              widget.onDownload(r, _selectedFormat),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               );
             },

@@ -57,16 +57,19 @@ class MediaItem {
   final String? artist;
   // Always PNG-encoded after processing — safe for Image.memory everywhere.
   final Uint8List? thumbnailData;
+  final Duration? duration;
 
   const MediaItem(this.path, this.type,
-      {this.title, this.artist, this.thumbnailData});
+      {this.title, this.artist, this.thumbnailData, this.duration});
 
   MediaItem copyWith(
-          {String? title, String? artist, Uint8List? thumbnailData}) =>
+          {String? title, String? artist, Uint8List? thumbnailData,
+           Duration? duration}) =>
       MediaItem(path, type,
           title: title ?? this.title,
           artist: artist ?? this.artist,
-          thumbnailData: thumbnailData ?? this.thumbnailData);
+          thumbnailData: thumbnailData ?? this.thumbnailData,
+          duration: duration ?? this.duration);
 }
 
 // ─── Thumbnail transcoding ───────────────────────────────────────────────────
@@ -560,14 +563,45 @@ class PlayerState with ChangeNotifier {
           if (!await File(path).exists()) continue;
         } catch (_) { continue; }
       }
-      final thumb = await _generateVideoThumbnail(path);
-      if (_loadVersion != version) return;
-      if (thumb != null && i < library.length && library[i].path == path) {
-        library[i] = library[i].copyWith(thumbnailData: thumb);
-        if (_favourites.contains(path)) {
-          _favouriteCache[path] = library[i];
+
+      Uint8List? thumb;
+      Duration? dur;
+
+      // Strategy 0: read embedded artwork from container metadata.
+      // Works for MP4/M4V (yt-dlp --embed-thumbnail writes pictures here).
+      try {
+        final metaPath = await _resolveLocalPath(path);
+        final tag = await readMetadata(File(metaPath), getImage: true);
+        dur = tag.duration;
+        if (tag.pictures.isNotEmpty) {
+          for (final pic in tag.pictures) {
+            if (pic.bytes.isEmpty) continue;
+            thumb = await _transcodeToSafePng(pic.bytes, mimeType: pic.mimetype);
+            if (thumb != null) {
+              debugPrint('video embedded art found for $path (${pic.bytes.length} bytes)');
+              break;
+            }
+          }
         }
-        notifyListeners();
+      } catch (e) {
+        debugPrint('video metadata read error for $path: $e');
+      }
+
+      // Fall back to frame-based screenshot if no embedded art.
+      thumb ??= await _generateVideoThumbnail(path);
+
+      if (_loadVersion != version) return;
+      if (i < library.length && library[i].path == path) {
+        if (thumb != null || dur != null) {
+          library[i] = library[i].copyWith(
+            thumbnailData: thumb ?? library[i].thumbnailData,
+            duration: dur,
+          );
+          if (_favourites.contains(path)) {
+            _favouriteCache[path] = library[i];
+          }
+          notifyListeners();
+        }
       }
     }
   }
@@ -576,7 +610,6 @@ class PlayerState with ChangeNotifier {
   Future<void> _enrichMetadataFast(int i, List<MediaItem> lib) async {
     if (i >= lib.length) return;
     final item = lib[i];
-    if (item.type == MediaType.video) return;
     try {
       final metaPath = await _resolveLocalPath(item.path);
       final tag = await readMetadata(File(metaPath), getImage: false);
@@ -1970,185 +2003,266 @@ class _PlayerScreenState extends State<PlayerScreen>
     final sel = index == state.currentIndex;
     final isFav = state.isFavourite(item.path);
     return Material(
-      color: sel ? _a(0.1) : Colors.transparent,
-      child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-        leading: _thumb(item, 46, Icons.audiotrack),
-        title: Text(
-          item.title ?? p.basenameWithoutExtension(item.path),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-              fontSize: 13,
-              fontWeight: sel ? FontWeight.bold : FontWeight.normal,
-              color: sel ? _accent : _text),
-        ),
-        subtitle: item.artist != null
-            ? Text(item.artist!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11, color: _sub))
-            : null,
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () {
-                state.enqueue(index);
-                ScaffoldMessenger.of(context)
-                  ..clearSnackBars()
-                  ..showSnackBar(SnackBar(
-                      content: Text('Added to queue'),
-                      duration: const Duration(seconds: 1)));
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(6),
-                child: Icon(Icons.queue_music, size: 18, color: _sub),
-              ),
-            ),
-            InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => state.toggleFavourite(item.path),
-              child: Padding(
-                padding: const EdgeInsets.all(6),
-                child: Icon(
-                  isFav ? Icons.favorite : Icons.favorite_border,
-                  size: 18,
-                  color: isFav ? Colors.redAccent : _sub,
+      color: sel ? _a(0.08) : Colors.transparent,
+      child: InkWell(
+        onTap: () => state.select(index),
+        child: Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          child: Row(
+            children: [
+              // Thumbnail with playing indicator overlay
+              SizedBox(
+                width: 48,
+                height: 48,
+                child: Stack(
+                  children: [
+                    _thumb(item, 48, Icons.audiotrack),
+                    if (sel)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Icon(Icons.equalizer,
+                              color: _accent, size: 22),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-            ),
-            if (sel)
-              const Icon(Icons.equalizer, color: _accent, size: 18),
-          ],
+              const SizedBox(width: 12),
+              // Title & artist
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.title ?? p.basenameWithoutExtension(item.path),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight:
+                              sel ? FontWeight.bold : FontWeight.w400,
+                          color: sel ? _accent : _text),
+                    ),
+                    if (item.artist != null) ...[
+                      const SizedBox(height: 2),
+                      Text(item.artist!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 11, color: _sub)),
+                    ],
+                  ],
+                ),
+              ),
+              // Actions
+              InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  state.enqueue(index);
+                  ScaffoldMessenger.of(context)
+                    ..clearSnackBars()
+                    ..showSnackBar(SnackBar(
+                        content: Text('Added to queue'),
+                        duration: const Duration(seconds: 1)));
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(Icons.queue_music, size: 18, color: _sub),
+                ),
+              ),
+              InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => state.toggleFavourite(item.path),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(
+                    isFav ? Icons.favorite : Icons.favorite_border,
+                    size: 18,
+                    color: isFav ? Colors.redAccent : _sub,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        onTap: () => state.select(index),
       ),
     );
   }
 
   Widget _videoGrid(
       PlayerState state, List<MapEntry<int, MediaItem>> entries) {
-    return GridView.builder(
-      shrinkWrap: true,
-      primary: false,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 16 / 9,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-      ),
-      itemCount: entries.length,
-      itemBuilder: (_, i) {
-        final idx = entries[i].key;
-        final item = entries[i].value;
-        final sel = idx == state.currentIndex;
-        final isFav = state.isFavourite(item.path);
+    return LayoutBuilder(builder: (context, constraints) {
+      // Responsive columns: 1 on narrow (phones), 2 on medium, 3+ on wide
+      final width = constraints.maxWidth;
+      final cols = width < 400 ? 1 : width < 700 ? 2 : width < 1100 ? 3 : 4;
+      final spacing = cols == 1 ? 12.0 : 10.0;
 
-        return GestureDetector(
-          onTap: () => state.select(idx),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Stack(fit: StackFit.expand, children: [
-                    item.thumbnailData != null
-                        ? _img(item.thumbnailData!, fit: BoxFit.cover)
-                        : Container(
-                            color: _tile,
-                            child:
-                                Icon(Icons.videocam, color: _sub, size: 32)),
-                    if (sel) Container(color: _a(0.3)),
-                    Center(
-                      child: Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.6),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          sel
-                              ? Icons.stop_rounded
-                              : Icons.play_arrow_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
+      return GridView.builder(
+        shrinkWrap: true,
+        primary: false,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: cols,
+          // Taller ratio to fit title + artist below the thumbnail
+          childAspectRatio: cols == 1 ? 16 / 11 : 16 / 13,
+          mainAxisSpacing: spacing,
+          crossAxisSpacing: spacing,
+        ),
+        itemCount: entries.length,
+        itemBuilder: (_, i) => _videoCard(state, entries[i].key, entries[i].value),
+      );
+    });
+  }
+
+  Widget _videoCard(PlayerState state, int idx, MediaItem item) {
+    final sel = idx == state.currentIndex;
+    final isFav = state.isFavourite(item.path);
+    final durStr = item.duration != null ? _fmt(item.duration!) : null;
+
+    return GestureDetector(
+      onTap: () => state.select(idx),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Thumbnail ──
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Stack(fit: StackFit.expand, children: [
+                // Thumbnail or placeholder
+                item.thumbnailData != null
+                    ? _img(item.thumbnailData!, fit: BoxFit.cover)
+                    : Container(
+                        color: _tile,
+                        child: Icon(Icons.videocam, color: _sub, size: 40)),
+                // Selection tint
+                if (sel)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _accent.withValues(alpha: 0.25),
+                      border: Border.all(color: _accent, width: 2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                // Play/stop center icon (subtle, only on hover-like states)
+                Center(
+                  child: AnimatedOpacity(
+                    opacity: sel ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.7),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        sel ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                        color: Colors.white,
+                        size: 24,
                       ),
                     ),
-                    Positioned(
-                      top: 2,
-                      right: 2,
-                      child: GestureDetector(
-                        onTap: () => state.toggleFavourite(item.path),
-                        child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            isFav ? Icons.favorite : Icons.favorite_border,
-                            size: 14,
-                            color: isFav ? Colors.redAccent : Colors.white70,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 2,
-                      right: 2,
-                      child: GestureDetector(
-                        onTap: () {
-                          state.enqueue(idx);
-                          ScaffoldMessenger.of(context)
-                            ..clearSnackBars()
-                            ..showSnackBar(SnackBar(
-                                content: Text('Added to queue'),
-                                duration: const Duration(seconds: 1)));
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.queue_music,
-                            size: 14,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ]),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                item.title ?? p.basenameWithoutExtension(item.path),
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: _text),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (item.artist != null)
-                Text(item.artist!,
-                    style: TextStyle(fontSize: 10, color: _sub),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-            ],
+                // Duration badge (bottom-right)
+                if (durStr != null)
+                  Positioned(
+                    bottom: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.75),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(durStr,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500)),
+                    ),
+                  ),
+                // Favourite button (top-right)
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: GestureDetector(
+                    onTap: () => state.toggleFavourite(item.path),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isFav ? Icons.favorite : Icons.favorite_border,
+                        size: 16,
+                        color: isFav ? Colors.redAccent : Colors.white70,
+                      ),
+                    ),
+                  ),
+                ),
+              ]),
+            ),
           ),
-        );
-      },
+          // ── Title & info row ──
+          Padding(
+            padding: const EdgeInsets.only(top: 8, left: 2, right: 2),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.title ?? p.basenameWithoutExtension(item.path),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: sel ? FontWeight.bold : FontWeight.w500,
+                          color: sel ? _accent : _text,
+                          height: 1.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (item.artist != null) ...[
+                        const SizedBox(height: 2),
+                        Text(item.artist!,
+                            style: TextStyle(fontSize: 11, color: _sub),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ],
+                    ],
+                  ),
+                ),
+                // Queue button
+                GestureDetector(
+                  onTap: () {
+                    state.enqueue(idx);
+                    ScaffoldMessenger.of(context)
+                      ..clearSnackBars()
+                      ..showSnackBar(SnackBar(
+                          content: Text('Added to queue'),
+                          duration: const Duration(seconds: 1)));
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4, top: 2),
+                    child: Icon(Icons.more_vert, size: 18, color: _sub),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

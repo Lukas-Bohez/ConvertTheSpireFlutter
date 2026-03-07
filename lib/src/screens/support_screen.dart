@@ -296,6 +296,8 @@ class SupportScreenState extends State<SupportScreen>
         if (!isEnabled) ...[
           _buildWhyCard(cs),
           const SizedBox(height: 16),
+          _buildHowItWorksCard(cs),
+          const SizedBox(height: 16),
           _buildGuaranteesCard(cs),
           const SizedBox(height: 16),
         ],
@@ -665,6 +667,128 @@ class SupportScreenState extends State<SupportScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 20, color: Colors.green),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(desc,
+                    style: const TextStyle(fontSize: 13, height: 1.4)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHowItWorksCard(ColorScheme cs) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.school_outlined, color: cs.primary),
+                const SizedBox(width: 8),
+                const Text('How Qubic Mining Works',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _howStep(
+              '1',
+              'Weekly Epochs',
+              'Qubic operates on a weekly cycle called an epoch. '
+              'Each epoch runs from Wednesday to Wednesday and is made '
+              'up of many short rounds (roughly ~7-second intervals). '
+              'During each round your CPU solves AI training tasks.',
+            ),
+            _howStep(
+              '2',
+              'Mining in Rounds',
+              'In every round, the qli-Client sends your CPU a small '
+              'AI training workload. Your processor solves it and submits '
+              'the answer back to the Qubic network. The faster your CPU, '
+              'the more solutions you contribute per epoch.',
+            ),
+            _howStep(
+              '3',
+              'Earning QUBIC Tokens',
+              'At the end of each epoch the Qubic network distributes newly '
+              'created QUBIC tokens. Miners are ranked by the number of valid '
+              'solutions they submitted. More solutions = larger share of the '
+              'weekly token distribution.',
+            ),
+            _howStep(
+              '4',
+              'Pool Mining',
+              'This app connects to a mining pool (qubic.li) which combines '
+              'your hashpower with other miners. Rewards are split '
+              'proportionally based on your contribution, so even modest '
+              'hardware earns a steady share every week.',
+            ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: cs.primaryContainer.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline,
+                      size: 18, color: cs.onPrimaryContainer),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'All QUBIC earnings go to the developer\u2019s wallet '
+                      'to fund continued development of this free app. '
+                      'You\u2019re supporting the project just by leaving '
+                      'mining on!',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onPrimaryContainer,
+                          height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _howStep(String number, String title, String desc) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: _tierColor(context).withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Text(number,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                )),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
