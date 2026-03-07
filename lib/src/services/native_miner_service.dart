@@ -556,6 +556,7 @@ class NativeMinerService {
         _connectionTimeout?.cancel();
         _restartCount = 0;
       }
+      _lastError = null; // Clear stale errors once mining is confirmed
       _statusMessage = 'Mining \u2022 Epoch $_epoch \u2022 ${_hashRate.round()} it/s';
     } else if (epochMatch != null && _avgHashRate > 0) {
       _statusMessage = 'Mining \u2022 Epoch $_epoch \u2022 warming up';

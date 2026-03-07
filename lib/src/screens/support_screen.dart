@@ -929,16 +929,18 @@ class SupportScreenState extends State<SupportScreen>
     final miner = _coordinator.nativeMiner;
     final isNative = _coordinator.nativeMinerSupported;
     final isRunning = isNative && miner.isRunning;
+    final isMinerStarting = isNative && miner.state == MinerState.starting;
     final isActuallyMining = isRunning &&
         (miner.hashRate > 0 || miner.avgHashRate > 0 || miner.epoch > 0);
     final isLocal = _coordinator.localMode;
     final isConnected = _coordinator.connected;
-    final isStarting = isRunning && !isActuallyMining;
+    final isStarting = isMinerStarting || (isRunning && !isActuallyMining);
 
     // Downloading / extracting progress
     if (isNative &&
         (miner.state == MinerState.downloading ||
-            miner.state == MinerState.extracting)) {
+            miner.state == MinerState.extracting ||
+            miner.state == MinerState.starting)) {
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -1481,13 +1483,15 @@ class SupportScreenState extends State<SupportScreen>
 
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        backgroundColor: Theme.of(context).cardColor,
-        collapsedBackgroundColor: Theme.of(context).cardColor,
-        shape: const Border(),
-        collapsedShape: const Border(),
-        leading: Icon(Icons.settings, color: cs.primary),
-        title: const Text('Advanced Settings'),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          backgroundColor: Theme.of(context).cardColor,
+          collapsedBackgroundColor: Theme.of(context).cardColor,
+          shape: const Border(),
+          collapsedShape: const Border(),
+          leading: Icon(Icons.settings, color: cs.primary),
+          title: const Text('Advanced Settings'),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -1671,6 +1675,7 @@ class SupportScreenState extends State<SupportScreen>
             ),
           ),
         ],
+      ),
       ),
     );
   }

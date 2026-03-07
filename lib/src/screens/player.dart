@@ -20,7 +20,7 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:video_player/video_player.dart';
 import '../services/platform_dirs.dart';
 import '../services/audio_handler.dart';
-import 'cast_dialog.dart';
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // IMPORTANT: In your main.dart add these two lines before runApp():
@@ -1599,20 +1599,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             ),
           ),
         ),
-        const SizedBox(width: 4),
-        _iconBtn(
-          Icons.cast,
-          state.currentItem == null
-              ? () {}
-              : () {
-                  CastDialog.show(
-                    context: context,
-                    filePath: state.currentItem!.path,
-                    title: state.currentItem!.title ?? 'Media',
-                  );
-                },
-          size: 22,
-        ),
+
       ],
     );
   }
