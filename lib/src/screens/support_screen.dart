@@ -922,8 +922,11 @@ class SupportScreenState extends State<SupportScreen>
     final miner = _coordinator.nativeMiner;
     final isNative = _coordinator.nativeMinerSupported;
     final isRunning = isNative && miner.isRunning;
+    final isActuallyMining = isRunning &&
+        (miner.hashRate > 0 || miner.avgHashRate > 0 || miner.epoch > 0);
     final isLocal = _coordinator.localMode;
     final isConnected = _coordinator.connected;
+    final isStarting = isRunning && !isActuallyMining;
 
     // Downloading / extracting progress
     if (isNative &&
@@ -970,18 +973,25 @@ class SupportScreenState extends State<SupportScreen>
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(
-              isRunning
-                  ? Icons.cloud_done
-                  : isLocal
-                      ? Icons.computer
-                      : isConnected
-                          ? Icons.cloud_done
-                          : Icons.cloud_off,
-              color: (isRunning || isLocal || isConnected)
-                  ? Colors.green
-                  : cs.error,
-            ),
+            if (isStarting)
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              Icon(
+                isActuallyMining
+                    ? Icons.cloud_done
+                    : isLocal
+                        ? Icons.computer
+                        : isConnected
+                            ? Icons.cloud_done
+                            : Icons.cloud_off,
+                color: (isActuallyMining || isLocal || isConnected)
+                    ? Colors.green
+                    : cs.error,
+              ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -989,9 +999,15 @@ class SupportScreenState extends State<SupportScreen>
                 children: [
                   Text(_coordinator.connectionStatus,
                       style: const TextStyle(fontWeight: FontWeight.w500)),
-                  if (isRunning)
+                  if (isActuallyMining)
                     Text(
                       'Pool mining via qli-Client \u2022 Payout to ${QubicService.walletId.substring(0, 8)}\u2026',
+                      style:
+                          TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+                    )
+                  else if (isStarting)
+                    Text(
+                      'Connecting to mining pool\u2026',
                       style:
                           TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
                     )

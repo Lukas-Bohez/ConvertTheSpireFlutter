@@ -32,20 +32,16 @@ class TrayService with TrayListener, WindowListener {
   }
 
   Future<void> _setupTray() async {
-    // Use the app icon for the tray. Resolve the PNG icon bundled in
-    // flutter_assets next to the executable.
+    // Use the app icon for the tray.
     String iconPath;
     if (Platform.isWindows) {
-      // The .ico embedded in the exe can't be read by tray_manager; use
-      // the bundled PNG from the flutter_assets folder instead.
+      // tray_manager on Windows requires .ico format.
       final exeDir = p.dirname(Platform.resolvedExecutable);
+      final ico = p.join(exeDir, 'data', 'flutter_assets', 'assets',
+          'icons', 'app_icon.ico');
       final png = p.join(exeDir, 'data', 'flutter_assets', 'assets',
           'icons', 'favicon-192x192.png');
-      // Fall back to runner resources .ico if the PNG doesn't exist.
-      iconPath = File(png).existsSync()
-          ? png
-          : p.join(exeDir, 'data', 'flutter_assets', 'assets', 'icons',
-              'favicon-192x192.png');
+      iconPath = File(ico).existsSync() ? ico : png;
     } else {
       iconPath = 'assets/icons/favicon-192x192.png';
     }

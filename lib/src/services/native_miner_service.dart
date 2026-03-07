@@ -90,6 +90,9 @@ class NativeMinerService {
   bool _disposed = false;
   Timer? _statsThrottle;
   bool _statsPending = false;
+  Timer? _connectionTimeout;
+  int _restartCount = 0;
+  bool _everConnected = false;
 
   final StreamController<MinerStats> _statsController =
       StreamController<MinerStats>.broadcast();
@@ -304,11 +307,8 @@ class NativeMinerService {
         mode: ProcessStartMode.normal,
       );
 
-      // Boost process priority on Windows so it actually uses the CPU.
+      // Set miner to BelowNormal priority so downloads and app stay responsive.
       if (Platform.isWindows) {
-        final priorityClass = t >= (_cpuThreads * 0.7).ceil()
-            ? 'AboveNormal'
-            : 'Normal';
         try {
           await Process.run('wmic', [
             'process',
@@ -316,12 +316,29 @@ class NativeMinerService {
             'ProcessId=${_process!.pid}',
             'CALL',
             'SetPriority',
-            priorityClass == 'AboveNormal' ? '32768' : '32',
+            '16384',  // BelowNormal
           ]);
         } catch (_) {}
       }
 
       _setState(MinerState.running, msg: 'Connecting to pool\u2026');
+
+      // Start a connection timeout — restart if stuck on "starting" for too long.
+      _connectionTimeout?.cancel();
+      _connectionTimeout = Timer(const Duration(seconds: 90), () {
+        if (_disposed) return;
+        if (_hashRate <= 0 && _avgHashRate <= 0 && _state == MinerState.running) {
+          debugPrint('NativeMinerService: connection timeout — restarting');
+          _lastError = 'Connection timed out. Restarting\u2026';
+          _restartCount++;
+          if (_restartCount <= 3) {
+            _autoRestart();
+          } else {
+            _setState(MinerState.error,
+                msg: 'Unable to connect after multiple attempts');
+          }
+        }
+      });
 
       // Listen to stdout / stderr.
       _process!.stdout
@@ -351,8 +368,28 @@ class NativeMinerService {
     }
   }
 
-  Future<void> stop() async {
+  /// Auto-restart the miner after a connection timeout.
+  Future<void> _autoRestart() async {
+    _connectionTimeout?.cancel();
+    final proc = _process;
+    _process = null;
+    if (proc != null) {
+      await _killProcess(proc);
+    }
+    await killAllInstances();
     _hashRate = 0;
+    _avgHashRate = 0;
+    _setState(MinerState.starting, msg: 'Restarting miner\u2026');
+    await Future.delayed(const Duration(seconds: 3));
+    if (_disposed || _state == MinerState.stopped) return;
+    await start();
+  }
+
+  Future<void> stop() async {
+    _connectionTimeout?.cancel();
+    _hashRate = 0;
+    _restartCount = 0;
+    _everConnected = false;
     final proc = _process;
     _process = null;
     if (proc != null) {
@@ -487,6 +524,11 @@ class NativeMinerService {
 
     // Epoch line — actively mining if any rate > 0
     if (epochMatch != null && _hashRate > 0) {
+      if (!_everConnected) {
+        _everConnected = true;
+        _connectionTimeout?.cancel();
+        _restartCount = 0;
+      }
       _statusMessage = 'Mining \u2022 Epoch $_epoch \u2022 ${_hashRate.round()} it/s';
     } else if (epochMatch != null && _avgHashRate > 0) {
       _statusMessage = 'Mining \u2022 Epoch $_epoch \u2022 warming up';
@@ -498,6 +540,21 @@ class NativeMinerService {
       _statusMessage = 'CPU trainer ready, mining\u2026';
     } else if (lower.contains('idle') || lower.contains('waiting')) {
       _statusMessage = 'Idle (waiting for next round)';
+    } else if (lower.contains('unable to connect') ||
+               lower.contains('connection refused') ||
+               lower.contains('could not connect') ||
+               lower.contains('no connection')) {
+      _lastError = line.length > 120 ? '${line.substring(0, 120)}\u2026' : line;
+      _statusMessage = 'Unable to connect to pool';
+      // Trigger auto-restart if we haven't exceeded retry limit
+      if (!_everConnected && _restartCount <= 3) {
+        _connectionTimeout?.cancel();
+        _restartCount++;
+        debugPrint('NativeMinerService: pool connection failed, auto-restart #$_restartCount');
+        _autoRestart();
+      } else if (_restartCount > 3) {
+        _setState(MinerState.error, msg: 'Unable to connect after multiple attempts');
+      }
     } else if (lower.contains('error') || lower.contains('fail')) {
       // Filter known XMRig performance warnings
       final isKnownWarning = _ignoredWarnings.any((w) => lower.contains(w));
@@ -558,6 +615,7 @@ class NativeMinerService {
   void dispose() {
     _disposed = true;
     _statsThrottle?.cancel();
+    _connectionTimeout?.cancel();
     // Use synchronous kill for dispose — can't await here.
     final proc = _process;
     _process = null;

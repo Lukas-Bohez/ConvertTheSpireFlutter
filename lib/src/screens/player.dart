@@ -2099,18 +2099,18 @@ class _PlayerScreenState extends State<PlayerScreen>
     return LayoutBuilder(builder: (context, constraints) {
       // Responsive columns: 1 on narrow (phones), 2 on medium, 3+ on wide
       final width = constraints.maxWidth;
-      final cols = width < 400 ? 1 : width < 700 ? 2 : width < 1100 ? 3 : 4;
-      final spacing = cols == 1 ? 12.0 : 10.0;
+      final cols = width < 400 ? 1 : width < 600 ? 2 : width < 900 ? 3 : width < 1300 ? 4 : 5;
+      final spacing = 16.0;
 
       return GridView.builder(
         shrinkWrap: true,
         primary: false,
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: cols,
-          // Taller ratio to fit title + artist below the thumbnail
-          childAspectRatio: cols == 1 ? 16 / 11 : 16 / 13,
+          // Wide ratio so thumbnails stay rectangular (16:9-ish) with text below
+          childAspectRatio: cols == 1 ? 16 / 10.5 : 16 / 12,
           mainAxisSpacing: spacing,
           crossAxisSpacing: spacing,
         ),
@@ -2131,9 +2131,10 @@ class _PlayerScreenState extends State<PlayerScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Thumbnail ──
-          Expanded(
+          AspectRatio(
+            aspectRatio: 16 / 9,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
               child: Stack(fit: StackFit.expand, children: [
                 // Thumbnail or placeholder
                 item.thumbnailData != null
@@ -2147,7 +2148,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                     decoration: BoxDecoration(
                       color: _accent.withValues(alpha: 0.25),
                       border: Border.all(color: _accent, width: 2),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                 // Play/stop center icon (subtle, only on hover-like states)
@@ -2213,9 +2214,10 @@ class _PlayerScreenState extends State<PlayerScreen>
             ),
           ),
           // ── Title & info row ──
-          Padding(
-            padding: const EdgeInsets.only(top: 8, left: 2, right: 2),
-            child: Row(
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8, left: 2, right: 2),
+              child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
@@ -2260,6 +2262,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 ),
               ],
             ),
+          ),
           ),
         ],
       ),

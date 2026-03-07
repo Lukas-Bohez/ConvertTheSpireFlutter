@@ -40,16 +40,21 @@ class CoordinatorService {
   /// Last error, if any.
   String? lastError;
 
-  bool get connected => _nativeMinerRunning || _localMode;
+  bool get connected => _nativeMinerActuallyMining || _localMode;
   bool get enabled => _enabled;
   bool get localMode => _localMode;
   String get deviceId => _deviceId;
 
-  /// Whether the native qli-Client miner is active.
+  /// Whether the native qli-Client miner is active (process alive).
   bool get nativeMinerRunning => _nativeMinerRunning;
   bool get _nativeMinerRunning =>
       _nativeMiner.state == MinerState.running ||
       _nativeMiner.state == MinerState.starting;
+
+  /// Whether the miner is actually producing hashes (not just starting).
+  bool get _nativeMinerActuallyMining =>
+      _nativeMiner.state == MinerState.running &&
+      (_nativeMiner.hashRate > 0 || _nativeMiner.avgHashRate > 0 || _nativeMiner.epoch > 0);
 
   /// Whether the native mining binary is available for this platform.
   bool get nativeMinerSupported =>
