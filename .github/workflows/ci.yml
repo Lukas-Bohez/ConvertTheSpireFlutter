@@ -192,7 +192,7 @@ jobs:
       - name: Package Windows release
         run: |
           cd artifacts/windows-release
-          zip -r ../../windows.zip .
+          zip -r ../../ConvertTheSpireReborn.zip .
 
       - name: Package Linux release
         run: |
@@ -214,7 +214,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            windows.zip
+            ConvertTheSpireReborn.zip
             linux.zip
             artifacts/android-release/ConvertTheSpireReborn.apk
         env:

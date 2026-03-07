@@ -20,7 +20,7 @@ class MusicBrainzService {
     final response = await http.get(
       Uri.parse(url),
       headers: {'User-Agent': _userAgent},
-    );
+    ).timeout(const Duration(seconds: 15));
     if (response.statusCode != 200) return null;
 
     final data = jsonDecode(response.body);
@@ -50,7 +50,7 @@ class MusicBrainzService {
       final response = await http.get(
         Uri.parse(url),
         headers: {'User-Agent': _userAgent},
-      );
+      ).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return null;
       final data = jsonDecode(response.body);
       final genres = data['genres'] as List?;
@@ -67,7 +67,8 @@ class MusicBrainzService {
 class AlbumArtService {
   Future<String?> downloadAlbumArt(String thumbnailUrl, String trackId) async {
     try {
-      final response = await http.get(Uri.parse(thumbnailUrl));
+      final response = await http.get(Uri.parse(thumbnailUrl))
+          .timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) return null;
       final tempDir = await getTemporaryDirectory();
       final artPath = '${tempDir.path}${Platform.pathSeparator}album_art_$trackId.jpg';
@@ -95,7 +96,8 @@ class LyricsService {
 
     final uri = Uri.parse('$_baseUrl/get').replace(queryParameters: params);
     try {
-      final response = await http.get(uri);
+      final response = await http.get(uri)
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return null;
 
       final data = jsonDecode(response.body);

@@ -9,8 +9,6 @@ on:
       release_name:
         description: 'Release name. Leave empty to use tag.'
         required: false
-  release:
-    types: [published]
 
 permissions:
   contents: write
@@ -65,14 +63,14 @@ jobs:
 
       - name: Archive Windows bundle
         run: |
-          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath windows.zip
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath ConvertTheSpireReborn.zip
         shell: pwsh
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64
-          path: windows.zip
+          path: ConvertTheSpireReborn.zip
 
   # ── Linux Build ──────────────────────────────────────────────────────
   build-linux:
@@ -172,15 +170,6 @@ jobs:
           name: ${{ inputs.release_name || inputs.release_tag || format('Build {0}', github.run_number) }}
           generate_release_notes: true
           files: |
-            artifacts/windows-x64/windows.zip
-            artifacts/linux-x64/linux.zip
-            artifacts/android-apk/ConvertTheSpireReborn.apk
-
-      - name: Upload to existing Release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            artifacts/windows-x64/windows.zip
+            artifacts/windows-x64/ConvertTheSpireReborn.zip
             artifacts/linux-x64/linux.zip
             artifacts/android-apk/ConvertTheSpireReborn.apk
