@@ -14,7 +14,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   tray_manager
   url_launcher_windows
   volume_controller
-  webview_windows
   window_manager
 )
 

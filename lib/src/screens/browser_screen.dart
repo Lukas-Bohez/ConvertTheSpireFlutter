@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -8,7 +7,6 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:webview_windows/webview_windows.dart' as winwv;
 
 import '../browser/adblock/adblock_service.dart';
 import '../browser/cast/cast_service.dart';
@@ -57,11 +55,6 @@ class _BrowserScreenState extends State<BrowserScreen>
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _findController = TextEditingController();
 
-  // Windows-specific webview (webview_windows package).
-  winwv.WebviewController? _winController;
-  bool _winReady = false;
-  final List<StreamSubscription> _winSubs = [];
-
   bool _isLoading = false;
   double _progress = 0;
   String _pageTitle = '';
@@ -87,9 +80,6 @@ class _BrowserScreenState extends State<BrowserScreen>
   /// True when the platform supports an in-app WebView.
   bool get _webViewSupported => !kIsWeb && !Platform.isLinux;
 
-  /// True when running on Windows desktop.
-  bool get _isWindows => !kIsWeb && Platform.isWindows;
-
   @override
   void initState() {
     super.initState();
@@ -106,9 +96,6 @@ class _BrowserScreenState extends State<BrowserScreen>
       _showNewTabPage = false;
       _pendingUrl = widget.initialUrl;
     }
-    if (_isWindows) {
-      _initWindowsWebView();
-    }
   }
 
   Future<void> _loadPrefs() async {
@@ -117,91 +104,6 @@ class _BrowserScreenState extends State<BrowserScreen>
       _searchEngine = prefs.getString('browser_search_engine') ?? 'DuckDuckGo';
       _desktopMode = prefs.getBool('browser_desktop_mode') ?? false;
     });
-  }
-
-  // ── Windows WebView (webview_windows) ──
-
-  Future<void> _initWindowsWebView() async {
-    final controller = winwv.WebviewController();
-    try {
-      await controller.initialize();
-    } catch (e) {
-      debugPrint('Windows WebView init failed: $e');
-      return; // Falls through to _buildPlatformUnavailable()
-    }
-    if (!mounted) {
-      controller.dispose();
-      return;
-    }
-    _winController = controller;
-
-    // Wire up streams from webview_windows → local state.
-    _winSubs.add(controller.url.listen((url) {
-      if (!mounted || url == 'about:blank') return;
-      setState(() {
-        _addressController.text = url;
-        _isSecure = url.startsWith('https://');
-        _isFavourited = false;
-      });
-      final tab = _tabManager.activeTab;
-      if (tab != null) {
-        _tabManager.updateTab(tab.id, url: url);
-      }
-      _checkFavouriteState();
-      _videoDetector.clearForPage();
-    }));
-    _winSubs.add(controller.title.listen((title) {
-      if (!mounted) return;
-      setState(() => _pageTitle = title);
-      final tab = _tabManager.activeTab;
-      if (tab != null) {
-        _tabManager.updateTab(tab.id, title: title);
-      }
-    }));
-    _winSubs.add(controller.loadingState.listen((state) {
-      if (!mounted) return;
-      final wasLoading = _isLoading;
-      setState(() {
-        _isLoading = state == winwv.LoadingState.loading;
-        if (state == winwv.LoadingState.navigationCompleted) {
-          _progress = 1.0;
-        }
-      });
-      // Record history when navigation completes.
-      if (wasLoading && state == winwv.LoadingState.navigationCompleted) {
-        final url = _addressController.text.trim();
-        final tab = _tabManager.activeTab;
-        if (tab != null) {
-          _tabManager.updateTab(tab.id,
-              url: url, title: _pageTitle, isLoading: false);
-        }
-        if (!(tab?.isIncognito ?? false) && url.isNotEmpty) {
-          final domain = Uri.tryParse(url)?.host ?? '';
-          final faviconUrl = domain.isNotEmpty
-              ? 'https://www.google.com/s2/favicons?sz=64&domain_url=$domain'
-              : null;
-          _repo.addHistory(url, _pageTitle, faviconUrl);
-          _repo.upsertRecentSite(url, _pageTitle, faviconUrl);
-        }
-      }
-    }));
-    _winSubs.add(controller.historyChanged.listen((history) {
-      if (!mounted) return;
-      setState(() {
-        _canGoBack = history.canGoBack;
-        _canGoForward = history.canGoForward;
-      });
-    }));
-
-    // If we had a URL pending, load it now.
-    final urlToLoad = _pendingUrl;
-    _pendingUrl = null;
-    if (urlToLoad != null && urlToLoad.isNotEmpty) {
-      await controller.loadUrl(urlToLoad);
-      setState(() => _showNewTabPage = false);
-    }
-
-    setState(() => _winReady = true);
   }
 
   void _onVideoDetectorChanged() {
@@ -230,10 +132,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     _findController.dispose();
     _castService.dispose();
     _videoDetector.dispose();
-    for (final sub in _winSubs) {
-      sub.cancel();
-    }
-    _winController?.dispose();
     super.dispose();
   }
 
@@ -273,15 +171,6 @@ class _BrowserScreenState extends State<BrowserScreen>
       _isFavourited = false;
     });
     _addressController.text = normalized;
-
-    if (_isWindows) {
-      if (_winController != null && _winReady) {
-        _winController!.loadUrl(normalized);
-      } else {
-        _pendingUrl = normalized;
-      }
-      return;
-    }
 
     if (_webViewController != null) {
       _webViewController!
@@ -482,10 +371,6 @@ class _BrowserScreenState extends State<BrowserScreen>
   // ── Actions ──
 
   void _goBack() async {
-    if (_isWindows && _winController != null && _winReady) {
-      _winController!.goBack();
-      return;
-    }
     if (_webViewController != null &&
         await _webViewController!.canGoBack()) {
       _webViewController!.goBack();
@@ -493,10 +378,6 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _goForward() async {
-    if (_isWindows && _winController != null && _winReady) {
-      _winController!.goForward();
-      return;
-    }
     if (_webViewController != null &&
         await _webViewController!.canGoForward()) {
       _webViewController!.goForward();
@@ -506,15 +387,6 @@ class _BrowserScreenState extends State<BrowserScreen>
   void _reload() {
     if (_showNewTabPage) return;
     final currentUrl = _addressController.text.trim();
-    if (_isWindows && _winController != null && _winReady) {
-      if (_isLoading) {
-        _winController!.stop();
-        setState(() => _isLoading = false);
-      } else {
-        _winController!.reload();
-      }
-      return;
-    }
     if (_isLoading) {
       _webViewController?.stopLoading();
       setState(() => _isLoading = false);
@@ -652,18 +524,8 @@ class _BrowserScreenState extends State<BrowserScreen>
     _desktopMode = !_desktopMode;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('browser_desktop_mode', _desktopMode);
-    if (_isWindows && _winController != null && _winReady) {
-      if (_desktopMode) {
-        _winController!.setUserAgent(
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-          '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        );
-      }
-      _winController!.reload();
-    } else {
-      _webViewController?.setSettings(settings: _buildSettings());
-      _webViewController?.reload();
-    }
+    _webViewController?.setSettings(settings: _buildSettings());
+    _webViewController?.reload();
     setState(() {});
   }
 
@@ -810,9 +672,7 @@ class _BrowserScreenState extends State<BrowserScreen>
                       if (_webViewSupported)
                         Offstage(
                           offstage: _showNewTabPage,
-                          child: _isWindows
-                              ? _buildWindowsWebView()
-                              : _buildWebView(),
+                          child: _buildWebView(),
                         )
                       else
                         _buildPlatformUnavailable(),
@@ -913,14 +773,6 @@ class _BrowserScreenState extends State<BrowserScreen>
         return false;
       },
     );
-  }
-
-  Widget _buildWindowsWebView() {
-    final controller = _winController;
-    if (controller == null || !_winReady) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    return winwv.Webview(controller);
   }
 
   Widget _buildPlatformUnavailable() {

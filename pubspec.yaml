@@ -54,7 +54,6 @@ dependencies:
 
   # HTML parsing
   html: ^0.15.4
-  webview_windows: ^0.4.0
   webview_flutter_web: ^0.2.3+4
   just_audio_windows: ^0.2.2
   video_thumbnail: ^0.5.6

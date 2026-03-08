@@ -51,9 +51,21 @@ class _NewTabPageState extends State<NewTabPage> {
     }
   }
 
+  static const _defaultSites = [
+    {'url': 'https://www.youtube.com', 'title': 'YouTube', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=youtube.com'},
+    {'url': 'https://www.google.com', 'title': 'Google', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=google.com'},
+    {'url': 'https://www.wikipedia.org', 'title': 'Wikipedia', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=wikipedia.org'},
+    {'url': 'https://www.reddit.com', 'title': 'Reddit', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=reddit.com'},
+    {'url': 'https://github.com', 'title': 'GitHub', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=github.com'},
+    {'url': 'https://music.youtube.com', 'title': 'YouTube Music', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=music.youtube.com'},
+    {'url': 'https://soundcloud.com', 'title': 'SoundCloud', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=soundcloud.com'},
+    {'url': 'https://www.twitch.tv', 'title': 'Twitch', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=twitch.tv'},
+  ];
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final quickAccessSites = _recentSites.isNotEmpty ? _recentSites : _defaultSites;
     return CustomScrollView(
       slivers: [
         const SliverToBoxAdapter(child: SizedBox(height: 32)),
@@ -88,39 +100,37 @@ class _NewTabPageState extends State<NewTabPage> {
 
         const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
-        // ── Quick access (most visited) ──
-        if (_recentSites.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text('Quick Access',
-                  style: Theme.of(context).textTheme.titleSmall),
-            ),
+        // ── Quick access (most visited / suggested) ──
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+                _recentSites.isNotEmpty ? 'Quick Access' : 'Suggested Sites',
+                style: Theme.of(context).textTheme.titleSmall),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverGrid.count(
-              crossAxisCount: 4,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 0.85,
-              children: _recentSites.take(8).map((site) {
-                final url = site['url'] as String;
-                final title = site['title'] as String? ?? '';
-                final favicon = site['favicon'] as String?;
-                final host = Uri.tryParse(url)?.host ?? url;
-                final label =
-                    title.isNotEmpty ? title : host;
-                return _QuickAccessTile(
-                  label: label,
-                  faviconUrl: favicon,
-                  onTap: () => widget.onNavigate(url),
-                );
-              }).toList(),
-            ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 8)),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverGrid.count(
+            crossAxisCount: 4,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 0.85,
+            children: quickAccessSites.take(8).map((site) {
+              final url = site['url'] as String;
+              final title = site['title'] as String? ?? '';
+              final favicon = site['favicon'] as String?;
+              final host = Uri.tryParse(url)?.host ?? url;
+              final label = title.isNotEmpty ? title : host;
+              return _QuickAccessTile(
+                label: label,
+                faviconUrl: favicon,
+                onTap: () => widget.onNavigate(url),
+              );
+            }).toList(),
           ),
-        ],
+        ),
 
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
