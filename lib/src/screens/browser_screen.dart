@@ -89,6 +89,17 @@ class _BrowserScreenState extends State<BrowserScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
+    _findInteractionController = FindInteractionController(
+      onFindResultReceived:
+          (controller, activeMatchOrdinal, numberOfMatches, isDoneCounting) {
+        if (isDoneCounting) {
+          setState(() {
+            _findMatchCount = numberOfMatches;
+            _findActiveIndex = activeMatchOrdinal;
+          });
+        }
+      },
+    );
     _videoDetector.addListener(_onVideoDetectorChanged);
     _castService.addListener(_onCastChanged);
     _loadPrefs();
@@ -226,6 +237,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _onWebViewCreated(InAppWebViewController controller) {
+    debugPrint('[BROWSER] onWebViewCreated – controller ready');
     _webViewController = controller;
 
     controller.addJavaScriptHandler(
@@ -247,6 +259,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _onLoadStart(InAppWebViewController controller, WebUri? url) {
+    debugPrint('[BROWSER] onLoadStart – $url');
     _videoDetector.clearForPage();
     final urlStr = url?.toString() ?? '';
     // Ignore about:blank navigations caused by WebView initialisation.
@@ -264,6 +277,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _onLoadStop(InAppWebViewController controller, WebUri? url) async {
+    debugPrint('[BROWSER] onLoadStop – $url');
     final urlStr = url?.toString() ?? '';
     // Ignore about:blank completions.
     if (urlStr == 'about:blank') return;
@@ -336,9 +350,19 @@ class _BrowserScreenState extends State<BrowserScreen>
       WebResourceRequest request) async {
     final url = request.url.toString();
 
-    // Ad-block.
+    // Ad-block (skip on YouTube/Google sites whose players depend on Google ad
+    // domains like doubleclick.net and googlesyndication.com).
     if (_adBlock.adBlockEnabled && _adBlock.shouldBlock(url)) {
-      return WebResourceResponse(data: Uint8List(0));
+      final pageHost =
+          Uri.tryParse(_addressController.text)?.host?.toLowerCase() ?? '';
+      final isGoogleSite = pageHost.endsWith('youtube.com') ||
+          pageHost.endsWith('.youtube.com') ||
+          pageHost.endsWith('google.com') ||
+          pageHost.endsWith('.google.com') ||
+          pageHost.contains('.google.');
+      if (!isGoogleSite) {
+        return WebResourceResponse(data: Uint8List(0));
+      }
     }
 
     // Video detection via network sniffing.
@@ -358,6 +382,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _onReceivedError(InAppWebViewController controller,
       WebResourceRequest request, WebResourceError error) {
+    debugPrint('[BROWSER] onReceivedError – ${request.url} | ${error.type} | ${error.description}');
     if (request.isForMainFrame ?? false) {
       setState(() => _isLoading = false);
     }
@@ -666,14 +691,11 @@ class _BrowserScreenState extends State<BrowserScreen>
                 Expanded(
                   child: Stack(
                     children: [
-                      // The WebView is ALWAYS in the tree so its
-                      // controller stays alive across new-tab-page
-                      // transitions.
+                      // WebView always in tree (texture-based on
+                      // Windows — no HWND overlay issues). NewTabPage
+                      // is placed on top when active.
                       if (_webViewSupported)
-                        Offstage(
-                          offstage: _showNewTabPage,
-                          child: _buildWebView(),
-                        )
+                        Positioned.fill(child: _buildWebView())
                       else
                         _buildPlatformUnavailable(),
 
@@ -738,16 +760,6 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   Widget _buildWebView() {
-    _findInteractionController = FindInteractionController(
-      onFindResultReceived: (controller, activeMatchOrdinal, numberOfMatches, isDoneCounting) {
-        if (isDoneCounting) {
-          setState(() {
-            _findMatchCount = numberOfMatches;
-            _findActiveIndex = activeMatchOrdinal;
-          });
-        }
-      },
-    );
     return InAppWebView(
       key: const ValueKey('browser_webview'),
       initialSettings: _buildSettings(),
@@ -908,16 +920,24 @@ class _BrowserScreenState extends State<BrowserScreen>
         tabManager: _tabManager,
         onSelectTab: (index) {
           _tabManager.switchToTab(index);
-          setState(() {
-            _showNewTabPage = _tabManager.activeTab?.url.isEmpty ?? true;
-          });
+          final tab = _tabManager.activeTab;
+          final showNew = tab?.url.isEmpty ?? true;
+          setState(() => _showNewTabPage = showNew);
+          if (!showNew && tab != null && tab.url.isNotEmpty) {
+            _webViewController?.loadUrl(
+                urlRequest: URLRequest(url: WebUri(tab.url)));
+          }
           Navigator.pop(context);
         },
         onCloseTab: (index) {
           _tabManager.closeTab(index);
-          setState(() {
-            _showNewTabPage = _tabManager.activeTab?.url.isEmpty ?? true;
-          });
+          final tab = _tabManager.activeTab;
+          final showNew = tab?.url.isEmpty ?? true;
+          setState(() => _showNewTabPage = showNew);
+          if (!showNew && tab != null && tab.url.isNotEmpty) {
+            _webViewController?.loadUrl(
+                urlRequest: URLRequest(url: WebUri(tab.url)));
+          }
         },
         onNewTab: () {
           _tabManager.addTab();
