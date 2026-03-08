@@ -409,12 +409,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
-  /// Open a web URL in the system browser.
+  /// Open a web URL in the **in-app browser**.
   void openBrowserWith(String url) {
-    final uri = Uri.tryParse(url);
-    if (uri != null) {
-      launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+    _navigateToPage(2); // Switch to the browser tab
+    BrowserScreen.navigate(url); // Load URL in the in-app WebView
   }
 
   String _formatAndroidFolderLabel(String uriString) {

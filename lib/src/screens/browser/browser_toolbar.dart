@@ -177,6 +177,17 @@ class BrowserToolbar extends StatelessWidget {
                     child: Text('Add to Favourites')),
                 const PopupMenuItem(
                     value: 'share', child: Text('Share URL')),
+                const PopupMenuDivider(),
+                const PopupMenuItem(
+                    value: 'history',
+                    child: Text('History')),
+                const PopupMenuItem(
+                    value: 'favourites',
+                    child: Text('Favourites')),
+                const PopupMenuItem(
+                    value: 'settings',
+                    child: Text('Settings')),
+                const PopupMenuDivider(),
                 PopupMenuItem(
                   value: 'desktop_mode',
                   child: Row(

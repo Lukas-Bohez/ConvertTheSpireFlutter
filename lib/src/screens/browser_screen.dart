@@ -22,6 +22,9 @@ import 'browser/browser_toolbar.dart';
 import 'browser/cast/cast_picker_sheet.dart';
 import 'browser/cast_mini_bar.dart';
 import 'browser/new_tab_page.dart';
+import 'browser/history_screen.dart';
+import 'browser/favourites_screen.dart';
+import 'browser/browser_settings_screen.dart';
 
 /// Full-featured browser screen with ad-blocking, video detection, and casting.
 class BrowserScreen extends StatefulWidget {
@@ -138,8 +141,14 @@ class _BrowserScreenState extends State<BrowserScreen>
       setState(() {
         _addressController.text = url;
         _isSecure = url.startsWith('https://');
+        _isFavourited = false;
       });
+      final tab = _tabManager.activeTab;
+      if (tab != null) {
+        _tabManager.updateTab(tab.id, url: url);
+      }
       _checkFavouriteState();
+      _videoDetector.clearForPage();
     }));
     _winSubs.add(controller.title.listen((title) {
       if (!mounted) return;
@@ -151,12 +160,30 @@ class _BrowserScreenState extends State<BrowserScreen>
     }));
     _winSubs.add(controller.loadingState.listen((state) {
       if (!mounted) return;
+      final wasLoading = _isLoading;
       setState(() {
         _isLoading = state == winwv.LoadingState.loading;
         if (state == winwv.LoadingState.navigationCompleted) {
           _progress = 1.0;
         }
       });
+      // Record history when navigation completes.
+      if (wasLoading && state == winwv.LoadingState.navigationCompleted) {
+        final url = _addressController.text.trim();
+        final tab = _tabManager.activeTab;
+        if (tab != null) {
+          _tabManager.updateTab(tab.id,
+              url: url, title: _pageTitle, isLoading: false);
+        }
+        if (!(tab?.isIncognito ?? false) && url.isNotEmpty) {
+          final domain = Uri.tryParse(url)?.host ?? '';
+          final faviconUrl = domain.isNotEmpty
+              ? 'https://www.google.com/s2/favicons?sz=64&domain_url=$domain'
+              : null;
+          _repo.addHistory(url, _pageTitle, faviconUrl);
+          _repo.upsertRecentSite(url, _pageTitle, faviconUrl);
+        }
+      }
     }));
     _winSubs.add(controller.historyChanged.listen((history) {
       if (!mounted) return;
@@ -649,6 +676,45 @@ class _BrowserScreenState extends State<BrowserScreen>
     _findActiveIndex = 0;
   }
 
+  void _openHistory() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => HistoryScreen(
+          repo: _repo,
+          onNavigate: (url) {
+            Navigator.pop(context);
+            _navigateTo(url);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _openFavourites() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FavouritesScreen(
+          repo: _repo,
+          onNavigate: (url) {
+            Navigator.pop(context);
+            _navigateTo(url);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _openSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BrowserSettingsScreen(
+          adBlockService: _adBlock,
+          repo: _repo,
+        ),
+      ),
+    );
+  }
+
   void _closeFindInPage() {
     _findInteractionController?.clearMatches();
     setState(() {
@@ -973,6 +1039,12 @@ class _BrowserScreenState extends State<BrowserScreen>
         _openInExternal();
       case 'find':
         _openFindInPage();
+      case 'history':
+        _openHistory();
+      case 'favourites':
+        _openFavourites();
+      case 'settings':
+        _openSettings();
     }
   }
 
