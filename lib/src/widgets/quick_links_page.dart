@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'quick_links_service.dart';
 
-/// Firefox-style "New Tab" home page with a prominent search bar
-/// and a grid of quick-link tiles.
+/// Clean home page with a grid of quick-link tiles.
 class QuickLinksPage extends StatefulWidget {
   final ValueChanged<String> onNavigate;
   final ValueChanged<String> onSearch;
@@ -20,18 +19,11 @@ class QuickLinksPage extends StatefulWidget {
 
 class _QuickLinksPageState extends State<QuickLinksPage> {
   List<QuickLink> _links = [];
-  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadLinks();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadLinks() async {
@@ -43,151 +35,164 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final width = MediaQuery.of(context).size.width;
-    final crossAxisCount = width < 600 ? 2 : (width < 1024 ? 3 : 4);
+    final crossAxisCount = width < 500 ? 3 : (width < 900 ? 4 : 5);
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-      children: [
-        const SizedBox(height: 24),
-        // App branding
-        Center(
-          child: Column(
-            children: [
-              Icon(Icons.music_note, size: 48, color: cs.primary),
-              const SizedBox(height: 8),
-              Text(
-                'Convert the Spire',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: cs.primary,
-                    ),
-              ),
-            ],
-          ),
+    return Container(
+      color: cs.surfaceContainerLowest,
+      child: ListView(
+        padding: EdgeInsets.symmetric(
+          horizontal: width < 600 ? 16 : 48,
+          vertical: 24,
         ),
-        const SizedBox(height: 32),
-
-        // Centered search bar
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search or enter address...',
-                prefixIcon: Icon(Icons.search, color: cs.primary),
-                filled: true,
-                fillColor: cs.surfaceContainerHighest,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(28),
-                  borderSide: BorderSide.none,
+        children: [
+          const SizedBox(height: 32),
+          // App branding
+          Center(
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        cs.primary.withValues(alpha: 0.15),
+                        cs.tertiary.withValues(alpha: 0.10),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Icon(Icons.music_note_rounded,
+                      size: 40, color: cs.primary),
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              ),
-              onSubmitted: (value) {
-                final trimmed = value.trim();
-                if (trimmed.isEmpty) return;
-                // Check if it's a known route
-                if (QuickLinksService.routeToIndex.containsKey(trimmed)) {
-                  widget.onNavigate(trimmed);
-                } else {
-                  widget.onSearch(trimmed);
-                }
-              },
+                const SizedBox(height: 14),
+                Text(
+                  'Convert the Spire',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                        color: cs.onSurface,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Use the address bar above to navigate or enter a URL',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(height: 40),
+          const SizedBox(height: 36),
 
-        // Quick links section label
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Text(
-            'Quick Links',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurfaceVariant,
-                ),
+          // Quick links grid
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 1.0,
+            ),
+            itemCount: _links.length,
+            itemBuilder: (context, index) {
+              final link = _links[index];
+              return _QuickLinkTile(
+                link: link,
+                onTap: () => widget.onNavigate(link.route),
+              );
+            },
           ),
-        ),
-
-        // Quick links grid
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.4,
-          ),
-          itemCount: _links.length,
-          itemBuilder: (context, index) {
-            final link = _links[index];
-            return _QuickLinkTile(
-              link: link,
-              onTap: () => widget.onNavigate(link.route),
-            );
-          },
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _QuickLinkTile extends StatelessWidget {
+class _QuickLinkTile extends StatefulWidget {
   final QuickLink link;
   final VoidCallback onTap;
 
   const _QuickLinkTile({required this.link, required this.onTap});
 
   @override
+  State<_QuickLinkTile> createState() => _QuickLinkTileState();
+}
+
+class _QuickLinkTileState extends State<_QuickLinkTile> {
+  bool _hovering = false;
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(link.icon, color: cs.primary, size: 22),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          color: _hovering
+              ? cs.primaryContainer.withValues(alpha: 0.35)
+              : cs.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: _hovering
+                ? cs.primary.withValues(alpha: 0.3)
+                : cs.outlineVariant.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(14),
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: cs.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(widget.link.icon,
+                        color: cs.primary, size: 22),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.link.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      color: cs.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                  if (widget.link.description.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.link.description,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                link.name,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 13),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
-              if (link.description.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Text(
-                  link.description,
-                  style: TextStyle(
-                      fontSize: 11, color: cs.onSurfaceVariant),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),

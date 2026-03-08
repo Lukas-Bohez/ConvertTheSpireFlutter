@@ -2,50 +2,21 @@ import 'package:flutter/material.dart';
 
 import 'quick_links_service.dart';
 
-/// The persistent browser-like shell that wraps all app content.
-///
-/// Contains:
-/// - Top AppBar with back/forward/refresh, fake URL bar, favicon, queue toggle
-/// - Main content area (child pages)
-/// - Queue sidebar (endDrawer on mobile/tablet, fixed panel on desktop)
-///
-/// This widget never rebuilds when navigating between features — it holds
-/// the scaffold, URL bar state, and navigation history.
+/// Persistent browser-like shell that wraps all app content.
 class BrowserShell extends StatefulWidget {
-  /// The current page index (0–12).
   final int currentIndex;
-
-  /// The queue widget, kept alive across navigations.
   final Widget queueWidget;
-
-  /// Callback when a route is navigated to from the URL bar.
   final ValueChanged<String> onNavigate;
-
-  /// Callback when back is pressed.
+  final ValueChanged<String>? onOpenUrl;
   final VoidCallback? onBack;
-
-  /// Callback when forward is pressed.
   final VoidCallback? onForward;
-
-  /// Callback when refresh is pressed.
   final VoidCallback onRefresh;
-
-  /// Whether back navigation is possible.
+  final VoidCallback onHome;
   final bool canGoBack;
-
-  /// Whether forward navigation is possible.
   final bool canGoForward;
-
-  /// Whether the queue sidebar is on the right (true) or left (false).
   final bool queueOnRight;
-
-  /// Total items in queue (for badge).
   final int queueCount;
-
-  /// Child content — the active page.
   final Widget child;
-
-  /// Global key to control the scaffold's endDrawer/drawer.
   final GlobalKey<ScaffoldState> scaffoldKey;
 
   const BrowserShell({
@@ -53,9 +24,11 @@ class BrowserShell extends StatefulWidget {
     required this.currentIndex,
     required this.queueWidget,
     required this.onNavigate,
+    this.onOpenUrl,
     required this.onBack,
     required this.onForward,
     required this.onRefresh,
+    required this.onHome,
     required this.canGoBack,
     required this.canGoForward,
     required this.queueOnRight,
@@ -70,8 +43,11 @@ class BrowserShell extends StatefulWidget {
 
 class _BrowserShellState extends State<BrowserShell> {
   bool _isEditing = false;
+  bool _showQueueDesktop = true;
   late final TextEditingController _urlEditController;
   final FocusNode _urlFocusNode = FocusNode();
+  final LayerLink _layerLink = LayerLink();
+  OverlayEntry? _suggestionsOverlay;
 
   @override
   void initState() {
@@ -81,13 +57,11 @@ class _BrowserShellState extends State<BrowserShell> {
 
   @override
   void dispose() {
+    _removeSuggestions();
     _urlEditController.dispose();
     _urlFocusNode.dispose();
     super.dispose();
   }
-
-  String get _currentRoute =>
-      QuickLinksService.indexToRoute[widget.currentIndex] ?? 'search.tab';
 
   String get _currentTitle =>
       QuickLinksService.indexToTitle[widget.currentIndex] ?? 'Search';
@@ -95,46 +69,107 @@ class _BrowserShellState extends State<BrowserShell> {
   IconData get _currentFavicon =>
       QuickLinksService.indexToIcon[widget.currentIndex] ?? Icons.search;
 
+  // ── URL bar editing ──
+
   void _startEditing() {
-    _urlEditController.text = _currentRoute;
+    _urlEditController.text = '';
     setState(() => _isEditing = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _urlFocusNode.requestFocus();
-      _urlEditController.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: _urlEditController.text.length,
-      );
+      _showSuggestions('');
     });
   }
 
   void _submitUrl(String value) {
+    _removeSuggestions();
     setState(() => _isEditing = false);
-    final trimmed = value.trim().toLowerCase();
+    final trimmed = value.trim();
     if (trimmed.isEmpty) return;
 
-    // Direct route match
-    if (QuickLinksService.routeToIndex.containsKey(trimmed)) {
-      widget.onNavigate(trimmed);
+    // Web URL detection — open in browser tab
+    if (_looksLikeUrl(trimmed)) {
+      final url = trimmed.startsWith('http') ? trimmed : 'https://$trimmed';
+      widget.onOpenUrl?.call(url);
       return;
     }
 
-    // Partial match (e.g. "player" → "player.tab")
+    final lower = trimmed.toLowerCase();
+
+    // Direct route match
+    if (QuickLinksService.routeToIndex.containsKey(lower)) {
+      widget.onNavigate(lower);
+      return;
+    }
+
+    // Title match (case-insensitive)
+    for (final entry in QuickLinksService.indexToTitle.entries) {
+      if (entry.value.toLowerCase() == lower) {
+        final route = QuickLinksService.indexToRoute[entry.key];
+        if (route != null) {
+          widget.onNavigate(route);
+          return;
+        }
+      }
+    }
+
+    // Partial match
     for (final entry in QuickLinksService.routeToIndex.entries) {
-      if (entry.key.startsWith(trimmed) ||
-          entry.key.replaceAll('.tab', '').replaceAll('.spire', '') ==
-              trimmed) {
+      final name = entry.key.replaceAll('.tab', '');
+      if (name.startsWith(lower) || name.contains(lower)) {
         widget.onNavigate(entry.key);
         return;
       }
     }
 
-    // Fallback: treat as search query → navigate to search tab
+    // Fallback: treat as search query
     widget.onNavigate('search.tab');
   }
 
+  bool _looksLikeUrl(String text) {
+    final lower = text.toLowerCase();
+    return lower.startsWith('http://') ||
+        lower.startsWith('https://') ||
+        lower.startsWith('www.') ||
+        (lower.contains('.') &&
+            !lower.contains(' ') &&
+            RegExp(r'\.[a-z]{2,}$', caseSensitive: false).hasMatch(lower));
+  }
+
   void _cancelEditing() {
+    _removeSuggestions();
     setState(() => _isEditing = false);
   }
+
+  // ── Suggestions overlay ──
+
+  void _showSuggestions(String query) {
+    _removeSuggestions();
+    final overlay = Overlay.of(context);
+    _suggestionsOverlay = OverlayEntry(
+      builder: (ctx) => _SuggestionsDropdown(
+        link: _layerLink,
+        query: query,
+        onSelect: (route) {
+          _removeSuggestions();
+          setState(() => _isEditing = false);
+          widget.onNavigate(route);
+        },
+        onDismiss: _cancelEditing,
+      ),
+    );
+    overlay.insert(_suggestionsOverlay!);
+  }
+
+  void _removeSuggestions() {
+    _suggestionsOverlay?.remove();
+    _suggestionsOverlay = null;
+  }
+
+  void _onUrlChanged(String value) {
+    _showSuggestions(value.trim().toLowerCase());
+  }
+
+  // ── Queue toggle ──
 
   void _toggleQueue() {
     final scaffold = widget.scaffoldKey.currentState;
@@ -154,6 +189,8 @@ class _BrowserShellState extends State<BrowserShell> {
     }
   }
 
+  // ── Build ──
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
@@ -169,148 +206,154 @@ class _BrowserShellState extends State<BrowserShell> {
       key: widget.scaffoldKey,
       endDrawer: !isDesktop && widget.queueOnRight ? queueDrawer : null,
       drawer: !isDesktop && !widget.queueOnRight ? queueDrawer : null,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(52),
-        child: _buildAppBar(cs, isDesktop),
+      body: Column(
+        children: [
+          _buildNavBar(cs, isDesktop),
+          Expanded(
+            child: isDesktop
+                ? Row(
+                    children: [
+                      if (!widget.queueOnRight && _showQueueDesktop)
+                        _buildDesktopQueuePanel(cs),
+                      Expanded(child: widget.child),
+                      if (widget.queueOnRight && _showQueueDesktop)
+                        _buildDesktopQueuePanel(cs),
+                    ],
+                  )
+                : widget.child,
+          ),
+        ],
       ),
-      body: isDesktop
-          ? Row(
-              children: [
-                if (!widget.queueOnRight)
-                  SizedBox(
-                    width: 300,
-                    child: Material(
-                      elevation: 1,
-                      child: widget.queueWidget,
-                    ),
-                  ),
-                Expanded(child: widget.child),
-                if (widget.queueOnRight)
-                  SizedBox(
-                    width: 300,
-                    child: Material(
-                      elevation: 1,
-                      child: widget.queueWidget,
-                    ),
-                  ),
-              ],
-            )
-          : Stack(
-              children: [
-                widget.child,
-                // Subtle handle on the right edge (mobile) to hint at queue drawer
-                if (widget.queueOnRight)
-                  Positioned(
-                    right: 0,
-                    top: MediaQuery.of(context).size.height * 0.35,
-                    child: GestureDetector(
-                      onTap: _toggleQueue,
-                      onHorizontalDragEnd: (_) => _toggleQueue(),
-                      child: Container(
-                        width: 14,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: cs.primaryContainer.withValues(alpha: 0.8),
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(8),
-                            bottomLeft: Radius.circular(8),
-                          ),
-                        ),
-                        child: Icon(Icons.chevron_left,
-                            size: 14, color: cs.primary),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
     );
   }
 
-  Widget _buildAppBar(ColorScheme cs, bool isDesktop) {
+  Widget _buildDesktopQueuePanel(ColorScheme cs) {
+    return Container(
+      width: 300,
+      decoration: BoxDecoration(
+        border: Border(
+          left: widget.queueOnRight
+              ? BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3))
+              : BorderSide.none,
+          right: !widget.queueOnRight
+              ? BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3))
+              : BorderSide.none,
+        ),
+      ),
+      child: widget.queueWidget,
+    );
+  }
+
+  Widget _buildNavBar(ColorScheme cs, bool isDesktop) {
     return Container(
       decoration: BoxDecoration(
-        color: cs.surface,
+        color: cs.surfaceContainerLow,
         border: Border(
-          bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+          bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.2)),
         ),
       ),
       child: SafeArea(
         bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            children: [
-              // Back
-              IconButton(
-                icon: const Icon(Icons.arrow_back, size: 20),
-                onPressed: widget.canGoBack ? widget.onBack : null,
-                tooltip: 'Back',
-                visualDensity: VisualDensity.compact,
-              ),
-              // Forward
-              IconButton(
-                icon: const Icon(Icons.arrow_forward, size: 20),
-                onPressed: widget.canGoForward ? widget.onForward : null,
-                tooltip: 'Forward',
-                visualDensity: VisualDensity.compact,
-              ),
-              // Refresh
-              IconButton(
-                icon: const Icon(Icons.refresh, size: 20),
-                onPressed: widget.onRefresh,
-                tooltip: 'Refresh',
-                visualDensity: VisualDensity.compact,
-              ),
-              const SizedBox(width: 4),
-
-              // URL bar
-              Expanded(child: _buildUrlBar(cs)),
-
-              const SizedBox(width: 4),
-
-              // Queue toggle with badge
-              Stack(
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      isDesktop
-                          ? Icons.view_sidebar
-                          : Icons.queue_music,
-                      size: 20,
-                    ),
-                    onPressed: isDesktop ? null : _toggleQueue,
-                    tooltip: isDesktop ? 'Queue sidebar' : 'Toggle queue',
-                    visualDensity: VisualDensity.compact,
+        child: SizedBox(
+          height: 46,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Row(
+              children: [
+                _navButton(Icons.arrow_back_ios_new_rounded, 'Back',
+                    widget.canGoBack ? widget.onBack : null, cs),
+                _navButton(Icons.arrow_forward_ios_rounded, 'Forward',
+                    widget.canGoForward ? widget.onForward : null, cs),
+                _navButton(
+                    Icons.refresh_rounded, 'Refresh', widget.onRefresh, cs),
+                _navButton(Icons.home_rounded, 'Home', widget.onHome, cs),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: CompositedTransformTarget(
+                    link: _layerLink,
+                    child: _buildUrlBar(cs),
                   ),
-                  if (widget.queueCount > 0)
-                    Positioned(
-                      right: 4,
-                      top: 4,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        constraints: const BoxConstraints(minWidth: 16),
-                        decoration: BoxDecoration(
-                          color: cs.primary,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          widget.queueCount > 99
-                              ? '99+'
-                              : '${widget.queueCount}',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: cs.onPrimary,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(width: 6),
+                _buildQueueButton(cs, isDesktop),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _navButton(
+      IconData icon, String tooltip, VoidCallback? onPressed, ColorScheme cs) {
+    return SizedBox(
+      width: 34,
+      height: 34,
+      child: IconButton(
+        icon: Icon(icon, size: 17),
+        onPressed: onPressed,
+        tooltip: tooltip,
+        visualDensity: VisualDensity.compact,
+        padding: EdgeInsets.zero,
+        style: IconButton.styleFrom(
+          foregroundColor: onPressed != null ? cs.onSurface : cs.outline,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQueueButton(ColorScheme cs, bool isDesktop) {
+    return SizedBox(
+      width: 38,
+      height: 34,
+      child: Stack(
+        children: [
+          Center(
+            child: IconButton(
+              icon: Icon(
+                isDesktop
+                    ? Icons.view_sidebar_rounded
+                    : Icons.queue_music_rounded,
+                size: 18,
+              ),
+              onPressed: isDesktop
+                  ? () =>
+                      setState(() => _showQueueDesktop = !_showQueueDesktop)
+                  : _toggleQueue,
+              tooltip: isDesktop ? 'Toggle queue panel' : 'Open queue',
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              style: IconButton.styleFrom(
+                foregroundColor: isDesktop && _showQueueDesktop
+                    ? cs.primary
+                    : cs.onSurface,
+              ),
+            ),
+          ),
+          if (widget.queueCount > 0)
+            Positioned(
+              right: 0,
+              top: 2,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                constraints: const BoxConstraints(minWidth: 16),
+                decoration: BoxDecoration(
+                  color: cs.primary,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  widget.queueCount > 99 ? '99+' : '${widget.queueCount}',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: cs.onPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -318,22 +361,29 @@ class _BrowserShellState extends State<BrowserShell> {
   Widget _buildUrlBar(ColorScheme cs) {
     if (_isEditing) {
       return Container(
-        height: 36,
+        height: 34,
         decoration: BoxDecoration(
           color: cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: cs.primary, width: 1.5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: cs.primary.withValues(alpha: 0.6), width: 1.5),
         ),
         child: TextField(
           controller: _urlEditController,
           focusNode: _urlFocusNode,
-          style: const TextStyle(fontSize: 13),
-          decoration: const InputDecoration(
+          style: TextStyle(fontSize: 13, color: cs.onSurface),
+          decoration: InputDecoration(
             isDense: true,
             border: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            hintText: 'Search pages or enter web address...',
+            hintStyle: TextStyle(
+                fontSize: 13,
+                color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           ),
           onSubmitted: _submitUrl,
+          onChanged: _onUrlChanged,
           onTapOutside: (_) => _cancelEditing(),
         ),
       );
@@ -342,32 +392,25 @@ class _BrowserShellState extends State<BrowserShell> {
     return GestureDetector(
       onTap: _startEditing,
       child: Container(
-        height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(18),
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           children: [
-            Icon(_currentFavicon, size: 16, color: cs.primary),
+            Icon(_currentFavicon, size: 15, color: cs.primary),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                _currentRoute,
+                _currentTitle,
                 style: TextStyle(
                   fontSize: 13,
-                  color: cs.onSurfaceVariant,
+                  color: cs.onSurface,
+                  fontWeight: FontWeight.w500,
                 ),
                 overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '— $_currentTitle',
-              style: TextStyle(
-                fontSize: 12,
-                color: cs.onSurfaceVariant.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -375,4 +418,102 @@ class _BrowserShellState extends State<BrowserShell> {
       ),
     );
   }
+}
+
+// ── Suggestions dropdown overlay ──
+
+class _SuggestionsDropdown extends StatelessWidget {
+  final LayerLink link;
+  final String query;
+  final ValueChanged<String> onSelect;
+  final VoidCallback onDismiss;
+
+  const _SuggestionsDropdown({
+    required this.link,
+    required this.query,
+    required this.onSelect,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    final pages = <_PageSuggestion>[];
+    for (final entry in QuickLinksService.indexToTitle.entries) {
+      final route = QuickLinksService.indexToRoute[entry.key];
+      if (route == null) continue;
+      final icon = QuickLinksService.indexToIcon[entry.key] ?? Icons.link;
+      pages.add(_PageSuggestion(
+        title: entry.value,
+        route: route,
+        icon: icon,
+      ));
+    }
+
+    final filtered = query.isEmpty
+        ? pages
+        : pages.where((p) {
+            final q = query.toLowerCase();
+            return p.title.toLowerCase().contains(q) ||
+                p.route.toLowerCase().contains(q);
+          }).toList();
+
+    if (filtered.isEmpty) return const SizedBox.shrink();
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: onDismiss,
+          ),
+        ),
+        CompositedTransformFollower(
+          link: link,
+          targetAnchor: Alignment.bottomLeft,
+          followerAnchor: Alignment.topLeft,
+          offset: const Offset(0, 4),
+          child: Material(
+            elevation: 8,
+            borderRadius: BorderRadius.circular(10),
+            color: cs.surfaceContainerHigh,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 320, maxWidth: 500),
+              child: IntrinsicWidth(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  itemCount: filtered.length,
+                  itemBuilder: (ctx, i) {
+                    final p = filtered[i];
+                    return ListTile(
+                      dense: true,
+                      visualDensity: VisualDensity.compact,
+                      leading: Icon(p.icon, size: 18, color: cs.primary),
+                      title: Text(p.title,
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500)),
+                      onTap: () => onSelect(p.route),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PageSuggestion {
+  final String title;
+  final String route;
+  final IconData icon;
+  const _PageSuggestion({
+    required this.title,
+    required this.route,
+    required this.icon,
+  });
 }

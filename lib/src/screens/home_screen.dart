@@ -343,6 +343,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           canGoForward: _canGoForward,
           queueOnRight: _queueOnRight,
           queueCount: widget.controller.queue.length,
+          onHome: _navigateHome,
+          onOpenUrl: openBrowserWith,
           child: _buildPageWithBanner(settings),
         );
       },
