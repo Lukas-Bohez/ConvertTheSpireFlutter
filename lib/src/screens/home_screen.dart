@@ -409,14 +409,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
-  /// Programmatically switch to the browser tab and navigate it.
+  /// Open a web URL in the system browser.
   void openBrowserWith(String url) {
-    _navigateToPage(2);
-    // schedule navigation after the tab switch has taken effect so that the
-    // BrowserScreen widget tree is mounted and its controller may be created.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      BrowserScreen.navigate(url);
-    });
+    final uri = Uri.tryParse(url);
+    if (uri != null) {
+      launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   String _formatAndroidFolderLabel(String uriString) {
@@ -1422,23 +1420,22 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // ---------------------------------------------------------------------------
 
   Widget _buildQueueTab() {
-    final isNarrow = _isNarrowLayout(context);
     final items = widget.controller.queue;
     if (items.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.queue_music, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant),
-            const SizedBox(height: 16),
+            Icon(Icons.queue_music, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            const SizedBox(height: 12),
             Text(
               'No items in queue',
-              style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               'Add items from the Search tab',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -1448,411 +1445,319 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final completedCount = items.where((i) => i.status == DownloadStatus.completed).length;
     final inProgressCount = items.where((i) => i.status == DownloadStatus.downloading).length;
 
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-          child: isNarrow
-              ? Column(
+    // Use LayoutBuilder so the queue adapts to its actual available width
+    // (e.g. 300px sidebar) instead of the full screen width.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 400;
+        return Column(
+          children: [
+            _buildQueueHeader(items, inProgressCount, completedCount, isCompact),
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.all(isCompact ? 8 : 16),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  return _buildQueueItemCard(item, isCompact);
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildQueueHeader(List<QueueItem> items, int inProgressCount, int completedCount, bool isCompact) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: EdgeInsets.all(isCompact ? 10 : 16),
+      color: cs.primary.withValues(alpha: 0.06),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Queue Status',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      'Queue',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: isCompact ? 14 : 16,
+                      ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
-                      '${items.length} total \u2022 $inProgressCount downloading \u2022 $completedCount completed',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        DropdownButton<String>(
-                          value: _downloadFormat,
-                          items: const [
-                            DropdownMenuItem(value: 'mp3', child: Text('MP3')),
-                            DropdownMenuItem(value: 'm4a', child: Text('M4A')),
-                            DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
-                          ],
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() {
-                              _downloadFormat = value;
-                            });
-                          },
-                        ),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.download_for_offline),
-                          label: const Text('Download All'),
-                          onPressed: items.isEmpty ? null : () {
-                            final s = widget.controller.settings;
-                            if (s != null && !_ensureDownloadFolder(s)) return;
-                            widget.controller.downloadAll();
-                          },
-                        ),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.clear_all),
-                          label: const Text('Clear Queue'),
-                          onPressed: items.isEmpty
-                              ? null
-                              : () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text('Clear Queue'),
-                                      content: const Text('Are you sure you want to clear all items from the queue?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context),
-                                          child: const Text('Cancel'),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () {
-                                            final snapshot = List<QueueItem>.from(items);
-                                            for (final item in snapshot) {
-                                              widget.controller.removeFromQueue(item);
-                                            }
-                                            Navigator.pop(context);
-                                          },
-                                          child: const Text('Clear'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                        ),
-                      ],
-                    ),
-                  ],
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Queue Status',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${items.length} total \u2022 $inProgressCount downloading \u2022 $completedCount completed',
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        DropdownButton<String>(
-                          value: _downloadFormat,
-                          items: const [
-                            DropdownMenuItem(value: 'mp3', child: Text('MP3')),
-                            DropdownMenuItem(value: 'm4a', child: Text('M4A')),
-                            DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
-                          ],
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() {
-                              _downloadFormat = value;
-                            });
-                          },
-                        ),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.download_for_offline),
-                          label: const Text('Download All'),
-                          onPressed: items.isEmpty ? null : () {
-                            final s = widget.controller.settings;
-                            if (s != null && !_ensureDownloadFolder(s)) return;
-                            widget.controller.downloadAll();
-                          },
-                        ),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.clear_all),
-                          label: const Text('Clear Queue'),
-                          onPressed: items.isEmpty
-                              ? null
-                              : () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text('Clear Queue'),
-                                      content: const Text('Are you sure you want to clear all items from the queue?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context),
-                                          child: const Text('Cancel'),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () {
-                                            final snapshot = List<QueueItem>.from(items);
-                                            for (final item in snapshot) {
-                                              widget.controller.removeFromQueue(item);
-                                            }
-                                            Navigator.pop(context);
-                                          },
-                                          child: const Text('Clear'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                        ),
-                      ],
+                      '${items.length} total \u2022 $inProgressCount active \u2022 $completedCount done',
+                      style: TextStyle(
+                        fontSize: isCompact ? 11 : 13,
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              final statusColor = _getStatusColor(item.status);
-              final statusIcon = _getStatusIcon(item.status);
-
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: statusColor.withValues(alpha: 0.2),
-                        child: Icon(statusIcon, color: statusColor),
-                      ),
-                      title: Text(
-                        item.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 4),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  item.status.name.toUpperCase(),
-                                  style: TextStyle(
-                                    color: statusColor,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              Text('${item.progress}%'),
-                              DropdownButton<String>(
-                                value: item.format,
-                                isDense: true,
-                                items: const [
-                                  DropdownMenuItem(value: 'mp3', child: Text('MP3')),
-                                  DropdownMenuItem(value: 'm4a', child: Text('M4A')),
-                                  DropdownMenuItem(value: 'mp4', child: Text('MP4')),
-                                ],
-                                onChanged: item.status == DownloadStatus.downloading ||
-                                            item.status == DownloadStatus.converting ||
-                                            item.status == DownloadStatus.completed
-                                    ? null
-                                    : (value) {
-                                        if (value == null) return;
-                                        widget.controller.changeQueueItemFormat(item, value);
-                                      },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      trailing: isNarrow
-                          ? null
-                          : Wrap(
-                              spacing: 4,
-                              children: [
-                                if (item.status == DownloadStatus.queued ||
-                                    item.status == DownloadStatus.failed ||
-                                    item.status == DownloadStatus.cancelled)
-                                  IconButton(
-                                    icon: const Icon(Icons.download),
-                                    onPressed: () {
-                                      final s = widget.controller.settings;
-                                      if (s != null && !_ensureDownloadFolder(s)) return;
-                                      widget.controller.downloadSingle(item);
-                                    },
-                                    tooltip: 'Download',
-                                    color: Colors.blue,
-                                  ),
-                                if (item.status == DownloadStatus.downloading ||
-                                    item.status == DownloadStatus.converting)
-                                  IconButton(
-                                    icon: const Icon(Icons.pause_circle),
-                                    onPressed: () => widget.controller.cancelDownload(item),
-                                    tooltip: 'Cancel',
-                                    color: Colors.orange,
-                                  ),
-                                if (item.status == DownloadStatus.cancelled ||
-                                    item.status == DownloadStatus.failed)
-                                  IconButton(
-                                    icon: const Icon(Icons.play_circle),
-                                    onPressed: () {
-                                      final s = widget.controller.settings;
-                                      if (s != null && !_ensureDownloadFolder(s)) return;
-                                      widget.controller.resumeDownload(item);
-                                    },
-                                    tooltip: 'Resume',
-                                    color: Colors.green,
-                                  ),
-                                if (item.status == DownloadStatus.completed &&
-                                    item.outputPath != null &&
-                                    !kIsWeb && !Platform.isAndroid)
-                                  IconButton(
-                                    icon: const Icon(Icons.folder_open),
-                                    onPressed: () => _showInFolder(item.outputPath!),
-                                    tooltip: 'Show in folder',
-                                    color: Colors.blue,
-                                  ),
-                                if (item.status == DownloadStatus.completed &&
-                                    item.outputPath != null &&
-                                    !kIsWeb && Platform.isAndroid)
-                                  IconButton(
-                                    icon: const Icon(Icons.share),
-                                    onPressed: () => _shareFile(item.outputPath!, item.title),
-                                    tooltip: 'Share',
-                                    color: Colors.blue,
-                                  ),
-                                if (item.status != DownloadStatus.downloading &&
-                                    item.status != DownloadStatus.converting)
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline),
-                                    onPressed: () => widget.controller.removeFromQueue(item),
-                                    tooltip: 'Remove',
-                                    color: Colors.red,
-                                  ),
-                              ],
-                            ),
-                    ),
-                    if (isNarrow)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
-                        child: Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            if (item.status == DownloadStatus.queued ||
-                                item.status == DownloadStatus.failed ||
-                                item.status == DownloadStatus.cancelled)
-                              OutlinedButton.icon(
-                                icon: const Icon(Icons.download, size: 18),
-                                label: const Text('Download'),
-                                onPressed: () {
-                                  final s = widget.controller.settings;
-                                  if (s != null && !_ensureDownloadFolder(s)) return;
-                                  widget.controller.downloadSingle(item);
-                                },
-                              ),
-                            if (item.status == DownloadStatus.downloading ||
-                                item.status == DownloadStatus.converting)
-                              OutlinedButton.icon(
-                                icon: const Icon(Icons.pause_circle, size: 18),
-                                label: const Text('Cancel'),
-                                onPressed: () => widget.controller.cancelDownload(item),
-                              ),
-                            if (item.status == DownloadStatus.cancelled ||
-                                item.status == DownloadStatus.failed)
-                              OutlinedButton.icon(
-                                icon: const Icon(Icons.play_circle, size: 18),
-                                label: const Text('Resume'),
-                                onPressed: () {
-                                  final s = widget.controller.settings;
-                                  if (s != null && !_ensureDownloadFolder(s)) return;
-                                  widget.controller.resumeDownload(item);
-                                },
-                              ),
-
-                            if (item.status == DownloadStatus.completed &&
-                                item.outputPath != null &&
-                                !kIsWeb && !Platform.isAndroid)
-                              OutlinedButton.icon(
-                                icon: const Icon(Icons.folder_open, size: 18),
-                                label: const Text('Show in folder'),
-                                onPressed: () => _showInFolder(item.outputPath!),
-                              ),
-                            if (item.status == DownloadStatus.completed &&
-                                item.outputPath != null &&
-                                !kIsWeb && Platform.isAndroid)
-                              OutlinedButton.icon(
-                                icon: const Icon(Icons.share, size: 18),
-                                label: const Text('Share'),
-                                onPressed: () => _shareFile(item.outputPath!, item.title),
-                              ),
-                            if (item.status != DownloadStatus.downloading &&
-                                item.status != DownloadStatus.converting)
-                              OutlinedButton.icon(
-                                icon: const Icon(Icons.delete_outline, size: 18),
-                                label: const Text('Remove'),
-                                onPressed: () => widget.controller.removeFromQueue(item),
-                              ),
-                          ],
-                        ),
-                      ),
-                    if (item.progress > 0 && item.progress < 100)
-                      LinearProgressIndicator(
-                        value: item.progress / 100,
-                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                      ),
-                    if (item.error != null && item.status == DownloadStatus.failed)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        color: Colors.red.withValues(alpha: 0.1),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.error_outline, color: Colors.red, size: 16),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                item.error!,
-                                style: const TextStyle(color: Colors.red, fontSize: 12),
-                              ),
-                            ),
-                            TextButton.icon(
-                              icon: const Icon(Icons.list_alt, size: 14),
-                              label: const Text('View Logs', style: TextStyle(fontSize: 12)),
-                              onPressed: () => _navigateToPage(10),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            },
+              ),
+              DropdownButton<String>(
+                value: _downloadFormat,
+                isDense: true,
+                underline: const SizedBox.shrink(),
+                style: TextStyle(fontSize: 12, color: cs.onSurface),
+                items: const [
+                  DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+                  DropdownMenuItem(value: 'm4a', child: Text('M4A')),
+                  DropdownMenuItem(value: 'mp4', child: Text('MP4')),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _downloadFormat = value);
+                },
+              ),
+            ],
           ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 32,
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.download_rounded, size: 16),
+                    label: Text(isCompact ? 'All' : 'Download All',
+                        style: const TextStyle(fontSize: 12)),
+                    onPressed: items.isEmpty ? null : () {
+                      final s = widget.controller.settings;
+                      if (s != null && !_ensureDownloadFolder(s)) return;
+                      widget.controller.downloadAll();
+                    },
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: SizedBox(
+                  height: 32,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.clear_all_rounded, size: 16),
+                    label: Text(isCompact ? 'Clear' : 'Clear Queue',
+                        style: const TextStyle(fontSize: 12)),
+                    onPressed: items.isEmpty
+                        ? null
+                        : () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Clear Queue'),
+                                content: const Text('Remove all items from the queue?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      final snapshot = List<QueueItem>.from(items);
+                                      for (final item in snapshot) {
+                                        widget.controller.removeFromQueue(item);
+                                      }
+                                      Navigator.pop(context);
+                                    },
+                                    child: const Text('Clear'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQueueItemCard(QueueItem item, bool isCompact) {
+    final cs = Theme.of(context).colorScheme;
+    final statusColor = _getStatusColor(item.status);
+    final statusIcon = _getStatusIcon(item.status);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 6),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(isCompact ? 8 : 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title row with status icon
+            Row(
+              children: [
+                Icon(statusIcon, color: statusColor, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: isCompact ? 12 : 14,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            // Status + progress row
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    item.status.name.toUpperCase(),
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text('${item.progress}%',
+                    style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+                const Spacer(),
+                // Format dropdown (compact)
+                SizedBox(
+                  height: 24,
+                  child: DropdownButton<String>(
+                    value: item.format,
+                    isDense: true,
+                    underline: const SizedBox.shrink(),
+                    style: TextStyle(fontSize: 11, color: cs.onSurface),
+                    items: const [
+                      DropdownMenuItem(value: 'mp3', child: Text('MP3', style: TextStyle(fontSize: 11))),
+                      DropdownMenuItem(value: 'm4a', child: Text('M4A', style: TextStyle(fontSize: 11))),
+                      DropdownMenuItem(value: 'mp4', child: Text('MP4', style: TextStyle(fontSize: 11))),
+                    ],
+                    onChanged: item.status == DownloadStatus.downloading ||
+                                item.status == DownloadStatus.converting ||
+                                item.status == DownloadStatus.completed
+                        ? null
+                        : (value) {
+                            if (value == null) return;
+                            widget.controller.changeQueueItemFormat(item, value);
+                          },
+                  ),
+                ),
+              ],
+            ),
+            // Progress bar
+            if (item.progress > 0 && item.progress < 100) ...[
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(
+                  value: item.progress / 100,
+                  minHeight: 4,
+                  backgroundColor: cs.surfaceContainerHighest,
+                  valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                ),
+              ),
+            ],
+            // Action buttons row
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (item.status == DownloadStatus.queued ||
+                    item.status == DownloadStatus.failed ||
+                    item.status == DownloadStatus.cancelled)
+                  _queueAction(Icons.download_rounded, 'Download', Colors.blue, () {
+                    final s = widget.controller.settings;
+                    if (s != null && !_ensureDownloadFolder(s)) return;
+                    widget.controller.downloadSingle(item);
+                  }),
+                if (item.status == DownloadStatus.downloading ||
+                    item.status == DownloadStatus.converting)
+                  _queueAction(Icons.stop_rounded, 'Cancel', Colors.orange,
+                      () => widget.controller.cancelDownload(item)),
+                if (item.status == DownloadStatus.cancelled ||
+                    item.status == DownloadStatus.failed)
+                  _queueAction(Icons.play_arrow_rounded, 'Resume', Colors.green, () {
+                    final s = widget.controller.settings;
+                    if (s != null && !_ensureDownloadFolder(s)) return;
+                    widget.controller.resumeDownload(item);
+                  }),
+                if (item.status == DownloadStatus.completed &&
+                    item.outputPath != null &&
+                    !kIsWeb && !Platform.isAndroid)
+                  _queueAction(Icons.folder_open_rounded, 'Folder', Colors.blue,
+                      () => _showInFolder(item.outputPath!)),
+                if (item.status == DownloadStatus.completed &&
+                    item.outputPath != null &&
+                    !kIsWeb && Platform.isAndroid)
+                  _queueAction(Icons.share_rounded, 'Share', Colors.blue,
+                      () => _shareFile(item.outputPath!, item.title)),
+                if (item.status != DownloadStatus.downloading &&
+                    item.status != DownloadStatus.converting)
+                  _queueAction(Icons.delete_outline_rounded, 'Remove', Colors.red,
+                      () => widget.controller.removeFromQueue(item)),
+              ],
+            ),
+            // Error message
+            if (item.error != null && item.status == DownloadStatus.failed) ...[
+              const SizedBox(height: 4),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  item.error!,
+                  style: const TextStyle(color: Colors.red, fontSize: 11),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _queueAction(IconData icon, String tooltip, Color color, VoidCallback onPressed) {
+    return SizedBox(
+      width: 30,
+      height: 30,
+      child: IconButton(
+        icon: Icon(icon, size: 16, color: color),
+        onPressed: onPressed,
+        tooltip: tooltip,
+        padding: EdgeInsets.zero,
+        visualDensity: VisualDensity.compact,
+      ),
     );
   }
 

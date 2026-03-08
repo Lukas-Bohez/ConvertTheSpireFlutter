@@ -35,17 +35,21 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final width = MediaQuery.of(context).size.width;
-    final crossAxisCount = width < 500 ? 3 : (width < 900 ? 4 : 5);
+    final crossAxisCount = width < 500 ? 2 : (width < 900 ? 3 : 4);
+
+    // Filter out Browser (grey/unusable) and Queue (always in sidebar)
+    final visibleLinks = _links.where((l) =>
+        l.route != 'browser.tab' && l.route != 'queue.tab').toList();
 
     return Container(
       color: cs.surfaceContainerLowest,
       child: ListView(
         padding: EdgeInsets.symmetric(
-          horizontal: width < 600 ? 16 : 48,
+          horizontal: width < 600 ? 20 : 56,
           vertical: 24,
         ),
         children: [
-          const SizedBox(height: 32),
+          const SizedBox(height: 28),
           // App branding
           Center(
             child: Column(
@@ -79,7 +83,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                 Text(
                   'Use the address bar above to navigate or enter a URL',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     color: cs.onSurfaceVariant.withValues(alpha: 0.7),
                   ),
                 ),
@@ -94,13 +98,13 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.0,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.3,
             ),
-            itemCount: _links.length,
+            itemCount: visibleLinks.length,
             itemBuilder: (context, index) {
-              final link = _links[index];
+              final link = visibleLinks[index];
               return _QuickLinkTile(
                 link: link,
                 onTap: () => widget.onNavigate(link.route),
@@ -152,25 +156,25 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
             onTap: widget.onTap,
             borderRadius: BorderRadius.circular(14),
             child: Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(14),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: cs.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(widget.link.icon,
-                        color: cs.primary, size: 22),
+                        color: cs.primary, size: 26),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Text(
                     widget.link.name,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                      fontSize: 14,
                       color: cs.onSurface,
                     ),
                     maxLines: 1,
@@ -178,11 +182,11 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
                     textAlign: TextAlign.center,
                   ),
                   if (widget.link.description.isNotEmpty) ...[
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       widget.link.description,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 12,
                         color: cs.onSurfaceVariant.withValues(alpha: 0.7),
                       ),
                       maxLines: 1,
