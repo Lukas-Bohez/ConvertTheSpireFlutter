@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart' hide SearchResult;
 
 import 'screens/home_screen.dart';
-import 'screens/onboarding_screen.dart';
 import 'screens/player.dart';
 import 'services/bulk_import_service.dart';
 import 'services/convert_service.dart';
@@ -230,23 +229,6 @@ class _MyAppState extends State<MyApp> {
                         }
 
                         final prefs = snap.data!;
-                        final seen = prefs.getBool('seenOnboarding') ?? false;
-                        if (!seen) {
-                          // show onboarding once; caller will mark flag when finished
-                          return OnboardingScreen(
-                            onFinish: () {
-                              prefs.setBool('seenOnboarding', true);
-                              setState(() {
-                                // force rebuild so home screen is shown next
-                              });
-                            },
-                            themeMode: themeMode,
-                            onThemeChanged: (mode) {
-                              // update app controller settings if available
-                              _controller?.setThemeMode(mode);
-                            },
-                          );
-                        }
 
                         return ChangeNotifierProvider(
                           create: (_) => PlayerState(prefs),

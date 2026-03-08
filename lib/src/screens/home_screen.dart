@@ -26,6 +26,10 @@ import 'watched_playlists_screen.dart';
 import 'browser_screen.dart';
 import 'support_screen.dart';
 import 'player.dart';
+import '../widgets/browser_shell.dart';
+import '../widgets/onboarding_tooltip_service.dart';
+import '../widgets/quick_links_page.dart';
+import '../widgets/quick_links_service.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -69,12 +73,20 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _settingsInitialized = false;
   bool _supportEnabled = false;
   PlayerState? _playerState;
-  late final TabController _mainTabController;
   late final TabController _playlistTabController;
   File? _convertFile;
   String _convertTarget = 'mp4';
   String _androidDownloadUri = '';
-  int _selectedPageIndex = 0;
+  int _selectedPageIndex = 13;
+
+  final GlobalKey<ScaffoldState> _shellScaffoldKey = GlobalKey<ScaffoldState>();
+  final List<int> _navHistory = [13];
+  int _navHistoryIndex = 0;
+  bool _queueOnRight = true;
+
+  /// Progressive onboarding tooltip system.
+  final OnboardingTooltipService _onboarding = OnboardingTooltipService();
+  String? _dismissedBannerRoute;
 
   /// Mining services — owned here so they survive tab switches.
   late final ComputationService _computeService;
@@ -90,7 +102,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   /// Pages that have been visited at least once in the narrow (mobile) layout.
   /// Used by IndexedStack to lazily build pages while keeping them alive.
-  final Set<int> _visitedPages = {0};
+  final Set<int> _visitedPages = {13};
 
   // Range selector for adding subset of preview results to queue
   int _addRangeFrom = 1;
@@ -99,13 +111,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _mainTabController = TabController(length: 13, vsync: this);
-    _mainTabController.addListener(() {
-      if (!_mainTabController.indexIsChanging) {
-        setState(() => _selectedPageIndex = _mainTabController.index);
-      }
-    });
     _playlistTabController = TabController(length: 2, vsync: this);
+
+    // Progressive onboarding.
+    _onboarding.init();
 
     // Mining services — survive tab switches.
     _computeService = ComputationService(maxConcurrent: 2);
@@ -169,7 +178,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void dispose() {
     _coordinatorService.dispose();
     _trayService?.destroy();
-    _mainTabController.dispose();
     _playlistTabController.dispose();
     _urlController.dispose();
     _downloadDirController.dispose();
@@ -182,22 +190,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _rangeToController.dispose();
     super.dispose();
   }
-
-  static const _navItems = <_NavItem>[
-    _NavItem(0, Icons.search, 'Search', 'Search & Discovery'),
-    _NavItem(1, Icons.travel_explore, 'Multi-Search', 'Search & Discovery'),
-    _NavItem(2, Icons.open_in_browser, 'Browser', 'Tools'),
-    _NavItem(3, Icons.queue_music, 'Queue', 'Downloads'),
-    _NavItem(4, Icons.playlist_play, 'Playlists', 'Downloads'),
-    _NavItem(5, Icons.upload_file, 'Bulk Import', 'Downloads'),
-    _NavItem(6, Icons.bar_chart, 'Stats', 'Tools'),
-    _NavItem(7, Icons.settings, 'Settings', null),
-    _NavItem(8, Icons.volunteer_activism, 'Support', null),
-    _NavItem(9, Icons.transform, 'Convert', 'Tools'),
-    _NavItem(10, Icons.list_alt, 'Logs', 'Tools'),
-    _NavItem(11, Icons.menu_book, 'Guide', null),
-    _NavItem(12, Icons.music_note, 'Player', 'Tools'),
-  ];
 
   Widget _buildPageContent(int index, AppSettings? settings) {
     switch (index) {
@@ -255,77 +247,64 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         );
       case 12:
         return const playerPlayerPage(key: ValueKey('player-player'));
+      case 13:
+        return QuickLinksPage(
+          key: const ValueKey('quick-links-home'),
+          onNavigate: (route) {
+            final idx = QuickLinksService.routeToIndex[route];
+            if (idx != null) _navigateToPage(idx);
+          },
+          onSearch: (query) {
+            _urlController.text = query;
+            _navigateToPage(0);
+            _onSearch();
+          },
+        );
       default:
         return _buildSearchTab(settings);
     }
   }
 
-  Widget _buildNavigationDrawer() {
-    final cs = Theme.of(context).colorScheme;
-    String? lastGroup;
-    final children = <Widget>[
-      DrawerHeader(
-        decoration: BoxDecoration(color: cs.primaryContainer),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Icon(Icons.music_note, size: 48, color: cs.onPrimaryContainer),
-            const SizedBox(height: 8),
-            Text('Convert the Spire',
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: cs.onPrimaryContainer)),
-          ],
-        ),
-      ),
-    ];
+  // ---------------------------------------------------------------------------
+  // NAVIGATION HELPERS
+  // ---------------------------------------------------------------------------
 
-    for (final item in _navItems) {
-      if (item.group != lastGroup) {
-        if (lastGroup != null) children.add(const Divider());
-        if (item.group != null) {
-          children.add(Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text(item.group!,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: cs.primary,
-                    letterSpacing: 0.5)),
-          ));
-        }
-        lastGroup = item.group;
+  bool get _canGoBack => _navHistoryIndex > 0;
+  bool get _canGoForward => _navHistoryIndex < _navHistory.length - 1;
+
+  void _navigateToPage(int index) {
+    if (index == _selectedPageIndex) return;
+    setState(() {
+      // Truncate forward history when navigating to a new page.
+      if (_navHistoryIndex < _navHistory.length - 1) {
+        _navHistory.removeRange(_navHistoryIndex + 1, _navHistory.length);
       }
-      final selected = _selectedPageIndex == item.index;
-      children.add(ListTile(
-        leading: Icon(item.icon, color: selected ? cs.primary : null),
-        title: Text(item.label,
-            style: TextStyle(
-                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                color: selected ? cs.primary : null)),
-        selected: selected,
-        selectedTileColor: cs.primaryContainer,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        onTap: () {
-          setState(() {
-            _selectedPageIndex = item.index;
-            _mainTabController.index = item.index;
-          });
-          Navigator.pop(context);
-        },
-      ));
-    }
-
-    final bottomPad = MediaQuery.of(context).viewPadding.bottom;
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.only(bottom: bottomPad + 16),
-        children: children,
-      ),
-    );
+      _navHistory.add(index);
+      _navHistoryIndex = _navHistory.length - 1;
+      _selectedPageIndex = index;
+      _visitedPages.add(index);
+    });
   }
+
+  void _goBack() {
+    if (!_canGoBack) return;
+    setState(() {
+      _navHistoryIndex--;
+      _selectedPageIndex = _navHistory[_navHistoryIndex];
+      _visitedPages.add(_selectedPageIndex);
+    });
+  }
+
+  void _goForward() {
+    if (!_canGoForward) return;
+    setState(() {
+      _navHistoryIndex++;
+      _selectedPageIndex = _navHistory[_navHistoryIndex];
+      _visitedPages.add(_selectedPageIndex);
+    });
+  }
+
+  void _navigateHome() => _navigateToPage(13);
 
   @override
   Widget build(BuildContext context) {
@@ -340,100 +319,68 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           });
         }
 
-        if (_isNarrowLayout(context)) {
-          // Use IndexedStack so visited pages stay alive (preserves
-          // search results, miner settings, etc. across tab switches).
-          _visitedPages.add(_selectedPageIndex);
-          return Scaffold(
-            appBar: AppBar(title: const Text('Convert the Spire')),
-            drawer: _buildNavigationDrawer(),
-            body: SafeArea(
-              top: false,
-              child: IndexedStack(
-                index: _selectedPageIndex,
-                children: List.generate(14, (i) {
-                  if (!_visitedPages.contains(i)) {
-                    return const SizedBox.shrink();
-                  }
-                  return _buildPageContent(i, settings);
-                }),
-              ),
-            ),
-          );
-        }
+        _visitedPages.add(_selectedPageIndex);
 
-        return Scaffold(
-            appBar: AppBar(
-              title: const Text('Convert the Spire'),
-              bottom: TabBar(
-                controller: _mainTabController,
-                isScrollable: true,
-                tabs: const [
-                  Tab(icon: Icon(Icons.search), text: 'Search'),
-                  Tab(icon: Icon(Icons.travel_explore), text: 'Multi-Search'),
-                  Tab(icon: Icon(Icons.open_in_browser), text: 'Browser'),
-                  Tab(icon: Icon(Icons.queue_music), text: 'Queue'),
-                  Tab(icon: Icon(Icons.playlist_play), text: 'Playlists'),
-                  Tab(icon: Icon(Icons.upload_file), text: 'Bulk Import'),
-                  Tab(icon: Icon(Icons.bar_chart), text: 'Stats'),
-                  Tab(icon: Icon(Icons.settings), text: 'Settings'),
-                  Tab(icon: Icon(Icons.volunteer_activism), text: 'Support'),
-                  Tab(icon: Icon(Icons.transform), text: 'Convert'),
-                  Tab(icon: Icon(Icons.list_alt), text: 'Logs'),
-                  Tab(icon: Icon(Icons.menu_book), text: 'Guide'),
-                  Tab(icon: Icon(Icons.music_note), text: 'Player'),
-                ],
-              ),
-            ),
-            body: TabBarView(
-              controller: _mainTabController,
-              children: [
-                _buildSearchTab(settings),
-                SearchScreen(
-                  key: const ValueKey('multi-search'),
-                  searchService: widget.controller.searchService,
-                  previewPlayer: widget.controller.previewPlayer,
-                  onDownload: (result, format) => widget.controller.addSearchResultToQueue(result, format: format),
-                ),
-                BrowserScreen(
-                  key: BrowserScreen.browserKey,
-                  onAddToQueue: widget.controller.addSearchResultToQueue,
-                ),
-                _buildQueueTab(),
-                _buildPlaylistsTab(),
-                BulkImportScreen(
-                  key: const ValueKey('bulk-import'),
-                  importService: widget.controller.bulkImportService,
-                  onProcess: (queries, format) => widget.controller.processBulkImport(queries, format: format),
-                ),
-                StatisticsScreen(
-                  key: const ValueKey('statistics'),
-                  statisticsService: widget.controller.statisticsService,
-                ),
-                _buildSettingsTab(settings),
-                SupportScreen(
-                  key: const ValueKey('support'),
-                  enabled: _supportEnabled,
-                  onEnabledChanged: (v) => _setSupportEnabled(v),
-                  compute: _computeService,
-                  coordinator: _coordinatorService,
-                ),
-                _buildConvertTab(settings),
-                _buildLogsTab(),
-                Builder(builder: (_) {
-                  final tm = _resolveThemeMode(widget.controller.settings?.themeMode);
-                  return GuideScreen(
-                    key: const ValueKey('guide'),
-                    themeMode: tm,
-                    onThemeChanged: (mode) => widget.controller.setThemeMode(mode),
-                  );
-                }),
-                const playerPlayerPage(key: ValueKey('player-player')),
-              ],
-            ),
+        return BrowserShell(
+          scaffoldKey: _shellScaffoldKey,
+          currentIndex: _selectedPageIndex,
+          queueWidget: _buildQueueTab(),
+          onNavigate: (route) {
+            if (route == 'home') {
+              _navigateHome();
+              return;
+            }
+            final idx = QuickLinksService.routeToIndex[route];
+            if (idx != null) _navigateToPage(idx);
+          },
+          onBack: _canGoBack ? _goBack : null,
+          onForward: _canGoForward ? _goForward : null,
+          onRefresh: () => setState(() {}),
+          canGoBack: _canGoBack,
+          canGoForward: _canGoForward,
+          queueOnRight: _queueOnRight,
+          queueCount: widget.controller.queue.length,
+          child: _buildPageWithBanner(settings),
         );
       },
     );
+  }
+
+  Widget _buildPageWithBanner(AppSettings? settings) {
+    final route = QuickLinksService.indexToRoute[_selectedPageIndex];
+    final showBanner = route != null &&
+        _onboarding.step < 4 &&
+        !_onboarding.hasVisitedScreen(route) &&
+        _dismissedBannerRoute != route;
+    final description =
+        route != null ? OnboardingTooltipService.screenDescriptions[route] : null;
+
+    final stack = IndexedStack(
+      index: _selectedPageIndex,
+      children: List.generate(14, (i) {
+        if (!_visitedPages.contains(i)) {
+          return const SizedBox.shrink();
+        }
+        return _buildPageContent(i, settings);
+      }),
+    );
+
+    if (showBanner && description != null) {
+      return Column(
+        children: [
+          OnboardingBanner(
+            message: description,
+            onDismiss: () {
+              _onboarding.markScreenVisited(route);
+              setState(() => _dismissedBannerRoute = route);
+            },
+          ),
+          Expanded(child: stack),
+        ],
+      );
+    }
+
+    return stack;
   }
 
   void _initSettings(AppSettings settings) {
@@ -459,10 +406,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   /// Programmatically switch to the browser tab and navigate it.
   void openBrowserWith(String url) {
-    setState(() {
-      _selectedPageIndex = 2;
-      _mainTabController.index = 2;
-    });
+    _navigateToPage(2);
     // schedule navigation after the tab switch has taken effect so that the
     // BrowserScreen widget tree is mounted and its controller may be created.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -999,22 +943,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         action: SnackBarAction(
           label: 'Go to Settings',
           textColor: Colors.white,
-          onPressed: () {
-            setState(() {
-              _selectedPageIndex = 7;
-              _mainTabController.index = 7;
-              _visitedPages.add(7);
-            });
-          },
+          onPressed: () => _navigateToPage(7),
         ),
       ),
     );
     // Navigate to settings
-    setState(() {
-      _selectedPageIndex = 7;
-      _mainTabController.index = 7;
-      _visitedPages.add(7);
-    });
+    _navigateToPage(7);
     return false;
   }
 
@@ -1897,13 +1831,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             TextButton.icon(
                               icon: const Icon(Icons.list_alt, size: 14),
                               label: const Text('View Logs', style: TextStyle(fontSize: 12)),
-                              onPressed: () {
-                                setState(() {
-                                  _selectedPageIndex = 10;
-                                  _mainTabController.index = 10;
-                                  _visitedPages.add(10);
-                                });
-                              },
+                              onPressed: () => _navigateToPage(10),
                               style: TextButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
                                 minimumSize: Size.zero,
@@ -2087,13 +2015,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: TextButton.icon(
                       icon: const Icon(Icons.open_in_new, size: 16),
                       label: const Text('Learn more'),
-                      onPressed: () {
-                        setState(() {
-                          _selectedPageIndex = 8;
-                          _mainTabController.index = 8;
-                          _visitedPages.add(8);
-                        });
-                      },
+                      onPressed: () => _navigateToPage(8),
                     ),
                   ),
                 ],
@@ -2707,7 +2629,72 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(height: 24),
-          
+
+          // Browser Shell Settings
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.view_sidebar_outlined),
+                      const SizedBox(width: 8),
+                      Text('Browser Shell', style: Theme.of(context).textTheme.titleLarge),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    value: _queueOnRight,
+                    onChanged: (value) {
+                      setState(() => _queueOnRight = value);
+                    },
+                    title: const Text('Queue sidebar on right'),
+                    subtitle: Text(_queueOnRight ? 'Queue panel on the right side' : 'Queue panel on the left side'),
+                    secondary: Icon(_queueOnRight ? Icons.border_right : Icons.border_left),
+                  ),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    leading: const Icon(Icons.home),
+                    title: const Text('Go to Home page'),
+                    subtitle: const Text('Navigate to quick links home'),
+                    onTap: () => _navigateToPage(13),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.restart_alt),
+                    title: const Text('Reset quick links'),
+                    subtitle: const Text('Restore default quick links'),
+                    onTap: () async {
+                      await QuickLinksService.resetToDefaults();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Quick links reset to defaults')),
+                        );
+                      }
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.school),
+                    title: const Text('Replay tutorial tips'),
+                    subtitle: const Text('Show screen descriptions again'),
+                    onTap: () async {
+                      await _onboarding.reset();
+                      setState(() => _dismissedBannerRoute = null);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Tutorial tips will show again on each screen')),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
           // Save Button (bottom)
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
@@ -3202,13 +3189,4 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-}
-
-class _NavItem {
-  final int index;
-  final IconData icon;
-  final String label;
-  final String? group;
-
-  const _NavItem(this.index, this.icon, this.label, this.group);
 }
