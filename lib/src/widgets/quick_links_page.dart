@@ -55,7 +55,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
@@ -65,25 +65,25 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(24),
                   ),
                   child: Icon(Icons.music_note_rounded,
-                      size: 40, color: cs.primary),
+                      size: 56, color: cs.primary),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 18),
                 Text(
                   'Convert the Spire',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.3,
                         color: cs.onSurface,
                       ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text(
                   'Use the address bar above to navigate or enter a URL',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 18,
                     color: cs.onSurfaceVariant.withValues(alpha: 0.7),
                   ),
                 ),
@@ -98,9 +98,9 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.3,
+              mainAxisSpacing: 14,
+              crossAxisSpacing: 14,
+              childAspectRatio: 1.0,
             ),
             itemCount: visibleLinks.length,
             itemBuilder: (context, index) {
@@ -156,25 +156,25 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
             onTap: widget.onTap,
             borderRadius: BorderRadius.circular(14),
             child: Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: cs.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(widget.link.icon,
-                        color: cs.primary, size: 26),
+                        color: cs.primary, size: 36),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   Text(
                     widget.link.name,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: 18,
                       color: cs.onSurface,
                     ),
                     maxLines: 1,
@@ -182,11 +182,11 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
                     textAlign: TextAlign.center,
                   ),
                   if (widget.link.description.isNotEmpty) ...[
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Text(
                       widget.link.description,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 15,
                         color: cs.onSurfaceVariant.withValues(alpha: 0.7),
                       ),
                       maxLines: 1,

@@ -67,18 +67,6 @@ class QuickLinksService {
       description: 'Search YouTube & SoundCloud',
     ),
     QuickLink(
-      name: 'Browser',
-      icon: Icons.open_in_browser,
-      route: 'browser.tab',
-      description: 'Built-in web browser',
-    ),
-    QuickLink(
-      name: 'Queue',
-      icon: Icons.queue_music,
-      route: 'queue.tab',
-      description: 'Download queue & status',
-    ),
-    QuickLink(
       name: 'Playlists',
       icon: Icons.playlist_play,
       route: 'playlists.tab',
@@ -206,18 +194,27 @@ class QuickLinksService {
     13: Icons.home,
   };
 
+  static const _hiddenRoutes = {'browser.tab', 'queue.tab'};
+
   static Future<List<QuickLink>> load() async {
     final prefs = await SharedPreferences.getInstance();
     final json = prefs.getString(_key);
-    if (json == null) return List.of(defaults);
-    try {
-      final list = jsonDecode(json) as List;
-      return list
-          .map((e) => QuickLink.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (_) {
-      return List.of(defaults);
+    List<QuickLink> links;
+    if (json == null) {
+      links = List.of(defaults);
+    } else {
+      try {
+        final list = jsonDecode(json) as List;
+        links = list
+            .map((e) => QuickLink.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (_) {
+        links = List.of(defaults);
+      }
     }
+    // Always strip retired Browser/Queue tiles (may still be in saved prefs).
+    links.removeWhere((l) => _hiddenRoutes.contains(l.route));
+    return links;
   }
 
   static Future<void> save(List<QuickLink> links) async {

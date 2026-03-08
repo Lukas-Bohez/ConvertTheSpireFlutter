@@ -1312,7 +1312,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item.uploader),
+                        Text(item.uploader, maxLines: 1, overflow: TextOverflow.ellipsis),
                         if (item.duration != null)
                           Text(
                             _formatDuration(item.duration!),
@@ -1623,8 +1623,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ],
             ),
             const SizedBox(height: 6),
-            // Status + progress row
-            Row(
+            // Status + progress row — use Wrap to avoid overflow in narrow panels
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
@@ -1639,13 +1642,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
+                    maxLines: 1,
                   ),
                 ),
-                const SizedBox(width: 6),
                 Text('${item.progress}%',
                     style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
-                const Spacer(),
-                // Format dropdown (compact)
+                // Format dropdown
                 SizedBox(
                   height: 24,
                   child: DropdownButton<String>(
@@ -1683,10 +1685,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
             ],
-            // Action buttons row
+            // Action buttons row — use Wrap so icons flow instead of overflowing
             const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 0,
+              runSpacing: 0,
               children: [
                 if (item.status == DownloadStatus.queued ||
                     item.status == DownloadStatus.failed ||
