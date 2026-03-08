@@ -1,18 +1,11 @@
 package com.orokaconner.convertthespirereborn
 
-import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.ContentValues
-import android.content.pm.PackageManager
-import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.provider.MediaStore
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.documentfile.provider.DocumentFile
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -24,12 +17,6 @@ class MainActivity : FlutterActivity() {
     private val channelName = "convert_the_spire/saf"
     private val pickTreeRequestCode = 5011
     private var pendingResult: MethodChannel.Result? = null
-
-    // Screencast
-    private val screenCaptureRequestCode = 5020
-    private val audioPermissionRequestCode = 5021
-    private var screencastResult: MethodChannel.Result? = null
-    private var audioPermissionGranted = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -180,105 +167,9 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
-
-        // ── Screencast channel ──────────────────────────────────────────
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "convert_the_spire/screencast")
-            .setMethodCallHandler { call, result ->
-                when (call.method) {
-                    "requestPermission" -> {
-                        if (screencastResult != null) {
-                            result.error("BUSY", "Permission request already in progress", null)
-                            return@setMethodCallHandler
-                        }
-                        screencastResult = result
-                        // Check RECORD_AUDIO first (needed for system audio capture)
-                        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                            == PackageManager.PERMISSION_GRANTED) {
-                            audioPermissionGranted = true
-                            launchMediaProjectionRequest()
-                        } else {
-                            ActivityCompat.requestPermissions(
-                                this, arrayOf(Manifest.permission.RECORD_AUDIO),
-                                audioPermissionRequestCode
-                            )
-                        }
-                    }
-                    "startCapture" -> {
-                        val width = call.argument<Int>("width") ?: 1920
-                        val height = call.argument<Int>("height") ?: 1080
-                        val fps = call.argument<Int>("fps") ?: 30
-                        ScreenCaptureService.lastError = null
-                        val intent = Intent(this, ScreenCaptureService::class.java).apply {
-                            action = ScreenCaptureService.ACTION_START
-                            putExtra("width", width)
-                            putExtra("height", height)
-                            putExtra("fps", fps)
-                        }
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            startForegroundService(intent)
-                        } else {
-                            startService(intent)
-                        }
-                        // Poll until service is ready
-                        var attempts = 0
-                        val handler = Handler(Looper.getMainLooper())
-                        fun checkReady() {
-                            if (ScreenCaptureService.isRunning && ScreenCaptureService.streamPort > 0) {
-                                result.success(ScreenCaptureService.streamPort)
-                            } else if (ScreenCaptureService.lastError != null) {
-                                result.error("START_FAILED", ScreenCaptureService.lastError, null)
-                            } else if (attempts++ < 20) {
-                                handler.postDelayed(::checkReady, 250)
-                            } else {
-                                result.error("TIMEOUT", "Capture service did not start", null)
-                            }
-                        }
-                        handler.postDelayed(::checkReady, 500)
-                    }
-                    "stopCapture" -> {
-                        val intent = Intent(this, ScreenCaptureService::class.java).apply {
-                            action = ScreenCaptureService.ACTION_STOP
-                        }
-                        startService(intent)
-                        result.success(null)
-                    }
-                    "isCapturing" -> {
-                        result.success(ScreenCaptureService.isRunning)
-                    }
-                    else -> result.notImplemented()
-                }
-            }
-    }
-
-    private fun launchMediaProjectionRequest() {
-        val mgr = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        startActivityForResult(mgr.createScreenCaptureIntent(), screenCaptureRequestCode)
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (requestCode == audioPermissionRequestCode) {
-            audioPermissionGranted = grantResults.isNotEmpty() &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED
-            launchMediaProjectionRequest()
-            return
-        }
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == screenCaptureRequestCode) {
-            val res = screencastResult
-            screencastResult = null
-            if (resultCode == Activity.RESULT_OK && data != null) {
-                ScreenCaptureService.resultCode = resultCode
-                ScreenCaptureService.resultData = data
-                ScreenCaptureService.audioGranted = audioPermissionGranted
-                res?.success(mapOf("granted" to true, "audio" to audioPermissionGranted))
-            } else {
-                res?.success(mapOf("granted" to false, "audio" to false))
-            }
-            return
-        }
         if (requestCode == pickTreeRequestCode) {
             val result = pendingResult
             pendingResult = null

@@ -24,7 +24,6 @@ import 'guide_screen.dart';
 import 'statistics_screen.dart';
 import 'watched_playlists_screen.dart';
 import 'browser_screen.dart';
-import 'screencast_screen.dart';
 import 'support_screen.dart';
 import 'player.dart';
 
@@ -100,7 +99,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _mainTabController = TabController(length: 14, vsync: this);
+    _mainTabController = TabController(length: 13, vsync: this);
     _mainTabController.addListener(() {
       if (!_mainTabController.indexIsChanging) {
         setState(() => _selectedPageIndex = _mainTabController.index);
@@ -197,8 +196,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _NavItem(9, Icons.transform, 'Convert', 'Tools'),
     _NavItem(10, Icons.list_alt, 'Logs', 'Tools'),
     _NavItem(11, Icons.menu_book, 'Guide', null),
-    _NavItem(12, Icons.cast_connected, 'Screencast', 'Tools'),
-    _NavItem(13, Icons.music_note, 'Player', 'Tools'),
+    _NavItem(12, Icons.music_note, 'Player', 'Tools'),
   ];
 
   Widget _buildPageContent(int index, AppSettings? settings) {
@@ -256,8 +254,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           onThemeChanged: (mode) => widget.controller.setThemeMode(mode),
         );
       case 12:
-        return const ScreencastScreen(key: ValueKey('screencast'));
-      case 13:
         return const playerPlayerPage(key: ValueKey('player-player'));
       default:
         return _buildSearchTab(settings);
@@ -385,7 +381,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Tab(icon: Icon(Icons.transform), text: 'Convert'),
                   Tab(icon: Icon(Icons.list_alt), text: 'Logs'),
                   Tab(icon: Icon(Icons.menu_book), text: 'Guide'),
-                  Tab(icon: Icon(Icons.cast_connected), text: 'Screencast'),
                   Tab(icon: Icon(Icons.music_note), text: 'Player'),
                 ],
               ),
@@ -433,7 +428,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     onThemeChanged: (mode) => widget.controller.setThemeMode(mode),
                   );
                 }),
-                const ScreencastScreen(key: ValueKey('screencast')),
                 const playerPlayerPage(key: ValueKey('player-player')),
               ],
             ),

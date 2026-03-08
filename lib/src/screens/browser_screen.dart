@@ -1,39 +1,35 @@
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_windows/webview_windows.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../browser/adblock/adblock_service.dart';
+import '../browser/cast/cast_service.dart';
+import '../browser/cast/unified_cast_service.dart';
+import '../browser/tabs/tab_manager.dart';
+import '../browser/video/video_detector_service.dart';
+import '../data/browser_db.dart';
 import '../models/search_result.dart';
+import 'browser/browser_bottom_bar.dart';
+import 'browser/browser_toolbar.dart';
+import 'browser/cast/cast_picker_sheet.dart';
+import 'browser/cast_mini_bar.dart';
+import 'browser/new_tab_page.dart';
 
-/// A simple full‑page browser that starts on YouTube and remembers its
-/// internal navigation state while it lives in memory.  Switching away from
-/// the tab does not rebuild the widget, so history is preserved.  The
-/// browser also supports a crude "incognito" mode which clears cookies/cache
-/// on enter/exit and does not persist any state between toggles.
-///
-/// The widget exposes a small toolbar with a URL entry field, back/forward
-/// buttons, reload, and an incognito toggle.  On startup it always navigates
-/// to the YouTube homepage as requested by the user.
+/// Full-featured browser screen with ad-blocking, video detection, and casting.
 class BrowserScreen extends StatefulWidget {
-  /// Optional URL to navigate to as soon as the controller is ready.
   final String? initialUrl;
-
-  /// Callback invoked when the user presses the download button.
   final void Function(SearchResult result) onAddToQueue;
 
-  BrowserScreen({Key? key, this.initialUrl, required this.onAddToQueue}) : super(key: key);
+  const BrowserScreen({super.key, this.initialUrl, required this.onAddToQueue});
 
-  /// Global key that allows other widgets (e.g. search screen) to access the
-  /// state and call `_navigateTo` without relying on the tab widget being in
-  /// the current route.  HomeScreen attaches this key when constructing the
-  /// browser page.
   static final GlobalKey<_BrowserScreenState> browserKey = GlobalKey();
 
-  /// Convenience method that other classes can call instead of reaching for
-  /// the key directly.
   static void navigate(String url) {
     browserKey.currentState?._navigateTo(url);
   }
@@ -42,661 +38,724 @@ class BrowserScreen extends StatefulWidget {
   State<BrowserScreen> createState() => _BrowserScreenState();
 }
 
-class _BrowserScreenState extends State<BrowserScreen> with AutomaticKeepAliveClientMixin {
-  WebViewController? _normalController;
-  WebViewController? _incognitoController;
+class _BrowserScreenState extends State<BrowserScreen>
+    with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
+  // ── Services (singletons for the lifetime of this widget) ──
+  final BrowserRepository _repo = BrowserRepository();
+  final AdBlockService _adBlock = AdBlockService();
+  final UnifiedCastService _castService = UnifiedCastService();
+  final TabManager _tabManager = TabManager();
 
-  // Windows-specific controllers (uses webview_windows package)
-  WebviewController? _winController;
-  WebviewController? _winIncognitoController;
+  // Per-tab detector — recreated when switching tabs
+  VideoDetectorService _videoDetector = VideoDetectorService();
 
-  bool _winInitError = false; // set true if Windows webview fails to init
-  bool _genericInitError = false; // used for other platforms (Linux/Mac/Android/iOS)
-  bool _isIncognito = false;
-
-  /// Whether we should attempt to create a WebView controller.  After
-  /// installing the proper federated plugins this will be true on every
-  /// platform except pure web and Linux (no webview_flutter_linux package
-  /// exists, so attempting to create a controller crashes the app).
-  bool get _webViewSupported => !kIsWeb && !Platform.isLinux;
-
-  bool get _usingWindows => !kIsWeb && Platform.isWindows;
-
-  final List<String> _bookmarks = [];
-
+  InAppWebViewController? _webViewController;
   final TextEditingController _addressController = TextEditingController();
+  bool _isLoading = false;
+  double _progress = 0;
+  String _pageTitle = '';
+  bool _canGoBack = false;
+  bool _canGoForward = false;
+  bool _isSecure = false;
+  bool _desktopMode = false;
+  bool _showNewTabPage = true;
+  String _searchEngine = 'DuckDuckGo';
+
+  // Cast badge animation
+  late final AnimationController _castBadgeController;
 
   @override
   void initState() {
     super.initState();
-
-    // On Android we would normally set the platform implementation for
-    // performance.  Removing this reference keeps the file compiling on
-    // Windows where `WebView` and `SurfaceAndroidWebView` are unavailable.
-    // The default implementation works fine on other platforms.
-    //
-    // if (!kIsWeb && Platform.isAndroid) {
-    //   WebView.platform = SurfaceAndroidWebView();
-    // }
-
-    // delay async work
-    _setupControllers();
-
-    // if the user provided an initial URL, navigate once the controller is
-    // ready.  We can't do this synchronously here because controllers are
-    // created asynchronously; instead our _setupControllers callback uses
-    // _activeController or _winController, so we simply schedule a post frame
-    // check.
-    if (widget.initialUrl != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _navigateTo(widget.initialUrl!);
-      });
+    _adBlock.init();
+    _castService.startDiscovery();
+    _castBadgeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _videoDetector.addListener(_onVideoDetectorChanged);
+    _castService.addListener(_onCastChanged);
+    _loadPrefs();
+    if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
+      _showNewTabPage = false;
     }
   }
 
-  Future<void> _setupControllers() async {
-    if (_usingWindows) {
-      try {
-        // Check whether the WebView2 Runtime is installed before attempting
-        // to create a controller.  On PCs without Edge/WebView2 the native
-        // plugin can crash the entire process before Dart's try-catch fires.
-        final webViewVersion = await WebviewController.getWebViewVersion();
-        if (webViewVersion == null || webViewVersion.isEmpty) {
-          debugPrint('WebView2 Runtime is not installed');
-          setState(() {
-            _winInitError = true;
-            _addressController.text = 'https://www.youtube.com/';
-          });
-          return;
-        }
-        // initialize with timeout in case WebView2 hang occurs
-        final ctrl = await _createWindowsController()
-            .timeout(const Duration(seconds: 15));
-        setState(() {
-          _winController = ctrl;
-          _winInitError = false;
-        });
-      } catch (e) {
-        debugPrint('Windows webview init error: $e');
-        setState(() {
-          _winInitError = true;
-          _addressController.text = 'https://www.youtube.com/';
-        });
-      }
-    } else if (_webViewSupported) {
-      try {
-        await _createNormalController();
-        setState(() {
-          _genericInitError = false;
-        });
-      } catch (e) {
-        debugPrint('WebView init error: $e');
-        setState(() {
-          _genericInitError = true;
-          _addressController.text = 'https://www.youtube.com/';
-        });
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _searchEngine = prefs.getString('browser_search_engine') ?? 'DuckDuckGo';
+      _desktopMode = prefs.getBool('browser_desktop_mode') ?? false;
+    });
+  }
+
+  void _onVideoDetectorChanged() {
+    if (_videoDetector.hasVideos) {
+      if (!_castBadgeController.isAnimating) {
+        _castBadgeController.repeat(reverse: true);
       }
     } else {
-      _addressController.text = 'https://www.youtube.com/';
+      _castBadgeController.stop();
+      _castBadgeController.value = 0;
     }
+    if (mounted) setState(() {});
+  }
+
+  void _onCastChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _castBadgeController.dispose();
+    _videoDetector.removeListener(_onVideoDetectorChanged);
+    _castService.removeListener(_onCastChanged);
+    _castService.stopDiscovery();
     _addressController.dispose();
-    _winController?.dispose();
-    _winIncognitoController?.dispose();
+    _castService.dispose();
+    _videoDetector.dispose();
     super.dispose();
   }
 
-  Future<void> _createNormalController() async {
-    _normalController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(NavigationDelegate(
-        onPageStarted: (url) {
-          _addressController.text = url.toString();
-        },
-        onPageFinished: (url) {
-          _addressController.text = url.toString();
-        },
-      ))
-      ..loadRequest(Uri.parse('https://www.youtube.com/'));
-    _addressController.text = 'https://www.youtube.com/';
-  }
+  @override
+  bool get wantKeepAlive => true;
 
-  /// Creates a Windows WebView controller.
-  ///
-  /// If [userDataPath] is provided, we pass it to the environment initializer
-  /// so that each controller can use an isolated profile (used for incognito).
-  Future<WebviewController> _createWindowsController({String? userDataPath}) async {
-    // initialize env once (throws if already initialized)
-    try {
-      await WebviewController.initializeEnvironment(
-          userDataPath: userDataPath);
-    } catch (_) {}
-    final ctrl = WebviewController();
-    await ctrl.initialize();
-    // subscribe early for url changes
-    ctrl.url.listen((u) {
-      setState(() { _addressController.text = u; });
-    });
-    await ctrl.loadUrl('https://www.youtube.com/');
-    _addressController.text = 'https://www.youtube.com/';
-    return ctrl;
-  }
+  // ── URL helpers ──
 
-  Future<void> _enterIncognito() async {
-    // mark as incognito immediately so UI updates
-    setState(() { _isIncognito = true; });
-
-    if (_usingWindows) {
-      try {
-        final ctrl = await _createWindowsController()
-            .timeout(const Duration(seconds: 15));
-        // clean session
-        await ctrl.clearCookies();
-        await ctrl.clearCache();
-        setState(() {
-          _winIncognitoController = ctrl;
-        });
-      } catch (e) {
-        debugPrint('Windows incognito init failed: $e');
-        // revert the incognito toggle so user doesn't end up looking at
-        // a permanent spinner; they can try again if they wish.
-        setState(() {
-          _isIncognito = false;
-        });
-      }
-      return;
-    }
-
-    if (!_webViewSupported) return;
-    try {
-      final controller = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setNavigationDelegate(NavigationDelegate(
-          onPageStarted: (url) {
-            _addressController.text = url.toString();
-          },
-          onPageFinished: (url) {
-            _addressController.text = url.toString();
-          },
-        ))
-        ..loadRequest(Uri.parse('https://www.youtube.com/'));
-      // clear cookies using new API
-      try {
-        await WebViewCookieManager().clearCookies();
-      } catch (_) {}
-      setState(() {
-        _incognitoController = controller;
-      });
-      _addressController.text = 'https://www.youtube.com/';
-    } catch (_) {}
-  }
-
-  Future<void> _exitIncognito() async {
-    if (_usingWindows) {
-      // dispose controller if desired
-      _winIncognitoController = null;
-      setState(() {
-        _isIncognito = false;
-      });
-      return;
-    }
-
-    if (!_webViewSupported) return;
-    _incognitoController = null;
-    setState(() {
-      _isIncognito = false;
-    });
-    // update address bar to whatever normal controller has
-    _normalController?.currentUrl().then((uri) {
-      if (uri != null) {
-        _addressController.text = uri.toString();
-      }
-    });
-  }
-
-  WebViewController? get _activeController {
-    if (_usingWindows) return null;
-    if (!_webViewSupported) return null;
-    return (_isIncognito ? _incognitoController : _normalController);
-  }
-
-  /// Normalize user input into a loadable URL.
-  ///
-  /// - Full URLs (`https://example.com`) are returned as-is.
-  /// - Bare domains (`hianime.to`, `vimeo.com/123`) get `https://` prepended.
-  /// - Everything else is treated as a search query and turned into a
-  ///   DuckDuckGo search URL.
-  static String _normalizeInput(String raw) {
+  String _normalizeInput(String raw) {
     final trimmed = raw.trim();
-    if (trimmed.isEmpty) return 'https://www.youtube.com/';
-
-    // Already has a scheme
+    if (trimmed.isEmpty) return '';
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       return trimmed;
     }
+    final domainPattern =
+        RegExp(r'^[^\s]+\.[a-zA-Z]{2,}(:\d+)?([/?#].*)?$');
+    if (domainPattern.hasMatch(trimmed)) return 'https://$trimmed';
+    final ipPattern =
+        RegExp(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?(/.*)?$');
+    if (ipPattern.hasMatch(trimmed)) return 'https://$trimmed';
+    if (trimmed.startsWith('localhost')) return 'http://$trimmed';
 
-    // Looks like a domain (contains a dot, no spaces, has a valid TLD-ish
-    // segment after the last dot).  This catches `hianime.to`,
-    // `www.google.com/search?q=test`, `example.com:8080`, etc.
-    final domainPattern = RegExp(
-      r'^[^\s]+\.[a-zA-Z]{2,}(:\d+)?([/?#].*)?$',
-    );
-    if (domainPattern.hasMatch(trimmed)) {
-      return 'https://$trimmed';
-    }
-
-    // Also catch IP-address style URLs (e.g. 192.168.1.1)
-    final ipPattern = RegExp(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?(/.*)?$');
-    if (ipPattern.hasMatch(trimmed)) {
-      return 'https://$trimmed';
-    }
-
-    // Looks like `localhost` or `localhost:8080`
-    if (trimmed.startsWith('localhost')) {
-      return 'http://$trimmed';
-    }
-
-    // Fallback: treat as a search query
+    // Search query
     final encoded = Uri.encodeComponent(trimmed);
-    return 'https://duckduckgo.com/?q=$encoded';
+    return switch (_searchEngine) {
+      'Google' => 'https://www.google.com/search?q=$encoded',
+      'Bing' => 'https://www.bing.com/search?q=$encoded',
+      'Brave' => 'https://search.brave.com/search?q=$encoded',
+      _ => 'https://duckduckgo.com/?q=$encoded',
+    };
   }
 
   void _navigateTo(String urlStr) {
     final normalized = _normalizeInput(urlStr);
+    if (normalized.isEmpty) return;
+    setState(() => _showNewTabPage = false);
     _addressController.text = normalized;
-    if (_usingWindows) {
-      final ctrl = _isIncognito ? _winIncognitoController : _winController;
-      ctrl?.loadUrl(normalized);
-    } else {
-      _activeController?.loadRequest(Uri.parse(normalized));
-    }
+    _webViewController?.loadUrl(
+        urlRequest: URLRequest(url: WebUri(normalized)));
   }
 
-  Widget _buildToolbar() {
-    if (!_webViewSupported) {
-      return Container(
-        padding: const EdgeInsets.all(8),
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: const Center(child: Text('WebView unsupported')),
-      );
-    }
+  void _onNewTabPageNavigate(String url) {
+    _navigateTo(url);
+  }
 
-    final bgColor = _isIncognito
-        ? Colors.grey.shade900
-        : Theme.of(context).colorScheme.surface;
-    final iconColor = _isIncognito
-        ? Colors.white
-        : Theme.of(context).colorScheme.onSurface;
+  // ── WebView callbacks ──
 
-    return Container(
-      color: bgColor,
-      child: Padding(
-        // trimmed padding to give a little more room when space is tight
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        child: IconTheme(
-          data: IconThemeData(color: iconColor),
-          child: Row(
-            children: [
-          IconButton(
-            padding: const EdgeInsets.all(4),
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () async {
-              if (_usingWindows) {
-                final ctrl = _isIncognito ? _winIncognitoController : _winController;
-                if (ctrl != null) {
-                  ctrl.goBack();
-                }
-              } else {
-                if (_activeController != null && await _activeController!.canGoBack()) {
-                  _activeController!.goBack();
-                }
-              }
-            },
-          ),
-          IconButton(
-            padding: const EdgeInsets.all(4),
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.arrow_forward),
-            onPressed: () async {
-              if (_usingWindows) {
-                final ctrl = _isIncognito ? _winIncognitoController : _winController;
-                if (ctrl != null) {
-                  ctrl.goForward();
-                }
-              } else {
-                if (_activeController != null && await _activeController!.canGoForward()) {
-                  _activeController!.goForward();
-                }
-              }
-            },
-          ),
-          Expanded(
-            child: TextField(
-              controller: _addressController,
-              keyboardType: TextInputType.url,
-              textInputAction: TextInputAction.go,
-              onSubmitted: (str) {
-                _navigateTo(str);
-              },
-              decoration: InputDecoration(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                border: const OutlineInputBorder(),
-                hintText: 'Enter URL or search…',
-                hintStyle: TextStyle(color: iconColor.withValues(alpha: 0.5)),
-              ),
-            ),
-          ),
-          IconButton(
-            padding: const EdgeInsets.all(4),
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              if (_usingWindows) {
-                final ctrl = _isIncognito ? _winIncognitoController : _winController;
-                ctrl?.reload();
-              } else {
-                _activeController?.reload();
-              }
-            },
-          ),
-          IconButton(
-            padding: const EdgeInsets.all(4),
-            visualDensity: VisualDensity.compact,
-            icon: Icon(_isIncognito ? Icons.visibility_off : Icons.visibility),
-            tooltip: _isIncognito ? 'Exit incognito' : 'Enter incognito',
-            onPressed: () {
-              if (_isIncognito) {
-                _exitIncognito();
-              } else {
-                _enterIncognito();
-              }
-            },
-          ),
-          IconButton(
-            padding: const EdgeInsets.all(4),
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.bookmark),
-            tooltip: 'Bookmarks',
-            onPressed: _showBookmarksDialog,
-          ),
-          IconButton(
-            padding: const EdgeInsets.all(4),
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.coffee),
-            tooltip: 'Support me',
-            onPressed: () async {
-              final uri = Uri.parse('https://buymeacoffee.com/orokaconner');
-              if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-                // handle failure silently
-              }
-            },
-          ),
-          IconButton(
-            padding: const EdgeInsets.all(4),
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.quiz),
-            tooltip: 'Quiz the Spire',
-            onPressed: () {
-              _navigateTo('https://quizthespire.com/');
-            },
-          ),
-          IconButton(
-            padding: const EdgeInsets.all(4),
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.download),
-            tooltip: 'Download current',
-            onPressed: _addCurrentToQueue,
-          ),
-        ],
-          ), // close Row
-        ), // close IconTheme
-      ), // close Padding
+  InAppWebViewSettings _buildSettings() {
+    return InAppWebViewSettings(
+      javaScriptEnabled: true,
+      domStorageEnabled: true,
+      databaseEnabled: true,
+      cacheEnabled: true,
+      mediaPlaybackRequiresUserGesture: false,
+      allowsInlineMediaPlayback: true,
+      useHybridComposition: true,
+      transparentBackground: false,
+      useShouldInterceptRequest: true,
+      incognito: _tabManager.activeTab?.isIncognito ?? false,
+      userAgent: _desktopMode
+          ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+          : null, // Use platform default in mobile mode
     );
   }
 
+  void _onWebViewCreated(InAppWebViewController controller) {
+    _webViewController = controller;
 
-  /// Enqueue the current URL for download.
-  ///
-  /// YouTube URLs are parsed into a video ID and sent as a YouTube result.
-  /// All other URLs are sent as generic results that will be routed to yt-dlp.
+    controller.addJavaScriptHandler(
+      handlerName: 'onVideoFound',
+      callback: (args) {
+        if (args.isNotEmpty) {
+          _videoDetector.handleJsCallback(args[0].toString());
+        }
+      },
+    );
+
+    if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
+      controller.loadUrl(
+          urlRequest: URLRequest(url: WebUri(widget.initialUrl!)));
+    }
+  }
+
+  void _onLoadStart(InAppWebViewController controller, WebUri? url) {
+    _videoDetector.clearForPage();
+    final urlStr = url?.toString() ?? '';
+    setState(() {
+      _isLoading = true;
+      _addressController.text = urlStr;
+      _isSecure = urlStr.startsWith('https://');
+    });
+    _tabManager.updateTab(_tabManager.activeTab!.id,
+        url: urlStr, isLoading: true);
+  }
+
+  void _onLoadStop(InAppWebViewController controller, WebUri? url) async {
+    final urlStr = url?.toString() ?? '';
+    _addressController.text = urlStr;
+
+    final title = await controller.getTitle() ?? '';
+    _canGoBack = await controller.canGoBack();
+    _canGoForward = await controller.canGoForward();
+
+    setState(() {
+      _isLoading = false;
+      _pageTitle = title;
+    });
+
+    _tabManager.updateTab(_tabManager.activeTab!.id,
+        url: urlStr, title: title, isLoading: false);
+
+    // Record in history (unless incognito)
+    if (!(_tabManager.activeTab?.isIncognito ?? false) && urlStr.isNotEmpty) {
+      final domain = Uri.tryParse(urlStr)?.host ?? '';
+      final faviconUrl = domain.isNotEmpty
+          ? 'https://www.google.com/s2/favicons?sz=64&domain_url=$domain'
+          : null;
+      _repo.addHistory(urlStr, title, faviconUrl);
+      _repo.upsertRecentSite(urlStr, title, faviconUrl);
+    }
+
+    // Inject video detection JS
+    controller.evaluateJavascript(
+        source: VideoDetectorService.injectionJs);
+
+    // Inject popup blocker
+    if (_adBlock.adBlockEnabled) {
+      controller.evaluateJavascript(
+          source: VideoDetectorService.popupBlockerJs);
+    }
+  }
+
+  void _onProgressChanged(
+      InAppWebViewController controller, int progress) {
+    setState(() => _progress = progress / 100.0);
+  }
+
+  Future<NavigationActionPolicy?> _shouldOverrideUrlLoading(
+      InAppWebViewController controller,
+      NavigationAction action) async {
+    return NavigationActionPolicy.ALLOW;
+  }
+
+  Future<WebResourceResponse?> _shouldInterceptRequest(
+      InAppWebViewController controller,
+      WebResourceRequest request) async {
+    final url = request.url.toString();
+
+    // Ad-block
+    if (_adBlock.adBlockEnabled && _adBlock.shouldBlock(url)) {
+      return WebResourceResponse(data: Uint8List(0));
+    }
+
+    // Video detection via network sniffing
+    if (VideoDetectorService.isVideoUrl(url)) {
+      _videoDetector.notifyVideoFound(url);
+    }
+
+    return null;
+  }
+
+  void _onConsoleMessage(
+      InAppWebViewController controller, ConsoleMessage message) {
+    if (kDebugMode) {
+      debugPrint('WebView Console: ${message.message}');
+    }
+  }
+
+  void _onReceivedError(InAppWebViewController controller,
+      WebResourceRequest request, WebResourceError error) {
+    if (request.isForMainFrame ?? false) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _onScrollChanged(
+      InAppWebViewController controller, int x, int y) {
+    // Re-scan for lazy-loaded video players
+    controller.evaluateJavascript(
+        source: VideoDetectorService.injectionJs);
+  }
+
+  // ── Actions ──
+
+  void _goBack() => _webViewController?.goBack();
+  void _goForward() => _webViewController?.goForward();
+
+  void _reload() {
+    if (_isLoading) {
+      _webViewController?.stopLoading();
+    } else {
+      _webViewController?.reload();
+    }
+  }
+
+  void _openCastSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => CastPickerSheet(
+        detectedUrls: _videoDetector.detectedUrls,
+        castService: _castService,
+        onCast: (device, url) {
+          _castService.castUrl(device, url,
+              title: _pageTitle.isNotEmpty ? _pageTitle : null);
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
+  void _goHome() {
+    setState(() => _showNewTabPage = true);
+    _addressController.clear();
+  }
+
+  void _toggleIncognito() {
+    final tab = _tabManager.activeTab;
+    if (tab == null) return;
+    if (tab.isIncognito) {
+      // Exit incognito — open a new normal tab
+      _tabManager.addTab();
+    } else {
+      _tabManager.addTab(incognito: true);
+    }
+    setState(() => _showNewTabPage = true);
+  }
+
+  void _addCurrentToFavourites() {
+    final url = _addressController.text.trim();
+    if (url.isEmpty) return;
+    final domain = Uri.tryParse(url)?.host ?? '';
+    final faviconUrl = domain.isNotEmpty
+        ? 'https://www.google.com/s2/favicons?sz=64&domain_url=$domain'
+        : null;
+    _repo.addFavourite(url, _pageTitle, faviconUrl);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Added to favourites'),
+            duration: Duration(seconds: 1)),
+      );
+    }
+  }
+
   void _addCurrentToQueue() {
     final url = _addressController.text.trim();
     if (url.isEmpty) return;
-
-    String? id;
     Uri? uri;
+    String? id;
     try {
       uri = Uri.parse(url);
       final host = uri.host.toLowerCase();
       if (host.contains('youtube.com') || host.contains('youtu.be') ||
           host.contains('music.youtube.com')) {
-        // Standard watch URL: youtube.com/watch?v=ID
         id = uri.queryParameters['v'];
-        // Short-link: youtu.be/ID
         if (id == null && host == 'youtu.be' && uri.pathSegments.isNotEmpty) {
           id = uri.pathSegments[0];
         }
-        // Shorts: youtube.com/shorts/ID
         if (id == null && uri.pathSegments.length >= 2 &&
             uri.pathSegments[0] == 'shorts') {
           id = uri.pathSegments[1];
         }
-        // Embed: youtube.com/embed/ID
         if (id == null && uri.pathSegments.length >= 2 &&
             uri.pathSegments[0] == 'embed') {
-          id = uri.pathSegments[1];
-        }
-        // Live: youtube.com/live/ID
-        if (id == null && uri.pathSegments.length >= 2 &&
-            uri.pathSegments[0] == 'live') {
           id = uri.pathSegments[1];
         }
       }
     } catch (_) {}
 
     if (id != null) {
-      // YouTube video — use existing YouTube pipeline
-      final result = SearchResult(
+      widget.onAddToQueue(SearchResult(
         id: id,
-        title: uri?.pathSegments.isNotEmpty == true ? uri!.pathSegments.last : url,
+        title: _pageTitle.isNotEmpty ? _pageTitle : url,
         artist: 'YouTube',
         duration: Duration.zero,
         thumbnailUrl: 'https://img.youtube.com/vi/$id/default.jpg',
         source: 'youtube',
-      );
-      widget.onAddToQueue(result);
+      ));
     } else {
-      // Non-YouTube URL — will be routed to yt-dlp by the download service
-      final displayTitle = uri?.host ?? url;
-      final result = SearchResult(
-        id: url,  // use the full URL as the ID for non-YouTube
-        title: displayTitle,
+      widget.onAddToQueue(SearchResult(
+        id: url,
+        title: _pageTitle.isNotEmpty ? _pageTitle : (uri?.host ?? url),
         artist: uri?.host ?? 'Web',
         duration: Duration.zero,
         thumbnailUrl: '',
         source: 'generic',
-      );
-      widget.onAddToQueue(result);
+      ));
     }
   }
 
-  void _showBookmarksDialog() {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Bookmarks'),
-          content: SizedBox(
-            width: 300,
-            child: ListView(
-              shrinkWrap: true,
+  void _openInExternal() async {
+    final url = _addressController.text.trim();
+    if (url.isNotEmpty) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void _toggleDesktopMode() async {
+    _desktopMode = !_desktopMode;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('browser_desktop_mode', _desktopMode);
+    _webViewController?.setSettings(settings: _buildSettings());
+    _webViewController?.reload();
+    setState(() {});
+  }
+
+  // ── Build ──
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final isIncognito = _tabManager.activeTab?.isIncognito ?? false;
+    final viewPadding = MediaQuery.of(context).viewPadding;
+
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      body: SafeArea(
+        top: true,
+        bottom: false,
+        child: Stack(
+          children: [
+            Column(
               children: [
-                for (final bm in _bookmarks)
-                  ListTile(
-                    title: Text(bm),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _navigateTo(bm);
-                    },
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () {
-                        setState(() => _bookmarks.remove(bm));
-                        Navigator.pop(ctx);
-                        _showBookmarksDialog();
-                      },
-                    ),
+                // ── Top toolbar ──
+                BrowserToolbar(
+                  addressController: _addressController,
+                  isLoading: _isLoading,
+                  isSecure: _isSecure,
+                  isIncognito: isIncognito,
+                  canGoBack: _canGoBack,
+                  canGoForward: _canGoForward,
+                  hasVideos: _videoDetector.hasVideos,
+                  castBadgeAnimation: _castBadgeController,
+                  desktopMode: _desktopMode,
+                  adBlockEnabled: _adBlock.adBlockEnabled,
+                  pageTitle: _pageTitle,
+                  onBack: _goBack,
+                  onForward: _goForward,
+                  onReload: _reload,
+                  onSubmitted: _navigateTo,
+                  onCastTap: _openCastSheet,
+                  onMenuAction: _handleMenuAction,
+                ),
+
+                // ── Progress bar ──
+                if (_isLoading)
+                  LinearProgressIndicator(
+                    value: _progress > 0 ? _progress : null,
+                    minHeight: 2,
                   ),
-                ListTile(
-                  leading: const Icon(Icons.add),
-                  title: const Text('Add current'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    final current = _addressController.text;
-                    if (current.isNotEmpty && !_bookmarks.contains(current)) {
-                      setState(() => _bookmarks.add(current));
-                    }
-                  },
+
+                // ── WebView or New Tab Page ──
+                Expanded(
+                  child: _showNewTabPage
+                      ? NewTabPage(
+                          repo: _repo,
+                          onNavigate: _onNewTabPageNavigate,
+                        )
+                      : _buildWebView(),
+                ),
+
+                // ── Bottom bar ──
+                BrowserBottomBar(
+                  tabCount: _tabManager.tabCount,
+                  onHome: _goHome,
+                  onTabs: _showTabSwitcher,
+                  onFavourite: _addCurrentToFavourites,
+                  bottomPadding: viewPadding.bottom,
                 ),
               ],
             ),
+
+            // ── Cast mini bar ──
+            if (_castService.activeDevice != null)
+              Positioned(
+                bottom: viewPadding.bottom + 56, // above bottom bar
+                left: 0,
+                right: 0,
+                child: CastMiniBar(
+                  deviceName: _castService.activeDevice!.name,
+                  isPlaying: _castService.playbackState ==
+                      CastPlaybackState.playing,
+                  onPlayPause: () {
+                    if (_castService.playbackState ==
+                        CastPlaybackState.playing) {
+                      _castService.pause();
+                    } else {
+                      _castService.resume();
+                    }
+                  },
+                  onStop: () => _castService.stop(),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebView() {
+    if (kIsWeb || Platform.isLinux) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.public,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 16),
+              const Text(
+                'In-app browser is not available on this platform.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _openInExternal,
+                icon: const Icon(Icons.open_in_browser),
+                label: const Text('Open in External Browser'),
+              ),
+            ],
           ),
+        ),
+      );
+    }
+
+    return InAppWebView(
+      initialSettings: _buildSettings(),
+      onWebViewCreated: _onWebViewCreated,
+      onLoadStart: _onLoadStart,
+      onLoadStop: _onLoadStop,
+      onProgressChanged: _onProgressChanged,
+      shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
+      shouldInterceptRequest: _shouldInterceptRequest,
+      onConsoleMessage: _onConsoleMessage,
+      onReceivedError: _onReceivedError,
+      onScrollChanged: _onScrollChanged,
+    );
+  }
+
+  void _handleMenuAction(String action) {
+    switch (action) {
+      case 'new_tab':
+        _tabManager.addTab();
+        setState(() => _showNewTabPage = true);
+      case 'incognito':
+        _toggleIncognito();
+      case 'add_favourite':
+        _addCurrentToFavourites();
+      case 'share':
+        // Use share_plus
+        final url = _addressController.text.trim();
+        if (url.isNotEmpty) {
+          // ignore: deprecated_member_use
+          Share.share(url);
+        }
+      case 'desktop_mode':
+        _toggleDesktopMode();
+      case 'adblock':
+        _adBlock.toggleAdBlock();
+        setState(() {});
+      case 'download':
+        _addCurrentToQueue();
+      case 'external':
+        _openInExternal();
+      case 'find':
+        // Find-in-page: no-op if not supported by this InAppWebView version
+        break;
+    }
+  }
+
+  void _showTabSwitcher() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _TabSwitcherSheet(
+        tabManager: _tabManager,
+        onSelectTab: (index) {
+          _tabManager.switchToTab(index);
+          setState(() {
+            _showNewTabPage = _tabManager.activeTab?.url.isEmpty ?? true;
+          });
+          Navigator.pop(context);
+        },
+        onCloseTab: (index) {
+          _tabManager.closeTab(index);
+          setState(() {
+            _showNewTabPage = _tabManager.activeTab?.url.isEmpty ?? true;
+          });
+        },
+        onNewTab: () {
+          _tabManager.addTab();
+          setState(() => _showNewTabPage = true);
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+}
+
+// ── Tab Switcher Sheet ──
+
+class _TabSwitcherSheet extends StatelessWidget {
+  final TabManager tabManager;
+  final ValueChanged<int> onSelectTab;
+  final ValueChanged<int> onCloseTab;
+  final VoidCallback onNewTab;
+
+  const _TabSwitcherSheet({
+    required this.tabManager,
+    required this.onSelectTab,
+    required this.onCloseTab,
+    required this.onNewTab,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      maxChildSize: 0.9,
+      minChildSize: 0.3,
+      expand: false,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Text('Tabs (${tabManager.tabCount})',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: onNewTab,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: GridView.builder(
+                controller: scrollController,
+                padding: const EdgeInsets.all(12),
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.75,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                ),
+                itemCount: tabManager.tabCount,
+                itemBuilder: (context, index) {
+                  final tab = tabManager.tabs[index];
+                  final isActive = index == tabManager.activeIndex;
+                  return GestureDetector(
+                    onTap: () => onSelectTab(index),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isActive
+                              ? cs.primary
+                              : cs.outlineVariant,
+                          width: isActive ? 2 : 1,
+                        ),
+                        color: tab.isIncognito
+                            ? const Color(0xFF1A1A2E)
+                            : cs.surfaceContainerLow,
+                      ),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 6),
+                            child: Row(
+                              children: [
+                                if (tab.isIncognito)
+                                  const Icon(Icons.visibility_off,
+                                      size: 14, color: Colors.white70),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    tab.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: tab.isIncognito
+                                          ? Colors.white70
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () => onCloseTab(index),
+                                  child: Icon(Icons.close,
+                                      size: 16,
+                                      color: tab.isIncognito
+                                          ? Colors.white70
+                                          : cs.onSurfaceVariant),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: tab.screenshot != null
+                                ? ClipRRect(
+                                    borderRadius: const BorderRadius.only(
+                                      bottomLeft: Radius.circular(11),
+                                      bottomRight: Radius.circular(11),
+                                    ),
+                                    child: Image.memory(
+                                      tab.screenshot!,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                    ),
+                                  )
+                                : Center(
+                                    child: Icon(Icons.web,
+                                        size: 32,
+                                        color: cs.outlineVariant),
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
     );
   }
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context); // from AutomaticKeepAliveClientMixin
-    return Column(
-      children: [
-        _buildToolbar(),
-        const Divider(height: 1),
-        Expanded(
-          child: _usingWindows
-              ? (_isIncognito
-                  ? (_winIncognitoController == null
-                      ? const Center(child: CircularProgressIndicator())
-                      : KeyedSubtree(
-                          key: const ValueKey('win-incognito'),
-                          child: Webview(_winIncognitoController!),
-                        ))
-                  : (_winController == null
-                      ? (_winInitError
-                          ? Padding(
-                              padding: const EdgeInsets.all(32),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.warning_amber_rounded,
-                                      size: 48,
-                                      color: Theme.of(context).colorScheme.error),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'WebView2 Runtime is not installed',
-                                    style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'The in-app browser requires the Microsoft Edge WebView2 Runtime.\n'
-                                    'Install it from the link below, then restart the app.',
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 20),
-                                  FilledButton.icon(
-                                    onPressed: () => launchUrl(
-                                      Uri.parse(
-                                          'https://developer.microsoft.com/en-us/microsoft-edge/webview2/'),
-                                      mode: LaunchMode.externalApplication,
-                                    ),
-                                    icon: const Icon(Icons.download),
-                                    label: const Text('Download WebView2 Runtime'),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  OutlinedButton.icon(
-                                    onPressed: () {
-                                      final url = _addressController.text.isNotEmpty
-                                          ? _addressController.text
-                                          : 'https://www.youtube.com/';
-                                      launchUrl(Uri.parse(url),
-                                          mode: LaunchMode.externalApplication);
-                                    },
-                                    icon: const Icon(Icons.open_in_browser),
-                                    label: const Text('Open in External Browser'),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  TextButton.icon(
-                                    onPressed: _setupControllers,
-                                    icon: const Icon(Icons.refresh),
-                                    label: const Text('Retry'),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : const Center(child: CircularProgressIndicator()))
-                      : KeyedSubtree(
-                          key: const ValueKey('win-normal'),
-                          child: Webview(_winController!),
-                        )))
-              : (!_webViewSupported)
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.public, size: 64,
-                                color: Theme.of(context).colorScheme.primary),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'In-app browser is not available on this platform.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 16),
-                            ),
-                            const SizedBox(height: 24),
-                            FilledButton.icon(
-                              onPressed: () {
-                                final url = _addressController.text.isNotEmpty
-                                    ? _addressController.text
-                                    : 'https://www.youtube.com/';
-                                launchUrl(Uri.parse(url),
-                                    mode: LaunchMode.externalApplication);
-                              },
-                              icon: const Icon(Icons.open_in_browser),
-                              label: const Text('Open in External Browser'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : (_activeController == null
-                      ? (_genericInitError
-                          ? Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text('Failed to initialize WebView'),
-                                const SizedBox(height: 8),
-                                ElevatedButton(
-                                  onPressed: _setupControllers,
-                                  child: const Text('Retry'),
-                                ),
-                              ],
-                            )
-                          : const Center(child: CircularProgressIndicator()))
-                      : WebViewWidget(controller: _activeController!)),
-        ),
-      ],
-    );
-  }
-
-  @override
-  bool get wantKeepAlive => true;
 }
