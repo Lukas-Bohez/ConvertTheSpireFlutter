@@ -2636,6 +2636,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   /// Toggle support mining on/off and update the coordinator services.
   void _setSupportEnabled(bool value) {
     setState(() => _supportEnabled = value);
+    // Ensure SupportScreen is built in the IndexedStack so its UI callbacks
+    // (onStateChanged) are connected to the services — prevents errors if the
+    // user never manually navigated to the Support page.
+    if (value) _visitedPages.add(8);
     final isAndroid = !kIsWeb && Platform.isAndroid;
     if (isAndroid) return;
     _coordinatorService.setEnabled(value);

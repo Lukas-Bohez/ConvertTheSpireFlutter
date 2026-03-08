@@ -354,7 +354,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     // domains like doubleclick.net and googlesyndication.com).
     if (_adBlock.adBlockEnabled && _adBlock.shouldBlock(url)) {
       final pageHost =
-          Uri.tryParse(_addressController.text)?.host?.toLowerCase() ?? '';
+          Uri.tryParse(_addressController.text)?.host.toLowerCase() ?? '';
       final isGoogleSite = pageHost.endsWith('youtube.com') ||
           pageHost.endsWith('.youtube.com') ||
           pageHost.endsWith('google.com') ||
@@ -773,6 +773,25 @@ class _BrowserScreenState extends State<BrowserScreen>
       onConsoleMessage: _onConsoleMessage,
       onReceivedError: _onReceivedError,
       onScrollChanged: _onScrollChanged,
+      onUpdateVisitedHistory: (controller, url, androidIsReload) {
+        final urlStr = url?.toString() ?? '';
+        if (urlStr.isEmpty || urlStr == 'about:blank') return;
+        setState(() {
+          _addressController.text = urlStr;
+          _isSecure = urlStr.startsWith('https://');
+        });
+        final activeTab = _tabManager.activeTab;
+        if (activeTab != null) {
+          _tabManager.updateTab(activeTab.id, url: urlStr);
+        }
+        controller.canGoBack().then((v) {
+          if (mounted) setState(() => _canGoBack = v);
+        });
+        controller.canGoForward().then((v) {
+          if (mounted) setState(() => _canGoForward = v);
+        });
+        _checkFavouriteState();
+      },
       onDownloadStartRequest: (controller, request) {
         launchUrl(request.url, mode: LaunchMode.externalApplication);
       },

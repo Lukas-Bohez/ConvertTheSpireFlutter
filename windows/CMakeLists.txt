@@ -10,6 +10,11 @@ set(BINARY_NAME "convert_the_spire_reborn")
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
 
+# Force flutter_inappwebview_windows to use the software PixelBuffer texture
+# fallback instead of the GPU D3D shared-handle path, which produces blank
+# textures on some Windows/GPU combinations.
+set(FLUTTER_WEBVIEW_WINDOWS_USE_TEXTURE_FALLBACK ON CACHE BOOL "" FORCE)
+
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(IS_MULTICONFIG)
