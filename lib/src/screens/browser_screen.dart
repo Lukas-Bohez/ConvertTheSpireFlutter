@@ -40,17 +40,18 @@ class BrowserScreen extends StatefulWidget {
 
 class _BrowserScreenState extends State<BrowserScreen>
     with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
-  // ── Services (singletons for the lifetime of this widget) ──
+  // ── Services ──
   final BrowserRepository _repo = BrowserRepository();
   final AdBlockService _adBlock = AdBlockService();
   final UnifiedCastService _castService = UnifiedCastService();
   final TabManager _tabManager = TabManager();
-
-  // Per-tab detector — recreated when switching tabs
   VideoDetectorService _videoDetector = VideoDetectorService();
 
   InAppWebViewController? _webViewController;
+  FindInteractionController? _findInteractionController;
   final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _findController = TextEditingController();
+
   bool _isLoading = false;
   double _progress = 0;
   String _pageTitle = '';
@@ -59,10 +60,22 @@ class _BrowserScreenState extends State<BrowserScreen>
   bool _isSecure = false;
   bool _desktopMode = false;
   bool _showNewTabPage = true;
+  bool _isFavourited = false;
   String _searchEngine = 'DuckDuckGo';
+
+  // Find-in-page state
+  bool _showFindBar = false;
+  int _findMatchCount = 0;
+  int _findActiveIndex = 0;
+
+  // Pending URL — loaded once the WebView controller is ready.
+  String? _pendingUrl;
 
   // Cast badge animation
   late final AnimationController _castBadgeController;
+
+  /// True when the platform supports the in-app WebView.
+  bool get _webViewSupported => !kIsWeb && !Platform.isLinux;
 
   @override
   void initState() {
@@ -78,6 +91,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     _loadPrefs();
     if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
       _showNewTabPage = false;
+      _pendingUrl = widget.initialUrl;
     }
   }
 
@@ -112,6 +126,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     _castService.removeListener(_onCastChanged);
     _castService.stopDiscovery();
     _addressController.dispose();
+    _findController.dispose();
     _castService.dispose();
     _videoDetector.dispose();
     super.dispose();
@@ -136,7 +151,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (ipPattern.hasMatch(trimmed)) return 'https://$trimmed';
     if (trimmed.startsWith('localhost')) return 'http://$trimmed';
 
-    // Search query
     final encoded = Uri.encodeComponent(trimmed);
     return switch (_searchEngine) {
       'Google' => 'https://www.google.com/search?q=$encoded',
@@ -149,14 +163,35 @@ class _BrowserScreenState extends State<BrowserScreen>
   void _navigateTo(String urlStr) {
     final normalized = _normalizeInput(urlStr);
     if (normalized.isEmpty) return;
-    setState(() => _showNewTabPage = false);
+    setState(() {
+      _showNewTabPage = false;
+      _isFavourited = false;
+    });
     _addressController.text = normalized;
-    _webViewController?.loadUrl(
-        urlRequest: URLRequest(url: WebUri(normalized)));
+
+    if (_webViewController != null) {
+      _webViewController!
+          .loadUrl(urlRequest: URLRequest(url: WebUri(normalized)));
+    } else {
+      // Controller not ready yet — stash for _onWebViewCreated.
+      _pendingUrl = normalized;
+    }
   }
 
-  void _onNewTabPageNavigate(String url) {
-    _navigateTo(url);
+  void _onNewTabPageNavigate(String url) => _navigateTo(url);
+
+  // ── Favourite state helper ──
+
+  Future<void> _checkFavouriteState() async {
+    final url = _addressController.text.trim();
+    if (url.isEmpty) {
+      if (_isFavourited) setState(() => _isFavourited = false);
+      return;
+    }
+    final fav = await _repo.isFavourite(url);
+    if (mounted && fav != _isFavourited) {
+      setState(() => _isFavourited = fav);
+    }
   }
 
   // ── WebView callbacks ──
@@ -172,10 +207,19 @@ class _BrowserScreenState extends State<BrowserScreen>
       useHybridComposition: true,
       transparentBackground: false,
       useShouldInterceptRequest: true,
+      supportZoom: true,
+      builtInZoomControls: true,
+      displayZoomControls: false,
+      useWideViewPort: true,
+      loadWithOverviewMode: true,
+      allowContentAccess: true,
+      allowFileAccess: true,
+      mixedContentMode: MixedContentMode.MIXED_CONTENT_COMPATIBILITY_MODE,
       incognito: _tabManager.activeTab?.isIncognito ?? false,
       userAgent: _desktopMode
-          ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-          : null, // Use platform default in mobile mode
+          ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+            '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+          : null,
     );
   }
 
@@ -191,19 +235,25 @@ class _BrowserScreenState extends State<BrowserScreen>
       },
     );
 
-    if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
+    // Load any URL that was requested before the controller was ready.
+    final urlToLoad = _pendingUrl;
+    _pendingUrl = null;
+    if (urlToLoad != null && urlToLoad.isNotEmpty) {
       controller.loadUrl(
-          urlRequest: URLRequest(url: WebUri(widget.initialUrl!)));
+          urlRequest: URLRequest(url: WebUri(urlToLoad)));
     }
   }
 
   void _onLoadStart(InAppWebViewController controller, WebUri? url) {
     _videoDetector.clearForPage();
     final urlStr = url?.toString() ?? '';
+    // Ignore about:blank navigations caused by WebView initialisation.
+    if (urlStr == 'about:blank') return;
     setState(() {
       _isLoading = true;
       _addressController.text = urlStr;
       _isSecure = urlStr.startsWith('https://');
+      _isFavourited = false;
     });
     _tabManager.updateTab(_tabManager.activeTab!.id,
         url: urlStr, isLoading: true);
@@ -211,6 +261,8 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _onLoadStop(InAppWebViewController controller, WebUri? url) async {
     final urlStr = url?.toString() ?? '';
+    // Ignore about:blank completions.
+    if (urlStr == 'about:blank') return;
     _addressController.text = urlStr;
 
     final title = await controller.getTitle() ?? '';
@@ -225,7 +277,10 @@ class _BrowserScreenState extends State<BrowserScreen>
     _tabManager.updateTab(_tabManager.activeTab!.id,
         url: urlStr, title: title, isLoading: false);
 
-    // Record in history (unless incognito)
+    // Check favourite state.
+    _checkFavouriteState();
+
+    // Record in history (unless incognito).
     if (!(_tabManager.activeTab?.isIncognito ?? false) && urlStr.isNotEmpty) {
       final domain = Uri.tryParse(urlStr)?.host ?? '';
       final faviconUrl = domain.isNotEmpty
@@ -235,11 +290,11 @@ class _BrowserScreenState extends State<BrowserScreen>
       _repo.upsertRecentSite(urlStr, title, faviconUrl);
     }
 
-    // Inject video detection JS
+    // Inject video detection JS.
     controller.evaluateJavascript(
         source: VideoDetectorService.injectionJs);
 
-    // Inject popup blocker
+    // Inject popup blocker when ad-block is on.
     if (_adBlock.adBlockEnabled) {
       controller.evaluateJavascript(
           source: VideoDetectorService.popupBlockerJs);
@@ -254,6 +309,18 @@ class _BrowserScreenState extends State<BrowserScreen>
   Future<NavigationActionPolicy?> _shouldOverrideUrlLoading(
       InAppWebViewController controller,
       NavigationAction action) async {
+    final url = action.request.url?.toString() ?? '';
+    // Handle external protocols (tel:, mailto:, etc.).
+    if (url.startsWith('tel:') ||
+        url.startsWith('mailto:') ||
+        url.startsWith('intent:') ||
+        url.startsWith('market:')) {
+      try {
+        await launchUrl(Uri.parse(url),
+            mode: LaunchMode.externalApplication);
+      } catch (_) {}
+      return NavigationActionPolicy.CANCEL;
+    }
     return NavigationActionPolicy.ALLOW;
   }
 
@@ -262,12 +329,12 @@ class _BrowserScreenState extends State<BrowserScreen>
       WebResourceRequest request) async {
     final url = request.url.toString();
 
-    // Ad-block
+    // Ad-block.
     if (_adBlock.adBlockEnabled && _adBlock.shouldBlock(url)) {
       return WebResourceResponse(data: Uint8List(0));
     }
 
-    // Video detection via network sniffing
+    // Video detection via network sniffing.
     if (VideoDetectorService.isVideoUrl(url)) {
       _videoDetector.notifyVideoFound(url);
     }
@@ -289,23 +356,37 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   }
 
-  void _onScrollChanged(
-      InAppWebViewController controller, int x, int y) {
-    // Re-scan for lazy-loaded video players
+  void _onScrollChanged(InAppWebViewController controller, int x, int y) {
     controller.evaluateJavascript(
         source: VideoDetectorService.injectionJs);
   }
 
   // ── Actions ──
 
-  void _goBack() => _webViewController?.goBack();
-  void _goForward() => _webViewController?.goForward();
+  void _goBack() async {
+    if (_webViewController != null &&
+        await _webViewController!.canGoBack()) {
+      _webViewController!.goBack();
+    }
+  }
+
+  void _goForward() async {
+    if (_webViewController != null &&
+        await _webViewController!.canGoForward()) {
+      _webViewController!.goForward();
+    }
+  }
 
   void _reload() {
+    if (_showNewTabPage) return;
+    final currentUrl = _addressController.text.trim();
     if (_isLoading) {
       _webViewController?.stopLoading();
-    } else {
-      _webViewController?.reload();
+      setState(() => _isLoading = false);
+    } else if (currentUrl.isNotEmpty && currentUrl != 'about:blank') {
+      // Re-load the current URL explicitly so we never reload about:blank.
+      _webViewController?.loadUrl(
+          urlRequest: URLRequest(url: WebUri(currentUrl)));
     }
   }
 
@@ -326,36 +407,47 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _goHome() {
-    setState(() => _showNewTabPage = true);
+    setState(() {
+      _showNewTabPage = true;
+      _isFavourited = false;
+    });
     _addressController.clear();
   }
 
   void _toggleIncognito() {
     final tab = _tabManager.activeTab;
     if (tab == null) return;
-    if (tab.isIncognito) {
-      // Exit incognito — open a new normal tab
-      _tabManager.addTab();
-    } else {
-      _tabManager.addTab(incognito: true);
-    }
+    _tabManager.addTab(incognito: !tab.isIncognito);
     setState(() => _showNewTabPage = true);
   }
 
-  void _addCurrentToFavourites() {
+  void _toggleFavourite() async {
     final url = _addressController.text.trim();
-    if (url.isEmpty) return;
-    final domain = Uri.tryParse(url)?.host ?? '';
-    final faviconUrl = domain.isNotEmpty
-        ? 'https://www.google.com/s2/favicons?sz=64&domain_url=$domain'
-        : null;
-    _repo.addFavourite(url, _pageTitle, faviconUrl);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Added to favourites'),
-            duration: Duration(seconds: 1)),
-      );
+    if (url.isEmpty || _showNewTabPage) return;
+    if (_isFavourited) {
+      await _repo.removeFavourite(url);
+      setState(() => _isFavourited = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Removed from favourites'),
+              duration: Duration(seconds: 1)),
+        );
+      }
+    } else {
+      final domain = Uri.tryParse(url)?.host ?? '';
+      final faviconUrl = domain.isNotEmpty
+          ? 'https://www.google.com/s2/favicons?sz=64&domain_url=$domain'
+          : null;
+      await _repo.addFavourite(url, _pageTitle, faviconUrl);
+      setState(() => _isFavourited = true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Added to favourites'),
+              duration: Duration(seconds: 1)),
+        );
+      }
     }
   }
 
@@ -367,17 +459,20 @@ class _BrowserScreenState extends State<BrowserScreen>
     try {
       uri = Uri.parse(url);
       final host = uri.host.toLowerCase();
-      if (host.contains('youtube.com') || host.contains('youtu.be') ||
+      if (host.contains('youtube.com') ||
+          host.contains('youtu.be') ||
           host.contains('music.youtube.com')) {
         id = uri.queryParameters['v'];
         if (id == null && host == 'youtu.be' && uri.pathSegments.isNotEmpty) {
           id = uri.pathSegments[0];
         }
-        if (id == null && uri.pathSegments.length >= 2 &&
+        if (id == null &&
+            uri.pathSegments.length >= 2 &&
             uri.pathSegments[0] == 'shorts') {
           id = uri.pathSegments[1];
         }
-        if (id == null && uri.pathSegments.length >= 2 &&
+        if (id == null &&
+            uri.pathSegments.length >= 2 &&
             uri.pathSegments[0] == 'embed') {
           id = uri.pathSegments[1];
         }
@@ -403,6 +498,13 @@ class _BrowserScreenState extends State<BrowserScreen>
         source: 'generic',
       ));
     }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Added to queue'),
+            duration: Duration(seconds: 1)),
+      );
+    }
   }
 
   void _openInExternal() async {
@@ -419,6 +521,55 @@ class _BrowserScreenState extends State<BrowserScreen>
     _webViewController?.setSettings(settings: _buildSettings());
     _webViewController?.reload();
     setState(() {});
+  }
+
+  // ── Find-in-page ──
+
+  void _openFindInPage() {
+    setState(() => _showFindBar = true);
+    _findController.clear();
+    _findMatchCount = 0;
+    _findActiveIndex = 0;
+  }
+
+  void _closeFindInPage() {
+    _findInteractionController?.clearMatches();
+    setState(() {
+      _showFindBar = false;
+      _findMatchCount = 0;
+      _findActiveIndex = 0;
+    });
+  }
+
+  void _performFind(String query) async {
+    if (query.isEmpty) {
+      _findInteractionController?.clearMatches();
+      setState(() {
+        _findMatchCount = 0;
+        _findActiveIndex = 0;
+      });
+      return;
+    }
+    await _findInteractionController?.findAll(find: query);
+  }
+
+  void _findNext() {
+    _findInteractionController?.findNext(forward: true);
+    if (_findMatchCount > 0) {
+      setState(() {
+        _findActiveIndex = (_findActiveIndex + 1) % _findMatchCount;
+      });
+    }
+  }
+
+  void _findPrevious() {
+    _findInteractionController?.findNext(forward: false);
+    if (_findMatchCount > 0) {
+      setState(() {
+        _findActiveIndex =
+            (_findActiveIndex - 1 + _findMatchCount) % _findMatchCount;
+      });
+    }
   }
 
   // ── Build ──
@@ -466,22 +617,49 @@ class _BrowserScreenState extends State<BrowserScreen>
                     minHeight: 2,
                   ),
 
-                // ── WebView or New Tab Page ──
+                // ── WebView + NewTabPage (Stack: WebView persists) ──
                 Expanded(
-                  child: _showNewTabPage
-                      ? NewTabPage(
-                          repo: _repo,
-                          onNavigate: _onNewTabPageNavigate,
+                  child: Stack(
+                    children: [
+                      // The WebView is ALWAYS in the tree so its
+                      // controller stays alive across new-tab-page
+                      // transitions.
+                      if (_webViewSupported)
+                        Offstage(
+                          offstage: _showNewTabPage,
+                          child: _buildWebView(),
                         )
-                      : _buildWebView(),
+                      else
+                        _buildPlatformUnavailable(),
+
+                      // NewTabPage overlay.
+                      if (_showNewTabPage)
+                        Positioned.fill(
+                          child: NewTabPage(
+                            repo: _repo,
+                            onNavigate: _onNewTabPageNavigate,
+                          ),
+                        ),
+
+                      // Find-in-page bar.
+                      if (_showFindBar)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: _buildFindBar(),
+                        ),
+                    ],
+                  ),
                 ),
 
                 // ── Bottom bar ──
                 BrowserBottomBar(
                   tabCount: _tabManager.tabCount,
+                  isFavourited: _isFavourited,
                   onHome: _goHome,
                   onTabs: _showTabSwitcher,
-                  onFavourite: _addCurrentToFavourites,
+                  onFavourite: _toggleFavourite,
                   bottomPadding: viewPadding.bottom,
                 ),
               ],
@@ -490,7 +668,7 @@ class _BrowserScreenState extends State<BrowserScreen>
             // ── Cast mini bar ──
             if (_castService.activeDevice != null)
               Positioned(
-                bottom: viewPadding.bottom + 56, // above bottom bar
+                bottom: viewPadding.bottom + 56,
                 left: 0,
                 right: 0,
                 child: CastMiniBar(
@@ -515,35 +693,20 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   Widget _buildWebView() {
-    if (kIsWeb || Platform.isLinux) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.public,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary),
-              const SizedBox(height: 16),
-              const Text(
-                'In-app browser is not available on this platform.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: _openInExternal,
-                icon: const Icon(Icons.open_in_browser),
-                label: const Text('Open in External Browser'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
+    _findInteractionController = FindInteractionController(
+      onFindResultReceived: (controller, activeMatchOrdinal, numberOfMatches, isDoneCounting) {
+        if (isDoneCounting) {
+          setState(() {
+            _findMatchCount = numberOfMatches;
+            _findActiveIndex = activeMatchOrdinal;
+          });
+        }
+      },
+    );
     return InAppWebView(
+      key: const ValueKey('browser_webview'),
       initialSettings: _buildSettings(),
+      findInteractionController: _findInteractionController,
       onWebViewCreated: _onWebViewCreated,
       onLoadStart: _onLoadStart,
       onLoadStop: _onLoadStop,
@@ -553,6 +716,107 @@ class _BrowserScreenState extends State<BrowserScreen>
       onConsoleMessage: _onConsoleMessage,
       onReceivedError: _onReceivedError,
       onScrollChanged: _onScrollChanged,
+      onDownloadStartRequest: (controller, request) {
+        launchUrl(request.url, mode: LaunchMode.externalApplication);
+      },
+      onCreateWindow: (controller, createWindowAction) async {
+        // Open new-window requests in the same WebView.
+        final url = createWindowAction.request.url;
+        if (url != null) {
+          _navigateTo(url.toString());
+        }
+        return false;
+      },
+    );
+  }
+
+  Widget _buildPlatformUnavailable() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.public,
+                size: 64,
+                color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 16),
+            const Text(
+              'In-app browser is not available on this platform.\n'
+              'Use the button below to open in your default browser.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: _openInExternal,
+              icon: const Icon(Icons.open_in_browser),
+              label: const Text('Open in External Browser'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFindBar() {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      elevation: 4,
+      color: cs.surface,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _findController,
+                autofocus: true,
+                style: const TextStyle(fontSize: 14),
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: 'Find in page',
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: cs.surfaceContainerHighest,
+                ),
+                onChanged: _performFind,
+                onSubmitted: (_) => _findNext(),
+              ),
+            ),
+            if (_findMatchCount > 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  '${_findActiveIndex + 1}/$_findMatchCount',
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                ),
+              ),
+            IconButton(
+              icon: const Icon(Icons.keyboard_arrow_up, size: 20),
+              onPressed: _findPrevious,
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
+            IconButton(
+              icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+              onPressed: _findNext,
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 20),
+              onPressed: _closeFindInPage,
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -564,9 +828,8 @@ class _BrowserScreenState extends State<BrowserScreen>
       case 'incognito':
         _toggleIncognito();
       case 'add_favourite':
-        _addCurrentToFavourites();
+        _toggleFavourite();
       case 'share':
-        // Use share_plus
         final url = _addressController.text.trim();
         if (url.isNotEmpty) {
           // ignore: deprecated_member_use
@@ -582,8 +845,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       case 'external':
         _openInExternal();
       case 'find':
-        // Find-in-page: no-op if not supported by this InAppWebView version
-        break;
+        _openFindInPage();
     }
   }
 
@@ -683,9 +945,7 @@ class _TabSwitcherSheet extends StatelessWidget {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isActive
-                              ? cs.primary
-                              : cs.outlineVariant,
+                          color: isActive ? cs.primary : cs.outlineVariant,
                           width: isActive ? 2 : 1,
                         ),
                         color: tab.isIncognito

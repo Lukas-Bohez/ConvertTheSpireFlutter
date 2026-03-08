@@ -1,7 +1,7 @@
 name: my_flutter_app
 description: A new Flutter project.
 publish_to: 'none'
-version: 4.0.0+1
+version: 4.0.1+2
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -35,6 +35,7 @@ dependencies:
   # Storage
   shared_preferences: ^2.2.2
   sqflite: ^2.4.1
+  sqflite_common_ffi: ^2.3.4
 
   # In-app browser
   flutter_inappwebview: ^6.1.5

@@ -202,6 +202,10 @@ class BrowserToolbar extends StatelessWidget {
                     value: 'download',
                     child: Text('Download Current')),
                 const PopupMenuItem(
+                    value: 'find',
+                    child: Text('Find in Page')),
+                const PopupMenuDivider(),
+                const PopupMenuItem(
                     value: 'external',
                     child: Text('Open in External Browser')),
               ],

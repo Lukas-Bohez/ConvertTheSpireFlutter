@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Sleek bottom bar for the browser with tabs count, home, and favourite buttons.
+/// Bottom bar for the browser with tabs count, home, and favourite toggle.
 class BrowserBottomBar extends StatelessWidget {
   final int tabCount;
+  final bool isFavourited;
   final VoidCallback onHome;
   final VoidCallback onTabs;
   final VoidCallback onFavourite;
@@ -11,6 +12,7 @@ class BrowserBottomBar extends StatelessWidget {
   const BrowserBottomBar({
     super.key,
     required this.tabCount,
+    required this.isFavourited,
     required this.onHome,
     required this.onTabs,
     required this.onFavourite,
@@ -63,9 +65,12 @@ class BrowserBottomBar extends StatelessWidget {
               icon: const Icon(Icons.home_outlined),
               onPressed: onHome,
             ),
-            // Favourite — quick add current page
+            // Favourite toggle — filled when page is bookmarked
             IconButton(
-              icon: const Icon(Icons.favorite_border),
+              icon: Icon(
+                isFavourited ? Icons.favorite : Icons.favorite_border,
+                color: isFavourited ? Colors.red : null,
+              ),
               onPressed: onFavourite,
             ),
           ],
