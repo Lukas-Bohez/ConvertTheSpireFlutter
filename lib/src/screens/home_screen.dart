@@ -113,8 +113,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.initState();
     _playlistTabController = TabController(length: 2, vsync: this);
 
-    // Progressive onboarding.
-    _onboarding.init();
+    // Progressive onboarding — await then refresh UI with loaded state.
+    _onboarding.init().then((_) {
+      if (mounted) setState(() {});
+    });
 
     // Mining services — survive tab switches.
     _computeService = ComputationService(maxConcurrent: 2);
@@ -273,6 +275,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool get _canGoForward => _navHistoryIndex < _navHistory.length - 1;
 
   void _navigateToPage(int index) {
+    if (index < 0 || index > 13) return;
     if (index == _selectedPageIndex) return;
     setState(() {
       // Truncate forward history when navigating to a new page.
@@ -372,7 +375,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             message: description,
             onDismiss: () {
               _onboarding.markScreenVisited(route);
-              setState(() => _dismissedBannerRoute = route);
+              if (mounted) setState(() => _dismissedBannerRoute = route);
             },
           ),
           Expanded(child: stack),

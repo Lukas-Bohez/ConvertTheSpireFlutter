@@ -149,6 +149,7 @@ class QuickLinksService {
     'logs.tab': 10,
     'guide.tab': 11,
     'player.tab': 12,
+    'home': 13,
   };
 
   /// Tab index → route string mapping.
@@ -166,6 +167,7 @@ class QuickLinksService {
     10: 'logs.tab',
     11: 'guide.tab',
     12: 'player.tab',
+    13: 'home',
   };
 
   /// Tab index → page title for the fake URL bar.
@@ -183,6 +185,7 @@ class QuickLinksService {
     10: 'Logs',
     11: 'Guide',
     12: 'Player',
+    13: 'Home',
   };
 
   /// Tab index → favicon icon.
@@ -200,6 +203,7 @@ class QuickLinksService {
     10: Icons.list_alt,
     11: Icons.menu_book,
     12: Icons.music_note,
+    13: Icons.home,
   };
 
   static Future<List<QuickLink>> load() async {
