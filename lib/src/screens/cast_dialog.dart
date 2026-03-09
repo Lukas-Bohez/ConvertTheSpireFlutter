@@ -72,10 +72,11 @@ class _CastDialogState extends State<CastDialog> {
   }
 
   Future<void> _startScan() async {
+    final isRescan = _devices != null;
     setState(() {
       _scanning = true;
       _error = null;
-      _devices = null;
+      if (!isRescan) _devices = null;
     });
 
     try {
@@ -84,7 +85,12 @@ class _CastDialogState extends State<CastDialog> {
       );
       if (mounted) {
         setState(() {
-          _devices = devices;
+          // Merge new devices with existing (dedup by udn)
+          final existing = {for (final d in _devices ?? <DlnaDevice>[]) d.udn: d};
+          for (final d in devices) {
+            existing.putIfAbsent(d.udn, () => d);
+          }
+          _devices = existing.values.toList();
           _scanning = false;
         });
       }
@@ -277,7 +283,8 @@ class _CastDialogState extends State<CastDialog> {
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+        bottom: MediaQuery.of(context).viewInsets.bottom +
+            MediaQuery.of(context).viewPadding.bottom,
       ),
       child: Container(
         constraints: const BoxConstraints(maxHeight: 500),
@@ -384,8 +391,12 @@ class _CastDialogState extends State<CastDialog> {
                 ),
               )
             else if (_devices != null) ...[
-              // Device list
-              Flexible(
+            // Scanning progress bar
+            if (_scanning && _devices != null)
+              const LinearProgressIndicator(),
+
+            // Device list
+            Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
                   itemCount: _devices!.length,
@@ -395,7 +406,7 @@ class _CastDialogState extends State<CastDialog> {
                         _castingTo != null && _castingTo!.udn == device.udn;
                     return ListTile(
                       leading: Icon(
-                        device.isPanasonicViera ? Icons.tv : Icons.speaker,
+                        device.deviceType.icon,
                         color: device.isPanasonicViera
                             ? Colors.blue
                             : cs.primary,
@@ -404,7 +415,7 @@ class _CastDialogState extends State<CastDialog> {
                       subtitle: Text(
                         device.isPanasonicViera
                             ? 'Panasonic Viera • ${device.address.address}'
-                            : device.address.address,
+                            : '${device.deviceType.name} • ${device.address.address}',
                         style: const TextStyle(fontSize: 12),
                       ),
                       trailing: isCastTarget && _isCasting

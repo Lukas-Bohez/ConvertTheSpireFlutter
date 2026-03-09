@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:ui' show Offset, Size;
 
 import 'package:flutter/foundation.dart' show VoidCallback, debugPrint, kIsWeb;
 import 'package:path/path.dart' as p;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -25,6 +27,7 @@ class TrayService with TrayListener, WindowListener {
     _initialised = true;
 
     await windowManager.ensureInitialized();
+    await _restoreWindowGeometry();
     await windowManager.setPreventClose(true);
     windowManager.addListener(this);
 
@@ -98,12 +101,54 @@ class TrayService with TrayListener, WindowListener {
 
   @override
   void onWindowClose() {
+    _saveWindowGeometry();
     if (shouldMinimiseToTray()) {
       debugPrint('TrayService: minimising to tray instead of closing');
       windowManager.hide();
     } else {
       onTrayQuit?.call();
     }
+  }
+
+  @override
+  void onWindowResized() => _saveWindowGeometry();
+
+  @override
+  void onWindowMoved() => _saveWindowGeometry();
+
+  // ── Window geometry persistence ─────────────────────────────────────────
+
+  static const _kWindowX = 'window_x';
+  static const _kWindowY = 'window_y';
+  static const _kWindowW = 'window_w';
+  static const _kWindowH = 'window_h';
+
+  Future<void> _saveWindowGeometry() async {
+    try {
+      final bounds = await windowManager.getBounds();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(_kWindowX, bounds.left);
+      await prefs.setDouble(_kWindowY, bounds.top);
+      await prefs.setDouble(_kWindowW, bounds.width);
+      await prefs.setDouble(_kWindowH, bounds.height);
+    } catch (_) {}
+  }
+
+  Future<void> _restoreWindowGeometry() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final x = prefs.getDouble(_kWindowX);
+      final y = prefs.getDouble(_kWindowY);
+      final w = prefs.getDouble(_kWindowW);
+      final h = prefs.getDouble(_kWindowH);
+      if (x != null && y != null && w != null && h != null && w > 100 && h > 100) {
+        await windowManager.setBounds(
+          null,
+          position: Offset(x, y),
+          size: Size(w, h),
+        );
+      }
+    } catch (_) {}
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────

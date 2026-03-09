@@ -245,6 +245,8 @@ class PlayerState with ChangeNotifier {
   bool _pendingReload = false;
   bool _disposed = false;
   final List<StreamSubscription> _subs = [];
+  StreamSubscription? _dirWatcher;
+  String? _watchedDirPath;
 
   Duration position = Duration.zero;
   Duration? duration;
@@ -546,6 +548,86 @@ class PlayerState with ChangeNotifier {
     // ── Background: load thumbnails for all items ──
     _loadAudioThumbnailsInBackground(version);
     _generateThumbnailsInBackground(version);
+
+    // ── Watch library directory for new/removed files (desktop only) ──
+    _startDirectoryWatcher(items);
+  }
+
+  /// Watches the common parent directory for file-system changes and
+  /// triggers a lightweight library refresh when files are added/removed.
+  void _startDirectoryWatcher(List<MediaItem> items) {
+    _dirWatcher?.cancel();
+    _dirWatcher = null;
+    _watchedDirPath = null;
+
+    if (kIsWeb || Platform.isAndroid || Platform.isIOS) return;
+    if (items.isEmpty) return;
+
+    // Determine common directory from first item's path
+    final firstPath = items.first.path;
+    if (firstPath.startsWith('content://')) return;
+    final dirPath = p.dirname(firstPath);
+    _watchedDirPath = dirPath;
+
+    try {
+      final dir = Directory(dirPath);
+      if (!dir.existsSync()) return;
+      _dirWatcher = dir.watch().listen((event) {
+        if (_disposed || _loadVersion != _loadVersion) return;
+        final ext = p.extension(event.path).toLowerCase();
+        if (!_mediaExtensions.contains(ext)) return;
+        // Debounce: flag a pending reload; the next notifyListeners cycle
+        // will pick it up.
+        if (!_pendingReload) {
+          _pendingReload = true;
+          Future.delayed(const Duration(seconds: 2), () {
+            if (_disposed) return;
+            _pendingReload = false;
+            _refreshLibraryFromDisk();
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint('Directory watcher error: $e');
+    }
+  }
+
+  static const _mediaExtensions = {
+    '.mp3', '.m4a', '.flac', '.wav', '.ogg', '.opus', '.aac', '.wma',
+    '.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v',
+  };
+
+  /// Re-scan the watched directory and update the library in-place.
+  Future<void> _refreshLibraryFromDisk() async {
+    final dirPath = _watchedDirPath;
+    if (dirPath == null) return;
+    final dir = Directory(dirPath);
+    if (!await dir.exists()) return;
+
+    final files = dir
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) {
+          final ext = p.extension(f.path).toLowerCase();
+          return _mediaExtensions.contains(ext);
+        })
+        .map((f) {
+          final ext = p.extension(f.path).toLowerCase();
+          final type = {'.mp4','.mkv','.avi','.webm','.mov','.wmv','.flv','.m4v'}.contains(ext)
+              ? MediaType.video
+              : MediaType.audio;
+          return MediaItem(f.path, type, title: p.basenameWithoutExtension(f.path));
+        })
+        .toList();
+
+    // Only refresh if the file set actually changed
+    final currentPaths = library.take(_folderItemCount).map((e) => e.path).toSet();
+    final newPaths = files.map((e) => e.path).toSet();
+    if (currentPaths.length == newPaths.length && currentPaths.containsAll(newPaths)) {
+      return; // no change
+    }
+
+    await setLibrary(files);
   }
 
   /// Sequential thumbnail generation — avoids races on shared _thumbPlayer.
@@ -1184,6 +1266,7 @@ class PlayerState with ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _dirWatcher?.cancel();
     for (final sub in _subs) {
       sub.cancel();
     }
@@ -1198,6 +1281,32 @@ class PlayerState with ChangeNotifier {
     _disposeAndroidController();
     super.dispose();
   }
+}
+
+// ─── Helper for virtualised All / Favourites tabs ─────────────────────────────
+
+enum _AllTabKind { header, song, videoGrid }
+
+class _AllTabItem {
+  final _AllTabKind kind;
+  final String? headerText;
+  final MapEntry<int, MediaItem>? entry;
+  final List<MapEntry<int, MediaItem>>? entries;
+
+  const _AllTabItem.header(this.headerText)
+      : kind = _AllTabKind.header,
+        entry = null,
+        entries = null;
+
+  _AllTabItem.song(this.entry)
+      : kind = _AllTabKind.song,
+        headerText = null,
+        entries = null;
+
+  _AllTabItem.videoGrid(this.entries)
+      : kind = _AllTabKind.videoGrid,
+        headerText = null,
+        entry = null;
 }
 
 // ─── Root screen ──────────────────────────────────────────────────────────────
@@ -1286,7 +1395,10 @@ class _PlayerScreenState extends State<PlayerScreen>
     final state = context.watch<PlayerState>();
 
     return Scaffold(
-      body: Column(
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Column(
         children: [
           // ── Persistent video renderer (always in tree, hidden when not needed) ──
           _PersistentVideoWidget(
@@ -1378,6 +1490,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -1536,6 +1649,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                   );
                 },
           size: 20,
+          tooltip: 'Add to queue',
         ),
         const SizedBox(width: 4),
         _iconBtn(
@@ -1544,21 +1658,29 @@ class _PlayerScreenState extends State<PlayerScreen>
             state.previous(only: state.activeTabFilter);
           },
           size: 30,
+          tooltip: 'Previous',
         ),
         const SizedBox(width: 6),
-        GestureDetector(
-          onTap: state.library.isEmpty ? null : state.togglePlay,
-          child: Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: state.library.isEmpty ? _sub : _text,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              state.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              color: _bg,
-              size: 30,
+        Semantics(
+          button: true,
+          label: state.isPlaying ? 'Pause' : 'Play',
+          child: Tooltip(
+            message: state.isPlaying ? 'Pause' : 'Play',
+            child: GestureDetector(
+              onTap: state.library.isEmpty ? null : state.togglePlay,
+              child: Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: state.library.isEmpty ? _sub : _text,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  state.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  color: _bg,
+                  size: 30,
+                ),
+              ),
             ),
           ),
         ),
@@ -1569,6 +1691,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             state.next(only: state.activeTabFilter);
           },
           size: 30,
+          tooltip: 'Next',
         ),
         const SizedBox(width: 4),
         _toggleBtn(
@@ -1637,26 +1760,40 @@ class _PlayerScreenState extends State<PlayerScreen>
     required VoidCallback onTap,
   }) {
     final color = active ? _accent : _sub;
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, color: color, size: 20),
-          Text(label, style: TextStyle(fontSize: 9, color: color)),
-        ]),
+    return Semantics(
+      button: true,
+      label: '$label: ${active ? "on" : "off"}',
+      child: Tooltip(
+        message: label,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(icon, color: color, size: 20),
+              Text(label, style: TextStyle(fontSize: 9, color: color)),
+            ]),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _iconBtn(IconData icon, VoidCallback onTap, {double size = 26}) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(size),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Icon(icon, size: size, color: _text),
+  Widget _iconBtn(IconData icon, VoidCallback onTap, {double size = 26, String? tooltip}) {
+    return Semantics(
+      button: true,
+      label: tooltip,
+      child: Tooltip(
+        message: tooltip ?? '',
+        child: InkWell(
+          borderRadius: BorderRadius.circular(size),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Icon(icon, size: size, color: _text),
+          ),
+        ),
       ),
     );
   }
@@ -1672,21 +1809,38 @@ class _PlayerScreenState extends State<PlayerScreen>
         .where((e) => _matchesSearch(e.value))
         .toList();
     if (filteredAudio.isEmpty && filteredVideo.isEmpty) return _noResults();
+
+    // Build a flat list of widgets for builder-based virtualisation.
+    // Each section header and tile gets a slot.
+    final items = <_AllTabItem>[];
+    if (filteredAudio.isNotEmpty) {
+      items.add(const _AllTabItem.header('♪ Songs'));
+      for (final e in filteredAudio) {
+        items.add(_AllTabItem.song(e));
+      }
+    }
+    if (filteredVideo.isNotEmpty) {
+      items.add(const _AllTabItem.header('▶ Videos'));
+      items.add(_AllTabItem.videoGrid(filteredVideo));
+    }
+
     return Scrollbar(
       controller: _allScrollController,
-      child: ListView(
+      child: ListView.builder(
         controller: _allScrollController,
         primary: false,
-        children: [
-          if (filteredAudio.isNotEmpty) ...[
-            _sectionHeader('♪ Songs'),
-            ...filteredAudio.map((e) => _songTile(state, e.key, e.value)),
-          ],
-          if (filteredVideo.isNotEmpty) ...[
-            _sectionHeader('▶ Videos'),
-            _videoGrid(state, filteredVideo),
-          ],
-        ],
+        itemCount: items.length,
+        itemBuilder: (_, i) {
+          final item = items[i];
+          switch (item.kind) {
+            case _AllTabKind.header:
+              return _sectionHeader(item.headerText!);
+            case _AllTabKind.song:
+              return _songTile(state, item.entry!.key, item.entry!.value);
+            case _AllTabKind.videoGrid:
+              return _videoGrid(state, item.entries!);
+          }
+        },
       ),
     );
   }
@@ -1751,21 +1905,36 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
     final favAudio = favs.where((e) => e.value.type == MediaType.audio).toList();
     final favVideo = favs.where((e) => e.value.type == MediaType.video).toList();
+
+    final items = <_AllTabItem>[];
+    if (favAudio.isNotEmpty) {
+      items.add(const _AllTabItem.header('♪ Songs'));
+      for (final e in favAudio) {
+        items.add(_AllTabItem.song(e));
+      }
+    }
+    if (favVideo.isNotEmpty) {
+      items.add(const _AllTabItem.header('▶ Videos'));
+      items.add(_AllTabItem.videoGrid(favVideo));
+    }
+
     return Scrollbar(
       controller: _favouritesScrollController,
-      child: ListView(
+      child: ListView.builder(
         controller: _favouritesScrollController,
         primary: false,
-        children: [
-          if (favAudio.isNotEmpty) ...[
-            _sectionHeader('♪ Songs'),
-            ...favAudio.map((e) => _songTile(state, e.key, e.value)),
-          ],
-          if (favVideo.isNotEmpty) ...[
-            _sectionHeader('▶ Videos'),
-            _videoGrid(state, favVideo),
-          ],
-        ],
+        itemCount: items.length,
+        itemBuilder: (_, i) {
+          final item = items[i];
+          switch (item.kind) {
+            case _AllTabKind.header:
+              return _sectionHeader(item.headerText!);
+            case _AllTabKind.song:
+              return _songTile(state, item.entry!.key, item.entry!.value);
+            case _AllTabKind.videoGrid:
+              return _videoGrid(state, item.entries!);
+          }
+        },
       ),
     );
   }

@@ -1,7 +1,7 @@
 name: my_flutter_app
 description: A new Flutter project.
 publish_to: 'none'
-version: 4.2.1+6
+version: 5.0.0+1
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -69,6 +69,9 @@ dependencies:
   window_manager: ^0.5.1
   tray_manager: ^0.5.2
   audio_service: ^0.18.18
+
+  # mDNS for Chromecast/Airplay discovery
+  multicast_dns: ^0.3.2+1
 
 dependency_overrides:
   win32: '<5.13.0'

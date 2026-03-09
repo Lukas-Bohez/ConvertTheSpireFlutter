@@ -41,6 +41,74 @@ class DownloadService {
   /// Supported download formats.
   static const supportedFormats = {'mp3', 'm4a', 'mp4'};
 
+  /// Known difficult sites that require browser-like headers and/or cookies.
+  static const Map<String, String> knownDifficultSites = {
+    'hianime.to':
+        'Uses Cloudflare bot protection \u2014 cookies required.',
+    'crunchyroll.com':
+        'Requires authentication. Sign in via browser and export cookies.',
+    'funimation.com':
+        'Requires authentication and may be geo-restricted.',
+    'bilibili.com':
+        'May require cookies for high-quality streams.',
+    'nicovideo.jp':
+        'Requires login cookies for most content.',
+  };
+
+  /// Browser-like headers for difficult sites.
+  static const Map<String, String> _browserHeaders = {
+    'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+            '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept-Language': 'en-US,en;q=0.9',
+  };
+
+  /// Returns the referer header for a known difficult site, or null.
+  static String? _refererForUrl(String url) {
+    final host = Uri.tryParse(url)?.host.toLowerCase() ?? '';
+    if (host.contains('hianime.to')) return 'https://hianime.to/';
+    if (host.contains('crunchyroll.com')) return 'https://www.crunchyroll.com/';
+    if (host.contains('bilibili.com')) return 'https://www.bilibili.com/';
+    return null;
+  }
+
+  /// Whether a URL belongs to a known difficult site.
+  static bool isDifficultSite(String url) {
+    final host = Uri.tryParse(url)?.host.toLowerCase() ?? '';
+    return knownDifficultSites.keys.any((domain) => host.contains(domain));
+  }
+
+  /// Translate common yt-dlp/download errors into user-friendly messages.
+  static String translateError(String error) {
+    if (error.contains('403') || error.contains('Forbidden')) {
+      return 'Access blocked by site. Try providing browser cookies in Settings.';
+    }
+    if (error.contains('No video formats found')) {
+      return 'No video found. This site may require cookies.';
+    }
+    if (error.contains('This video is unavailable') ||
+        error.contains('Video unavailable')) {
+      return 'Video unavailable in your region or removed.';
+    }
+    if (error.contains('Unsupported URL') ||
+        error.contains('is not a valid URL')) {
+      return 'This URL is not supported by yt-dlp.';
+    }
+    if (error.contains('geographic restriction') ||
+        error.contains('not available in your country')) {
+      return 'This content is geo-restricted and not available in your region.';
+    }
+    if (error.contains('Private video') ||
+        error.contains('login required') ||
+        error.contains('Sign in')) {
+      return 'This content is private or requires authentication.';
+    }
+    if (error.contains('429') || error.contains('Too Many Requests')) {
+      return 'Rate limited by the server. Please wait a minute and try again.';
+    }
+    return error;
+  }
+
   /// Download a non-YouTube URL using yt-dlp exclusively.
   ///
   /// This is the entry point for generic sites (Vimeo, Dailymotion, anime
@@ -56,6 +124,8 @@ class DownloadService {
     String? ytDlpPath,
     String preferredVideoQuality = '720p',
     int preferredAudioBitrate = 192,
+    String? cookiesFile,
+    String? cookiesFromBrowser,
   }) async {
     if (kIsWeb) {
       throw Exception('Downloads are not supported on web.');
@@ -94,6 +164,11 @@ class DownloadService {
     final outputPath =
         '${outputFolder.path}${Platform.pathSeparator}$safeTitle.$formatLower';
 
+    // Build browser-like headers for difficult sites
+    final headers = <String, String>{..._browserHeaders};
+    final referer = _refererForUrl(item.url);
+    if (referer != null) headers['Referer'] = referer;
+
     try {
       await ytDlp.download(
         url: item.url,
@@ -104,6 +179,9 @@ class DownloadService {
         videoQuality: preferredVideoQuality,
         audioBitrate: preferredAudioBitrate,
         isCancelled: () => token.cancelled,
+        extraHeaders: isDifficultSite(item.url) ? headers : null,
+        cookiesFile: cookiesFile,
+        cookiesFromBrowser: cookiesFromBrowser,
         onProgress: (pct) {
           final adjusted = (pct * 0.95).toInt();
           final status = pct >= 100
@@ -133,38 +211,52 @@ class DownloadService {
     } catch (e) {
       await _safeDelete(outputPath);
       final msg = e.toString();
-      // Provide clear user-facing errors for common yt-dlp failures
-      if (msg.contains('Unsupported URL') ||
-          msg.contains('is not a valid URL') ||
-          msg.contains('No video formats found')) {
-        throw Exception(
-          'yt-dlp could not extract media from this URL. '
-          'The site may be unsupported, or the content is private/restricted.',
-        );
+
+      // Retry with force-generic-extractor for difficult sites
+      if (!token.cancelled &&
+          (msg.contains('Unsupported URL') ||
+              msg.contains('No video formats found') ||
+              msg.contains('403'))) {
+        try {
+          debugPrint('yt-dlp: retrying with --force-generic-extractor');
+          await ytDlp.download(
+            url: item.url,
+            outputPath: outputPath,
+            format: formatLower,
+            ffmpegPath: ffmpegPath,
+            ytDlpPath: resolvedYtDlp,
+            videoQuality: preferredVideoQuality,
+            audioBitrate: preferredAudioBitrate,
+            isCancelled: () => token.cancelled,
+            extraHeaders: headers,
+            cookiesFile: cookiesFile,
+            cookiesFromBrowser: cookiesFromBrowser,
+            forceGenericExtractor: true,
+            onProgress: (pct) {
+              onProgress((pct * 0.95).toInt(),
+                  pct >= 100 ? DownloadStatus.converting : DownloadStatus.downloading);
+            },
+          );
+          if (!token.cancelled) {
+            onProgress(98, DownloadStatus.converting);
+            return _finalizeOutput(
+              outputPath: outputPath,
+              outputDir: outputDir,
+              safeTitle: safeTitle,
+              formatLower: formatLower,
+              thumbBytes: null,
+              isSafOutput: isSafOutput,
+              useMediaStoreOnly: useMediaStoreOnly,
+              outputFolder: outputFolder,
+            );
+          }
+        } catch (_) {
+          await _safeDelete(outputPath);
+          // Fall through to user-friendly error below
+        }
       }
-      if (msg.contains('geographic restriction') ||
-          msg.contains('not available in your country') ||
-          msg.contains('geo')) {
-        throw Exception(
-          'This content is geo-restricted and not available in your region.',
-        );
-      }
-      if (msg.contains('Private video') ||
-          msg.contains('private') ||
-          msg.contains('Sign in') ||
-          msg.contains('login required')) {
-        throw Exception(
-          'This content is private or requires authentication.',
-        );
-      }
-      if (msg.contains('429') ||
-          msg.contains('Too Many Requests') ||
-          msg.contains('rate limit')) {
-        throw Exception(
-          'Rate limited by the server. Please wait a minute and try again.',
-        );
-      }
-      rethrow;
+
+      throw Exception(translateError(msg));
     }
   }
 

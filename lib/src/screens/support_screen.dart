@@ -54,6 +54,7 @@ class SupportScreenState extends State<SupportScreen>
 
   int? _walletBalance;
   bool _balanceLoading = false;
+  bool _hasShownConsent = false;
 
   // Mining time tracking
   DateTime? _miningStart;
@@ -88,7 +89,76 @@ class SupportScreenState extends State<SupportScreen>
     _startBatteryMonitoring();
     _fetchWalletBalance();
     _loadMinedMinutes();
+    _loadConsentFlag();
     _syncMiningTimer();
+    _autoResumeIfNeeded();
+  }
+
+  Future<void> _loadConsentFlag() async {
+    final prefs = await SharedPreferences.getInstance();
+    _hasShownConsent = prefs.getBool('mining_consent_shown') ?? false;
+  }
+
+  Future<void> _saveConsentFlag() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('mining_consent_shown', true);
+    _hasShownConsent = true;
+  }
+
+  /// Show a one-time consent dialog before the miner is enabled for the
+  /// first time.  Returns `true` if the user accepted.
+  Future<bool> _showConsentDialog() async {
+    final accepted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Opt-in Mining'),
+        content: const Text(
+          'This feature uses your idle CPU cycles to mine QUBIC '
+          'cryptocurrency. All earnings go to the developer\u2019s '
+          'wallet to support continued development of this free app.\n\n'
+          'Mining runs at below-normal priority and pauses automatically '
+          'when your battery is low. You can stop at any time.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('I Understand — Start'),
+          ),
+        ],
+      ),
+    );
+    return accepted ?? false;
+  }
+
+  /// Called when the user taps "Start Contributing".  Shows the consent
+  /// dialog on first use, then enables mining.
+  Future<void> _onStartContributing() async {
+    if (!_hasShownConsent) {
+      final accepted = await _showConsentDialog();
+      if (!accepted) return;
+      await _saveConsentFlag();
+    }
+    _batteryPaused = false;
+    _coordinator.setEnabled(true);
+    _compute.setEnabled(true);
+    widget.onEnabledChanged?.call(true);
+  }
+
+  /// Auto-resume mining if it was enabled in a previous session.
+  Future<void> _autoResumeIfNeeded() async {
+    if (kIsWeb || (!kIsWeb && Platform.isAndroid)) return;
+    if (_coordinator.enabled) return; // already running
+    final wasEnabled = await _coordinator.restoreEnabledState();
+    if (wasEnabled && mounted) {
+      _coordinator.setEnabled(true);
+      _compute.setEnabled(true);
+      widget.onEnabledChanged?.call(true);
+    }
   }
 
   Future<void> _fetchWalletBalance() async {
@@ -164,17 +234,23 @@ class SupportScreenState extends State<SupportScreen>
     final isOnBattery = _batteryState == BatteryState.discharging;
     final isLow = _batteryLevel < 30;
 
-    if (_compute.enabled && isOnBattery && isLow) {
+    if (_coordinator.enabled && isOnBattery && isLow) {
       if (!_batteryPaused) {
         _batteryPaused = true;
         _compute.setEnabled(false);
-        if (kDebugMode) debugPrint('SupportScreen: paused compute (battery $_batteryLevel%)');
+        // Also pause the native miner subprocess.
+        _coordinator.nativeMiner.stop();
+        if (kDebugMode) debugPrint('SupportScreen: paused compute + miner (battery $_batteryLevel%)');
       }
     } else if (_batteryPaused && (!isOnBattery || !isLow)) {
       if (_coordinator.enabled) {
         _batteryPaused = false;
         _compute.setEnabled(true);
-        if (kDebugMode) debugPrint('SupportScreen: resumed compute (power restored)');
+        // Resume native miner if on a supported platform.
+        if (_coordinator.nativeMinerSupported) {
+          _coordinator.restartNativeMiner();
+        }
+        if (kDebugMode) debugPrint('SupportScreen: resumed compute + miner (power restored)');
       }
     }
 
@@ -609,12 +685,7 @@ class SupportScreenState extends State<SupportScreen>
                           ),
                         )
                       : FilledButton.icon(
-                          onPressed: () {
-                            _batteryPaused = false;
-                            _coordinator.setEnabled(true);
-                            _compute.setEnabled(true);
-                            widget.onEnabledChanged?.call(true);
-                          },
+                          onPressed: _onStartContributing,
                           icon: const Icon(Icons.flash_on_rounded),
                           label: const Text('Start Contributing'),
                           style: FilledButton.styleFrom(
@@ -1031,6 +1102,24 @@ class SupportScreenState extends State<SupportScreen>
                       !isRunning && !isStarting && !isLocal)
                     Text(_coordinator.lastError!,
                         style: TextStyle(color: cs.error, fontSize: 12)),
+                  if (isNative &&
+                      miner.state == MinerState.error)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await miner.manualRetry();
+                          if (mounted) setState(() {});
+                        },
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Retry'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          textStyle: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

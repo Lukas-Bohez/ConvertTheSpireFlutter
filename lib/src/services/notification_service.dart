@@ -12,6 +12,9 @@ class NotificationService {
   bool _initialised = false;
   int _nextNotificationId = 1;
 
+  /// Fixed ID for the persistent "downloads active" notification.
+  static const int _activeDownloadsId = 900000;
+
   /// Whether the current platform has a notification implementation.
   static bool get _supported =>
       !kIsWeb &&
@@ -86,6 +89,43 @@ class NotificationService {
 
     try {
       await _plugin.show(id: id, title: 'Downloading', body: title, notificationDetails: details);
+    } catch (_) {}
+  }
+
+  /// Show an ongoing "downloads active" notification (Android).
+  /// This acts as a lightweight foreground indicator so the OS is less likely
+  /// to kill the process during long download queues.
+  Future<void> showActiveDownloadsBanner(int remaining) async {
+    if (!_initialised || kIsWeb || !Platform.isAndroid) return;
+
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'download_active',
+        'Active Downloads',
+        channelDescription: 'Shown while downloads are in progress',
+        importance: Importance.low,
+        priority: Priority.low,
+        ongoing: true,
+        autoCancel: false,
+        showProgress: false,
+      ),
+    );
+
+    try {
+      await _plugin.show(
+        id: _activeDownloadsId,
+        title: 'Downloads in progress',
+        body: '$remaining item${remaining == 1 ? '' : 's'} remaining',
+        notificationDetails: details,
+      );
+    } catch (_) {}
+  }
+
+  /// Cancel the ongoing downloads banner.
+  Future<void> cancelActiveDownloadsBanner() async {
+    if (!_initialised) return;
+    try {
+      await _plugin.cancel(id: _activeDownloadsId);
     } catch (_) {}
   }
 

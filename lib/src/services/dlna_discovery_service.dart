@@ -2,8 +2,31 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter/material.dart' show IconData, Icons;
 import 'package:http/http.dart' as http;
+import 'package:multicast_dns/multicast_dns.dart';
+
+/// The type of discovered device for icon display.
+enum DiscoveredDeviceType {
+  dlnaRenderer,
+  googleCast,
+  airplay,
+  manual;
+
+  IconData get icon {
+    switch (this) {
+      case DiscoveredDeviceType.dlnaRenderer:
+        return Icons.speaker;
+      case DiscoveredDeviceType.googleCast:
+        return Icons.cast;
+      case DiscoveredDeviceType.airplay:
+        return Icons.airplay;
+      case DiscoveredDeviceType.manual:
+        return Icons.settings_input_antenna;
+    }
+  }
+}
 
 /// A discovered DLNA/UPnP media renderer on the local network.
 class DlnaDevice {
@@ -14,6 +37,7 @@ class DlnaDevice {
   final String udn; // Unique Device Name
   final InternetAddress address;
   final bool isPanasonicViera;
+  final DiscoveredDeviceType deviceType;
 
   const DlnaDevice({
     required this.name,
@@ -23,6 +47,7 @@ class DlnaDevice {
     required this.udn,
     required this.address,
     this.isPanasonicViera = false,
+    this.deviceType = DiscoveredDeviceType.dlnaRenderer,
   });
 
   @override
@@ -46,12 +71,38 @@ class DlnaDiscoveryService {
   static const _multicastPort = 1900;
   static const _searchTarget = 'urn:schemas-upnp-org:service:AVTransport:1';
 
-  /// Scan for DLNA renderers. Returns discovered devices, sorted with
-  /// Panasonic Viera TVs first.
+  /// Scan for DLNA renderers and Cast/AirPlay devices. Returns discovered
+  /// devices sorted with Panasonic Viera TVs first, then by name.
   ///
-  /// [timeout] controls how long we listen for SSDP responses.
+  /// Runs SSDP and mDNS discovery in parallel and merges the results.
+  /// [timeout] controls how long we listen for responses.
   Future<List<DlnaDevice>> discover({
     Duration timeout = const Duration(seconds: 5),
+  }) async {
+    final results = await Future.wait([
+      _discoverViaSsdp(timeout: timeout),
+      _discoverViaMdns(timeout: timeout),
+    ]);
+
+    final devices = <String, DlnaDevice>{}; // keyed by udn for dedup
+    for (final list in results) {
+      for (final d in list) {
+        devices.putIfAbsent(d.udn, () => d);
+      }
+    }
+
+    final sorted = devices.values.toList()
+      ..sort((a, b) {
+        if (a.isPanasonicViera && !b.isPanasonicViera) return -1;
+        if (!a.isPanasonicViera && b.isPanasonicViera) return 1;
+        return a.name.compareTo(b.name);
+      });
+    return sorted;
+  }
+
+  /// SSDP multicast discovery for DLNA/UPnP renderers.
+  Future<List<DlnaDevice>> _discoverViaSsdp({
+    required Duration timeout,
   }) async {
     final devices = <DlnaDevice>{};
 
@@ -110,28 +161,101 @@ class DlnaDiscoveryService {
       // Wait for timeout, then await all pending parse operations
       Timer(timeout, () async {
         socket.close();
-        // Wait for all in-flight HTTP fetches to complete
         final results = await Future.wait(pendingParses);
         for (final device in results) {
           if (device != null) devices.add(device);
         }
         if (!completer.isCompleted) {
-          // Sort: Panasonic Viera first, then alphabetical
-          final sorted = devices.toList()
-            ..sort((a, b) {
-              if (a.isPanasonicViera && !b.isPanasonicViera) return -1;
-              if (!a.isPanasonicViera && b.isPanasonicViera) return 1;
-              return a.name.compareTo(b.name);
-            });
-          completer.complete(sorted);
+          completer.complete(devices.toList());
         }
       });
 
       return await completer.future;
     } catch (e) {
-      debugPrint('DLNA discovery error: $e');
+      debugPrint('DLNA SSDP discovery error: $e');
       return devices.toList();
     }
+  }
+
+  /// mDNS discovery for Google Cast and AirPlay devices.
+  Future<List<DlnaDevice>> _discoverViaMdns({
+    required Duration timeout,
+  }) async {
+    if (kIsWeb) return [];
+
+    final devices = <DlnaDevice>[];
+    MDnsClient? client;
+
+    try {
+      client = MDnsClient();
+      await client.start();
+
+      const services = {
+        '_googlecast._tcp': DiscoveredDeviceType.googleCast,
+        '_airplay._tcp': DiscoveredDeviceType.airplay,
+      };
+
+      for (final entry in services.entries) {
+        final serviceType = entry.key;
+        final deviceType = entry.value;
+
+        await for (final ptr in client.lookup<PtrResourceRecord>(
+          ResourceRecordQuery.serverPointer(serviceType),
+          timeout: timeout,
+        )) {
+          // Resolve SRV for host + port
+          await for (final srv in client.lookup<SrvResourceRecord>(
+            ResourceRecordQuery.service(ptr.domainName),
+            timeout: const Duration(seconds: 3),
+          )) {
+            // Resolve A record for IP
+            await for (final ip in client.lookup<IPAddressResourceRecord>(
+              ResourceRecordQuery.addressIPv4(srv.target),
+              timeout: const Duration(seconds: 3),
+            )) {
+              // Try to get friendly name from TXT record
+              String friendlyName = ptr.domainName
+                  .replaceAll('.$serviceType', '')
+                  .replaceAll(RegExp(r'\.$'), '');
+
+              try {
+                await for (final txt in client.lookup<TxtResourceRecord>(
+                  ResourceRecordQuery.text(ptr.domainName),
+                  timeout: const Duration(seconds: 2),
+                )) {
+                  final fnEntry = txt.text
+                      .split('\n')
+                      .where((l) => l.startsWith('fn='))
+                      .firstOrNull;
+                  if (fnEntry != null) {
+                    friendlyName = fnEntry.substring(3);
+                  }
+                  break; // only need first TXT
+                }
+              } catch (_) {}
+
+              devices.add(DlnaDevice(
+                name: friendlyName,
+                type: serviceType,
+                location: 'http://${ip.address.address}:${srv.port}/',
+                controlUrl: 'http://${ip.address.address}:${srv.port}/',
+                udn: 'mdns-${ip.address.address}:${srv.port}',
+                address: ip.address,
+                deviceType: deviceType,
+              ));
+              break; // first IP is enough
+            }
+            break; // first SRV is enough
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('mDNS discovery error: $e');
+    } finally {
+      client?.stop();
+    }
+
+    return devices;
   }
 
   /// Create a DlnaDevice from a manually entered IP address.
@@ -170,6 +294,7 @@ class DlnaDiscoveryService {
       udn: 'manual-$ip',
       address: address,
       isPanasonicViera: false,
+      deviceType: DiscoveredDeviceType.manual,
     );
   }
 

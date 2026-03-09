@@ -41,23 +41,25 @@ class LocalMediaServer {
     _servingMime = lookupMimeType(filePath) ?? 'application/octet-stream';
 
     // If already running, just update the file path — keep the same port
-    if (_server != null) {
-      final url = 'http://$localIp:${_server!.port}/media';
+    final existing = _server;
+    if (existing != null) {
+      final url = 'http://$localIp:${existing.port}/media';
       debugPrint('LocalMediaServer: updated file → $filePath  ($url)');
       return url;
     }
 
     // Start fresh
-    _server = await HttpServer.bind(
+    final server = await HttpServer.bind(
       InternetAddress.anyIPv4,
       preferredPort,
       shared: true,
     );
+    _server = server;
 
-    final url = 'http://$localIp:${_server!.port}/media';
+    final url = 'http://$localIp:${server.port}/media';
     debugPrint('LocalMediaServer: listening on $url  (serving $filePath)');
 
-    _server!.listen((request) async {
+    server.listen((request) async {
       if (request.uri.path == '/media' && _servingPath != null) {
         await _handleMediaRequest(request);
       } else {
@@ -99,10 +101,9 @@ class LocalMediaServer {
     if (rangeHeader != null && request.method == 'GET') {
       final rangeMatch = RegExp(r'bytes=(\d+)-(\d*)').firstMatch(rangeHeader);
       if (rangeMatch != null) {
-        final start = int.parse(rangeMatch.group(1)!);
-        final end = rangeMatch.group(2)!.isNotEmpty
-            ? int.parse(rangeMatch.group(2)!)
-            : length - 1;
+        final start = int.parse(rangeMatch.group(1) ?? '0');
+        final endStr = rangeMatch.group(2) ?? '';
+        final end = endStr.isNotEmpty ? int.parse(endStr) : length - 1;
         final rangeLength = end - start + 1;
 
         request.response
@@ -126,12 +127,13 @@ class LocalMediaServer {
 
   /// Stop the server and release the port.
   Future<void> stop() async {
-    if (_server != null) {
+    final server = _server;
+    if (server != null) {
       debugPrint('LocalMediaServer: stopping');
-      await _server!.close(force: true);
       _server = null;
       _servingPath = null;
       _servingMime = null;
+      await server.close(force: true);
     }
   }
 

@@ -1,5 +1,40 @@
 # Changelog
 
+## 5.0.0 — Production Polish Release
+
+### New Features
+- **Chromecast & AirPlay discovery** — mDNS-based scanning discovers Google Cast and AirPlay devices alongside DLNA renderers
+- **Desktop window management** — window size, position, and geometry persist across sessions; minimum size enforced
+- **Desktop media keys** — play/pause, next, previous, and Ctrl+Space shortcuts via CallbackShortcuts
+- **Directory watcher** — media library auto-refreshes when files are added or removed on desktop
+- **Download progress banner** — Android foreground notification shows remaining downloads during batch operations
+- **Browser tab** — re-added as a first-class quick-link entry
+- **HiAnime extraction** — difficult-site headers, cookies, and force-generic-extractor retry for yt-dlp
+
+### Improvements
+- **Virtualised player lists** — All and Favourites tabs use `ListView.builder` for large libraries
+- **SafeArea audit** — all major screens respect system insets (notch, status bar, nav bar)
+- **Accessibility** — player controls now have Semantics labels and Tooltips
+- **Centralised strings** — `Strings` constants class for UI text
+- **Code quality** — null-safe Range header parsing, race-condition-safe local media server, kIsWeb guards
+- **Mobile nav labels** — shortened to fit 5-tab layout ("Search+", "Import")
+- **URL bar** — single-line with ellipsis overflow, tap navigates to tab switcher
+- **Miner auto-resume** — mining state persists across app restarts via SharedPreferences
+- **Battery guard** — now pauses and resumes the native miner subprocess, not just isolate tasks
+- **Error recovery** — exponential backoff on miner restarts (3 s → 6 s → 12 s), manual Retry button after max attempts
+- **First-run consent dialog** — one-time prompt explaining mining before it can be enabled
+- **Wallet constants** — extracted to `wallet_constants.dart` for single-source-of-truth
+
+### Fixes
+- `.gitignore` rewritten from corrupted UTF-16LE encoding
+- Force-unwrap crashes in local_media_server.dart eliminated
+- BrowserScreen widget test removed (requires platform InAppWebView)
+
+### Internal
+- Added `multicast_dns: ^0.3.2+1` dependency
+- Added `FOREGROUND_SERVICE_DATA_SYNC` and `POST_NOTIFICATIONS` Android permissions
+- Unit tests for QueueItem model and Strings constants
+
 ## 4.0.0 — Browser Overhaul
 
 ### Breaking Changes

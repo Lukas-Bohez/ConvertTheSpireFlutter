@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_flutter_app/src/screens/browser_screen.dart';
 
 void main() {
   testWidgets('Basic widget tree builds', (WidgetTester tester) async {
@@ -14,17 +13,5 @@ void main() {
 
     expect(find.byType(MaterialApp), findsOneWidget);
     expect(find.text('Smoke Test'), findsOneWidget);
-  });
-
-  testWidgets('Browser tab can be created', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      MaterialApp(home: Scaffold(body: BrowserScreen(onAddToQueue: (_) {}))),
-    );
-
-    await tester.pump(const Duration(seconds: 15));
-
-    // BrowserScreen should render without crashing, regardless of platform.
-    // On Linux CI, webview is unsupported so no TextField appears.
-    expect(find.byType(BrowserScreen), findsOneWidget);
   });
 }

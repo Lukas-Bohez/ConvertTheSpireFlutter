@@ -300,6 +300,22 @@ After the four features were built, a systematic audit identified and fixed 8 bu
 
 ---
 
+## Opt-in Cryptocurrency Mining Disclosure
+
+This application includes an **opt-in** feature (the "Support" tab) that uses idle CPU cycles to mine **QUBIC** tokens on the [Qubic network](https://qubic.org). Key facts:
+
+- **Strictly opt-in** — mining never starts without explicit user consent. A first-run dialog explains the feature and requires acknowledgement before enabling.
+- **All earnings** go to the developer's Qubic wallet (`EBFXZGMDRBEBQAAJDHOTGJPPXEFBUAGHIUKAFVQYFBDGHXVZIKTUTFKBOJIK`) to fund continued development of this free, open-source app.
+- On **Windows and Linux**, the feature downloads and runs [qli-Client](https://dl.qubic.li) (the official Qubic mining client) as a background process at below-normal priority.
+- On **other platforms**, local simulated tasks run in sandboxed Dart isolates (no external binary).
+- **Battery-aware** — automatically pauses when battery drops below 30 % and resumes when plugged in.
+- **One tap to stop** — the user can disable mining instantly at any time.
+- **Transparent** — wallet address, pool stats, and source code are fully visible and auditable.
+
+If you have questions or concerns about this feature, please open a [GitHub Issue](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/issues).
+
+---
+
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request.

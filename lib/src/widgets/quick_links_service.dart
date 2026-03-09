@@ -67,6 +67,12 @@ class QuickLinksService {
       description: 'Search YouTube & SoundCloud',
     ),
     QuickLink(
+      name: 'Browser',
+      icon: Icons.language,
+      route: 'browser.tab',
+      description: 'In-app web browser',
+    ),
+    QuickLink(
       name: 'Playlists',
       icon: Icons.playlist_play,
       route: 'playlists.tab',
@@ -161,11 +167,11 @@ class QuickLinksService {
   /// Tab index → page title for the fake URL bar.
   static const Map<int, String> indexToTitle = {
     0: 'Search',
-    1: 'Multi-Search',
+    1: 'Search+',
     2: 'Browser',
     3: 'Queue',
     4: 'Playlists',
-    5: 'Bulk Import',
+    5: 'Import',
     6: 'Stats',
     7: 'Settings',
     8: 'Support',
@@ -194,7 +200,7 @@ class QuickLinksService {
     13: Icons.home,
   };
 
-  static const _hiddenRoutes = {'browser.tab', 'queue.tab'};
+  static const _hiddenRoutes = {'queue.tab'};
 
   static Future<List<QuickLink>> load() async {
     final prefs = await SharedPreferences.getInstance();

@@ -19,6 +19,7 @@ class BrowserToolbar extends StatelessWidget {
   final ValueChanged<String> onSubmitted;
   final VoidCallback onCastTap;
   final ValueChanged<String> onMenuAction;
+  final VoidCallback? onUrlBarTap;
 
   const BrowserToolbar({
     super.key,
@@ -39,6 +40,7 @@ class BrowserToolbar extends StatelessWidget {
     required this.onSubmitted,
     required this.onCastTap,
     required this.onMenuAction,
+    this.onUrlBarTap,
   });
 
   @override
@@ -99,11 +101,14 @@ class BrowserToolbar extends StatelessWidget {
                         controller: addressController,
                         keyboardType: TextInputType.url,
                         textInputAction: TextInputAction.go,
+                        maxLines: 1,
                         style: TextStyle(
                           fontSize: 13,
                           color: isIncognito ? Colors.white : null,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         onSubmitted: onSubmitted,
+                        onTap: onUrlBarTap,
                         decoration: InputDecoration(
                           isDense: true,
                           border: InputBorder.none,

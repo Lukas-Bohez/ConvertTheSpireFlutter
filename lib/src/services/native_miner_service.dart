@@ -387,6 +387,7 @@ class NativeMinerService {
   }
 
   /// Auto-restart the miner after a connection timeout.
+  /// Uses exponential backoff: 3s → 6s → 12s → give up.
   Future<void> _autoRestart() async {
     if (_isStarting) return; // Prevent overlapping restarts
     _connectionTimeout?.cancel();
@@ -404,8 +405,17 @@ class NativeMinerService {
     _avgHashRate = 0;
     _lastError = null;
     _setState(MinerState.starting, msg: 'Restarting miner\u2026');
-    await Future.delayed(const Duration(seconds: 3));
+    final backoff = Duration(seconds: 3 * (1 << (_restartCount - 1)).clamp(1, 4));
+    await Future.delayed(backoff);
     if (_disposed || _state == MinerState.stopped) return;
+    await start();
+  }
+
+  /// Manually retry after max auto-restarts have been exhausted.
+  Future<void> manualRetry() async {
+    _restartCount = 0;
+    _everConnected = false;
+    _lastError = null;
     await start();
   }
 

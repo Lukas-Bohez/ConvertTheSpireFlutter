@@ -147,6 +147,10 @@ class YtDlpService {
     String videoQuality = '720p',
     int audioBitrate = 192,
     bool Function()? isCancelled,
+    Map<String, String>? extraHeaders,
+    String? cookiesFile,
+    String? cookiesFromBrowser,
+    bool forceGenericExtractor = false,
   }) async {
     final args = <String>[];
     final formatLower = format.toLowerCase();
@@ -185,6 +189,32 @@ class YtDlpService {
         ffmpegPath.trim().isNotEmpty &&
         ffmpegPath.trim() != 'ffmpeg') {
       args.addAll(['--ffmpeg-location', ffmpegPath]);
+    }
+
+    // Browser-like headers for difficult sites
+    if (extraHeaders != null) {
+      for (final entry in extraHeaders.entries) {
+        if (entry.key.toLowerCase() == 'user-agent') {
+          args.addAll(['--user-agent', entry.value]);
+        } else if (entry.key.toLowerCase() == 'referer') {
+          args.addAll(['--referer', entry.value]);
+        } else {
+          args.addAll(['--add-header', '${entry.key}:${entry.value}']);
+        }
+      }
+    }
+
+    // Cookie support
+    if (cookiesFile != null && cookiesFile.trim().isNotEmpty) {
+      args.addAll(['--cookies', cookiesFile]);
+    } else if (cookiesFromBrowser != null &&
+        cookiesFromBrowser.trim().isNotEmpty) {
+      args.addAll(['--cookies-from-browser', cookiesFromBrowser]);
+    }
+
+    // Force generic extractor as fallback
+    if (forceGenericExtractor) {
+      args.add('--force-generic-extractor');
     }
 
     args.add(url);

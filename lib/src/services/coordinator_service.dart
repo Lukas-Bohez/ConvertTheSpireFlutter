@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'computation_service.dart';
 import 'native_miner_service.dart';
@@ -80,16 +81,34 @@ class CoordinatorService {
 
   // ── Enable / Disable ────────────────────────────────────────────────────
 
-  /// Enable or disable the service.
+  static const _enabledKey = 'coordinator_enabled';
+
+  /// Enable or disable the service.  Persists the choice so streaming can
+  /// auto-resume after an app restart.
   Future<void> setEnabled(bool value) async {
     _enabled = value;
     _compute.setEnabled(value);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_enabledKey, value);
+    } catch (_) {}
     if (value) {
       _start();
     } else {
       await _stop();
     }
     onStateChanged?.call();
+  }
+
+  /// Restore persisted enabled state.  Call once from the UI after services
+  /// are wired up (e.g. in SupportScreen.initState).
+  Future<bool> restoreEnabledState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_enabledKey) ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   // ── Start / Stop ────────────────────────────────────────────────────────

@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 
+import '../constants/wallet_constants.dart';
+
 /// Qubic blockchain helper — wallet constants and RPC queries.
 ///
 /// All mining rewards earned through the Support tab go to the developer's
@@ -10,22 +12,20 @@ import 'package:http/http.dart' as http;
 class QubicService {
   QubicService._();
 
-  /// Developer's Qubic wallet address.
-  static const walletId =
-      'EBFXZGMDRBEBQAAJDHOTGJPPXEFBUAGHIUKAFVQYFBDGHXVZIKTUTFKBOJIK';
+  /// Developer's Qubic wallet address (delegated to [WalletConstants]).
+  static const walletId = WalletConstants.walletId;
 
   /// Qubic blockchain RPC endpoint.
-  static const rpcUrl = 'https://rpc.qubic.org';
+  static const rpcUrl = WalletConstants.rpcUrl;
 
   /// Qubic mining pool (WebSocket endpoint used by qli-Client).
-  static const poolUrl = 'wss://wps.qubic.li/ws';
+  static const poolUrl = WalletConstants.poolUrl;
 
   /// Pool dashboard (login with Qubic address to see stats).
-  static const poolDashboardUrl = 'https://pool.qubic.li';
+  static const poolDashboardUrl = WalletConstants.poolDashboardUrl;
 
   /// Qubic explorer for viewing the wallet publicly.
-  static String get explorerUrl =>
-      'https://explorer.qubic.org/network/address/$walletId';
+  static String get explorerUrl => WalletConstants.explorerUrl;
 
   /// Fetch wallet balance from the Qubic RPC.
   ///

@@ -324,7 +324,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         _visitedPages.add(_selectedPageIndex);
 
-        return BrowserShell(
+        final shell = BrowserShell(
           scaffoldKey: _shellScaffoldKey,
           currentIndex: _selectedPageIndex,
           queueWidget: _buildQueueTab(),
@@ -347,6 +347,40 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           onOpenUrl: openBrowserWith,
           child: _buildPageWithBanner(settings),
         );
+
+        // Wrap in CallbackShortcuts for desktop media key support
+        if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+          return CallbackShortcuts(
+            bindings: <ShortcutActivator, VoidCallback>{
+              const SingleActivator(LogicalKeyboardKey.mediaPlayPause): () {
+                try {
+                  context.read<PlayerState>().togglePlay();
+                } catch (_) {}
+              },
+              const SingleActivator(LogicalKeyboardKey.mediaTrackNext): () {
+                try {
+                  context.read<PlayerState>().next();
+                } catch (_) {}
+              },
+              const SingleActivator(LogicalKeyboardKey.mediaTrackPrevious): () {
+                try {
+                  context.read<PlayerState>().previous();
+                } catch (_) {}
+              },
+              const SingleActivator(LogicalKeyboardKey.space, control: true): () {
+                try {
+                  context.read<PlayerState>().togglePlay();
+                } catch (_) {}
+              },
+            },
+            child: Focus(
+              autofocus: true,
+              child: shell,
+            ),
+          );
+        }
+
+        return shell;
       },
     );
   }
@@ -2692,6 +2726,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _showInFolder(String filePath) async {
+    if (kIsWeb) return;
     try {
       final file = File(filePath);
       final dir = file.parent.path;

@@ -354,6 +354,9 @@ class AppController extends ChangeNotifier {
         final pending = queue.where((item) => item.status == DownloadStatus.queued).toList();
         if (pending.isEmpty) break;
 
+        // Show ongoing notification so OS keeps process alive
+        await notificationService.showActiveDownloadsBanner(pending.length);
+
         final workers = (_settings?.maxWorkers ?? 3).clamp(1, 10);
         int index = 0;
 
@@ -373,6 +376,7 @@ class AppController extends ChangeNotifier {
       }
     } finally {
       _downloadAllRunning = false;
+      await notificationService.cancelActiveDownloadsBanner();
     }
   }
 

@@ -14,6 +14,7 @@ import '../browser/cast/unified_cast_service.dart';
 import '../browser/tabs/tab_manager.dart';
 import '../browser/video/video_detector_service.dart';
 import '../data/browser_db.dart';
+import '../services/download_service.dart';
 import '../models/search_result.dart';
 import 'browser/browser_bottom_bar.dart';
 import 'browser/browser_toolbar.dart';
@@ -678,6 +679,7 @@ class _BrowserScreenState extends State<BrowserScreen>
                   onSubmitted: _navigateTo,
                   onCastTap: _openCastSheet,
                   onMenuAction: _handleMenuAction,
+                  onUrlBarTap: _showTabSwitcher,
                 ),
 
                 // ── Progress bar ──
@@ -751,6 +753,20 @@ class _BrowserScreenState extends State<BrowserScreen>
                     }
                   },
                   onStop: () => _castService.stop(),
+                ),
+              ),
+
+            // ── Extract & Download FAB for difficult sites ──
+            if (!_showNewTabPage &&
+                DownloadService.isDifficultSite(_addressController.text))
+              Positioned(
+                bottom: viewPadding.bottom + 72,
+                right: 16,
+                child: FloatingActionButton.extended(
+                  heroTag: 'extract_download',
+                  onPressed: _addCurrentToQueue,
+                  icon: const Icon(Icons.download_rounded),
+                  label: const Text('Extract & Download'),
                 ),
               ),
           ],
