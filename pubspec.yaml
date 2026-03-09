@@ -38,7 +38,9 @@ dependencies:
   sqflite_common_ffi: ^2.3.4
 
   # In-app browser
-  flutter_inappwebview: ^6.1.5
+  # Temporary downgrade to avoid Windows build failure caused by a plugin
+  # bug in 6.1.5.  See issue #...; upgrade when fixed.
+  flutter_inappwebview: ^6.1.4
 
   # UI components
   fl_chart: ^0.66.0
