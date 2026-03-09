@@ -22,10 +22,8 @@ jobs:
         uses: flutter-actions/setup-flutter@v4
         with:
           channel: stable
+          version: '3.41.2'
           cache: true
-
-      - name: Clear pub cache
-        run: flutter pub cache repair
 
       - name: Install dependencies
         run: flutter pub get
@@ -53,10 +51,8 @@ jobs:
         uses: flutter-actions/setup-flutter@v4
         with:
           channel: stable
+          version: '3.41.2'
           cache: true
-
-      - name: Clear pub cache
-        run: flutter pub cache repair
 
       - name: Install dependencies
         run: flutter pub get
@@ -119,10 +115,8 @@ jobs:
         uses: flutter-actions/setup-flutter@v4
         with:
           channel: stable
+          version: '3.41.2'
           cache: true
-
-      - name: Clear pub cache
-        run: flutter pub cache repair
 
       - name: Install dependencies
         run: flutter pub get
