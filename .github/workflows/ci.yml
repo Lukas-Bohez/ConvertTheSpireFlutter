@@ -39,6 +39,24 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Patch flutter_inappwebview_windows after pub get
+        shell: pwsh
+        run: |
+          $dir = "$env:PUB_CACHE\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows"
+          if (Test-Path $dir) {
+            Get-ChildItem $dir -Recurse -Filter *.cc | ForEach-Object {
+              (Get-Content $_.FullName) -replace '\bwebview_\b','view' |
+                Set-Content $_.FullName
+            }
+          }
+          $eph = "windows\flutter\ephemeral\.plugin_symlinks\flutter_inappwebview_windows\windows"
+          if (Test-Path $eph) {
+            Get-ChildItem $eph -Recurse -Filter *.cc | ForEach-Object {
+              (Get-Content $_.FullName) -replace '\bwebview_\b','view' |
+                Set-Content $_.FullName
+            }
+          }
+
       - name: Analyze code
         run: flutter analyze --no-fatal-infos
 
@@ -78,6 +96,24 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Patch flutter_inappwebview_windows after pub get
+        shell: pwsh
+        run: |
+          $dir = "$env:PUB_CACHE\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows"
+          if (Test-Path $dir) {
+            Get-ChildItem $dir -Recurse -Filter *.cc | ForEach-Object {
+              (Get-Content $_.FullName) -replace '\bwebview_\b','view' |
+                Set-Content $_.FullName
+            }
+          }
+          $eph = "windows\flutter\ephemeral\.plugin_symlinks\flutter_inappwebview_windows\windows"
+          if (Test-Path $eph) {
+            Get-ChildItem $eph -Recurse -Filter *.cc | ForEach-Object {
+              (Get-Content $_.FullName) -replace '\bwebview_\b','view' |
+                Set-Content $_.FullName
+            }
+          }
 
       - name: Build Windows release (with retry)
         shell: pwsh
