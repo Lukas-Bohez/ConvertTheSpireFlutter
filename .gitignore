@@ -89,3 +89,9 @@ debug_run_log.txt
 # Releases (built artifacts, not source)
 # 
 /releases/
+
+# Temporary source/zips created during release process
+local_src.zip
+v5_source.zip
+temp_src/
+*.zip
