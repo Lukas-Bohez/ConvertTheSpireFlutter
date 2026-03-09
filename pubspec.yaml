@@ -42,8 +42,11 @@ dependencies:
   # bug in 6.1.5.  See issue #...; upgrade when fixed.
   flutter_inappwebview: ^6.1.5  # bumped to latest stable to match pubspec.lock and avoid version mismatches
 
-  # UI components
-  fl_chart: ^0.66.0
+dependency_overrides:
+  # Ensure the Windows sub-package stays at the tested version; otherwise pub
+  # can pull a newer patch which renames the internal `webview_` member.
+  flutter_inappwebview_windows: 0.6.0
+
 
   # Notifications
   flutter_local_notifications: ^20.1.0
@@ -75,11 +78,11 @@ dependencies:
   # mDNS for Chromecast/Airplay discovery
   multicast_dns: ^0.3.2+1
 
-dependency_overrides:
+  # Additional overrides originally in duplicate block
   win32: '<5.13.0'
+  # keep older fl_chart/other pins as needed by app
   fl_chart: 0.65.0
   package_info_plus: 8.1.0
-  share_plus: 11.0.0
 
 dev_dependencies:
   flutter_test:

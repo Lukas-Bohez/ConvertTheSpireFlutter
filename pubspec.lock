@@ -34,7 +34,7 @@ packages:
     source: hosted
     version: "1.4.2"
   audio_service:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: audio_service
       sha256: cb122c7c2639d2a992421ef96b67948ad88c5221da3365ccef1031393a76e044
@@ -74,7 +74,7 @@ packages:
     source: hosted
     version: "2.2.9"
   battery_plus:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: battery_plus
       sha256: "03d5a6bb36db9d2b977c548f6b0262d5a84c4d5a4cfee2edac4a91d57011b365"
@@ -162,7 +162,7 @@ packages:
     source: hosted
     version: "1.19.1"
   connectivity_plus:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: connectivity_plus
       sha256: b5e72753cf63becce2c61fd04dfe0f1c430cc5278b53a1342dc5ad839eab29ec
@@ -210,7 +210,7 @@ packages:
     source: hosted
     version: "1.0.2"
   csv:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: csv
       sha256: "63ed2871dd6471193dffc52c0e6c76fb86269c00244d244297abbb355c84a86e"
@@ -306,7 +306,7 @@ packages:
     source: hosted
     version: "1.1.1"
   fl_chart:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: fl_chart
       sha256: "5a74434cc83bf64346efb562f1a06eefaf1bcb530dc3d96a104f631a1eff8d79"
@@ -383,7 +383,7 @@ packages:
     source: hosted
     version: "1.1.2"
   flutter_inappwebview_windows:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: flutter_inappwebview_windows
       sha256: "8b4d3a46078a2cdc636c4a3d10d10f2a16882f6be607962dbfff8874d1642055"
@@ -399,7 +399,7 @@ packages:
     source: hosted
     version: "0.14.4"
   flutter_local_notifications:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: flutter_local_notifications
       sha256: "2b50e938a275e1ad77352d6a25e25770f4130baa61eaf02de7a9a884680954ad"
@@ -481,7 +481,7 @@ packages:
     source: hosted
     version: "1.0.2"
   html:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: html
       sha256: "6d1264f2dffa1b1101c25a91dff0dc2daee4c18e87cd8538729773c073dbf602"
@@ -561,7 +561,7 @@ packages:
     source: hosted
     version: "0.4.16"
   just_audio_windows:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: just_audio_windows
       sha256: b1ba5305d841c0e3883644e20fc11aaa23f28cfdd43ec20236d1e119a402ef29
@@ -617,7 +617,7 @@ packages:
     source: hosted
     version: "0.13.0"
   media_kit:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: media_kit
       sha256: ae9e79597500c7ad6083a3c7b7b7544ddabfceacce7ae5c9709b0ec16a5d6643
@@ -625,7 +625,7 @@ packages:
     source: hosted
     version: "1.2.6"
   media_kit_libs_windows_video:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: media_kit_libs_windows_video
       sha256: dff76da2778729ab650229e6b4ec6ec111eb5151431002cbd7ea304ff1f112ab
@@ -633,7 +633,7 @@ packages:
     source: hosted
     version: "1.0.11"
   media_kit_video:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: media_kit_video
       sha256: "813858c3fe84eb46679eb698695f60665e2bfbef757766fac4d2e683f926e15a"
@@ -673,7 +673,7 @@ packages:
     source: hosted
     version: "3.16.13"
   multicast_dns:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: multicast_dns
       sha256: de72ada5c3db6fdd6ad4ae99452fe05fb403c4bb37c67ceb255ddd37d2b5b1eb
@@ -921,13 +921,13 @@ packages:
     source: hosted
     version: "0.2.0"
   share_plus:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: share_plus
-      sha256: b2961506569e28948d75ec346c28775bb111986bb69dc6a20754a457e3d97fa0
+      sha256: "14c8860d4de93d3a7e53af51bff479598c4e999605290756bbbe45cf65b37840"
       url: "https://pub.dev"
     source: hosted
-    version: "11.0.0"
+    version: "12.0.1"
   share_plus_platform_interface:
     dependency: transitive
     description:
@@ -1134,7 +1134,7 @@ packages:
     source: hosted
     version: "0.10.1"
   tray_manager:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: tray_manager
       sha256: c5fd83b0ae4d80be6eaedfad87aaefab8787b333b8ebd064b0e442a81006035b
@@ -1302,7 +1302,7 @@ packages:
     source: hosted
     version: "2.4.0"
   video_thumbnail:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: video_thumbnail
       sha256: "181a0c205b353918954a881f53a3441476b9e301641688a581e0c13f00dc588b"
@@ -1374,7 +1374,7 @@ packages:
     source: hosted
     version: "2.14.0"
   webview_flutter_web:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: webview_flutter_web
       sha256: "18a7ccc1c31dd9a5c759a1b7217a2a1e04bd8f65712714a4070bfac19a23ca9e"
@@ -1398,7 +1398,7 @@ packages:
     source: hosted
     version: "5.12.0"
   window_manager:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: window_manager
       sha256: "7eb6d6c4164ec08e1bf978d6e733f3cebe792e2a23fb07cbca25c2872bfdbdcd"
