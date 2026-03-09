@@ -18,6 +18,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Patch inappwebview_windows source
+        shell: pwsh
+        run: |
+          $dir = "$env:PUB_CACHE\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows"
+          if (Test-Path $dir) {
+            Get-ChildItem $dir -Recurse -Filter *.cc | ForEach-Object {
+              (Get-Content $_.FullName) -replace '\bwebview_\b','view' |
+                Set-Content $_.FullName
+            }
+          }
+
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v4
         with:
@@ -46,6 +57,17 @@ jobs:
     runs-on: windows-2022   # pin to VS2022 to avoid plugin compile bug
     steps:
       - uses: actions/checkout@v4
+
+      - name: Patch inappwebview_windows source
+        shell: pwsh
+        run: |
+          $dir = "$env:PUB_CACHE\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows"
+          if (Test-Path $dir) {
+            Get-ChildItem $dir -Recurse -Filter *.cc | ForEach-Object {
+              (Get-Content $_.FullName) -replace '\bwebview_\b','view' |
+                Set-Content $_.FullName
+            }
+          }
 
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v4
