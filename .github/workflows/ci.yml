@@ -55,8 +55,27 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build Windows release
-        run: flutter build windows --release
+      - name: Build Windows release (with retry)
+        shell: pwsh
+        run: |
+          $attempt = 0
+          $max = 2
+          while ($attempt -lt $max) {
+            Write-Host "Windows build attempt $($attempt + 1) of $max"
+            try {
+              flutter build windows --release
+              break
+            } catch {
+              Write-Host "Build failed: $_"
+              $attempt++
+              if ($attempt -lt $max) {
+                Write-Host "Retrying in 10 seconds..."
+                Start-Sleep -Seconds 10
+              } else {
+                throw
+              }
+            }
+          }
 
       - name: Prepare artifact
         shell: pwsh
