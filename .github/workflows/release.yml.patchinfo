@@ -1,0 +1,2 @@
+Patched release.yml: added post-pubget patch steps for windows/linux/android to replace 'webview_' with 'view' in plugin sources and ephemeral symlink directories.
+Timestamp: 2026-03-10
