@@ -479,25 +479,23 @@ class _SuggestionsDropdown extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             color: cs.surfaceContainerHigh,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 320, maxWidth: 500),
-              child: IntrinsicWidth(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  itemCount: filtered.length,
-                  itemBuilder: (ctx, i) {
-                    final p = filtered[i];
-                    return ListTile(
-                      dense: true,
-                      visualDensity: VisualDensity.compact,
-                      leading: Icon(p.icon, size: 18, color: cs.primary),
-                      title: Text(p.title,
-                          style: const TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w500)),
-                      onTap: () => onSelect(p.route),
-                    );
-                  },
-                ),
+              constraints: const BoxConstraints(minWidth: 200, maxWidth: 500, maxHeight: 320),
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                itemCount: filtered.length,
+                itemBuilder: (ctx, i) {
+                  final p = filtered[i];
+                  return ListTile(
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    leading: Icon(p.icon, size: 18, color: cs.primary),
+                    title: Text(p.title,
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w500)),
+                    onTap: () => onSelect(p.route),
+                  );
+                },
               ),
             ),
           ),

@@ -660,6 +660,78 @@ class _BrowserScreenState extends State<BrowserScreen>
           children: [
             Column(
               children: [
+                // ── Tab row (old-style browser tabs) ──
+                if (_tabManager.tabCount > 1)
+                  SizedBox(
+                    height: 40,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Row(
+                        children: _tabManager.tabs.asMap().entries.map((e) {
+                          final idx = e.key;
+                          final tab = e.value;
+                          final isActive = idx == _tabManager.activeIndex;
+                          return GestureDetector(
+                            onTap: () {
+                              _tabManager.switchToTab(idx);
+                              final showNew = tab.url.isEmpty;
+                              setState(() => _showNewTabPage = showNew);
+                              if (!showNew && tab.url.isNotEmpty) {
+                                _webViewController?.loadUrl(
+                                    urlRequest: URLRequest(url: WebUri(tab.url)));
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                                    : null,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: isActive
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context).colorScheme.outlineVariant,
+                                  width: isActive ? 2 : 1,
+                                ),
+                              ),
+                              width: 120,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (tab.screenshot != null) ...[
+                                    ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxHeight: 24,
+                                        maxWidth: 24,
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: Image.memory(
+                                          tab.screenshot!,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                  ],
+                                  Text(
+                                    tab.title.isNotEmpty ? tab.title : (Uri.tryParse(tab.url)?.host ?? ''),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+
                 // ── Top toolbar ──
                 BrowserToolbar(
                   addressController: _addressController,
