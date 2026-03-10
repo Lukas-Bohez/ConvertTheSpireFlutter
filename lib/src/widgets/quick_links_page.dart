@@ -37,9 +37,10 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
     final width = MediaQuery.of(context).size.width;
     final crossAxisCount = width < 500 ? 2 : (width < 900 ? 3 : 4);
 
-    // Filter out Browser (grey/unusable) and Queue (always in sidebar)
-    final visibleLinks = _links.where((l) =>
-        l.route != 'browser.tab' && l.route != 'queue.tab').toList();
+    // Filter out only the queue tile (always in sidebar).
+    // Browser remains available so users can tap it directly.
+    final visibleLinks =
+        _links.where((l) => l.route != 'queue.tab').toList();
 
     return Container(
       color: cs.surfaceContainerLowest,
@@ -107,7 +108,12 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
               final link = visibleLinks[index];
               return _QuickLinkTile(
                 link: link,
-                onTap: () => widget.onNavigate(link.route),
+                onTap: () {
+                  // remove focus from search field/URL bar before navigation so
+                  // the tap isn't swallowed by a still-focused TextField.
+                  FocusScope.of(context).unfocus();
+                  widget.onNavigate(link.route);
+                },
               );
             },
           ),
