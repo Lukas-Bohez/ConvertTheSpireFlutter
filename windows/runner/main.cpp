@@ -13,6 +13,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     CreateAndAttachConsole();
   }
 
+  // Certain GPU/driver combinations crash inside dcomp.dll when the engine tries
+  // to initialize DirectComposition.  Force software rendering to avoid those
+  // crashes and guarantee the application window appears.
+  ::SetEnvironmentVariable(L"FLUTTER_ENABLE_SOFTWARE_RENDERING", L"1");
+  // Some builds may also respect this variable to disable dcomp entirely.
+  ::SetEnvironmentVariable(L"FLUTTER_DISABLE_DCOMP", L"1");
+
   // Initialize COM, so that it is available for use in the library and/or
   // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
