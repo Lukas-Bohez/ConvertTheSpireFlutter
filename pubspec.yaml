@@ -1,7 +1,7 @@
 name: my_flutter_app
 description: A new Flutter project.
 publish_to: 'none'
-version: 5.1.2+3  # ready for v5.1.1 release
+version: 5.1.4+5  # ready for v5.1.4 release
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -18,101 +18,3 @@ dependencies:
   video_player: ^2.5.1
   archive: ^3.4.10
   image: ^4.3.0
-  mime: ^2.0.0
-  uuid: ^4.4.0
-  crypto: ^3.0.3
-  ffmpeg_kit_flutter_new: ^4.1.0
-  pdf: ^3.10.7
-  webview_flutter: ^4.2.3
-
-  # Download & HTTP
-  dio: ^5.4.0
-
-  # Audio playback / preview
-  just_audio: ^0.9.36
-  audio_metadata_reader: ^1.4.2
-
-  # Storage
-  shared_preferences: ^2.2.2
-  sqflite: ^2.4.1
-  sqflite_common_ffi: ^2.3.4
-
-  # In-app browser
-  # Temporary downgrade to avoid Windows build failure caused by a plugin
-  # bug in 6.1.5.  See issue #...; upgrade when fixed.
-  flutter_inappwebview: ^6.1.5  # bumped to latest stable to match pubspec.lock and avoid version mismatches
-
-dependency_overrides:
-  # Ensure the Windows sub-package stays at the tested version; otherwise pub
-  # can pull a newer patch which renames the internal `webview_` member.
-  flutter_inappwebview_windows: 0.6.0
-
-
-  # Notifications
-  flutter_local_notifications: ^20.1.0
-
-  # Sharing
-  share_plus: ^12.0.1
-
-  # CSV parsing
-  csv: ^5.1.1
-
-  # HTML parsing
-  html: ^0.15.4
-  webview_flutter_web: ^0.2.3+4
-  just_audio_windows: ^0.2.2
-  video_thumbnail: ^0.5.6
-
-  # Windows media support
-  media_kit: ^1.1.10
-  media_kit_video: ^1.2.4
-  media_kit_libs_windows_video: ^1.0.9
-
-  # Battery detection (for distributed computing)
-  battery_plus: ^6.0.3
-  connectivity_plus: ^6.1.4
-  window_manager: ^0.5.1
-  tray_manager: ^0.5.2
-  audio_service: ^0.18.18
-
-  # mDNS for Chromecast/Airplay discovery
-  multicast_dns: ^0.3.2+1
-
-  # Additional overrides originally in duplicate block
-  win32: '<5.13.0'
-  # keep older fl_chart/other pins as needed by app
-  fl_chart: 0.65.0
-  package_info_plus: 8.1.0
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  msix: ^3.16.7
-  flutter_launcher_icons: ^0.14.3
-
-flutter_launcher_icons:
-  android: true
-  ios: false
-  web:
-    generate: false
-  windows:
-    generate: true
-    icon_size: 48
-  image_path: "assets/icons/favicon-192x192.png"
-
-flutter:
-  uses-material-design: true
-
-  assets:
-    - assets/images/
-    - assets/icons/
-
-msix_config:
-  display_name: Convert the Spire Reborn
-  publisher_display_name: Oroka Conner
-  publisher: CN=Oroka Conner
-  identity_name: OrokaConner.ConvertTheSpireReborn
-  msix_version: 1.0.0.0
-  logo_path: assets/icons/favicon-192x192.png
-  capabilities: internetClient
-  sign_msix: false

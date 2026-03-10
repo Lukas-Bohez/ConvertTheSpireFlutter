@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:io' show Platform;
+import 'dart:ffi';
+import 'dart:io' show Platform, Directory;
+import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:media_kit/media_kit.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -9,6 +11,23 @@ import 'src/app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ensure WebView2 user data folder is short (avoids long-path crashes)
+  if (!kIsWeb && Platform.isWindows) {
+    final local = Platform.environment['LOCALAPPDATA'] ?? '';
+    final userData = Directory('$local\\ConvertTheSpireReborn\\WebView2');
+    if (!userData.existsSync()) userData.createSync(recursive: true);
+    // call Win32 SetEnvironmentVariableW via FFI
+    final kernel32 = DynamicLibrary.open('kernel32.dll');
+    final setEnv = kernel32.lookupFunction<
+        Int32 Function(Pointer<Utf16>, Pointer<Utf16>),
+        int Function(Pointer<Utf16>, Pointer<Utf16>)>('SetEnvironmentVariableW');
+    final namePtr = 'WEBVIEW2_USER_DATA_FOLDER'.toNativeUtf16();
+    final valuePtr = userData.path.toNativeUtf16();
+    setEnv(namePtr, valuePtr);
+    malloc.free(namePtr);
+    malloc.free(valuePtr);
+  }
 
   // Initialize sqflite FFI for desktop platforms (Windows / Linux).
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
