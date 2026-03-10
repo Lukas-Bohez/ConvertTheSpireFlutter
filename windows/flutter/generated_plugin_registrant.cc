@@ -10,8 +10,15 @@
 #include <url_launcher_windows/url_launcher_windows.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
-  FlutterInappwebviewWindowsPluginCApiRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("FlutterInappwebviewWindowsPluginCApi"));
+    // Temporarily skip registering flutter_inappwebview_windows on Windows
+    // to avoid a startup crash in certain environments caused by DirectComposition
+    // / WebView2 initialization. This is a targeted workaround for release builds
+    // while a proper fix is applied in the plugin. Remove this bypass once the
+    // upstream plugin is fixed.
+#if 0
+    FlutterInappwebviewWindowsPluginCApiRegisterWithRegistrar(
+            registry->GetRegistrarForPlugin("FlutterInappwebviewWindowsPluginCApi"));
+#endif
   UrlLauncherWindowsRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("UrlLauncherWindows"));
 }
