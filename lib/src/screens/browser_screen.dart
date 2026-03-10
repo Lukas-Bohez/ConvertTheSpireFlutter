@@ -1020,6 +1020,9 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _showTabSwitcher() {
+    // remove focus from URL/search field first, otherwise taps in the sheet
+    // can be swallowed by the still‑focused TextField and only clear focus.
+    FocusScope.of(context).unfocus();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

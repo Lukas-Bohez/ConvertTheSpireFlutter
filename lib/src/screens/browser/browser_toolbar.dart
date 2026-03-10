@@ -46,10 +46,18 @@ class BrowserToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    // always ensure a light toolbar on mobile unless in incognito mode; dark
+    // themes make the toolbar blend with the rest of the app, which looks bad
+    // inside the browser.  Desktop respects the global surface color.
+    final bool forceLight = !isIncognito &&
+        (Theme.of(context).platform == TargetPlatform.android ||
+            Theme.of(context).platform == TargetPlatform.iOS);
     final bgColor = isIncognito
         ? const Color(0xFF1A1A2E)
-        : cs.surface;
-    final iconColor = isIncognito ? Colors.white : cs.onSurface;
+        : (forceLight ? Colors.white : cs.surface);
+    final iconColor = isIncognito
+        ? Colors.white
+        : (forceLight ? Colors.black : cs.onSurface);
 
     return Container(
       color: bgColor,
