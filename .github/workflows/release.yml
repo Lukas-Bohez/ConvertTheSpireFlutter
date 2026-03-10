@@ -41,18 +41,30 @@ jobs:
             echo "No test files found - skipping tests"
           fi
 
-  # ── Windows Build ────────────────────────────────────────────────────
+  # ── Build - Windows (copied from working CI job)
   build-windows:
     name: Build Windows
     needs: analyze
-    runs-on: windows-latest
+    runs-on: windows-2022   # pin to VS2022 to avoid plugin compile bug
     steps:
       - uses: actions/checkout@v4
+
+      - name: Patch inappwebview_windows source
+        shell: pwsh
+        run: |
+          $dir = "$env:PUB_CACHE\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows"
+          if (Test-Path $dir) {
+            Get-ChildItem $dir -Recurse -Filter *.cc | ForEach-Object {
+              (Get-Content $_.FullName) -replace '\\bwebview_\\b','view' |
+                Set-Content $_.FullName
+            }
+          }
 
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v4
         with:
           channel: stable
+          version: '3.41.2'
           cache: true
 
       - name: Install dependencies
@@ -68,27 +80,44 @@ jobs:
                 Set-Content $_.FullName
             }
           }
-          $eph = "windows\flutter\ephemeral\\.plugin_symlinks\flutter_inappwebview_windows\windows"
-          if (Test-Path $eph) {
-            Get-ChildItem $eph -Recurse -Filter *.cc | ForEach-Object {
-              (Get-Content $_.FullName) -replace '\\bwebview_\\b','view' |
-                Set-Content $_.FullName
+
+      - name: Build Windows release (with retry)
+        shell: pwsh
+        run: |
+          $attempt = 0
+          $max = 2
+          while ($attempt -lt $max) {
+            Write-Host "Windows build attempt $($attempt + 1) of $max"
+            try {
+              flutter build windows --release
+              break
+            } catch {
+              Write-Host "Build failed: $_"
+              $attempt++
+              if ($attempt -lt $max) {
+                Write-Host "Retrying in 10 seconds..."
+                Start-Sleep -Seconds 10
+              } else {
+                throw
+              }
             }
           }
 
-      - name: Build Windows release
-        run: flutter build windows --release
-
-      - name: Archive Windows bundle
-        run: |
-          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath ConvertTheSpireReborn.zip
+      - name: Prepare artifact
         shell: pwsh
+        run: |
+          $src = "build\windows\x64\runner\Release"
+          $dest = "releases\windows"
+          if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
+          New-Item -ItemType Directory -Path $dest -Force | Out-Null
+          Copy-Item "$src\*" $dest -Recurse
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-x64
-          path: ConvertTheSpireReborn.zip
+          name: windows-release
+          path: releases/windows/
+          retention-days: 30
 
   # ── Linux Build ──────────────────────────────────────────────────────
   build-linux:
@@ -202,12 +231,11 @@ jobs:
       - name: List artifacts
         run: find artifacts -type f
 
-      - name: Create Release (manual dispatch)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.release_tag || format('v0.0.{0}', github.run_number) }}
-          name: ${{ inputs.release_name || inputs.release_tag || format('Build {0}', github.run_number) }}
+          tag_name: ${{ inputs.release_tag || github.ref_name || format('v0.0.{0}', github.run_number) }}
+          name: ${{ inputs.release_name || inputs.release_tag || github.ref_name || format('Build {0}', github.run_number) }}
           generate_release_notes: true
           files: |
             artifacts/windows-x64/ConvertTheSpireReborn.zip
