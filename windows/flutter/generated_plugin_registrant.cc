@@ -10,8 +10,12 @@
 #include <url_launcher_windows/url_launcher_windows.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
-  FlutterInappwebviewWindowsPluginCApiRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("FlutterInappwebviewWindowsPluginCApi"));
-  UrlLauncherWindowsRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("UrlLauncherWindows"));
+    // Temporarily disable all plugin registration to isolate startup crash.
+    // Re-enable plugins one-by-one after verifying startup.
+#if 0
+    FlutterInappwebviewWindowsPluginCApiRegisterWithRegistrar(
+            registry->GetRegistrarForPlugin("FlutterInappwebviewWindowsPluginCApi"));
+    UrlLauncherWindowsRegisterWithRegistrar(
+            registry->GetRegistrarForPlugin("UrlLauncherWindows"));
+#endif
 }
