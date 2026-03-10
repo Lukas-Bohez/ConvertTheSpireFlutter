@@ -6,6 +6,10 @@ version: 5.1.4+5  # ready for v5.1.4 release
 environment:
   sdk: ">=3.0.0 <4.0.0"
 
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
 dependencies:
   flutter:
     sdk: flutter
@@ -18,3 +22,23 @@ dependencies:
   video_player: ^2.5.1
   archive: ^3.4.10
   image: ^4.3.0
+  shared_preferences: any
+  sqflite: any
+  sqflite_common_ffi: any
+  window_manager: any
+  media_kit: any
+  media_kit_video: any
+  flutter_inappwebview: any
+  share_plus: any
+  just_audio: any
+  audio_service: any
+  video_thumbnail: any
+  fl_chart: any
+  battery_plus: any
+  audio_metadata_reader: any
+  csv: any
+  pdf: any
+  multicast_dns: any
+  ffmpeg_kit_flutter_new: any
+  flutter_local_notifications: any
+  tray_manager: any

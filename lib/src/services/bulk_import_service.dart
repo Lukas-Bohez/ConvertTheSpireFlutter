@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 
 /// Parses bulk track lists from text or CSV and returns search queries.
@@ -60,7 +59,7 @@ class BulkImportService {
 
   Future<List<String>> _importCSV(File file) async {
     final text = await file.readAsString();
-    final rows = const CsvToListConverter().convert(text);
+    final rows = _parseCsv(text);
     final queries = <String>[];
     for (final row in rows) {
       if (row.length >= 2) {
@@ -70,5 +69,26 @@ class BulkImportService {
       }
     }
     return queries;
+  }
+
+  // Minimal CSV parser: splits on commas not inside quotes. Returns rows as
+  // lists of strings. This avoids depending on `CsvToListConverter` API
+  // differences across package versions.
+  List<List<dynamic>> _parseCsv(String text) {
+    final lines = text.split('\n');
+    final rows = <List<dynamic>>[];
+    final reg = RegExp(r',(?=(?:[^\"]*\"[^\"]*\")*[^\"]*\$)');
+    for (final line in lines) {
+      if (line.trim().isEmpty) continue;
+      final parts = line.split(reg).map((s) {
+        var v = s.trim();
+        if (v.startsWith('"') && v.endsWith('"') && v.length >= 2) {
+          v = v.substring(1, v.length - 1).replaceAll('""', '"');
+        }
+        return v;
+      }).toList();
+      rows.add(parts);
+    }
+    return rows;
   }
 }

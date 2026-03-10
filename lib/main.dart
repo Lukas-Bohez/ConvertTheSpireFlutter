@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:ui' show Size;
+import 'dart:ui' as ui;
 import 'dart:ffi';
 import 'dart:io' show Platform, Directory;
 import 'package:ffi/ffi.dart';
@@ -74,8 +74,8 @@ void main() async {
     // analyzer errors on the subsequent lines (they were previously marked
     // around `size`/`minimumSize`).
     final windowOptions = WindowOptions(
-      size: Size(1100, 750),
-      minimumSize: Size(480, 600),
+      size: ui.Size(1100, 750),
+      minimumSize: ui.Size(480, 600),
       center: true,
       title: 'Convert the Spire Reborn',
     );

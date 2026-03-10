@@ -1,4 +1,6 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/services.dart' show LogicalKeyboardKey, RawKeyEvent, RawKeyDownEvent;
+import 'package:window_manager/window_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -40,6 +42,7 @@ class _MyAppState extends State<MyApp> {
   String? _initError;
   bool _dismissedMediaKitError = false;
   late final Future<SharedPreferences> _prefsFuture = SharedPreferences.getInstance();
+  late final FocusNode _keyboardFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -51,7 +54,25 @@ class _MyAppState extends State<MyApp> {
   void dispose() {
     _ytExplode?.close();
     _controller?.dispose();
+    _keyboardFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleKey(RawKeyEvent event) async {
+    if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.f11) {
+      // Only attempt to toggle fullscreen on desktop platforms.
+      if (!kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.windows ||
+              defaultTargetPlatform == TargetPlatform.linux ||
+              defaultTargetPlatform == TargetPlatform.macOS)) {
+        try {
+          final isFull = await windowManager.isFullScreen();
+          await windowManager.setFullScreen(!isFull);
+        } catch (e) {
+          if (kDebugMode) debugPrint('Failed to toggle fullscreen: $e');
+        }
+      }
+    }
   }
 
   Future<void> _initController() async {
@@ -230,9 +251,16 @@ class _MyAppState extends State<MyApp> {
 
                         final prefs = snap.data!;
 
-                        return ChangeNotifierProvider(
+                        final content = ChangeNotifierProvider(
                           create: (_) => PlayerState(prefs),
                           child: HomeScreen(controller: _controller!),
+                        );
+
+                        return RawKeyboardListener(
+                          focusNode: _keyboardFocusNode,
+                          autofocus: true,
+                          onKey: _handleKey,
+                          child: content,
                         );
                       },
                     ),

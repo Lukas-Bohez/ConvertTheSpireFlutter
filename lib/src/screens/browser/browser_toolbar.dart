@@ -118,3 +118,47 @@ class BrowserToolbar extends StatelessWidget {
                         onSubmitted: onSubmitted,
                         onTap: onUrlBarTap,
                         decoration: InputDecoration(
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                            hintText: pageTitle.isNotEmpty ? pageTitle : 'Search or enter URL',
+                            hintStyle: TextStyle(
+                              fontSize: 13,
+                              color: isIncognito ? Colors.white54 : cs.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      // Reload
+                      IconButton(
+                        padding: const EdgeInsets.all(4),
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.refresh, size: 20),
+                        onPressed: onReload,
+                      ),
+                      // Cast
+                      IconButton(
+                        padding: const EdgeInsets.all(4),
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.cast, size: 20),
+                        onPressed: onCastTap,
+                      ),
+                      // Menu
+                      PopupMenuButton<String>(
+                        onSelected: onMenuAction,
+                        itemBuilder: (ctx) => [
+                          const PopupMenuItem(value: 'open_in_browser', child: Text('Open in browser')),
+                          const PopupMenuItem(value: 'share', child: Text('Share')),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
