@@ -79,8 +79,21 @@ class AppController extends ChangeNotifier {
 
   Future<void> init() async {
     _settings = await settingsStore.load();
-    await statisticsService.load();
-    await notificationService.initialize();
+    // Load non-critical services individually so a single failure doesn't
+    // prevent the app from starting. Errors are logged and initialization
+    // continues.
+    try {
+      await statisticsService.load();
+    } catch (e, st) {
+      logs.add('StatisticsService failed to load: $e');
+      if (kDebugMode) debugPrint('StatisticsService.load error: $e\n$st');
+    }
+    try {
+      await notificationService.initialize();
+    } catch (e, st) {
+      logs.add('NotificationService failed to initialize: $e');
+      if (kDebugMode) debugPrint('NotificationService.initialize error: $e\n$st');
+    }
     notifyListeners();
 
     // Auto-install FFmpeg on boot (desktop only; mobile bundles FFmpegKit)

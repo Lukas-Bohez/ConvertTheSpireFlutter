@@ -182,6 +182,19 @@ jobs:
       - name: Build Linux release
         run: flutter build linux --release
 
+      - name: Check Linux shared libs
+        run: |
+          set -e
+          echo "Checking for missing shared libraries in Linux bundle..."
+          missing=$(ldd build/linux/x64/release/bundle/convert_the_spire_reborn | grep "not found" || true)
+          if [ -n "$missing" ]; then
+            echo "ERROR: Missing shared libraries detected:" >&2
+            echo "$missing" >&2
+            exit 1
+          else
+            echo "No missing shared libraries detected."
+          fi
+
       - name: Prepare artifact
         run: |
           rm -rf releases/linux

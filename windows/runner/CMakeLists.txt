@@ -50,3 +50,14 @@ foreach(lib ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS})
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${lib}" "$<TARGET_FILE_DIR:${BINARY_NAME}>")
 endforeach()
 
+# If the media_kit plugin bundles an older msvcp140.dll inside its plugin
+# artifacts (ANGLE archive), prefer installing the application's own
+# Visual C++ runtime into the runtime bundle so the app uses the system
+# CRT rather than a possibly incompatible plugin copy. The file path
+# below is relative to the project; it will exist after plugin files are
+# staged during build. This mirrors the recommended workaround.
+install(FILES
+  "${CMAKE_CURRENT_SOURCE_DIR}/../build/windows/x64/plugins/media_kit_libs_windows_video/msvcp140.dll"
+  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)
+
