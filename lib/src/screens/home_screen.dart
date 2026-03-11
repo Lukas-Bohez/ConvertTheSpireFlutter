@@ -303,7 +303,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   /// Alias used by tappable top-bar UI items to navigate to a tab index.
-  void _navigateToTab(int index) => _navigateToPage(index);
+  /// (Removed unused alias to satisfy analyzer.)
 
   void _goBack() {
     if (!_canGoBack) return;
