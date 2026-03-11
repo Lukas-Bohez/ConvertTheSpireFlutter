@@ -80,6 +80,11 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   /// True when the platform supports an in-app WebView.
   bool get _webViewSupported => !kIsWeb && !Platform.isLinux;
+  // Create the WebView widget lazily to avoid crashing on platforms
+  // where the native WebView runtime is missing (e.g. WebView2 on some
+  // Windows machines). This flag is set when the user first navigates or
+  // explicitly requests the browser.
+  bool _createWebView = false;
 
   @override
   void initState() {
@@ -183,6 +188,8 @@ class _BrowserScreenState extends State<BrowserScreen>
       _isFavourited = false;
     });
     _addressController.text = normalized;
+    // Ensure the WebView is created when the user navigates.
+    _createWebView = true;
 
     if (_webViewController != null) {
       _webViewController!
@@ -768,8 +775,16 @@ class _BrowserScreenState extends State<BrowserScreen>
                       // WebView always in tree (texture-based on
                       // Windows — no HWND overlay issues). NewTabPage
                       // is placed on top when active.
-                      if (_webViewSupported)
+                      if (_webViewSupported && _createWebView)
                         Positioned.fill(child: _buildWebView())
+                      else if (_webViewSupported && !_createWebView)
+                        // Show the NewTabPage when the webview is not yet created.
+                        Positioned.fill(
+                          child: NewTabPage(
+                            repo: _repo,
+                            onNavigate: _onNewTabPageNavigate,
+                          ),
+                        )
                       else
                         _buildPlatformUnavailable(),
 
@@ -848,7 +863,8 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   Widget _buildWebView() {
-    return InAppWebView(
+    try {
+      return InAppWebView(
       key: const ValueKey('browser_webview'),
       initialSettings: _buildSettings(),
       findInteractionController: _findInteractionController,
@@ -892,6 +908,27 @@ class _BrowserScreenState extends State<BrowserScreen>
         return false;
       },
     );
+    } catch (e) {
+      if (kDebugMode) debugPrint('InAppWebView construction failed: $e');
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48),
+              const SizedBox(height: 12),
+              const Text('Browser unavailable. Microsoft Edge WebView2 Runtime is required.'),
+              const SizedBox(height: 8),
+              FilledButton(
+                onPressed: () => launchUrl(Uri.parse('https://developer.microsoft.com/microsoft-edge/webview2/')), 
+                child: const Text('Download WebView2'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildPlatformUnavailable() {
