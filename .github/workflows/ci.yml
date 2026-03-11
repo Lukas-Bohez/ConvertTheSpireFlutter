@@ -87,6 +87,15 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Verify dependencies resolve
+        run: |
+          echo "=== pubspec.yaml ==="
+          cat pubspec.yaml || true
+          echo "=== pubspec.lock (youtube_explode_dart) ==="
+          grep "youtube_explode_dart" pubspec.lock || true
+          echo "--- pub deps ---"
+          flutter pub deps --no-dev || (echo "pub deps failed" && exit 1)
+
       - name: Build Windows release
         run: flutter build windows --release --no-tree-shake-icons
 
@@ -147,6 +156,15 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Verify dependencies resolve
+        run: |
+          echo "=== pubspec.yaml ==="
+          cat pubspec.yaml || true
+          echo "=== pubspec.lock (youtube_explode_dart) ==="
+          grep "youtube_explode_dart" pubspec.lock || true
+          echo "--- pub deps ---"
+          flutter pub deps --no-dev || (echo "pub deps failed" && exit 1)
+
       - name: Build Linux release
         run: flutter build linux --release --no-tree-shake-icons
 
@@ -189,6 +207,15 @@ jobs:
 
       - name: Flutter pub get
         run: flutter pub get
+
+      - name: Verify dependencies resolve
+        run: |
+          echo "=== pubspec.yaml ==="
+          cat pubspec.yaml || true
+          echo "=== pubspec.lock (youtube_explode_dart) ==="
+          grep "youtube_explode_dart" pubspec.lock || true
+          echo "--- pub deps ---"
+          flutter pub deps --no-dev || (echo "pub deps failed" && exit 1)
 
       - name: Build Android APK (split per ABI)
         run: flutter build apk --release --split-per-abi --no-tree-shake-icons
