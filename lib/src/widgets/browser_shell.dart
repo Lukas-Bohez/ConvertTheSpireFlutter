@@ -334,22 +334,25 @@ class _BrowserShellState extends State<BrowserShell> {
             Positioned(
               right: 0,
               top: 2,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                constraints: const BoxConstraints(minWidth: 16),
-                decoration: BoxDecoration(
-                  color: cs.primary,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  widget.queueCount > 99 ? '99+' : '${widget.queueCount}',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    color: cs.onPrimary,
+              child: GestureDetector(
+                onTap: () => widget.onNavigate('queue.tab'),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  constraints: const BoxConstraints(minWidth: 16),
+                  decoration: BoxDecoration(
+                    color: cs.primary,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  textAlign: TextAlign.center,
+                  child: Text(
+                    widget.queueCount > 99 ? '99+' : '${widget.queueCount}',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: cs.onPrimary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             ),
