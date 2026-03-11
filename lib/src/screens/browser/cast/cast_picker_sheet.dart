@@ -103,6 +103,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                       final isSelected = url == _selectedUrl;
                       return ListTile(
                         dense: true,
+                        // ignore: deprecated_member_use
                         leading: Radio<String>(
                           value: url,
                           groupValue: _selectedUrl,
@@ -161,6 +162,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                       final isSelected = device == _selectedDevice;
                       return ListTile(
                         dense: true,
+                        // ignore: deprecated_member_use
                         leading: Radio<CastDevice>(
                           value: device,
                           groupValue: _selectedDevice,

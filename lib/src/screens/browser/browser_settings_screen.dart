@@ -146,6 +146,9 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
         children: engines
             .map((e) => ListTile(
                   title: Text(e),
+                  // RadioGroup API introduced — suppress deprecation info until
+                  // a full migration is implemented.
+                  // ignore: deprecated_member_use
                   leading: Radio<String>(
                     value: e,
                     groupValue: _searchEngine,
