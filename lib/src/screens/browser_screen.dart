@@ -694,8 +694,8 @@ class _BrowserScreenState extends State<BrowserScreen>
                               margin: const EdgeInsets.symmetric(horizontal: 4),
                               decoration: BoxDecoration(
                                 color: isActive
-                                    ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                                    : null,
+                                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                                  : null,
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
                                   color: isActive
