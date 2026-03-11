@@ -1274,8 +1274,8 @@ class _TabSwitcherSheet extends StatelessWidget {
                           width: isActive ? 2 : 1,
                         ),
                         color: tab.isIncognito
-                            ? const Color(0xFF1A1A2E)
-                            : cs.surfaceContainerLow,
+                          ? cs.surface
+                          : cs.surfaceContainerLow,
                       ),
                       child: Column(
                         children: [
@@ -1285,29 +1285,29 @@ class _TabSwitcherSheet extends StatelessWidget {
                             child: Row(
                               children: [
                                 if (tab.isIncognito)
-                                  const Icon(Icons.visibility_off,
-                                      size: 14, color: Colors.white70),
+                                  Icon(Icons.visibility_off,
+                                      size: 14, color: cs.onSurfaceVariant),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
                                     tab.title,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
+                                      style: TextStyle(
                                       fontSize: 12,
                                       color: tab.isIncognito
-                                          ? Colors.white70
+                                          ? cs.onSurfaceVariant
                                           : null,
                                     ),
                                   ),
                                 ),
                                 GestureDetector(
                                   onTap: () => onCloseTab(index),
-                                  child: Icon(Icons.close,
+                                    child: Icon(Icons.close,
                                       size: 16,
                                       color: tab.isIncognito
-                                          ? Colors.white70
-                                          : cs.onSurfaceVariant),
+                                        ? cs.onSurfaceVariant
+                                        : cs.onSurfaceVariant),
                                 ),
                               ],
                             ),
