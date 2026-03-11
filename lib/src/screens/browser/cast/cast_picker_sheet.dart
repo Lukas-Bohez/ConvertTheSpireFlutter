@@ -103,12 +103,11 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                       final isSelected = url == _selectedUrl;
                       return ListTile(
                         dense: true,
-                        // ignore: deprecated_member_use
-                        leading: Radio<String>(
-                          value: url,
-                          groupValue: _selectedUrl,
-                          onChanged: (v) =>
-                              setState(() => _selectedUrl = v),
+                        leading: Icon(
+                          isSelected
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                          color: isSelected ? cs.primary : cs.onSurfaceVariant,
                         ),
                         title: Text(
                           _truncateUrl(url),
@@ -125,8 +124,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                                 : cs.onSurfaceVariant,
                           ),
                         ),
-                        onTap: () =>
-                            setState(() => _selectedUrl = url),
+                        onTap: () => setState(() => _selectedUrl = url),
                       );
                     }),
                   ],
@@ -162,12 +160,11 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                       final isSelected = device == _selectedDevice;
                       return ListTile(
                         dense: true,
-                        // ignore: deprecated_member_use
-                        leading: Radio<CastDevice>(
-                          value: device,
-                          groupValue: _selectedDevice,
-                          onChanged: (v) =>
-                              setState(() => _selectedDevice = v),
+                        leading: Icon(
+                          isSelected
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                          color: isSelected ? cs.primary : cs.onSurfaceVariant,
                         ),
                         title: Text(device.name),
                         subtitle: Text(
@@ -187,8 +184,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                               : Icons.tv,
                           color: isSelected ? cs.primary : null,
                         ),
-                        onTap: () =>
-                            setState(() => _selectedDevice = device),
+                        onTap: () => setState(() => _selectedDevice = device),
                       );
                     }),
                 ],
