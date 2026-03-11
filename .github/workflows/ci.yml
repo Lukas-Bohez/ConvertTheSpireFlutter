@@ -115,15 +115,15 @@ jobs:
             }
           }
 
-      - name: Build Windows release (with retry)
+    - name: Build Windows release (with retry)
         shell: pwsh
         run: |
           $attempt = 0
           $max = 2
-          while ($attempt -lt $max) {
+              while ($attempt -lt $max) {
             Write-Host "Windows build attempt $($attempt + 1) of $max"
             try {
-              flutter build windows --release
+                  flutter build windows --release --no-tree-shake-icons
               break
             } catch {
               Write-Host "Build failed: $_"
@@ -183,7 +183,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Linux release
-        run: flutter build linux --release
+        run: flutter build linux --release --no-tree-shake-icons
 
       - name: Check Linux shared libs
         run: |
@@ -256,7 +256,7 @@ jobs:
           EOF
 
       - name: Build Android APKs (split per ABI)
-        run: flutter build apk --release --split-per-abi
+        run: flutter build apk --release --split-per-abi --no-tree-shake-icons
 
       - name: Prepare artifact
         run: |
