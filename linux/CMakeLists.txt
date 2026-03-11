@@ -106,6 +106,15 @@ foreach(bundled_library ${PLUGIN_BUNDLED_LIBRARIES})
     COMPONENT Runtime)
 endforeach(bundled_library)
 
+# Ensure plugin shared libraries built under the build plugins folder are copied
+# into the bundle lib directory so the runtime can load them from $ORIGIN/lib.
+install(CODE "
+  file(GLOB plugin_libs \"${PROJECT_BINARY_DIR}/plugins/*/*.so\")
+  foreach(p ${plugin_libs})
+    file(COPY ${p} DESTINATION \"${INSTALL_BUNDLE_LIB_DIR}\")
+  endforeach()
+" COMPONENT Runtime)
+
 # Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/linux/")
 install(DIRECTORY "${NATIVE_ASSETS_DIR}"
