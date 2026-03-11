@@ -18,6 +18,11 @@ class BrowserToolbar extends StatelessWidget {
   final VoidCallback onReload;
   final ValueChanged<String> onSubmitted;
   final VoidCallback onCastTap;
+  final VoidCallback? onDownload;
+  final bool isDownloading;
+  final bool downloadEnabled;
+  final bool isKnownDifficultSite;
+  final bool isCastConnected;
   final ValueChanged<String> onMenuAction;
   final VoidCallback? onUrlBarTap;
 
@@ -39,6 +44,11 @@ class BrowserToolbar extends StatelessWidget {
     required this.onReload,
     required this.onSubmitted,
     required this.onCastTap,
+    this.onDownload,
+    this.isDownloading = false,
+    this.downloadEnabled = false,
+    this.isKnownDifficultSite = false,
+    this.isCastConnected = false,
     required this.onMenuAction,
     this.onUrlBarTap,
   });
@@ -137,19 +147,69 @@ class BrowserToolbar extends StatelessWidget {
                         icon: const Icon(Icons.refresh, size: 20),
                         onPressed: onReload,
                       ),
-                      // Cast
-                      IconButton(
-                        padding: const EdgeInsets.all(4),
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.cast, size: 20),
-                        onPressed: onCastTap,
+                      // Download (primary action)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: onDownload == null
+                            ? const SizedBox.shrink()
+                            : (isDownloading
+                                ? const SizedBox(
+                                    width: 28,
+                                    height: 28,
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      ),
+                                    ),
+                                  )
+                                : IconButton(
+                                    padding: const EdgeInsets.all(4),
+                                    visualDensity: VisualDensity.compact,
+                                    icon: const Icon(Icons.download_rounded, size: 20),
+                                    onPressed: downloadEnabled ? onDownload : null,
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                      foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                                    ),
+                                  )),
                       ),
-                      // Menu
+
+                      // Overflow menu (More)
                       PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert),
+                        tooltip: 'More options',
+                        color: Theme.of(context).colorScheme.surfaceContainer,
                         onSelected: onMenuAction,
                         itemBuilder: (ctx) => [
-                          const PopupMenuItem(value: 'open_in_browser', child: Text('Open in browser')),
-                          const PopupMenuItem(value: 'share', child: Text('Share')),
+                          PopupMenuItem(value: 'cast', child: Row(children: [
+                            Icon(Icons.cast, color: Theme.of(context).colorScheme.onSurface),
+                            const SizedBox(width: 12),
+                            const Text('Cast to device'),
+                            const Spacer(),
+                            if (isCastConnected) Icon(Icons.circle, size: 8, color: Theme.of(context).colorScheme.primary),
+                          ])),
+                          PopupMenuItem(value: 'openExternal', child: Row(children: [
+                            Icon(Icons.open_in_browser, color: Theme.of(context).colorScheme.onSurface),
+                            const SizedBox(width: 12),
+                            const Text('Open in browser'),
+                          ])),
+                          PopupMenuItem(value: 'copyLink', child: Row(children: [
+                            Icon(Icons.copy, color: Theme.of(context).colorScheme.onSurface),
+                            const SizedBox(width: 12),
+                            const Text('Copy link'),
+                          ])),
+                          PopupMenuItem(value: 'share', child: Row(children: [
+                            Icon(Icons.share, color: Theme.of(context).colorScheme.onSurface),
+                            const SizedBox(width: 12),
+                            const Text('Share'),
+                          ])),
+                          PopupMenuItem(value: 'addCookies', child: Row(children: [
+                            Icon(Icons.cookie_outlined, color: Theme.of(context).colorScheme.onSurface),
+                            const SizedBox(width: 12),
+                            const Text('Add cookies (for downloads)'),
+                          ])),
                         ],
                       ),
                     ],
