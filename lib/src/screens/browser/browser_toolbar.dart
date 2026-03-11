@@ -124,7 +124,7 @@ class BrowserToolbar extends StatelessWidget {
                             hintText: pageTitle.isNotEmpty ? pageTitle : 'Search or enter URL',
                             hintStyle: TextStyle(
                               fontSize: 13,
-                              color: isIncognito ? Colors.white54 : cs.onSurface.withOpacity(0.6),
+                              color: isIncognito ? Colors.white54 : cs.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
                         ),

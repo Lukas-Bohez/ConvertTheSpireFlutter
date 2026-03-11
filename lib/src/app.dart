@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
-import 'package:flutter/services.dart' show LogicalKeyboardKey, RawKeyEvent, RawKeyDownEvent;
+import 'package:flutter/services.dart' show LogicalKeyboardKey, KeyEvent, KeyDownEvent;
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -58,19 +58,17 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  Future<void> _handleKey(RawKeyEvent event) async {
-    if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.f11) {
-      // Only attempt to toggle fullscreen on desktop platforms.
+  void _handleKey(KeyEvent event) {
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.f11) {
       if (!kIsWeb &&
           (defaultTargetPlatform == TargetPlatform.windows ||
               defaultTargetPlatform == TargetPlatform.linux ||
               defaultTargetPlatform == TargetPlatform.macOS)) {
-        try {
-          final isFull = await windowManager.isFullScreen();
-          await windowManager.setFullScreen(!isFull);
-        } catch (e) {
+        windowManager.isFullScreen().then((isFull) {
+          windowManager.setFullScreen(!isFull);
+        }).catchError((e) {
           if (kDebugMode) debugPrint('Failed to toggle fullscreen: $e');
-        }
+        });
       }
     }
   }
@@ -256,10 +254,10 @@ class _MyAppState extends State<MyApp> {
                           child: HomeScreen(controller: _controller!),
                         );
 
-                        return RawKeyboardListener(
+                        return KeyboardListener(
                           focusNode: _keyboardFocusNode,
                           autofocus: true,
-                          onKey: _handleKey,
+                          onKeyEvent: _handleKey,
                           child: content,
                         );
                       },
