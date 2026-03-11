@@ -115,7 +115,7 @@ jobs:
             }
           }
 
-    - name: Build Windows release (with retry)
+      - name: Build Windows release (with retry)
         shell: pwsh
         run: |
           $attempt = 0
