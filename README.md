@@ -84,7 +84,7 @@ This project demonstrates patterns common in IoT and embedded-adjacent applicati
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        Flutter UI                           │
-│  HomeScreen (rail nav) → 13 screens (Search, Player, …)    │
+│  HomeScreen (rail nav) → 13 screens (Search, Player, …)     │
 ├─────────────────────────────────────────────────────────────┤
 │                     State Management                        │
 │  AppController (ChangeNotifier + Provider)                  │
