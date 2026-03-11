@@ -101,9 +101,9 @@ This project demonstrates patterns common in IoT and embedded-adjacent applicati
 │  RawDatagramSocket · HttpServer · Isolate.run               │
 └─────────────────────────────────────────────────────────────┘
 ```
-
+Video playback uses `media_kit` and is packaged via the `media_kit_libs_android_video` helper package which bundles the native `libmpv` libraries into the APK. Ensure you pick the correct APK (ConvertTheSpireReborn.apk) for arm64 devices.
 ### Key Files
-
+- Built-in browser shell (flutter_inappwebview)
 | Path | Purpose |
 |------|---------|
 | `lib/main.dart` | Entry point |
@@ -127,10 +127,9 @@ Pre-built binaries are available on the [Releases](https://github.com/Lukas-Bohe
 
 | Platform | File | Notes |
 |----------|------|-------|
-| Windows x64 | `ConvertTheSpire-Windows-vX.Y.Z.zip` | Extract and run `my_flutter_app.exe` |
-| Linux x64 | `ConvertTheSpire-Linux-vX.Y.Z.tar.gz` | Requires `libmpv` at runtime |
-| Android arm64 | `app-arm64-v8a-release.apk` | Modern 64-bit devices |
-| Android armv7 | `app-armeabi-v7a-release.apk` | Older 32-bit devices |
+| Windows x64 | ConvertTheSpireReborn.zip | Extract and run ConvertTheSpireReborn.exe |
+| Android arm64 | ConvertTheSpireReborn.apk | Side-load on Android 6.0+ |
+| Linux x64 | linux.zip | Requires libmpv at runtime |
 
 ---
 
