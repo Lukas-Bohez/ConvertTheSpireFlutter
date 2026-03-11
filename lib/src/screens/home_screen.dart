@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../theme/app_colors.dart';
 
 import '../models/app_settings.dart';
 import '../models/preview_item.dart';
@@ -876,7 +877,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.warning_amber_rounded, size: 18, color: Colors.orange),
+                        Icon(Icons.warning_amber_rounded, size: 18, color: context.warning),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -884,7 +885,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
-                                ?.copyWith(color: Colors.orange),
+                                ?.copyWith(color: context.warning),
                           ),
                         ),
                       ],
@@ -989,22 +990,22 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (dir.isNotEmpty) return true;
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+          SnackBar(
         content: const Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+                Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
             SizedBox(width: 8),
             Expanded(child: Text('Please select a download folder in Settings first.')),
           ],
         ),
-        backgroundColor: Colors.orange.shade700,
+            backgroundColor: context.warning.withValues(alpha: 0.95),
         duration: const Duration(seconds: 4),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         margin: const EdgeInsets.all(16),
         action: SnackBarAction(
           label: 'Go to Settings',
-          textColor: Colors.white,
+              textColor: Colors.white,
           onPressed: () => _navigateToPage(7),
         ),
       ),
