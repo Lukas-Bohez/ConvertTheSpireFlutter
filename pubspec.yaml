@@ -17,7 +17,7 @@ dependencies:
   path_provider: ^2.1.2
   file_picker: ^10.3.10
   url_launcher: ^6.2.5
-  youtube_explode_dart: ^3.0.5
+  youtube_explode_dart: ^3.0.0
   provider: ^6.0.5
   video_player: ^2.5.1
   archive: ^3.4.10
