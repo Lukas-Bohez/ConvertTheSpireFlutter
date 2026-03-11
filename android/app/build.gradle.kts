@@ -7,7 +7,8 @@ plugins {
 
 android {
     namespace = "com.orokaconner.convertthespirereborn"
-    compileSdk = flutter.compileSdkVersion
+    // Use a fixed SDK to ensure proper native library loading on newer Android versions
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -25,8 +26,10 @@ android {
         applicationId = "com.orokaconner.convertthespirereborn"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // media_kit requires minSdk 21; use 24 for wider device compatibility
         minSdk = 24
-        targetSdk = flutter.targetSdkVersion
+        // Target API 35 to ensure proper .so loading behavior on Android 15 (API 35)
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

@@ -10,3 +10,11 @@
 - **Miner stability** — auto-resume on restart, battery guard pauses native miner, exponential backoff on connection failures, manual retry button, first-run consent dialog
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
+
+## Windows Requirements
+
+If the app fails to open with an error about a missing Visual C++ runtime (e.g. "The specified module could not be found" or errors referencing `vcruntime140.dll`/`msvcp140.dll`), please install the Microsoft Visual C++ Redistributable (x64):
+
+- https://aka.ms/vs/17/release/vc_redist.x64.exe
+
+This is a one-time install required by many native Windows applications and resolves runtime errors caused by missing CRT components used by `libmpv`.

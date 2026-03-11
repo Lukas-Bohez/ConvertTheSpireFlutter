@@ -63,3 +63,11 @@ if(DEFINED INSTALL_BUNDLE_LIB_DIR AND NOT "${INSTALL_BUNDLE_LIB_DIR}" STREQUAL "
     COMPONENT Runtime)
 endif()
 
+# Ensure media_kit native DLLs (libmpv) are copied into the release bundle
+install(CODE "
+  file(GLOB plugin_dlls \"${CMAKE_CURRENT_SOURCE_DIR}/../build/windows/x64/plugins/*/*.dll\")
+  foreach(d ${plugin_dlls})
+    file(COPY ${d} DESTINATION \"${INSTALL_BUNDLE_LIB_DIR}\")
+  endforeach()
+" COMPONENT Runtime)
+

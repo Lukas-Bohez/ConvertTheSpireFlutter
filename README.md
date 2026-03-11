@@ -197,6 +197,8 @@ flutter build apk --release --split-per-abi
 # Output: build/app/outputs/flutter-apk/app-{abi}-release.apk
 ```
 
+Note: Ensure you have added `media_kit_libs_android_video` to `pubspec.yaml` so the native `libmpv` libraries are bundled into the APK. If you ship a single fat APK (without `--split-per-abi`), the `media_kit` plugin may fail to find the native `.so` at runtime on some devices.
+
 For signed release builds, create `android/key.properties`:
 ```properties
 storePassword=YOUR_PASSWORD

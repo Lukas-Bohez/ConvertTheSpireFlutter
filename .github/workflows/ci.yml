@@ -142,6 +142,9 @@ jobs:
         run: |
           $src = "build\windows\x64\runner\Release"
           $dest = "releases\windows"
+          if (-not (Test-Path $src)) { Write-Error "Windows release dir not found"; exit 1 }
+          # Fail fast if libmpv-2.dll is missing from the release directory
+          if (-not (Test-Path "$src\libmpv-2.dll")) { Write-Error "libmpv-2.dll not found in release dir. Build is broken."; exit 1 }
           if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
           New-Item -ItemType Directory -Path $dest -Force | Out-Null
           Copy-Item "$src\*" $dest -Recurse
@@ -252,14 +255,17 @@ jobs:
           storeFile=keystore.jks
           EOF
 
-      - name: Build Android APK
-        run: flutter build apk --release
+      - name: Build Android APKs (split per ABI)
+        run: flutter build apk --release --split-per-abi
 
       - name: Prepare artifact
         run: |
           rm -rf releases/android
           mkdir -p releases/android
-          cp build/app/outputs/flutter-apk/app-release.apk releases/android/ConvertTheSpireReborn.apk
+          # Copy all split APKs produced by --split-per-abi
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk releases/android/ || true
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk releases/android/ || true
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk releases/android/ || true
 
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
@@ -309,6 +315,6 @@ jobs:
           files: |
             ConvertTheSpireReborn.zip
             linux.zip
-            artifacts/android-release/ConvertTheSpireReborn.apk
+            artifacts/android-release/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
