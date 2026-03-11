@@ -1337,9 +1337,10 @@ class _PlayerScreenState extends State<PlayerScreen>
   Color get _sub =>
       Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55);
   Color get _div => Theme.of(context).dividerColor;
-  Color get _tile => Theme.of(context).brightness == Brightness.dark
-      ? const Color(0xFF2C2C2E)
-      : const Color(0xFFE0E0E0);
+  Color get _tile {
+    final cs = Theme.of(context).colorScheme;
+    return cs.brightness == Brightness.dark ? cs.surfaceContainerHighest : cs.surface;
+  }
 
   static Color _a(double a) => _accent.withValues(alpha: a);
 
