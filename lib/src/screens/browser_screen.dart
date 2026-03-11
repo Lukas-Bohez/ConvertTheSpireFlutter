@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'dart:typed_data';
+// 'dart:typed_data' not needed; removed to satisfy analyzer.
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
@@ -73,6 +73,9 @@ class _BrowserScreenState extends State<BrowserScreen>
   String _searchEngine = 'DuckDuckGo';
   // Download state for toolbar
   bool _isDownloading = false;
+  // Field kept to record download errors (currently only assigned).
+  // ignore: unused_field
+  String? _downloadError;
 
   // Find-in-page state
   bool _showFindBar = false;
