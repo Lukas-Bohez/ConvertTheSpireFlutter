@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -125,6 +126,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     // Desktop: system-tray & shortcut.
     _initDesktopFeatures();
+
+    // Restore last selected tab if present.
+    SharedPreferences.getInstance().then((prefs) {
+      final saved = prefs.getInt('last_tab');
+      if (saved != null && mounted) {
+        setState(() {
+          _selectedPageIndex = saved;
+        });
+      }
+    });
   }
 
   @override
@@ -287,7 +298,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _selectedPageIndex = index;
       _visitedPages.add(index);
     });
+    // Persist last selected tab
+    SharedPreferences.getInstance().then((prefs) => prefs.setInt('last_tab', index));
   }
+
+  /// Alias used by tappable top-bar UI items to navigate to a tab index.
+  void _navigateToTab(int index) => _navigateToPage(index);
 
   void _goBack() {
     if (!_canGoBack) return;
@@ -349,6 +365,17 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         );
 
         // Wrap in CallbackShortcuts for desktop media key support
+        // Also wrap shell in a PopScope so Android back navigates to home instead of exiting.
+        final popWrapped = PopScope(
+          canPop: _selectedPageIndex == 13,
+          onPopInvokedWithResult: (didPop, result) {
+            if (!didPop && _selectedPageIndex != 13) {
+              setState(() => _selectedPageIndex = 13);
+            }
+          },
+          child: shell,
+        );
+
         if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
           return CallbackShortcuts(
             bindings: <ShortcutActivator, VoidCallback>{
@@ -375,12 +402,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             },
             child: Focus(
               autofocus: true,
-              child: shell,
+              child: popWrapped,
             ),
           );
         }
 
-        return shell;
+        return popWrapped;
       },
     );
   }
@@ -1201,7 +1228,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         if (items.length > 1) ...[
           const SizedBox(height: 8),
           Card(
-            color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Column(
@@ -1226,6 +1253,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           value: _addRangeFrom.clamp(1, items.length),
                           isDense: true,
                           isExpanded: true,
+                          dropdownColor: Theme.of(context).colorScheme.surfaceContainer,
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                           items: List.generate(items.length, (i) {
                             return DropdownMenuItem(value: i + 1, child: Text('${i + 1}'));
                           }),
@@ -1245,6 +1274,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           value: _addRangeTo.clamp(_addRangeFrom, items.length),
                           isDense: true,
                           isExpanded: true,
+                          dropdownColor: Theme.of(context).colorScheme.surfaceContainer,
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                           items: List.generate(
                             items.length - _addRangeFrom + 1,
                             (i) {
