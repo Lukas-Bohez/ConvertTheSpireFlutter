@@ -12,6 +12,7 @@ import '../services/computation_service.dart';
 import '../services/coordinator_service.dart';
 import '../services/native_miner_service.dart';
 import '../services/qubic_service.dart';
+import '../theme/app_colors.dart';
 
 /// Full-page screen for the Qubic mining contribution feature.
 ///
@@ -547,7 +548,7 @@ class SupportScreenState extends State<SupportScreen>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: isEnabled
-            ? BorderSide(color: Colors.green.shade400, width: 2)
+            ? BorderSide(color: context.success.withValues(alpha: 0.7), width: 2)
             : BorderSide.none,
       ),
       child: Container(
@@ -579,7 +580,7 @@ class SupportScreenState extends State<SupportScreen>
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: isEnabled
-                          ? Colors.green.shade100
+                          ? context.success.withValues(alpha: 0.12)
                           : cs.primary.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
@@ -588,7 +589,7 @@ class SupportScreenState extends State<SupportScreen>
                           ? Icons.flash_on_rounded
                           : Icons.toll_rounded,
                       size: 28,
-                      color: isEnabled ? Colors.green : cs.primary,
+                      color: isEnabled ? context.success : cs.primary,
                     ),
                   ),
                 ),
@@ -605,7 +606,7 @@ class SupportScreenState extends State<SupportScreen>
                           fontSize: 19,
                           fontWeight: FontWeight.bold,
                           color: isEnabled
-                              ? Colors.green.shade700
+                              ? context.success.withValues(alpha: 0.85)
                               : cs.onSurface,
                         ),
                       ),
@@ -744,7 +745,7 @@ class SupportScreenState extends State<SupportScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: Colors.green),
+          Icon(icon, size: 20, color: context.success),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -895,7 +896,7 @@ class SupportScreenState extends State<SupportScreen>
           children: [
             Row(
               children: [
-                Icon(Icons.verified_user, color: Colors.green.shade600),
+                Icon(Icons.verified_user, color: context.success.withValues(alpha: 0.8)),
                 const SizedBox(width: 8),
                 const Text('Our Guarantees',
                     style:
@@ -925,7 +926,7 @@ class SupportScreenState extends State<SupportScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.check_circle, size: 18, color: Colors.green.shade600),
+          Icon(Icons.check_circle, size: 18, color: context.success.withValues(alpha: 0.8)),
           const SizedBox(width: 8),
           Expanded(
               child: Text(text, style: const TextStyle(fontSize: 13))),
@@ -1154,7 +1155,7 @@ class SupportScreenState extends State<SupportScreen>
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.15),
+                      color: context.success.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text('POOL',
@@ -1232,7 +1233,7 @@ class SupportScreenState extends State<SupportScreen>
                       _batteryLevel > 50
                           ? Icons.battery_full
                           : Icons.battery_3_bar,
-                      _batteryLevel > 30 ? Colors.green : Colors.orange),
+                      _batteryLevel > 30 ? context.success : context.warning),
                   const SizedBox(width: 8),
                   _statCard(
                       'Support',
@@ -1273,7 +1274,7 @@ class SupportScreenState extends State<SupportScreen>
                 children: [
                   _statCard('Active', '${_compute.activeCount}', Icons.memory,
                       _compute.activeCount > 0
-                          ? Colors.green
+                          ? context.success
                           : cs.onSurfaceVariant),
                   const SizedBox(width: 8),
                   _statCard('Queued', '${_compute.queuedCount}',
