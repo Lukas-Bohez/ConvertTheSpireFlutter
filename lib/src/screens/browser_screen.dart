@@ -66,6 +66,9 @@ class _BrowserScreenState extends State<BrowserScreen>
   bool _showNewTabPage = true;
   bool _isFavourited = false;
   String _searchEngine = 'DuckDuckGo';
+  // Download state for toolbar
+  bool _isDownloading = false;
+  String? _downloadError;
 
   // Find-in-page state
   bool _showFindBar = false;
@@ -757,6 +760,11 @@ class _BrowserScreenState extends State<BrowserScreen>
                   onReload: _reload,
                   onSubmitted: _navigateTo,
                   onCastTap: _openCastSheet,
+                  onDownload: _handleDownload,
+                  isDownloading: _isDownloading,
+                  downloadEnabled: (_addressController.text.trim().isNotEmpty && _addressController.text.trim() != 'about:blank' && (_addressController.text.startsWith('http://') || _addressController.text.startsWith('https://'))),
+                  isKnownDifficultSite: DownloadService.isDifficultSite(_addressController.text),
+                  isCastConnected: _castService.activeDevice != null,
                   onMenuAction: _handleMenuAction,
                   onUrlBarTap: _showTabSwitcher,
                 ),
@@ -1026,33 +1034,125 @@ class _BrowserScreenState extends State<BrowserScreen>
       case 'new_tab':
         _tabManager.addTab();
         setState(() => _showNewTabPage = true);
+        break;
       case 'incognito':
         _toggleIncognito();
+        break;
       case 'add_favourite':
         _toggleFavourite();
+        break;
       case 'share':
         final url = _addressController.text.trim();
         if (url.isNotEmpty) {
           // ignore: deprecated_member_use
           Share.share(url);
         }
+        break;
       case 'desktop_mode':
         _toggleDesktopMode();
+        break;
       case 'adblock':
         _adBlock.toggleAdBlock();
         setState(() {});
+        break;
       case 'download':
         _addCurrentToQueue();
+        break;
       case 'external':
+      case 'openExternal':
         _openInExternal();
+        break;
       case 'find':
         _openFindInPage();
+        break;
       case 'history':
         _openHistory();
+        break;
       case 'favourites':
         _openFavourites();
+        break;
       case 'settings':
+      case 'addCookies':
         _openSettings();
+        break;
+      case 'cast':
+        _openCastSheet();
+        break;
+      case 'copyLink':
+        final url = _addressController.text.trim();
+        if (url.isNotEmpty) {
+          Clipboard.setData(ClipboardData(text: url));
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
+        }
+        break;
+      case 'copy':
+        final url = _addressController.text.trim();
+        if (url.isNotEmpty) {
+          Clipboard.setData(ClipboardData(text: url));
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  Future<void> _handleDownload() async {
+    final url = _addressController.text.trim();
+    if (url.isEmpty || url == 'about:blank' || url.startsWith('chrome:') || !(url.startsWith('http://') || url.startsWith('https://'))) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No downloadable page loaded.')));
+      return;
+    }
+
+    setState(() {
+      _isDownloading = true;
+      _downloadError = null;
+    });
+
+    try {
+      final title = _pageTitle.isNotEmpty ? _pageTitle : '';
+      final previewItem = PreviewItem(
+        id: url,
+        title: title.isNotEmpty ? title : url,
+        url: url,
+        uploader: '',
+        duration: null,
+        thumbnailUrl: null,
+      );
+
+      final app = context.read<AppController>();
+      // Default to mp4 for generic page media
+      const format = 'mp4';
+      app.addToQueue(previewItem, format);
+
+      // Find the queued item
+      final queued = app.queue.firstWhere((q) => q.url == url && q.format == format);
+
+      // Start download (don't await fully — show immediate feedback)
+      unawaited(app.downloadSingle(queued).then((_) {
+        if (mounted) setState(() => _isDownloading = false);
+      }).catchError((e) {
+        if (mounted) {
+          setState(() {
+            _downloadError = e.toString();
+            _isDownloading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(DownloadService.translateError(e.toString()))));
+        }
+      }));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download started: ${title.isNotEmpty ? title : url}')));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _downloadError = e.toString();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(DownloadService.translateError(e.toString()))));
+      }
+    } finally {
+      // leave _isDownloading toggled off when download completes
     }
   }
 
