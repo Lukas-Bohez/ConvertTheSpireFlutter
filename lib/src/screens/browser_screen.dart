@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
@@ -16,6 +19,8 @@ import '../browser/video/video_detector_service.dart';
 import '../data/browser_db.dart';
 import '../services/download_service.dart';
 import '../models/search_result.dart';
+import '../models/preview_item.dart';
+import '../state/app_controller.dart';
 import 'browser/browser_bottom_bar.dart';
 import 'browser/browser_toolbar.dart';
 import 'browser/cast/cast_picker_sheet.dart';
@@ -68,7 +73,6 @@ class _BrowserScreenState extends State<BrowserScreen>
   String _searchEngine = 'DuckDuckGo';
   // Download state for toolbar
   bool _isDownloading = false;
-  String? _downloadError;
 
   // Find-in-page state
   bool _showFindBar = false;
