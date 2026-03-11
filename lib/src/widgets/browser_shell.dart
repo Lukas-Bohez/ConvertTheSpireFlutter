@@ -469,7 +469,10 @@ class _SuggestionsDropdown extends StatelessWidget {
         Positioned.fill(
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
-            onTap: onDismiss,
+            // Dismiss on pointer down so the overlay is removed before the
+            // remainder of the gesture is processed. This lets the underlying
+            // widget receive the tap (e.g. a navigation item) and act on it.
+            onTapDown: (_) => onDismiss(),
           ),
         ),
         CompositedTransformFollower(
