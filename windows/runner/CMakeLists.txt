@@ -56,8 +56,10 @@ endforeach()
 # CRT rather than a possibly incompatible plugin copy. The file path
 # below is relative to the project; it will exist after plugin files are
 # staged during build. This mirrors the recommended workaround.
-install(FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/../build/windows/x64/plugins/media_kit_libs_windows_video/msvcp140.dll"
-  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
-  COMPONENT Runtime)
+if(DEFINED INSTALL_BUNDLE_LIB_DIR AND NOT "${INSTALL_BUNDLE_LIB_DIR}" STREQUAL "")
+  install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../build/windows/x64/plugins/media_kit_libs_windows_video/msvcp140.dll"
+    DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+    COMPONENT Runtime)
+endif()
 
