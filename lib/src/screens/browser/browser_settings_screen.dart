@@ -141,31 +141,25 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
     const engines = ['DuckDuckGo', 'Google', 'Bing', 'Brave'];
     showDialog(
       context: context,
-      builder: (ctx) => SimpleDialog(
-        title: const Text('Search Engine'),
-        children: engines
-            .map((e) => ListTile(
-                  title: Text(e),
-                  // RadioGroup API introduced — suppress deprecation info until
-                  // a full migration is implemented.
-                  // ignore: deprecated_member_use
-                  leading: Radio<String>(
-                    value: e,
-                    groupValue: _searchEngine,
-                    onChanged: (v) {
-                      setState(() => _searchEngine = v!);
-                      _savePref('browser_search_engine', v!);
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return SimpleDialog(
+          title: const Text('Search Engine'),
+          children: engines
+              .map((e) => ListTile(
+                    title: Text(e),
+                    trailing: e == _searchEngine
+                        ? Icon(Icons.check, color: cs.primary)
+                        : null,
+                    onTap: () {
+                      setState(() => _searchEngine = e);
+                      _savePref('browser_search_engine', e);
                       Navigator.pop(ctx);
                     },
-                  ),
-                  onTap: () {
-                    setState(() => _searchEngine = e);
-                    _savePref('browser_search_engine', e);
-                    Navigator.pop(ctx);
-                  },
-                ))
-            .toList(),
-      ),
+                  ))
+              .toList(),
+        );
+      },
     );
   }
 
