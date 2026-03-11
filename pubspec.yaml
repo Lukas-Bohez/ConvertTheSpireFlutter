@@ -45,3 +45,10 @@ dependencies:
   ffmpeg_kit_flutter_new: any
   flutter_local_notifications: any
   tray_manager: any
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/images/
+    - assets/icons/
