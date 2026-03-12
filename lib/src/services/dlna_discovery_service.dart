@@ -149,8 +149,8 @@ class DlnaDiscoveryService {
           final datagram = socket.receive();
           if (datagram == null) return;
           final response = utf8.decode(datagram.data, allowMalformed: true);
-          final future = _parseResponse(response, datagram.address)
-              .catchError((e) {
+          final future =
+              _parseResponse(response, datagram.address).catchError((e) {
             debugPrint('DLNA: failed to parse response: $e');
             return null;
           });
@@ -182,6 +182,15 @@ class DlnaDiscoveryService {
     required Duration timeout,
   }) async {
     if (kIsWeb) return [];
+    // mDNS APIs used here rely on socket options that are not supported on
+    // Windows in this environment and cause O/S errors. Disable mDNS on
+    // Windows to avoid socket option failures (use SSDP only).
+    try {
+      if (Platform.isWindows) {
+        debugPrint('mDNS discovery disabled on Windows');
+        return [];
+      }
+    } catch (_) {}
 
     final devices = <DlnaDevice>[];
     MDnsClient? client;
@@ -262,7 +271,17 @@ class DlnaDiscoveryService {
   ///
   /// Attempts to fetch the device description XML from common DLNA ports.
   Future<DlnaDevice?> discoverByIp(String ip) async {
-    final commonPorts = [8060, 55000, 49152, 49153, 7676, 8008, 8443, 1400, 9197];
+    final commonPorts = [
+      8060,
+      55000,
+      49152,
+      49153,
+      7676,
+      8008,
+      8443,
+      1400,
+      9197
+    ];
     final address = InternetAddress(ip);
 
     for (final port in commonPorts) {
@@ -329,8 +348,8 @@ class DlnaDiscoveryService {
       final xml = resp.body;
 
       // Extract device name
-      final nameMatch = RegExp(r'<friendlyName>(.*?)</friendlyName>')
-          .firstMatch(xml);
+      final nameMatch =
+          RegExp(r'<friendlyName>(.*?)</friendlyName>').firstMatch(xml);
       final name = nameMatch?.group(1) ?? 'Unknown Device';
 
       // Extract device type
