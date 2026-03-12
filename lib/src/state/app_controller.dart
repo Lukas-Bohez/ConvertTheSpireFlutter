@@ -54,6 +54,9 @@ class AppController extends ChangeNotifier {
 
   AppSettings? _settings;
   AppSettings? get settings => _settings;
+  // Active tab index for the shell (0-13). Restored once at startup.
+  int _activeTabIndex = 13;
+  int get activeTabIndex => _activeTabIndex;
 
   // Onboarding/version gating
   bool onboardingChecked = false;
@@ -109,6 +112,21 @@ class AppController extends ChangeNotifier {
     }
     notifyListeners();
 
+    // Restore last selected tab (if present). Only restore once during
+    // controller initialization to avoid racing with manual navigation.
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getInt('last_tab');
+      if (saved != null) {
+        var selected = saved;
+        if (selected == 2) selected = 13; // never restore directly into browser
+        _activeTabIndex = selected;
+        if (kDebugMode) debugPrint('[AppController] restored last_tab -> $_activeTabIndex');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[AppController] prefs restore failed: $e');
+    }
+
     // Check whether onboarding needs to be shown for this app version.
     unawaited(checkOnboardingStatus());
 
@@ -123,6 +141,17 @@ class AppController extends ChangeNotifier {
       _ensureFfmpegOnBoot();
       _ensureYtDlpOnBoot();
     }
+  }
+
+  /// Programmatic tab switch. Persists preference and notifies listeners.
+  void switchToTab(int index) {
+    if (index < 0 || index > 13) return;
+    if (index == _activeTabIndex) return;
+    if (kDebugMode) debugPrint('[AppController] switchToTab requested: $_activeTabIndex -> $index\n${StackTrace.current}');
+    _activeTabIndex = index;
+    // Persist asynchronously; don't await here.
+    SharedPreferences.getInstance().then((prefs) => prefs.setInt('last_tab', index));
+    notifyListeners();
   }
 
   /// Fire-and-forget FFmpeg check at startup so it's ready before downloads.

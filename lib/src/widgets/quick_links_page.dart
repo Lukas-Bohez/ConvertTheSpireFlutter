@@ -54,6 +54,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
           // App branding
           Center(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
                   padding: const EdgeInsets.all(20),
@@ -161,9 +162,10 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
           child: InkWell(
             onTap: widget.onTap,
             borderRadius: BorderRadius.circular(14),
-            child: Padding(
+              child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(

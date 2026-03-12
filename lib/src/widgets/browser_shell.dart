@@ -1,5 +1,6 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../state/app_controller.dart';
 
 import 'quick_links_service.dart';
 
@@ -47,9 +48,7 @@ class _BrowserShellState extends State<BrowserShell> {
   bool _showQueueDesktop = true;
   late final TextEditingController _urlEditController;
   final FocusNode _urlFocusNode = FocusNode();
-  final LayerLink _layerLink = LayerLink();
-  OverlayEntry? _suggestionsOverlay;
-  Timer? _suggestionDebounce;
+  // overlay/old suggestion machinery removed in favor of RawAutocomplete
 
   @override
   void initState() {
@@ -59,7 +58,6 @@ class _BrowserShellState extends State<BrowserShell> {
 
   @override
   void dispose() {
-    _removeSuggestions();
     _urlEditController.dispose();
     _urlFocusNode.dispose();
     super.dispose();
@@ -76,34 +74,32 @@ class _BrowserShellState extends State<BrowserShell> {
   void _startEditing() {
     _urlEditController.text = '';
     setState(() => _isEditing = true);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _urlFocusNode.requestFocus();
-      _showSuggestions('');
-    });
+    // RawAutocomplete opens suggestions automatically on focus — no manual call needed
   }
 
   void _submitUrl(String value) {
-    _removeSuggestions();
     setState(() => _isEditing = false);
     final trimmed = value.trim();
     if (trimmed.isEmpty) return;
 
-    // Web URL detection — open in browser tab
-    if (_looksLikeUrl(trimmed)) {
-      final url = trimmed.startsWith('http') ? trimmed : 'https://$trimmed';
-      widget.onOpenUrl?.call(url);
-      return;
-    }
-
     final lower = trimmed.toLowerCase();
 
-    // Direct route match
+    // Prefer exact route matches first (e.g. "queue.tab") so suggestions
+    // that use route strings navigate the app instead of being treated as URLs.
     if (QuickLinksService.routeToIndex.containsKey(lower)) {
+      final idx = QuickLinksService.routeToIndex[lower];
+      if (idx != null) {
+        try {
+          final app = Provider.of<AppController>(context, listen: false);
+          app.switchToTab(idx);
+          return;
+        } catch (_) {}
+      }
       widget.onNavigate(lower);
       return;
     }
 
-    // Title match (case-insensitive)
+    // Title exact match (case-insensitive)
     for (final entry in QuickLinksService.indexToTitle.entries) {
       if (entry.value.toLowerCase() == lower) {
         final route = QuickLinksService.indexToRoute[entry.key];
@@ -114,7 +110,14 @@ class _BrowserShellState extends State<BrowserShell> {
       }
     }
 
-    // Partial match
+    // Web URL detection — open in browser tab
+    if (_looksLikeUrl(trimmed)) {
+      final url = trimmed.startsWith('http') ? trimmed : 'https://$trimmed';
+      widget.onOpenUrl?.call(url);
+      return;
+    }
+
+    // Partial route/name match fallback
     for (final entry in QuickLinksService.routeToIndex.entries) {
       final name = entry.key.replaceAll('.tab', '');
       if (name.startsWith(lower) || name.contains(lower)) {
@@ -135,52 +138,10 @@ class _BrowserShellState extends State<BrowserShell> {
   }
 
   void _cancelEditing() {
-    _removeSuggestions();
     setState(() => _isEditing = false);
   }
 
-  // ── Suggestions overlay ──
-
-  void _showSuggestions(String query) {
-    _removeSuggestions();
-    final overlay = Overlay.of(context);
-    _suggestionsOverlay = OverlayEntry(
-      builder: (ctx) => _SuggestionsDropdown(
-        link: _layerLink,
-        query: query,
-        onSelect: (value) {
-          // Simulate typed input and press Enter: put text into the
-          // address editor and call the same submit handler used by
-          // the TextField so behaviour is identical.
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            try {
-              _urlEditController.text = value;
-              _urlEditController.selection = TextSelection.fromPosition(
-                  TextPosition(offset: value.length));
-              _submitUrl(value);
-            } catch (_) {}
-          });
-          _removeSuggestions();
-          setState(() => _isEditing = false);
-        },
-        onDismiss: _cancelEditing,
-      ),
-    );
-    overlay.insert(_suggestionsOverlay!);
-  }
-
-  void _removeSuggestions() {
-    _suggestionsOverlay?.remove();
-    _suggestionsOverlay = null;
-  }
-
-  void _onUrlChanged(String value) {
-    _suggestionDebounce?.cancel();
-    final q = value.trim().toLowerCase();
-    _suggestionDebounce = Timer(const Duration(milliseconds: 150), () {
-      if (mounted) _showSuggestions(q);
-    });
-  }
+  // Suggestions are handled by RawAutocomplete in the URL bar.
 
   // ── Queue toggle ──
 
@@ -281,12 +242,7 @@ class _BrowserShellState extends State<BrowserShell> {
                     Icons.refresh_rounded, 'Refresh', widget.onRefresh, cs),
                 _navButton(Icons.home_rounded, 'Home', widget.onHome, cs),
                 const SizedBox(width: 6),
-                Expanded(
-                  child: CompositedTransformTarget(
-                    link: _layerLink,
-                    child: _buildUrlBar(cs),
-                  ),
-                ),
+                Expanded(child: _buildUrlBar(cs)),
                 const SizedBox(width: 6),
                 _buildQueueButton(cs, isDesktop),
               ],
@@ -373,155 +329,124 @@ class _BrowserShellState extends State<BrowserShell> {
   }
 
   Widget _buildUrlBar(ColorScheme cs) {
-    if (_isEditing) {
-      return Container(
-        height: 34,
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(8),
-          border:
-              Border.all(color: cs.primary.withValues(alpha: 0.6), width: 1.5),
-        ),
-        child: TextField(
-          controller: _urlEditController,
-          focusNode: _urlFocusNode,
-          style: TextStyle(fontSize: 13, color: cs.onSurface),
-          decoration: InputDecoration(
-            isDense: true,
-            border: InputBorder.none,
-            hintText: 'Search pages or enter web address...',
-            hintStyle: TextStyle(
-                fontSize: 13,
-                color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    if (!_isEditing) {
+      return GestureDetector(
+        onTap: _startEditing,
+        child: Container(
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(8),
           ),
-          onSubmitted: _submitUrl,
-          onChanged: _onUrlChanged,
-          onTapOutside: (_) => _cancelEditing(),
+          child: Row(
+            children: [
+              Icon(_currentFavicon, size: 15, color: cs.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _currentTitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return GestureDetector(
-      onTap: _startEditing,
-      child: Container(
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Icon(_currentFavicon, size: 15, color: cs.primary),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                _currentTitle,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: cs.onSurface,
-                  fontWeight: FontWeight.w500,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Suggestions dropdown overlay ──
-
-class _SuggestionsDropdown extends StatelessWidget {
-  final LayerLink link;
-  final String query;
-  final ValueChanged<String> onSelect;
-  final VoidCallback onDismiss;
-
-  const _SuggestionsDropdown({
-    required this.link,
-    required this.query,
-    required this.onSelect,
-    required this.onDismiss,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    final pages = <_PageSuggestion>[];
+    // Build suggestion list from QuickLinksService
+    final allPages = <_PageSuggestion>[];
     for (final entry in QuickLinksService.indexToTitle.entries) {
       final route = QuickLinksService.indexToRoute[entry.key];
       if (route == null) continue;
       final icon = QuickLinksService.indexToIcon[entry.key] ?? Icons.link;
-      pages.add(_PageSuggestion(
-        title: entry.value,
-        route: route,
-        icon: icon,
-      ));
+      allPages.add(_PageSuggestion(title: entry.value, route: route, icon: icon));
     }
 
-    final filtered = query.isEmpty
-        ? pages
-        : pages.where((p) {
-            final q = query.toLowerCase();
-            return p.title.toLowerCase().contains(q) ||
-                p.route.toLowerCase().contains(q);
-          }).toList();
-
-    if (filtered.isEmpty) return const SizedBox.shrink();
-
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: Listener(
-            behavior: HitTestBehavior.translucent,
-            // Use pointer-down to reliably detect mouse clicks on Windows.
-            onPointerDown: (event) {
-              // Primary mouse button is bit 0 (value 1) across platforms.
-              if ((event.buttons & 0x1) != 0) {
-                onDismiss();
-              }
-            },
+    return RawAutocomplete<_PageSuggestion>(
+      textEditingController: _urlEditController,
+      focusNode: _urlFocusNode,
+      optionsBuilder: (textEditingValue) {
+        final q = textEditingValue.text.trim().toLowerCase();
+        if (q.isEmpty) return allPages;
+        return allPages.where((p) =>
+            p.title.toLowerCase().contains(q) || p.route.toLowerCase().contains(q));
+      },
+      onSelected: (suggestion) {
+        setState(() => _isEditing = false);
+        _submitUrl(suggestion.route);
+      },
+      fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+        return Container(
+          height: 34,
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+                color: cs.primary.withValues(alpha: 0.6), width: 1.5),
           ),
-        ),
-        CompositedTransformFollower(
-          link: link,
-          targetAnchor: Alignment.bottomLeft,
-          followerAnchor: Alignment.topLeft,
-          offset: const Offset(0, 4),
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            autofocus: true,
+            style: TextStyle(fontSize: 13, color: cs.onSurface),
+            decoration: InputDecoration(
+              isDense: true,
+              border: InputBorder.none,
+              hintText: 'Search pages or enter web address...',
+              hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+            onSubmitted: (v) {
+              setState(() => _isEditing = false);
+              _submitUrl(v);
+            },
+            onTapOutside: (_) => _cancelEditing(),
+          ),
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        final cs = Theme.of(context).colorScheme;
+        return Align(
+          alignment: Alignment.topLeft,
           child: Material(
             elevation: 8,
             borderRadius: BorderRadius.circular(10),
             color: cs.surfaceContainerHigh,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                  minWidth: 200, maxWidth: 500, maxHeight: 320),
+              constraints: const BoxConstraints(maxWidth: 500, maxHeight: 280),
               child: ListView.builder(
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(vertical: 4),
-                itemCount: filtered.length,
-                itemBuilder: (ctx, i) {
-                  final p = filtered[i];
-                  return ListTile(
-                    dense: true,
-                    visualDensity: VisualDensity.compact,
-                    leading: Icon(p.icon, size: 18, color: cs.primary),
-                    title: Text(p.title,
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w500)),
-                    onTap: () => onSelect(p.title),
+                itemCount: options.length,
+                itemBuilder: (context, index) {
+                  final p = options.elementAt(index);
+                  return InkWell(
+                    onTap: () => onSelected(p),
+                    child: ListTile(
+                      dense: true,
+                      visualDensity: VisualDensity.compact,
+                      leading: Icon(p.icon, size: 18, color: cs.primary),
+                      title: Text(p.title,
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500)),
+                    ),
                   );
                 },
               ),
             ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
