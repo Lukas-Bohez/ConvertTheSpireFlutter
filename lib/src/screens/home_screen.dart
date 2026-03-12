@@ -1108,7 +1108,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
             Icon(Icons.warning_amber_rounded,
                 color: context.onWarning, size: 20),
@@ -3179,30 +3179,18 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 const Text(
                                   'Selected file:',
                                   style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold),
+                                      fontSize: 12, fontWeight: FontWeight.bold),
                                 ),
                                 Text(
                                   _convertFile!.path
                                       .split(Platform.pathSeparator)
-                                      Row(
+                                      .last,
                                   style: const TextStyle(fontSize: 14),
-                                        Icon(
-                                              isError
-                                                ? Icons.error
-                                                : isWarning
-                                                  ? Icons.warning
-                                                  : isSuccess
-                                                    ? Icons.check_circle
-                                                    : Icons.info,
-                                              size: 16,
-                                              color: isError
-                                                ? context.danger
-                                                : isWarning
-                                                  ? context.warning
-                                                  : isSuccess
-                                                    ? context.success
-                                                    : Theme.of(context).colorScheme.primary,
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
                             icon: const Icon(Icons.close),
                             onPressed: () {
                               setState(() {
