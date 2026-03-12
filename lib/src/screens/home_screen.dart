@@ -160,7 +160,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (!_checkUpdatesOnLaunch && !force) return;
       final info = await UpdateService.checkForUpdate();
       if (info == null) return;
-      final shouldShow = await UpdateService.shouldShowBanner(info.latestVersion);
+      final shouldShow =
+          await UpdateService.shouldShowBanner(info.latestVersion);
       if (mounted) {
         setState(() {
           _updateInfo = info;
@@ -483,9 +484,18 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             onDownload: () {
               String url = _updateInfo!.releaseUrl;
               if (!kIsWeb) {
-                if (Platform.isWindows) url = _updateInfo!.windowsAssetUrl.isNotEmpty ? _updateInfo!.windowsAssetUrl : url;
-                if (Platform.isAndroid) url = _updateInfo!.androidAssetUrl.isNotEmpty ? _updateInfo!.androidAssetUrl : url;
-                if (Platform.isLinux) url = _updateInfo!.linuxAssetUrl.isNotEmpty ? _updateInfo!.linuxAssetUrl : url;
+                if (Platform.isWindows)
+                  url = _updateInfo!.windowsAssetUrl.isNotEmpty
+                      ? _updateInfo!.windowsAssetUrl
+                      : url;
+                if (Platform.isAndroid)
+                  url = _updateInfo!.androidAssetUrl.isNotEmpty
+                      ? _updateInfo!.androidAssetUrl
+                      : url;
+                if (Platform.isLinux)
+                  url = _updateInfo!.linuxAssetUrl.isNotEmpty
+                      ? _updateInfo!.linuxAssetUrl
+                      : url;
               }
               if (url.isNotEmpty) {
                 launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
@@ -2620,7 +2630,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
                           'Will be installed automatically when needed. Use Browse to set a custom path.',
-                            style: Theme.of(context)
+                          style: Theme.of(context)
                               .textTheme
                               .bodySmall
                               ?.copyWith(color: context.warning),
@@ -3051,7 +3061,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       SnackBar(
         content: Row(
           children: [
-            Icon(Icons.check_circle, color: Theme.of(context).colorScheme.onPrimary, size: 20),
+            Icon(Icons.check_circle,
+                color: Theme.of(context).colorScheme.onPrimary, size: 20),
             const SizedBox(width: 8),
             const Text('Settings saved'),
           ],
@@ -3162,10 +3173,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
@@ -3179,7 +3196,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 const Text(
                                   'Selected file:',
                                   style: TextStyle(
-                                      fontSize: 12, fontWeight: FontWeight.bold),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold),
                                 ),
                                 Text(
                                   _convertFile!.path
@@ -3206,10 +3224,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.1),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3)),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withOpacity(0.3)),
                       ),
                       child: Center(
                         child: Column(
@@ -3493,12 +3517,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         return Card(
                           margin: const EdgeInsets.only(bottom: 4),
                           color: isError
-                            ? context.danger.withOpacity(0.1)
-                            : isWarning
-                              ? context.warning.withOpacity(0.1)
-                              : isSuccess
-                                ? context.success.withOpacity(0.1)
-                                : null,
+                              ? context.danger.withOpacity(0.1)
+                              : isWarning
+                                  ? context.warning.withOpacity(0.1)
+                                  : isSuccess
+                                      ? context.success.withOpacity(0.1)
+                                      : null,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 8),
@@ -3512,14 +3536,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                           : isSuccess
                                               ? Icons.check_circle
                                               : Icons.info,
-                                    size: 16,
-                                    color: isError
+                                  size: 16,
+                                  color: isError
                                       ? context.danger
                                       : isWarning
-                                        ? context.warning
-                                        : isSuccess
-                                          ? context.success
-                                          : Theme.of(context).colorScheme.primary,
+                                          ? context.warning
+                                          : isSuccess
+                                              ? context.success
+                                              : Theme.of(context)
+                                                  .colorScheme
+                                                  .primary,
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
