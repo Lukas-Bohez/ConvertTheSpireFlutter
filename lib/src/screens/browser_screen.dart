@@ -927,6 +927,21 @@ class _BrowserScreenState extends State<BrowserScreen>
       );
     } catch (e) {
       if (kDebugMode) debugPrint('InAppWebView construction failed: $e');
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          try {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: const Text('In-app browser unavailable on this device.'),
+              action: SnackBarAction(
+                label: 'Open externally',
+                onPressed: () => launchUrl(Uri.parse('about:blank'),
+                    mode: LaunchMode.externalApplication),
+              ),
+            ));
+          } catch (_) {}
+        });
+      }
+
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
