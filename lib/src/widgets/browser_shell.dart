@@ -150,9 +150,11 @@ class _BrowserShellState extends State<BrowserShell> {
         link: _layerLink,
         query: query,
         onSelect: (route) {
+          // Ensure navigation is invoked first so the app responds even
+          // if overlay removal briefly affects focus/gesture handling.
+          widget.onNavigate(route);
           _removeSuggestions();
           setState(() => _isEditing = false);
-          widget.onNavigate(route);
         },
         onDismiss: _cancelEditing,
       ),
