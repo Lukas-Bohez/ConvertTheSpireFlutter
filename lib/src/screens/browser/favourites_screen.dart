@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/browser_db.dart';
+import '../../widgets/empty_state.dart';
 
 /// Full favourites manager with folders, search, grid/list toggle,
 /// drag-to-reorder, and bulk editing.
@@ -120,8 +121,8 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
                           label: Text(f),
                           selected: _activeFolder == f,
                           onSelected: (_) {
-                            setState(() => _activeFolder =
-                                _activeFolder == f ? null : f);
+                            setState(() =>
+                                _activeFolder = _activeFolder == f ? null : f);
                             _load();
                           },
                         ),
@@ -133,18 +134,11 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
           // ── List / Grid ──
           Expanded(
             child: items.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.star_border,
-                            size: 64,
-                            color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-                        const SizedBox(height: 12),
-                        Text('No favourites yet',
-                            style: TextStyle(color: cs.onSurfaceVariant)),
-                      ],
-                    ),
+                ? EmptyState(
+                    icon: Icons.star_border,
+                    title: 'No favourites yet',
+                    subtitle:
+                        'Add pages to your favourites using the star icon',
                   )
                 : _gridView
                     ? _buildGrid(items)
@@ -165,8 +159,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
       itemCount: items.length,
       onReorder: (oldIndex, newIndex) {
         if (newIndex > oldIndex) newIndex--;
-        final ids =
-            items.map((i) => i['id'] as int).toList();
+        final ids = items.map((i) => i['id'] as int).toList();
         final id = ids.removeAt(oldIndex);
         ids.insert(newIndex, id);
         widget.repo.reorderFavourites(ids);
@@ -300,8 +293,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
             onPressed: () {
               final url = urlC.text.trim();
               if (url.isNotEmpty) {
-                widget.repo.addFavourite(
-                    url, titleC.text.trim(), null);
+                widget.repo.addFavourite(url, titleC.text.trim(), null);
                 Navigator.pop(ctx);
               }
             },
@@ -347,8 +339,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
               widget.repo.removeFavourite(item['url'] as String);
               Navigator.pop(ctx);
             },
-            child:
-                const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
           FilledButton(
             onPressed: () {

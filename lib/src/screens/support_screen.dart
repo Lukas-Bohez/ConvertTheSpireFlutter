@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
+import '../utils/snack.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -21,6 +22,7 @@ import '../theme/app_colors.dart';
 class SupportScreen extends StatefulWidget {
   /// When true the coordinator auto-enables on first build.
   final bool enabled;
+
   /// Fires when the screen's own start/stop button changes state.
   final ValueChanged<bool>? onEnabledChanged;
 
@@ -241,7 +243,9 @@ class SupportScreenState extends State<SupportScreen>
         _compute.setEnabled(false);
         // Also pause the native miner subprocess.
         _coordinator.nativeMiner.stop();
-        if (kDebugMode) debugPrint('SupportScreen: paused compute + miner (battery $_batteryLevel%)');
+        if (kDebugMode)
+          debugPrint(
+              'SupportScreen: paused compute + miner (battery $_batteryLevel%)');
       }
     } else if (_batteryPaused && (!isOnBattery || !isLow)) {
       if (_coordinator.enabled) {
@@ -251,7 +255,8 @@ class SupportScreenState extends State<SupportScreen>
         if (_coordinator.nativeMinerSupported) {
           _coordinator.restartNativeMiner();
         }
-        if (kDebugMode) debugPrint('SupportScreen: resumed compute + miner (power restored)');
+        if (kDebugMode)
+          debugPrint('SupportScreen: resumed compute + miner (power restored)');
       }
     }
 
@@ -310,9 +315,9 @@ class SupportScreenState extends State<SupportScreen>
   int get _nextTierMinutes {
     if (_totalMinedMinutes >= 6000) return _totalMinedMinutes; // Diamond (100h)
     if (_totalMinedMinutes >= 1440) return 6000; // → Diamond
-    if (_totalMinedMinutes >= 300) return 1440;  // → Gold (24h)
-    if (_totalMinedMinutes >= 60) return 300;    // → Silver (5h)
-    return 60;                                    // → Bronze (1h)
+    if (_totalMinedMinutes >= 300) return 1440; // → Gold (24h)
+    if (_totalMinedMinutes >= 60) return 300; // → Silver (5h)
+    return 60; // → Bronze (1h)
   }
 
   /// Format large hash counts with SI suffixes.
@@ -340,8 +345,7 @@ class SupportScreenState extends State<SupportScreen>
 
   // ── Support level helpers (1-10 scale ↔ CPU threads) ───────────
 
-  int get _maxThreads =>
-      !kIsWeb && !_isWeb() ? Platform.numberOfProcessors : 4;
+  int get _maxThreads => !kIsWeb && !_isWeb() ? Platform.numberOfProcessors : 4;
 
   int _levelForThreads(int threads) {
     if (_maxThreads <= 1) return 1;
@@ -437,24 +441,24 @@ class SupportScreenState extends State<SupportScreen>
                   _faqItem(
                     'Will this slow down my device?',
                     'No. Tasks run on idle CPU only and are automatically throttled '
-                    'so your downloads, media playback, and other apps are unaffected.',
+                        'so your downloads, media playback, and other apps are unaffected.',
                   ),
                   _faqItem(
                     'What kind of work does it do?',
                     'On desktop (Windows/Linux) it runs the official qli-Client to perform '
-                    'AI training computations for the Qubic network (pool mining via qubic.li). '
-                    'On other platforms it runs simulated cryptographic tasks locally.',
+                        'AI training computations for the Qubic network (pool mining via qubic.li). '
+                        'On other platforms it runs simulated cryptographic tasks locally.',
                   ),
                   _faqItem(
                     'Can I stop at any time?',
                     'Yes — one tap stops all work instantly. No data is stored '
-                    'on any server.',
+                        'on any server.',
                   ),
                   _faqItem(
                     'Does this mine cryptocurrency?',
                     'Yes — it mines QUBIC tokens using your idle CPU cycles. '
-                    'All earnings go to the developer\u2019s wallet to support '
-                    'continued development of this app.',
+                        'All earnings go to the developer\u2019s wallet to support '
+                        'continued development of this app.',
                   ),
                 ],
               ),
@@ -485,8 +489,7 @@ class SupportScreenState extends State<SupportScreen>
                           'Every task you complete mines QUBIC tokens for the developer. '
                           'You\u2019re directly supporting continued development of this app!',
                           style: TextStyle(
-                              fontSize: 13,
-                              color: cs.onPrimaryContainer),
+                              fontSize: 13, color: cs.onPrimaryContainer),
                         ),
                       ],
                     ),
@@ -503,14 +506,11 @@ class SupportScreenState extends State<SupportScreen>
           child: ListTile(
             leading: const Icon(Icons.coffee, color: Colors.brown),
             title: const Text('Buy Me a Coffee'),
-            subtitle:
-                const Text('Help keep this project free & open-source'),
+            subtitle: const Text('Help keep this project free & open-source'),
             trailing: const Icon(Icons.open_in_new),
             onTap: () async {
-              final uri =
-                  Uri.parse('https://buymeacoffee.com/orokaconner');
-              if (!await launchUrl(uri,
-                  mode: LaunchMode.externalApplication)) {
+              final uri = Uri.parse('https://buymeacoffee.com/orokaconner');
+              if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
                 debugPrint('Could not launch $uri');
               }
             },
@@ -528,11 +528,10 @@ class SupportScreenState extends State<SupportScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(question,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600, fontSize: 14)),
+              style:
+                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
           const SizedBox(height: 4),
-          Text(answer,
-              style: const TextStyle(fontSize: 13, height: 1.4)),
+          Text(answer, style: const TextStyle(fontSize: 13, height: 1.4)),
         ],
       ),
     );
@@ -548,7 +547,8 @@ class SupportScreenState extends State<SupportScreen>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: isEnabled
-            ? BorderSide(color: context.success.withValues(alpha: 0.7), width: 2)
+            ? BorderSide(
+                color: context.success.withValues(alpha: 0.7), width: 2)
             : BorderSide.none,
       ),
       child: Container(
@@ -571,9 +571,8 @@ class SupportScreenState extends State<SupportScreen>
                 AnimatedBuilder(
                   animation: _pulseController,
                   builder: (_, child) => Transform.scale(
-                    scale: isEnabled
-                        ? 1.0 + (_pulseController.value * 0.1)
-                        : 1.0,
+                    scale:
+                        isEnabled ? 1.0 + (_pulseController.value * 0.1) : 1.0,
                     child: child,
                   ),
                   child: Container(
@@ -585,9 +584,7 @@ class SupportScreenState extends State<SupportScreen>
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      isEnabled
-                          ? Icons.flash_on_rounded
-                          : Icons.toll_rounded,
+                      isEnabled ? Icons.flash_on_rounded : Icons.toll_rounded,
                       size: 28,
                       color: isEnabled ? context.success : cs.primary,
                     ),
@@ -649,8 +646,7 @@ class SupportScreenState extends State<SupportScreen>
                       ),
                       child: Column(
                         children: [
-                          Icon(Icons.info_outline,
-                              color: cs.onSurfaceVariant),
+                          Icon(Icons.info_outline, color: cs.onSurfaceVariant),
                           const SizedBox(height: 8),
                           Text(
                             'Not available on Android',
@@ -690,8 +686,7 @@ class SupportScreenState extends State<SupportScreen>
                           icon: const Icon(Icons.flash_on_rounded),
                           label: const Text('Start Contributing'),
                           style: FilledButton.styleFrom(
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                             textStyle: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.bold),
                           ),
@@ -720,19 +715,27 @@ class SupportScreenState extends State<SupportScreen>
               ],
             ),
             const SizedBox(height: 12),
-            _whyRow(Icons.security, 'Real Mining',
+            _whyRow(
+                Icons.security,
+                'Real Mining',
                 'On desktop, your CPU runs official Qubic pool mining via '
-                'qli-Client. Solutions earn real QUBIC tokens paid to the '
-                'developer\u2019s wallet.'),
-            _whyRow(Icons.shield_outlined, '100% Safe',
+                    'qli-Client. Solutions earn real QUBIC tokens paid to the '
+                    'developer\u2019s wallet.'),
+            _whyRow(
+                Icons.shield_outlined,
+                '100% Safe',
                 'Runs in sandboxed Dart Isolates — no access to your files, '
-                'network, or personal data. Zero risk.'),
-            _whyRow(Icons.battery_charging_full, 'Battery Smart',
+                    'network, or personal data. Zero risk.'),
+            _whyRow(
+                Icons.battery_charging_full,
+                'Battery Smart',
                 'Automatically pauses when battery drops below 30%. '
-                'Resumes when plugged in.'),
-            _whyRow(Icons.speed, 'Zero Impact',
+                    'Resumes when plugged in.'),
+            _whyRow(
+                Icons.speed,
+                'Zero Impact',
                 'Uses only idle CPU. You won\'t notice any slowdown in '
-                'your downloads or media playback.'),
+                    'your downloads or media playback.'),
           ],
         ),
       ),
@@ -755,8 +758,7 @@ class SupportScreenState extends State<SupportScreen>
                     style: const TextStyle(
                         fontWeight: FontWeight.w600, fontSize: 14)),
                 const SizedBox(height: 2),
-                Text(desc,
-                    style: const TextStyle(fontSize: 13, height: 1.4)),
+                Text(desc, style: const TextStyle(fontSize: 13, height: 1.4)),
               ],
             ),
           ),
@@ -786,33 +788,33 @@ class SupportScreenState extends State<SupportScreen>
               '1',
               'Weekly Epochs',
               'Qubic operates on a weekly cycle called an epoch. '
-              'Each epoch runs from Wednesday to Wednesday and is made '
-              'up of many short rounds (roughly ~7-second intervals). '
-              'During each round your CPU solves AI training tasks.',
+                  'Each epoch runs from Wednesday to Wednesday and is made '
+                  'up of many short rounds (roughly ~7-second intervals). '
+                  'During each round your CPU solves AI training tasks.',
             ),
             _howStep(
               '2',
               'Mining in Rounds',
               'In every round, the qli-Client sends your CPU a small '
-              'AI training workload. Your processor solves it and submits '
-              'the answer back to the Qubic network. The faster your CPU, '
-              'the more solutions you contribute per epoch.',
+                  'AI training workload. Your processor solves it and submits '
+                  'the answer back to the Qubic network. The faster your CPU, '
+                  'the more solutions you contribute per epoch.',
             ),
             _howStep(
               '3',
               'Earning QUBIC Tokens',
               'At the end of each epoch the Qubic network distributes newly '
-              'created QUBIC tokens. Miners are ranked by the number of valid '
-              'solutions they submitted. More solutions = larger share of the '
-              'weekly token distribution.',
+                  'created QUBIC tokens. Miners are ranked by the number of valid '
+                  'solutions they submitted. More solutions = larger share of the '
+                  'weekly token distribution.',
             ),
             _howStep(
               '4',
               'Pool Mining',
               'This app connects to a mining pool (qubic.li) which combines '
-              'your hashpower with other miners. Rewards are split '
-              'proportionally based on your contribution, so even modest '
-              'hardware earns a steady share every week.',
+                  'your hashpower with other miners. Rewards are split '
+                  'proportionally based on your contribution, so even modest '
+                  'hardware earns a steady share every week.',
             ),
             const SizedBox(height: 4),
             Container(
@@ -877,8 +879,7 @@ class SupportScreenState extends State<SupportScreen>
                     style: const TextStyle(
                         fontWeight: FontWeight.w600, fontSize: 14)),
                 const SizedBox(height: 2),
-                Text(desc,
-                    style: const TextStyle(fontSize: 13, height: 1.4)),
+                Text(desc, style: const TextStyle(fontSize: 13, height: 1.4)),
               ],
             ),
           ),
@@ -896,7 +897,8 @@ class SupportScreenState extends State<SupportScreen>
           children: [
             Row(
               children: [
-                Icon(Icons.verified_user, color: context.success.withValues(alpha: 0.8)),
+                Icon(Icons.verified_user,
+                    color: context.success.withValues(alpha: 0.8)),
                 const SizedBox(width: 8),
                 const Text('Our Guarantees',
                     style:
@@ -904,14 +906,11 @@ class SupportScreenState extends State<SupportScreen>
               ],
             ),
             const SizedBox(height: 12),
-            _guaranteeChip(
-                'Opt-in only — never runs without your consent'),
+            _guaranteeChip('Opt-in only — never runs without your consent'),
             _guaranteeChip(
                 'Uses official qli-Client from qubic.li — transparent & auditable'),
-            _guaranteeChip(
-                'One tap to stop, instantly — no questions asked'),
-            _guaranteeChip(
-                'Open source — audit every line of code yourself'),
+            _guaranteeChip('One tap to stop, instantly — no questions asked'),
+            _guaranteeChip('Open source — audit every line of code yourself'),
             _guaranteeChip(
                 'Real Qubic pool mining — earnings visible on chain'),
           ],
@@ -926,10 +925,10 @@ class SupportScreenState extends State<SupportScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.check_circle, size: 18, color: context.success.withValues(alpha: 0.8)),
+          Icon(Icons.check_circle,
+              size: 18, color: context.success.withValues(alpha: 0.8)),
           const SizedBox(width: 8),
-          Expanded(
-              child: Text(text, style: const TextStyle(fontSize: 13))),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
         ],
       ),
     );
@@ -946,8 +945,7 @@ class SupportScreenState extends State<SupportScreen>
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-            color: _tierColor(context).withValues(alpha: 0.5)),
+        side: BorderSide(color: _tierColor(context).withValues(alpha: 0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -975,8 +973,8 @@ class SupportScreenState extends State<SupportScreen>
                 const Spacer(),
                 if (!atMax)
                   Text(remainLabel,
-                      style: TextStyle(
-                          fontSize: 12, color: cs.onSurfaceVariant)),
+                      style:
+                          TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
               ],
             ),
             if (!atMax) ...[
@@ -1100,11 +1098,12 @@ class SupportScreenState extends State<SupportScreen>
                     ),
                   if (_coordinator.lastError != null &&
                       _coordinator.lastError!.isNotEmpty &&
-                      !isRunning && !isStarting && !isLocal)
+                      !isRunning &&
+                      !isStarting &&
+                      !isLocal)
                     Text(_coordinator.lastError!,
                         style: TextStyle(color: cs.error, fontSize: 12)),
-                  if (isNative &&
-                      miner.state == MinerState.error)
+                  if (isNative && miner.state == MinerState.error)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: OutlinedButton.icon(
@@ -1134,7 +1133,8 @@ class SupportScreenState extends State<SupportScreen>
     final miner = _coordinator.nativeMiner;
     // Show native dashboard whenever native mining is supported and we're not
     // in local-fallback mode (covers starting, running, error states).
-    final isNative = _coordinator.nativeMinerSupported && !_coordinator.localMode;
+    final isNative =
+        _coordinator.nativeMinerSupported && !_coordinator.localMode;
 
     return Card(
       child: Padding(
@@ -1147,13 +1147,13 @@ class SupportScreenState extends State<SupportScreen>
                 Icon(Icons.dashboard, color: cs.primary),
                 const SizedBox(width: 8),
                 const Text('Live Dashboard',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const Spacer(),
                 if (isNative)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: context.success.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
@@ -1166,8 +1166,8 @@ class SupportScreenState extends State<SupportScreen>
                   )
                 else if (_coordinator.localMode)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: cs.outline.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
@@ -1193,9 +1193,7 @@ class SupportScreenState extends State<SupportScreen>
                           ? _formatHashCount(miner.hashRate.round())
                           : '\u2014',
                       Icons.speed,
-                      miner.hashRate > 0
-                          ? Colors.teal
-                          : cs.onSurfaceVariant),
+                      miner.hashRate > 0 ? Colors.teal : cs.onSurfaceVariant),
                   const SizedBox(width: 8),
                   _statCard(
                       'Avg Speed',
@@ -1258,12 +1256,10 @@ class SupportScreenState extends State<SupportScreen>
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
                     children: [
-                      Icon(Icons.open_in_new,
-                          size: 14, color: cs.primary),
+                      Icon(Icons.open_in_new, size: 14, color: cs.primary),
                       const SizedBox(width: 6),
                       Text('View pool stats on qubic.li',
-                          style: TextStyle(
-                              fontSize: 12, color: cs.primary)),
+                          style: TextStyle(fontSize: 12, color: cs.primary)),
                     ],
                   ),
                 ),
@@ -1272,7 +1268,10 @@ class SupportScreenState extends State<SupportScreen>
               // Local simulated mode stats
               Row(
                 children: [
-                  _statCard('Active', '${_compute.activeCount}', Icons.memory,
+                  _statCard(
+                      'Active',
+                      '${_compute.activeCount}',
+                      Icons.memory,
                       _compute.activeCount > 0
                           ? context.success
                           : cs.onSurfaceVariant),
@@ -1280,13 +1279,8 @@ class SupportScreenState extends State<SupportScreen>
                   _statCard('Queued', '${_compute.queuedCount}',
                       Icons.hourglass_top, cs.onSurfaceVariant),
                   const SizedBox(width: 8),
-                  _statCard(
-                      'Done',
-                      '$_totalCompleted',
-                      Icons.check_circle,
-                      _totalCompleted > 0
-                          ? Colors.blue
-                          : cs.onSurfaceVariant),
+                  _statCard('Done', '$_totalCompleted', Icons.check_circle,
+                      _totalCompleted > 0 ? Colors.blue : cs.onSurfaceVariant),
                   const SizedBox(width: 8),
                   _statCard(
                       'Battery',
@@ -1318,9 +1312,7 @@ class SupportScreenState extends State<SupportScreen>
                   const SizedBox(width: 8),
                   _statCard(
                       'H/s',
-                      _compute.activeCount > 0
-                          ? _estimateHashRate()
-                          : '\u2014',
+                      _compute.activeCount > 0 ? _estimateHashRate() : '\u2014',
                       Icons.speed,
                       _compute.activeCount > 0
                           ? Colors.teal
@@ -1330,8 +1322,8 @@ class SupportScreenState extends State<SupportScreen>
               const SizedBox(height: 12),
               if (_compute.runningJobIds.isNotEmpty) ...[
                 const Text('Running:',
-                    style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600)),
+                    style:
+                        TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
                 for (final jobId in _compute.runningJobIds)
                   Padding(
@@ -1359,17 +1351,15 @@ class SupportScreenState extends State<SupportScreen>
               if (_compute.completedResults.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 const Text('Recent:',
-                    style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600)),
+                    style:
+                        TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
-                for (final r
-                    in _compute.completedResults.reversed.take(5))
+                for (final r in _compute.completedResults.reversed.take(5))
                   Padding(
                     padding: const EdgeInsets.only(left: 4, bottom: 3),
                     child: Row(
                       children: [
-                        const Icon(Icons.check,
-                            size: 14, color: Colors.green),
+                        const Icon(Icons.check, size: 14, color: Colors.green),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -1398,12 +1388,10 @@ class SupportScreenState extends State<SupportScreen>
     );
   }
 
-  Widget _statCard(
-      String label, String value, IconData icon, Color color) {
+  Widget _statCard(String label, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
@@ -1414,13 +1402,10 @@ class SupportScreenState extends State<SupportScreen>
             const SizedBox(height: 4),
             Text(value,
                 style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: color)),
+                    fontSize: 16, fontWeight: FontWeight.bold, color: color)),
             Text(label,
                 style: TextStyle(
-                    fontSize: 11,
-                    color: color.withValues(alpha: 0.7))),
+                    fontSize: 11, color: color.withValues(alpha: 0.7))),
           ],
         ),
       ),
@@ -1492,11 +1477,9 @@ class SupportScreenState extends State<SupportScreen>
                   onPressed: () {
                     Clipboard.setData(
                         ClipboardData(text: QubicService.walletId));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Wallet address copied'),
-                          duration: Duration(seconds: 2)),
-                    );
+                    Snack.show(context, 'Wallet address copied',
+                        level: SnackLevel.success,
+                        duration: const Duration(seconds: 2));
                   },
                   icon: const Icon(Icons.copy, size: 16),
                   label: const Text('Copy Address'),
@@ -1546,7 +1529,8 @@ class SupportScreenState extends State<SupportScreen>
         child: Row(
           children: [
             Icon(Icons.battery_alert,
-                color: Theme.of(context).colorScheme.onErrorContainer, size: 24),
+                color: Theme.of(context).colorScheme.onErrorContainer,
+                size: 24),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -1582,190 +1566,185 @@ class SupportScreenState extends State<SupportScreen>
           collapsedShape: const Border(),
           leading: Icon(Icons.settings, color: cs.primary),
           title: const Text('Advanced Settings'),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── Mining mode info ──────────────────────────────
-                if (isNative) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.check_circle,
-                            color: Colors.green, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Real pool mining via qli-Client v${NativeMinerService.clientVersion}\n'
-                            'Registerless mode \u2022 PPS (Pay Per Share)',
-                            style:
-                                TextStyle(fontSize: 12, color: cs.onSurface),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Mining mode info ──────────────────────────────
+                  if (isNative) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle,
+                              color: Colors.green, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Real pool mining via qli-Client v${NativeMinerService.clientVersion}\n'
+                              'Registerless mode \u2022 PPS (Pay Per Share)',
+                              style:
+                                  TextStyle(fontSize: 12, color: cs.onSurface),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                ] else ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: cs.errorContainer.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline,
-                            color: cs.error, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Real Qubic mining requires Windows or Linux.\n'
-                            'Running simulated tasks on this platform.',
-                            style: TextStyle(
-                                fontSize: 12, color: cs.onErrorContainer),
+                    const SizedBox(height: 12),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: cs.errorContainer.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: cs.error, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Real Qubic mining requires Windows or Linux.\n'
+                              'Running simulated tasks on this platform.',
+                              style: TextStyle(
+                                  fontSize: 12, color: cs.onErrorContainer),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
+                    const SizedBox(height: 12),
+                  ],
 
-                // ── Support level slider (1-10) ──────────────────
-                if (isNative) ...[
-                  Text(
-                    'How much would you like to support?',
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Level ${_levelForThreads(miner.cpuThreads)} \u2014 ${_levelLabel(_levelForThreads(miner.cpuThreads))}',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: cs.primary),
+                  // ── Support level slider (1-10) ──────────────────
+                  if (isNative) ...[
+                    Text(
+                      'How much would you like to support?',
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Level ${_levelForThreads(miner.cpuThreads)} \u2014 ${_levelLabel(_levelForThreads(miner.cpuThreads))}',
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: cs.primary),
+                          ),
                         ),
+                        Text(
+                          'Using ${miner.cpuThreads} of $_maxThreads cores',
+                          style: TextStyle(fontSize: 11, color: cs.outline),
+                        ),
+                      ],
+                    ),
+                    Slider(
+                      value: _levelForThreads(miner.cpuThreads).toDouble(),
+                      min: 1,
+                      max: 10,
+                      divisions: 9,
+                      label: '${_levelForThreads(miner.cpuThreads)}',
+                      onChanged: (val) {
+                        final threads = _threadsForLevel(val.round());
+                        miner.setCpuThreads(threads);
+                        setState(() {});
+                      },
+                    ),
+                    Text(
+                      'Higher = more support, uses more of your computer\u2019s power.\n'
+                      '1 = barely noticeable, 10 = full power.',
+                      style: TextStyle(fontSize: 11, color: cs.outline),
+                    ),
+                  ] else ...[
+                    Row(
+                      children: [
+                        Text('Parallel workers: ${_compute.maxConcurrent}',
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w500)),
+                        const Spacer(),
+                        Text('(1 = minimal, 4 = max throughput)',
+                            style: TextStyle(fontSize: 11, color: cs.outline)),
+                      ],
+                    ),
+                    Slider(
+                      value: _compute.maxConcurrent.toDouble(),
+                      min: 1,
+                      max: 4,
+                      divisions: 3,
+                      label: '${_compute.maxConcurrent}',
+                      onChanged: (val) {
+                        _compute.setMaxConcurrent(val.toInt());
+                        setState(() {});
+                      },
+                    ),
+                  ],
+
+                  // ── Restart miner button (native only) ────────────
+                  if (isNative && miner.isRunning) ...[
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await _coordinator.restartNativeMiner();
+                          if (mounted) setState(() {});
+                        },
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('Apply changes'),
                       ),
-                      Text(
-                        'Using ${miner.cpuThreads} of $_maxThreads cores',
-                        style: TextStyle(fontSize: 11, color: cs.outline),
-                      ),
-                    ],
-                  ),
-                  Slider(
-                    value: _levelForThreads(miner.cpuThreads).toDouble(),
-                    min: 1,
-                    max: 10,
-                    divisions: 9,
-                    label: '${_levelForThreads(miner.cpuThreads)}',
-                    onChanged: (val) {
-                      final threads = _threadsForLevel(val.round());
-                      miner.setCpuThreads(threads);
-                      setState(() {});
-                    },
-                  ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  const SizedBox(height: 4),
+                  Text('Device ID: ${_coordinator.deviceId}',
+                      style: TextStyle(fontSize: 11, color: cs.outline)),
+                  const SizedBox(height: 4),
                   Text(
-                    'Higher = more support, uses more of your computer\u2019s power.\n'
-                    '1 = barely noticeable, 10 = full power.',
+                    'Power: ${switch (_batteryState) {
+                      BatteryState.charging => 'Charging (AC)',
+                      BatteryState.full => 'Full (AC)',
+                      BatteryState.discharging => 'On battery',
+                      BatteryState.connectedNotCharging => 'Connected',
+                      _ => 'Unknown',
+                    }} \u2022 Battery: $_batteryLevel%',
                     style: TextStyle(fontSize: 11, color: cs.outline),
                   ),
-                ] else ...[
-                  Row(
-                    children: [
-                      Text(
-                          'Parallel workers: ${_compute.maxConcurrent}',
-                          style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500)),
-                      const Spacer(),
-                      Text(
-                          '(1 = minimal, 4 = max throughput)',
-                          style:
-                              TextStyle(fontSize: 11, color: cs.outline)),
-                    ],
-                  ),
-                  Slider(
-                    value: _compute.maxConcurrent.toDouble(),
-                    min: 1,
-                    max: 4,
-                    divisions: 3,
-                    label: '${_compute.maxConcurrent}',
-                    onChanged: (val) {
-                      _compute.setMaxConcurrent(val.toInt());
-                      setState(() {});
-                    },
-                  ),
-                ],
-
-                // ── Restart miner button (native only) ────────────
-                if (isNative && miner.isRunning) ...[
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        await _coordinator.restartNativeMiner();
-                        if (mounted) setState(() {});
+                  if (isNative) ...[
+                    const SizedBox(height: 4),
+                    InkWell(
+                      onTap: () async {
+                        final uri = Uri.parse(
+                            '${QubicService.poolDashboardUrl}/en-US/setup');
+                        if (!await launchUrl(uri,
+                            mode: LaunchMode.externalApplication)) {
+                          debugPrint('Could not launch $uri');
+                        }
                       },
-                      icon: const Icon(Icons.refresh, size: 18),
-                      label: const Text('Apply changes'),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                const SizedBox(height: 4),
-                Text('Device ID: ${_coordinator.deviceId}',
-                    style: TextStyle(fontSize: 11, color: cs.outline)),
-                const SizedBox(height: 4),
-                Text(
-                  'Power: ${switch (_batteryState) {
-                    BatteryState.charging => 'Charging (AC)',
-                    BatteryState.full => 'Full (AC)',
-                    BatteryState.discharging => 'On battery',
-                    BatteryState.connectedNotCharging => 'Connected',
-                    _ => 'Unknown',
-                  }} \u2022 Battery: $_batteryLevel%',
-                  style: TextStyle(fontSize: 11, color: cs.outline),
-                ),
-                if (isNative) ...[
-                  const SizedBox(height: 4),
-                  InkWell(
-                    onTap: () async {
-                      final uri = Uri.parse(
-                          '${QubicService.poolDashboardUrl}/en-US/setup');
-                      if (!await launchUrl(uri,
-                          mode: LaunchMode.externalApplication)) {
-                        debugPrint('Could not launch $uri');
-                      }
-                    },
-                    child: Text(
-                      'Pool setup guide: pool.qubic.li',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: cs.primary,
-                        decoration: TextDecoration.underline,
+                      child: Text(
+                        'Pool setup guide: pool.qubic.li',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.primary,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }

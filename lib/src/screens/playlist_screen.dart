@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../utils/snack.dart';
 
 import '../models/search_result.dart';
 import '../services/playlist_service.dart';
@@ -8,7 +9,8 @@ import '../services/playlist_service.dart';
 /// and taking action on missing / matched / extra tracks.
 class PlaylistScreen extends StatefulWidget {
   final PlaylistService playlistService;
-  final void Function(List<SearchResult> tracks, String format) onDownloadMissing;
+  final void Function(List<SearchResult> tracks, String format)
+      onDownloadMissing;
 
   const PlaylistScreen({
     super.key,
@@ -140,11 +142,12 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       type: FileType.custom,
     );
     if (result != null) {
-      await widget.playlistService.exportTrackList(_comparison!.missing, result);
+      await widget.playlistService
+          .exportTrackList(_comparison!.missing, result);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Exported ${_comparison!.missing.length} tracks to $result')),
-        );
+        Snack.show(context,
+            'Exported ${_comparison!.missing.length} tracks to $result',
+            level: SnackLevel.success);
       }
     }
   }
@@ -158,11 +161,10 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       type: FileType.custom,
     );
     if (result != null) {
-      await widget.playlistService.generateM3U(_tracks!, result, format: _selectedFormat);
+      await widget.playlistService
+          .generateM3U(_tracks!, result, format: _selectedFormat);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Saved M3U to $result')),
-        );
+        Snack.show(context, 'Saved M3U to $result', level: SnackLevel.success);
       }
     }
   }
@@ -326,7 +328,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         children: [
           const Icon(Icons.error_outline, color: Colors.red, size: 18),
           const SizedBox(width: 8),
-          Expanded(child: Text(_error!, style: const TextStyle(color: Colors.red))),
+          Expanded(
+              child: Text(_error!, style: const TextStyle(color: Colors.red))),
           IconButton(
             icon: const Icon(Icons.close, size: 18),
             onPressed: () => setState(() => _error = null),
@@ -368,7 +371,10 @@ class _PlaylistScreenState extends State<PlaylistScreen>
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text('$count',
-                style: TextStyle(fontSize: 11, color: badgeColor, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    fontSize: 11,
+                    color: badgeColor,
+                    fontWeight: FontWeight.bold)),
           ),
         ],
       ],
@@ -398,9 +404,11 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                   if (v == 'missing') _exportMissing();
                 },
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'm3u', child: Text('Export as M3U')),
+                  const PopupMenuItem(
+                      value: 'm3u', child: Text('Export as M3U')),
                   if (_comparison != null && _comparison!.missing.isNotEmpty)
-                    const PopupMenuItem(value: 'missing', child: Text('Export missing list')),
+                    const PopupMenuItem(
+                        value: 'missing', child: Text('Export missing list')),
                 ],
                 icon: const Icon(Icons.more_vert),
               ),
@@ -445,14 +453,17 @@ class _PlaylistScreenState extends State<PlaylistScreen>
           // Quick actions
           if (_comparison!.missing.isNotEmpty)
             FilledButton.icon(
-              onPressed: () => widget.onDownloadMissing(_comparison!.missing, _selectedFormat),
+              onPressed: () => widget.onDownloadMissing(
+                  _comparison!.missing, _selectedFormat),
               icon: const Icon(Icons.download),
-              label: Text('Download All ${_comparison!.missingCount} Missing Tracks'),
+              label: Text(
+                  'Download All ${_comparison!.missingCount} Missing Tracks'),
             ),
         ] else ...[
           // No comparison yet — show track list
           const SizedBox(height: 8),
-          Text('${_tracks!.length} tracks loaded. Select a folder above to compare.',
+          Text(
+              '${_tracks!.length} tracks loaded. Select a folder above to compare.',
               style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey)),
           const SizedBox(height: 12),
           ...List.generate(
@@ -462,7 +473,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
               return ListTile(
                 dense: true,
                 leading: Text('${i + 1}', style: theme.textTheme.bodySmall),
-                title: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                title:
+                    Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                 subtitle: Text(t.artist),
                 trailing: Text(_formatDuration(t.duration),
                     style: theme.textTheme.bodySmall),
@@ -478,10 +490,14 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     final c = _comparison!;
     return Row(
       children: [
-        _summaryCard('Total', '${c.total}', Icons.queue_music, cs.primary, theme),
-        _summaryCard('Matched', '${c.downloadedCount}', Icons.check_circle, Colors.green, theme),
-        _summaryCard('Missing', '${c.missingCount}', Icons.cancel, Colors.orange, theme),
-        _summaryCard('Extras', '${c.extraCount}', Icons.library_music, Colors.blue, theme),
+        _summaryCard(
+            'Total', '${c.total}', Icons.queue_music, cs.primary, theme),
+        _summaryCard('Matched', '${c.downloadedCount}', Icons.check_circle,
+            Colors.green, theme),
+        _summaryCard(
+            'Missing', '${c.missingCount}', Icons.cancel, Colors.orange, theme),
+        _summaryCard('Extras', '${c.extraCount}', Icons.library_music,
+            Colors.blue, theme),
       ],
     );
   }
@@ -496,8 +512,9 @@ class _PlaylistScreenState extends State<PlaylistScreen>
             children: [
               Icon(icon, color: color, size: 28),
               const SizedBox(height: 4),
-              Text(value, style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold, color: color)),
+              Text(value,
+                  style: theme.textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.bold, color: color)),
               Text(label, style: theme.textTheme.bodySmall),
             ],
           ),
@@ -519,8 +536,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
               children: [
                 Text('Completion', style: theme.textTheme.titleSmall),
                 Text('${c.completionPercentage.toStringAsFixed(1)}%',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold)),
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
@@ -556,7 +573,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
     // Filter by confidence
     if (_confidenceFilter > 0) {
-      matches = matches.where((m) => m.confidence >= _confidenceFilter).toList();
+      matches =
+          matches.where((m) => m.confidence >= _confidenceFilter).toList();
     }
 
     // Sort
@@ -595,11 +613,15 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                 underline: const SizedBox(),
                 isDense: true,
                 items: const [
-                  DropdownMenuItem(value: _SortMode.original, child: Text('Playlist order')),
-                  DropdownMenuItem(value: _SortMode.title, child: Text('Title A-Z')),
-                  DropdownMenuItem(value: _SortMode.confidence, child: Text('Confidence ↑')),
+                  DropdownMenuItem(
+                      value: _SortMode.original, child: Text('Playlist order')),
+                  DropdownMenuItem(
+                      value: _SortMode.title, child: Text('Title A-Z')),
+                  DropdownMenuItem(
+                      value: _SortMode.confidence, child: Text('Confidence ↑')),
                 ],
-                onChanged: (v) => setState(() => _sortMode = v ?? _SortMode.original),
+                onChanged: (v) =>
+                    setState(() => _sortMode = v ?? _SortMode.original),
               ),
             ],
           ),
@@ -631,7 +653,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.check_circle_outline, size: 56, color: Colors.green.shade300),
+            Icon(Icons.check_circle_outline,
+                size: 56, color: Colors.green.shade300),
             const SizedBox(height: 12),
             Text('All playlist tracks are in the folder!',
                 style: theme.textTheme.titleMedium),
@@ -648,7 +671,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
           child: Row(
             children: [
               FilledButton.icon(
-                onPressed: () => widget.onDownloadMissing(_comparison!.missing, _selectedFormat),
+                onPressed: () => widget.onDownloadMissing(
+                    _comparison!.missing, _selectedFormat),
                 icon: const Icon(Icons.download, size: 18),
                 label: Text('Download All (${_comparison!.missingCount})'),
               ),
@@ -669,12 +693,15 @@ class _PlaylistScreenState extends State<PlaylistScreen>
               return ListTile(
                 dense: true,
                 leading: const Icon(Icons.music_off, color: Colors.orange),
-                title: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text('${t.artist}  •  ${_formatDuration(t.duration)}'),
+                title:
+                    Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                subtitle:
+                    Text('${t.artist}  •  ${_formatDuration(t.duration)}'),
                 trailing: IconButton(
                   icon: const Icon(Icons.download, size: 20),
                   tooltip: 'Download this track',
-                  onPressed: () => widget.onDownloadMissing([t], _selectedFormat),
+                  onPressed: () =>
+                      widget.onDownloadMissing([t], _selectedFormat),
                 ),
               );
             },
@@ -729,9 +756,13 @@ class _PlaylistScreenState extends State<PlaylistScreen>
               return ListTile(
                 dense: true,
                 leading: const Icon(Icons.audio_file, color: Colors.blue),
-                title: Text(f.fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text(f.filePath, maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                title: Text(f.fileName,
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                subtitle: Text(f.filePath,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: Colors.grey)),
               );
             },
           ),
@@ -749,8 +780,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   }
 
   String _formatTotalDuration(List<SearchResult> tracks) {
-    final total = tracks.fold<Duration>(
-        Duration.zero, (sum, t) => sum + t.duration);
+    final total =
+        tracks.fold<Duration>(Duration.zero, (sum, t) => sum + t.duration);
     if (total.inHours > 0) {
       return '${total.inHours}h ${total.inMinutes.remainder(60)}m';
     }
