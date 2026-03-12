@@ -90,9 +90,10 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (kIsWeb) return false;
     if (defaultTargetPlatform == TargetPlatform.windows) {
       try {
-        final ctrl = Provider.of<AppController?>(context, listen: false);
-        return ctrl?.webViewEnvironment != null;
-      } catch (_) {
+        final ctrl = Provider.of<AppController>(context, listen: false);
+        return ctrl.webViewEnvironment != null;
+      } catch (e) {
+        debugPrint('[BROWSER] webViewSupported check failed: $e');
         return false;
       }
     }
@@ -434,7 +435,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       WebResourceRequest request, WebResourceError error) {
     // ignore about:blank startup error which is harmless and expected on
     // Windows; the WebView is immediately navigated away from it.
-    final urlStr = request.url?.toString() ?? '';
+    final urlStr = request.url.toString();
     if (urlStr == 'about:blank') return;
 
     debugPrint(

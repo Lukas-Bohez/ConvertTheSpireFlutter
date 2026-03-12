@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/services.dart'
     show LogicalKeyboardKey, KeyEvent, KeyDownEvent;
 import 'package:window_manager/window_manager.dart';
-import 'dart:io' show Platform, exit;
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
