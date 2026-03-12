@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_flutter_app/src/constants/strings.dart';
+import 'package:convert_the_spire_reborn/src/constants/strings.dart';
 
 void main() {
   group('Strings', () {

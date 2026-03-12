@@ -1,10 +1,14 @@
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
-import 'package:flutter/services.dart' show LogicalKeyboardKey, KeyEvent, KeyDownEvent;
+import 'package:flutter/foundation.dart'
+    show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/services.dart'
+    show LogicalKeyboardKey, KeyEvent, KeyDownEvent;
 import 'package:window_manager/window_manager.dart';
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:youtube_explode_dart/youtube_explode_dart.dart' hide SearchResult;
+import 'package:youtube_explode_dart/youtube_explode_dart.dart'
+    hide SearchResult;
 
 import 'screens/home_screen.dart';
 import 'screens/player.dart';
@@ -41,13 +45,67 @@ class _MyAppState extends State<MyApp> {
   YoutubeExplode? _ytExplode;
   String? _initError;
   bool _dismissedMediaKitError = false;
-  late final Future<SharedPreferences> _prefsFuture = SharedPreferences.getInstance();
+  late final Future<SharedPreferences> _prefsFuture =
+      SharedPreferences.getInstance();
   late final FocusNode _keyboardFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _initController();
+    // If MediaKit failed to initialize on Linux, show a clear, copyable
+    // dialog instructing the user how to install libmpv instead of
+    // crashing silently.
+    if (widget.mediaKitInitError != null && Platform.isLinux) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _dismissedMediaKitError) return;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertDialog(
+            title: const Text('Missing dependency'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'libmpv is required for media playback on Linux. '
+                  'Install it with your package manager:',
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const SelectableText(
+                    'Ubuntu/Debian:  sudo apt install libmpv1\n'
+                    'Fedora:         sudo dnf install mpv-libs\n'
+                    'Arch:           sudo pacman -S mpv',
+                    style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text('Restart the app after installing.'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _dismissedMediaKitError = true;
+                  });
+                },
+                child: const Text('Continue without player'),
+              ),
+            ],
+          ),
+        );
+      });
+    }
   }
 
   @override
@@ -83,7 +141,8 @@ class _MyAppState extends State<MyApp> {
       final youtube = YouTubeService(yt: ytExplode);
       final ffmpeg = FfmpegService();
       final ytDlp = YtDlpService();
-      final downloadService = DownloadService(yt: ytExplode, ffmpeg: ffmpeg, ytDlp: ytDlp);
+      final downloadService =
+          DownloadService(yt: ytExplode, ffmpeg: ffmpeg, ytDlp: ytDlp);
       final convertService = ConvertService(ffmpeg: ffmpeg);
       final installerService = InstallerService();
 
@@ -107,7 +166,8 @@ class _MyAppState extends State<MyApp> {
       // so we create a placeholder and assign later.
       late final AppController controller;
       final watchedPlaylistService = WatchedPlaylistService(
-        fetchPlaylistTracks: (url) => playlistService.getYouTubePlaylistTracks(url),
+        fetchPlaylistTracks: (url) =>
+            playlistService.getYouTubePlaylistTracks(url),
         onNewTrack: (track) async {
           controller.addSearchResultToQueue(track);
         },
@@ -178,14 +238,17 @@ class _MyAppState extends State<MyApp> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                          const Icon(Icons.error_outline,
+                              size: 64, color: Colors.red),
                           const SizedBox(height: 16),
                           Text('MediaKit initialization failure',
                               style: Theme.of(context).textTheme.headlineSmall),
                           const SizedBox(height: 8),
-                          Text(widget.mediaKitInitError!, textAlign: TextAlign.center),
+                          Text(widget.mediaKitInitError!,
+                              textAlign: TextAlign.center),
                           const SizedBox(height: 16),
-                          if (widget.mediaKitInitError!.contains('Unsupported platform'))
+                          if (widget.mediaKitInitError!
+                              .contains('Unsupported platform'))
                             const Text(
                               'Video playback is not supported on this platform. '
                               'Only audio will be available.',
@@ -220,15 +283,21 @@ class _MyAppState extends State<MyApp> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                              const Icon(Icons.error_outline,
+                                  size: 64, color: Colors.red),
                               const SizedBox(height: 16),
-                              Text('Failed to start', style: Theme.of(context).textTheme.headlineSmall),
+                              Text('Failed to start',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall),
                               const SizedBox(height: 8),
                               Text(_initError!, textAlign: TextAlign.center),
                               const SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: () {
-                                  setState(() { _initError = null; });
+                                  setState(() {
+                                    _initError = null;
+                                  });
                                   _initController();
                                 },
                                 child: const Text('Retry'),
@@ -239,29 +308,32 @@ class _MyAppState extends State<MyApp> {
                       ),
                     )
                   : _controller == null
-                      ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+                      ? const Scaffold(
+                          body: Center(child: CircularProgressIndicator()))
                       : FutureBuilder<SharedPreferences>(
                           future: _prefsFuture,
-                      builder: (context, snap) {
-                        if (!snap.hasData) {
-                          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-                        }
+                          builder: (context, snap) {
+                            if (!snap.hasData) {
+                              return const Scaffold(
+                                  body: Center(
+                                      child: CircularProgressIndicator()));
+                            }
 
-                        final prefs = snap.data!;
+                            final prefs = snap.data!;
 
-                        final content = ChangeNotifierProvider(
-                          create: (_) => PlayerState(prefs),
-                          child: HomeScreen(controller: _controller!),
-                        );
+                            final content = ChangeNotifierProvider(
+                              create: (_) => PlayerState(prefs),
+                              child: HomeScreen(controller: _controller!),
+                            );
 
-                        return KeyboardListener(
-                          focusNode: _keyboardFocusNode,
-                          autofocus: true,
-                          onKeyEvent: _handleKey,
-                          child: content,
-                        );
-                      },
-                    ),
+                            return KeyboardListener(
+                              focusNode: _keyboardFocusNode,
+                              autofocus: true,
+                              onKeyEvent: _handleKey,
+                              child: content,
+                            );
+                          },
+                        ),
         );
       },
     );
