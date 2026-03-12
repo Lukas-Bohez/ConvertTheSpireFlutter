@@ -120,6 +120,24 @@ class _BrowserScreenState extends State<BrowserScreen>
     super.dispose();
   }
 
+  /// Dispose all held InAppWebView controllers. Public so external
+  /// callers (e.g. window close handler) can force-dispose before
+  /// the process exits to avoid WinRT DLL unload ordering hangs.
+  void disposeAllWebViewControllers() {
+    try {
+      for (final c in _controllers.values) {
+        try {
+          c.stopLoading();
+        } catch (_) {}
+        try {
+          c.dispose();
+        } catch (_) {}
+      }
+    } catch (_) {}
+    _controllers.clear();
+    _webViewController = null;
+  }
+
   @override
   void initState() {
     super.initState();

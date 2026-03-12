@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/services.dart'
     show LogicalKeyboardKey, KeyEvent, KeyDownEvent;
 import 'package:window_manager/window_manager.dart';
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, exit;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +12,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart'
 
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/browser_screen.dart';
 import 'screens/player.dart';
 import 'services/bulk_import_service.dart';
 import 'services/convert_service.dart';
@@ -43,7 +44,7 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WindowListener {
   AppController? _controller;
   YoutubeExplode? _ytExplode;
   String? _initError;
@@ -56,6 +57,11 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _initController();
+    if (!kIsWeb && Platform.isWindows) {
+      try {
+        windowManager.addListener(this);
+      } catch (_) {}
+    }
     // If MediaKit failed to initialize on Linux, show a clear, copyable
     // dialog instructing the user how to install libmpv instead of
     // crashing silently.
@@ -113,6 +119,11 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
+    if (!kIsWeb && Platform.isWindows) {
+      try {
+        windowManager.removeListener(this);
+      } catch (_) {}
+    }
     _ytExplode?.close();
     _controller?.dispose();
     _keyboardFocusNode.dispose();
@@ -211,6 +222,30 @@ class _MyAppState extends State<MyApp> {
           _initError = '$e';
         });
       }
+    }
+  }
+
+  @override
+  void onWindowClose() async {
+    // Called when the user clicks the X button. Dispose WebViews first
+    // to avoid WinRT composition DLL unload ordering hangs, then exit.
+    if (kDebugMode)
+      debugPrint('[App] Window close requested — disposing WebViews...');
+    try {
+      // Force the BrowserScreen to dispose all controllers.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          BrowserScreen.browserKey.currentState?.disposeAllWebViewControllers();
+        } catch (_) {}
+      });
+      // Give widgets a short moment to run disposals.
+      await Future.delayed(const Duration(milliseconds: 120));
+    } catch (_) {}
+    if (kDebugMode) debugPrint('[App] Exiting now.');
+    try {
+      exit(0);
+    } catch (_) {
+      // fallback
     }
   }
 
