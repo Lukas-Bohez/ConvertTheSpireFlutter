@@ -425,6 +425,11 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _onReceivedError(InAppWebViewController controller,
       WebResourceRequest request, WebResourceError error) {
+    // ignore about:blank startup error which is harmless and expected on
+    // Windows; the WebView is immediately navigated away from it.
+    final urlStr = request.url?.toString() ?? '';
+    if (urlStr == 'about:blank') return;
+
     debugPrint(
         '[BROWSER] onReceivedError – ${request.url} | ${error.type} | ${error.description}');
     if (request.isForMainFrame ?? false) {

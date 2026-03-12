@@ -428,7 +428,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           currentIndex: _selectedPageIndex,
           queueWidget: _buildQueueTab(),
           onNavigate: (route) {
-            if (kDebugMode) debugPrint('[NAV] requested route: "$route"');
+            if (kDebugMode) {
+              debugPrint('[NAV] requested route: "$route"');
+              if (route == 'browser.tab') {
+                debugPrint('[NAV] caller stack trace:\n${StackTrace.current}');
+              }
+            }
             if (route == 'home') {
               _navigateHome();
               return;
