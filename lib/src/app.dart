@@ -228,7 +228,10 @@ class _MyAppState extends State<MyApp> with WindowListener {
   @override
   void onWindowClose() async {
     // Called when the user clicks the X button. Dispose WebViews first
-    // to avoid WinRT composition DLL unload ordering hangs, then exit.
+    // to avoid WinRT composition DLL unload ordering hangs, then tear down the
+    // window manager before exiting.  The previous implementation simply
+    // called `exit(0)`, which still triggered ERROR_CLASS_HAS_WINDOWS (1412)
+    // because WebView2 had not finished unregistering its window class.
     if (kDebugMode)
       debugPrint('[App] Window close requested — disposing WebViews...');
     try {
@@ -241,12 +244,23 @@ class _MyAppState extends State<MyApp> with WindowListener {
       // Give widgets a short moment to run disposals.
       await Future.delayed(const Duration(milliseconds: 120));
     } catch (_) {}
-    if (kDebugMode) debugPrint('[App] Exiting now.');
+
+    // Allow the window manager to clean up its native resources. This should
+    // unregister the WebView class properly before the window is destroyed.
     try {
-      exit(0);
-    } catch (_) {
-      // fallback
+      await windowManager.setPreventClose(false);
+      await windowManager.destroy();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[App] windowManager.destroy failed: $e');
     }
+
+    // Wait a bit more to give WebView2 time to flush its class unregistration.
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    if (kDebugMode) debugPrint('[App] window manager destroyed; allowing exit');
+    // Do not call exit() explicitly; let the Flutter/host process tear down
+    // normally now that we've cleaned up resources.  Calling exit() earlier was
+    // probably racing with the WebView2 teardown and caused ERROR_CLASS_HAS_WINDOWS.
   }
 
   @override

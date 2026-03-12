@@ -2,6 +2,14 @@
 cmake_minimum_required(VERSION 3.14)
 project(convert_the_spire_reborn LANGUAGES CXX)
 
+# Workaround for flutter_inappwebview_windows plugin: its CMakeLists uses
+# `add_custom_command(TARGET ... DEPENDS ...)`, which triggers policy
+# CMP0175 warnings on newer CMake.  Silence by reverting the policy to OLD so
+# the command is accepted without warning.
+if(POLICY CMP0175)
+  cmake_policy(SET CMP0175 OLD)
+endif()
+
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
 set(BINARY_NAME "convert_the_spire_reborn")
@@ -9,6 +17,9 @@ set(BINARY_NAME "convert_the_spire_reborn")
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
+
+# silence plugin warnings that appear as CMake dev messages
+set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE BOOL "" FORCE)
 
 # Force flutter_inappwebview_windows to use the software PixelBuffer texture
 # fallback instead of the GPU D3D shared-handle path, which produces blank
