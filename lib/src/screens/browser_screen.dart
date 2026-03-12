@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/snack.dart';
+import '../widgets/browser_shell.dart';
 
 import '../browser/adblock/adblock_service.dart';
 import '../browser/cast/cast_service.dart';
@@ -59,6 +60,8 @@ class _BrowserScreenState extends State<BrowserScreen>
   final TabManager _tabManager = TabManager();
   final Map<String, InAppWebViewController> _controllers = {};
   final Set<String> _mountedWebViews = {}; // track webview mount state
+  // Cache WebView widgets so they aren't rebuilt on every setState
+  final Map<String, Widget> _webViewCache = {};
   VideoDetectorService _videoDetector = VideoDetectorService();
 
   InAppWebViewController? _webViewController;
@@ -135,6 +138,8 @@ class _BrowserScreenState extends State<BrowserScreen>
     } catch (_) {}
     _controllers.clear();
     _mountedWebViews.clear();
+    // Clear widget cache to avoid holding onto disposed WebView widgets
+    _webViewCache.clear();
     _webViewController = null;
   }
 
@@ -154,6 +159,8 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
     // Listen for tab manager changes to update active controller and UI
     _tabManager.addListener(_onTabManagerChanged);
+    // Always mount the WebView tree so new tabs get controllers created
+    _createWebView = true;
   }
 
   void _releaseWebViewFocus() {
@@ -904,7 +911,9 @@ class _BrowserScreenState extends State<BrowserScreen>
 
       return IndexedStack(
         index: activeIndex < 0 ? 0 : activeIndex,
-        children: tabs.map((t) => _buildWebViewForTab(t)).toList(),
+        children: tabs
+            .map((t) => _webViewCache.putIfAbsent(t.id, () => _buildWebViewForTab(t)))
+            .toList(),
       );
     } catch (e) {
       if (kDebugMode) debugPrint('InAppWebView construction failed: $e');
@@ -960,7 +969,18 @@ class _BrowserScreenState extends State<BrowserScreen>
     _mountedWebViews.add(tabId);
     if (_tabManager.activeTab?.id == tabId) {
       _webViewController = controller;
+      // Ensure UI shows the created WebView and stop showing NewTabPage.
+      if (mounted) {
+        setState(() {
+          // Keep `_createWebView` true so the WebView widget remains in the
+          // tree — setting it false caused the widget to be removed and the
+          // native controller to be deallocated immediately after creation.
+          _showNewTabPage = false;
+          _isSwitchingTab = false;
+        });
+      }
     }
+    debugPrint('[BROWSER] tabs=${_tabManager.tabCount} controllers=${_controllers.length} mounted=${_mountedWebViews.length} active=${_tabManager.activeTab?.id}');
 
     controller.addJavaScriptHandler(
       handlerName: 'onVideoFound',
@@ -986,8 +1006,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     return InAppWebView(
       key: key,
       initialSettings: _buildSettingsForTab(tab),
-      initialUrlRequest:
-          tab.url.isNotEmpty ? URLRequest(url: WebUri(tab.url)) : null,
       findInteractionController: _findInteractionController,
       onWebViewCreated: (controller) =>
           _onWebViewCreatedForTab(controller, tab.id, tab),
@@ -1131,7 +1149,10 @@ class _BrowserScreenState extends State<BrowserScreen>
     switch (action) {
       case 'new_tab':
         _tabManager.addTab();
-        setState(() => _showNewTabPage = true);
+        setState(() {
+          _showNewTabPage = true;
+          _createWebView = true;
+        });
         break;
       case 'incognito':
         _toggleIncognito();
@@ -1188,6 +1209,20 @@ class _BrowserScreenState extends State<BrowserScreen>
         if (url.isNotEmpty) {
           Clipboard.setData(ClipboardData(text: url));
           if (mounted) Snack.show(context, 'Link copied to clipboard');
+        }
+        break;
+      case 'search':
+      case 'search.tab':
+        // Route to the app-level "Search" tab instead of treating as a URL.
+        // Find the surrounding BrowserShell widget and invoke its onNavigate
+        // callback so HomeScreen resolves the route -> page index.
+        try {
+          Navigator.of(context).pop();
+        } catch (_) {}
+        final shell = context.findAncestorWidgetOfExactType<BrowserShell>();
+        if (shell != null) {
+          final route = action.endsWith('.tab') ? action : '${action}.tab';
+          shell.onNavigate(route);
         }
         break;
       default:
@@ -1318,6 +1353,8 @@ class _BrowserScreenState extends State<BrowserScreen>
               } catch (_) {}
             }
             _mountedWebViews.remove(closingTab.id);
+                // Remove cached widget for this tab so it can be garbage collected
+                _webViewCache.remove(closingTab.id);
           } catch (_) {}
 
           _tabManager.closeTab(index);
@@ -1352,6 +1389,7 @@ class _BrowserScreenState extends State<BrowserScreen>
             _isSecure = false;
             _canGoBack = false;
             _canGoForward = false;
+            _createWebView = true;
           });
           Navigator.pop(context);
         },
