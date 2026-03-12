@@ -71,84 +71,8 @@ class _BrowserScreenState extends State<BrowserScreen>
   bool _showNewTabPage = true;
   bool _isFavourited = false;
   String _searchEngine = 'DuckDuckGo';
-  // Download state for toolbar
-  bool _isDownloading = false;
-  // Field kept to record download errors (currently only assigned).
-  // ignore: unused_field
-  String? _downloadError;
-
-  // Find-in-page state
-  bool _showFindBar = false;
-  int _findMatchCount = 0;
-  int _findActiveIndex = 0;
-
-  // Pending URL — loaded once the WebView controller is ready.
-  String? _pendingUrl;
-
-  // Cast badge animation
-  late final AnimationController _castBadgeController;
-
-  /// True when the platform supports an in-app WebView.
-  bool get _webViewSupported => !kIsWeb && !Platform.isLinux;
-  // Create the WebView widget lazily to avoid crashing on platforms
-  // where the native WebView runtime is missing (e.g. WebView2 on some
-  // Windows machines). This flag is set when the user first navigates or
-  // explicitly requests the browser.
-  bool _createWebView = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _adBlock.init();
-    _castService.startDiscovery();
-    _castBadgeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _findInteractionController = FindInteractionController(
-      onFindResultReceived:
-          (controller, activeMatchOrdinal, numberOfMatches, isDoneCounting) {
-        if (isDoneCounting) {
-          setState(() {
-            _findMatchCount = numberOfMatches;
-            _findActiveIndex = activeMatchOrdinal;
-          });
-        }
-      },
-    );
-    _videoDetector.addListener(_onVideoDetectorChanged);
-    _castService.addListener(_onCastChanged);
-    _loadPrefs();
-    if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
-      _showNewTabPage = false;
-      _pendingUrl = widget.initialUrl;
-    }
-  }
-
-  Future<void> _loadPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _searchEngine = prefs.getString('browser_search_engine') ?? 'DuckDuckGo';
-      _desktopMode = prefs.getBool('browser_desktop_mode') ?? false;
-    });
-  }
-
-  void _onVideoDetectorChanged() {
-    if (_videoDetector.hasVideos) {
-      if (!_castBadgeController.isAnimating) {
-        _castBadgeController.repeat(reverse: true);
-      }
-    } else {
-      _castBadgeController.stop();
-      _castBadgeController.value = 0;
-    }
-    if (mounted) setState(() {});
-  }
-
-  void _onCastChanged() {
-    if (mounted) setState(() {});
-  }
-
+                // Horizontal tab strip removed — the toolbar tab button
+                // and the tab switcher sheet provide a consistent UX.
   @override
   void dispose() {
     _castBadgeController.dispose();
@@ -305,6 +229,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
     setState(() {
       _isLoading = false;
+      _isSwitchingTab = false;
       _pageTitle = title;
     });
 
@@ -658,6 +583,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     super.build(context);
     final isIncognito = _tabManager.activeTab?.isIncognito ?? false;
     final viewPadding = MediaQuery.of(context).viewPadding;
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -794,6 +720,30 @@ class _BrowserScreenState extends State<BrowserScreen>
                       // is placed on top when active.
                       if (_webViewSupported && _createWebView)
                         Positioned.fill(child: _buildWebView())
+                      // Tab-switch overlay — appears while a tab switch triggers
+                      // a webview load so the previous content doesn't flash.
+                      if (_isSwitchingTab)
+                        Positioned.fill(
+                          child: ColoredBox(
+                            color: cs.surface,
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircularProgressIndicator(
+                                    color: cs.primary,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text('Loading tab…',
+                                      style: TextStyle(
+                                        color: cs.onSurfaceVariant,
+                                        fontSize: 13,
+                                      )),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
                       else if (_webViewSupported && !_createWebView)
                         // Show the NewTabPage when the webview is not yet created.
                         Positioned.fill(
@@ -1209,8 +1159,12 @@ class _BrowserScreenState extends State<BrowserScreen>
           _tabManager.switchToTab(index);
           final tab = _tabManager.activeTab;
           final showNew = tab?.url.isEmpty ?? true;
-          setState(() => _showNewTabPage = showNew);
+          setState(() {
+            _showNewTabPage = showNew;
+            _isSwitchingTab = !showNew;
+          });
           if (!showNew && tab != null && tab.url.isNotEmpty) {
+            _addressController.text = tab.url;
             _webViewController?.loadUrl(
                 urlRequest: URLRequest(url: WebUri(tab.url)));
           }
@@ -1220,15 +1174,31 @@ class _BrowserScreenState extends State<BrowserScreen>
           _tabManager.closeTab(index);
           final tab = _tabManager.activeTab;
           final showNew = tab?.url.isEmpty ?? true;
-          setState(() => _showNewTabPage = showNew);
+          setState(() {
+            _showNewTabPage = showNew;
+            _isSwitchingTab = !showNew && tab != null;
+          });
           if (!showNew && tab != null && tab.url.isNotEmpty) {
+            _addressController.text = tab.url;
+            _pageTitle = tab.title;
             _webViewController?.loadUrl(
                 urlRequest: URLRequest(url: WebUri(tab.url)));
+          } else {
+            _addressController.clear();
+            _pageTitle = '';
           }
         },
         onNewTab: () {
           _tabManager.addTab();
-          setState(() => _showNewTabPage = true);
+          setState(() {
+            _showNewTabPage = true;
+            _isSwitchingTab = false;
+            _addressController.clear();
+            _pageTitle = '';
+            _isSecure = false;
+            _canGoBack = false;
+            _canGoForward = false;
+          });
           Navigator.pop(context);
         },
       ),
