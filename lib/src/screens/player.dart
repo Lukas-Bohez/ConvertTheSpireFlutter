@@ -260,8 +260,11 @@ class PlayerState with ChangeNotifier {
       try {
         _mkPlayer = Player();
         _mkController = VideoController(_mkPlayer!);
-        _thumbPlayer = Player();
-        _thumbVideoCtl = VideoController(_thumbPlayer!);
+        // Do not eagerly create the auxiliary thumbnail player here; create
+        // it lazily in _generateVideoThumbnail() to avoid allocating a
+        // second native VideoOutput texture at startup.
+        _thumbPlayer = null;
+        _thumbVideoCtl = null;
       } catch (e, st) {
         debugPrint('media_kit player creation failed: $e');
         debugPrint('$st');
@@ -809,33 +812,48 @@ class PlayerState with ChangeNotifier {
     }
 
     // Strategy 2: media_kit screenshot (desktop/iOS only)
-    if (_videoSupported && _thumbPlayer != null) {
-      try {
-        await _thumbPlayer!.setVolume(0);
-        await _thumbPlayer!.open(Media(_toUri(filePath)), play: false);
-
-        Duration? dur;
+    if (_videoSupported) {
+      // Lazily create the auxiliary thumbnail player if needed. This avoids
+      // creating a second VideoOutput texture at app startup.
+      if (_thumbPlayer == null) {
         try {
-          dur = await _thumbPlayer!.stream.duration
-              .firstWhere((d) => d.inMilliseconds > 0)
-              .timeout(const Duration(seconds: 5));
-        } catch (_) {}
-
-        if (dur != null && dur.inMilliseconds > 0) {
-          final seekMs = (dur.inMilliseconds * 0.1).round().clamp(0, 15000);
-          await _thumbPlayer!.seek(Duration(milliseconds: seekMs));
+          _thumbPlayer = Player();
+          _thumbVideoCtl = VideoController(_thumbPlayer!);
+        } catch (e) {
+          debugPrint('thumbnail player creation failed: $e');
+          _thumbPlayer = null;
+          _thumbVideoCtl = null;
         }
+      }
 
-        await Future.delayed(const Duration(milliseconds: 800));
-        snap = await _thumbPlayer!.screenshot();
-        debugPrint(
-            'screenshot() returned ${snap?.length ?? 0} bytes for $filePath');
-      } catch (e) {
-        debugPrint('screenshot error for $filePath: $e');
-      } finally {
+      if (_thumbPlayer != null) {
         try {
-          await _thumbPlayer!.stop();
-        } catch (_) {}
+          await _thumbPlayer!.setVolume(0);
+          await _thumbPlayer!.open(Media(_toUri(filePath)), play: false);
+
+          Duration? dur;
+          try {
+            dur = await _thumbPlayer!.stream.duration
+                .firstWhere((d) => d.inMilliseconds > 0)
+                .timeout(const Duration(seconds: 5));
+          } catch (_) {}
+
+          if (dur != null && dur.inMilliseconds > 0) {
+            final seekMs = (dur.inMilliseconds * 0.1).round().clamp(0, 15000);
+            await _thumbPlayer!.seek(Duration(milliseconds: seekMs));
+          }
+
+          await Future.delayed(const Duration(milliseconds: 800));
+          snap = await _thumbPlayer!.screenshot();
+          debugPrint(
+              'screenshot() returned ${snap?.length ?? 0} bytes for $filePath');
+        } catch (e) {
+          debugPrint('screenshot error for $filePath: $e');
+        } finally {
+          try {
+            await _thumbPlayer!.stop();
+          } catch (_) {}
+        }
       }
     }
 

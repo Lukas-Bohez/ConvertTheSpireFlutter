@@ -218,6 +218,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       // Stop mining before quitting.
       _coordinatorService.dispose();
       try {
+        // Ensure browser WebViews are disposed to avoid WinRT unload hangs
+        // before destroying tray/window and exiting.
+        try {
+          BrowserScreen.browserKey.currentState?.disposeAllWebViewControllers();
+        } catch (_) {}
         await _trayService?.destroy();
       } catch (_) {}
       exit(0);
