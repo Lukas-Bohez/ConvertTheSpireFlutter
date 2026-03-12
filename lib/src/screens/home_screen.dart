@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import '../utils/snack.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// shared_preferences no longer used directly in HomeScreen; handled by AppController
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
@@ -78,12 +78,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _audioBitrate = 320;
   bool _settingsInitialized = false;
   bool _supportEnabled = false;
-  PlayerState? _playerState;
+  // Removed unused player state field (was causing analyzer unused_field warning).
   late final TabController _playlistTabController;
   File? _convertFile;
   String _convertTarget = 'mp4';
   String _androidDownloadUri = '';
   int _selectedPageIndex = 13;
+  DateTime? _lastLocalNavigation;
 
   final GlobalKey<ScaffoldState> _shellScaffoldKey = GlobalKey<ScaffoldState>();
   final List<int> _navHistory = [13];
@@ -137,39 +138,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     // Desktop: system-tray & shortcut.
     _initDesktopFeatures();
 
-    // Restore last selected tab if present. Only apply the saved value
-    // if the user hasn't already navigated away from the default home index
-    // (13).  This avoids a race where the async prefs callback fires *after*
-    // a manual navigation, which was causing the UI to jump back to the
-    // browser when the saved index happened to be 2.  We also never restore
-    // the browser index itself – always start on home if the last tab was
-    // browser.
-    SharedPreferences.getInstance().then((prefs) {
-      final saved = prefs.getInt('last_tab');
-      if (saved != null && mounted) {
-        var selected = saved;
-        // Never restore into the browser tab; start on home instead.  This
-        // mirrors the earlier check but unconditionally prevents index 2.
-        if (selected == 2) {
-          selected = 13;
-        }
-        // Only update if we still have the default index; skipping means the
-        // user navigated manually already and their choice takes precedence.
-        if (_selectedPageIndex == 13) {
-          if (kDebugMode) {
-            debugPrint(
-                '[NAV] prefs restore setting initial tab index to $selected');
-          }
-          setState(() {
-            _selectedPageIndex = selected;
-          });
-        } else {
-          if (kDebugMode) {
-            debugPrint('[NAV] prefs restore ignored (user already navigated)');
-          }
-        }
-      }
-    });
+    // Initialise selected tab from controller (controller restores prefs once
+    // during its own `init()` call). This avoids restoring prefs multiple
+    // times from different places and eliminates races with manual nav.
+    try {
+      _selectedPageIndex = widget.controller.activeTabIndex;
+    } catch (_) {}
 
     // Debug: print available quick-links map for developer diagnostics.
     if (kDebugMode) {
@@ -358,9 +332,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _selectedPageIndex = index;
       _visitedPages.add(index);
     });
-    // Persist last selected tab
-    SharedPreferences.getInstance()
-        .then((prefs) => prefs.setInt('last_tab', index));
+    // Keep controller in sync and let it persist the preference.
+    try {
+      widget.controller.switchToTab(index);
+    } catch (_) {}
+    // Record that we initiated a navigation locally so controller-driven
+    // AnimatedBuilder sync does not immediately override it (avoid feedback).
+    _lastLocalNavigation = DateTime.now();
   }
 
   /// Alias used by tappable top-bar UI items to navigate to a tab index.
@@ -373,6 +351,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _selectedPageIndex = _navHistory[_navHistoryIndex];
       _visitedPages.add(_selectedPageIndex);
     });
+    try {
+      widget.controller.switchToTab(_selectedPageIndex);
+    } catch (_) {}
   }
 
   void _goForward() {
@@ -382,6 +363,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _selectedPageIndex = _navHistory[_navHistoryIndex];
       _visitedPages.add(_selectedPageIndex);
     });
+    try {
+      widget.controller.switchToTab(_selectedPageIndex);
+    } catch (_) {}
   }
 
   void _navigateHome() => _navigateToPage(13);
@@ -396,6 +380,24 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
             _initSettings(settings);
+          });
+        }
+
+        // Keep local selected index in sync with controller if it changed.
+        // However, if we just performed a local (user) navigation, avoid
+        // immediately syncing from the controller to prevent a feedback
+        // bounce where two different widgets fight for control.
+        final ctrlIndex = widget.controller.activeTabIndex;
+        final recentLocalNav = _lastLocalNavigation != null &&
+            DateTime.now().difference(_lastLocalNavigation!).inMilliseconds <
+                600;
+        if (!recentLocalNav && ctrlIndex != _selectedPageIndex) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            setState(() {
+              _selectedPageIndex = ctrlIndex;
+              _visitedPages.add(ctrlIndex);
+            });
           });
         }
 
