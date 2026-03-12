@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/browser_db.dart';
+import '../../widgets/empty_state.dart';
 
 /// History screen with date-grouped entries, search, swipe-to-delete,
 /// clear by time range, and infinite scroll pagination.
@@ -22,6 +23,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   final _scrollController = ScrollController();
   final List<Map<String, dynamic>> _items = [];
   String _search = '';
+  final TextEditingController _historySearchController =
+      TextEditingController();
   bool _loading = false;
   bool _hasMore = true;
   static const _pageSize = 50;
@@ -37,6 +40,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _historySearchController.dispose();
     widget.repo.removeListener(_refresh);
     super.dispose();
   }
@@ -89,6 +93,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
       appBar: AppBar(
         title: const Text('History'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_sweep_rounded),
+            tooltip: 'Clear all history',
+            onPressed: _items.isEmpty
+                ? null
+                : () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text('Clear history?'),
+                        content:
+                            const Text('All browsing history will be deleted.'),
+                        actions: [
+                          TextButton(
+                              onPressed: () => Navigator.pop(_, false),
+                              child: const Text('Cancel')),
+                          FilledButton(
+                              onPressed: () => Navigator.pop(_, true),
+                              child: const Text('Clear')),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      await widget.repo.clearHistory();
+                      _refresh();
+                    }
+                  },
+          ),
           PopupMenuButton<String>(
             onSelected: _handleClearAction,
             itemBuilder: (_) => const [
@@ -97,7 +129,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               PopupMenuItem(value: 'week', child: Text('Last 7 days')),
               PopupMenuItem(value: 'all', child: Text('All time')),
             ],
-            icon: const Icon(Icons.delete_sweep),
+            icon: const Icon(Icons.more_vert),
           ),
         ],
       ),
@@ -107,9 +139,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: TextField(
+              controller: _historySearchController,
               decoration: InputDecoration(
-                hintText: 'Search history',
+                hintText: 'Search history…',
                 prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: _search.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _historySearchController.clear();
+                          setState(() => _search = '');
+                          _items.clear();
+                          _hasMore = true;
+                          _loadMore();
+                        },
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      )
+                    : null,
                 isDense: true,
                 filled: true,
                 fillColor: cs.surfaceContainerHighest,
@@ -125,18 +172,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
           // ── List ──
           Expanded(
             child: _items.isEmpty && !_loading
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.history,
-                            size: 64,
-                            color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-                        const SizedBox(height: 12),
-                        Text('No history',
-                            style: TextStyle(color: cs.onSurfaceVariant)),
-                      ],
-                    ),
+                ? EmptyState(
+                    icon: Icons.history,
+                    title: 'No history',
+                    subtitle: 'Your browsing history will appear here',
                   )
                 : ListView.builder(
                     controller: _scrollController,
@@ -161,8 +200,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           widget.onNavigate(item['url'] as String);
                           Navigator.pop(context);
                         },
-                        onDismissed: () => widget.repo
-                            .deleteHistoryItem(item['id'] as int),
+                        onDismissed: () =>
+                            widget.repo.deleteHistoryItem(item['id'] as int),
                       );
                     },
                   ),
@@ -177,8 +216,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final result = <dynamic>[];
     String? lastLabel;
     for (final item in items) {
-      final dt = DateTime.fromMillisecondsSinceEpoch(
-          item['visited_at'] as int);
+      final dt = DateTime.fromMillisecondsSinceEpoch(item['visited_at'] as int);
       final label = _dateLabel(dt);
       if (label != lastLabel) {
         result.add(label);
@@ -275,8 +313,7 @@ class _HistoryTile extends StatelessWidget {
     final title = item['title'] as String? ?? '';
     final favicon = item['favicon'] as String?;
     final host = Uri.tryParse(url)?.host ?? url;
-    final dt = DateTime.fromMillisecondsSinceEpoch(
-        item['visited_at'] as int);
+    final dt = DateTime.fromMillisecondsSinceEpoch(item['visited_at'] as int);
     final time =
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
@@ -313,8 +350,7 @@ class _HistoryTile extends StatelessWidget {
       return Image.network(url,
           width: 24,
           height: 24,
-          errorBuilder: (_, __, ___) =>
-              const Icon(Icons.language, size: 24));
+          errorBuilder: (_, __, ___) => const Icon(Icons.language, size: 24));
     }
     return const Icon(Icons.language, size: 24);
   }

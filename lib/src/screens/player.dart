@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
+import '../utils/snack.dart';
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
@@ -20,7 +21,6 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:video_player/video_player.dart';
 import '../services/platform_dirs.dart';
 import '../services/audio_handler.dart';
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // IMPORTANT: In your main.dart add these two lines before runApp():
@@ -63,8 +63,10 @@ class MediaItem {
       {this.title, this.artist, this.thumbnailData, this.duration});
 
   MediaItem copyWith(
-          {String? title, String? artist, Uint8List? thumbnailData,
-           Duration? duration}) =>
+          {String? title,
+          String? artist,
+          Uint8List? thumbnailData,
+          Duration? duration}) =>
       MediaItem(path, type,
           title: title ?? this.title,
           artist: artist ?? this.artist,
@@ -135,24 +137,24 @@ img.Image? _decodeByMagic(Uint8List raw) {
   if (raw[0] == 0xFF && raw[1] == 0xD8 && raw[2] == 0xFF) {
     return img.decodeJpg(raw);
   }
-  if (raw[0] == 0x89 &&
-      raw[1] == 0x50 &&
-      raw[2] == 0x4E &&
-      raw[3] == 0x47) {
+  if (raw[0] == 0x89 && raw[1] == 0x50 && raw[2] == 0x4E && raw[3] == 0x47) {
     return img.decodePng(raw);
   }
-  if (raw[0] == 0x47 &&
-      raw[1] == 0x49 &&
-      raw[2] == 0x46 &&
-      raw[3] == 0x38) {
+  if (raw[0] == 0x47 && raw[1] == 0x49 && raw[2] == 0x46 && raw[3] == 0x38) {
     return img.decodeGif(raw);
   }
   if (raw[0] == 0x42 && raw[1] == 0x4D) {
     return img.decodeBmp(raw);
   }
   if (raw.length >= 12 &&
-      raw[0] == 0x52 && raw[1] == 0x49 && raw[2] == 0x46 && raw[3] == 0x46 &&
-      raw[8] == 0x57 && raw[9] == 0x45 && raw[10] == 0x42 && raw[11] == 0x50) {
+      raw[0] == 0x52 &&
+      raw[1] == 0x49 &&
+      raw[2] == 0x46 &&
+      raw[3] == 0x46 &&
+      raw[8] == 0x57 &&
+      raw[9] == 0x45 &&
+      raw[10] == 0x42 &&
+      raw[11] == 0x50) {
     return img.decodeWebP(raw);
   }
   if ((raw[0] == 0x49 && raw[1] == 0x49 && raw[2] == 0x2A && raw[3] == 0x00) ||
@@ -383,7 +385,8 @@ class PlayerState with ChangeNotifier {
   bool get isPlaying {
     if (isVideo) {
       if (_videoSupported && _mkPlayer != null) return _mkPlayer!.state.playing;
-      if (_androidController != null) return _androidController!.value.isPlaying;
+      if (_androidController != null)
+        return _androidController!.value.isPlaying;
       return false;
     }
     return _audio.playing;
@@ -426,7 +429,8 @@ class PlayerState with ChangeNotifier {
       final item = _favouriteCache[path];
       if (item != null) {
         // tab-separated: path \t type \t title \t artist
-        list.add('${item.path}\t${item.type == MediaType.video ? 'v' : 'a'}\t${item.title ?? ''}\t${item.artist ?? ''}');
+        list.add(
+            '${item.path}\t${item.type == MediaType.video ? 'v' : 'a'}\t${item.title ?? ''}\t${item.artist ?? ''}');
         // Persist thumbnail to disk if available.
         if (item.thumbnailData != null) {
           _saveThumbToCache(path, item.thumbnailData!);
@@ -440,7 +444,8 @@ class PlayerState with ChangeNotifier {
   Future<Directory> _getThumbCacheDir() async {
     if (_thumbCacheDir != null) return _thumbCacheDir!;
     final appDir = await getApplicationSupportDirectory();
-    _thumbCacheDir = Directory('${appDir.path}${Platform.pathSeparator}thumb_cache');
+    _thumbCacheDir =
+        Directory('${appDir.path}${Platform.pathSeparator}thumb_cache');
     if (!_thumbCacheDir!.existsSync()) {
       _thumbCacheDir!.createSync(recursive: true);
     }
@@ -456,7 +461,8 @@ class PlayerState with ChangeNotifier {
   Future<void> _saveThumbToCache(String itemPath, Uint8List data) async {
     try {
       final dir = await _getThumbCacheDir();
-      final file = File('${dir.path}${Platform.pathSeparator}${_thumbCacheKey(itemPath)}.png');
+      final file = File(
+          '${dir.path}${Platform.pathSeparator}${_thumbCacheKey(itemPath)}.png');
       await file.writeAsBytes(data);
     } catch (e) {
       debugPrint('thumb cache write error: $e');
@@ -466,7 +472,8 @@ class PlayerState with ChangeNotifier {
   Future<Uint8List?> _loadThumbFromCache(String itemPath) async {
     try {
       final dir = await _getThumbCacheDir();
-      final file = File('${dir.path}${Platform.pathSeparator}${_thumbCacheKey(itemPath)}.png');
+      final file = File(
+          '${dir.path}${Platform.pathSeparator}${_thumbCacheKey(itemPath)}.png');
       if (await file.exists()) return await file.readAsBytes();
     } catch (e) {
       debugPrint('thumb cache read error: $e');
@@ -496,9 +503,13 @@ class PlayerState with ChangeNotifier {
     _folderItemCount = 0;
 
     // Stop any currently playing media to avoid stream listener interference.
-    try { await _audio.stop(); } catch (_) {}
+    try {
+      await _audio.stop();
+    } catch (_) {}
     if (_videoSupported && _mkPlayer != null) {
-      try { await _mkPlayer!.stop(); } catch (_) {}
+      try {
+        await _mkPlayer!.stop();
+      } catch (_) {}
     }
     await _disposeAndroidController();
 
@@ -593,8 +604,22 @@ class PlayerState with ChangeNotifier {
   }
 
   static const _mediaExtensions = {
-    '.mp3', '.m4a', '.flac', '.wav', '.ogg', '.opus', '.aac', '.wma',
-    '.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v',
+    '.mp3',
+    '.m4a',
+    '.flac',
+    '.wav',
+    '.ogg',
+    '.opus',
+    '.aac',
+    '.wma',
+    '.mp4',
+    '.mkv',
+    '.avi',
+    '.webm',
+    '.mov',
+    '.wmv',
+    '.flv',
+    '.m4v',
   };
 
   /// Re-scan the watched directory and update the library in-place.
@@ -604,26 +629,32 @@ class PlayerState with ChangeNotifier {
     final dir = Directory(dirPath);
     if (!await dir.exists()) return;
 
-    final files = dir
-        .listSync(recursive: true)
-        .whereType<File>()
-        .where((f) {
-          final ext = p.extension(f.path).toLowerCase();
-          return _mediaExtensions.contains(ext);
-        })
-        .map((f) {
-          final ext = p.extension(f.path).toLowerCase();
-          final type = {'.mp4','.mkv','.avi','.webm','.mov','.wmv','.flv','.m4v'}.contains(ext)
-              ? MediaType.video
-              : MediaType.audio;
-          return MediaItem(f.path, type, title: p.basenameWithoutExtension(f.path));
-        })
-        .toList();
+    final files = dir.listSync(recursive: true).whereType<File>().where((f) {
+      final ext = p.extension(f.path).toLowerCase();
+      return _mediaExtensions.contains(ext);
+    }).map((f) {
+      final ext = p.extension(f.path).toLowerCase();
+      final type = {
+        '.mp4',
+        '.mkv',
+        '.avi',
+        '.webm',
+        '.mov',
+        '.wmv',
+        '.flv',
+        '.m4v'
+      }.contains(ext)
+          ? MediaType.video
+          : MediaType.audio;
+      return MediaItem(f.path, type, title: p.basenameWithoutExtension(f.path));
+    }).toList();
 
     // Only refresh if the file set actually changed
-    final currentPaths = library.take(_folderItemCount).map((e) => e.path).toSet();
+    final currentPaths =
+        library.take(_folderItemCount).map((e) => e.path).toSet();
     final newPaths = files.map((e) => e.path).toSet();
-    if (currentPaths.length == newPaths.length && currentPaths.containsAll(newPaths)) {
+    if (currentPaths.length == newPaths.length &&
+        currentPaths.containsAll(newPaths)) {
       return; // no change
     }
 
@@ -643,7 +674,9 @@ class PlayerState with ChangeNotifier {
       if (!path.startsWith('content://')) {
         try {
           if (!await File(path).exists()) continue;
-        } catch (_) { continue; }
+        } catch (_) {
+          continue;
+        }
       }
 
       Uint8List? thumb;
@@ -658,9 +691,12 @@ class PlayerState with ChangeNotifier {
         if (tag.pictures.isNotEmpty) {
           for (final pic in tag.pictures) {
             if (pic.bytes.isEmpty) continue;
-            thumb = await _transcodeToSafePng(pic.bytes, mimeType: pic.mimetype);
+            thumb =
+                await _transcodeToSafePng(pic.bytes, mimeType: pic.mimetype);
             if (thumb != null) {
-              if (kDebugMode) debugPrint('video embedded art found for $path (${pic.bytes.length} bytes)');
+              if (kDebugMode)
+                debugPrint(
+                    'video embedded art found for $path (${pic.bytes.length} bytes)');
               break;
             }
           }
@@ -718,7 +754,9 @@ class PlayerState with ChangeNotifier {
       if (!path.startsWith('content://')) {
         try {
           if (!await File(path).exists()) continue;
-        } catch (_) { continue; }
+        } catch (_) {
+          continue;
+        }
       }
       try {
         final metaPath = await _resolveLocalPath(path);
@@ -727,7 +765,8 @@ class PlayerState with ChangeNotifier {
         if (tag.pictures.isNotEmpty) {
           for (final pic in tag.pictures) {
             if (pic.bytes.isEmpty) continue;
-            final safePng = await _transcodeToSafePng(pic.bytes, mimeType: pic.mimetype);
+            final safePng =
+                await _transcodeToSafePng(pic.bytes, mimeType: pic.mimetype);
             if (_loadVersion != version || i >= library.length) return;
             if (safePng != null) {
               library[i] = library[i].copyWith(thumbnailData: safePng);
@@ -783,8 +822,7 @@ class PlayerState with ChangeNotifier {
         } catch (_) {}
 
         if (dur != null && dur.inMilliseconds > 0) {
-          final seekMs =
-              (dur.inMilliseconds * 0.1).round().clamp(0, 15000);
+          final seekMs = (dur.inMilliseconds * 0.1).round().clamp(0, 15000);
           await _thumbPlayer!.seek(Duration(milliseconds: seekMs));
         }
 
@@ -847,8 +885,8 @@ class PlayerState with ChangeNotifier {
       if (_videoSupported && _mkPlayer != null) {
         _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
       }
-      _androidController?.setVolume(
-          (volume * _videoVolumeBoost).clamp(0.0, 1.0));
+      _androidController
+          ?.setVolume((volume * _videoVolumeBoost).clamp(0.0, 1.0));
     }
   }
 
@@ -857,7 +895,9 @@ class PlayerState with ChangeNotifier {
   /// Get valid playback indices based on current mode and filters.
   List<int> _getPlaybackCandidates({MediaType? only}) {
     final scope = _folderItemCount > 0 ? _folderItemCount : library.length;
-    return library.asMap().entries
+    return library
+        .asMap()
+        .entries
         .where((e) {
           if (favouritesOnly) {
             if (!_favourites.contains(e.value.path)) return false;
@@ -865,7 +905,9 @@ class PlayerState with ChangeNotifier {
             if (e.key >= scope) return false;
           }
           if (only != null && e.value.type != only) return false;
-          if (!_videoSupported && !Platform.isAndroid && e.value.type != MediaType.audio) return false;
+          if (!_videoSupported &&
+              !Platform.isAndroid &&
+              e.value.type != MediaType.audio) return false;
           return true;
         })
         .map((e) => e.key)
@@ -902,7 +944,8 @@ class PlayerState with ChangeNotifier {
       _pendingReload = true;
       return;
     }
-    final item = currentItem!; // Capture once – library may change across awaits
+    final item =
+        currentItem!; // Capture once – library may change across awaits
     _loadingTrack = true;
     _pendingReload = false;
     _videoCompletionFired = false;
@@ -953,7 +996,9 @@ class PlayerState with ChangeNotifier {
                 await ctrl.initialize();
               } catch (e) {
                 debugPrint('android VP content:// init failed: $e');
-                try { await ctrl?.dispose(); } catch (_) {}
+                try {
+                  await ctrl?.dispose();
+                } catch (_) {}
                 ctrl = null;
               }
             }
@@ -965,7 +1010,9 @@ class PlayerState with ChangeNotifier {
                 await ctrl.initialize();
               } catch (e) {
                 debugPrint('android VP file init failed: $e');
-                try { await ctrl?.dispose(); } catch (_) {}
+                try {
+                  await ctrl?.dispose();
+                } catch (_) {}
                 ctrl = null;
               }
             }
@@ -980,7 +1027,9 @@ class PlayerState with ChangeNotifier {
                 }
               } catch (e) {
                 debugPrint('android VP temp-copy init failed: $e');
-                try { await ctrl?.dispose(); } catch (_) {}
+                try {
+                  await ctrl?.dispose();
+                } catch (_) {}
                 ctrl = null;
               }
             }
@@ -1014,6 +1063,7 @@ class PlayerState with ChangeNotifier {
                 }
                 notifyListeners();
               }
+
               _androidListener = listener;
               ctrl.addListener(listener);
             } else {
@@ -1039,7 +1089,8 @@ class PlayerState with ChangeNotifier {
   }
 
   String _toUri(String path) {
-    if (path.startsWith('file://') || path.startsWith('http') ||
+    if (path.startsWith('file://') ||
+        path.startsWith('http') ||
         path.startsWith('content://')) return path;
     if (Platform.isWindows) return Uri.file(path, windows: true).toString();
     return Uri.file(path).toString();
@@ -1129,8 +1180,8 @@ class PlayerState with ChangeNotifier {
   }
 
   void cycleRepeat() {
-    repeatMode = RepeatMode
-        .values[(repeatMode.index + 1) % RepeatMode.values.length];
+    repeatMode =
+        RepeatMode.values[(repeatMode.index + 1) % RepeatMode.values.length];
     prefs.setInt('repeat', repeatMode.index);
     notifyListeners();
   }
@@ -1140,8 +1191,8 @@ class PlayerState with ChangeNotifier {
     shuffle = prefs.getBool('shuffle') ?? false;
     repeatMode = RepeatMode.values[
         (prefs.getInt('repeat') ?? 0).clamp(0, RepeatMode.values.length - 1)];
-    playbackMode = PlaybackMode.values[
-        (prefs.getInt('playbackMode') ?? 0).clamp(0, PlaybackMode.values.length - 1)];
+    playbackMode = PlaybackMode.values[(prefs.getInt('playbackMode') ?? 0)
+        .clamp(0, PlaybackMode.values.length - 1)];
     _applyPlaybackMode();
     _favourites = (prefs.getStringList('player_favourites') ?? []).toSet();
 
@@ -1153,9 +1204,10 @@ class PlayerState with ChangeNotifier {
         final path = parts[0];
         final type = parts[1] == 'v' ? MediaType.video : MediaType.audio;
         final title = parts.length > 2 && parts[2].isNotEmpty ? parts[2] : null;
-        final artist = parts.length > 3 && parts[3].isNotEmpty ? parts[3] : null;
-        _favouriteCache[path] = MediaItem(path, type,
-            title: title, artist: artist);
+        final artist =
+            parts.length > 3 && parts[3].isNotEmpty ? parts[3] : null;
+        _favouriteCache[path] =
+            MediaItem(path, type, title: title, artist: artist);
       }
     }
     // Load cached thumbnails from disk for favourites.
@@ -1339,7 +1391,9 @@ class _PlayerScreenState extends State<PlayerScreen>
   Color get _div => Theme.of(context).dividerColor;
   Color get _tile {
     final cs = Theme.of(context).colorScheme;
-    return cs.brightness == Brightness.dark ? cs.surfaceContainerHighest : cs.surface;
+    return cs.brightness == Brightness.dark
+        ? cs.surfaceContainerHighest
+        : cs.surface;
   }
 
   static Color _a(double a) => _accent.withValues(alpha: a);
@@ -1386,7 +1440,8 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _matchesSearch(MediaItem item) {
     if (_searchQuery.isEmpty) return true;
     final q = _searchQuery.toLowerCase();
-    final title = (item.title ?? p.basenameWithoutExtension(item.path)).toLowerCase();
+    final title =
+        (item.title ?? p.basenameWithoutExtension(item.path)).toLowerCase();
     final artist = (item.artist ?? '').toLowerCase();
     return title.contains(q) || artist.contains(q);
   }
@@ -1400,98 +1455,102 @@ class _PlayerScreenState extends State<PlayerScreen>
         top: false,
         bottom: true,
         child: Column(
-        children: [
-          // ── Persistent video renderer (always in tree, hidden when not needed) ──
-          _PersistentVideoWidget(
-            mkController: state.videoController,
-            androidController: state.androidVideoController,
-            visible: state.isVideo &&
-                (state.videoController != null || state.androidVideoController != null),
-            ready: state.videoReady,
-            onTap: state.togglePlay,
-            accent: _accent,
-            tileBg: _tile,
-          ),
+          children: [
+            // ── Persistent video renderer (always in tree, hidden when not needed) ──
+            _PersistentVideoWidget(
+              mkController: state.videoController,
+              androidController: state.androidVideoController,
+              visible: state.isVideo &&
+                  (state.videoController != null ||
+                      state.androidVideoController != null),
+              ready: state.videoReady,
+              onTap: state.togglePlay,
+              accent: _accent,
+              tileBg: _tile,
+            ),
 
-          // ── Scrollable content ──
-          Expanded(
-            child: CustomScrollView(
-              primary: false,
-              slivers: [
-                SliverToBoxAdapter(child: _header()),
-                SliverToBoxAdapter(child: _nowPlaying(state)),
-                if (state.isLoading)
-                  SliverToBoxAdapter(
-                    child: LinearProgressIndicator(color: _accent),
+            // ── Scrollable content ──
+            Expanded(
+              child: CustomScrollView(
+                primary: false,
+                slivers: [
+                  SliverToBoxAdapter(child: _header()),
+                  SliverToBoxAdapter(child: _nowPlaying(state)),
+                  if (state.isLoading)
+                    SliverToBoxAdapter(
+                      child: LinearProgressIndicator(color: _accent),
+                    ),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _TabHeaderDelegate(
+                      TabBar(
+                        controller: _tabController,
+                        labelColor: _accent,
+                        unselectedLabelColor: _sub,
+                        indicatorColor: _accent,
+                        isScrollable: true,
+                        tabAlignment: TabAlignment.start,
+                        tabs: [
+                          Tab(text: 'All (${state.folderItemCount})'),
+                          Tab(text: '♪ Songs (${state.audioEntries.length})'),
+                          Tab(text: '▶ Videos (${state.videoEntries.length})'),
+                          Tab(
+                              text:
+                                  '★ Favourites (${state.favouriteEntries.length})'),
+                          Tab(text: '⏭ Queue (${state.manualQueue.length})'),
+                        ],
+                      ),
+                      bg: _bg,
+                    ),
                   ),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _TabHeaderDelegate(
-                    TabBar(
+                  // ── Search bar ──
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search library…',
+                          prefixIcon: const Icon(Icons.search, size: 20),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          isDense: true,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 12),
+                        ),
+                        onChanged: (v) =>
+                            setState(() => _searchQuery = v.trim()),
+                      ),
+                    ),
+                  ),
+                  SliverFillRemaining(
+                    hasScrollBody: true,
+                    child: TabBarView(
                       controller: _tabController,
-                      labelColor: _accent,
-                      unselectedLabelColor: _sub,
-                      indicatorColor: _accent,
-                      isScrollable: true,
-                      tabAlignment: TabAlignment.start,
-                      tabs: [
-                        Tab(text: 'All (${state.folderItemCount})'),
-                        Tab(text: '♪ Songs (${state.audioEntries.length})'),
-                        Tab(text: '▶ Videos (${state.videoEntries.length})'),
-                        Tab(text: '★ Favourites (${state.favouriteEntries.length})'),
-                        Tab(text: '⏭ Queue (${state.manualQueue.length})'),
+                      children: [
+                        _allTab(state),
+                        _songsTab(state),
+                        _videosTab(state),
+                        _favouritesTab(state),
+                        _queueTab(state),
                       ],
                     ),
-                    bg: _bg,
                   ),
-                ),
-                // ── Search bar ──
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search library…',
-                        prefixIcon: const Icon(Icons.search, size: 20),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _searchQuery = '');
-                                },
-                              )
-                            : null,
-                        isDense: true,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            vertical: 8, horizontal: 12),
-                      ),
-                      onChanged: (v) => setState(() => _searchQuery = v.trim()),
-                    ),
-                  ),
-                ),
-                SliverFillRemaining(
-                  hasScrollBody: true,
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _allTab(state),
-                      _songsTab(state),
-                      _videosTab(state),
-                      _favouritesTab(state),
-                      _queueTab(state),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -1621,8 +1680,8 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   Widget _controls(PlayerState state) {
-    final isFav = state.currentItem != null &&
-        state.isFavourite(state.currentItem!.path);
+    final isFav =
+        state.currentItem != null && state.isFavourite(state.currentItem!.path);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -1640,13 +1699,11 @@ class _PlayerScreenState extends State<PlayerScreen>
               ? () {}
               : () {
                   state.enqueue(state.currentIndex);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Queued: ${state.currentItem!.title ?? p.basenameWithoutExtension(state.currentItem!.path)}',
-                      ),
-                      duration: const Duration(seconds: 2),
-                    ),
+                  Snack.show(
+                    context,
+                    'Queued: ${state.currentItem!.title ?? p.basenameWithoutExtension(state.currentItem!.path)}',
+                    level: SnackLevel.info,
+                    duration: const Duration(seconds: 2),
                   );
                 },
           size: 20,
@@ -1677,7 +1734,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  state.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  state.isPlaying
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded,
                   color: _bg,
                   size: 30,
                 ),
@@ -1723,7 +1782,6 @@ class _PlayerScreenState extends State<PlayerScreen>
             ),
           ),
         ),
-
       ],
     );
   }
@@ -1781,7 +1839,8 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
-  Widget _iconBtn(IconData icon, VoidCallback onTap, {double size = 26, String? tooltip}) {
+  Widget _iconBtn(IconData icon, VoidCallback onTap,
+      {double size = 26, String? tooltip}) {
     return Semantics(
       button: true,
       label: tooltip,
@@ -1803,12 +1862,10 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Widget _allTab(PlayerState state) {
     if (state.library.isEmpty) return _empty();
-    final filteredAudio = state.audioEntries
-        .where((e) => _matchesSearch(e.value))
-        .toList();
-    final filteredVideo = state.videoEntries
-        .where((e) => _matchesSearch(e.value))
-        .toList();
+    final filteredAudio =
+        state.audioEntries.where((e) => _matchesSearch(e.value)).toList();
+    final filteredVideo =
+        state.videoEntries.where((e) => _matchesSearch(e.value)).toList();
     if (filteredAudio.isEmpty && filteredVideo.isEmpty) return _noResults();
 
     // Build a flat list of widgets for builder-based virtualisation.
@@ -1848,9 +1905,8 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Widget _songsTab(PlayerState state) {
     if (state.audioEntries.isEmpty) return _empty();
-    final filtered = state.audioEntries
-        .where((e) => _matchesSearch(e.value))
-        .toList();
+    final filtered =
+        state.audioEntries.where((e) => _matchesSearch(e.value)).toList();
     if (filtered.isEmpty) return _noResults();
     return Scrollbar(
       controller: _songsScrollController,
@@ -1868,9 +1924,8 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Widget _videosTab(PlayerState state) {
     if (state.videoEntries.isEmpty) return _empty();
-    final filtered = state.videoEntries
-        .where((e) => _matchesSearch(e.value))
-        .toList();
+    final filtered =
+        state.videoEntries.where((e) => _matchesSearch(e.value)).toList();
     if (filtered.isEmpty) return _noResults();
     return Scrollbar(
       controller: _videosScrollController,
@@ -1883,9 +1938,8 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   Widget _favouritesTab(PlayerState state) {
-    final favs = state.favouriteEntries
-        .where((e) => _matchesSearch(e.value))
-        .toList();
+    final favs =
+        state.favouriteEntries.where((e) => _matchesSearch(e.value)).toList();
     if (favs.isEmpty) {
       return Center(
         child: Column(
@@ -1898,14 +1952,16 @@ class _PlayerScreenState extends State<PlayerScreen>
                 style: TextStyle(color: _sub, fontSize: 14)),
             const SizedBox(height: 4),
             Text('Tap the heart icon on any track',
-                style: TextStyle(color: _sub.withValues(alpha: 0.6),
-                    fontSize: 12)),
+                style: TextStyle(
+                    color: _sub.withValues(alpha: 0.6), fontSize: 12)),
           ],
         ),
       );
     }
-    final favAudio = favs.where((e) => e.value.type == MediaType.audio).toList();
-    final favVideo = favs.where((e) => e.value.type == MediaType.video).toList();
+    final favAudio =
+        favs.where((e) => e.value.type == MediaType.audio).toList();
+    final favVideo =
+        favs.where((e) => e.value.type == MediaType.video).toList();
 
     final items = <_AllTabItem>[];
     if (favAudio.isNotEmpty) {
@@ -1982,8 +2038,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                         return ChoiceChip(
                           key: ValueKey(mode),
                           avatar: Icon(icon,
-                              size: 16,
-                              color: selected ? Colors.white : _sub),
+                              size: 16, color: selected ? Colors.white : _sub),
                           label: Text(label),
                           selected: selected,
                           selectedColor: _accent,
@@ -2041,8 +2096,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                     const SizedBox(height: 4),
                     Text('Tap the queue button to add songs',
                         style: TextStyle(
-                            color: _sub.withValues(alpha: 0.6),
-                            fontSize: 12)),
+                            color: _sub.withValues(alpha: 0.6), fontSize: 12)),
                   ],
                 ),
               ),
@@ -2071,7 +2125,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                   child: ListTile(
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                    leading: _thumb(item, 40,
+                    leading: _thumb(
+                        item,
+                        40,
                         item.type == MediaType.video
                             ? Icons.videocam
                             : Icons.audiotrack),
@@ -2120,8 +2176,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.folder_open,
-              size: 64, color: _sub.withValues(alpha: 0.4)),
+          Icon(Icons.folder_open, size: 64, color: _sub.withValues(alpha: 0.4)),
           const SizedBox(height: 12),
           Text('Open a folder to load media',
               style: TextStyle(color: _sub, fontSize: 14)),
@@ -2135,11 +2190,9 @@ class _PlayerScreenState extends State<PlayerScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.search_off,
-              size: 64, color: _sub.withValues(alpha: 0.4)),
+          Icon(Icons.search_off, size: 64, color: _sub.withValues(alpha: 0.4)),
           const SizedBox(height: 12),
-          Text('No matches found',
-              style: TextStyle(color: _sub, fontSize: 14)),
+          Text('No matches found', style: TextStyle(color: _sub, fontSize: 14)),
         ],
       ),
     );
@@ -2165,8 +2218,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       child: InkWell(
         onTap: () => state.select(index),
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           child: Row(
             children: [
               // Thumbnail with playing indicator overlay
@@ -2203,8 +2255,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           fontSize: 13,
-                          fontWeight:
-                              sel ? FontWeight.bold : FontWeight.w400,
+                          fontWeight: sel ? FontWeight.bold : FontWeight.w400,
                           color: sel ? _accent : _text),
                     ),
                     if (item.artist != null) ...[
@@ -2222,11 +2273,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                 borderRadius: BorderRadius.circular(16),
                 onTap: () {
                   state.enqueue(index);
-                  ScaffoldMessenger.of(context)
-                    ..clearSnackBars()
-                    ..showSnackBar(SnackBar(
-                        content: Text('Added to queue'),
-                        duration: const Duration(seconds: 1)));
+                  Snack.show(context, 'Added to queue',
+                      level: SnackLevel.info,
+                      duration: const Duration(seconds: 1));
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(6),
@@ -2252,12 +2301,19 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
-  Widget _videoGrid(
-      PlayerState state, List<MapEntry<int, MediaItem>> entries) {
+  Widget _videoGrid(PlayerState state, List<MapEntry<int, MediaItem>> entries) {
     return LayoutBuilder(builder: (context, constraints) {
       // Responsive columns: 1 on narrow (phones), 2 on medium, 3+ on wide
       final width = constraints.maxWidth;
-      final cols = width < 400 ? 1 : width < 600 ? 2 : width < 900 ? 3 : width < 1300 ? 4 : 5;
+      final cols = width < 400
+          ? 1
+          : width < 600
+              ? 2
+              : width < 900
+                  ? 3
+                  : width < 1300
+                      ? 4
+                      : 5;
       final spacing = 16.0;
 
       return GridView.builder(
@@ -2273,7 +2329,8 @@ class _PlayerScreenState extends State<PlayerScreen>
           crossAxisSpacing: spacing,
         ),
         itemCount: entries.length,
-        itemBuilder: (_, i) => _videoCard(state, entries[i].key, entries[i].value),
+        itemBuilder: (_, i) =>
+            _videoCard(state, entries[i].key, entries[i].value),
       );
     });
   }
@@ -2376,51 +2433,49 @@ class _PlayerScreenState extends State<PlayerScreen>
             child: Padding(
               padding: const EdgeInsets.only(top: 8, left: 2, right: 2),
               child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title ?? p.basenameWithoutExtension(item.path),
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: sel ? FontWeight.bold : FontWeight.w500,
-                          color: sel ? _accent : _text,
-                          height: 1.2,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.title ?? p.basenameWithoutExtension(item.path),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: sel ? FontWeight.bold : FontWeight.w500,
+                            color: sel ? _accent : _text,
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (item.artist != null) ...[
-                        const SizedBox(height: 2),
-                        Text(item.artist!,
-                            style: TextStyle(fontSize: 11, color: _sub),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
+                        if (item.artist != null) ...[
+                          const SizedBox(height: 2),
+                          Text(item.artist!,
+                              style: TextStyle(fontSize: 11, color: _sub),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                // Queue button
-                GestureDetector(
-                  onTap: () {
-                    state.enqueue(idx);
-                    ScaffoldMessenger.of(context)
-                      ..clearSnackBars()
-                      ..showSnackBar(SnackBar(
-                          content: Text('Added to queue'),
-                          duration: const Duration(seconds: 1)));
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 4, top: 2),
-                    child: Icon(Icons.more_vert, size: 18, color: _sub),
+                  // Queue button
+                  GestureDetector(
+                    onTap: () {
+                      state.enqueue(idx);
+                      Snack.show(context, 'Added to queue',
+                          level: SnackLevel.info,
+                          duration: const Duration(seconds: 1));
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 4, top: 2),
+                      child: Icon(Icons.more_vert, size: 18, color: _sub),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           ),
         ],
       ),
@@ -2440,8 +2495,8 @@ class _PlayerScreenState extends State<PlayerScreen>
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-          color: _tile, borderRadius: BorderRadius.circular(4)),
+      decoration:
+          BoxDecoration(color: _tile, borderRadius: BorderRadius.circular(4)),
       child: Icon(fallback, color: _sub, size: size * 0.5),
     );
   }
@@ -2501,35 +2556,30 @@ class _PlayerScreenState extends State<PlayerScreen>
             }
           }
           if (!audioExt.contains(ext) && !videoExt.contains(ext)) continue;
-          final type = videoExt.contains(ext) ? MediaType.video : MediaType.audio;
-          files.add(MediaItem(uri, type,
-              title: p.basenameWithoutExtension(name)));
+          final type =
+              videoExt.contains(ext) ? MediaType.video : MediaType.audio;
+          files.add(
+              MediaItem(uri, type, title: p.basenameWithoutExtension(name)));
         }
       } else {
         final dir = Directory(result);
         if (await dir.exists()) {
-          files = dir
-              .listSync(recursive: true)
-              .whereType<File>()
-              .where((f) {
-                final ext = p.extension(f.path).toLowerCase();
-                return audioExt.contains(ext) || videoExt.contains(ext);
-              })
-              .map((f) {
-                final ext = p.extension(f.path).toLowerCase();
-                final type =
-                    videoExt.contains(ext) ? MediaType.video : MediaType.audio;
-                return MediaItem(f.path, type,
-                    title: p.basenameWithoutExtension(f.path));
-              })
-              .toList();
+          files = dir.listSync(recursive: true).whereType<File>().where((f) {
+            final ext = p.extension(f.path).toLowerCase();
+            return audioExt.contains(ext) || videoExt.contains(ext);
+          }).map((f) {
+            final ext = p.extension(f.path).toLowerCase();
+            final type =
+                videoExt.contains(ext) ? MediaType.video : MediaType.audio;
+            return MediaItem(f.path, type,
+                title: p.basenameWithoutExtension(f.path));
+          }).toList();
         } else {
           final picked = await FilePicker.platform.pickFiles(
             allowMultiple: true,
             type: FileType.custom,
-            allowedExtensions: [...audioExt, ...videoExt]
-                .map((e) => e.substring(1))
-                .toList(),
+            allowedExtensions:
+                [...audioExt, ...videoExt].map((e) => e.substring(1)).toList(),
           );
           if (picked != null && picked.files.isNotEmpty) {
             for (final pf in picked.files) {
@@ -2549,9 +2599,8 @@ class _PlayerScreenState extends State<PlayerScreen>
       final picked = await FilePicker.platform.pickFiles(
         allowMultiple: true,
         type: FileType.custom,
-        allowedExtensions: [...audioExt, ...videoExt]
-            .map((e) => e.substring(1))
-            .toList(),
+        allowedExtensions:
+            [...audioExt, ...videoExt].map((e) => e.substring(1)).toList(),
       );
       if (picked != null && picked.files.isNotEmpty) {
         for (final pf in picked.files) {
@@ -2560,8 +2609,8 @@ class _PlayerScreenState extends State<PlayerScreen>
           final ext = p.extension(path).toLowerCase();
           final type =
               videoExt.contains(ext) ? MediaType.video : MediaType.audio;
-          files.add(MediaItem(path, type,
-              title: p.basenameWithoutExtension(path)));
+          files.add(
+              MediaItem(path, type, title: p.basenameWithoutExtension(path)));
         }
       }
     }
@@ -2623,11 +2672,13 @@ class _PersistentVideoWidgetState extends State<_PersistentVideoWidget>
               ValueListenableBuilder<VideoPlayerValue>(
                 valueListenable: widget.androidController!,
                 builder: (_, value, __) {
-                  if (!value.isInitialized) return Container(color: widget.tileBg);
+                  if (!value.isInitialized)
+                    return Container(color: widget.tileBg);
                   return ClipRect(
                     child: Center(
                       child: AspectRatio(
-                        aspectRatio: value.aspectRatio == 0 ? 16 / 9 : value.aspectRatio,
+                        aspectRatio:
+                            value.aspectRatio == 0 ? 16 / 9 : value.aspectRatio,
                         child: VideoPlayer(widget.androidController!),
                       ),
                     ),

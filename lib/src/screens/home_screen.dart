@@ -1,8 +1,9 @@
 ﻿import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
+import '../utils/snack.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -145,6 +146,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         });
       }
     });
+
+    // Debug: print available quick-links map for developer diagnostics.
+    if (kDebugMode) {
+      debugPrint('[NAV] QuickLinks routeToIndex keys: ' +
+          QuickLinksService.routeToIndex.keys.join(', '));
+    }
 
     // Load update preference and check for updates on launch
     UpdateService.isCheckOnLaunchEnabled().then((v) {
@@ -387,7 +394,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               return;
             }
             final idx = QuickLinksService.routeToIndex[route];
-            if (idx != null) _navigateToPage(idx);
+            if (idx != null) {
+              _navigateToPage(idx);
+            } else {
+              if (kDebugMode)
+                debugPrint('[NAV] WARNING: no index for route "$route"');
+            }
           },
           onBack: _canGoBack ? _goBack : null,
           onForward: _canGoForward ? _goForward : null,
@@ -591,9 +603,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
     await widget.controller.saveSettings(settings.copyWith(downloadDir: uri));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Download folder updated')),
-      );
+      Snack.show(context, 'Download folder updated', level: SnackLevel.info);
     }
   }
 
@@ -601,9 +611,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (!_hasAndroidFolder) return;
     final ok = await _androidSaf.openTree(_androidDownloadUri);
     if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open the selected folder.')),
-      );
+      Snack.show(context, 'Could not open the selected folder.',
+          level: SnackLevel.error);
     }
   }
 
@@ -1115,30 +1124,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (_isAndroid) return true;
     final dir = settings.downloadDir.trim();
     if (dir.isNotEmpty) return true;
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded,
-                color: context.onWarning, size: 20),
-            SizedBox(width: 8),
-            Expanded(
-                child:
-                    Text('Please select a download folder in Settings first.')),
-          ],
-        ),
-        backgroundColor: context.warning.withAlpha((0.95 * 255).round()),
-        duration: const Duration(seconds: 4),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        margin: const EdgeInsets.all(16),
-        action: SnackBarAction(
-          label: 'Go to Settings',
-          textColor: context.onWarning,
-          onPressed: () => _navigateToPage(7),
-        ),
-      ),
+    Snack.show(
+      context,
+      'Please select a download folder in Settings first.',
+      level: SnackLevel.warning,
+      actionLabel: 'Go to Settings',
+      onAction: () => _navigateToPage(7),
+      duration: const Duration(seconds: 4),
     );
     // Navigate to settings
     _navigateToPage(7);
@@ -1293,11 +1285,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         widget.controller
                             .addToQueue(item, _downloadFormat.toLowerCase());
                       }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content:
-                                Text('Added ${items.length} items to queue')),
-                      );
+                      Snack.show(
+                          context, 'Added ${items.length} items to queue',
+                          level: SnackLevel.info);
                     },
                   ),
                   ElevatedButton.icon(
@@ -1344,11 +1334,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         widget.controller
                             .addToQueue(item, _downloadFormat.toLowerCase());
                       }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content:
-                                Text('Added ${items.length} items to queue')),
-                      );
+                      Snack.show(
+                          context, 'Added ${items.length} items to queue',
+                          level: SnackLevel.info);
                     },
                   ),
                   const SizedBox(width: 8),
@@ -1453,11 +1441,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             widget.controller.addToQueue(
                                 item, _downloadFormat.toLowerCase());
                           }
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text(
-                                    'Added ${subset.length} items to queue')),
-                          );
+                          Snack.show(
+                              context, 'Added ${subset.length} items to queue',
+                              level: SnackLevel.info);
                         },
                       ),
                       ElevatedButton.icon(
@@ -1560,10 +1546,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 onPressed: () {
                                   widget.controller.addToQueue(
                                       item, _downloadFormat.toLowerCase());
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text('Added to queue')),
-                                  );
+                                  Snack.show(context, 'Added to queue',
+                                      level: SnackLevel.info,
+                                      duration: const Duration(seconds: 1));
                                 },
                                 tooltip: 'Add to queue',
                               ),
@@ -1596,9 +1581,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             onPressed: () {
                               widget.controller.addToQueue(
                                   item, _downloadFormat.toLowerCase());
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Added to queue')),
-                              );
+                              Snack.show(context, 'Added to queue',
+                                  level: SnackLevel.info,
+                                  duration: const Duration(seconds: 1));
                             },
                           ),
                           ElevatedButton.icon(
@@ -2903,11 +2888,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             mode: LaunchMode.externalApplication,
                           );
                           if (!launched && mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content:
-                                      Text('Could not open the GitHub link.')),
-                            );
+                            Snack.show(
+                                context, 'Could not open the GitHub link.',
+                                level: SnackLevel.error);
                           }
                         },
                       ),
@@ -2962,10 +2945,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     onTap: () async {
                       await QuickLinksService.resetToDefaults();
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Quick links reset to defaults')),
-                        );
+                        Snack.show(context, 'Quick links reset to defaults',
+                            level: SnackLevel.info);
                       }
                     },
                   ),
@@ -2977,11 +2958,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       await _onboarding.reset();
                       setState(() => _dismissedBannerRoute = null);
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  'Tutorial tips will show again on each screen')),
-                        );
+                        Snack.show(context,
+                            'Tutorial tips will show again on each screen',
+                            level: SnackLevel.info);
                       }
                     },
                   ),
@@ -3012,10 +2991,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final launched =
         await launchUrl(_buyMeCoffeeUri, mode: LaunchMode.externalApplication);
     if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Could not open the Buy Me a Coffee link.')),
-      );
+      Snack.show(context, 'Could not open the Buy Me a Coffee link.',
+          level: SnackLevel.error);
     }
   }
 
@@ -3056,33 +3033,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
     await widget.controller.saveSettings(next);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle,
-                color: Theme.of(context).colorScheme.onPrimary, size: 20),
-            const SizedBox(width: 8),
-            const Text('Settings saved'),
-          ],
-        ),
-        backgroundColor: context.success,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+    Snack.show(context, 'Settings saved',
+        level: SnackLevel.success, duration: const Duration(seconds: 2));
   }
 
   Future<void> _openWebsite() async {
     final launched =
         await launchUrl(_websiteUri, mode: LaunchMode.externalApplication);
     if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open the website.')),
-      );
+      Snack.show(context, 'Could not open the website.',
+          level: SnackLevel.error);
     }
   }
 
@@ -3100,9 +3060,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open folder: $e')),
-        );
+        Snack.show(context, 'Could not open folder: $e',
+            level: SnackLevel.error);
       }
     }
   }
@@ -3114,9 +3073,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not share file: $e')),
-        );
+        Snack.show(context, 'Could not share file: $e',
+            level: SnackLevel.error);
       }
     }
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/snack.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../browser/adblock/adblock_service.dart';
@@ -34,8 +35,7 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _searchEngine =
-          prefs.getString('browser_search_engine') ?? 'DuckDuckGo';
+      _searchEngine = prefs.getString('browser_search_engine') ?? 'DuckDuckGo';
       _desktopMode = prefs.getBool('browser_desktop_mode') ?? false;
       _blockPopups = prefs.getBool('browser_block_popups') ?? true;
       _doNotTrack = prefs.getBool('browser_dnt') ?? true;
@@ -73,9 +73,8 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
           SwitchListTile(
             secondary: const Icon(Icons.block),
             title: const Text('Ad Blocker'),
-            subtitle: Text(widget.adBlockService.adBlockEnabled
-                ? 'Enabled'
-                : 'Disabled'),
+            subtitle: Text(
+                widget.adBlockService.adBlockEnabled ? 'Enabled' : 'Disabled'),
             value: widget.adBlockService.adBlockEnabled,
             onChanged: (v) {
               widget.adBlockService.setEnabled(v);
@@ -107,9 +106,8 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
             onTap: () async {
               await widget.adBlockService.updateBlocklist();
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Blocklist updated')),
-                );
+                Snack.show(context, 'Blocklist updated',
+                    level: SnackLevel.info);
               }
             },
           ),
@@ -124,8 +122,7 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
           SwitchListTile(
             secondary: const Icon(Icons.desktop_windows),
             title: const Text('Desktop Mode'),
-            subtitle:
-                const Text('Request desktop version of websites'),
+            subtitle: const Text('Request desktop version of websites'),
             value: _desktopMode,
             onChanged: (v) {
               setState(() => _desktopMode = v);
@@ -172,16 +169,14 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
             'This will clear your browsing history and recent sites. Favourites will not be affected.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           FilledButton(
             onPressed: () async {
               await widget.repo.clearHistory();
               Navigator.pop(ctx);
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Browsing data cleared')),
-                );
+                Snack.show(context, 'Browsing data cleared',
+                    level: SnackLevel.info);
               }
             },
             child: const Text('Clear'),

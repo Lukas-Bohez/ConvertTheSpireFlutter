@@ -471,12 +471,15 @@ class _SuggestionsDropdown extends StatelessWidget {
     return Stack(
       children: [
         Positioned.fill(
-          child: GestureDetector(
+          child: Listener(
             behavior: HitTestBehavior.translucent,
-            // Dismiss on tap outside the suggestions list. Using `onTap`
-            // ensures taps on list items are handled by the items' onTap
-            // handlers instead of preemptively dismissing the overlay.
-            onTap: onDismiss,
+            // Use pointer-down to reliably detect mouse clicks on Windows.
+            onPointerDown: (event) {
+              // Primary mouse button is bit 0 (value 1) across platforms.
+              if ((event.buttons & 0x1) != 0) {
+                onDismiss();
+              }
+            },
           ),
         ),
         CompositedTransformFollower(
