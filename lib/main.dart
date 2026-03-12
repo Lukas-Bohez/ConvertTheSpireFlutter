@@ -3,7 +3,10 @@ import 'dart:ui' as ui;
 import 'dart:ffi';
 import 'dart:io' show Platform, Directory;
 import 'package:ffi/ffi.dart';
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
@@ -22,12 +25,34 @@ void main() async {
     final kernel32 = DynamicLibrary.open('kernel32.dll');
     final setEnv = kernel32.lookupFunction<
         Int32 Function(Pointer<Utf16>, Pointer<Utf16>),
-        int Function(Pointer<Utf16>, Pointer<Utf16>)>('SetEnvironmentVariableW');
+        int Function(
+            Pointer<Utf16>, Pointer<Utf16>)>('SetEnvironmentVariableW');
     final namePtr = 'WEBVIEW2_USER_DATA_FOLDER'.toNativeUtf16();
     final valuePtr = userData.path.toNativeUtf16();
     setEnv(namePtr, valuePtr);
     malloc.free(namePtr);
     malloc.free(valuePtr);
+  }
+
+  WebViewEnvironment? webViewEnvironment;
+  // Create WebViewEnvironment on Windows so flutter_inappwebview can initialize.
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+    try {
+      final available = await WebViewEnvironment.getAvailableVersion();
+      if (available != null) {
+        final appSupport = await getApplicationSupportDirectory();
+        final webViewDataDir = '${appSupport.path}\\WebView2UserData';
+        webViewEnvironment = await WebViewEnvironment.create(
+          settings: WebViewEnvironmentSettings(userDataFolder: webViewDataDir),
+        );
+        if (kDebugMode)
+          debugPrint('[WebView] created environment at $webViewDataDir');
+      } else {
+        if (kDebugMode) debugPrint('[WebView] WebView2 runtime not available');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[WebView] environment init failed: $e');
+    }
   }
 
   // Initialize sqflite FFI for desktop platforms (Windows / Linux).
@@ -48,7 +73,8 @@ void main() async {
     // plugin itself checks `Platform.isAndroid` and will emit
     // "Unsupported platform: android".
     if (Platform.isAndroid) {
-      if (kDebugMode) debugPrint('Skipping MediaKit initialization on Android (unsupported)');
+      if (kDebugMode)
+        debugPrint('Skipping MediaKit initialization on Android (unsupported)');
     } else {
       try {
         MediaKit.ensureInitialized(); // required by media_kit (synchronous)
@@ -85,5 +111,7 @@ void main() async {
     });
   }
 
-  runApp(MyApp(mediaKitInitError: mediaKitError));
+  runApp(MyApp(
+      mediaKitInitError: mediaKitError,
+      webViewEnvironment: webViewEnvironment));
 }

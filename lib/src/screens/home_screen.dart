@@ -141,8 +141,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     SharedPreferences.getInstance().then((prefs) {
       final saved = prefs.getInt('last_tab');
       if (saved != null && mounted) {
+        var selected = saved;
+        // Never restore into the browser tab on cold boot if WebView isn't available.
+        if (selected == 2) {
+          final env = widget.controller.webViewEnvironment;
+          if (env == null) selected = 13;
+        }
         setState(() {
-          _selectedPageIndex = saved;
+          _selectedPageIndex = selected;
         });
       }
     });
@@ -389,12 +395,34 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           currentIndex: _selectedPageIndex,
           queueWidget: _buildQueueTab(),
           onNavigate: (route) {
+            if (kDebugMode) debugPrint('[NAV] requested route: "$route"');
             if (route == 'home') {
               _navigateHome();
               return;
             }
-            final idx = QuickLinksService.routeToIndex[route];
+
+            // Attempt direct lookup first.
+            var idx = QuickLinksService.routeToIndex[route];
+
+            // If not found, try appending ".tab" (some callers pass labels).
+            if (idx == null && !route.endsWith('.tab')) {
+              final cand = '$route.tab';
+              idx = QuickLinksService.routeToIndex[cand];
+            }
+
+            // If still not found, try matching by display title (case-insensitive).
+            if (idx == null) {
+              final lower = route.toLowerCase();
+              for (final entry in QuickLinksService.indexToTitle.entries) {
+                if (entry.value.toLowerCase() == lower) {
+                  idx = entry.key;
+                  break;
+                }
+              }
+            }
+
             if (idx != null) {
+              if (kDebugMode) debugPrint('[NAV] resolved "$route" -> $idx');
               _navigateToPage(idx);
             } else {
               if (kDebugMode)

@@ -11,6 +11,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
 
 import 'screens/home_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/player.dart';
 import 'services/bulk_import_service.dart';
 import 'services/convert_service.dart';
@@ -30,11 +31,13 @@ import 'services/watched_playlist_service.dart';
 import 'services/youtube_service.dart';
 import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 class MyApp extends StatefulWidget {
   final String? mediaKitInitError;
+  final WebViewEnvironment? webViewEnvironment;
 
-  const MyApp({super.key, this.mediaKitInitError});
+  const MyApp({super.key, this.mediaKitInitError, this.webViewEnvironment});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -174,6 +177,7 @@ class _MyAppState extends State<MyApp> {
         logs: logs,
       );
       controller = AppController(
+        webViewEnvironment: widget.webViewEnvironment,
         settingsStore: settingsStore,
         youtube: youtube,
         downloadService: downloadService,
@@ -321,21 +325,40 @@ class _MyAppState extends State<MyApp> {
 
                             final prefs = snap.data!;
 
-                            final content = MultiProvider(
-                              providers: [
-                                ChangeNotifierProvider(
-                                    create: (_) => PlayerState(prefs)),
-                                ChangeNotifierProvider.value(
-                                    value: _controller!),
-                              ],
-                              child: HomeScreen(controller: _controller!),
-                            );
+                            final controller = _controller!;
+                            Widget contentChild;
+                            if (!controller.onboardingChecked) {
+                              contentChild = const Scaffold(
+                                body:
+                                    Center(child: CircularProgressIndicator()),
+                              );
+                            } else if (controller.needsOnboarding) {
+                              contentChild = OnboardingScreen(
+                                onFinish: () async {
+                                  await controller.completeOnboarding();
+                                },
+                                onThemeChanged: (mode) =>
+                                    controller.setThemeMode(mode),
+                                themeMode: _resolveThemeMode(
+                                    controller.settings?.themeMode),
+                              );
+                            } else {
+                              contentChild = MultiProvider(
+                                providers: [
+                                  ChangeNotifierProvider(
+                                      create: (_) => PlayerState(prefs)),
+                                  ChangeNotifierProvider.value(
+                                      value: controller),
+                                ],
+                                child: HomeScreen(controller: controller),
+                              );
+                            }
 
                             return KeyboardListener(
                               focusNode: _keyboardFocusNode,
                               autofocus: true,
                               onKeyEvent: _handleKey,
-                              child: content,
+                              child: contentChild,
                             );
                           },
                         ),
