@@ -64,6 +64,19 @@ class PlaylistService {
     await file.writeAsString(buf.toString());
   }
 
+  /// Generate an M3U using actual local file paths from `TrackMatch` results.
+  /// This ensures the M3U contains real file locations (with correct extensions)
+  /// when a playlist has been compared against a folder.
+  Future<void> generateM3UFromMatches(List<TrackMatch> matches, String outputPath) async {
+    final buf = StringBuffer('#EXTM3U\n');
+    for (final m in matches) {
+      buf.writeln('#EXTINF:${m.track.duration.inSeconds},${m.track.artist} - ${m.track.title}');
+      buf.writeln(m.filePath);
+    }
+    final file = File(outputPath);
+    await file.writeAsString(buf.toString());
+  }
+
   /// Export a list of track titles to a plain text file (one per line).
   Future<void> exportTrackList(
     List<SearchResult> tracks,

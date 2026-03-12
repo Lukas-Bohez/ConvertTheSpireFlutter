@@ -161,8 +161,13 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       type: FileType.custom,
     );
     if (result != null) {
-      await widget.playlistService
-          .generateM3U(_tracks!, result, format: _selectedFormat);
+      if (_comparison != null && _comparison!.matched.isNotEmpty) {
+        await widget.playlistService.generateM3UFromMatches(
+            _comparison!.matched, result);
+      } else {
+        await widget.playlistService
+            .generateM3U(_tracks!, result, format: _selectedFormat);
+      }
       if (mounted) {
         Snack.show(context, 'Saved M3U to $result', level: SnackLevel.success);
       }
