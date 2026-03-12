@@ -179,8 +179,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       // without user interaction.  If the bug remains this will show a
       // subsequent unexpected log shifting back to browser.
       Future.delayed(const Duration(seconds: 5), () {
-        debugPrint('[TEST] forcing navigation to search.tab');
-        _navigateToPage(0);
       });
     }
 
@@ -211,59 +209,39 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _playerState ??= context.read<PlayerState>();
-  }
+  void _initDesktopFeatures() {
+    if (kIsWeb) return;
+    if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return;
 
-  /// True when the app has active downloads or conversions.
-  bool get _hasActiveWork {
-    return widget.controller.queue.any((q) =>
-        q.status == DownloadStatus.downloading ||
-        q.status == DownloadStatus.converting ||
-        q.status == DownloadStatus.queued);
-  }
+    _trayService = TrayService(shouldMinimiseToTray: () => true);
 
-  Future<void> _initDesktopFeatures() async {
-    if (kIsWeb ||
-        (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS)) return;
-
-    // System tray.
-    _trayService = TrayService(
-      shouldMinimiseToTray: () =>
-          _supportEnabled ||
-          _hasActiveWork ||
-          (_playerState?.isActuallyPlaying ?? false),
-    );
-    _trayService!.onTrayShow = () {
-      // no-op — window_manager.show() is handled by TrayService itself.
-    };
     _trayService!.onTrayQuit = () async {
       // Stop mining before quitting.
       _coordinatorService.dispose();
       try {
-        // Ensure browser WebViews are disposed to avoid WinRT unload hangs
-        // before destroying tray/window and exiting.
-        try {
-          BrowserScreen.browserKey.currentState?.disposeAllWebViewControllers();
-        } catch (_) {}
+        BrowserScreen.browserKey.currentState?.disposeAllWebViewControllers();
+      } catch (_) {}
+      try {
         await _trayService?.destroy();
       } catch (_) {}
       exit(0);
     };
-    try {
-      await _trayService!.init();
-    } catch (e) {
-      debugPrint('HomeScreen: tray init failed: $e');
-    }
 
-    // Desktop shortcut.
-    try {
-      await ShortcutService.ensureDesktopShortcut();
-    } catch (e) {
+    _trayService!.onTrayShow = () {
+      // Bring window to front when tray icon is clicked.
+      try {
+        // window_manager operations are handled inside TrayService; keep
+        // this callback minimal to avoid duplicating platform logic.
+      } catch (_) {}
+    };
+
+    _trayService!.init().catchError((e) {
+      debugPrint('HomeScreen: tray init failed: $e');
+    });
+
+    ShortcutService.ensureDesktopShortcut().catchError((e) {
       debugPrint('HomeScreen: desktop shortcut failed: $e');
-    }
+    });
   }
 
   @override

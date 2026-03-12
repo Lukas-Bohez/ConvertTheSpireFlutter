@@ -122,9 +122,6 @@ class _BrowserShellState extends State<BrowserShell> {
         return;
       }
     }
-
-    // Fallback: treat as search query
-    widget.onNavigate('search.tab');
   }
 
   bool _looksLikeUrl(String text) {
