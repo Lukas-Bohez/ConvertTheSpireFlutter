@@ -58,6 +58,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   final UnifiedCastService _castService = UnifiedCastService();
   final TabManager _tabManager = TabManager();
   final Map<String, InAppWebViewController> _controllers = {};
+  final Set<String> _mountedWebViews = {}; // track webview mount state
   VideoDetectorService _videoDetector = VideoDetectorService();
 
   InAppWebViewController? _webViewController;
@@ -108,15 +109,8 @@ class _BrowserScreenState extends State<BrowserScreen>
     _findController.dispose();
     _castService.dispose();
     _videoDetector.dispose();
-    // Best-effort: stop any active controller loads before clearing map.
-    try {
-      for (final c in _controllers.values) {
-        try {
-          c.stopLoading();
-        } catch (_) {}
-      }
-    } catch (_) {}
-    _controllers.clear();
+    // Dispose all webview controllers safely.
+    disposeAllWebViewControllers();
     super.dispose();
   }
 
@@ -125,16 +119,22 @@ class _BrowserScreenState extends State<BrowserScreen>
   /// the process exits to avoid WinRT DLL unload ordering hangs.
   void disposeAllWebViewControllers() {
     try {
-      for (final c in _controllers.values) {
+      for (final entry in _controllers.entries) {
+        final id = entry.key;
+        final c = entry.value;
         try {
           c.stopLoading();
         } catch (_) {}
-        try {
-          c.dispose();
-        } catch (_) {}
+        // Only dispose controllers that were successfully created/mounted.
+        if (_mountedWebViews.contains(id)) {
+          try {
+            c.dispose();
+          } catch (_) {}
+        }
       }
     } catch (_) {}
     _controllers.clear();
+    _mountedWebViews.clear();
     _webViewController = null;
   }
 
@@ -147,7 +147,11 @@ class _BrowserScreenState extends State<BrowserScreen>
     _castService.addListener(_onCastChanged);
     // Start cast discovery; stopDiscovery() is called in dispose().
     unawaited(_castService.startDiscovery());
-    _findInteractionController = FindInteractionController();
+    try {
+      _findInteractionController = FindInteractionController();
+    } catch (_) {
+      _findInteractionController = null;
+    }
     // Listen for tab manager changes to update active controller and UI
     _tabManager.addListener(_onTabManagerChanged);
   }
@@ -947,6 +951,8 @@ class _BrowserScreenState extends State<BrowserScreen>
       InAppWebViewController controller, String tabId, BrowserTab tab) {
     debugPrint('[BROWSER] onWebViewCreated – controller ready for $tabId');
     _controllers[tabId] = controller;
+    // Mark this webview as mounted/created so disposal is safe later.
+    _mountedWebViews.add(tabId);
     if (_tabManager.activeTab?.id == tabId) {
       _webViewController = controller;
     }
@@ -972,60 +978,58 @@ class _BrowserScreenState extends State<BrowserScreen>
   Widget _buildWebViewForTab(BrowserTab tab) {
     // Use a stable key so Flutter preserves each WebView widget instance.
     final key = ValueKey('browser_webview_${tab.id}');
-    return Positioned.fill(
-      child: InAppWebView(
-        key: key,
-        initialSettings: _buildSettingsForTab(tab),
-        initialUrlRequest:
-            tab.url.isNotEmpty ? URLRequest(url: WebUri(tab.url)) : null,
-        findInteractionController: _findInteractionController,
-        onWebViewCreated: (controller) =>
-            _onWebViewCreatedForTab(controller, tab.id, tab),
-        onLoadStart: (controller, url) => _onLoadStart(controller, url),
-        onLoadStop: (controller, url) => _onLoadStop(controller, url),
-        onProgressChanged: _onProgressChanged,
-        shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
-        shouldInterceptRequest: _shouldInterceptRequest,
-        onConsoleMessage: _onConsoleMessage,
-        onReceivedError: _onReceivedError,
-        onScrollChanged: _onScrollChanged,
-        onUpdateVisitedHistory: (controller, url, androidIsReload) {
-          final urlStr = url?.toString() ?? '';
-          if (urlStr.isEmpty || urlStr == 'about:blank') return;
-          // Update model for this tab specifically.
-          _tabManager.updateTab(tab.id, url: urlStr);
+    return InAppWebView(
+      key: key,
+      initialSettings: _buildSettingsForTab(tab),
+      initialUrlRequest:
+          tab.url.isNotEmpty ? URLRequest(url: WebUri(tab.url)) : null,
+      findInteractionController: _findInteractionController,
+      onWebViewCreated: (controller) =>
+          _onWebViewCreatedForTab(controller, tab.id, tab),
+      onLoadStart: (controller, url) => _onLoadStart(controller, url),
+      onLoadStop: (controller, url) => _onLoadStop(controller, url),
+      onProgressChanged: _onProgressChanged,
+      shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
+      shouldInterceptRequest: _shouldInterceptRequest,
+      onConsoleMessage: _onConsoleMessage,
+      onReceivedError: _onReceivedError,
+      onScrollChanged: _onScrollChanged,
+      onUpdateVisitedHistory: (controller, url, androidIsReload) {
+        final urlStr = url?.toString() ?? '';
+        if (urlStr.isEmpty || urlStr == 'about:blank') return;
+        // Update model for this tab specifically.
+        _tabManager.updateTab(tab.id, url: urlStr);
 
-          if (_controllers[tab.id] == controller) {
-            if (mounted)
-              setState(() {
-                if (_tabManager.activeTab?.id == tab.id) {
-                  _addressController.text = urlStr;
-                  _isSecure = urlStr.startsWith('https://');
-                }
-              });
+        if (_controllers[tab.id] == controller) {
+          if (mounted)
+            setState(() {
+              if (_tabManager.activeTab?.id == tab.id) {
+                _addressController.text = urlStr;
+                _isSecure = urlStr.startsWith('https://');
+              }
+            });
 
-            controller.canGoBack().then((v) {
-              if (mounted && _tabManager.activeTab?.id == tab.id)
-                setState(() => _canGoBack = v);
-            });
-            controller.canGoForward().then((v) {
-              if (mounted && _tabManager.activeTab?.id == tab.id)
-                setState(() => _canGoForward = v);
-            });
-            _checkFavouriteState();
-          }
-        },
-        onDownloadStartRequest: (controller, request) {
-          launchUrl(request.url, mode: LaunchMode.externalApplication);
-        },
-        onCreateWindow: (controller, createWindowAction) async {
-          final url = createWindowAction.request.url;
-          if (url != null) {
-            _navigateTo(url.toString());
-          }
-          return false;
-        },
-      ),
+          controller.canGoBack().then((v) {
+            if (mounted && _tabManager.activeTab?.id == tab.id)
+              setState(() => _canGoBack = v);
+          });
+          controller.canGoForward().then((v) {
+            if (mounted && _tabManager.activeTab?.id == tab.id)
+              setState(() => _canGoForward = v);
+          });
+          _checkFavouriteState();
+        }
+      },
+      onDownloadStartRequest: (controller, request) {
+        launchUrl(request.url, mode: LaunchMode.externalApplication);
+      },
+      onCreateWindow: (controller, createWindowAction) async {
+        final url = createWindowAction.request.url;
+        if (url != null) {
+          _navigateTo(url.toString());
+        }
+        return false;
+      },
     );
   }
 
@@ -1300,11 +1304,15 @@ class _BrowserScreenState extends State<BrowserScreen>
             final closingTab = _tabManager.tabs[index];
             final ctrl = _controllers.remove(closingTab.id);
             if (ctrl != null) {
-              // Best-effort: stop loading and remove JS handlers.
+              // Best-effort: stop loading and dispose controller.
               try {
                 ctrl.stopLoading();
               } catch (_) {}
+              try {
+                ctrl.dispose();
+              } catch (_) {}
             }
+            _mountedWebViews.remove(closingTab.id);
           } catch (_) {}
 
           _tabManager.closeTab(index);
