@@ -51,7 +51,8 @@ class QueueItem {
       thumbnailBytes: thumbnailBytes ?? this.thumbnailBytes,
       progress: progress ?? this.progress,
       status: status ?? this.status,
-      outputPath: outputPath == _unset ? this.outputPath : outputPath as String?,
+      outputPath:
+          outputPath == _unset ? this.outputPath : outputPath as String?,
       error: error == _unset ? this.error : error as String?,
     );
   }
@@ -63,4 +64,35 @@ class QueueItem {
 
   @override
   int get hashCode => url.hashCode ^ format.hashCode;
+
+  Map<String, dynamic> toJson() => {
+        'url': url,
+        'title': title,
+        'format': format,
+        'uploader': uploader,
+        'status': status.name,
+        'progress': progress,
+        'outputPath': outputPath,
+        'error': error,
+      };
+
+  factory QueueItem.fromJson(Map<String, dynamic> json) => QueueItem(
+        url: json['url'] as String,
+        title: json['title'] as String,
+        format: json['format'] as String,
+        uploader: json['uploader'] as String?,
+        thumbnailBytes: null,
+        progress: 0,
+        status: () {
+          final s = json['status'] as String? ?? 'queued';
+          if (s == 'downloading' || s == 'converting')
+            return DownloadStatus.queued;
+          return DownloadStatus.values.firstWhere(
+            (e) => e.name == s,
+            orElse: () => DownloadStatus.queued,
+          );
+        }(),
+        outputPath: json['outputPath'] as String?,
+        error: null,
+      );
 }

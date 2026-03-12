@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../utils/snack.dart';
+import '../widgets/empty_state.dart';
 
 import '../services/watched_playlist_service.dart';
 
@@ -37,9 +39,8 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
     if (url.isEmpty) return;
     if (!url.contains('youtube.com/playlist') && !url.contains('youtu.be')) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter a valid YouTube playlist URL')),
-        );
+        Snack.show(context, 'Please enter a valid YouTube playlist URL',
+            level: SnackLevel.warning);
       }
       return;
     }
@@ -54,10 +55,15 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Remove Playlist'),
-        content: const Text('Stop watching this playlist? You can re-add it later.'),
+        content:
+            const Text('Stop watching this playlist? You can re-add it later.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Remove')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Remove')),
         ],
       ),
     );
@@ -72,16 +78,14 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
       final found = await widget.watchedService.checkAllPlaylists();
       if (mounted) {
         setState(() => _checking = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$found new track(s) queued for download')),
-        );
+        Snack.show(context, '$found new track(s) queued for download',
+            level: SnackLevel.info);
       }
     } catch (e) {
       if (mounted) {
         setState(() => _checking = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to check playlists: $e')),
-        );
+        Snack.show(context, 'Failed to check playlists: $e',
+            level: SnackLevel.error);
       }
     }
   }
@@ -137,19 +141,11 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
         if (_checking) const LinearProgressIndicator(),
         Expanded(
           child: _urls.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.playlist_add, size: 64, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-                      const SizedBox(height: 12),
-                      Text('No watched playlists yet',
-                          style: TextStyle(fontSize: 16, color: cs.onSurfaceVariant)),
-                      const SizedBox(height: 4),
-                      Text('Add a YouTube playlist URL above to track new tracks',
-                          style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant.withValues(alpha: 0.7))),
-                    ],
-                  ),
+              ? EmptyState(
+                  icon: Icons.playlist_add,
+                  title: 'No watched playlists yet',
+                  subtitle:
+                      'Add a YouTube playlist URL above to track new tracks',
                 )
               : ListView.separated(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -160,8 +156,10 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
                     return Card(
                       child: ListTile(
                         leading: Icon(Icons.playlist_play, color: cs.primary),
-                        title: Text(url, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: const Text('Checked periodically for new tracks'),
+                        title: Text(url,
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle:
+                            const Text('Checked periodically for new tracks'),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete_outline),
                           tooltip: 'Remove playlist',

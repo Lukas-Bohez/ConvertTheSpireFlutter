@@ -25,6 +25,7 @@ class BrowserToolbar extends StatelessWidget {
   final bool isCastConnected;
   final ValueChanged<String> onMenuAction;
   final VoidCallback? onUrlBarTap;
+  final VoidCallback? onReleaseWebViewFocus;
   final VoidCallback onTabs;
   final int tabCount;
 
@@ -53,6 +54,7 @@ class BrowserToolbar extends StatelessWidget {
     this.isCastConnected = false,
     required this.onMenuAction,
     this.onUrlBarTap,
+    this.onReleaseWebViewFocus,
     required this.onTabs,
     this.tabCount = 1,
   });
@@ -180,7 +182,10 @@ class BrowserToolbar extends StatelessWidget {
                             ),
                         ],
                       ),
-                      onPressed: onTabs,
+                      onPressed: () {
+                        onReleaseWebViewFocus?.call();
+                        onTabs();
+                      },
                       tooltip: 'Tabs',
                     ),
 
@@ -214,8 +219,12 @@ class BrowserToolbar extends StatelessWidget {
                                   visualDensity: VisualDensity.compact,
                                   icon: const Icon(Icons.download_rounded,
                                       size: 20),
-                                  onPressed:
-                                      downloadEnabled ? onDownload : null,
+                                  onPressed: downloadEnabled
+                                      ? () {
+                                          onReleaseWebViewFocus?.call();
+                                          onDownload?.call();
+                                        }
+                                      : null,
                                   style: IconButton.styleFrom(
                                     backgroundColor: Theme.of(context)
                                         .colorScheme
@@ -227,65 +236,80 @@ class BrowserToolbar extends StatelessWidget {
                                 )),
                     ),
 
-                    // Overflow menu (More)
-                    PopupMenuButton<String>(
+                    // Overflow menu (More) — use explicit showMenu so we can
+                    // release WebView focus on Windows before the native
+                    // WebView2 consumes the click. Uses onMenuAction via
+                    // onSelected to remain safe for navigation.
+                    IconButton(
                       icon: const Icon(Icons.more_vert),
                       tooltip: 'More options',
-                      color: Theme.of(context).colorScheme.surfaceContainer,
-                      onSelected: onMenuAction,
-                      itemBuilder: (ctx) => [
-                        PopupMenuItem(
-                            value: 'cast',
-                            child: Row(children: [
-                              Icon(Icons.cast,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface),
-                              const SizedBox(width: 12),
-                              const Text('Cast to device'),
-                              const Spacer(),
-                              if (isCastConnected)
-                                Icon(Icons.circle,
-                                    size: 8,
-                                    color:
-                                        Theme.of(context).colorScheme.primary),
-                            ])),
-                        PopupMenuItem(
-                            value: 'openExternal',
-                            child: Row(children: [
-                              Icon(Icons.open_in_browser,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface),
-                              const SizedBox(width: 12),
-                              const Text('Open in browser'),
-                            ])),
-                        PopupMenuItem(
-                            value: 'copyLink',
-                            child: Row(children: [
-                              Icon(Icons.copy,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface),
-                              const SizedBox(width: 12),
-                              const Text('Copy link'),
-                            ])),
-                        PopupMenuItem(
-                            value: 'share',
-                            child: Row(children: [
-                              Icon(Icons.share,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface),
-                              const SizedBox(width: 12),
-                              const Text('Share'),
-                            ])),
-                        PopupMenuItem(
-                            value: 'addCookies',
-                            child: Row(children: [
-                              Icon(Icons.cookie_outlined,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface),
-                              const SizedBox(width: 12),
-                              const Text('Add cookies (for downloads)'),
-                            ])),
-                      ],
+                      onPressed: () async {
+                        onReleaseWebViewFocus?.call();
+                        final selection = await showMenu<String>(
+                          context: context,
+                          position: RelativeRect.fromLTRB(1000, 80, 8, 0),
+                          items: [
+                            PopupMenuItem(
+                                value: 'cast',
+                                child: Row(children: [
+                                  Icon(Icons.cast,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface),
+                                  const SizedBox(width: 12),
+                                  const Text('Cast to device'),
+                                  const Spacer(),
+                                  if (isCastConnected)
+                                    Icon(Icons.circle,
+                                        size: 8,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary),
+                                ])),
+                            PopupMenuItem(
+                                value: 'openExternal',
+                                child: Row(children: [
+                                  Icon(Icons.open_in_browser,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface),
+                                  const SizedBox(width: 12),
+                                  const Text('Open in browser'),
+                                ])),
+                            PopupMenuItem(
+                                value: 'copyLink',
+                                child: Row(children: [
+                                  Icon(Icons.copy,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface),
+                                  const SizedBox(width: 12),
+                                  const Text('Copy link'),
+                                ])),
+                            PopupMenuItem(
+                                value: 'share',
+                                child: Row(children: [
+                                  Icon(Icons.share,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface),
+                                  const SizedBox(width: 12),
+                                  const Text('Share'),
+                                ])),
+                            PopupMenuItem(
+                                value: 'addCookies',
+                                child: Row(children: [
+                                  Icon(Icons.cookie_outlined,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface),
+                                  const SizedBox(width: 12),
+                                  const Text('Add cookies (for downloads)'),
+                                ])),
+                          ],
+                        );
+                        if (selection != null) onMenuAction(selection);
+                      },
                     ),
                   ],
                 ),

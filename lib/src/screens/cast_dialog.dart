@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/snack.dart';
 
 import '../services/dlna_control_service.dart';
 import '../services/dlna_discovery_service.dart';
@@ -86,7 +87,9 @@ class _CastDialogState extends State<CastDialog> {
       if (mounted) {
         setState(() {
           // Merge new devices with existing (dedup by udn)
-          final existing = {for (final d in _devices ?? <DlnaDevice>[]) d.udn: d};
+          final existing = {
+            for (final d in _devices ?? <DlnaDevice>[]) d.udn: d
+          };
           for (final d in devices) {
             existing.putIfAbsent(d.udn, () => d);
           }
@@ -225,9 +228,8 @@ class _CastDialogState extends State<CastDialog> {
                       await _control.pause(device);
                     } catch (e) {
                       if (ctx.mounted) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(content: Text('Pause failed: $e')),
-                        );
+                        Snack.show(ctx, 'Pause failed: $e',
+                            level: SnackLevel.error);
                       }
                     }
                   },
@@ -240,9 +242,8 @@ class _CastDialogState extends State<CastDialog> {
                       await _control.play(device);
                     } catch (e) {
                       if (ctx.mounted) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(content: Text('Play failed: $e')),
-                        );
+                        Snack.show(ctx, 'Play failed: $e',
+                            level: SnackLevel.error);
                       }
                     }
                   },
@@ -336,7 +337,8 @@ class _CastDialogState extends State<CastDialog> {
                     Expanded(
                       child: Text(
                         _error!,
-                        style: TextStyle(color: cs.onErrorContainer, fontSize: 13),
+                        style:
+                            TextStyle(color: cs.onErrorContainer, fontSize: 13),
                       ),
                     ),
                   ],
@@ -391,12 +393,12 @@ class _CastDialogState extends State<CastDialog> {
                 ),
               )
             else if (_devices != null) ...[
-            // Scanning progress bar
-            if (_scanning && _devices != null)
-              const LinearProgressIndicator(),
+              // Scanning progress bar
+              if (_scanning && _devices != null)
+                const LinearProgressIndicator(),
 
-            // Device list
-            Flexible(
+              // Device list
+              Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
                   itemCount: _devices!.length,
@@ -407,9 +409,8 @@ class _CastDialogState extends State<CastDialog> {
                     return ListTile(
                       leading: Icon(
                         device.deviceType.icon,
-                        color: device.isPanasonicViera
-                            ? Colors.blue
-                            : cs.primary,
+                        color:
+                            device.isPanasonicViera ? Colors.blue : cs.primary,
                       ),
                       title: Text(device.name),
                       subtitle: Text(
@@ -436,8 +437,7 @@ class _CastDialogState extends State<CastDialog> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
-                    onPressed: () =>
-                        setState(() => _showManualInput = true),
+                    onPressed: () => setState(() => _showManualInput = true),
                     icon: const Icon(Icons.edit, size: 16),
                     label: const Text('Enter IP manually'),
                   ),

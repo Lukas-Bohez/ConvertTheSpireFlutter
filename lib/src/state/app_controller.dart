@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -26,6 +27,7 @@ import '../services/settings_store.dart';
 import '../services/statistics_service.dart';
 import '../services/watched_playlist_service.dart';
 import '../services/youtube_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AppController extends ChangeNotifier {
   final SettingsStore settingsStore;
@@ -53,6 +55,7 @@ class AppController extends ChangeNotifier {
   bool previewLoading = false;
   List<PreviewItem> previewItems = <PreviewItem>[];
   List<QueueItem> queue = <QueueItem>[];
+  static const _queueKey = 'persisted_queue';
   final Map<String, DownloadToken> _tokens = {};
   final List<ConvertResult> convertResults = <ConvertResult>[];
   Future<String?>? _ffmpegInstall;
@@ -92,12 +95,19 @@ class AppController extends ChangeNotifier {
       await notificationService.initialize();
     } catch (e, st) {
       logs.add('NotificationService failed to initialize: $e');
-      if (kDebugMode) debugPrint('NotificationService.initialize error: $e\n$st');
+      if (kDebugMode)
+        debugPrint('NotificationService.initialize error: $e\n$st');
     }
     notifyListeners();
 
+    // Load persisted queue (if any)
+    try {
+      await _loadQueue();
+    } catch (_) {}
+
     // Auto-install FFmpeg on boot (desktop only; mobile bundles FFmpegKit)
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    if (!kIsWeb &&
+        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       _ensureFfmpegOnBoot();
       _ensureYtDlpOnBoot();
     }
@@ -108,7 +118,8 @@ class AppController extends ChangeNotifier {
     unawaited(Future(() async {
       final settings = _settings;
       if (settings == null) return;
-      final resolved = await downloadService.ffmpeg.resolveAvailablePath(settings.ffmpegPath);
+      final resolved = await downloadService.ffmpeg
+          .resolveAvailablePath(settings.ffmpegPath);
       if (resolved != null) {
         // Already available – persist resolved path if it wasn't saved
         if (settings.ffmpegPath != resolved) {
@@ -133,7 +144,8 @@ class AppController extends ChangeNotifier {
     unawaited(Future(() async {
       final settings = _settings;
       if (settings == null) return;
-      final resolved = await downloadService.ytDlp.resolveAvailablePath(settings.ytDlpPath);
+      final resolved =
+          await downloadService.ytDlp.resolveAvailablePath(settings.ytDlpPath);
       if (resolved != null) {
         if (settings.ytDlpPath != resolved) {
           await saveSettings(settings.copyWith(ytDlpPath: resolved));
@@ -174,7 +186,8 @@ class AppController extends ChangeNotifier {
     await saveSettings(_settings!.copyWith(themeMode: str));
   }
 
-  Future<void> preview(String url, bool expandPlaylist, {int startIndex = 0, int? limit}) async {
+  Future<void> preview(String url, bool expandPlaylist,
+      {int startIndex = 0, int? limit}) async {
     if (_settings == null) {
       return;
     }
@@ -217,6 +230,7 @@ class AppController extends ChangeNotifier {
         ),
       );
     notifyListeners();
+    unawaited(_saveQueue());
   }
 
   void removeFromQueue(QueueItem item) {
@@ -225,6 +239,7 @@ class AppController extends ChangeNotifier {
     queue = List<QueueItem>.from(queue)
       ..removeWhere((q) => q.url == item.url && q.format == item.format);
     notifyListeners();
+    unawaited(_saveQueue());
   }
 
   Future<void> downloadSingle(QueueItem item) async {
@@ -236,9 +251,12 @@ class AppController extends ChangeNotifier {
     // Resolve title if it's still a raw URL (user downloaded without preview)
     // Only attempt YouTube metadata fetch for YouTube URLs
     final isYouTube = _isYouTubeUrl(item.url);
-    if (isYouTube && (item.title.startsWith('http://') || item.title.startsWith('https://'))) {
+    if (isYouTube &&
+        (item.title.startsWith('http://') ||
+            item.title.startsWith('https://'))) {
       try {
-        final video = await downloadService.yt.videos.get(item.url)
+        final video = await downloadService.yt.videos
+            .get(item.url)
             .timeout(const Duration(seconds: 15));
         final resolved = item.copyWith(title: video.title);
         _updateQueue(item, resolved);
@@ -251,8 +269,12 @@ class AppController extends ChangeNotifier {
     final token = DownloadToken();
     final key = '${item.url}|${item.format}';
     _tokens[key] = token;
-    _updateQueue(item, item.copyWith(status: DownloadStatus.downloading, progress: 0, error: null));
-    logs.add('Preparing download: ${item.title} [${item.format.toUpperCase()}]');
+    _updateQueue(
+        item,
+        item.copyWith(
+            status: DownloadStatus.downloading, progress: 0, error: null));
+    logs.add(
+        'Preparing download: ${item.title} [${item.format.toUpperCase()}]');
 
     String? ffmpegPath = settings.ffmpegPath;
     try {
@@ -341,9 +363,11 @@ class AppController extends ChangeNotifier {
         if (attempt < maxAttempts && isRetryable) {
           logs.add('Download attempt $attempt failed: $msg – retrying...');
           _updateQueue(item, item.copyWith(progress: 0, error: null));
-          await Future.delayed(Duration(seconds: (_settings?.retryBackoffSeconds ?? 3)));
+          await Future.delayed(
+              Duration(seconds: (_settings?.retryBackoffSeconds ?? 3)));
         } else {
-          final updated = item.copyWith(status: DownloadStatus.failed, error: msg);
+          final updated =
+              item.copyWith(status: DownloadStatus.failed, error: msg);
           _updateQueue(item, updated);
           logs.add('Download failed: $msg');
           unawaited(onDownloadCompleted(
@@ -360,11 +384,14 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> downloadAll() async {
-    if (_downloadAllRunning) return; // already processing; new items picked up by the loop below
+    if (_downloadAllRunning)
+      return; // already processing; new items picked up by the loop below
     _downloadAllRunning = true;
     try {
       while (true) {
-        final pending = queue.where((item) => item.status == DownloadStatus.queued).toList();
+        final pending = queue
+            .where((item) => item.status == DownloadStatus.queued)
+            .toList();
         if (pending.isEmpty) break;
 
         // Show ongoing notification so OS keeps process alive
@@ -396,7 +423,8 @@ class AppController extends ChangeNotifier {
   void cancelDownload(QueueItem item) {
     final key = '${item.url}|${item.format}';
     _tokens[key]?.cancel();
-    final updated = item.copyWith(status: DownloadStatus.cancelled, error: 'Cancelled');
+    final updated =
+        item.copyWith(status: DownloadStatus.cancelled, error: 'Cancelled');
     _updateQueue(item, updated);
   }
 
@@ -405,7 +433,8 @@ class AppController extends ChangeNotifier {
     // item up before downloadSingle progresses past its first await).
     final key = '${item.url}|${item.format}';
     if (_tokens.containsKey(key) && !_tokens[key]!.cancelled) return;
-    final reset = item.copyWith(status: DownloadStatus.queued, progress: 0, error: null);
+    final reset =
+        item.copyWith(status: DownloadStatus.queued, progress: 0, error: null);
     _updateQueue(item, reset);
     downloadSingle(reset);
   }
@@ -419,7 +448,8 @@ class AppController extends ChangeNotifier {
     _updateQueue(item, updated);
   }
 
-  Future<void> installFfmpeg(Uri url, {String? checksum, void Function(int, String)? onProgress}) async {
+  Future<void> installFfmpeg(Uri url,
+      {String? checksum, void Function(int, String)? onProgress}) async {
     final path = await installerService.installFfmpeg(
       url: url,
       checksumSha256: checksum,
@@ -439,7 +469,8 @@ class AppController extends ChangeNotifier {
     }
     try {
       final ffmpegPath = await _ensureFfmpegPath(settings, target);
-      final result = await convertService.convertFile(file, target, ffmpegPath: ffmpegPath);
+      final result = await convertService.convertFile(file, target,
+          ffmpegPath: ffmpegPath);
       convertResults.add(result);
       logs.add('Conversion complete: ${result.name}');
       notifyListeners();
@@ -481,7 +512,8 @@ class AppController extends ChangeNotifier {
   }
 
   void _updateQueue(QueueItem original, QueueItem updated) {
-    final index = queue.indexWhere((q) => q.url == original.url && q.format == original.format);
+    final index = queue.indexWhere(
+        (q) => q.url == original.url && q.format == original.format);
     if (index == -1) {
       return;
     }
@@ -489,6 +521,44 @@ class AppController extends ChangeNotifier {
     next[index] = updated;
     queue = next;
     notifyListeners();
+    unawaited(_saveQueue());
+  }
+
+  Future<void> _saveQueue() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final filtered = queue
+          .where((q) =>
+              q.status == DownloadStatus.queued ||
+              q.status == DownloadStatus.failed ||
+              q.status == DownloadStatus.cancelled ||
+              q.status == DownloadStatus.completed)
+          .toList();
+      final data = jsonEncode(filtered.map((q) => q.toJson()).toList());
+      await prefs.setString(_queueKey, data);
+    } catch (_) {}
+  }
+
+  Future<void> _loadQueue() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_queueKey);
+      if (raw == null) return;
+      final list = jsonDecode(raw) as List<dynamic>;
+      final restored = list
+          .map((e) => QueueItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+      if (restored.isNotEmpty) {
+        queue = List<QueueItem>.from(queue)..addAll(restored);
+        notifyListeners();
+      }
+    } catch (_) {
+      // Corrupted data — remove to avoid repeated failures
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_queueKey);
+      } catch (_) {}
+    }
   }
 
   /// Strip 'Exception: ' prefix and simplify verbose error messages.
@@ -541,7 +611,21 @@ class AppController extends ChangeNotifier {
     final formatLower = format.toLowerCase();
 
     // Non-media formats (images, docs) don't need FFmpeg at all
-    const nonMediaFormats = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'pdf', 'txt', 'zip', 'cbz', 'epub'};
+    const nonMediaFormats = {
+      'png',
+      'jpg',
+      'jpeg',
+      'gif',
+      'bmp',
+      'tiff',
+      'tif',
+      'webp',
+      'pdf',
+      'txt',
+      'zip',
+      'cbz',
+      'epub'
+    };
     if (nonMediaFormats.contains(formatLower)) {
       return settings.ffmpegPath;
     }
@@ -549,11 +633,14 @@ class AppController extends ChangeNotifier {
     // MP4 is downloaded natively but may need FFmpeg for thumbnail embed.
     // Still try to resolve PATH so we have a working path when available.
     if (formatLower == 'mp4') {
-      return await downloadService.ffmpeg.resolveAvailablePath(settings.ffmpegPath) ?? settings.ffmpegPath;
+      return await downloadService.ffmpeg
+              .resolveAvailablePath(settings.ffmpegPath) ??
+          settings.ffmpegPath;
     }
 
     // Check configured path AND system PATH
-    final resolved = await downloadService.ffmpeg.resolveAvailablePath(settings.ffmpegPath);
+    final resolved =
+        await downloadService.ffmpeg.resolveAvailablePath(settings.ffmpegPath);
     if (resolved != null) return resolved;
 
     _ffmpegInstall ??= _installFfmpeg(settings);
@@ -584,17 +671,21 @@ class AppController extends ChangeNotifier {
     }
 
     logs.add('FFmpeg not found. Downloading automatically...');
-    const url = 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip';
+    const url =
+        'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip';
     try {
-      final path = await installerService.installFfmpeg(
-        url: Uri.parse(url),
-        onProgress: (pct, message) {
-          if (pct == 0 || pct == 60 || pct == 100) {
-            logs.add('FFmpeg $message ($pct%)');
-          }
-        },
-      ).timeout(const Duration(minutes: 5),
-          onTimeout: () => throw TimeoutException('FFmpeg download timed out after 5 minutes'));
+      final path = await installerService
+          .installFfmpeg(
+            url: Uri.parse(url),
+            onProgress: (pct, message) {
+              if (pct == 0 || pct == 60 || pct == 100) {
+                logs.add('FFmpeg $message ($pct%)');
+              }
+            },
+          )
+          .timeout(const Duration(minutes: 5),
+              onTimeout: () => throw TimeoutException(
+                  'FFmpeg download timed out after 5 minutes'));
       await saveSettings(settings.copyWith(ffmpegPath: path));
       logs.add('FFmpeg installed: $path');
       return path;
@@ -646,9 +737,8 @@ class AppController extends ChangeNotifier {
 
     // If source is 'generic', the ID *is* the URL (set by BrowserScreen)
     final isGeneric = result.source == 'generic';
-    final url = isGeneric
-        ? result.id
-        : 'https://www.youtube.com/watch?v=${result.id}';
+    final url =
+        isGeneric ? result.id : 'https://www.youtube.com/watch?v=${result.id}';
 
     addToQueue(
       PreviewItem(
@@ -669,7 +759,8 @@ class AppController extends ChangeNotifier {
     int failed = 0;
     for (final query in queries) {
       try {
-        final results = await searchService.youtubeSearcher.search(query, limit: 1);
+        final results =
+            await searchService.youtubeSearcher.search(query, limit: 1);
         if (results.isEmpty) {
           failed++;
           continue;
@@ -680,7 +771,8 @@ class AppController extends ChangeNotifier {
         failed++;
       }
     }
-    logs.add('Bulk import: $found queued, $failed failed out of ${queries.length}');
+    logs.add(
+        'Bulk import: $found queued, $failed failed out of ${queries.length}');
     notifyListeners();
   }
 
