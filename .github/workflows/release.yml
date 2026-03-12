@@ -107,16 +107,16 @@ jobs:
         shell: pwsh
         run: |
           $src = "build\windows\x64\runner\Release"
-          $dest = "releases\windows"
-          if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
-          New-Item -ItemType Directory -Path $dest -Force | Out-Null
-          Copy-Item "$src\*" $dest -Recurse
+          $zip = "ConvertTheSpireReborn.zip"
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          # Create a ZIP containing the release bundle (preserve structure)
+          Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-release
-          path: releases/windows/
+          name: windows-x64
+          path: ConvertTheSpireReborn.zip
           retention-days: 30
 
   # ── Linux Build ──────────────────────────────────────────────────────
