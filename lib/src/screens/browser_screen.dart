@@ -1,4 +1,3 @@
-import 'dart:io';
 // 'dart:typed_data' not needed; removed to satisfy analyzer.
 import 'dart:async';
 
@@ -60,7 +59,10 @@ class _BrowserScreenState extends State<BrowserScreen>
   FindInteractionController? _findInteractionController;
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _findController = TextEditingController();
-
+  // Missing state fields reintroduced
+  late AnimationController _castBadgeController;
+  bool _createWebView = false;
+  String? _pendingUrl;
   bool _isLoading = false;
   double _progress = 0;
   String _pageTitle = '';
@@ -70,9 +72,16 @@ class _BrowserScreenState extends State<BrowserScreen>
   bool _desktopMode = false;
   bool _showNewTabPage = true;
   bool _isFavourited = false;
+  bool _isSwitchingTab = false;
+  bool _showFindBar = false;
+  int _findMatchCount = 0;
+  int _findActiveIndex = 0;
+  bool _isDownloading = false;
+  String? _downloadError;
+  bool get _webViewSupported => !kIsWeb;
   String _searchEngine = 'DuckDuckGo';
-                // Horizontal tab strip removed — the toolbar tab button
-                // and the tab switcher sheet provide a consistent UX.
+  // Horizontal tab strip removed — the toolbar tab button
+  // and the tab switcher sheet provide a consistent UX.
   @override
   void dispose() {
     _castBadgeController.dispose();
@@ -84,6 +93,26 @@ class _BrowserScreenState extends State<BrowserScreen>
     _castService.dispose();
     _videoDetector.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _castBadgeController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 300));
+    _videoDetector.addListener(_onVideoDetectorChanged);
+    _castService.addListener(_onCastChanged);
+    // Start cast discovery; stopDiscovery() is called in dispose().
+    unawaited(_castService.startDiscovery());
+    _findInteractionController = FindInteractionController();
+  }
+
+  void _onVideoDetectorChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onCastChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -719,7 +748,7 @@ class _BrowserScreenState extends State<BrowserScreen>
                       // Windows — no HWND overlay issues). NewTabPage
                       // is placed on top when active.
                       if (_webViewSupported && _createWebView)
-                        Positioned.fill(child: _buildWebView())
+                        Positioned.fill(child: _buildWebView()),
                       // Tab-switch overlay — appears while a tab switch triggers
                       // a webview load so the previous content doesn't flash.
                       if (_isSwitchingTab)
@@ -807,6 +836,43 @@ class _BrowserScreenState extends State<BrowserScreen>
                     }
                   },
                   onStop: () => _castService.stop(),
+                ),
+              ),
+
+            // ── Download error banner ──
+            if (_downloadError != null)
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: viewPadding.bottom + 136,
+                child: Material(
+                  elevation: 6,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: cs.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _downloadError!,
+                            style: TextStyle(color: cs.onError, fontSize: 13),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close, color: cs.onError),
+                          onPressed: () =>
+                              setState(() => _downloadError = null),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
 
