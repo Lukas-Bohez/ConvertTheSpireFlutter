@@ -1128,7 +1128,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Text('Please select a download folder in Settings first.')),
           ],
         ),
-        backgroundColor: context.warning.withOpacity(0.95),
+        backgroundColor: context.warning.withAlpha((0.95 * 255).round()),
         duration: const Duration(seconds: 4),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -2007,7 +2007,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 width: double.infinity,
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: context.danger.withOpacity(0.08),
+                  color: context.danger.withAlpha((0.08 * 255).round()),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -3176,13 +3176,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         color: Theme.of(context)
                             .colorScheme
                             .primary
-                            .withOpacity(0.1),
+                            .withAlpha((0.1 * 255).round()),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                             color: Theme.of(context)
                                 .colorScheme
                                 .primary
-                                .withOpacity(0.3)),
+                                .withAlpha((0.3 * 255).round())),
                       ),
                       child: Row(
                         children: [
@@ -3227,13 +3227,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         color: Theme.of(context)
                             .colorScheme
                             .onSurfaceVariant
-                            .withOpacity(0.1),
+                            .withAlpha((0.1 * 255).round()),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurfaceVariant
-                                .withOpacity(0.3)),
+                                .withAlpha((0.3 * 255).round())),
                       ),
                       child: Center(
                         child: Column(
@@ -3517,11 +3517,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         return Card(
                           margin: const EdgeInsets.only(bottom: 4),
                           color: isError
-                              ? context.danger.withOpacity(0.1)
+                              ? context.danger.withAlpha((0.1 * 255).round())
                               : isWarning
-                                  ? context.warning.withOpacity(0.1)
+                                  ? context.warning
+                                      .withAlpha((0.1 * 255).round())
                                   : isSuccess
-                                      ? context.success.withOpacity(0.1)
+                                      ? context.success
+                                          .withAlpha((0.1 * 255).round())
                                       : null,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
