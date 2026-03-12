@@ -48,7 +48,9 @@ class BrowserScreen extends StatefulWidget {
 }
 
 class _BrowserScreenState extends State<BrowserScreen>
-    with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
+    with
+        AutomaticKeepAliveClientMixin<BrowserScreen>,
+        TickerProviderStateMixin {
   // ── Services ──
   final BrowserRepository _repo = BrowserRepository();
   final AdBlockService _adBlock = AdBlockService();
@@ -64,7 +66,6 @@ class _BrowserScreenState extends State<BrowserScreen>
   // Missing state fields reintroduced
   late AnimationController _castBadgeController;
   bool _createWebView = false;
-  String? _pendingUrl;
   bool _isLoading = false;
   double _progress = 0;
   String _pageTitle = '';
@@ -141,7 +142,6 @@ class _BrowserScreenState extends State<BrowserScreen>
         _pageTitle = active.title;
       } else if (ctrl == null && active?.url.isNotEmpty == true) {
         // Ensure a WebView is created for this tab and schedule loading.
-        _pendingUrl = active!.url;
         _createWebView = true;
       }
     });
@@ -248,7 +248,6 @@ class _BrowserScreenState extends State<BrowserScreen>
               '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
           : null,
     );
-  }
   }
 
   void _onLoadStart(InAppWebViewController controller, WebUri? url) {
@@ -1257,7 +1256,6 @@ class _BrowserScreenState extends State<BrowserScreen>
             if (ctrl != null) {
               ctrl.loadUrl(urlRequest: URLRequest(url: WebUri(tab.url)));
             } else {
-              _pendingUrl = tab.url;
               _createWebView = true;
             }
           }
@@ -1296,7 +1294,6 @@ class _BrowserScreenState extends State<BrowserScreen>
             if (ctrl != null) {
               ctrl.loadUrl(urlRequest: URLRequest(url: WebUri(tab.url)));
             } else {
-              _pendingUrl = tab.url;
               _createWebView = true;
             }
           }
