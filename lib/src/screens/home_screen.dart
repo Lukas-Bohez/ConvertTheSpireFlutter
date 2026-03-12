@@ -32,7 +32,8 @@ import '../widgets/browser_shell.dart';
 import '../widgets/onboarding_tooltip_service.dart';
 import '../widgets/quick_links_page.dart';
 import '../widgets/quick_links_service.dart';
-
+import '../services/update_service.dart';
+import '../widgets/update_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppController controller;
@@ -44,7 +45,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  static final Uri _buyMeCoffeeUri = Uri.parse('https://buymeacoffee.com/orokaconner');
+  static final Uri _buyMeCoffeeUri =
+      Uri.parse('https://buymeacoffee.com/orokaconner');
 
   ThemeMode _resolveThemeMode(String? mode) {
     switch (mode) {
@@ -56,6 +58,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return ThemeMode.system;
     }
   }
+
   static final Uri _websiteUri = Uri.parse('https://quizthespire.com/');
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _downloadDirController = TextEditingController();
@@ -89,6 +92,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   /// Progressive onboarding tooltip system.
   final OnboardingTooltipService _onboarding = OnboardingTooltipService();
   String? _dismissedBannerRoute;
+  // Update checker
+  UpdateInfo? _updateInfo;
+  bool _updateBannerDismissed = false;
+  bool _checkUpdatesOnLaunch = true;
 
   /// Mining services — owned here so they survive tab switches.
   late final ComputationService _computeService;
@@ -100,7 +107,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   /// Playlist preview amount: '10', '25', '50', '100', 'all', 'custom'
   String _previewPreset = '25';
   bool get _isAndroid => !kIsWeb && Platform.isAndroid;
-  bool _isNarrowLayout(BuildContext context) => MediaQuery.of(context).size.width < 600;
+  bool _isNarrowLayout(BuildContext context) =>
+      MediaQuery.of(context).size.width < 600;
 
   /// Pages that have been visited at least once in the narrow (mobile) layout.
   /// Used by IndexedStack to lazily build pages while keeping them alive.
@@ -137,6 +145,31 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         });
       }
     });
+
+    // Load update preference and check for updates on launch
+    UpdateService.isCheckOnLaunchEnabled().then((v) {
+      if (mounted) setState(() => _checkUpdatesOnLaunch = v);
+    });
+
+    // Kick off update check (silent on network failure)
+    _checkForUpdate();
+  }
+
+  Future<void> _checkForUpdate({bool force = false}) async {
+    try {
+      if (!_checkUpdatesOnLaunch && !force) return;
+      final info = await UpdateService.checkForUpdate();
+      if (info == null) return;
+      final shouldShow = await UpdateService.shouldShowBanner(info.latestVersion);
+      if (mounted) {
+        setState(() {
+          _updateInfo = info;
+          _updateBannerDismissed = !shouldShow;
+        });
+      }
+    } catch (e) {
+      debugPrint('HomeScreen: update check failed: $e');
+    }
   }
 
   @override
@@ -154,7 +187,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _initDesktopFeatures() async {
-    if (kIsWeb || (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS)) return;
+    if (kIsWeb ||
+        (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS)) return;
 
     // System tray.
     _trayService = TrayService(
@@ -219,8 +253,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         );
       case 2:
         return BrowserScreen(
-            key: BrowserScreen.browserKey,
-            onAddToQueue: widget.controller.addSearchResultToQueue,
+          key: BrowserScreen.browserKey,
+          onAddToQueue: widget.controller.addSearchResultToQueue,
         );
       case 3:
         return _buildQueueTab();
@@ -300,7 +334,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _visitedPages.add(index);
     });
     // Persist last selected tab
-    SharedPreferences.getInstance().then((prefs) => prefs.setInt('last_tab', index));
+    SharedPreferences.getInstance()
+        .then((prefs) => prefs.setInt('last_tab', index));
   }
 
   /// Alias used by tappable top-bar UI items to navigate to a tab index.
@@ -377,7 +412,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: shell,
         );
 
-        if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+        if (!kIsWeb &&
+            (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
           return CallbackShortcuts(
             bindings: <ShortcutActivator, VoidCallback>{
               const SingleActivator(LogicalKeyboardKey.mediaPlayPause): () {
@@ -395,7 +431,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   context.read<PlayerState>().previous();
                 } catch (_) {}
               },
-              const SingleActivator(LogicalKeyboardKey.space, control: true): () {
+              const SingleActivator(LogicalKeyboardKey.space, control: true):
+                  () {
                 try {
                   context.read<PlayerState>().togglePlay();
                 } catch (_) {}
@@ -419,8 +456,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _onboarding.step < 4 &&
         !_onboarding.hasVisitedScreen(route) &&
         _dismissedBannerRoute != route;
-    final description =
-        route != null ? OnboardingTooltipService.screenDescriptions[route] : null;
+    final description = route != null
+        ? OnboardingTooltipService.screenDescriptions[route]
+        : null;
 
     final stack = IndexedStack(
       index: _selectedPageIndex,
@@ -431,6 +469,41 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return _buildPageContent(i, settings);
       }),
     );
+
+    // Show update banner above onboarding banner when appropriate
+    if (_updateInfo != null && !_updateBannerDismissed) {
+      return Column(
+        children: [
+          UpdateBanner(
+            info: _updateInfo!,
+            onDismiss: () async {
+              await UpdateService.dismissBanner(_updateInfo!.latestVersion);
+              if (mounted) setState(() => _updateBannerDismissed = true);
+            },
+            onDownload: () {
+              String url = _updateInfo!.releaseUrl;
+              if (!kIsWeb) {
+                if (Platform.isWindows) url = _updateInfo!.windowsAssetUrl.isNotEmpty ? _updateInfo!.windowsAssetUrl : url;
+                if (Platform.isAndroid) url = _updateInfo!.androidAssetUrl.isNotEmpty ? _updateInfo!.androidAssetUrl : url;
+                if (Platform.isLinux) url = _updateInfo!.linuxAssetUrl.isNotEmpty ? _updateInfo!.linuxAssetUrl : url;
+              }
+              if (url.isNotEmpty) {
+                launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+              }
+            },
+          ),
+          if (showBanner && description != null)
+            OnboardingBanner(
+              message: description,
+              onDismiss: () {
+                _onboarding.markScreenVisited(route);
+                if (mounted) setState(() => _dismissedBannerRoute = route);
+              },
+            ),
+          Expanded(child: stack),
+        ],
+      );
+    }
 
     if (showBanner && description != null) {
       return Column(
@@ -454,7 +527,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() {
       if (_isAndroid) {
         _androidDownloadUri = settings.downloadDir;
-        _downloadDirController.text = _formatAndroidFolderLabel(settings.downloadDir);
+        _downloadDirController.text =
+            _formatAndroidFolderLabel(settings.downloadDir);
       } else {
         _downloadDirController.text = settings.downloadDir;
       }
@@ -596,7 +670,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     children: [
                       const Icon(Icons.settings),
                       const SizedBox(width: 8),
-                      Text('Download Options', style: Theme.of(context).textTheme.titleMedium),
+                      Text('Download Options',
+                          style: Theme.of(context).textTheme.titleMedium),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -614,7 +689,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           items: const [
                             DropdownMenuItem(value: 'mp3', child: Text('MP3')),
                             DropdownMenuItem(value: 'm4a', child: Text('M4A')),
-                            DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
+                            DropdownMenuItem(
+                                value: 'mp4', child: Text('MP4 (Video)')),
                           ],
                           onChanged: (value) {
                             if (value == null) return;
@@ -633,11 +709,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             prefixIcon: Icon(Icons.high_quality),
                           ),
                           items: const [
-                            DropdownMenuItem(value: '360p', child: Text('360p')),
-                            DropdownMenuItem(value: '480p', child: Text('480p')),
-                            DropdownMenuItem(value: '720p', child: Text('720p (HD)')),
-                            DropdownMenuItem(value: '1080p', child: Text('1080p (Full HD)')),
-                            DropdownMenuItem(value: 'best', child: Text('Best Available')),
+                            DropdownMenuItem(
+                                value: '360p', child: Text('360p')),
+                            DropdownMenuItem(
+                                value: '480p', child: Text('480p')),
+                            DropdownMenuItem(
+                                value: '720p', child: Text('720p (HD)')),
+                            DropdownMenuItem(
+                                value: '1080p', child: Text('1080p (Full HD)')),
+                            DropdownMenuItem(
+                                value: 'best', child: Text('Best Available')),
                           ],
                           onChanged: (value) {
                             if (value == null) return;
@@ -656,10 +737,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             prefixIcon: Icon(Icons.equalizer),
                           ),
                           items: const [
-                            DropdownMenuItem(value: 128, child: Text('128 kbps')),
-                            DropdownMenuItem(value: 192, child: Text('192 kbps')),
-                            DropdownMenuItem(value: 256, child: Text('256 kbps')),
-                            DropdownMenuItem(value: 320, child: Text('320 kbps')),
+                            DropdownMenuItem(
+                                value: 128, child: Text('128 kbps')),
+                            DropdownMenuItem(
+                                value: 192, child: Text('192 kbps')),
+                            DropdownMenuItem(
+                                value: 256, child: Text('256 kbps')),
+                            DropdownMenuItem(
+                                value: 320, child: Text('320 kbps')),
                           ],
                           onChanged: (value) {
                             if (value == null) return;
@@ -697,9 +782,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   prefixIcon: Icon(Icons.audio_file),
                                 ),
                                 items: const [
-                                  DropdownMenuItem(value: 'mp3', child: Text('MP3')),
-                                  DropdownMenuItem(value: 'm4a', child: Text('M4A')),
-                                  DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
+                                  DropdownMenuItem(
+                                      value: 'mp3', child: Text('MP3')),
+                                  DropdownMenuItem(
+                                      value: 'm4a', child: Text('M4A')),
+                                  DropdownMenuItem(
+                                      value: 'mp4', child: Text('MP4 (Video)')),
                                 ],
                                 onChanged: (value) {
                                   if (value == null) return;
@@ -720,11 +808,18 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   prefixIcon: Icon(Icons.high_quality),
                                 ),
                                 items: const [
-                                  DropdownMenuItem(value: '360p', child: Text('360p')),
-                                  DropdownMenuItem(value: '480p', child: Text('480p')),
-                                  DropdownMenuItem(value: '720p', child: Text('720p (HD)')),
-                                  DropdownMenuItem(value: '1080p', child: Text('1080p (Full HD)')),
-                                  DropdownMenuItem(value: 'best', child: Text('Best Available')),
+                                  DropdownMenuItem(
+                                      value: '360p', child: Text('360p')),
+                                  DropdownMenuItem(
+                                      value: '480p', child: Text('480p')),
+                                  DropdownMenuItem(
+                                      value: '720p', child: Text('720p (HD)')),
+                                  DropdownMenuItem(
+                                      value: '1080p',
+                                      child: Text('1080p (Full HD)')),
+                                  DropdownMenuItem(
+                                      value: 'best',
+                                      child: Text('Best Available')),
                                 ],
                                 onChanged: (value) {
                                   if (value == null) return;
@@ -745,10 +840,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   prefixIcon: Icon(Icons.equalizer),
                                 ),
                                 items: const [
-                                  DropdownMenuItem(value: 128, child: Text('128 kbps')),
-                                  DropdownMenuItem(value: 192, child: Text('192 kbps')),
-                                  DropdownMenuItem(value: 256, child: Text('256 kbps')),
-                                  DropdownMenuItem(value: 320, child: Text('320 kbps')),
+                                  DropdownMenuItem(
+                                      value: 128, child: Text('128 kbps')),
+                                  DropdownMenuItem(
+                                      value: 192, child: Text('192 kbps')),
+                                  DropdownMenuItem(
+                                      value: 256, child: Text('256 kbps')),
+                                  DropdownMenuItem(
+                                      value: 320, child: Text('320 kbps')),
                                 ],
                                 onChanged: (value) {
                                   if (value == null) return;
@@ -793,7 +892,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       children: [
                         const Icon(Icons.playlist_play),
                         const SizedBox(width: 8),
-                        Text('Playlist Options', style: Theme.of(context).textTheme.titleMedium),
+                        Text('Playlist Options',
+                            style: Theme.of(context).textTheme.titleMedium),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -811,12 +911,19 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               isDense: true,
                             ),
                             items: const [
-                              DropdownMenuItem(value: '10', child: Text('First 10')),
-                              DropdownMenuItem(value: '25', child: Text('First 25')),
-                              DropdownMenuItem(value: '50', child: Text('First 50')),
-                              DropdownMenuItem(value: '100', child: Text('First 100')),
-                              DropdownMenuItem(value: 'all', child: Text('All')),
-                              DropdownMenuItem(value: 'custom', child: Text('Custom range...')),
+                              DropdownMenuItem(
+                                  value: '10', child: Text('First 10')),
+                              DropdownMenuItem(
+                                  value: '25', child: Text('First 25')),
+                              DropdownMenuItem(
+                                  value: '50', child: Text('First 50')),
+                              DropdownMenuItem(
+                                  value: '100', child: Text('First 100')),
+                              DropdownMenuItem(
+                                  value: 'all', child: Text('All')),
+                              DropdownMenuItem(
+                                  value: 'custom',
+                                  child: Text('Custom range...')),
                             ],
                             onChanged: (value) {
                               if (value == null) return;
@@ -843,7 +950,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 isDense: true,
                               ),
                               keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly
+                              ],
                             ),
                           ),
                           const Padding(
@@ -861,7 +970,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 isDense: true,
                               ),
                               keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly
+                              ],
                             ),
                           ),
                         ],
@@ -870,14 +981,17 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Text(
                         'Video numbers are 1-based (e.g. 1 to 25 = first 25 videos)',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
                       ),
                     ],
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.warning_amber_rounded, size: 18, color: context.warning),
+                        Icon(Icons.warning_amber_rounded,
+                            size: 18, color: context.warning),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -905,9 +1019,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.search),
                     label: const Text('Search / Preview'),
-                    onPressed: settings == null || _urlController.text.trim().isEmpty
-                        ? null
-                        : _onSearch,
+                    onPressed:
+                        settings == null || _urlController.text.trim().isEmpty
+                            ? null
+                            : _onSearch,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -919,9 +1034,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.download),
                     label: const Text('Download'),
-                    onPressed: settings == null || _urlController.text.trim().isEmpty
-                        ? null
-                        : () => _downloadUrl(settings),
+                    onPressed:
+                        settings == null || _urlController.text.trim().isEmpty
+                            ? null
+                            : () => _downloadUrl(settings),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -936,9 +1052,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.search),
                     label: const Text('Search / Preview'),
-                    onPressed: settings == null || _urlController.text.trim().isEmpty
-                        ? null
-                        : _onSearch,
+                    onPressed:
+                        settings == null || _urlController.text.trim().isEmpty
+                            ? null
+                            : _onSearch,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -949,9 +1066,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.download),
                     label: const Text('Download'),
-                    onPressed: settings == null || _urlController.text.trim().isEmpty
-                        ? null
-                        : () => _downloadUrl(settings),
+                    onPressed:
+                        settings == null || _urlController.text.trim().isEmpty
+                            ? null
+                            : () => _downloadUrl(settings),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -973,8 +1091,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
             ),
-          if (!widget.controller.previewLoading)
-            _buildPreviewList(),
+          if (!widget.controller.previewLoading) _buildPreviewList(),
         ],
       ),
     );
@@ -990,22 +1107,25 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (dir.isNotEmpty) return true;
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+      SnackBar(
         content: const Row(
           children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+            Icon(Icons.warning_amber_rounded,
+                color: context.onWarning, size: 20),
             SizedBox(width: 8),
-            Expanded(child: Text('Please select a download folder in Settings first.')),
+            Expanded(
+                child:
+                    Text('Please select a download folder in Settings first.')),
           ],
         ),
-            backgroundColor: context.warning.withValues(alpha: 0.95),
+        backgroundColor: context.warning.withOpacity(0.95),
         duration: const Duration(seconds: 4),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         margin: const EdgeInsets.all(16),
         action: SnackBarAction(
           label: 'Go to Settings',
-              textColor: Colors.white,
+          textColor: context.onWarning,
           onPressed: () => _navigateToPage(7),
         ),
       ),
@@ -1022,9 +1142,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (url.isEmpty) return;
     final item = widget.controller.previewItems.isNotEmpty
         ? widget.controller.previewItems.cast<PreviewItem?>().firstWhere(
-            (p) => p!.url == url,
-            orElse: () => null,
-          )
+              (p) => p!.url == url,
+              orElse: () => null,
+            )
         : null;
     if (item != null) {
       widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
@@ -1100,16 +1220,21 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              Icon(Icons.info_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              Icon(Icons.info_outline,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
               const SizedBox(height: 16),
               Text(
                 'No preview results yet.',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 8),
               Text(
                 'Enter a YouTube URL above and click Search',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12),
               ),
             ],
           ),
@@ -1132,7 +1257,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             children: [
               Row(
                 children: [
-                  Icon(Icons.video_library, color: Theme.of(context).primaryColor),
+                  Icon(Icons.video_library,
+                      color: Theme.of(context).primaryColor),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -1154,10 +1280,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     label: const Text('Add All'),
                     onPressed: () {
                       for (final item in items) {
-                        widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                        widget.controller
+                            .addToQueue(item, _downloadFormat.toLowerCase());
                       }
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Added ${items.length} items to queue')),
+                        SnackBar(
+                            content:
+                                Text('Added ${items.length} items to queue')),
                       );
                     },
                   ),
@@ -1168,7 +1297,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       final s = widget.controller.settings;
                       if (s != null && !_ensureDownloadFolder(s)) return;
                       for (final item in items) {
-                        widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                        widget.controller
+                            .addToQueue(item, _downloadFormat.toLowerCase());
                       }
                       widget.controller.downloadAll();
                     },
@@ -1183,7 +1313,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             children: [
               Row(
                 children: [
-                  Icon(Icons.video_library, color: Theme.of(context).primaryColor),
+                  Icon(Icons.video_library,
+                      color: Theme.of(context).primaryColor),
                   const SizedBox(width: 8),
                   Text(
                     'Preview Results (${items.length})',
@@ -1200,10 +1331,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     label: const Text('Add All'),
                     onPressed: () {
                       for (final item in items) {
-                        widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                        widget.controller
+                            .addToQueue(item, _downloadFormat.toLowerCase());
                       }
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Added ${items.length} items to queue')),
+                        SnackBar(
+                            content:
+                                Text('Added ${items.length} items to queue')),
                       );
                     },
                   ),
@@ -1215,7 +1349,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       final s = widget.controller.settings;
                       if (s != null && !_ensureDownloadFolder(s)) return;
                       for (final item in items) {
-                        widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                        widget.controller
+                            .addToQueue(item, _downloadFormat.toLowerCase());
                       }
                       widget.controller.downloadAll();
                     },
@@ -1254,10 +1389,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           value: _addRangeFrom.clamp(1, items.length),
                           isDense: true,
                           isExpanded: true,
-                          dropdownColor: Theme.of(context).colorScheme.surfaceContainer,
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                          dropdownColor:
+                              Theme.of(context).colorScheme.surfaceContainer,
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface),
                           items: List.generate(items.length, (i) {
-                            return DropdownMenuItem(value: i + 1, child: Text('${i + 1}'));
+                            return DropdownMenuItem(
+                                value: i + 1, child: Text('${i + 1}'));
                           }),
                           onChanged: (v) {
                             if (v == null) return;
@@ -1275,13 +1413,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           value: _addRangeTo.clamp(_addRangeFrom, items.length),
                           isDense: true,
                           isExpanded: true,
-                          dropdownColor: Theme.of(context).colorScheme.surfaceContainer,
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                          dropdownColor:
+                              Theme.of(context).colorScheme.surfaceContainer,
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface),
                           items: List.generate(
                             items.length - _addRangeFrom + 1,
                             (i) {
                               final v = _addRangeFrom + i;
-                              return DropdownMenuItem(value: v, child: Text('$v'));
+                              return DropdownMenuItem(
+                                  value: v, child: Text('$v'));
                             },
                           ),
                           onChanged: (v) {
@@ -1296,24 +1437,31 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         icon: const Icon(Icons.playlist_add, size: 18),
                         label: Text('Add ${_addRangeTo - _addRangeFrom + 1}'),
                         onPressed: () {
-                          final subset = items.sublist(_addRangeFrom - 1, _addRangeTo);
+                          final subset =
+                              items.sublist(_addRangeFrom - 1, _addRangeTo);
                           for (final item in subset) {
-                            widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                            widget.controller.addToQueue(
+                                item, _downloadFormat.toLowerCase());
                           }
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Added ${subset.length} items to queue')),
+                            SnackBar(
+                                content: Text(
+                                    'Added ${subset.length} items to queue')),
                           );
                         },
                       ),
                       ElevatedButton.icon(
                         icon: const Icon(Icons.download, size: 18),
-                        label: Text('Download ${_addRangeTo - _addRangeFrom + 1}'),
+                        label:
+                            Text('Download ${_addRangeTo - _addRangeFrom + 1}'),
                         onPressed: () {
                           final s = widget.controller.settings;
                           if (s != null && !_ensureDownloadFolder(s)) return;
-                          final subset = items.sublist(_addRangeFrom - 1, _addRangeTo);
+                          final subset =
+                              items.sublist(_addRangeFrom - 1, _addRangeTo);
                           for (final item in subset) {
-                            widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                            widget.controller.addToQueue(
+                                item, _downloadFormat.toLowerCase());
                           }
                           widget.controller.downloadAll();
                         },
@@ -1344,7 +1492,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           child: Text(
                             '${index + 1}',
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -1352,7 +1502,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        item.thumbnailUrl != null && item.thumbnailUrl!.isNotEmpty
+                        item.thumbnailUrl != null &&
+                                item.thumbnailUrl!.isNotEmpty
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
                                 child: Image.network(
@@ -1376,11 +1527,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item.uploader, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Text(item.uploader,
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
                         if (item.duration != null)
                           Text(
                             _formatDuration(item.duration!),
-                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                                fontSize: 12),
                           ),
                       ],
                     ),
@@ -1392,9 +1548,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               IconButton(
                                 icon: const Icon(Icons.add_circle_outline),
                                 onPressed: () {
-                                  widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                                  widget.controller.addToQueue(
+                                      item, _downloadFormat.toLowerCase());
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Added to queue')),
+                                    const SnackBar(
+                                        content: Text('Added to queue')),
                                   );
                                 },
                                 tooltip: 'Add to queue',
@@ -1404,8 +1562,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 label: const Text('Download'),
                                 onPressed: () {
                                   final s = widget.controller.settings;
-                                  if (s != null && !_ensureDownloadFolder(s)) return;
-                                  widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                                  if (s != null && !_ensureDownloadFolder(s))
+                                    return;
+                                  widget.controller.addToQueue(
+                                      item, _downloadFormat.toLowerCase());
                                   widget.controller.downloadAll();
                                 },
                               ),
@@ -1414,7 +1574,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   if (isNarrow)
                     Padding(
-                      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+                      padding: const EdgeInsets.only(
+                          left: 16, right: 16, bottom: 12),
                       child: Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -1423,7 +1584,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             icon: const Icon(Icons.playlist_add, size: 18),
                             label: const Text('Add to queue'),
                             onPressed: () {
-                              widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                              widget.controller.addToQueue(
+                                  item, _downloadFormat.toLowerCase());
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('Added to queue')),
                               );
@@ -1434,8 +1596,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             label: const Text('Download'),
                             onPressed: () {
                               final s = widget.controller.settings;
-                              if (s != null && !_ensureDownloadFolder(s)) return;
-                              widget.controller.addToQueue(item, _downloadFormat.toLowerCase());
+                              if (s != null && !_ensureDownloadFolder(s))
+                                return;
+                              widget.controller.addToQueue(
+                                  item, _downloadFormat.toLowerCase());
                               widget.controller.downloadAll();
                             },
                           ),
@@ -1490,24 +1654,32 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.queue_music, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            Icon(Icons.queue_music,
+                size: 48,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(
               'No items in queue',
-              style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 6),
             Text(
               'Add items from the Search tab',
-              style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ],
         ),
       );
     }
 
-    final completedCount = items.where((i) => i.status == DownloadStatus.completed).length;
-    final inProgressCount = items.where((i) => i.status == DownloadStatus.downloading).length;
+    final completedCount =
+        items.where((i) => i.status == DownloadStatus.completed).length;
+    final inProgressCount =
+        items.where((i) => i.status == DownloadStatus.downloading).length;
 
     // Use LayoutBuilder so the queue adapts to its actual available width
     // (e.g. 300px sidebar) instead of the full screen width.
@@ -1516,7 +1688,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         final isCompact = constraints.maxWidth < 400;
         return Column(
           children: [
-            _buildQueueHeader(items, inProgressCount, completedCount, isCompact),
+            _buildQueueHeader(
+                items, inProgressCount, completedCount, isCompact),
             Expanded(
               child: ListView.builder(
                 padding: EdgeInsets.all(isCompact ? 8 : 16),
@@ -1533,7 +1706,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildQueueHeader(List<QueueItem> items, int inProgressCount, int completedCount, bool isCompact) {
+  Widget _buildQueueHeader(List<QueueItem> items, int inProgressCount,
+      int completedCount, bool isCompact) {
     final cs = Theme.of(context).colorScheme;
     return Container(
       padding: EdgeInsets.all(isCompact ? 10 : 16),
@@ -1592,11 +1766,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     icon: const Icon(Icons.download_rounded, size: 16),
                     label: Text(isCompact ? 'All' : 'Download All',
                         style: const TextStyle(fontSize: 12)),
-                    onPressed: items.isEmpty ? null : () {
-                      final s = widget.controller.settings;
-                      if (s != null && !_ensureDownloadFolder(s)) return;
-                      widget.controller.downloadAll();
-                    },
+                    onPressed: items.isEmpty
+                        ? null
+                        : () {
+                            final s = widget.controller.settings;
+                            if (s != null && !_ensureDownloadFolder(s)) return;
+                            widget.controller.downloadAll();
+                          },
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
@@ -1618,7 +1794,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               context: context,
                               builder: (context) => AlertDialog(
                                 title: const Text('Clear Queue'),
-                                content: const Text('Remove all items from the queue?'),
+                                content: const Text(
+                                    'Remove all items from the queue?'),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
@@ -1626,7 +1803,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   ),
                                   ElevatedButton(
                                     onPressed: () {
-                                      final snapshot = List<QueueItem>.from(items);
+                                      final snapshot =
+                                          List<QueueItem>.from(items);
                                       for (final item in snapshot) {
                                         widget.controller.removeFromQueue(item);
                                       }
@@ -1694,7 +1872,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
@@ -1720,17 +1899,24 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     underline: const SizedBox.shrink(),
                     style: TextStyle(fontSize: 11, color: cs.onSurface),
                     items: const [
-                      DropdownMenuItem(value: 'mp3', child: Text('MP3', style: TextStyle(fontSize: 11))),
-                      DropdownMenuItem(value: 'm4a', child: Text('M4A', style: TextStyle(fontSize: 11))),
-                      DropdownMenuItem(value: 'mp4', child: Text('MP4', style: TextStyle(fontSize: 11))),
+                      DropdownMenuItem(
+                          value: 'mp3',
+                          child: Text('MP3', style: TextStyle(fontSize: 11))),
+                      DropdownMenuItem(
+                          value: 'm4a',
+                          child: Text('M4A', style: TextStyle(fontSize: 11))),
+                      DropdownMenuItem(
+                          value: 'mp4',
+                          child: Text('MP4', style: TextStyle(fontSize: 11))),
                     ],
                     onChanged: item.status == DownloadStatus.downloading ||
-                                item.status == DownloadStatus.converting ||
-                                item.status == DownloadStatus.completed
+                            item.status == DownloadStatus.converting ||
+                            item.status == DownloadStatus.completed
                         ? null
                         : (value) {
                             if (value == null) return;
-                            widget.controller.changeQueueItemFormat(item, value);
+                            widget.controller
+                                .changeQueueItemFormat(item, value);
                           },
                   ),
                 ),
@@ -1759,35 +1945,48 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 if (item.status == DownloadStatus.queued ||
                     item.status == DownloadStatus.failed ||
                     item.status == DownloadStatus.cancelled)
-                  _queueAction(Icons.download_rounded, 'Download', Colors.blue, () {
+                  _queueAction(Icons.download_rounded, 'Download',
+                      Theme.of(context).colorScheme.primary, () {
                     final s = widget.controller.settings;
                     if (s != null && !_ensureDownloadFolder(s)) return;
                     widget.controller.downloadSingle(item);
                   }),
                 if (item.status == DownloadStatus.downloading ||
                     item.status == DownloadStatus.converting)
-                  _queueAction(Icons.stop_rounded, 'Cancel', Colors.orange,
+                  _queueAction(Icons.stop_rounded, 'Cancel', context.warning,
                       () => widget.controller.cancelDownload(item)),
                 if (item.status == DownloadStatus.cancelled ||
                     item.status == DownloadStatus.failed)
-                  _queueAction(Icons.play_arrow_rounded, 'Resume', Colors.green, () {
+                  _queueAction(
+                      Icons.play_arrow_rounded, 'Resume', context.success, () {
                     final s = widget.controller.settings;
                     if (s != null && !_ensureDownloadFolder(s)) return;
                     widget.controller.resumeDownload(item);
                   }),
                 if (item.status == DownloadStatus.completed &&
                     item.outputPath != null &&
-                    !kIsWeb && !Platform.isAndroid)
-                  _queueAction(Icons.folder_open_rounded, 'Folder', Colors.blue,
+                    !kIsWeb &&
+                    !Platform.isAndroid)
+                  _queueAction(
+                      Icons.folder_open_rounded,
+                      'Folder',
+                      Theme.of(context).colorScheme.primary,
                       () => _showInFolder(item.outputPath!)),
                 if (item.status == DownloadStatus.completed &&
                     item.outputPath != null &&
-                    !kIsWeb && Platform.isAndroid)
-                  _queueAction(Icons.share_rounded, 'Share', Colors.blue,
+                    !kIsWeb &&
+                    Platform.isAndroid)
+                  _queueAction(
+                      Icons.share_rounded,
+                      'Share',
+                      Theme.of(context).colorScheme.primary,
                       () => _shareFile(item.outputPath!, item.title)),
                 if (item.status != DownloadStatus.downloading &&
                     item.status != DownloadStatus.converting)
-                  _queueAction(Icons.delete_outline_rounded, 'Remove', Colors.red,
+                  _queueAction(
+                      Icons.delete_outline_rounded,
+                      'Remove',
+                      context.danger,
                       () => widget.controller.removeFromQueue(item)),
               ],
             ),
@@ -1798,12 +1997,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 width: double.infinity,
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.08),
+                  color: context.danger.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   item.error!,
-                  style: const TextStyle(color: Colors.red, fontSize: 11),
+                  style: TextStyle(color: context.danger, fontSize: 11),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1815,7 +2014,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _queueAction(IconData icon, String tooltip, Color color, VoidCallback onPressed) {
+  Widget _queueAction(
+      IconData icon, String tooltip, Color color, VoidCallback onPressed) {
     return SizedBox(
       width: 30,
       height: 30,
@@ -1830,19 +2030,20 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Color _getStatusColor(DownloadStatus status) {
+    final cs = Theme.of(context).colorScheme;
     switch (status) {
       case DownloadStatus.completed:
-        return Colors.green;
+        return context.success;
       case DownloadStatus.downloading:
-        return Colors.blue;
+        return cs.primary;
       case DownloadStatus.converting:
-        return Colors.indigo;
+        return cs.secondary;
       case DownloadStatus.cancelled:
-        return Colors.orange;
+        return context.warning;
       case DownloadStatus.failed:
-        return Colors.red;
+        return context.danger;
       case DownloadStatus.queued:
-        return Colors.grey;
+        return cs.onSurfaceVariant;
     }
   }
 
@@ -1881,21 +2082,21 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: TabBarView(
             controller: _playlistTabController,
             children: [
-                PlaylistScreen(
-                  playlistService: widget.controller.playlistService,
-                  onDownloadMissing: (tracks, format) {
-                    for (final t in tracks) {
-                      widget.controller.addSearchResultToQueue(t, format: format);
-                    }
-                  },
-                ),
-                WatchedPlaylistsScreen(
-                  watchedService: widget.controller.watchedPlaylistService,
-                ),
-              ],
-            ),
+              PlaylistScreen(
+                playlistService: widget.controller.playlistService,
+                onDownloadMissing: (tracks, format) {
+                  for (final t in tracks) {
+                    widget.controller.addSearchResultToQueue(t, format: format);
+                  }
+                },
+              ),
+              WatchedPlaylistsScreen(
+                watchedService: widget.controller.watchedPlaylistService,
+              ),
+            ],
           ),
-        ],
+        ),
+      ],
     );
   }
 
@@ -1925,52 +2126,62 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           // â”€â”€ Support the Project â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           // Mining support – hidden entirely on Android.
           if (!_isAndroid) ...[
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          shape: BoxShape.circle,
+            Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.3)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color:
+                                Theme.of(context).colorScheme.primaryContainer,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.toll_rounded,
+                              color: Theme.of(context).colorScheme.primary),
                         ),
-                        child: Icon(Icons.toll_rounded,
-                            color: Theme.of(context).colorScheme.primary),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Support the Project',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    )),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Mine QUBIC tokens with idle CPU cycles â€” '
-                              'supports the developer, runs in sandboxed isolates.',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant),
-                            ),
-                          ],
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Support the Project',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      )),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Mine QUBIC tokens with idle CPU cycles â€” '
+                                'supports the developer, runs in sandboxed isolates.',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Mining toggle – never shown on Android
-                  SwitchListTile(
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Mining toggle – never shown on Android
+                    SwitchListTile(
                       value: _supportEnabled,
                       onChanged: (value) {
                         _setSupportEnabled(value);
@@ -1982,25 +2193,27 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             : 'Tap to start mining',
                       ),
                       secondary: Icon(
-                        _supportEnabled ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-                        color: _supportEnabled ? Colors.green : null,
+                        _supportEnabled
+                            ? Icons.flash_on_rounded
+                            : Icons.flash_off_rounded,
+                        color: _supportEnabled ? context.success : null,
                       ),
                       contentPadding: EdgeInsets.zero,
                     ),
-                  const SizedBox(height: 4),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      icon: const Icon(Icons.open_in_new, size: 16),
-                      label: const Text('Learn more'),
-                      onPressed: () => _navigateToPage(8),
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: const Text('Learn more'),
+                        onPressed: () => _navigateToPage(8),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
           ], // end if (!_isAndroid) mining card
 
           // Download Settings
@@ -2014,7 +2227,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     children: [
                       const Icon(Icons.folder_outlined),
                       const SizedBox(width: 8),
-                      Text('Download Settings', style: Theme.of(context).textTheme.titleLarge),
+                      Text('Download Settings',
+                          style: Theme.of(context).textTheme.titleLarge),
                     ],
                   ),
                   const Divider(),
@@ -2027,7 +2241,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         labelText: 'Download folder',
                         border: const OutlineInputBorder(),
                         prefixIcon: const Icon(Icons.folder),
-                        helperText: 'Pick a folder using the system file picker. If not set, files go to Downloads/ConvertTheSpireReborn.',
+                        helperText:
+                            'Pick a folder using the system file picker. If not set, files go to Downloads/ConvertTheSpireReborn.',
                         helperMaxLines: 3,
                       ),
                       readOnly: true,
@@ -2039,18 +2254,23 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       children: [
                         ElevatedButton.icon(
                           icon: const Icon(Icons.folder_open),
-                          label: Text(_hasAndroidFolder ? 'Change folder' : 'Choose folder'),
+                          label: Text(_hasAndroidFolder
+                              ? 'Change folder'
+                              : 'Choose folder'),
                           onPressed: () => _pickAndroidFolder(settings),
                         ),
                         OutlinedButton.icon(
                           icon: const Icon(Icons.folder),
                           label: const Text('Open folder'),
-                          onPressed: _hasAndroidFolder ? _openAndroidFolder : null,
+                          onPressed:
+                              _hasAndroidFolder ? _openAndroidFolder : null,
                         ),
                         TextButton.icon(
                           icon: const Icon(Icons.clear),
                           label: const Text('Clear'),
-                          onPressed: _hasAndroidFolder ? () => _clearAndroidFolder(settings) : null,
+                          onPressed: _hasAndroidFolder
+                              ? () => _clearAndroidFolder(settings)
+                              : null,
                         ),
                       ],
                     ),
@@ -2059,7 +2279,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
                           'No folder selected. Downloads will be saved to Downloads/ConvertTheSpireReborn.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: context.warning),
                         ),
                       ),
                   ] else ...[
@@ -2083,12 +2306,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               icon: const Icon(Icons.folder_open),
                               label: const Text('Browse'),
                               onPressed: () async {
-                                final result = await FilePicker.platform.getDirectoryPath();
+                                final result = await FilePicker.platform
+                                    .getDirectoryPath();
                                 if (result != null && mounted) {
                                   setState(() {
                                     _downloadDirController.text = result;
                                   });
-                                  await widget.controller.saveSettings(settings.copyWith(downloadDir: result));
+                                  await widget.controller.saveSettings(
+                                      settings.copyWith(downloadDir: result));
                                 }
                               },
                             ),
@@ -2114,12 +2339,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             icon: const Icon(Icons.folder_open),
                             label: const Text('Browse'),
                             onPressed: () async {
-                              final result = await FilePicker.platform.getDirectoryPath();
+                              final result =
+                                  await FilePicker.platform.getDirectoryPath();
                               if (result != null && mounted) {
                                 setState(() {
                                   _downloadDirController.text = result;
                                 });
-                                await widget.controller.saveSettings(settings.copyWith(downloadDir: result));
+                                await widget.controller.saveSettings(
+                                    settings.copyWith(downloadDir: result));
                               }
                             },
                           ),
@@ -2145,10 +2372,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   SwitchListTile(
                     value: settings.showNotifications,
                     onChanged: (value) {
-                      widget.controller.saveSettings(settings.copyWith(showNotifications: value));
+                      widget.controller.saveSettings(
+                          settings.copyWith(showNotifications: value));
                     },
                     title: const Text('Show notifications'),
-                    subtitle: const Text('Display notifications when downloads complete'),
+                    subtitle: const Text(
+                        'Display notifications when downloads complete'),
                     secondary: const Icon(Icons.notifications),
                   ),
                 ],
@@ -2168,7 +2397,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     children: [
                       const Icon(Icons.high_quality_outlined),
                       const SizedBox(width: 8),
-                      Text('Quality Settings', style: Theme.of(context).textTheme.titleLarge),
+                      Text('Quality Settings',
+                          style: Theme.of(context).textTheme.titleLarge),
                     ],
                   ),
                   const Divider(),
@@ -2181,20 +2411,27 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         labelText: 'Video Quality',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.videocam),
-                        helperText: '1080p+ downloads separate video & audio and merges them (requires FFmpeg)',
+                        helperText:
+                            '1080p+ downloads separate video & audio and merges them (requires FFmpeg)',
                         helperMaxLines: 2,
                       ),
                       items: const [
                         DropdownMenuItem(value: '360p', child: Text('360p')),
                         DropdownMenuItem(value: '480p', child: Text('480p')),
-                        DropdownMenuItem(value: '720p', child: Text('720p (HD)')),
-                        DropdownMenuItem(value: '1080p', child: Text('1080p (Full HD)')),
-                        DropdownMenuItem(value: 'best', child: Text('Best Available')),
+                        DropdownMenuItem(
+                            value: '720p', child: Text('720p (HD)')),
+                        DropdownMenuItem(
+                            value: '1080p', child: Text('1080p (Full HD)')),
+                        DropdownMenuItem(
+                            value: 'best', child: Text('Best Available')),
                       ],
                       onChanged: (value) {
                         if (value == null) return;
-                        setState(() { _videoQuality = value; });
-                        widget.controller.saveSettings(settings.copyWith(preferredVideoQuality: value));
+                        setState(() {
+                          _videoQuality = value;
+                        });
+                        widget.controller.saveSettings(
+                            settings.copyWith(preferredVideoQuality: value));
                       },
                     ),
                     const SizedBox(height: 12),
@@ -2205,19 +2442,27 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         labelText: 'Audio Bitrate',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.equalizer),
-                        helperText: 'Higher bitrate = better quality, larger file size',
+                        helperText:
+                            'Higher bitrate = better quality, larger file size',
                         helperMaxLines: 2,
                       ),
                       items: const [
-                        DropdownMenuItem(value: 128, child: Text('128 kbps (Compact)')),
-                        DropdownMenuItem(value: 192, child: Text('192 kbps (Standard)')),
-                        DropdownMenuItem(value: 256, child: Text('256 kbps (High)')),
-                        DropdownMenuItem(value: 320, child: Text('320 kbps (Maximum)')),
+                        DropdownMenuItem(
+                            value: 128, child: Text('128 kbps (Compact)')),
+                        DropdownMenuItem(
+                            value: 192, child: Text('192 kbps (Standard)')),
+                        DropdownMenuItem(
+                            value: 256, child: Text('256 kbps (High)')),
+                        DropdownMenuItem(
+                            value: 320, child: Text('320 kbps (Maximum)')),
                       ],
                       onChanged: (value) {
                         if (value == null) return;
-                        setState(() { _audioBitrate = value; });
-                        widget.controller.saveSettings(settings.copyWith(preferredAudioBitrate: value));
+                        setState(() {
+                          _audioBitrate = value;
+                        });
+                        widget.controller.saveSettings(
+                            settings.copyWith(preferredAudioBitrate: value));
                       },
                     ),
                   ] else
@@ -2235,16 +2480,25 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               helperMaxLines: 2,
                             ),
                             items: const [
-                              DropdownMenuItem(value: '360p', child: Text('360p')),
-                              DropdownMenuItem(value: '480p', child: Text('480p')),
-                              DropdownMenuItem(value: '720p', child: Text('720p (HD)')),
-                              DropdownMenuItem(value: '1080p', child: Text('1080p (Full HD)')),
-                              DropdownMenuItem(value: 'best', child: Text('Best Available')),
+                              DropdownMenuItem(
+                                  value: '360p', child: Text('360p')),
+                              DropdownMenuItem(
+                                  value: '480p', child: Text('480p')),
+                              DropdownMenuItem(
+                                  value: '720p', child: Text('720p (HD)')),
+                              DropdownMenuItem(
+                                  value: '1080p',
+                                  child: Text('1080p (Full HD)')),
+                              DropdownMenuItem(
+                                  value: 'best', child: Text('Best Available')),
                             ],
                             onChanged: (value) {
                               if (value == null) return;
-                              setState(() { _videoQuality = value; });
-                              widget.controller.saveSettings(settings.copyWith(preferredVideoQuality: value));
+                              setState(() {
+                                _videoQuality = value;
+                              });
+                              widget.controller.saveSettings(settings.copyWith(
+                                  preferredVideoQuality: value));
                             },
                           ),
                         ),
@@ -2261,15 +2515,25 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               helperMaxLines: 2,
                             ),
                             items: const [
-                              DropdownMenuItem(value: 128, child: Text('128 kbps (Compact)')),
-                              DropdownMenuItem(value: 192, child: Text('192 kbps (Standard)')),
-                              DropdownMenuItem(value: 256, child: Text('256 kbps (High)')),
-                              DropdownMenuItem(value: 320, child: Text('320 kbps (Maximum)')),
+                              DropdownMenuItem(
+                                  value: 128,
+                                  child: Text('128 kbps (Compact)')),
+                              DropdownMenuItem(
+                                  value: 192,
+                                  child: Text('192 kbps (Standard)')),
+                              DropdownMenuItem(
+                                  value: 256, child: Text('256 kbps (High)')),
+                              DropdownMenuItem(
+                                  value: 320,
+                                  child: Text('320 kbps (Maximum)')),
                             ],
                             onChanged: (value) {
                               if (value == null) return;
-                              setState(() { _audioBitrate = value; });
-                              widget.controller.saveSettings(settings.copyWith(preferredAudioBitrate: value));
+                              setState(() {
+                                _audioBitrate = value;
+                              });
+                              widget.controller.saveSettings(settings.copyWith(
+                                  preferredAudioBitrate: value));
                             },
                           ),
                         ),
@@ -2280,7 +2544,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // FFmpeg Settings
           if (!_isAndroid) ...[
             Card(
@@ -2294,14 +2558,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         Icon(
                           Icons.code,
                           color: _ffmpegPathController.text.isNotEmpty
-                              ? Colors.green
-                              : Colors.orange,
+                              ? context.success
+                              : context.warning,
                         ),
                         const SizedBox(width: 8),
-                        Text('FFmpeg', style: Theme.of(context).textTheme.titleLarge),
+                        Text('FFmpeg',
+                            style: Theme.of(context).textTheme.titleLarge),
                         if (_ffmpegPathController.text.isNotEmpty) ...[
                           const SizedBox(width: 8),
-                          const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                          Icon(Icons.check_circle,
+                              color: context.success, size: 18),
                         ],
                       ],
                     ),
@@ -2332,13 +2598,17 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               type: FileType.any,
                               dialogTitle: 'Select FFmpeg executable',
                             );
-                            if (result != null && result.files.single.path != null && mounted) {
+                            if (result != null &&
+                                result.files.single.path != null &&
+                                mounted) {
                               setState(() {
-                                _ffmpegPathController.text = result.files.single.path!;
+                                _ffmpegPathController.text =
+                                    result.files.single.path!;
                               });
                               final s = widget.controller.settings;
                               if (s != null) {
-                                widget.controller.saveSettings(s.copyWith(ffmpegPath: result.files.single.path!));
+                                widget.controller.saveSettings(s.copyWith(
+                                    ffmpegPath: result.files.single.path!));
                               }
                             }
                           },
@@ -2350,7 +2620,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
                           'Will be installed automatically when needed. Use Browse to set a custom path.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange),
+                            style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: context.warning),
                         ),
                       ),
                   ],
@@ -2371,14 +2644,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         Icon(
                           Icons.download_for_offline,
                           color: _ytDlpPathController.text.isNotEmpty
-                              ? Colors.green
-                              : Colors.orange,
+                              ? context.success
+                              : context.warning,
                         ),
                         const SizedBox(width: 8),
-                        Text('yt-dlp', style: Theme.of(context).textTheme.titleLarge),
+                        Text('yt-dlp',
+                            style: Theme.of(context).textTheme.titleLarge),
                         if (_ytDlpPathController.text.isNotEmpty) ...[
                           const SizedBox(width: 8),
-                          const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                          Icon(Icons.check_circle,
+                              color: context.success, size: 18),
                         ],
                       ],
                     ),
@@ -2409,13 +2684,17 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               type: FileType.any,
                               dialogTitle: 'Select yt-dlp executable',
                             );
-                            if (result != null && result.files.single.path != null && mounted) {
+                            if (result != null &&
+                                result.files.single.path != null &&
+                                mounted) {
                               setState(() {
-                                _ytDlpPathController.text = result.files.single.path!;
+                                _ytDlpPathController.text =
+                                    result.files.single.path!;
                               });
                               final s = widget.controller.settings;
                               if (s != null) {
-                                widget.controller.saveSettings(s.copyWith(ytDlpPath: result.files.single.path!));
+                                widget.controller.saveSettings(s.copyWith(
+                                    ytDlpPath: result.files.single.path!));
                               }
                             }
                           },
@@ -2427,7 +2706,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
                           'Will be downloaded automatically on first launch. Required for HD video downloads.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: context.warning),
                         ),
                       ),
                   ],
@@ -2436,7 +2718,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 16),
           ],
-          
+
           // Retry Settings
           Card(
             child: Padding(
@@ -2448,7 +2730,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     children: [
                       const Icon(Icons.refresh),
                       const SizedBox(width: 8),
-                      Text('Retry Settings', style: Theme.of(context).textTheme.titleLarge),
+                      Text('Retry Settings',
+                          style: Theme.of(context).textTheme.titleLarge),
                     ],
                   ),
                   const Divider(),
@@ -2456,10 +2739,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   SwitchListTile(
                     value: settings.autoRetryInstall,
                     onChanged: (value) {
-                      widget.controller.saveSettings(settings.copyWith(autoRetryInstall: value));
+                      widget.controller.saveSettings(
+                          settings.copyWith(autoRetryInstall: value));
                     },
                     title: const Text('Auto-retry installs'),
-                    subtitle: const Text('Automatically retry failed downloads'),
+                    subtitle:
+                        const Text('Automatically retry failed downloads'),
                     secondary: const Icon(Icons.replay),
                   ),
                   const SizedBox(height: 12),
@@ -2509,20 +2794,31 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     children: [
                       const Icon(Icons.palette_outlined),
                       const SizedBox(width: 8),
-                      Text('Appearance', style: Theme.of(context).textTheme.titleLarge),
+                      Text('Appearance',
+                          style: Theme.of(context).textTheme.titleLarge),
                     ],
                   ),
                   const Divider(),
                   const SizedBox(height: 8),
                   SegmentedButton<String>(
                     segments: const [
-                      ButtonSegment(value: 'system', label: Text('System'), icon: Icon(Icons.brightness_auto)),
-                      ButtonSegment(value: 'light', label: Text('Light'), icon: Icon(Icons.light_mode)),
-                      ButtonSegment(value: 'dark', label: Text('Dark'), icon: Icon(Icons.dark_mode)),
+                      ButtonSegment(
+                          value: 'system',
+                          label: Text('System'),
+                          icon: Icon(Icons.brightness_auto)),
+                      ButtonSegment(
+                          value: 'light',
+                          label: Text('Light'),
+                          icon: Icon(Icons.light_mode)),
+                      ButtonSegment(
+                          value: 'dark',
+                          label: Text('Dark'),
+                          icon: Icon(Icons.dark_mode)),
                     ],
                     selected: {settings.themeMode},
                     onSelectionChanged: (value) {
-                      widget.controller.saveSettings(settings.copyWith(themeMode: value.first));
+                      widget.controller.saveSettings(
+                          settings.copyWith(themeMode: value.first));
                     },
                   ),
                 ],
@@ -2542,7 +2838,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     children: [
                       const Icon(Icons.info_outline),
                       const SizedBox(width: 8),
-                      Text('About', style: Theme.of(context).textTheme.titleLarge),
+                      Text('About',
+                          style: Theme.of(context).textTheme.titleLarge),
                     ],
                   ),
                   const Divider(),
@@ -2569,7 +2866,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     'support â€” built with Flutter.',
                   ),
                   const SizedBox(height: 8),
-                  const Text('Copyright (c) 2026 Oroka Conner. Licensed under GPLv3.'),
+                  const Text(
+                      'Copyright (c) 2026 Oroka Conner. Licensed under GPLv3.'),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
@@ -2590,12 +2888,15 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         label: const Text('GitHub'),
                         onPressed: () async {
                           final launched = await launchUrl(
-                            Uri.parse('https://github.com/Lukas-Bohez/ConvertTheSpireFlutter'),
+                            Uri.parse(
+                                'https://github.com/Lukas-Bohez/ConvertTheSpireFlutter'),
                             mode: LaunchMode.externalApplication,
                           );
                           if (!launched && mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Could not open the GitHub link.')),
+                              const SnackBar(
+                                  content:
+                                      Text('Could not open the GitHub link.')),
                             );
                           }
                         },
@@ -2619,7 +2920,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     children: [
                       const Icon(Icons.view_sidebar_outlined),
                       const SizedBox(width: 8),
-                      Text('Browser Shell', style: Theme.of(context).textTheme.titleLarge),
+                      Text('Browser Shell',
+                          style: Theme.of(context).textTheme.titleLarge),
                     ],
                   ),
                   const Divider(),
@@ -2630,8 +2932,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       setState(() => _queueOnRight = value);
                     },
                     title: const Text('Queue sidebar on right'),
-                    subtitle: Text(_queueOnRight ? 'Queue panel on the right side' : 'Queue panel on the left side'),
-                    secondary: Icon(_queueOnRight ? Icons.border_right : Icons.border_left),
+                    subtitle: Text(_queueOnRight
+                        ? 'Queue panel on the right side'
+                        : 'Queue panel on the left side'),
+                    secondary: Icon(
+                        _queueOnRight ? Icons.border_right : Icons.border_left),
                   ),
                   const SizedBox(height: 8),
                   ListTile(
@@ -2648,7 +2953,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       await QuickLinksService.resetToDefaults();
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Quick links reset to defaults')),
+                          const SnackBar(
+                              content: Text('Quick links reset to defaults')),
                         );
                       }
                     },
@@ -2662,7 +2968,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       setState(() => _dismissedBannerRoute = null);
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Tutorial tips will show again on each screen')),
+                          const SnackBar(
+                              content: Text(
+                                  'Tutorial tips will show again on each screen')),
                         );
                       }
                     },
@@ -2691,10 +2999,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _openBuyMeCoffee() async {
-    final launched = await launchUrl(_buyMeCoffeeUri, mode: LaunchMode.externalApplication);
+    final launched =
+        await launchUrl(_buyMeCoffeeUri, mode: LaunchMode.externalApplication);
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open the Buy Me a Coffee link.')),
+        const SnackBar(
+            content: Text('Could not open the Buy Me a Coffee link.')),
       );
     }
   }
@@ -2716,10 +3026,17 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final ffmpegText = _ffmpegPathController.text.trim();
     final ytDlpText = _ytDlpPathController.text.trim();
     final next = settings.copyWith(
-      downloadDir: _isAndroid ? _androidDownloadUri : _downloadDirController.text.trim(),
-      maxWorkers: (int.tryParse(_workersController.text.trim()) ?? settings.maxWorkers).clamp(1, 10),
-      retryCount: (int.tryParse(_retryCountController.text.trim()) ?? settings.retryCount).clamp(0, 10),
-      retryBackoffSeconds: (int.tryParse(_retryBackoffController.text.trim()) ?? settings.retryBackoffSeconds).clamp(0, 60),
+      downloadDir:
+          _isAndroid ? _androidDownloadUri : _downloadDirController.text.trim(),
+      maxWorkers:
+          (int.tryParse(_workersController.text.trim()) ?? settings.maxWorkers)
+              .clamp(1, 10),
+      retryCount: (int.tryParse(_retryCountController.text.trim()) ??
+              settings.retryCount)
+          .clamp(0, 10),
+      retryBackoffSeconds: (int.tryParse(_retryBackoffController.text.trim()) ??
+              settings.retryBackoffSeconds)
+          .clamp(0, 60),
       preferredVideoQuality: _videoQuality,
       preferredAudioBitrate: _audioBitrate,
       defaultAudioFormat: _downloadFormat,
@@ -2732,14 +3049,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.white, size: 20),
-            SizedBox(width: 8),
-            Text('Settings saved'),
+            Icon(Icons.check_circle, color: Theme.of(context).colorScheme.onPrimary, size: 20),
+            const SizedBox(width: 8),
+            const Text('Settings saved'),
           ],
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: context.success,
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -2749,7 +3066,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _openWebsite() async {
-    final launched = await launchUrl(_websiteUri, mode: LaunchMode.externalApplication);
+    final launched =
+        await launchUrl(_websiteUri, mode: LaunchMode.externalApplication);
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open the website.')),
@@ -2811,7 +3129,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     children: [
                       const Icon(Icons.transform),
                       const SizedBox(width: 8),
-                      Text('File Converter', style: Theme.of(context).textTheme.titleLarge),
+                      Text('File Converter',
+                          style: Theme.of(context).textTheme.titleLarge),
                     ],
                   ),
                   const Divider(),
@@ -2819,18 +3138,21 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ElevatedButton.icon(
                     icon: const Icon(Icons.file_upload),
                     label: const Text('Select file to convert'),
-                    onPressed: kIsWeb ? null : () async {
-                      final result = await FilePicker.platform.pickFiles();
-                      if (result == null || result.files.isEmpty) {
-                        return;
-                      }
-                      final path = result.files.single.path;
-                      if (path == null) return;
-                      if (!mounted) return;
-                      setState(() {
-                        _convertFile = File(path);
-                      });
-                    },
+                    onPressed: kIsWeb
+                        ? null
+                        : () async {
+                            final result =
+                                await FilePicker.platform.pickFiles();
+                            if (result == null || result.files.isEmpty) {
+                              return;
+                            }
+                            final path = result.files.single.path;
+                            if (path == null) return;
+                            if (!mounted) return;
+                            setState(() {
+                              _convertFile = File(path);
+                            });
+                          },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -2840,13 +3162,15 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.1),
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                        border: Border.all(
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.insert_drive_file, color: Colors.blue),
+                          Icon(Icons.insert_drive_file,
+                              color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -2854,23 +3178,31 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               children: [
                                 const Text(
                                   'Selected file:',
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold),
                                 ),
                                 Text(
-                                  _convertFile!.path.split(Platform.pathSeparator).last,
+                                  _convertFile!.path
+                                      .split(Platform.pathSeparator)
+                                      Row(
                                   style: const TextStyle(fontSize: 14),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  _convertFile!.path,
-                                  style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 2,
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
+                                        Icon(
+                                              isError
+                                                ? Icons.error
+                                                : isWarning
+                                                  ? Icons.warning
+                                                  : isSuccess
+                                                    ? Icons.check_circle
+                                                    : Icons.info,
+                                              size: 16,
+                                              color: isError
+                                                ? context.danger
+                                                : isWarning
+                                                  ? context.warning
+                                                  : isSuccess
+                                                    ? context.success
+                                                    : Theme.of(context).colorScheme.primary,
                             icon: const Icon(Icons.close),
                             onPressed: () {
                               setState(() {
@@ -2886,18 +3218,26 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withValues(alpha: 0.1),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                        border: Border.all(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3)),
                       ),
                       child: Center(
                         child: Column(
                           children: [
-                            Icon(Icons.file_present, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            Icon(Icons.file_present,
+                                size: 48,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant),
                             const SizedBox(height: 8),
                             Text(
                               'No file selected',
-                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -2914,34 +3254,57 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                     items: const [
                       // â”€â”€ Audio â”€â”€
-                      DropdownMenuItem(value: 'mp3', child: Text('MP3 (Audio)')),
-                      DropdownMenuItem(value: 'm4a', child: Text('M4A (Audio)')),
-                      DropdownMenuItem(value: 'wav', child: Text('WAV (Audio)')),
-                      DropdownMenuItem(value: 'flac', child: Text('FLAC (Audio)')),
-                      DropdownMenuItem(value: 'ogg', child: Text('OGG (Audio)')),
-                      DropdownMenuItem(value: 'aac', child: Text('AAC (Audio)')),
-                      DropdownMenuItem(value: 'wma', child: Text('WMA (Audio)')),
+                      DropdownMenuItem(
+                          value: 'mp3', child: Text('MP3 (Audio)')),
+                      DropdownMenuItem(
+                          value: 'm4a', child: Text('M4A (Audio)')),
+                      DropdownMenuItem(
+                          value: 'wav', child: Text('WAV (Audio)')),
+                      DropdownMenuItem(
+                          value: 'flac', child: Text('FLAC (Audio)')),
+                      DropdownMenuItem(
+                          value: 'ogg', child: Text('OGG (Audio)')),
+                      DropdownMenuItem(
+                          value: 'aac', child: Text('AAC (Audio)')),
+                      DropdownMenuItem(
+                          value: 'wma', child: Text('WMA (Audio)')),
                       // â”€â”€ Video â”€â”€
-                      DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
-                      DropdownMenuItem(value: 'webm', child: Text('WebM (Video)')),
-                      DropdownMenuItem(value: 'mkv', child: Text('MKV (Video)')),
-                      DropdownMenuItem(value: 'avi', child: Text('AVI (Video)')),
-                      DropdownMenuItem(value: 'mov', child: Text('MOV (Video)')),
-                      DropdownMenuItem(value: 'wmv', child: Text('WMV (Video)')),
+                      DropdownMenuItem(
+                          value: 'mp4', child: Text('MP4 (Video)')),
+                      DropdownMenuItem(
+                          value: 'webm', child: Text('WebM (Video)')),
+                      DropdownMenuItem(
+                          value: 'mkv', child: Text('MKV (Video)')),
+                      DropdownMenuItem(
+                          value: 'avi', child: Text('AVI (Video)')),
+                      DropdownMenuItem(
+                          value: 'mov', child: Text('MOV (Video)')),
+                      DropdownMenuItem(
+                          value: 'wmv', child: Text('WMV (Video)')),
                       // â”€â”€ Image â”€â”€
-                      DropdownMenuItem(value: 'png', child: Text('PNG (Image)')),
-                      DropdownMenuItem(value: 'jpg', child: Text('JPG (Image)')),
-                      DropdownMenuItem(value: 'bmp', child: Text('BMP (Image)')),
-                      DropdownMenuItem(value: 'gif', child: Text('GIF (Image)')),
-                      DropdownMenuItem(value: 'tiff', child: Text('TIFF (Image)')),
-                      DropdownMenuItem(value: 'webp', child: Text('WebP (Image)')),
+                      DropdownMenuItem(
+                          value: 'png', child: Text('PNG (Image)')),
+                      DropdownMenuItem(
+                          value: 'jpg', child: Text('JPG (Image)')),
+                      DropdownMenuItem(
+                          value: 'bmp', child: Text('BMP (Image)')),
+                      DropdownMenuItem(
+                          value: 'gif', child: Text('GIF (Image)')),
+                      DropdownMenuItem(
+                          value: 'tiff', child: Text('TIFF (Image)')),
+                      DropdownMenuItem(
+                          value: 'webp', child: Text('WebP (Image)')),
                       // â”€â”€ Document â”€â”€
-                      DropdownMenuItem(value: 'pdf', child: Text('PDF (Document)')),
+                      DropdownMenuItem(
+                          value: 'pdf', child: Text('PDF (Document)')),
                       DropdownMenuItem(value: 'txt', child: Text('TXT (Text)')),
-                      DropdownMenuItem(value: 'epub', child: Text('EPUB (E-book)')),
+                      DropdownMenuItem(
+                          value: 'epub', child: Text('EPUB (E-book)')),
                       // â”€â”€ Archive â”€â”€
-                      DropdownMenuItem(value: 'zip', child: Text('ZIP (Archive)')),
-                      DropdownMenuItem(value: 'cbz', child: Text('CBZ (Comic Archive)')),
+                      DropdownMenuItem(
+                          value: 'zip', child: Text('ZIP (Archive)')),
+                      DropdownMenuItem(
+                          value: 'cbz', child: Text('CBZ (Comic Archive)')),
                     ],
                     onChanged: (value) {
                       if (value == null) return;
@@ -2958,7 +3321,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       label: const Text('Convert File'),
                       onPressed: (_convertFile == null || settings == null)
                           ? null
-                          : () => widget.controller.convert(_convertFile!, _convertTarget),
+                          : () => widget.controller
+                              .convert(_convertFile!, _convertTarget),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -2978,13 +3342,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.check_circle, color: Colors.green),
+                        Icon(Icons.check_circle, color: context.success),
                         const SizedBox(width: 8),
                         Text(
                           'Converted Files (${widget.controller.convertResults.length})',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                       ],
                     ),
@@ -3002,7 +3367,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           trailing: ElevatedButton.icon(
                             icon: const Icon(Icons.save_alt, size: 18),
                             label: const Text('Save'),
-                            onPressed: () => widget.controller.saveConvertedResult(result),
+                            onPressed: () =>
+                                widget.controller.saveConvertedResult(result),
                           ),
                         ),
                       ),
@@ -3041,7 +3407,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             Expanded(
                               child: Text(
                                 'Application Logs (${logs.length})',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
                                       fontWeight: FontWeight.bold,
                                     ),
                               ),
@@ -3069,7 +3438,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             const SizedBox(width: 8),
                             Text(
                               'Application Logs (${logs.length})',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
                             ),
@@ -3093,16 +3465,27 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.info_outline, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          Icon(Icons.info_outline,
+                              size: 64,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant),
                           const SizedBox(height: 16),
                           Text(
                             'No logs yet',
-                            style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            style: TextStyle(
+                                fontSize: 18,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'Activity will be logged here',
-                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -3112,23 +3495,25 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       itemCount: logs.length,
                       itemBuilder: (context, index) {
                         final log = logs[index];
-                        final isError = log.toLowerCase().contains('error') || 
-                                       log.toLowerCase().contains('failed');
+                        final isError = log.toLowerCase().contains('error') ||
+                            log.toLowerCase().contains('failed');
                         final isWarning = log.toLowerCase().contains('warning');
-                        final isSuccess = log.toLowerCase().contains('success') || 
-                                         log.toLowerCase().contains('completed');
-                        
+                        final isSuccess =
+                            log.toLowerCase().contains('success') ||
+                                log.toLowerCase().contains('completed');
+
                         return Card(
                           margin: const EdgeInsets.only(bottom: 4),
                           color: isError
-                              ? Colors.red.withValues(alpha: 0.1)
-                              : isWarning
-                                  ? Colors.orange.withValues(alpha: 0.1)
-                                  : isSuccess
-                                      ? Colors.green.withValues(alpha: 0.1)
-                                      : null,
+                            ? context.danger.withOpacity(0.1)
+                            : isWarning
+                              ? context.warning.withOpacity(0.1)
+                              : isSuccess
+                                ? context.success.withOpacity(0.1)
+                                : null,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
                             child: Row(
                               children: [
                                 Icon(
@@ -3139,14 +3524,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                           : isSuccess
                                               ? Icons.check_circle
                                               : Icons.info,
-                                  size: 16,
-                                  color: isError
-                                      ? Colors.red
+                                    size: 16,
+                                    color: isError
+                                      ? context.danger
                                       : isWarning
-                                          ? Colors.orange
-                                          : isSuccess
-                                              ? Colors.green
-                                              : Colors.blue,
+                                        ? context.warning
+                                        : isSuccess
+                                          ? context.success
+                                          : Theme.of(context).colorScheme.primary,
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
@@ -3155,7 +3540,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     style: TextStyle(
                                       fontFamily: 'monospace',
                                       fontSize: 12,
-                                      color: isError ? Colors.red[700] : null,
+                                      color: isError ? context.danger : null,
                                     ),
                                   ),
                                 ),
@@ -3171,5 +3556,4 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       },
     );
   }
-
 }

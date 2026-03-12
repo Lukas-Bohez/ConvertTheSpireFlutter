@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_flutter_app/src/models/queue_item.dart';
+import 'package:convert_the_spire_reborn/src/models/queue_item.dart';
 
 void main() {
   group('QueueItem', () {
@@ -16,7 +16,8 @@ void main() {
         error: null,
       );
 
-      final updated = item.copyWith(progress: 50, status: DownloadStatus.downloading);
+      final updated =
+          item.copyWith(progress: 50, status: DownloadStatus.downloading);
       expect(updated.url, 'https://example.com/video');
       expect(updated.title, 'Test Video');
       expect(updated.format, 'mp4');
@@ -87,14 +88,16 @@ void main() {
 
   group('DownloadStatus', () {
     test('all expected values exist', () {
-      expect(DownloadStatus.values, containsAll([
-        DownloadStatus.queued,
-        DownloadStatus.downloading,
-        DownloadStatus.converting,
-        DownloadStatus.completed,
-        DownloadStatus.failed,
-        DownloadStatus.cancelled,
-      ]));
+      expect(
+          DownloadStatus.values,
+          containsAll([
+            DownloadStatus.queued,
+            DownloadStatus.downloading,
+            DownloadStatus.converting,
+            DownloadStatus.completed,
+            DownloadStatus.failed,
+            DownloadStatus.cancelled,
+          ]));
     });
   });
 }
