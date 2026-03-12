@@ -321,8 +321,11 @@ class _MyAppState extends State<MyApp> {
 
                             final prefs = snap.data!;
 
-                            final content = ChangeNotifierProvider(
-                              create: (_) => PlayerState(prefs),
+                            final content = MultiProvider(
+                              providers: [
+                                ChangeNotifierProvider(create: (_) => PlayerState(prefs)),
+                                ChangeNotifierProvider.value(value: _controller!),
+                              ],
                               child: HomeScreen(controller: _controller!),
                             );
 
