@@ -245,9 +245,29 @@ class BrowserToolbar extends StatelessWidget {
                       tooltip: 'More options',
                       onPressed: () async {
                         onReleaseWebViewFocus?.call();
+
+                        // Compute a sensible position for the menu using this
+                        // button's RenderBox so the menu is anchored to it.
+                        final RenderBox button =
+                            context.findRenderObject() as RenderBox;
+                        final Offset buttonPos = button.localToGlobal(Offset.zero);
+                        final Size buttonSize = button.size;
+                        final RenderBox overlay =
+                            Overlay.of(context).context.findRenderObject()
+                                as RenderBox;
+
                         final selection = await showMenu<String>(
                           context: context,
-                          position: RelativeRect.fromLTRB(1000, 80, 8, 0),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHigh,
+                          elevation: 8,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          position: RelativeRect.fromRect(
+                            buttonPos & buttonSize,
+                            Offset.zero & overlay.size,
+                          ),
                           items: [
                             PopupMenuItem(
                                 value: 'cast',
