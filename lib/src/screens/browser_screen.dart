@@ -178,7 +178,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     final ctrl = active != null ? _controllers[active.id] : null;
     setState(() {
       _showNewTabPage = (active?.url.isEmpty ?? true);
-      _isSwitchingTab = !(_showNewTabPage);
+      _isSwitchingTab = !_showNewTabPage && _controllers[active?.id ?? ''] == null;
       _webViewController = ctrl;
       if (ctrl != null && active?.url.isNotEmpty == true) {
         _addressController.text = active!.url;
@@ -231,6 +231,8 @@ class _BrowserScreenState extends State<BrowserScreen>
     setState(() {
       _showNewTabPage = false;
       _isFavourited = false;
+      final activeId = _tabManager.activeTab?.id ?? '';
+      _isSwitchingTab = _controllers[activeId] == null;
     });
     _addressController.text = normalized;
     // Ensure the WebView is created when the user navigates.
@@ -246,6 +248,14 @@ class _BrowserScreenState extends State<BrowserScreen>
         // pending: stored in tab model url field
       }
     }
+
+    // Safety net: if _isSwitchingTab is still true after 3 seconds,
+    // the load event was missed — clear it unconditionally.
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted && _isSwitchingTab) {
+        setState(() => _isSwitchingTab = false);
+      }
+    });
   }
 
   void _onNewTabPageNavigate(String url) => _navigateTo(url);
@@ -335,12 +345,20 @@ class _BrowserScreenState extends State<BrowserScreen>
         activeTab != null ? _controllers[activeTab.id] : null;
 
     final title = await controller.getTitle() ?? '';
+
+    // Always clear the switching overlay — do NOT guard this on activeController
+    if (mounted) setState(() {
+      _isSwitchingTab = false;
+      if (urlStr.isNotEmpty && urlStr != 'about:blank') {
+        _showNewTabPage = false;
+      }
+    });
+
     if (activeController == controller) {
       _canGoBack = await controller.canGoBack();
       _canGoForward = await controller.canGoForward();
       setState(() {
         _isLoading = false;
-        _isSwitchingTab = false;
         _pageTitle = title;
         _addressController.text = urlStr;
       });
@@ -441,7 +459,10 @@ class _BrowserScreenState extends State<BrowserScreen>
     debugPrint(
         '[BROWSER] onReceivedError – ${request.url} | ${error.type} | ${error.description}');
     if (request.isForMainFrame ?? false) {
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _isSwitchingTab = false;
+      });
     }
   }
 
@@ -494,6 +515,19 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _goHome() {
+    if (_showNewTabPage) {
+      // Already showing NewTabPage — try to return to the loaded page behind it.
+      final activeUrl = _tabManager.activeTab?.url ?? '';
+      if (activeUrl.isNotEmpty && activeUrl != 'about:blank') {
+        setState(() {
+          _showNewTabPage = false;
+        });
+        _addressController.text = activeUrl;
+      }
+      // Nothing else to do if there is no loaded page behind the NewTabPage.
+      return;
+    }
+
     setState(() {
       _showNewTabPage = true;
       _isFavourited = false;
@@ -775,24 +809,21 @@ class _BrowserScreenState extends State<BrowserScreen>
                               ),
                             ),
                           ),
-                        )
-                      else if (_webViewSupported && !_createWebView)
-                        // Show the NewTabPage when the webview is not yet created.
-                        Positioned.fill(
-                          child: NewTabPage(
-                            repo: _repo,
-                            onNavigate: _onNewTabPageNavigate,
-                          ),
-                        )
-                      else
-                        _buildPlatformUnavailable(),
+                        ),
 
-                      // NewTabPage overlay.
+                      if (!_webViewSupported)
+                        Positioned.fill(child: _buildPlatformUnavailable()),
+
+                      // NewTabPage overlay with solid background to avoid
+                      // WebView content bleeding through.
                       if (_showNewTabPage)
                         Positioned.fill(
-                          child: NewTabPage(
-                            repo: _repo,
-                            onNavigate: _onNewTabPageNavigate,
+                          child: ColoredBox(
+                            color: Theme.of(context).colorScheme.surface,
+                            child: NewTabPage(
+                              repo: _repo,
+                              onNavigate: _onNewTabPageNavigate,
+                            ),
                           ),
                         ),
 
@@ -1316,7 +1347,7 @@ class _BrowserScreenState extends State<BrowserScreen>
           final showNew = tab?.url.isEmpty ?? true;
           setState(() {
             _showNewTabPage = showNew;
-            _isSwitchingTab = !showNew;
+            _isSwitchingTab = !showNew && _controllers[tab?.id ?? ''] == null;
             if (tab != null) {
               _addressController.text = tab.url;
               _pageTitle = tab.title;
@@ -1330,7 +1361,14 @@ class _BrowserScreenState extends State<BrowserScreen>
             final ctrl = _controllers[tab.id];
             _webViewController = ctrl;
             if (ctrl != null) {
-              ctrl.loadUrl(urlRequest: URLRequest(url: WebUri(tab.url)));
+              // Controller exists; refresh navigation state instead of
+              // forcing a reload which is unnecessary for alive WebViews.
+              ctrl.canGoBack().then((v) {
+                if (mounted) setState(() => _canGoBack = v);
+              });
+              ctrl.canGoForward().then((v) {
+                if (mounted) setState(() => _canGoForward = v);
+              });
             } else {
               _createWebView = true;
             }
@@ -1363,7 +1401,7 @@ class _BrowserScreenState extends State<BrowserScreen>
           final showNew = tab?.url.isEmpty ?? true;
           setState(() {
             _showNewTabPage = showNew;
-            _isSwitchingTab = !showNew && tab != null;
+            _isSwitchingTab = !showNew && tab != null && _controllers[tab.id] == null;
             _addressController.text = tab?.url ?? '';
             _pageTitle = tab?.title ?? '';
             _canGoBack = false;
@@ -1374,7 +1412,12 @@ class _BrowserScreenState extends State<BrowserScreen>
             final ctrl = _controllers[tab.id];
             _webViewController = ctrl;
             if (ctrl != null) {
-              ctrl.loadUrl(urlRequest: URLRequest(url: WebUri(tab.url)));
+              ctrl.canGoBack().then((v) {
+                if (mounted) setState(() => _canGoBack = v);
+              });
+              ctrl.canGoForward().then((v) {
+                if (mounted) setState(() => _canGoForward = v);
+              });
             } else {
               _createWebView = true;
             }
