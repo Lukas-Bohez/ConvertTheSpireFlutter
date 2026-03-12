@@ -173,8 +173,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       return trimmed;
     }
-    final domainPattern =
-        RegExp(r'^[^\s]+\.[a-zA-Z]{2,}(:\d+)?([/?#].*)?$');
+    final domainPattern = RegExp(r'^[^\s]+\.[a-zA-Z]{2,}(:\d+)?([/?#].*)?$');
     if (domainPattern.hasMatch(trimmed)) return 'https://$trimmed';
     final ipPattern =
         RegExp(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?(/.*)?$');
@@ -249,7 +248,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       incognito: _tabManager.activeTab?.isIncognito ?? false,
       userAgent: _desktopMode
           ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-            '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+              '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
           : null,
     );
   }
@@ -271,8 +270,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     final urlToLoad = _pendingUrl;
     _pendingUrl = null;
     if (urlToLoad != null && urlToLoad.isNotEmpty) {
-      controller.loadUrl(
-          urlRequest: URLRequest(url: WebUri(urlToLoad)));
+      controller.loadUrl(urlRequest: URLRequest(url: WebUri(urlToLoad)));
     }
   }
 
@@ -330,8 +328,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
 
     // Inject video detection JS.
-    controller.evaluateJavascript(
-        source: VideoDetectorService.injectionJs);
+    controller.evaluateJavascript(source: VideoDetectorService.injectionJs);
 
     // Inject popup blocker when ad-block is on.
     if (_adBlock.adBlockEnabled) {
@@ -340,14 +337,12 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   }
 
-  void _onProgressChanged(
-      InAppWebViewController controller, int progress) {
+  void _onProgressChanged(InAppWebViewController controller, int progress) {
     setState(() => _progress = progress / 100.0);
   }
 
   Future<NavigationActionPolicy?> _shouldOverrideUrlLoading(
-      InAppWebViewController controller,
-      NavigationAction action) async {
+      InAppWebViewController controller, NavigationAction action) async {
     final url = action.request.url?.toString() ?? '';
     // Handle external protocols (tel:, mailto:, etc.).
     if (url.startsWith('tel:') ||
@@ -355,8 +350,7 @@ class _BrowserScreenState extends State<BrowserScreen>
         url.startsWith('intent:') ||
         url.startsWith('market:')) {
       try {
-        await launchUrl(Uri.parse(url),
-            mode: LaunchMode.externalApplication);
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       } catch (_) {}
       return NavigationActionPolicy.CANCEL;
     }
@@ -364,8 +358,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   Future<WebResourceResponse?> _shouldInterceptRequest(
-      InAppWebViewController controller,
-      WebResourceRequest request) async {
+      InAppWebViewController controller, WebResourceRequest request) async {
     final url = request.url.toString();
 
     // Ad-block (skip on YouTube/Google sites whose players depend on Google ad
@@ -400,22 +393,21 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _onReceivedError(InAppWebViewController controller,
       WebResourceRequest request, WebResourceError error) {
-    debugPrint('[BROWSER] onReceivedError – ${request.url} | ${error.type} | ${error.description}');
+    debugPrint(
+        '[BROWSER] onReceivedError – ${request.url} | ${error.type} | ${error.description}');
     if (request.isForMainFrame ?? false) {
       setState(() => _isLoading = false);
     }
   }
 
   void _onScrollChanged(InAppWebViewController controller, int x, int y) {
-    controller.evaluateJavascript(
-        source: VideoDetectorService.injectionJs);
+    controller.evaluateJavascript(source: VideoDetectorService.injectionJs);
   }
 
   // ── Actions ──
 
   void _goBack() async {
-    if (_webViewController != null &&
-        await _webViewController!.canGoBack()) {
+    if (_webViewController != null && await _webViewController!.canGoBack()) {
       _webViewController!.goBack();
     }
   }
@@ -550,8 +542,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Added to queue'),
-            duration: Duration(seconds: 1)),
+            content: Text('Added to queue'), duration: Duration(seconds: 1)),
       );
     }
   }
@@ -696,21 +687,28 @@ class _BrowserScreenState extends State<BrowserScreen>
                               setState(() => _showNewTabPage = showNew);
                               if (!showNew && tab.url.isNotEmpty) {
                                 _webViewController?.loadUrl(
-                                    urlRequest: URLRequest(url: WebUri(tab.url)));
+                                    urlRequest:
+                                        URLRequest(url: WebUri(tab.url)));
                               }
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               margin: const EdgeInsets.symmetric(horizontal: 4),
                               decoration: BoxDecoration(
                                 color: isActive
-                                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
-                                  : null,
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withValues(alpha: 0.1)
+                                    : null,
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
                                   color: isActive
                                       ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(context).colorScheme.outlineVariant,
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .outlineVariant,
                                   width: isActive ? 2 : 1,
                                 ),
                               ),
@@ -735,7 +733,9 @@ class _BrowserScreenState extends State<BrowserScreen>
                                     const SizedBox(height: 4),
                                   ],
                                   Text(
-                                    tab.title.isNotEmpty ? tab.title : (Uri.tryParse(tab.url)?.host ?? ''),
+                                    tab.title.isNotEmpty
+                                        ? tab.title
+                                        : (Uri.tryParse(tab.url)?.host ?? ''),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(fontSize: 13),
@@ -769,11 +769,13 @@ class _BrowserScreenState extends State<BrowserScreen>
                   onCastTap: _openCastSheet,
                   onDownload: _handleDownload,
                   isDownloading: _isDownloading,
-                  downloadEnabled: (_addressController.text.trim().isNotEmpty && _addressController.text.trim() != 'about:blank' && (_addressController.text.startsWith('http://') || _addressController.text.startsWith('https://'))),
-                  isKnownDifficultSite: DownloadService.isDifficultSite(_addressController.text),
+                  downloadEnabled: true,
+                  isKnownDifficultSite:
+                      DownloadService.isDifficultSite(_addressController.text),
                   isCastConnected: _castService.activeDevice != null,
                   onMenuAction: _handleMenuAction,
-                  onUrlBarTap: _showTabSwitcher,
+                  onTabs: _showTabSwitcher,
+                  tabCount: _tabManager.tabCount,
                 ),
 
                 // ── Progress bar ──
@@ -844,8 +846,8 @@ class _BrowserScreenState extends State<BrowserScreen>
                 right: 0,
                 child: CastMiniBar(
                   deviceName: _castService.activeDevice!.name,
-                  isPlaying: _castService.playbackState ==
-                      CastPlaybackState.playing,
+                  isPlaying:
+                      _castService.playbackState == CastPlaybackState.playing,
                   onPlayPause: () {
                     if (_castService.playbackState ==
                         CastPlaybackState.playing) {
@@ -880,49 +882,49 @@ class _BrowserScreenState extends State<BrowserScreen>
   Widget _buildWebView() {
     try {
       return InAppWebView(
-      key: const ValueKey('browser_webview'),
-      initialSettings: _buildSettings(),
-      findInteractionController: _findInteractionController,
-      onWebViewCreated: _onWebViewCreated,
-      onLoadStart: _onLoadStart,
-      onLoadStop: _onLoadStop,
-      onProgressChanged: _onProgressChanged,
-      shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
-      shouldInterceptRequest: _shouldInterceptRequest,
-      onConsoleMessage: _onConsoleMessage,
-      onReceivedError: _onReceivedError,
-      onScrollChanged: _onScrollChanged,
-      onUpdateVisitedHistory: (controller, url, androidIsReload) {
-        final urlStr = url?.toString() ?? '';
-        if (urlStr.isEmpty || urlStr == 'about:blank') return;
-        setState(() {
-          _addressController.text = urlStr;
-          _isSecure = urlStr.startsWith('https://');
-        });
-        final activeTab = _tabManager.activeTab;
-        if (activeTab != null) {
-          _tabManager.updateTab(activeTab.id, url: urlStr);
-        }
-        controller.canGoBack().then((v) {
-          if (mounted) setState(() => _canGoBack = v);
-        });
-        controller.canGoForward().then((v) {
-          if (mounted) setState(() => _canGoForward = v);
-        });
-        _checkFavouriteState();
-      },
-      onDownloadStartRequest: (controller, request) {
-        launchUrl(request.url, mode: LaunchMode.externalApplication);
-      },
-      onCreateWindow: (controller, createWindowAction) async {
-        // Open new-window requests in the same WebView.
-        final url = createWindowAction.request.url;
-        if (url != null) {
-          _navigateTo(url.toString());
-        }
-        return false;
-      },
-    );
+        key: const ValueKey('browser_webview'),
+        initialSettings: _buildSettings(),
+        findInteractionController: _findInteractionController,
+        onWebViewCreated: _onWebViewCreated,
+        onLoadStart: _onLoadStart,
+        onLoadStop: _onLoadStop,
+        onProgressChanged: _onProgressChanged,
+        shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
+        shouldInterceptRequest: _shouldInterceptRequest,
+        onConsoleMessage: _onConsoleMessage,
+        onReceivedError: _onReceivedError,
+        onScrollChanged: _onScrollChanged,
+        onUpdateVisitedHistory: (controller, url, androidIsReload) {
+          final urlStr = url?.toString() ?? '';
+          if (urlStr.isEmpty || urlStr == 'about:blank') return;
+          setState(() {
+            _addressController.text = urlStr;
+            _isSecure = urlStr.startsWith('https://');
+          });
+          final activeTab = _tabManager.activeTab;
+          if (activeTab != null) {
+            _tabManager.updateTab(activeTab.id, url: urlStr);
+          }
+          controller.canGoBack().then((v) {
+            if (mounted) setState(() => _canGoBack = v);
+          });
+          controller.canGoForward().then((v) {
+            if (mounted) setState(() => _canGoForward = v);
+          });
+          _checkFavouriteState();
+        },
+        onDownloadStartRequest: (controller, request) {
+          launchUrl(request.url, mode: LaunchMode.externalApplication);
+        },
+        onCreateWindow: (controller, createWindowAction) async {
+          // Open new-window requests in the same WebView.
+          final url = createWindowAction.request.url;
+          if (url != null) {
+            _navigateTo(url.toString());
+          }
+          return false;
+        },
+      );
     } catch (e) {
       if (kDebugMode) debugPrint('InAppWebView construction failed: $e');
       return Center(
@@ -933,10 +935,12 @@ class _BrowserScreenState extends State<BrowserScreen>
             children: [
               const Icon(Icons.error_outline, size: 48),
               const SizedBox(height: 12),
-              const Text('Browser unavailable. Microsoft Edge WebView2 Runtime is required.'),
+              const Text(
+                  'Browser unavailable. Microsoft Edge WebView2 Runtime is required.'),
               const SizedBox(height: 8),
               FilledButton(
-                onPressed: () => launchUrl(Uri.parse('https://developer.microsoft.com/microsoft-edge/webview2/')), 
+                onPressed: () => launchUrl(Uri.parse(
+                    'https://developer.microsoft.com/microsoft-edge/webview2/')),
                 child: const Text('Download WebView2'),
               ),
             ],
@@ -954,8 +958,7 @@ class _BrowserScreenState extends State<BrowserScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.public,
-                size: 64,
-                color: Theme.of(context).colorScheme.primary),
+                size: 64, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 16),
             const Text(
               'In-app browser is not available on this platform.\n'
@@ -1089,14 +1092,18 @@ class _BrowserScreenState extends State<BrowserScreen>
         final url = _addressController.text.trim();
         if (url.isNotEmpty) {
           Clipboard.setData(ClipboardData(text: url));
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
+          if (mounted)
+            ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Link copied to clipboard')));
         }
         break;
       case 'copy':
         final url = _addressController.text.trim();
         if (url.isNotEmpty) {
           Clipboard.setData(ClipboardData(text: url));
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
+          if (mounted)
+            ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Link copied to clipboard')));
         }
         break;
       default:
@@ -1105,9 +1112,16 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   Future<void> _handleDownload() async {
-    final url = _addressController.text.trim();
-    if (url.isEmpty || url == 'about:blank' || url.startsWith('chrome:') || !(url.startsWith('http://') || url.startsWith('https://'))) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No downloadable page loaded.')));
+    // Obtain fresh URL from the WebView controller to avoid stale state
+    final uri = await _webViewController?.getUrl();
+    final url = uri?.toString() ?? _addressController.text.trim();
+    if (url.isEmpty ||
+        url == 'about:blank' ||
+        url.startsWith('chrome:') ||
+        !(url.startsWith('http://') || url.startsWith('https://'))) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No downloadable page loaded.')));
       return;
     }
 
@@ -1133,7 +1147,8 @@ class _BrowserScreenState extends State<BrowserScreen>
       app.addToQueue(previewItem, format);
 
       // Find the queued item
-      final queued = app.queue.firstWhere((q) => q.url == url && q.format == format);
+      final queued =
+          app.queue.firstWhere((q) => q.url == url && q.format == format);
 
       // Start download (don't await fully — show immediate feedback)
       unawaited(app.downloadSingle(queued).then((_) {
@@ -1144,22 +1159,25 @@ class _BrowserScreenState extends State<BrowserScreen>
             _downloadError = e.toString();
             _isDownloading = false;
           });
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(DownloadService.translateError(e.toString()))));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(DownloadService.translateError(e.toString()))));
         }
       }));
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download started: ${title.isNotEmpty ? title : url}')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content:
+                Text('Download started: ${title.isNotEmpty ? title : url}')));
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _downloadError = e.toString();
+          _isDownloading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(DownloadService.translateError(e.toString()))));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(DownloadService.translateError(e.toString()))));
       }
-    } finally {
-      // leave _isDownloading toggled off when download completes
     }
   }
 
@@ -1230,8 +1248,7 @@ class _TabSwitcherSheet extends StatelessWidget {
         return Column(
           children: [
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   Text('Tabs (${tabManager.tabCount})',
@@ -1253,8 +1270,7 @@ class _TabSwitcherSheet extends StatelessWidget {
               child: GridView.builder(
                 controller: scrollController,
                 padding: const EdgeInsets.all(12),
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   childAspectRatio: 0.75,
                   mainAxisSpacing: 12,
@@ -1274,8 +1290,8 @@ class _TabSwitcherSheet extends StatelessWidget {
                           width: isActive ? 2 : 1,
                         ),
                         color: tab.isIncognito
-                          ? cs.surface
-                          : cs.surfaceContainerLow,
+                            ? cs.surface
+                            : cs.surfaceContainerLow,
                       ),
                       child: Column(
                         children: [
@@ -1293,7 +1309,7 @@ class _TabSwitcherSheet extends StatelessWidget {
                                     tab.title,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
                                       color: tab.isIncognito
                                           ? cs.onSurfaceVariant
@@ -1303,11 +1319,11 @@ class _TabSwitcherSheet extends StatelessWidget {
                                 ),
                                 GestureDetector(
                                   onTap: () => onCloseTab(index),
-                                    child: Icon(Icons.close,
+                                  child: Icon(Icons.close,
                                       size: 16,
                                       color: tab.isIncognito
-                                        ? cs.onSurfaceVariant
-                                        : cs.onSurfaceVariant),
+                                          ? cs.onSurfaceVariant
+                                          : cs.onSurfaceVariant),
                                 ),
                               ],
                             ),
@@ -1327,8 +1343,7 @@ class _TabSwitcherSheet extends StatelessWidget {
                                   )
                                 : Center(
                                     child: Icon(Icons.web,
-                                        size: 32,
-                                        color: cs.outlineVariant),
+                                        size: 32, color: cs.outlineVariant),
                                   ),
                           ),
                         ],
