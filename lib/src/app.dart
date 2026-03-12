@@ -323,8 +323,10 @@ class _MyAppState extends State<MyApp> {
 
                             final content = MultiProvider(
                               providers: [
-                                ChangeNotifierProvider(create: (_) => PlayerState(prefs)),
-                                ChangeNotifierProvider.value(value: _controller!),
+                                ChangeNotifierProvider(
+                                    create: (_) => PlayerState(prefs)),
+                                ChangeNotifierProvider.value(
+                                    value: _controller!),
                               ],
                               child: HomeScreen(controller: _controller!),
                             );
