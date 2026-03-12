@@ -1,7 +1,8 @@
 // 'dart:typed_data' not needed; removed to satisfy analyzer.
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -81,7 +82,19 @@ class _BrowserScreenState extends State<BrowserScreen>
   int _findActiveIndex = 0;
   bool _isDownloading = false;
   String? _downloadError;
-  bool get _webViewSupported => !kIsWeb;
+  bool get _webViewSupported {
+    if (kIsWeb) return false;
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      try {
+        final ctrl = Provider.of<AppController?>(context, listen: false);
+        return ctrl?.webViewEnvironment != null;
+      } catch (_) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   String _searchEngine = 'DuckDuckGo';
   // Horizontal tab strip removed — the toolbar tab button
   // and the tab switcher sheet provide a consistent UX.

@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../services/platform_dirs.dart';
 
 import '../models/app_settings.dart';
@@ -30,6 +32,7 @@ import '../services/youtube_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppController extends ChangeNotifier {
+  final WebViewEnvironment? webViewEnvironment;
   final SettingsStore settingsStore;
   final YouTubeService youtube;
   final DownloadService downloadService;
@@ -52,6 +55,11 @@ class AppController extends ChangeNotifier {
   AppSettings? _settings;
   AppSettings? get settings => _settings;
 
+  // Onboarding/version gating
+  bool onboardingChecked = false;
+  bool needsOnboarding = false;
+  String? currentAppVersion;
+
   bool previewLoading = false;
   List<PreviewItem> previewItems = <PreviewItem>[];
   List<QueueItem> queue = <QueueItem>[];
@@ -62,6 +70,7 @@ class AppController extends ChangeNotifier {
   bool _downloadAllRunning = false;
 
   AppController({
+    this.webViewEnvironment,
     required this.settingsStore,
     required this.youtube,
     required this.downloadService,
@@ -99,6 +108,9 @@ class AppController extends ChangeNotifier {
         debugPrint('NotificationService.initialize error: $e\n$st');
     }
     notifyListeners();
+
+    // Check whether onboarding needs to be shown for this app version.
+    unawaited(checkOnboardingStatus());
 
     // Load persisted queue (if any)
     try {
@@ -172,6 +184,29 @@ class AppController extends ChangeNotifier {
   Future<void> saveSettings(AppSettings next) async {
     _settings = next;
     await settingsStore.save(next);
+    notifyListeners();
+  }
+
+  Future<void> checkOnboardingStatus() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      currentAppVersion = info.version;
+      final prefs = await SharedPreferences.getInstance();
+      final seen = prefs.getString('onboardingSeenVersion');
+      needsOnboarding = seen != currentAppVersion;
+    } catch (e) {
+      needsOnboarding = false;
+    } finally {
+      onboardingChecked = true;
+      notifyListeners();
+    }
+  }
+
+  Future<void> completeOnboarding() async {
+    final v = currentAppVersion ?? 'unknown';
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('onboardingSeenVersion', v);
+    needsOnboarding = false;
     notifyListeners();
   }
 
