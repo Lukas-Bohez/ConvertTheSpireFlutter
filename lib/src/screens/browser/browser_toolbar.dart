@@ -25,6 +25,8 @@ class BrowserToolbar extends StatelessWidget {
   final bool isCastConnected;
   final ValueChanged<String> onMenuAction;
   final VoidCallback? onUrlBarTap;
+  final VoidCallback onTabs;
+  final int tabCount;
 
   const BrowserToolbar({
     super.key,
@@ -51,6 +53,8 @@ class BrowserToolbar extends StatelessWidget {
     this.isCastConnected = false,
     required this.onMenuAction,
     this.onUrlBarTap,
+    required this.onTabs,
+    this.tabCount = 1,
   });
 
   @override
@@ -59,15 +63,10 @@ class BrowserToolbar extends StatelessWidget {
     // always ensure a light toolbar on mobile unless in incognito mode; dark
     // themes make the toolbar blend with the rest of the app, which looks bad
     // inside the browser.  Desktop respects the global surface color.
-    final bool forceLight = !isIncognito &&
-        (Theme.of(context).platform == TargetPlatform.android ||
-            Theme.of(context).platform == TargetPlatform.iOS);
     final bgColor = isIncognito
         ? const Color(0xFF1A1A2E)
-        : (forceLight ? Colors.white : cs.surface);
-    final iconColor = isIncognito
-        ? Colors.white
-        : (forceLight ? Colors.black : cs.onSurface);
+        : cs.surface; // avoid hardcoded white; use theme surface
+    final iconColor = isIncognito ? Colors.white : cs.onSurface;
 
     return Container(
       color: bgColor,
@@ -109,9 +108,7 @@ class BrowserToolbar extends StatelessWidget {
                       size: 14,
                       color: isSecure
                           ? Colors.green
-                          : (isIncognito
-                              ? Colors.white54
-                              : cs.outline),
+                          : (isIncognito ? Colors.white54 : cs.outline),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -126,99 +123,177 @@ class BrowserToolbar extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         onSubmitted: onSubmitted,
-                        onTap: onUrlBarTap,
+                        onTap: () {
+                          // Select all text when the URL bar is tapped (standard browser UX)
+                          addressController.selection = TextSelection(
+                            baseOffset: 0,
+                            extentOffset: addressController.text.length,
+                          );
+                        },
                         decoration: InputDecoration(
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                            hintText: pageTitle.isNotEmpty ? pageTitle : 'Search or enter URL',
-                            hintStyle: TextStyle(
-                              fontSize: 13,
-                              color: isIncognito ? Colors.white54 : cs.onSurface.withValues(alpha: 0.6),
-                            ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 8),
+                          hintText: pageTitle.isNotEmpty
+                              ? pageTitle
+                              : 'Search or enter URL',
+                          hintStyle: TextStyle(
+                            fontSize: 13,
+                            color: isIncognito
+                                ? Colors.white54
+                                : cs.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      // Reload
-                      IconButton(
-                        padding: const EdgeInsets.all(4),
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.refresh, size: 20),
-                        onPressed: onReload,
-                      ),
-                      // Download (primary action)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: onDownload == null
-                            ? const SizedBox.shrink()
-                            : (isDownloading
-                                ? const SizedBox(
-                                    width: 28,
-                                    height: 28,
-                                    child: Center(
-                                      child: SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
-                                      ),
-                                    ),
-                                  )
-                                : IconButton(
-                                    padding: const EdgeInsets.all(4),
-                                    visualDensity: VisualDensity.compact,
-                                    icon: const Icon(Icons.download_rounded, size: 20),
-                                    onPressed: downloadEnabled ? onDownload : null,
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                      foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-                                    ),
-                                  )),
-                      ),
-
-                      // Overflow menu (More)
-                      PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert),
-                        tooltip: 'More options',
-                        color: Theme.of(context).colorScheme.surfaceContainer,
-                        onSelected: onMenuAction,
-                        itemBuilder: (ctx) => [
-                          PopupMenuItem(value: 'cast', child: Row(children: [
-                            Icon(Icons.cast, color: Theme.of(context).colorScheme.onSurface),
-                            const SizedBox(width: 12),
-                            const Text('Cast to device'),
-                            const Spacer(),
-                            if (isCastConnected) Icon(Icons.circle, size: 8, color: Theme.of(context).colorScheme.primary),
-                          ])),
-                          PopupMenuItem(value: 'openExternal', child: Row(children: [
-                            Icon(Icons.open_in_browser, color: Theme.of(context).colorScheme.onSurface),
-                            const SizedBox(width: 12),
-                            const Text('Open in browser'),
-                          ])),
-                          PopupMenuItem(value: 'copyLink', child: Row(children: [
-                            Icon(Icons.copy, color: Theme.of(context).colorScheme.onSurface),
-                            const SizedBox(width: 12),
-                            const Text('Copy link'),
-                          ])),
-                          PopupMenuItem(value: 'share', child: Row(children: [
-                            Icon(Icons.share, color: Theme.of(context).colorScheme.onSurface),
-                            const SizedBox(width: 12),
-                            const Text('Share'),
-                          ])),
-                          PopupMenuItem(value: 'addCookies', child: Row(children: [
-                            Icon(Icons.cookie_outlined, color: Theme.of(context).colorScheme.onSurface),
-                            const SizedBox(width: 12),
-                            const Text('Add cookies (for downloads)'),
-                          ])),
+                    ),
+                    const SizedBox(width: 6),
+                    // Tabs button
+                    IconButton(
+                      padding: const EdgeInsets.all(4),
+                      visualDensity: VisualDensity.compact,
+                      icon: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          const Icon(Icons.tab_rounded, size: 20),
+                          if (tabCount > 1)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                constraints: const BoxConstraints(
+                                    minWidth: 14, minHeight: 14),
+                                child: Text(
+                                  '$tabCount',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
-                    ],
-                  ),
+                      onPressed: onTabs,
+                      tooltip: 'Tabs',
+                    ),
+
+                    // Reload
+                    IconButton(
+                      padding: const EdgeInsets.all(4),
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.refresh, size: 20),
+                      onPressed: onReload,
+                    ),
+                    // Download (primary action)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: onDownload == null
+                          ? const SizedBox.shrink()
+                          : (isDownloading
+                              ? const SizedBox(
+                                  width: 28,
+                                  height: 28,
+                                  child: Center(
+                                    child: SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
+                                    ),
+                                  ),
+                                )
+                              : IconButton(
+                                  padding: const EdgeInsets.all(4),
+                                  visualDensity: VisualDensity.compact,
+                                  icon: const Icon(Icons.download_rounded,
+                                      size: 20),
+                                  onPressed:
+                                      downloadEnabled ? onDownload : null,
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer,
+                                    foregroundColor: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimaryContainer,
+                                  ),
+                                )),
+                    ),
+
+                    // Overflow menu (More)
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
+                      tooltip: 'More options',
+                      color: Theme.of(context).colorScheme.surfaceContainer,
+                      onSelected: onMenuAction,
+                      itemBuilder: (ctx) => [
+                        PopupMenuItem(
+                            value: 'cast',
+                            child: Row(children: [
+                              Icon(Icons.cast,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface),
+                              const SizedBox(width: 12),
+                              const Text('Cast to device'),
+                              const Spacer(),
+                              if (isCastConnected)
+                                Icon(Icons.circle,
+                                    size: 8,
+                                    color:
+                                        Theme.of(context).colorScheme.primary),
+                            ])),
+                        PopupMenuItem(
+                            value: 'openExternal',
+                            child: Row(children: [
+                              Icon(Icons.open_in_browser,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface),
+                              const SizedBox(width: 12),
+                              const Text('Open in browser'),
+                            ])),
+                        PopupMenuItem(
+                            value: 'copyLink',
+                            child: Row(children: [
+                              Icon(Icons.copy,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface),
+                              const SizedBox(width: 12),
+                              const Text('Copy link'),
+                            ])),
+                        PopupMenuItem(
+                            value: 'share',
+                            child: Row(children: [
+                              Icon(Icons.share,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface),
+                              const SizedBox(width: 12),
+                              const Text('Share'),
+                            ])),
+                        PopupMenuItem(
+                            value: 'addCookies',
+                            child: Row(children: [
+                              Icon(Icons.cookie_outlined,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface),
+                              const SizedBox(width: 12),
+                              const Text('Add cookies (for downloads)'),
+                            ])),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
   }
+}
