@@ -150,9 +150,13 @@ class _BrowserShellState extends State<BrowserShell> {
         link: _layerLink,
         query: query,
         onSelect: (route) {
-          // Ensure navigation is invoked first so the app responds even
-          // if overlay removal briefly affects focus/gesture handling.
-          widget.onNavigate(route);
+          // Defer navigation until after the menu/overlay has popped so
+          // focus and gesture handling won't swallow the navigation.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            try {
+              widget.onNavigate(route);
+            } catch (_) {}
+          });
           _removeSuggestions();
           setState(() => _isEditing = false);
         },
