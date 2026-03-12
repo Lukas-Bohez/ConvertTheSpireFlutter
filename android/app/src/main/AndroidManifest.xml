@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <!-- Android 13+ notification permission -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- mDNS / DLNA discovery -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST"/>
 
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <application
