@@ -129,15 +129,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     });
   }
 
-  void _startSwitchingTab() {
-    if (mounted) {
-      setState(() => _isSwitchingTab = true);
-    }
-    Future.delayed(const Duration(seconds: 8), () {
-      if (mounted && _isSwitchingTab) setState(() => _isSwitchingTab = false);
-    });
-  }
-
   void _onTabManagerChanged() {
     final active = _tabManager.activeTab;
     final ctrl = active != null ? _controllers[active.id] : null;
@@ -258,31 +249,6 @@ class _BrowserScreenState extends State<BrowserScreen>
           : null,
     );
   }
-
-  void _onWebViewCreated(InAppWebViewController controller) {
-    debugPrint('[BROWSER] onWebViewCreated – controller ready');
-    // Assign controller for the currently active tab if present.
-    final active = _tabManager.activeTab;
-    if (active != null) {
-      _controllers[active.id] = controller;
-      _webViewController = controller;
-    }
-
-    controller.addJavaScriptHandler(
-      handlerName: 'onVideoFound',
-      callback: (args) {
-        if (args.isNotEmpty) {
-          _videoDetector.handleJsCallback(args[0].toString());
-        }
-      },
-    );
-
-    // Load any URL that was requested before the controller was ready.
-    final urlToLoad = _pendingUrl;
-    _pendingUrl = null;
-    if (urlToLoad != null && urlToLoad.isNotEmpty) {
-      controller.loadUrl(urlRequest: URLRequest(url: WebUri(urlToLoad)));
-    }
   }
 
   void _onLoadStart(InAppWebViewController controller, WebUri? url) {
