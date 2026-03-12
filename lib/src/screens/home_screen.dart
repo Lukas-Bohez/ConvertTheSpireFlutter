@@ -137,19 +137,37 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     // Desktop: system-tray & shortcut.
     _initDesktopFeatures();
 
-    // Restore last selected tab if present.
+    // Restore last selected tab if present. Only apply the saved value
+    // if the user hasn't already navigated away from the default home index
+    // (13).  This avoids a race where the async prefs callback fires *after*
+    // a manual navigation, which was causing the UI to jump back to the
+    // browser when the saved index happened to be 2.  We also never restore
+    // the browser index itself – always start on home if the last tab was
+    // browser.
     SharedPreferences.getInstance().then((prefs) {
       final saved = prefs.getInt('last_tab');
       if (saved != null && mounted) {
         var selected = saved;
-        // Never restore into the browser tab on cold boot if WebView isn't available.
+        // Never restore into the browser tab; start on home instead.  This
+        // mirrors the earlier check but unconditionally prevents index 2.
         if (selected == 2) {
-          final env = widget.controller.webViewEnvironment;
-          if (env == null) selected = 13;
+          selected = 13;
         }
-        setState(() {
-          _selectedPageIndex = selected;
-        });
+        // Only update if we still have the default index; skipping means the
+        // user navigated manually already and their choice takes precedence.
+        if (_selectedPageIndex == 13) {
+          if (kDebugMode) {
+            debugPrint(
+                '[NAV] prefs restore setting initial tab index to $selected');
+          }
+          setState(() {
+            _selectedPageIndex = selected;
+          });
+        } else {
+          if (kDebugMode) {
+            debugPrint('[NAV] prefs restore ignored (user already navigated)');
+          }
+        }
       }
     });
 
@@ -157,6 +175,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (kDebugMode) {
       debugPrint('[NAV] QuickLinks routeToIndex keys: ' +
           QuickLinksService.routeToIndex.keys.join(', '));
+      // schedule a fake navigation after startup to reproduce the bounce bug
+      // without user interaction.  If the bug remains this will show a
+      // subsequent unexpected log shifting back to browser.
+      Future.delayed(const Duration(seconds: 5), () {
+        debugPrint('[TEST] forcing navigation to search.tab');
+        _navigateToPage(0);
+      });
     }
 
     // Load update preference and check for updates on launch
@@ -342,6 +367,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _navigateToPage(int index) {
     if (index < 0 || index > 13) return;
     if (index == _selectedPageIndex) return;
+    if (kDebugMode) {
+      debugPrint('[NAV] _navigateToPage: $_selectedPageIndex -> $index');
+    }
     setState(() {
       // Truncate forward history when navigating to a new page.
       if (_navHistoryIndex < _navHistory.length - 1) {
