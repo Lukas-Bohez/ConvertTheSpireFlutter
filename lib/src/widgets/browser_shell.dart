@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'quick_links_service.dart';
@@ -48,6 +49,7 @@ class _BrowserShellState extends State<BrowserShell> {
   final FocusNode _urlFocusNode = FocusNode();
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _suggestionsOverlay;
+  Timer? _suggestionDebounce;
 
   @override
   void initState() {
@@ -149,12 +151,16 @@ class _BrowserShellState extends State<BrowserShell> {
       builder: (ctx) => _SuggestionsDropdown(
         link: _layerLink,
         query: query,
-        onSelect: (route) {
-          // Defer navigation until after the menu/overlay has popped so
-          // focus and gesture handling won't swallow the navigation.
+        onSelect: (value) {
+          // Simulate typed input and press Enter: put text into the
+          // address editor and call the same submit handler used by
+          // the TextField so behaviour is identical.
           WidgetsBinding.instance.addPostFrameCallback((_) {
             try {
-              widget.onNavigate(route);
+              _urlEditController.text = value;
+              _urlEditController.selection = TextSelection.fromPosition(
+                  TextPosition(offset: value.length));
+              _submitUrl(value);
             } catch (_) {}
           });
           _removeSuggestions();
@@ -172,7 +178,11 @@ class _BrowserShellState extends State<BrowserShell> {
   }
 
   void _onUrlChanged(String value) {
-    _showSuggestions(value.trim().toLowerCase());
+    _suggestionDebounce?.cancel();
+    final q = value.trim().toLowerCase();
+    _suggestionDebounce = Timer(const Duration(milliseconds: 150), () {
+      if (mounted) _showSuggestions(q);
+    });
   }
 
   // ── Queue toggle ──
@@ -507,7 +517,7 @@ class _SuggestionsDropdown extends StatelessWidget {
                     title: Text(p.title,
                         style: const TextStyle(
                             fontSize: 13, fontWeight: FontWeight.w500)),
-                    onTap: () => onSelect(p.route),
+                    onTap: () => onSelect(p.title),
                   );
                 },
               ),

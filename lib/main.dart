@@ -109,6 +109,11 @@ void main() async {
       await windowManager.show();
       await windowManager.focus();
     });
+    // Prevent the default close on desktop; the app will handle disposal
+    // to avoid known WebView2 / WinRT shutdown hangs.
+    try {
+      await windowManager.setPreventClose(true);
+    } catch (_) {}
   }
 
   runApp(MyApp(
