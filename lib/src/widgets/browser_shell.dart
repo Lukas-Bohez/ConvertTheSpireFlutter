@@ -317,16 +317,14 @@ class _BrowserShellState extends State<BrowserShell> {
                 size: 18,
               ),
               onPressed: isDesktop
-                  ? () =>
-                      setState(() => _showQueueDesktop = !_showQueueDesktop)
+                  ? () => setState(() => _showQueueDesktop = !_showQueueDesktop)
                   : _toggleQueue,
               tooltip: isDesktop ? 'Toggle queue panel' : 'Open queue',
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               style: IconButton.styleFrom(
-                foregroundColor: isDesktop && _showQueueDesktop
-                    ? cs.primary
-                    : cs.onSurface,
+                foregroundColor:
+                    isDesktop && _showQueueDesktop ? cs.primary : cs.onSurface,
               ),
             ),
           ),
@@ -368,8 +366,8 @@ class _BrowserShellState extends State<BrowserShell> {
         decoration: BoxDecoration(
           color: cs.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-              color: cs.primary.withValues(alpha: 0.6), width: 1.5),
+          border:
+              Border.all(color: cs.primary.withValues(alpha: 0.6), width: 1.5),
         ),
         child: TextField(
           controller: _urlEditController,
@@ -469,10 +467,10 @@ class _SuggestionsDropdown extends StatelessWidget {
         Positioned.fill(
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
-            // Dismiss on pointer down so the overlay is removed before the
-            // remainder of the gesture is processed. This lets the underlying
-            // widget receive the tap (e.g. a navigation item) and act on it.
-            onTapDown: (_) => onDismiss(),
+            // Dismiss on tap outside the suggestions list. Using `onTap`
+            // ensures taps on list items are handled by the items' onTap
+            // handlers instead of preemptively dismissing the overlay.
+            onTap: onDismiss,
           ),
         ),
         CompositedTransformFollower(
@@ -485,7 +483,8 @@ class _SuggestionsDropdown extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             color: cs.surfaceContainerHigh,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 200, maxWidth: 500, maxHeight: 320),
+              constraints: const BoxConstraints(
+                  minWidth: 200, maxWidth: 500, maxHeight: 320),
               child: ListView.builder(
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(vertical: 4),
