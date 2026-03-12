@@ -44,7 +44,8 @@ class UpdateBanner extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: cs.onPrimaryContainer.withOpacity(0.8),
+                        color: cs.onPrimaryContainer
+                            .withAlpha((0.8 * 255).round()),
                         fontSize: 11,
                       ),
                     ),
