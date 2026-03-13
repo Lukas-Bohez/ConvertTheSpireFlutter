@@ -122,7 +122,7 @@ class _NewTabPageState extends State<NewTabPage> {
                 crossAxisCount: crossAxisCount,
                 mainAxisSpacing: 8,
                 crossAxisSpacing: 8,
-                childAspectRatio: 0.95,
+                childAspectRatio: 1.6,
                 children: quickAccessSites.take(8).map((site) {
                   final url = site['url'] as String;
                   final title = site['title'] as String? ?? '';
@@ -163,12 +163,17 @@ class _NewTabPageState extends State<NewTabPage> {
                 itemBuilder: (context, index) {
                   final fav = _favourites[index];
                   final url = fav['url'] as String;
-                  final title = fav['title'] as String? ?? '';
-                  final host = Uri.tryParse(url)?.host ?? url;
+                  final rawTitle = fav['title'] as String? ?? '';
+                  final host = (Uri.tryParse(url)?.host ?? url)
+                      .replaceFirst('www.', '');
+                  final title = (rawTitle.isNotEmpty &&
+                          rawTitle.toLowerCase() != 'new tab')
+                      ? rawTitle
+                      : host;
                   return ActionChip(
                     avatar: const Icon(Icons.star, size: 16),
                     label: Text(
-                      title.isNotEmpty ? title : host,
+                      title,
                       overflow: TextOverflow.ellipsis,
                     ),
                     onPressed: () => widget.onNavigate(url),
@@ -265,29 +270,40 @@ class _QuickAccessTile extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: _FaviconWidget(faviconUrl: faviconUrl, size: 18),
+              ),
             ),
-            child: Center(
-              child: _FaviconWidget(faviconUrl: faviconUrl, size: 24),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: cs.onSurface,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11),
-            textAlign: TextAlign.center,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
