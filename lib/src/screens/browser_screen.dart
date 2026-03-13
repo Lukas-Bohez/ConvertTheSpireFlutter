@@ -383,8 +383,11 @@ class _BrowserScreenState extends State<BrowserScreen>
       final faviconUrl = domain.isNotEmpty
           ? 'https://www.google.com/s2/favicons?sz=64&domain_url=$domain'
           : null;
-      _repo.addHistory(urlStr, title, faviconUrl);
-      _repo.upsertRecentSite(urlStr, title, faviconUrl);
+        _repo.addHistory(urlStr, title, faviconUrl);
+        final siteTitle = (title.isNotEmpty && title.toLowerCase() != 'new tab')
+          ? title
+          : (Uri.tryParse(urlStr)?.host ?? urlStr).replaceFirst('www.', '');
+        _repo.upsertRecentSite(urlStr, siteTitle, faviconUrl);
     }
 
     // Inject video detection JS.
@@ -558,7 +561,9 @@ class _BrowserScreenState extends State<BrowserScreen>
       final faviconUrl = domain.isNotEmpty
           ? 'https://www.google.com/s2/favicons?sz=64&domain_url=$domain'
           : null;
-      final title = _getFavouriteTitle(url, _pageTitle);
+      // Fetch the live title from the WebView in case _pageTitle is stale
+      final liveTitle = await _webViewController?.getTitle() ?? '';
+      final title = _getFavouriteTitle(url, liveTitle.isNotEmpty ? liveTitle : _pageTitle);
       await _repo.addFavourite(url, title, faviconUrl);
       setState(() => _isFavourited = true);
       if (mounted) {
