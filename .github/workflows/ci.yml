@@ -129,9 +129,10 @@ jobs:
       - uses: actions/checkout@v4
 
       # Git >= 2.35.2 rejects repos owned by a different UID.
-      # Set the wildcard exception before anything else touches git.
+      # We write the gitconfig directly because git is not yet installed
+      # in the bare ubuntu:20.04 image at this point — apt-get hasn't run.
       - name: Trust all git directories (container UID mismatch fix)
-        run: git config --global --add safe.directory '*'
+        run: printf '[safe]\n\tdirectory = *\n' > "$HOME/.gitconfig"
 
       # jq must be installed here — it is not in the bare ubuntu:20.04 image
       # and flutter-actions/setup-flutter needs it to parse the release manifest.
