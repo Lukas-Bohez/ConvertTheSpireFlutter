@@ -36,6 +36,12 @@ class DownloadService {
   final YtDlpService ytDlp;
   final AndroidSaf _saf = AndroidSaf();
 
+  /// Called on Android when the app cannot write to the configured SAF folder
+  /// (e.g. permission was revoked or no folder has been set).
+  /// The callback should show a dialog / folder-picker and return the new
+  /// tree URI chosen by the user, or null to fall back to Downloads.
+  Future<String?> Function()? onSafAccessDenied;
+
   DownloadService({required this.yt, required this.ffmpeg, required this.ytDlp});
 
   /// Supported download formats.
@@ -653,13 +659,30 @@ class DownloadService {
     required Directory outputFolder,
   }) async {
     if (isSafOutput) {
-      final destUri = await _copyFileToSaf(
-        treeUri: outputDir,
+      var effectiveTreeUri = outputDir;
+      var destUri = await _copyFileToSaf(
+        treeUri: effectiveTreeUri,
         sourcePath: outputPath,
         safeTitle: safeTitle,
         formatLower: formatLower,
       );
+
+      // SAF copy failed – ask the user to re-grant / pick a new folder.
+      if (destUri == null && onSafAccessDenied != null) {
+        final newUri = await onSafAccessDenied!();
+        if (newUri != null && newUri.isNotEmpty) {
+          effectiveTreeUri = newUri;
+          destUri = await _copyFileToSaf(
+            treeUri: effectiveTreeUri,
+            sourcePath: outputPath,
+            safeTitle: safeTitle,
+            formatLower: formatLower,
+          );
+        }
+      }
+
       if (destUri == null) {
+        // Last resort: save to system Downloads so the file is not lost.
         final fallbackUri = await _copyFileToDownloads(
           sourcePath: outputPath,
           safeTitle: safeTitle,

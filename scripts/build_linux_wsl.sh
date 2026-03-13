@@ -39,8 +39,7 @@ fi
 echo "=== Installing system dependencies ==="
 sudo apt-get update -qq
 sudo apt-get install -y libayatana-appindicator3-dev 2>/dev/null || \
-  sudo apt-get install -y libappindicator3-dev 2>/dev/null || \
-  echo "WARNING: appindicator library not found — tray may not work on Linux"
+  echo "WARNING: libayatana-appindicator3-dev not found — tray may not work on Linux"
 
 echo "=== Installing dependencies ==="
 flutter pub get --no-example

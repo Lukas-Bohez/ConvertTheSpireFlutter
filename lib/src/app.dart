@@ -16,6 +16,7 @@ import 'screens/browser_screen.dart';
 import 'screens/player.dart';
 import 'services/bulk_import_service.dart';
 import 'services/convert_service.dart';
+import 'services/android_saf.dart';
 import 'services/download_service.dart';
 import 'services/ffmpeg_service.dart';
 import 'services/file_organization_service.dart';
@@ -48,6 +49,8 @@ class _MyAppState extends State<MyApp> with WindowListener {
   AppController? _controller;
   YoutubeExplode? _ytExplode;
   String? _initError;
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final AndroidSaf _androidSaf = AndroidSaf();
   bool _dismissedMediaKitError = false;
   late final Future<SharedPreferences> _prefsFuture =
       SharedPreferences.getInstance();
@@ -157,6 +160,43 @@ class _MyAppState extends State<MyApp> with WindowListener {
       final ytDlp = YtDlpService();
       final downloadService =
           DownloadService(yt: ytExplode, ffmpeg: ffmpeg, ytDlp: ytDlp);
+      // Wire up the SAF access-denied callback so the service can prompt the
+      // user to re-grant folder access when the saved URI is no longer valid.
+      downloadService.onSafAccessDenied = () async {
+        final ctx = _navigatorKey.currentContext;
+        if (ctx == null || !ctx.mounted) return null;
+        final shouldPick = await showDialog<bool>(
+          context: ctx,
+          barrierDismissible: false,
+          builder: (dialogCtx) => AlertDialog(
+            title: const Text('Folder access needed'),
+            content: const Text(
+              'The app can no longer write to your download folder.\n\n'
+              'Please select the folder again to grant access, '
+              'or tap "Use Downloads" to save there instead.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(false),
+                child: const Text('Use Downloads'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(true),
+                child: const Text('Pick folder'),
+              ),
+            ],
+          ),
+        );
+        if (shouldPick != true) return null;
+        final uri = await _androidSaf.pickTree();
+        if (uri != null && uri.isNotEmpty && _controller != null) {
+          final current = _controller!.settings;
+          if (current != null) {
+            await _controller!.saveSettings(current.copyWith(downloadDir: uri));
+          }
+        }
+        return uri;
+      };
       final convertService = ConvertService(ffmpeg: ffmpeg);
       final installerService = InstallerService();
 
@@ -206,6 +246,49 @@ class _MyAppState extends State<MyApp> with WindowListener {
         statisticsService: statisticsService,
         notificationService: notificationService,
       );
+      // Allow DownloadService to ask the UI to re-grant SAF access when a
+      // write to the configured tree fails. This callback shows a dialog
+      // via the app-wide navigator and persists the new choice.
+      downloadService.onSafAccessDenied = () async {
+        final ctx = _navigatorKey.currentState?.context;
+        if (ctx == null) return null;
+
+        final choose = await showDialog<bool>(
+          context: ctx,
+          builder: (dctx) => AlertDialog(
+            title: const Text('Folder access lost'),
+            content: const Text(
+              'The app can no longer access your selected download folder. '
+              'Would you like to pick it again? Choosing "No" will use Downloads instead.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dctx, false),
+                child: const Text('Use Downloads'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(dctx, true),
+                child: const Text('Pick folder'),
+              ),
+            ],
+          ),
+        );
+
+        if (choose != true) return null;
+
+        final uri = await _androidSaf.pickTree();
+        if (uri == null || uri.isEmpty) return null;
+
+        // Persist the new folder in settings so future downloads use it.
+        try {
+          final current = controller.settings;
+          if (current != null) {
+            await controller.saveSettings(current.copyWith(downloadDir: uri));
+          }
+        } catch (_) {}
+
+        return uri;
+      };
       if (kDebugMode) debugPrint('MyApp: all services created, calling init()');
       await controller.init();
       if (kDebugMode) debugPrint('MyApp: init() completed');
@@ -307,6 +390,7 @@ class _MyAppState extends State<MyApp> with WindowListener {
       builder: (context, _) {
         final themeMode = _resolveThemeMode(_controller?.settings?.themeMode);
         return MaterialApp(
+          navigatorKey: _navigatorKey,
           title: 'Convert the Spire',
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),

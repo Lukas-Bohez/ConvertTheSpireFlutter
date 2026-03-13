@@ -611,6 +611,54 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _audioBitrate = settings.preferredAudioBitrate;
       _settingsInitialized = true;
     });
+
+    // Wire SAF access-denied callback so DownloadService can ask the UI to
+    // prompt the user to re-grant folder access or pick a new folder.
+    try {
+      widget.controller.downloadService.onSafAccessDenied = () async {
+        if (!mounted) return null;
+
+        final choose = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Folder access lost'),
+            content: const Text(
+              'The app can no longer access your selected download folder. '
+              'Would you like to pick it again? Choosing "No" will use Downloads instead.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Use Downloads'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Pick folder'),
+              ),
+            ],
+          ),
+        );
+
+        if (choose != true) return null;
+
+        final uri = await _androidSaf.pickTree();
+        if (uri == null || uri.isEmpty) return null;
+
+        // Persist the new folder in settings so future downloads use it.
+        final current = widget.controller.settings;
+        if (current != null) {
+          await widget.controller.saveSettings(current.copyWith(downloadDir: uri));
+        }
+
+        if (!mounted) return uri;
+        setState(() {
+          _androidDownloadUri = uri;
+          _downloadDirController.text = _formatAndroidFolderLabel(uri);
+        });
+        Snack.show(context, 'Download folder updated', level: SnackLevel.info);
+        return uri;
+      };
+    } catch (_) {}
   }
 
   /// Open a web URL in the **in-app browser**.
