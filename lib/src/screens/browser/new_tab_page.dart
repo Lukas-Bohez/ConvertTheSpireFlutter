@@ -112,23 +112,31 @@ class _NewTabPageState extends State<NewTabPage> {
         const SliverToBoxAdapter(child: SizedBox(height: 8)),
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          sliver: SliverGrid.count(
-            crossAxisCount: 4,
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 0.85,
-            children: quickAccessSites.take(8).map((site) {
-              final url = site['url'] as String;
-              final title = site['title'] as String? ?? '';
-              final favicon = site['favicon'] as String?;
-              final host = Uri.tryParse(url)?.host ?? url;
-              final label = title.isNotEmpty ? title : host;
-              return _QuickAccessTile(
-                label: label,
-                faviconUrl: favicon,
-                onTap: () => widget.onNavigate(url),
+          sliver: SliverToBoxAdapter(
+            child: LayoutBuilder(builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final crossAxisCount = width < 500 ? 2 : (width < 900 ? 3 : 4);
+              return GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: crossAxisCount,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 0.95,
+                children: quickAccessSites.take(8).map((site) {
+                  final url = site['url'] as String;
+                  final title = site['title'] as String? ?? '';
+                  final favicon = site['favicon'] as String?;
+                  final host = Uri.tryParse(url)?.host ?? url;
+                  final label = title.isNotEmpty ? title : host;
+                  return _QuickAccessTile(
+                    label: label,
+                    faviconUrl: favicon,
+                    onTap: () => widget.onNavigate(url),
+                  );
+                }).toList(),
               );
-            }).toList(),
+            }),
           ),
         ),
 
