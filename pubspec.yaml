@@ -48,7 +48,7 @@ dependencies:
   csv: any
   pdf: any
   multicast_dns: any
-  ffmpeg_kit_flutter_new: any
+  ffmpeg_kit_flutter_new: ^4.1.0
   flutter_local_notifications: any
   tray_manager: any
 
