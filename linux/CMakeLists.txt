@@ -115,6 +115,63 @@ install(CODE "
   endforeach()
 " COMPONENT Runtime)
 
+# ── Bundle runtime libs so the app works on older distros ──────────────────
+
+# Locate libstdc++ and libgcc_s from the build machine's GCC toolchain
+execute_process(
+  COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libstdc++.so.6
+  OUTPUT_VARIABLE LIBSTDCPP_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+execute_process(
+  COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libgcc_s.so.1
+  OUTPUT_VARIABLE LIBGCC_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+# Resolve symlinks to get the real versioned file
+get_filename_component(LIBSTDCPP_REAL "${LIBSTDCPP_PATH}" REALPATH)
+get_filename_component(LIBGCC_REAL    "${LIBGCC_PATH}"    REALPATH)
+
+if(LIBSTDCPP_REAL AND EXISTS "${LIBSTDCPP_REAL}")
+  message(STATUS "Bundling libstdc++: ${LIBSTDCPP_REAL}")
+  install(FILES "${LIBSTDCPP_REAL}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+          RENAME libstdc++.so.6)
+endif()
+if(LIBGCC_REAL AND EXISTS "${LIBGCC_REAL}")
+  message(STATUS "Bundling libgcc: ${LIBGCC_REAL}")
+  install(FILES "${LIBGCC_REAL}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+          RENAME libgcc_s.so.1)
+endif()
+
+# Make the app binary look in its own lib/ dir first (before system libs)
+set_target_properties(${BINARY_NAME} PROPERTIES
+  INSTALL_RPATH "\$ORIGIN/lib"
+  BUILD_WITH_INSTALL_RPATH TRUE)
+
+# Locate and bundle libmpv (required by media_kit)
+find_library(LIBMPV_PATH mpv)
+if(LIBMPV_PATH)
+  get_filename_component(LIBMPV_REAL "${LIBMPV_PATH}" REALPATH)
+  if(EXISTS "${LIBMPV_REAL}")
+    get_filename_component(LIBMPV_BASENAME "${LIBMPV_REAL}" NAME)
+    message(STATUS "Bundling libmpv: ${LIBMPV_REAL} (installed as ${LIBMPV_BASENAME})")
+    install(FILES "${LIBMPV_REAL}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+            RENAME "${LIBMPV_BASENAME}")
+  endif()
+else()
+  message(WARNING "libmpv not found — install libmpv-dev on the build machine")
+endif()
+
+# Also bundle libass if available (media_kit may depend on it)
+find_library(LIBASS_PATH ass)
+if(LIBASS_PATH)
+  get_filename_component(LIBASS_REAL "${LIBASS_PATH}" REALPATH)
+  if(EXISTS "${LIBASS_REAL}")
+    get_filename_component(LIBASS_BASENAME "${LIBASS_REAL}" NAME)
+    message(STATUS "Bundling libass: ${LIBASS_REAL} (installed as ${LIBASS_BASENAME})")
+    install(FILES "${LIBASS_REAL}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+            RENAME "${LIBASS_BASENAME}")
+  endif()
+endif()
+
 # Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/linux/")
 install(DIRECTORY "${NATIVE_ASSETS_DIR}"
