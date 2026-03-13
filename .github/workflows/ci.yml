@@ -144,6 +144,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Mark git directories as safe (container root ownership fix)
+        run: git config --global --add safe.directory '*'
+
       - name: Install Linux build dependencies
         run: |
           apt-get update -qq
