@@ -133,6 +133,7 @@ jobs:
   build-linux:
     name: Build Linux
     needs: quality
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     container:
       image: ubuntu:20.04          # Build inside 20.04 so GLIBC ≤ 2.31
