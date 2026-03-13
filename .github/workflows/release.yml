@@ -154,7 +154,7 @@ jobs:
           apt-get install -y --no-install-recommends \
             curl git unzip xz-utils zip jq perl \
             build-essential clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev \
             libmpv-dev mpv libass-dev \
             libayatana-appindicator3-dev libappindicator3-dev \
             patchelf ca-certificates \
@@ -192,6 +192,15 @@ jobs:
 
       - name: Build Linux release
         run: flutter build linux --release --no-tree-shake-icons
+
+      - name: Bundle libstdc++ for portability
+        run: |
+          BUNDLE_LIB="build/linux/x64/release/bundle/lib"
+          mkdir -p "$BUNDLE_LIB"
+          cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 "$BUNDLE_LIB/"
+          cp /lib/x86_64-linux-gnu/libgcc_s.so.1      "$BUNDLE_LIB/"
+          echo "Bundled libs:"
+          ls -lh "$BUNDLE_LIB/"
 
       - name: Copy launcher into bundle
         run: |
@@ -262,7 +271,9 @@ jobs:
           done
 
       - name: Build APK
-        run: flutter build apk --release --no-tree-shake-icons
+        run: |
+          flutter build apk --release --no-tree-shake-icons || \
+          flutter build apk --release --no-tree-shake-icons
 
       - name: Rename APK
         run: |
