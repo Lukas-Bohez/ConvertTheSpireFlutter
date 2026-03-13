@@ -168,7 +168,7 @@ Install system dependencies first:
 
 ```bash
 sudo apt install clang cmake ninja-build pkg-config \
-  libgtk-3-dev liblzma-dev libstdc++-12-dev \
+  libgtk-3-dev liblzma-dev libstdc++-9-dev \
   libmpv-dev mpv libass-dev
 ```
 
