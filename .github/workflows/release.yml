@@ -143,6 +143,11 @@ jobs:
 
       # jq must be installed here — it is not in the bare ubuntu:20.04 image
       # and flutter-actions/setup-flutter needs it to parse the release manifest.
+      #
+      # FIX: Flutter 3.38+ uses native assets (e.g. for sqlite3) which require
+      # the LLVM linker `lld` to be present at /usr/lib/llvm-10/bin/ld.lld.
+      # The `clang` package on Ubuntu only pulls in binutils as its linker;
+      # `lld` and `llvm-10` must be installed explicitly.
       - name: Install build dependencies
         run: |
           apt-get update -qq
@@ -152,11 +157,17 @@ jobs:
             libgtk-3-dev liblzma-dev \
             libmpv-dev mpv libass-dev \
             libayatana-appindicator3-dev libappindicator3-dev \
-            patchelf ca-certificates
-          # Belt-and-suspenders: create unversioned symlinks if only versioned binaries present
+            patchelf ca-certificates \
+            lld llvm-10
+          # Ensure unversioned symlinks exist for clang, clang++, and lld.
+          # lld-10 ships ld.lld inside /usr/lib/llvm-10/bin/ which is where
+          # Flutter's native-assets toolchain looks for it.
           ln -sf /usr/bin/clang-10   /usr/bin/clang   || true
           ln -sf /usr/bin/clang++-10 /usr/bin/clang++ || true
           ln -sf /usr/bin/lld-10     /usr/bin/lld     || true
+          # Verify the linker Flutter needs is actually present
+          ls -la /usr/lib/llvm-10/bin/ld.lld || \
+            (echo "ERROR: ld.lld still missing after install" && exit 1)
 
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v4
