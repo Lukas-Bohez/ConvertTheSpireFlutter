@@ -141,7 +141,8 @@ jobs:
           apt-get update -qq
           apt-get install -y --no-install-recommends \
             curl git unzip xz-utils zip jq \
-            clang lld binutils cmake ninja-build pkg-config \
+            build-essential clang-10 llvm-10 lld-10 \
+            cmake ninja-build pkg-config \
             libgtk-3-dev liblzma-dev \
             libmpv-dev mpv libass-dev \
             libayatana-appindicator3-dev libappindicator3-dev \
@@ -164,7 +165,7 @@ jobs:
             "windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows"
           do
             if [ -d "$dir" ]; then
-              find "$dir" -type f -name '*.cc' -exec sed -i 's/\bwebview_\b/view/g' {} +
+              find "$dir" -type f -name '*.cc' -exec perl -pi -e "s/\\bwebview_\\b/view/g" {} +
             fi
           done
 
@@ -236,7 +237,7 @@ jobs:
             "windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows"
           do
             if [ -d "$dir" ]; then
-              find "$dir" -type f -name '*.cc' -exec sed -i 's/\bwebview_\b/view/g' {} +
+              find "$dir" -type f -name '*.cc' -exec perl -pi -e "s/\\bwebview_\\b/view/g" {} +
             fi
           done
 
