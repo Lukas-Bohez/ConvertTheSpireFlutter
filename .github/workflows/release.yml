@@ -14,7 +14,7 @@ permissions:
   contents: write
 
 jobs:
-  # ── Code quality gate ────────────────────────────────────────────────
+  # ── Code Quality Gate ────────────────────────────────────────────────
   analyze:
     name: Code Quality Gate
     runs-on: ubuntu-latest
@@ -25,6 +25,7 @@ jobs:
         uses: flutter-actions/setup-flutter@v4
         with:
           channel: stable
+          version: '3.41.2'
           cache: true
 
       - name: Install dependencies
@@ -41,24 +42,13 @@ jobs:
             echo "No test files found - skipping tests"
           fi
 
-  # ── Build - Windows (copied from working CI job)
+  # ── Windows Build ─────────────────────────────────────────────────────
   build-windows:
     name: Build Windows
     needs: analyze
-    runs-on: windows-2022   # pin to VS2022 to avoid plugin compile bug
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
-
-      - name: Patch inappwebview_windows source
-        shell: pwsh
-        run: |
-          $dir = "$env:PUB_CACHE\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows"
-          if (Test-Path $dir) {
-            Get-ChildItem $dir -Recurse -Filter *.cc | ForEach-Object {
-              (Get-Content $_.FullName) -replace '\\bwebview_\\b','view' |
-                Set-Content $_.FullName
-            }
-          }
 
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v4
@@ -70,14 +60,19 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Patch flutter_inappwebview_windows after pub get
+      - name: Patch flutter_inappwebview_windows
         shell: pwsh
         run: |
-          $dir = "$env:PUB_CACHE\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows"
-          if (Test-Path $dir) {
-            Get-ChildItem $dir -Recurse -Filter *.cc | ForEach-Object {
-              (Get-Content $_.FullName) -replace '\\bwebview_\\b','view' |
-                Set-Content $_.FullName
+          $dirs = @(
+            "$env:PUB_CACHE\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows",
+            "windows\flutter\ephemeral\.plugin_symlinks\flutter_inappwebview_windows\windows"
+          )
+          foreach ($dir in $dirs) {
+            if (Test-Path $dir) {
+              Get-ChildItem $dir -Recurse -Filter *.cc | ForEach-Object {
+                (Get-Content $_.FullName) -replace '\bwebview_\b','view' |
+                  Set-Content $_.FullName
+              }
             }
           }
 
@@ -89,7 +84,7 @@ jobs:
           while ($attempt -lt $max) {
             Write-Host "Windows build attempt $($attempt + 1) of $max"
             try {
-              flutter build windows --release
+              flutter build windows --release --no-tree-shake-icons
               break
             } catch {
               Write-Host "Build failed: $_"
@@ -103,14 +98,14 @@ jobs:
             }
           }
 
-      - name: Prepare artifact
+      - name: Package Windows release
         shell: pwsh
         run: |
           $src = "build\windows\x64\runner\Release"
           $zip = "ConvertTheSpireReborn.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
-          # Create a ZIP containing the release bundle (preserve structure)
           Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
+          Write-Host "Created $zip ($([math]::Round((Get-Item $zip).Length/1MB,1)) MB)"
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
@@ -119,13 +114,18 @@ jobs:
           path: ConvertTheSpireReborn.zip
           retention-days: 30
 
-  # ── Linux Build ──────────────────────────────────────────────────────
+  # ── Linux Build ───────────────────────────────────────────────────────
+  # Runs inside ubuntu:20.04 so the binary only requires GLIBC <= 2.31.
+  # The bare container is missing jq (needed by setup-flutter to parse the
+  # release manifest) — it must be installed before setup-flutter runs.
+  # Git safe.directory must also be set before Flutter setup because the
+  # runner extracts files under a different UID than the container user.
   build-linux:
     name: Build Linux
     needs: analyze
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:20.04          # Build inside 20.04 so GLIBC ≤ 2.31
+      image: ubuntu:20.04
       options: --user root
     env:
       DEBIAN_FRONTEND: noninteractive
@@ -133,10 +133,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Mark git directories as safe (container root ownership fix)
+      # Git >= 2.35.2 rejects repos owned by a different UID.
+      # Set the wildcard exception before anything else touches git.
+      - name: Trust all git directories (container UID mismatch fix)
         run: git config --global --add safe.directory '*'
 
-      - name: Install Linux build dependencies
+      # jq must be installed here — it is not in the bare ubuntu:20.04 image
+      # and flutter-actions/setup-flutter needs it to parse the release manifest.
+      - name: Install build dependencies
         run: |
           apt-get update -qq
           apt-get install -y --no-install-recommends \
@@ -151,24 +155,25 @@ jobs:
         uses: flutter-actions/setup-flutter@v4
         with:
           channel: stable
+          version: '3.41.2'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Patch flutter_inappwebview_windows after pub get
+      - name: Patch flutter_inappwebview_windows
         run: |
-          dir="${PUB_CACHE:-$HOME/.pub-cache}/hosted/pub.dev/flutter_inappwebview_windows-0.6.0/windows"
-          if [ -d "$dir" ]; then
-            find "$dir" -type f -name '*.cc' -exec sed -i 's/\bwebview_\b/view/g' {} +
-          fi
-          eph="windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows"
-          if [ -d "$eph" ]; then
-            find "$eph" -type f -name '*.cc' -exec sed -i 's/\bwebview_\b/view/g' {} +
-          fi
+          for dir in \
+            "${PUB_CACHE:-$HOME/.pub-cache}/hosted/pub.dev/flutter_inappwebview_windows-0.6.0/windows" \
+            "windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows"
+          do
+            if [ -d "$dir" ]; then
+              find "$dir" -type f -name '*.cc' -exec sed -i 's/\bwebview_\b/view/g' {} +
+            fi
+          done
 
       - name: Build Linux release
-        run: flutter build linux --release
+        run: flutter build linux --release --no-tree-shake-icons
 
       - name: Copy launcher into bundle
         run: |
@@ -179,7 +184,6 @@ jobs:
       - name: Verify no missing shared libs
         run: |
           BIN="build/linux/x64/release/bundle/convert_the_spire_reborn"
-          # Install runtime GUI libs so ldd can resolve them (same libs users will have)
           apt-get install -y --no-install-recommends \
             libgtk-3-0 libglib2.0-0 libgdk-pixbuf2.0-0 \
             libpango-1.0-0 libcairo2 libatk1.0-0 libharfbuzz0b \
@@ -202,8 +206,9 @@ jobs:
         with:
           name: linux-x64
           path: linux.zip
+          retention-days: 30
 
-  # ── Android Build ────────────────────────────────────────────────────
+  # ── Android Build ─────────────────────────────────────────────────────
   build-android:
     name: Build Android
     needs: analyze
@@ -221,39 +226,82 @@ jobs:
         uses: flutter-actions/setup-flutter@v4
         with:
           channel: stable
+          version: '3.41.2'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Patch flutter_inappwebview_windows after pub get
+      - name: Patch flutter_inappwebview_windows
         run: |
-          dir="${PUB_CACHE:-$HOME/.pub-cache}/hosted/pub.dev/flutter_inappwebview_windows-0.6.0/windows"
-          if [ -d "$dir" ]; then
-            find "$dir" -type f -name '*.cc' -exec sed -i 's/\\bwebview_\\b/view/g' {} +
-          fi
-          eph="windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows"
-          if [ -d "$eph" ]; then
-            find "$eph" -type f -name '*.cc' -exec sed -i 's/\\bwebview_\\b/view/g' {} +
-          fi
+          for dir in \
+            "${PUB_CACHE:-$HOME/.pub-cache}/hosted/pub.dev/flutter_inappwebview_windows-0.6.0/windows" \
+            "windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows"
+          do
+            if [ -d "$dir" ]; then
+              find "$dir" -type f -name '*.cc' -exec sed -i 's/\bwebview_\b/view/g' {} +
+            fi
+          done
 
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Rename APK
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk ConvertTheSpireReborn.apk
+          ls -lh ConvertTheSpireReborn.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: ConvertTheSpireReborn.apk
+          retention-days: 30
 
-  # ── Create / Update GitHub Release ──────────────────────────────────
+  # ── macOS Build ───────────────────────────────────────────────────────
+  # macos-latest runners include Xcode, CocoaPods, and the full Apple
+  # toolchain — no extra setup needed beyond Flutter itself.
+  build-macos:
+    name: Build macOS
+    needs: analyze
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: flutter-actions/setup-flutter@v4
+        with:
+          channel: stable
+          version: '3.41.2'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build macOS release
+        run: flutter build macos --release --no-tree-shake-icons
+
+      - name: Package macOS app
+        run: |
+          APP=$(find build/macos/Build/Products/Release -name "*.app" -maxdepth 1 | head -1)
+          if [ -z "$APP" ]; then
+            echo "ERROR: .app bundle not found" && exit 1
+          fi
+          echo "Packaging: $APP"
+          ditto -c -k --keepParent "$APP" ConvertTheSpireReborn-macOS.zip
+          ls -lh ConvertTheSpireReborn-macOS.zip
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-x64
+          path: ConvertTheSpireReborn-macOS.zip
+          retention-days: 30
+
+  # ── Create GitHub Release ─────────────────────────────────────────────
   release:
     name: Publish Release
-    needs: [build-windows, build-linux, build-android]
+    needs: [build-windows, build-linux, build-android, build-macos]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -262,7 +310,7 @@ jobs:
           path: artifacts
 
       - name: List artifacts
-        run: find artifacts -type f
+        run: find artifacts -type f | sort
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -274,3 +322,4 @@ jobs:
             artifacts/windows-x64/ConvertTheSpireReborn.zip
             artifacts/linux-x64/linux.zip
             artifacts/android-apk/ConvertTheSpireReborn.apk
+            artifacts/macos-x64/ConvertTheSpireReborn-macOS.zip
