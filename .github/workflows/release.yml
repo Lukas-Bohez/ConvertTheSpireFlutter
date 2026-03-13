@@ -129,12 +129,12 @@ jobs:
 
       - name: Install Linux dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            cmake ninja-build pkg-config \
-            libgtk-3-dev clang \
-            libasound2-dev libmpv-dev \
-            libayatana-appindicator3-dev
+          sudo apt-get update -qq
+          sudo apt-get install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            libmpv-dev mpv libass-dev \
+            libayatana-appindicator3-dev libappindicator3-dev \
+            patchelf
 
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v4
@@ -158,6 +158,26 @@ jobs:
 
       - name: Build Linux release
         run: flutter build linux --release
+
+      - name: Copy launcher and make executable into bundle
+        run: |
+          BUNDLE_DIR="build/linux/x64/release/bundle"
+          if [ -d "$BUNDLE_DIR" ]; then
+            cp linux/convert_the_spire.sh "$BUNDLE_DIR/"
+            chmod +x "$BUNDLE_DIR/convert_the_spire.sh"
+          else
+            echo "Bundle dir not found: $BUNDLE_DIR" && exit 1
+          fi
+
+      - name: Verify bundle on older distro (ubuntu:20.04 via Docker)
+        run: |
+          BUNDLE_DIR="build/linux/x64/release/bundle"
+          BIN="$BUNDLE_DIR/convert_the_spire_reborn"
+          if [ ! -f "$BIN" ]; then
+            echo "Binary not found: $BIN" && exit 1
+          fi
+          docker run --rm -v "$PWD/$BUNDLE_DIR":/bundle ubuntu:20.04 bash -lc \
+            "ldd /bundle/convert_the_spire_reborn | grep 'not found' && exit 1 || echo OK"
 
       - name: Archive Linux bundle
         run: |
