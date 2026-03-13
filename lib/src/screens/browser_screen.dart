@@ -53,6 +53,10 @@ class _BrowserScreenState extends State<BrowserScreen>
     with
         AutomaticKeepAliveClientMixin<BrowserScreen>,
         TickerProviderStateMixin {
+  // Maximum simultaneous tabs. Each live tab holds a WebView2 process;
+  // on low-RAM machines, more than a handful causes OOM crashes.
+  static const int _maxTabs = 5;
+
   // ── Services ──
   final BrowserRepository _repo = BrowserRepository();
   final AdBlockService _adBlock = AdBlockService();
@@ -60,8 +64,6 @@ class _BrowserScreenState extends State<BrowserScreen>
   final TabManager _tabManager = TabManager();
   final Map<String, InAppWebViewController> _controllers = {};
   final Set<String> _mountedWebViews = {}; // track webview mount state
-  // Cache WebView widgets so they aren't rebuilt on every setState
-  final Map<String, Widget> _webViewCache = {};
   VideoDetectorService _videoDetector = VideoDetectorService();
 
   InAppWebViewController? _webViewController;
@@ -141,8 +143,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     } catch (_) {}
     _controllers.clear();
     _mountedWebViews.clear();
-    // Clear widget cache to avoid holding onto disposed WebView widgets
-    _webViewCache.clear();
     _webViewController = null;
   }
 
@@ -286,7 +286,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       cacheEnabled: true,
       mediaPlaybackRequiresUserGesture: false,
       allowsInlineMediaPlayback: true,
-      useHybridComposition: true,
+      useHybridComposition: false,
       transparentBackground: false,
       useShouldInterceptRequest: true,
       supportZoom: true,
@@ -471,9 +471,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   }
 
-  void _onScrollChanged(InAppWebViewController controller, int x, int y) {
-    controller.evaluateJavascript(source: VideoDetectorService.injectionJs);
-  }
 
   // ── Actions ──
 
@@ -543,6 +540,10 @@ class _BrowserScreenState extends State<BrowserScreen>
   void _toggleIncognito() {
     final tab = _tabManager.activeTab;
     if (tab == null) return;
+    if (_tabManager.tabCount >= _maxTabs) {
+      Snack.show(context, 'Tab limit reached ($_maxTabs max). Close a tab first.', level: SnackLevel.warning);
+      return;
+    }
     _tabManager.addTab(incognito: !tab.isIncognito);
     setState(() => _showNewTabPage = true);
   }
@@ -952,21 +953,15 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   Widget _buildWebView() {
     try {
-      // Build an IndexedStack of WebViews, one per tab, to keep each
-      // WebView alive and avoid re-creating native resources on tab switch.
-      final tabs = _tabManager.tabs;
-      if (tabs.isEmpty) {
-        return const SizedBox.shrink();
-      }
-
+      // Only render the active tab's WebView. Keeping all tabs alive in
+      // an IndexedStack holds one WebView2 process per tab -- on a low-RAM
+      // machine this quickly exhausts memory and crashes the app.
       final active = _tabManager.activeTab;
-      final activeIndex = active != null ? tabs.indexOf(active) : 0;
+      if (active == null) return const SizedBox.shrink();
 
-      return IndexedStack(
-        index: activeIndex < 0 ? 0 : activeIndex,
-        children: tabs
-            .map((t) => _webViewCache.putIfAbsent(t.id, () => _buildWebViewForTab(t)))
-            .toList(),
+      return KeyedSubtree(
+        key: ValueKey('active_webview_' + active.id),
+        child: _buildWebViewForTab(active),
       );
     } catch (e) {
       if (kDebugMode) debugPrint('InAppWebView construction failed: $e');
@@ -1069,7 +1064,6 @@ class _BrowserScreenState extends State<BrowserScreen>
       shouldInterceptRequest: _shouldInterceptRequest,
       onConsoleMessage: _onConsoleMessage,
       onReceivedError: _onReceivedError,
-      onScrollChanged: _onScrollChanged,
       onUpdateVisitedHistory: (controller, url, androidIsReload) {
         final urlStr = url?.toString() ?? '';
         if (urlStr.isEmpty || urlStr == 'about:blank') return;
@@ -1201,6 +1195,10 @@ class _BrowserScreenState extends State<BrowserScreen>
   void _handleMenuAction(String action) {
     switch (action) {
       case 'new_tab':
+        if (_tabManager.tabCount >= _maxTabs) {
+          Snack.show(context, 'Tab limit reached ($_maxTabs max). Close a tab first.', level: SnackLevel.warning);
+          break;
+        }
         _tabManager.addTab();
         setState(() {
           _showNewTabPage = true;
@@ -1449,8 +1447,6 @@ class _BrowserScreenState extends State<BrowserScreen>
               } catch (_) {}
             }
             _mountedWebViews.remove(closingTab.id);
-                // Remove cached widget for this tab so it can be garbage collected
-                _webViewCache.remove(closingTab.id);
           } catch (_) {}
 
           _tabManager.closeTab(index);
@@ -1481,6 +1477,11 @@ class _BrowserScreenState extends State<BrowserScreen>
           }
         },
         onNewTab: () {
+          if (_tabManager.tabCount >= _maxTabs) {
+            Navigator.pop(context);
+            Snack.show(context, 'Tab limit reached ($_maxTabs max). Close a tab first.', level: SnackLevel.warning);
+            return;
+          }
           _tabManager.addTab();
           setState(() {
             _showNewTabPage = true;
