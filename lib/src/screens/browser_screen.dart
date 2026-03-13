@@ -121,7 +121,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   /// Dispose all held InAppWebView controllers. Public so external
   /// callers (e.g. window close handler) can force-dispose before
   /// the process exits to avoid WinRT DLL unload ordering hangs.
-  void disposeAllWebViewControllers() {
+  Future<void> disposeAllWebViewControllers() async {
     try {
       for (final entry in _controllers.entries) {
         final id = entry.key;
@@ -132,7 +132,9 @@ class _BrowserScreenState extends State<BrowserScreen>
         // Only dispose controllers that were successfully created/mounted.
         if (_mountedWebViews.contains(id)) {
           try {
-            c.dispose();
+            // Dispose is synchronous; wrap in a microtask to yield to the
+            // event loop so platform teardown can progress.
+            await Future.microtask(() => c.dispose());
           } catch (_) {}
         }
       }
@@ -556,11 +558,25 @@ class _BrowserScreenState extends State<BrowserScreen>
       final faviconUrl = domain.isNotEmpty
           ? 'https://www.google.com/s2/favicons?sz=64&domain_url=$domain'
           : null;
-      await _repo.addFavourite(url, _pageTitle, faviconUrl);
+      final title = _getFavouriteTitle(url, _pageTitle);
+      await _repo.addFavourite(url, title, faviconUrl);
       setState(() => _isFavourited = true);
       if (mounted) {
         Snack.show(context, 'Added to favourites', level: SnackLevel.success);
       }
+    }
+  }
+
+  String _getFavouriteTitle(String url, String? webTitle) {
+    final lower = (webTitle ?? '').trim().toLowerCase();
+    if (webTitle != null && webTitle.trim().isNotEmpty && lower != 'new tab') {
+      return webTitle.trim();
+    }
+    try {
+      final host = Uri.parse(url).host;
+      return host.replaceFirst('www.', '');
+    } catch (_) {
+      return url;
     }
   }
 
@@ -1293,8 +1309,44 @@ class _BrowserScreenState extends State<BrowserScreen>
       );
 
       final app = context.read<AppController>();
-      // Default to mp4 for generic page media
-      const format = 'mp4';
+
+      // Ask the user which format they want (video or audio).
+      final defaultFmt = app.settings?.defaultAudioFormat ?? 'mp3';
+      final chosen = await showDialog<String?>(
+        context: context,
+        builder: (ctx) {
+          String sel = defaultFmt;
+          return AlertDialog(
+            title: const Text('Choose download format'),
+            content: StatefulBuilder(builder: (c, setSt) {
+              return SizedBox(
+                width: 320,
+                child: DropdownButtonFormField<String>(
+                  initialValue: sel,
+                  items: const [
+                    DropdownMenuItem(value: 'mp4', child: Text('Video (MP4)')),
+                    DropdownMenuItem(value: 'mp3', child: Text('Audio (MP3)')),
+                    DropdownMenuItem(value: 'm4a', child: Text('Audio (M4A)')),
+                  ],
+                  onChanged: (v) => setSt(() => sel = v ?? sel),
+                  decoration: const InputDecoration(labelText: 'Format'),
+                ),
+              );
+            }),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Cancel')),
+              FilledButton(onPressed: () => Navigator.pop(ctx, sel), child: const Text('Download')),
+            ],
+          );
+        },
+      );
+
+      if (chosen == null) {
+        setState(() => _isDownloading = false);
+        return;
+      }
+
+      final format = chosen;
       app.addToQueue(previewItem, format);
 
       // Find the queued item

@@ -74,7 +74,9 @@ class _BrowserShellState extends State<BrowserShell> {
   void _startEditing() {
     _urlEditController.text = '';
     setState(() => _isEditing = true);
-    // RawAutocomplete opens suggestions automatically on focus — no manual call needed
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _urlFocusNode.requestFocus();
+    });
   }
 
   void _submitUrl(String value) {
@@ -130,11 +132,11 @@ class _BrowserShellState extends State<BrowserShell> {
   bool _looksLikeUrl(String text) {
     final lower = text.toLowerCase();
     return lower.startsWith('http://') ||
-        lower.startsWith('https://') ||
-        lower.startsWith('www.') ||
-        (lower.contains('.') &&
-            !lower.contains(' ') &&
-            RegExp(r'\.[a-z]{2,}$', caseSensitive: false).hasMatch(lower));
+      lower.startsWith('https://') ||
+      lower.startsWith('www.') ||
+      (lower.contains('.') &&
+        !lower.contains(' ') &&
+        RegExp(r'\.[a-z]{2,}$', caseSensitive: false).hasMatch(lower));
   }
 
   void _cancelEditing() {
@@ -302,7 +304,7 @@ class _BrowserShellState extends State<BrowserShell> {
               right: 0,
               top: 2,
               child: GestureDetector(
-                onTap: () => widget.onNavigate('queue.tab'),
+                onTap: _toggleQueue,
                 child: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
@@ -394,7 +396,6 @@ class _BrowserShellState extends State<BrowserShell> {
           child: TextField(
             controller: controller,
             focusNode: focusNode,
-            autofocus: true,
             style: TextStyle(fontSize: 13, color: cs.onSurface),
             decoration: InputDecoration(
               isDense: true,
@@ -420,25 +421,57 @@ class _BrowserShellState extends State<BrowserShell> {
           alignment: Alignment.topLeft,
           child: Material(
             elevation: 8,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             color: cs.surfaceContainerHigh,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 500, maxHeight: 280),
-              child: ListView.builder(
+              constraints: const BoxConstraints(maxWidth: 480, maxHeight: 320),
+              child: ListView.separated(
                 shrinkWrap: true,
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: 6),
                 itemCount: options.length,
+                separatorBuilder: (_, __) => Divider(
+                  height: 1,
+                  indent: 44,
+                  color: cs.outlineVariant.withValues(alpha: 0.3),
+                ),
                 itemBuilder: (context, index) {
                   final p = options.elementAt(index);
                   return InkWell(
+                    borderRadius: BorderRadius.circular(8),
                     onTap: () => onSelected(p),
-                    child: ListTile(
-                      dense: true,
-                      visualDensity: VisualDensity.compact,
-                      leading: Icon(p.icon, size: 18, color: cs.primary),
-                      title: Text(p.title,
-                          style: const TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w500)),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: cs.primaryContainer,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(p.icon, size: 16, color: cs.onPrimaryContainer),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              p.title,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: cs.onSurface,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            p.route.replaceAll('.tab', ''),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },

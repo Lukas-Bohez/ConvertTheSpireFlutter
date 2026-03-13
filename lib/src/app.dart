@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/services.dart'
     show LogicalKeyboardKey, KeyEvent, KeyDownEvent;
 import 'package:window_manager/window_manager.dart';
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, Process;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -232,30 +232,67 @@ class _MyAppState extends State<MyApp> with WindowListener {
     // window manager before exiting.  The previous implementation simply
     // called `exit(0)`, which still triggered ERROR_CLASS_HAS_WINDOWS (1412)
     // because WebView2 had not finished unregistering its window class.
-    if (kDebugMode)
-      debugPrint('[App] Window close requested — disposing WebViews...');
+    if (kDebugMode) debugPrint('[App] Window close requested — disposing WebViews...');
+
+    // Dispose WebView controllers and wait (so WebView2 can unregister classes).
     try {
-      // Force the BrowserScreen to dispose all controllers.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        try {
-          BrowserScreen.browserKey.currentState?.disposeAllWebViewControllers();
-        } catch (_) {}
-      });
-      // Give widgets a short moment to run disposals.
-      await Future.delayed(const Duration(milliseconds: 120));
+      try {
+        final future = BrowserScreen.browserKey.currentState?.disposeAllWebViewControllers();
+        if (future != null) {
+          await future.timeout(const Duration(seconds: 3), onTimeout: () {
+            if (kDebugMode) debugPrint('[App] disposeAllWebViewControllers timed out');
+            return;
+          });
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('[App] disposeAllWebViewControllers failed: $e');
+      }
+
+      // On Windows poll for WebView2 helper process to disappear, up to 5s.
+      if (!kIsWeb && Platform.isWindows) {
+        const maxWaitMs = 5000;
+        const intervalMs = 250;
+        var elapsed = 0;
+        var gone = false;
+        while (elapsed < maxWaitMs) {
+          try {
+            final listed = await Process.run('tasklist', ['/FI', 'IMAGENAME eq msedgewebview2.exe', '/NH']);
+            final out = listed.stdout?.toString().toLowerCase() ?? '';
+            if (!out.contains('msedgewebview2.exe')) {
+              gone = true;
+              break;
+            }
+          } catch (e) {
+            if (kDebugMode) debugPrint('[App] tasklist failed: $e');
+            break;
+          }
+          await Future.delayed(const Duration(milliseconds: intervalMs));
+          elapsed += intervalMs;
+        }
+
+        if (!gone) {
+          // Still present — attempt a gentle kill before destroying windows.
+          try {
+            final r = await Process.run('taskkill', ['/F', '/IM', 'msedgewebview2.exe']);
+            if (r.exitCode != 0) {
+              if (kDebugMode) debugPrint('[App] taskkill msedgewebview2 exit=${r.exitCode} stderr=${r.stderr}');
+            }
+          } catch (e) {
+            if (kDebugMode) debugPrint('[App] taskkill msedgewebview2 failed: $e');
+          }
+        }
+      }
+
     } catch (_) {}
 
-    // Allow the window manager to clean up its native resources. This should
-    // unregister the WebView class properly before the window is destroyed.
+    // Allow the window manager to clean up its native resources now that
+    // WebViews have been disposed and lingering helpers were handled.
     try {
       await windowManager.setPreventClose(false);
       await windowManager.destroy();
     } catch (e) {
       if (kDebugMode) debugPrint('[App] windowManager.destroy failed: $e');
     }
-
-    // Wait a bit more to give WebView2 time to flush its class unregistration.
-    await Future.delayed(const Duration(milliseconds: 400));
 
     if (kDebugMode) debugPrint('[App] window manager destroyed; allowing exit');
     // Do not call exit() explicitly; let the Flutter/host process tear down
