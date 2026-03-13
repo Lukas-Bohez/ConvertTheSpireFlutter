@@ -1,85 +1,46 @@
 # Convert the Spire Reborn
 
-[![CI/CD](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/actions/workflows/ci.yml/badge.svg)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/actions/workflows/ci.yml)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Flutter](https://img.shields.io/badge/Flutter-3.27.4-02569B?logo=flutter)](https://flutter.dev)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Android%20%7C%20macOS-brightgreen)](#downloads)
-
 ## What is this?
 
-Convert the Spire Reborn is a Flutter app that handles media downloading, conversion, playback, and DLNA casting in one place. It runs on Windows, Linux (older distros only, around Ubuntu 20.04), Android, and experimentally on macOS. No Electron, no browser overhead.
+Hey everyone! If you remember the old web-based Convert the Spire downloader, you probably know that YouTube eventually blocked our server's IP. To keep the project alive and better than ever, I built **Convert the Spire Reborn**.
 
-It started as a personal media tool and grew from there. The core was already functional before a second round of development added multi-site downloading, DLNA casting, a smarter browser, and an opt-in distributed computing feature.
+It is a fully native Flutter app that handles all your media downloading, playlist converting, and playback right on your own device. It started out as a simple, ad-free tool to bulk-download massive YouTube playlists, but it has grown into a full media suite. You can now download from multiple sites, cast to your TV, and easily manage your local library.
+
+Because it runs natively on Windows, Linux, Android, and macOS, there is no heavy Electron bloat and no browser overhead.
 
 ---
 
 ## Features
 
-### Core features
+### The Core Stuff
 
-- **YouTube search & download** — search, browse, and download via yt-dlp, up to 1080p video or 320 kbps audio
-- **Multi-search** — search across multiple sites at once and compare results
-- **File converter** — 27+ formats across four categories:
-  - Documents: PDF, EPUB, DOCX, HTML, TXT, CSV, JSON, XML, YAML, MD
-  - Images: PNG, JPG, BMP, GIF, TIFF, WebP, ICO
-  - Archives: ZIP, TAR.GZ, CBZ
-  - Media: MP3, WAV, AAC, FLAC, OGG, MP4, MKV, WEBM
-- **Media player** — audio/video playback via `media_kit` (libmpv), with library management, playlists, and queue
-- **File organisation** — duplicate detection via streaming MD5, cross-filesystem moves, smart folder structure
-- **Bulk import** — parse a track list and batch-download from YouTube
-- **Statistics** — listening history with `fl_chart` charts
-- **Built-in browser** — YouTube browsing with incognito mode (Windows only, via `webview_windows`)
-- **Notifications** — download progress and completion alerts
-- **Theming** — dark/light/auto, onboarding tour, configurable settings
-
-### Newer features
-
-#### Smart browser URL handling
-The in-app browser normalises URLs before loading them. Bare domains (`hianime.to`), IP addresses (`192.168.1.1`), ports (`localhost:8080`), and plain search queries all work without any manual prefixing. YouTube detection covers standard watch links, Shorts, embeds, live streams, and `music.youtube.com`.
-
-#### Multi-site download engine
-Downloads aren't limited to YouTube anymore. Anything yt-dlp supports (~1,800 sites) goes through the same pipeline, with progress reporting, human-readable error messages for geo-blocks, private content, and rate limits, plus automatic format conversion via FFmpeg.
-
-#### DLNA / UPnP casting
-Cast to any DLNA-compatible TV, speaker, or receiver on your local network. SSDP scans for devices automatically, there's a manual IP fallback for anything that doesn't respond to multicast, and a local HTTP server serves files with Range request support so you can seek. Play, pause, stop, and volume go through UPnP AVTransport SOAP calls.
-
-#### Distributed computing (opt-in)
-Donate spare CPU cycles to a coordinator server for open-data workloads. Uses WebSockets with exponential-backoff reconnection, Dart isolates for sandboxed parallel computation, and automatically pauses when your battery drops below 30% or the device is unplugged. There's a gamified UI with contributor tiers (Bronze through Diamond) and a live task dashboard.
+* **YouTube Search & Download:** Browse and download straight via yt-dlp. You can easily grab videos up to 1080p or audio at 320 kbps.
+* **Massive Playlist Support:** The main reason this project exists! Paste a playlist link and bulk-download the whole thing, completely ad-free.
+* **Multi-Site Engine:** It is not just YouTube anymore. Anything yt-dlp supports (over 1,800 sites) goes through the same seamless pipeline.
+* **Built-in Media Player:** Play your audio and video directly in the app. It comes with playlists, queue management, and library tracking powered by `media_kit`.
+* **File Converter:** Convert between 27+ formats, covering documents, images, archives, and media files.
+* **DLNA & UPnP Casting:** Cast your downloaded media to any compatible smart TV or speaker on your local network.
+* **Smart Browser:** The built-in browser handles URLs effortlessly. Bare domains, IP addresses, and plain search queries all work without manual formatting.
 
 ---
 
-## Why native?
+## Why Native?
 
-- **Startup** — ~200 ms AOT-compiled vs 2-5 s for Electron (JS parse + hydrate)
-- **Memory** — ~80 MB vs 300-600 MB with a full Chromium process
-- **File system** — direct `dart:io` access, not sandboxed
-- **Network** — raw UDP/TCP sockets for SSDP/DLNA; Electron can't do UDP or multicast at all
-- **CPU isolation** — `Isolate.run` gives true parallelism; Web Workers have serialisation overhead
-- **Battery API** — `battery_plus` native plugin vs `Navigator.getBattery()` which is Chrome-only
+If you are curious about the tech stack, the app is built to be fast, lightweight, and efficient:
 
-Flutter compiles to native ARM/x64 binaries via Dart's AOT compiler. No JavaScript runtime, no DOM, no GC pauses. That matters for DLNA (HTTP range requests need to respond fast) and for the compute feature (isolate pool throughput).
+* **Lightning Fast:** Flutter compiles directly to native code, meaning startup takes milliseconds compared to the heavy load times of Electron apps.
+* **Low Memory:** It uses around 80 MB of memory instead of hoarding hundreds of megabytes like a Chromium process.
+* **Network Power:** Raw UDP and TCP sockets allow for seamless DLNA casting and local device discovery, which web wrappers simply cannot do.
+* **Battery Smart:** The native battery plugins let the app throttle intense background tasks if your device is running low on juice.
 
----
+### Architecture Highlights
 
-## IoT / embedded relevance
-
-A few patterns here show up in embedded and IoT work too:
-
-- **SSDP / UPnP discovery** is the same multicast protocol used by smart-home hubs, Chromecast, and Sonos. The `DlnaDiscoveryService` sends M-SEARCH datagrams to `239.255.255.250:1900` and parses XML device descriptors, the same way a home-automation controller would.
-- **Local HTTP media server** serves files from disk with Range header support so any network device can stream and seek. Same pattern as Plex, Jellyfin, or NAS firmware.
-- **Battery-aware scheduling** monitors battery state and throttles work, directly applicable to battery-powered IoT gateways.
-- **Isolate-based computation** gives memory-isolated parallelism without shared-state bugs, similar to separate task contexts in an embedded RTOS.
-
----
-
-## Architecture
-
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
-│                        Flutter UI                           │
-│  HomeScreen (rail nav) → 13 screens (Search, Player, …)     │
+│                       Flutter UI                            │
+│  HomeScreen (rail nav) -> 13 screens (Search, Player, ...)  │
 ├─────────────────────────────────────────────────────────────┤
-│                     State Management                        │
+│                    State Management                         │
 │  AppController (ChangeNotifier + Provider)                  │
 ├───────────────┬─────────────────┬───────────────────────────┤
 │  Services     │  Services       │  Services                 │
@@ -89,237 +50,53 @@ A few patterns here show up in embedded and IoT work too:
 │ ConvertSvc    │ LocalMediaSvr   │ (WebSocket + Isolates)    │
 │ PlaylistSvc   │ (SSDP + HTTP)   │                           │
 ├───────────────┴─────────────────┴───────────────────────────┤
-│                   Platform Layer                            │
-│  dart:io · media_kit · battery_plus · webview_windows       │
-│  RawDatagramSocket · HttpServer · Isolate.run               │
+│                    Platform Layer                           │
+│  dart:io * media_kit * battery_plus * webview_windows       │
+│  RawDatagramSocket * HttpServer * Isolate.run               │
 └─────────────────────────────────────────────────────────────┘
+
 ```
-
-Video playback uses `media_kit` backed by `libmpv`. On Android, `media_kit_libs_android_video` bundles the native libraries into the APK, so make sure you grab the arm64 APK (`ConvertTheSpireReborn.apk`).
-
-### Key files
-
-- `lib/main.dart` — entry point
-- `lib/src/app.dart` — root widget, theme, Provider wiring
-- `lib/src/state/app_controller.dart` — central state (queue, settings, downloads)
-- `lib/src/screens/home_screen.dart` — navigation rail with 13 tabs
-- `lib/src/screens/browser_screen.dart` — in-app browser and URL normalisation
-- `lib/src/screens/compute_screen.dart` — distributed compute UI
-- `lib/src/services/download_service.dart` — multi-site download engine
-- `lib/src/services/dlna_discovery_service.dart` — SSDP device discovery
-- `lib/src/services/dlna_control_service.dart` — UPnP AVTransport SOAP control
-- `lib/src/services/local_media_server.dart` — HTTP file server with Range support
-- `lib/src/services/computation_service.dart` — isolate pool for distributed tasks
-- `lib/src/services/coordinator_service.dart` — WebSocket coordinator client
 
 ---
 
-## Downloads
+## How to Get It
 
-Pre-built binaries are on the [Releases](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases) page.
+You can download the app directly from our site at [quizthespire.com](https://quizthespire.com/) or head over to the [GitHub Releases](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases) page for the pre-built binaries.
 
-- **Windows x64** — `ConvertTheSpireReborn.zip`, extract and run `ConvertTheSpireReborn.exe`
-- **Android arm64** — `ConvertTheSpireReborn.apk`, side-load on Android 6.0+
-- **Linux x64** — `linux.zip`, requires libmpv at runtime; tested on older distros (around Ubuntu 20.04)
-- **macOS** — untested, build from source; not yet in CI but probably works
-
----
-
-## Building from source
-
-### Prerequisites
-
-- [Flutter SDK](https://flutter.dev/docs/get-started/install) **3.27.4** (stable channel)
-- Git
-- Platform toolchain (see below)
-
-### Quick start
-
-```bash
-git clone https://github.com/Lukas-Bohez/ConvertTheSpireFlutter.git
-cd ConvertTheSpireFlutter
-flutter pub get
-```
-
-### Windows
-
-```bash
-flutter build windows --release
-# Output: build\windows\x64\runner\Release\
-```
-
-Optional MSIX packaging (unsigned):
-```bash
-dart run msix:create
-```
-
-### Linux
-
-```bash
-sudo apt install clang cmake ninja-build pkg-config \
-  libgtk-3-dev liblzma-dev libstdc++-9-dev \
-  libmpv-dev mpv libass-dev
-
-flutter build linux --release
-# Output: build/linux/x64/release/bundle/
-```
-
-WSL users: symlinks break on NTFS mounts, use the included script instead:
-
-```bash
-wsl -e bash scripts/build_linux_wsl.sh
-```
-
-### Android
-
-```bash
-# Debug
-flutter build apk --debug
-
-# Release (split per ABI for smaller downloads)
-flutter build apk --release --split-per-abi
-```
-
-Make sure `media_kit_libs_android_video` is in `pubspec.yaml` or the native libmpv libraries won't be bundled and video will fail on some devices. Avoid the single fat APK path if you can.
-
-For signed release builds, create `android/key.properties`:
-```properties
-storePassword=YOUR_PASSWORD
-keyPassword=YOUR_PASSWORD
-keyAlias=YOUR_ALIAS
-storeFile=path/to/keystore.jks
-```
-
-### macOS (untested)
-
-macOS isn't in the CI pipeline yet and the build hasn't been formally tested. That said, `flutter build macos --release` should work fine since there's nothing platform-specific blocking it. If you try it and run into issues, open an issue.
-
-```bash
-flutter build macos --release
-```
-
-You'll need Xcode and the macOS Flutter toolchain set up. The `media_kit` libraries should be handled automatically by the package.
+* **Windows:** Download the `.zip`, extract it, and run the `.exe`.
+* **Android:** Grab the `.apk` and side-load it on your device.
+* **Linux:** Download the Linux package. Make sure you have `libmpv` installed on your system!
+* **macOS:** Untested currently, but you can easily build it from source.
 
 ---
 
-## CI/CD pipeline
+## Opt-In Mining (How I Keep the Lights On)
 
-One [GitHub Actions workflow](.github/workflows/ci.yml), five jobs:
+To help fund the development of the app, I included a "Support" tab. This allows you to voluntarily donate your idle CPU cycles to mine QUBIC tokens. All earnings go directly to my developer wallet.
 
-```
-push/PR to main → quality → build-windows →
-                             build-linux   → release (on v* tags)
-                             build-android →
-```
+A few important things to know:
 
-- **quality** (`ubuntu-latest`) — `flutter pub get`, `flutter analyse`, conditional `flutter test`
-- **build-windows** (`windows-latest`) — build release, upload artefact
-- **build-linux** (`ubuntu-latest`) — install apt deps, build release, upload artefact
-- **build-android** (`ubuntu-latest`) — JDK 17, optional keystore from secrets, build split APKs, upload artefact
-- **release** (`ubuntu-latest`) — download artefacts, zip/tar, publish GitHub Release
-
-### Triggering a release
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-### Android signing secrets (optional)
-
-Set these in your repository secrets if you want a properly signed release build:
-
-- `KEYSTORE_BASE64` — base64-encoded `.jks` keystore
-- `KEYSTORE_PASSWORD` — keystore password
-- `KEY_ALIAS` — key alias
-- `KEY_PASSWORD` — key password
-
-Without these, Android builds are debug-signed.
-
----
-
-## Native library requirements
-
-### Linux
-
-```bash
-sudo apt install libmpv-dev mpv   # Debian/Ubuntu
-```
-
-Without `libmpv`, the app falls back to audio-only.
-
-### Windows / macOS
-
-Bundled automatically by `media_kit_libs_windows_video`. Nothing to do manually.
-
-### Android
-
-Video playback falls back to `video_player` due to `media_kit` platform limitations.
-
----
-
-## Changelog summary
-
-### Pre-existing (before the assignment sprint)
-- YouTube search, download, and queue
-- File converter (27+ formats)
-- Media player with playlists (media_kit / libmpv)
-- Bulk import from track lists
-- Statistics dashboard
-- Built-in browser shell (Windows WebView)
-- Notifications, theming, onboarding
-- Settings screen, log viewer, user guide
-
-### Assignment sprint
-1. **Browser URL intelligence** — smart normalisation for bare domains, ports, IPs, YouTube variants (Shorts, embed, live, music)
-2. **Multi-site download engine** — any yt-dlp-compatible site, with progress reporting and translated error messages
-3. **DLNA / UPnP casting** — SSDP discovery + UPnP AVTransport + local HTTP server with Range support
-4. **Distributed computing** — opt-in volunteer compute, WebSocket coordinator, Dart isolates, battery-aware scheduling, gamified UI
-
-### Bug fixes (post-sprint audit)
-- Domain regex not handling port numbers (`:8080`)
-- YouTube Shorts/embed/live URL parsing
-- SSDP discovery race condition (async parse vs timeout)
-- Missing error translations for geo-blocked/private/rate-limited content
-- Removed unused `shelf` and `network_info_plus` dependencies
-- Coordinator premature `_connected` flag
-- Deprecated `withOpacity()` replaced with `withValues(alpha:)`
-
----
-
-## Opt-in mining disclosure
-
-The "Support" tab lets you donate idle CPU cycles to mine [QUBIC](https://qubic.org) tokens. A few things worth knowing:
-
-- It never starts without explicit consent. There's a first-run dialog that explains what it does before anything is enabled.
-- All earnings go to the developer's Qubic wallet (`EBFXZGMDRBEBQAAJDHOTGJPPXEFBUAGHIUKAFVQYFBDGHXVZIKTUTFKBOJIK`) to fund development of the app.
-- On Windows and Linux, it downloads and runs [qli-Client](https://dl.qubic.li) (the official Qubic mining client) as a background process at below-normal priority.
-- On other platforms, simulated tasks run in sandboxed Dart isolates with no external binary.
-- It pauses automatically when battery drops below 30% and resumes when plugged in.
-- You can stop it with one tap at any time.
-- The wallet address, pool stats, and source code are all visible and auditable.
-
-Questions or concerns? Open a [GitHub Issue](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/issues).
+* **It is 100% opt-in.** It will never run unless you explicitly consent and turn it on.
+* **It is battery-aware.** The miner pauses automatically if your battery drops below 30% and resumes when plugged in.
+* **Easy to stop.** You can disable it with a single tap at any time.
+* **Transparent.** The wallet address, pool stats, and source code are fully visible for anyone to audit.
 
 ---
 
 ## Contributing
 
-Open an issue or submit a pull request.
+I would love your help! Feel free to open an issue or submit a pull request.
 
-1. Fork the repo
-2. Create a feature branch (`git checkout -b feature/your-thing`)
-3. Make sure it passes analysis: `flutter analyse`
-4. Commit (`git commit -m 'feat: your thing'`)
-5. Push and open a PR
+1. Fork the repo.
+2. Create your feature branch.
+3. Make sure your code passes: `flutter analyse`.
+4. Commit and open a PR!
 
----
+## License & Support
 
-## License
+This project is licensed under the GNU General Public License v3.0.
 
-GNU General Public License v3.0. See [LICENSE](LICENSE).
+If this tool has saved you time and you want to support me:
 
-## Support
-
-- Buy me a coffee: https://buymeacoffee.com/orokaconner
-- Website: https://quizthespire.com/
+* Buy me a coffee: [Oroka Conner](https://buymeacoffee.com/orokaconner)
+* Website: [Convert the Spire](https://quizthespire.com/)
