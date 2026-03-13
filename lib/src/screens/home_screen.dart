@@ -193,7 +193,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       // Stop mining before quitting.
       _coordinatorService.dispose();
       try {
-        BrowserScreen.browserKey.currentState?.disposeAllWebViewControllers();
+        await BrowserScreen.browserKey.currentState?.disposeAllWebViewControllers();
       } catch (_) {}
       try {
         await _trayService?.destroy();
