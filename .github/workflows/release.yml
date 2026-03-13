@@ -154,7 +154,7 @@ jobs:
           apt-get install -y --no-install-recommends \
             curl git unzip xz-utils zip jq perl \
             build-essential clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            libgtk-3-dev liblzma-dev \
             libmpv-dev mpv libass-dev \
             libayatana-appindicator3-dev libappindicator3-dev \
             patchelf ca-certificates \
@@ -271,9 +271,7 @@ jobs:
           done
 
       - name: Build APK
-        run: |
-          flutter build apk --release --no-tree-shake-icons || \
-          flutter build apk --release --no-tree-shake-icons
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Rename APK
         run: |
