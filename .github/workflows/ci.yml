@@ -346,6 +346,12 @@ jobs:
           test -f release-files/android-release/ConvertTheSpireReborn.apk       || (echo "MISSING: Android APK"  && exit 1)
           test -f release-files/linux-release/linux.zip                         || (echo "MISSING: Linux zip"    && exit 1)
           test -f release-files/macos-release/ConvertTheSpireReborn-macOS.zip   || (echo "MISSING: macOS zip"    && exit 1)
+          # AppImage is optional (appimagetool may not be available). Don't fail the job if it's missing.
+          if [ -f "release-files/linux-release/ConvertTheSpireReborn.AppImage" ]; then
+            echo "AppImage present"
+          else
+            echo "AppImage not built (appimagetool unavailable) — skipping"
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -356,9 +362,11 @@ jobs:
             release-files/windows-release/ConvertTheSpireReborn.zip
             release-files/android-release/ConvertTheSpireReborn.apk
             release-files/linux-release/linux.zip
+            release-files/linux-release/ConvertTheSpireReborn.AppImage
             release-files/macos-release/ConvertTheSpireReborn-macOS.zip
           draft: false
           prerelease: false
-          fail_on_unmatched_files: true
+          # AppImage may be missing; don't fail the release action if any optional files aren't present.
+          fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

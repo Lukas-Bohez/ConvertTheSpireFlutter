@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.2.0 — Bug Fix & Stability Release
+
+### Fixed
+- Android Share button now works with content:// URIs
+- "Open Folder" button visible on Android queue items
+- Browser shows WebView2 download link on older Windows PCs
+- Linux AppImage for better compatibility on older distros
+
+### Notes
+- Bumped version to 5.2.0; see RELEASE_NOTES.md for highlights.
+
 ## 5.0.0 — Production Polish Release
 
 ### New Features

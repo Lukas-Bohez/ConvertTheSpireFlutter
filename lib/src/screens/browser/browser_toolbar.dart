@@ -240,35 +240,40 @@ class BrowserToolbar extends StatelessWidget {
                     // release WebView focus on Windows before the native
                     // WebView2 consumes the click. Uses onMenuAction via
                     // onSelected to remain safe for navigation.
-                    IconButton(
-                      icon: const Icon(Icons.more_vert),
-                      tooltip: 'More options',
-                      onPressed: () async {
-                        onReleaseWebViewFocus?.call();
+                    Builder(builder: (buttonContext) {
+                      return IconButton(
+                        icon: const Icon(Icons.more_vert),
+                        tooltip: 'More options',
+                        onPressed: () async {
+                          onReleaseWebViewFocus?.call();
+                          // Ask the parent to refresh tab preview before opening menu.
+                          try {
+                            onMenuAction('menu_open');
+                          } catch (_) {}
 
-                        // Compute a sensible position for the menu using this
-                        // button's RenderBox so the menu is anchored to it.
-                        final RenderBox button =
-                            context.findRenderObject() as RenderBox;
-                        final Offset buttonPos = button.localToGlobal(Offset.zero);
-                        final Size buttonSize = button.size;
-                        final RenderBox overlay =
-                            Overlay.of(context).context.findRenderObject()
-                                as RenderBox;
+                          // Compute a sensible position for the menu using this
+                          // button's RenderBox so the menu is anchored to it.
+                          final RenderBox button =
+                              buttonContext.findRenderObject() as RenderBox;
+                          final Offset buttonPos = button.localToGlobal(Offset.zero);
+                          final Size buttonSize = button.size;
+                          final RenderBox overlay =
+                              Overlay.of(buttonContext).context.findRenderObject()
+                                  as RenderBox;
 
-                        final selection = await showMenu<String>(
-                          context: context,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHigh,
-                          elevation: 8,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          position: RelativeRect.fromRect(
-                            buttonPos & buttonSize,
-                            Offset.zero & overlay.size,
-                          ),
-                          items: [
+                          final selection = await showMenu<String>(
+                            context: buttonContext,
+                            color: Theme.of(buttonContext)
+                                .colorScheme
+                                .surfaceContainerHigh,
+                            elevation: 8,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            position: RelativeRect.fromRect(
+                              buttonPos & buttonSize,
+                              Offset.zero & overlay.size,
+                            ),
+                            items: [
                             PopupMenuItem(
                                 value: 'cast',
                                 child: Row(children: [
@@ -328,9 +333,10 @@ class BrowserToolbar extends StatelessWidget {
                                 ])),
                           ],
                         );
-                        if (selection != null) onMenuAction(selection);
-                      },
-                    ),
+                          if (selection != null) onMenuAction(selection);
+                        },
+                      );
+                    }),
                   ],
                 ),
               ),

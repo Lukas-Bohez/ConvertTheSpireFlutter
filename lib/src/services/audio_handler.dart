@@ -90,8 +90,8 @@ Future<AppAudioHandler?> initAudioService(AudioPlayer player) async {
       config: AudioServiceConfig(
         androidNotificationChannelId: 'com.orokaconner.convertthespire.audio',
         androidNotificationChannelName: 'Audio Playback',
-        androidNotificationOngoing: true,
-        androidStopForegroundOnPause: false,
+        androidNotificationOngoing: false,
+        androidStopForegroundOnPause: true,
       ),
     );
     debugPrint('AudioService initialized for background playback');
