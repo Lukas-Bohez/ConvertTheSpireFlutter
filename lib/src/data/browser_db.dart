@@ -13,7 +13,7 @@ class BrowserDb {
     final path = p.join(dir.path, 'browser.db');
     _db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE history (
@@ -45,9 +45,35 @@ class BrowserDb {
             last_visit  INTEGER NOT NULL
           )
         ''');
+        // Create indexes to speed up pruning and lookups.
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_history_visited_at ON history(visited_at)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_history_url ON history(url)');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        // Ensure indexes exist when upgrading from older DB versions.
+        try {
+          await db.execute('CREATE INDEX IF NOT EXISTS idx_history_visited_at ON history(visited_at)');
+          await db.execute('CREATE INDEX IF NOT EXISTS idx_history_url ON history(url)');
+        } catch (e) {
+          if (kDebugMode) debugPrint('BrowserDb.onUpgrade: $e');
+        }
       },
     );
     return _db!;
+  }
+
+  /// Close the underlying database if open. Safe to call multiple times.
+  static Future<void> close() async {
+    try {
+      final db = _db;
+      if (db != null) {
+        await db.close();
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('BrowserDb.close() failed: $e');
+    } finally {
+      _db = null;
+    }
   }
 }
 
@@ -94,6 +120,23 @@ class BrowserRepository extends ChangeNotifier {
   Future<void> clearHistory() async {
     final db = await BrowserDb.database;
     await db.delete('history');
+    notifyListeners();
+  }
+
+  /// Prune browser history.
+  /// - Removes entries older than [maxAgeDays].
+  /// - Ensures at most [maxRows] rows remain by deleting oldest entries.
+  Future<void> pruneHistory({int maxAgeDays = 365, int maxRows = 5000}) async {
+    final db = await BrowserDb.database;
+    final cutoff = DateTime.now().subtract(Duration(days: maxAgeDays)).millisecondsSinceEpoch;
+    await db.delete('history', where: 'visited_at < ?', whereArgs: [cutoff]);
+
+    final countRow = await db.rawQuery('SELECT COUNT(*) as c FROM history');
+    final count = Sqflite.firstIntValue(countRow) ?? 0;
+    if (count > maxRows) {
+      final toDelete = count - maxRows;
+      await db.rawDelete('DELETE FROM history WHERE id IN (SELECT id FROM history ORDER BY visited_at ASC LIMIT ?)', [toDelete]);
+    }
     notifyListeners();
   }
 

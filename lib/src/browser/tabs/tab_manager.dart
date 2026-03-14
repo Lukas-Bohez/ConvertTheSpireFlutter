@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 /// State for a single browser tab.
 class BrowserTab {
@@ -8,7 +11,8 @@ class BrowserTab {
   String? favicon;
   bool isIncognito;
   bool isLoading;
-  Uint8List? screenshot;
+  /// Path to cached screenshot file, or null.
+  String? screenshotPath;
 
   BrowserTab({
     required this.id,
@@ -17,7 +21,7 @@ class BrowserTab {
     this.favicon,
     this.isIncognito = false,
     this.isLoading = false,
-    this.screenshot,
+    this.screenshotPath,
   });
 }
 
@@ -83,10 +87,30 @@ class TabManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setScreenshot(String tabId, Uint8List? data) {
+  /// Store screenshot bytes to a temp file and save the path on the tab.
+  Future<void> setScreenshot(String tabId, Uint8List? data) async {
     try {
       final tab = _tabs.firstWhere((t) => t.id == tabId);
-      tab.screenshot = data;
+      // Remove existing file if clearing or replacing.
+      if (tab.screenshotPath != null) {
+        try {
+          final f = File(tab.screenshotPath!);
+          if (await f.exists()) await f.delete();
+        } catch (_) {}
+        tab.screenshotPath = null;
+      }
+
+      if (data == null) {
+        notifyListeners();
+        return;
+      }
+
+      final dir = await getTemporaryDirectory();
+      final filePath = p.join(dir.path, 'tab_screenshot_${tab.id}.png');
+      final file = File(filePath);
+      await file.writeAsBytes(data, flush: true);
+      tab.screenshotPath = file.path;
+      notifyListeners();
     } catch (_) {}
   }
 }

@@ -27,30 +27,36 @@ dependencies:
   video_player: ^2.5.1
   archive: ^3.4.10
   image: ^4.3.0
-  shared_preferences: any
-  sqflite: any
-  sqflite_common_ffi: any
-  window_manager: any
-  media_kit: any
-  media_kit_video: any
+  shared_preferences: 2.5.4
+  sqflite: 2.4.2
+  sqflite_common_ffi: 2.4.0+2
+  window_manager: 0.5.1
+  media_kit: 1.2.6
+  media_kit_video: 2.0.1
   media_kit_libs_windows_video: ^1.0.9
   media_kit_libs_android_video: ^1.3.8
-  media_kit_libs_linux: any
+  media_kit_libs_linux: 1.2.1
   media_kit_native_event_loop: ^1.0.2
-  flutter_inappwebview: any
-  share_plus: any
-  just_audio: any
-  audio_service: any
-  video_thumbnail: any
-  fl_chart: any
-  battery_plus: any
-  audio_metadata_reader: any
-  csv: any
-  pdf: any
-  multicast_dns: any
+  flutter_inappwebview: 6.1.5
+  share_plus: 12.0.1
+  just_audio: 0.10.5
+  audio_service: 0.18.18
+  video_thumbnail: 0.5.6
+  fl_chart: 1.1.1
+  battery_plus: 7.0.0
+  audio_metadata_reader: 1.4.2
+  csv: 7.2.0
+  pdf: 3.11.3
+  multicast_dns: 0.3.3
   ffmpeg_kit_flutter_new: ^4.1.0
-  flutter_local_notifications: any
-  tray_manager: any
+  flutter_local_notifications: 21.0.0
+  tray_manager: 0.5.2
+  # Explicitly pinned transitive dependencies to avoid future resolution breakage
+  crypto: ^3.0.3
+  mime: ^2.0.0
+  ffi: ^2.1.0
+  uuid: ^4.5.1
+  path: ^1.9.0
 
 flutter:
   uses-material-design: true

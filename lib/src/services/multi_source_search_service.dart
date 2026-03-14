@@ -79,18 +79,28 @@ class SoundCloudSearcher {
 class MultiSourceSearchService {
   final YouTubeSearcher youtubeSearcher;
   final SoundCloudSearcher soundcloudSearcher;
+  final Duration perSourceTimeout;
+  final Duration globalTimeout;
 
   MultiSourceSearchService({
     required this.youtubeSearcher,
     required this.soundcloudSearcher,
+    this.perSourceTimeout = const Duration(seconds: 5),
+    this.globalTimeout = const Duration(seconds: 10),
   });
 
   /// Search YouTube and SoundCloud in parallel, merge and rank results.
   Future<List<SearchResult>> searchAll(String query, {int limitPerSource = 10}) async {
-    final results = await Future.wait([
-      youtubeSearcher.search(query, limit: limitPerSource),
-      _safeSoundCloudSearch(query, limit: limitPerSource),
-    ]);
+    final per = perSourceTimeout;
+    final global = globalTimeout;
+
+    final futYouTube = youtubeSearcher.search(query, limit: limitPerSource)
+      .timeout(per, onTimeout: () => <SearchResult>[]);
+    final futSoundCloud = _safeSoundCloudSearch(query, limit: limitPerSource)
+      .timeout(per, onTimeout: () => <SearchResult>[]);
+
+    final results = await Future.wait([futYouTube, futSoundCloud])
+      .timeout(global, onTimeout: () => [<SearchResult>[], <SearchResult>[]]);
 
     final combined = results.expand((list) => list).toList();
 

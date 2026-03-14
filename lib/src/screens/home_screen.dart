@@ -290,7 +290,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           onThemeChanged: (mode) => widget.controller.setThemeMode(mode),
         );
       case 12:
-        return const playerPlayerPage(key: ValueKey('player-player'));
+        return const PlayerPage(key: ValueKey('player-player'));
       case 13:
         return QuickLinksPage(
           key: const ValueKey('quick-links-home'),
@@ -2054,8 +2054,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   }),
                 if (item.status == DownloadStatus.completed &&
                     item.outputPath != null &&
-                    !kIsWeb &&
-                    !Platform.isAndroid)
+                    !kIsWeb)
                   _queueAction(
                       Icons.folder_open_rounded,
                       'Folder',
@@ -3143,6 +3142,34 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _showInFolder(String filePath) async {
     if (kIsWeb) return;
     try {
+      if (Platform.isAndroid) {
+        // If this is a content:// URI, try to open the SAF tree via AndroidSaf.
+        if (filePath.startsWith('content://')) {
+          final ok = await _androidSaf.openTree(filePath);
+          if (!ok && mounted) {
+            Snack.show(context, 'Could not open the selected folder.',
+                level: SnackLevel.error);
+          }
+          return;
+        }
+        // For non-content paths on Android, fall back to attempting to open
+        // the download folder tree if available in settings.
+        try {
+          final s = widget.controller.settings;
+          final tree = s?.downloadDir;
+          if (tree != null && tree.startsWith('content://')) {
+            final ok = await _androidSaf.openTree(tree);
+            if (!ok && mounted) {
+              Snack.show(context, 'Could not open the selected folder.',
+                  level: SnackLevel.error);
+            }
+            return;
+          }
+        } catch (_) {}
+
+        // Otherwise fall through to show error below.
+      }
+
       final file = File(filePath);
       final dir = file.parent.path;
       if (Platform.isWindows) {
@@ -3162,8 +3189,21 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _shareFile(String filePath, String title) async {
     try {
+      var pathToShare = filePath;
+      if (!kIsWeb && Platform.isAndroid && filePath.startsWith('content://')) {
+        final temp = await _androidSaf.copyToTemp(uri: filePath);
+        if (temp == null || temp.isEmpty) {
+          if (mounted) {
+            Snack.show(context, 'Could not prepare file for sharing.',
+                level: SnackLevel.error);
+          }
+          return;
+        }
+        pathToShare = temp;
+      }
+
       await SharePlus.instance.share(
-        ShareParams(files: [XFile(filePath)], title: title),
+        ShareParams(files: [XFile(pathToShare)], title: title),
       );
     } catch (e) {
       if (mounted) {

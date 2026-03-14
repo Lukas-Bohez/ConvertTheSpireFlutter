@@ -16,6 +16,7 @@ class DlnaCastService extends CastService {
   CastDevice? _activeDevice;
   String? _activeUrl;
   Timer? _pollTimer;
+  bool _pollingPaused = false;
 
   @override
   List<CastDevice> get discoveredDevices => List.unmodifiable(_devices);
@@ -107,6 +108,7 @@ class DlnaCastService extends CastService {
   }
 
   void _startPolling(DlnaDevice device) {
+    if (_pollingPaused) return;
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       try {
@@ -124,6 +126,27 @@ class DlnaCastService extends CastService {
         }
       } catch (_) {}
     });
+  }
+
+  /// Pause polling (e.g., when app is backgrounded). Polling can be resumed
+  /// later via [resumePolling()]. Safe to call multiple times.
+  void pausePolling() {
+    _pollingPaused = true;
+    _pollTimer?.cancel();
+    _pollTimer = null;
+  }
+
+  /// Resume polling if there is an active device. Does nothing if nothing is
+  /// playing or if polling is not paused.
+  void resumePolling() {
+    if (!_pollingPaused) return;
+    _pollingPaused = false;
+    if (_activeDevice != null) {
+      try {
+        final d = _activeDevice!.nativeHandle as DlnaDevice;
+        _startPolling(d);
+      } catch (_) {}
+    }
   }
 
   @override

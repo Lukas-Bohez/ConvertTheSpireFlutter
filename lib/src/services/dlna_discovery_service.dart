@@ -105,9 +105,14 @@ class DlnaDiscoveryService {
     required Duration timeout,
   }) async {
     final devices = <DlnaDevice>{};
+    RawDatagramSocket? socket;
+    StreamSubscription<RawSocketEvent>? subscription;
+    Timer? timer;
+    final completer = Completer<List<DlnaDevice>>();
+    final pendingParses = <Future<DlnaDevice?>>[];
 
     try {
-      final socket = await RawDatagramSocket.bind(
+      socket = await RawDatagramSocket.bind(
         InternetAddress.anyIPv4,
         0,
         reuseAddress: true,
@@ -141,26 +146,34 @@ class DlnaDiscoveryService {
         _multicastPort,
       );
 
-      final completer = Completer<List<DlnaDevice>>();
-      final pendingParses = <Future<DlnaDevice?>>[];
-
-      socket.listen((event) {
+      subscription = socket.listen((event) {
         if (event == RawSocketEvent.read) {
-          final datagram = socket.receive();
-          if (datagram == null) return;
-          final response = utf8.decode(datagram.data, allowMalformed: true);
-          final future =
-              _parseResponse(response, datagram.address).catchError((e) {
-            debugPrint('DLNA: failed to parse response: $e');
-            return null;
-          });
-          pendingParses.add(future);
+          try {
+            final datagram = socket?.receive();
+            if (datagram == null) return;
+            final response = utf8.decode(datagram.data, allowMalformed: true);
+            final future = _parseResponse(response, datagram.address).catchError((e) {
+              debugPrint('DLNA: failed to parse response: $e');
+              return null;
+            });
+            pendingParses.add(future);
+          } catch (e) {
+            debugPrint('DLNA SSDP read handler error: $e');
+          }
         }
+      }, onError: (e) {
+        debugPrint('DLNA SSDP subscription error: $e');
       });
 
       // Wait for timeout, then await all pending parse operations
-      Timer(timeout, () async {
-        socket.close();
+      timer = Timer(timeout, () async {
+        try {
+          await subscription?.cancel();
+        } catch (_) {}
+        try {
+          socket?.close();
+        } catch (_) {}
+
         final results = await Future.wait(pendingParses);
         for (final device in results) {
           if (device != null) devices.add(device);
@@ -173,6 +186,15 @@ class DlnaDiscoveryService {
       return await completer.future;
     } catch (e) {
       debugPrint('DLNA SSDP discovery error: $e');
+      try {
+        timer?.cancel();
+      } catch (_) {}
+      try {
+        await subscription?.cancel();
+      } catch (_) {}
+      try {
+        socket?.close();
+      } catch (_) {}
       return devices.toList();
     }
   }

@@ -6,6 +6,8 @@ import android.content.ContentValues
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.os.Environment
+import android.media.MediaScannerConnection
 import androidx.documentfile.provider.DocumentFile
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -227,30 +229,58 @@ class MainActivity : FlutterActivity() {
         mimeType: String,
         subdir: String?,
     ): Uri? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        // API 29+ (Q) use MediaStore Downloads (scoped storage)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val relativeBase = if (subdir.isNullOrBlank()) {
+                "Download/ConvertTheSpireReborn"
+            } else {
+                "Download/ConvertTheSpireReborn/$subdir"
+            }
+
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, relativeBase)
+            }
+            val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+            val uri = contentResolver.insert(collection, values) ?: return null
+
+            contentResolver.openOutputStream(uri, "w")?.use { output ->
+                FileInputStream(File(sourcePath)).use { input ->
+                    input.copyTo(output)
+                }
+            } ?: return null
+
+            return uri
+        }
+
+        // Fallback for API < 29: write directly to the public Downloads folder.
+        try {
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val baseDir = if (subdir.isNullOrBlank()) {
+                File(downloadsDir, "ConvertTheSpireReborn")
+            } else {
+                File(downloadsDir, "ConvertTheSpireReborn/$subdir")
+            }
+            if (!baseDir.exists()) baseDir.mkdirs()
+            val destFile = File(baseDir, displayName)
+            if (destFile.exists()) destFile.delete()
+
+            FileInputStream(File(sourcePath)).use { input ->
+                destFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            // Try to notify media scanner so the file appears in Downloads/Media
+            try {
+                MediaScannerConnection.scanFile(this, arrayOf(destFile.absolutePath), arrayOf(mimeType), null)
+            } catch (_: Exception) {
+            }
+
+            return Uri.fromFile(destFile)
+        } catch (e: Exception) {
             return null
         }
-
-        val relativeBase = if (subdir.isNullOrBlank()) {
-            "Download/ConvertTheSpireReborn"
-        } else {
-            "Download/ConvertTheSpireReborn/$subdir"
-        }
-
-        val values = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
-            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, relativeBase)
-        }
-        val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
-        val uri = contentResolver.insert(collection, values) ?: return null
-
-        contentResolver.openOutputStream(uri, "w")?.use { output ->
-            FileInputStream(File(sourcePath)).use { input ->
-                input.copyTo(output)
-            }
-        } ?: return null
-
-        return uri
     }
 }

@@ -88,12 +88,24 @@ Map<String, dynamic> _sha256Batch(Map<String, dynamic> payload) {
 /// Prime search: find all primes in [start, end].
 Map<String, dynamic> _primeSearch(Map<String, dynamic> payload) {
   final start = (payload['start'] as num?)?.toInt() ?? 2;
-  final end = (payload['end'] as num?)?.toInt() ?? 1000;
-  final primes = <int>[];
+  final rawEnd = (payload['end'] as num?)?.toInt() ?? 1000;
+  // Ensure end is within sanitized bounds (caller/sanitizer may already clamp).
+  final end = rawEnd.clamp(start, start + 500000);
+
+  int count = 0;
+  int largest = 0;
   for (int n = start.clamp(2, end); n <= end; n++) {
-    if (_isPrime(n)) primes.add(n);
+    if (_isPrime(n)) {
+      count++;
+      largest = n;
+    }
   }
-  return {'primes': primes, 'count': primes.length};
+
+  return {
+    'count': count,
+    'range': '$start-$end',
+    'largest_prime': largest,
+  };
 }
 
 bool _isPrime(int n) {
@@ -175,6 +187,21 @@ Map<String, dynamic> _runJobSync(ComputeJob job) {
       return _crc32Verify(job.payload);
     case ComputeJobType.qubicMining:
       return _qubicMining(job.payload);
+  }
+}
+
+/// Isolate entrypoint used by [_runJobWithTimeout]. Receives a 2-element
+/// list: [SendPort, Map<String, dynamic> jobJson]. Sends back a Map with
+/// either {'result': <map>} or {'error': <message>}.
+void _isolateEntry(List<dynamic> msg) {
+  final SendPort sendPort = msg[0] as SendPort;
+  final Map<String, dynamic> jobJson = Map<String, dynamic>.from(msg[1] as Map);
+  try {
+    final job = ComputeJob.fromJson(jobJson);
+    final res = _runJobSync(job);
+    sendPort.send({'result': res});
+  } catch (e) {
+    sendPort.send({'error': e.toString()});
   }
 }
 
@@ -262,6 +289,7 @@ class ComputationService {
   int _activeCount = 0;
   bool _enabled = false;
   final _queue = <ComputeJob>[];
+  int _maxQueueSize = 200;
   final _results = <ComputeResult>[];
 
   /// Currently running job IDs (for UI display).
@@ -284,6 +312,16 @@ class ComputationService {
   ComputationService({int maxConcurrent = 2})
       : _maxConcurrent = maxConcurrent.clamp(1, 4);
 
+  /// Configure maximum queued jobs (safety cap). Default 200.
+  void setMaxQueueSize(int value) {
+    _maxQueueSize = value.clamp(10, 10000);
+    // If queue is larger than new cap, drop oldest entries.
+    if (_queue.length > _maxQueueSize) {
+      final drop = _queue.length - _maxQueueSize;
+      _queue.removeRange(0, drop);
+    }
+  }
+
   void setMaxConcurrent(int value) {
     _maxConcurrent = value.clamp(1, 4);
     _processQueue();
@@ -300,9 +338,80 @@ class ComputationService {
   /// Enqueue a job for execution.
   void enqueue(ComputeJob job) {
     if (!_enabled) return;
-    _queue.add(job);
-    debugPrint('ComputationService: enqueued job ${job.id} (${job.type.name})');
+    // Cap queue size; reject new jobs when full to prevent OOM/DoS.
+    if (_queue.length >= _maxQueueSize) {
+      debugPrint(
+          'ComputationService: queue full (size=$_maxQueueSize), rejecting ${job.id}');
+      // Emit an immediate error result so callers get feedback.
+      final res = ComputeResult(
+        jobId: job.id,
+        type: job.type,
+        result: {'error': 'queue_full'},
+        elapsed: const Duration(milliseconds: 0),
+      );
+      _results.add(res);
+      if (!_resultStream.isClosed) _resultStream.add(res);
+      return;
+    }
+
+    final safeJob = _sanitizeJob(job);
+    _queue.add(safeJob);
+    debugPrint('ComputationService: enqueued job ${safeJob.id} (${safeJob.type.name})');
     _processQueue();
+  }
+
+  /// Sanitize job payloads to clamp expensive parameters to safe ranges.
+  ComputeJob _sanitizeJob(ComputeJob job) {
+    final payload = Map<String, dynamic>.from(job.payload);
+    switch (job.type) {
+      case ComputeJobType.sha256Batch:
+        final inputs = (payload['inputs'] as List?)?.cast<String>() ?? [];
+        if (inputs.length > 500) payload['inputs'] = inputs.sublist(0, 500);
+        break;
+      case ComputeJobType.primeSearch:
+        final start = (payload['start'] as num?)?.toInt() ?? 2;
+        var end = (payload['end'] as num?)?.toInt() ?? (start + 1000);
+        // Clamp reasonable range length to avoid long loops.
+        if (end < start) end = start;
+        final maxRange = 100000; // max numbers to test
+        if (end - start > maxRange) end = start + maxRange;
+        payload['start'] = start.clamp(2, 1 << 30);
+        payload['end'] = end.clamp(payload['start'], payload['start'] + maxRange);
+        break;
+      case ComputeJobType.matrixMultiply:
+        // Limit matrix dimensions to 64x64 to avoid huge CPU/memory work.
+        try {
+          final a = (payload['a'] as List?) ?? [];
+          final n = a.length;
+          if (n > 64) payload['a'] = a.sublist(0, 64);
+          final b = (payload['b'] as List?) ?? [];
+          if (b.isNotEmpty && (b[0] as List).length > 64) {
+            payload['b'] = b.map((r) => (r as List).sublist(0, 64)).toList();
+          }
+        } catch (_) {}
+        break;
+      case ComputeJobType.crc32Verify:
+        final data = payload['data'] as String? ?? '';
+        // Limit to 1MB of input data.
+        if (utf8.encode(data).length > 1 << 20) {
+          payload['data'] = utf8.decode(utf8.encode(data).sublist(0, 1 << 20));
+        }
+        break;
+      case ComputeJobType.qubicMining:
+        var difficulty = (payload['difficulty'] as num?)?.toInt() ?? 16;
+        var maxIterations = (payload['max_iterations'] as num?)?.toInt() ?? 500000;
+        difficulty = difficulty.clamp(0, 24);
+        maxIterations = maxIterations.clamp(1, 1000000);
+        payload['difficulty'] = difficulty;
+        payload['max_iterations'] = maxIterations;
+        break;
+    }
+    return ComputeJob(
+      id: job.id,
+      type: job.type,
+      payload: payload,
+      receivedAt: job.receivedAt,
+    );
   }
 
   /// Process queued jobs up to the concurrency limit.
@@ -320,7 +429,8 @@ class ComputationService {
 
     final sw = Stopwatch()..start();
     try {
-      final resultData = await Isolate.run(() => _runJobSync(job));
+      final timeout = _jobTimeouts[job.type] ?? const Duration(seconds: 10);
+      final resultData = await _runJobWithTimeout(job, timeout);
       sw.stop();
 
       final result = ComputeResult(
@@ -350,6 +460,41 @@ class ComputationService {
       runningJobIds.remove(job.id);
       onStateChanged?.call();
       _processQueue();
+    }
+  }
+
+  // Default per-job timeouts. Tuned to keep long-running tasks bounded.
+  static const Map<ComputeJobType, Duration> _jobTimeouts = {
+    ComputeJobType.sha256Batch: Duration(seconds: 5),
+    ComputeJobType.primeSearch: Duration(seconds: 10),
+    ComputeJobType.matrixMultiply: Duration(seconds: 10),
+    ComputeJobType.crc32Verify: Duration(seconds: 5),
+    ComputeJobType.qubicMining: Duration(seconds: 15),
+  };
+
+  /// Spawn an isolate to run [job] and enforce [timeout]. If the job times
+  /// out, the isolate is killed and an error is returned.
+  Future<Map<String, dynamic>> _runJobWithTimeout(ComputeJob job, Duration timeout) async {
+    final rp = ReceivePort();
+    Isolate? isolate;
+    try {
+      isolate = await Isolate.spawn(_isolateEntry, [rp.sendPort, job.toJson()]);
+      final msg = await rp.first.timeout(timeout);
+      if (msg is Map && msg.containsKey('result')) {
+        return Map<String, dynamic>.from(msg['result'] as Map);
+      } else if (msg is Map && msg.containsKey('error')) {
+        throw Exception(msg['error']);
+      } else {
+        throw Exception('Unexpected isolate response');
+      }
+    } on TimeoutException catch (_) {
+      // Kill the isolate if still running.
+      try {
+        isolate?.kill(priority: Isolate.immediate);
+      } catch (_) {}
+      throw Exception('job_timeout');
+    } finally {
+      rp.close();
     }
   }
 

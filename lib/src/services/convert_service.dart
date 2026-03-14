@@ -20,10 +20,18 @@ class ConvertService {
 
   Future<ConvertResult> convertFile(File input, String target, {required String? ffmpegPath}) async {
     final targetLower = target.toLowerCase().replaceAll('.', '');
-    final inputBytes = Uint8List.fromList(await input.readAsBytes());
     final inputName = _sanitizeFileName(input.uri.pathSegments.last);
     final baseName = _stripExtension(inputName);
     final inputExt = _getExtension(inputName).toLowerCase();
+
+    // Avoid reading the entire file into memory for media conversions;
+    // FFmpeg can operate on file paths directly.
+    if (_isMediaTarget(targetLower)) {
+      return _convertMedia(input, targetLower, baseName, ffmpegPath: ffmpegPath);
+    }
+
+    // For other conversions we need the bytes; read them on demand.
+    final inputBytes = Uint8List.fromList(await input.readAsBytes());
 
     if (targetLower == 'zip' || targetLower == 'cbz') {
       return _zipBytes(inputBytes, '$baseName.$targetLower', inputName);
@@ -39,10 +47,6 @@ class ConvertService {
 
     if (_isImageTarget(targetLower)) {
       return _convertImage(inputBytes, targetLower, baseName);
-    }
-
-    if (_isMediaTarget(targetLower)) {
-      return _convertMedia(input, targetLower, baseName, ffmpegPath: ffmpegPath);
     }
 
     if (targetLower == 'txt') {

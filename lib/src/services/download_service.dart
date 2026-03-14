@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+import 'package:characters/characters.dart';
 
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
@@ -1384,7 +1385,26 @@ class DownloadService {
     result = result.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '_');
     // Trim whitespace and dots from ends (Windows doesn't like trailing dots)
     result = result.trim().replaceAll(RegExp(r'\.+$'), '');
-    return result.isEmpty ? 'download' : result;
+
+    // Truncate overly long filenames while preserving the extension.
+    const int maxBaseChars = 120;
+    if (result.isEmpty) return 'download';
+
+    final parts = result.split('.');
+    String extension = '';
+    String base = result;
+    if (parts.length > 1) {
+      extension = '.${parts.removeLast()}';
+      base = parts.join('.');
+    }
+
+    if (base.characters.length > maxBaseChars) {
+      final keep = maxBaseChars - 3; // reserve room for ellipsis
+      base = '${base.characters.take(keep).toString()}...';
+    }
+
+    final sanitized = '$base$extension';
+    return sanitized.isEmpty ? 'download' : sanitized;
   }
 
   Future<void> _safeDelete(String path) async {

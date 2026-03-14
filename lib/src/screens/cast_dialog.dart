@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../utils/snack.dart';
+
+import 'dart:io' show File, Platform;
 
 import '../services/dlna_control_service.dart';
 import '../services/dlna_discovery_service.dart';
 import '../services/local_media_server.dart';
+import '../services/platform_dirs.dart';
 
 /// A dialog that discovers DLNA devices on the network and allows the user
 /// to cast a local media file to a selected device.
@@ -50,6 +54,7 @@ class _CastDialogState extends State<CastDialog> {
   final DlnaDiscoveryService _discovery = DlnaDiscoveryService();
   final DlnaControlService _control = DlnaControlService();
   final LocalMediaServer _server = LocalMediaServer();
+  String? _tempServedPath;
 
   List<DlnaDevice>? _devices;
   bool _scanning = false;
@@ -125,9 +130,20 @@ class _CastDialogState extends State<CastDialog> {
         );
       }
 
-      // 2. Start the local HTTP server
+      // 2. Prepare file for serving: if on Android and the path is a
+      // content:// URI (SAF/MediaStore), copy it into cache so dart:io can
+      // stream it to DLNA devices.
+      String servePath = widget.filePath;
+      if (!kIsWeb && Platform.isAndroid && servePath.startsWith('content://')) {
+        final copied = await PlatformDirs.copyToTemp(servePath);
+        if (copied == null) throw Exception('Failed to prepare file for casting');
+        servePath = copied;
+        _tempServedPath = copied;
+      }
+
+      // 3. Start the local HTTP server
       final mediaUrl = await _server.serve(
-        filePath: widget.filePath,
+        filePath: servePath,
         localIp: localIp,
       );
 
@@ -251,10 +267,17 @@ class _CastDialogState extends State<CastDialog> {
                 const SizedBox(width: 16),
                 IconButton(
                   icon: const Icon(Icons.stop_circle, size: 40),
-                  onPressed: () async {
+                    onPressed: () async {
                     try {
                       await _control.stop(device);
                       await _server.stop();
+                      if (_tempServedPath != null) {
+                        try {
+                          final f = File(_tempServedPath!);
+                          if (await f.exists()) await f.delete();
+                        } catch (_) {}
+                        _tempServedPath = null;
+                      }
                     } catch (_) {}
                     if (ctx.mounted) Navigator.pop(ctx);
                   },
@@ -269,6 +292,13 @@ class _CastDialogState extends State<CastDialog> {
               try {
                 await _control.stop(device);
                 await _server.stop();
+                if (_tempServedPath != null) {
+                  try {
+                    final f = File(_tempServedPath!);
+                    if (await f.exists()) await f.delete();
+                  } catch (_) {}
+                  _tempServedPath = null;
+                }
               } catch (_) {}
               if (ctx.mounted) Navigator.pop(ctx);
             },
