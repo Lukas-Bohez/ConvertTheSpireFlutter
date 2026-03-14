@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/browser_db.dart';
+import '../../utils/screenshot_helper.dart';
 
 /// Premium "New Tab" page with search bar, quick-access tiles,
 /// favourites horizontal scroll, and recent history.
@@ -23,12 +24,21 @@ class _NewTabPageState extends State<NewTabPage> {
   List<Map<String, dynamic>> _recentSites = [];
   List<Map<String, dynamic>> _favourites = [];
   List<Map<String, dynamic>> _recentHistory = [];
+  final GlobalKey _repaintKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     _load();
     widget.repo.addListener(_load);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Capture a one-off screenshot of the NewTabPage for QA.
+      try {
+        await Future.delayed(const Duration(milliseconds: 300));
+        await ScreenshotHelper.captureToFile(
+            _repaintKey, 'results/screenshots/new_tab_page.png');
+      } catch (_) {}
+    });
   }
 
   @override
@@ -66,7 +76,11 @@ class _NewTabPageState extends State<NewTabPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final quickAccessSites = _recentSites.isNotEmpty ? _recentSites : _defaultSites;
-    return CustomScrollView(
+    return Material(
+      color: cs.surface,
+      child: RepaintBoundary(
+        key: _repaintKey,
+        child: CustomScrollView(
       slivers: [
         const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
@@ -238,6 +252,8 @@ class _NewTabPageState extends State<NewTabPage> {
 
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
+    ),
+      ),
     );
   }
 
