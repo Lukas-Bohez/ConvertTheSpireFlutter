@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -16,6 +17,10 @@ class MusicBrainzService {
   // Simple in-memory cache to avoid hammering MusicBrainz for repeated queries
   final Map<String, _CacheEntry<TrackMetadata?>> _mbCache = {};
   final Duration _mbCacheTtl = const Duration(hours: 6);
+  // Rate limiter: allow 1 request per second across the service
+  static const Duration _mbRateInterval = Duration(seconds: 1);
+  DateTime _mbNextAllowed = DateTime.fromMillisecondsSinceEpoch(0);
+  Future<void> _mbQueue = Future.value();
 
   /// Search for metadata by artist + title.
   Future<TrackMetadata?> searchTrack(String artist, String title) async {
@@ -30,10 +35,11 @@ class MusicBrainzService {
       final query = Uri.encodeComponent('artist:"$artist" AND recording:"$title"');
       final url = '$_baseUrl/recording/?query=$query&fmt=json&limit=5';
 
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {'User-Agent': _userAgent},
-      ).timeout(const Duration(seconds: 15));
+      final response = await _withMbRateLimit(() {
+        return http
+            .get(Uri.parse(url), headers: {'User-Agent': _userAgent})
+            .timeout(const Duration(seconds: 15));
+      });
       if (response.statusCode != 200) return null;
 
       final data = jsonDecode(response.body);
@@ -59,6 +65,27 @@ class MusicBrainzService {
     }
   }
 
+  // Serialize requests to MusicBrainz and ensure at most one request per
+  // `_mbRateInterval`. This uses a simple Future-chain queue so concurrent
+  // callers are spaced correctly without external packages.
+  Future<T> _withMbRateLimit<T>(Future<T> Function() fn) {
+    final completer = Completer<T>();
+    _mbQueue = _mbQueue.then((_) async {
+      final now = DateTime.now();
+      if (now.isBefore(_mbNextAllowed)) {
+        await Future.delayed(_mbNextAllowed.difference(now));
+      }
+      _mbNextAllowed = DateTime.now().add(_mbRateInterval);
+      try {
+        final res = await fn();
+        completer.complete(res);
+      } catch (e, st) {
+        completer.completeError(e, st);
+      }
+    });
+    return completer.future;
+  }
+
   int? _extractYear(String? date) {
     if (date == null || date.isEmpty) return null;
     return int.tryParse(date.split('-').first);
@@ -73,10 +100,11 @@ class MusicBrainzService {
     }
     final url = '$_baseUrl/recording/$recordingId?inc=genres&fmt=json';
     try {
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {'User-Agent': _userAgent},
-      ).timeout(const Duration(seconds: 10));
+      final response = await _withMbRateLimit(() {
+        return http
+            .get(Uri.parse(url), headers: {'User-Agent': _userAgent})
+            .timeout(const Duration(seconds: 10));
+      });
       if (response.statusCode != 200) return null;
       final data = jsonDecode(response.body);
       final genres = data['genres'] as List?;
@@ -153,6 +181,10 @@ class LyricsService {
   // Cache lyrics per track to avoid repeated fetching and rate-limit API usage
   final Map<String, _CacheEntry<String?>> _lyricsCache = {};
   final Duration _lyricsCacheTtl = const Duration(hours: 24);
+  // Rate limiter for lyrics API: 1 request per second
+  static const Duration _lyricsRateInterval = Duration(seconds: 1);
+  DateTime _lyricsNextAllowed = DateTime.fromMillisecondsSinceEpoch(0);
+  Future<void> _lyricsQueue = Future.value();
 
   /// Fetch lyrics (prefer synced/LRC, fallback to plain).
   Future<String?> fetchLyrics(String artist, String title, {int? durationSeconds}) async {
@@ -171,8 +203,9 @@ class LyricsService {
 
     final uri = Uri.parse('$_baseUrl/get').replace(queryParameters: params);
     try {
-      final response = await http.get(uri)
-          .timeout(const Duration(seconds: 10));
+      final response = await _withLyricsRateLimit(() {
+        return http.get(uri).timeout(const Duration(seconds: 10));
+      });
       if (response.statusCode != 200) return null;
 
       final data = jsonDecode(response.body);
@@ -185,6 +218,24 @@ class LyricsService {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<T> _withLyricsRateLimit<T>(Future<T> Function() fn) {
+    final completer = Completer<T>();
+    _lyricsQueue = _lyricsQueue.then((_) async {
+      final now = DateTime.now();
+      if (now.isBefore(_lyricsNextAllowed)) {
+        await Future.delayed(_lyricsNextAllowed.difference(now));
+      }
+      _lyricsNextAllowed = DateTime.now().add(_lyricsRateInterval);
+      try {
+        final res = await fn();
+        completer.complete(res);
+      } catch (e, st) {
+        completer.completeError(e, st);
+      }
+    });
+    return completer.future;
   }
 
   /// Save lyrics as a .lrc sidecar file next to the audio file.

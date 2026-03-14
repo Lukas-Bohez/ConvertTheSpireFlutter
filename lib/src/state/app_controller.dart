@@ -939,6 +939,9 @@ class AppController extends ChangeNotifier {
   void dispose() {
     watchedPlaylistService.dispose();
     previewPlayer.dispose();
+    try {
+      youtube.close();
+    } catch (_) {}
     super.dispose();
   }
 }
