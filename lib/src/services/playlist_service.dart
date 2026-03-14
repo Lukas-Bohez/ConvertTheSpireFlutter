@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
@@ -9,13 +10,40 @@ import '../models/search_result.dart';
 class PlaylistService {
   final YoutubeExplode _yt;
 
+  // Safety caps for playlist expansion
+  static const int _defaultMaxPlaylistVideos = 500;
+  static const Duration _playlistStreamTimeout = Duration(seconds: 10);
+
   PlaylistService({required YoutubeExplode yt}) : _yt = yt;
 
   // ─── YouTube playlists ───────────────────────────────────────────────────
 
-  Future<List<SearchResult>> getYouTubePlaylistTracks(String playlistUrl) async {
+  Future<List<SearchResult>> getYouTubePlaylistTracks(String playlistUrl, {int? maxVideos}) async {
     final playlistId = PlaylistId(playlistUrl);
-    final videos = await _yt.playlists.getVideos(playlistId).toList();
+    final cap = maxVideos ?? _defaultMaxPlaylistVideos;
+    final videos = <Video>[];
+
+    try {
+      final stream = _yt.playlists.getVideos(playlistId).timeout(_playlistStreamTimeout);
+      await for (final video in stream) {
+        videos.add(video);
+        if (videos.length >= cap) break;
+      }
+    } on TimeoutException catch (_) {
+      // Stream stalled; return whatever we've collected so far
+    } catch (_) {
+      // Other errors — return whatever we have (or empty list)
+      return videos.map((video) {
+        return SearchResult(
+          id: video.id.value,
+          title: video.title,
+          artist: video.author,
+          duration: video.duration ?? Duration.zero,
+          thumbnailUrl: video.thumbnails.mediumResUrl,
+          source: 'youtube',
+        );
+      }).toList();
+    }
 
     return videos.map((video) {
       return SearchResult(

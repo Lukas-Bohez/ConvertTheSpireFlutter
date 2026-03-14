@@ -3,7 +3,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart'
-    show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
+  show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -1434,6 +1434,18 @@ class _BrowserScreenState extends State<BrowserScreen>
     // Release WebView focus so Windows WebView2 doesn't capture clicks
     // intended for the upcoming overlay/sheet.
     _releaseWebViewFocus();
+    // Kick off background screenshot captures for live WebViews so the
+    // tab switcher can show thumbnails. Fail silently — this is best-effort.
+    for (final tab in _tabManager.tabs) {
+      try {
+        final ctrl = _controllers[tab.id];
+        if (ctrl != null) {
+          ctrl.takeScreenshot().then((bytes) {
+            if (bytes != null) _tabManager.setScreenshot(tab.id, bytes);
+          }).catchError((_) {});
+        }
+      } catch (_) {}
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

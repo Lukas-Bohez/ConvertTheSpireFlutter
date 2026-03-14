@@ -77,18 +77,44 @@ class BulkImportService {
   List<List<dynamic>> _parseCsv(String text) {
     final lines = text.split('\n');
     final rows = <List<dynamic>>[];
-    final reg = RegExp(r',(?=(?:[^\"]*\"[^\"]*\")*[^\"]*\$)');
     for (final line in lines) {
       if (line.trim().isEmpty) continue;
-      final parts = line.split(reg).map((s) {
-        var v = s.trim();
-        if (v.startsWith('"') && v.endsWith('"') && v.length >= 2) {
-          v = v.substring(1, v.length - 1).replaceAll('""', '"');
-        }
-        return v;
-      }).toList();
-      rows.add(parts);
+      rows.add(_splitCsvLine(line));
     }
     return rows;
+  }
+
+  // Safe, linear-time CSV line splitter that handles quoted fields and
+  // doubled-quote escapes. Avoids catastrophic backtracking from regexes.
+  List<String> _splitCsvLine(String line) {
+    final fields = <String>[];
+    final sb = StringBuffer();
+    var inQuotes = false;
+    for (var i = 0; i < line.length; i++) {
+      final ch = line[i];
+      if (ch == '"') {
+        if (inQuotes && i + 1 < line.length && line[i + 1] == '"') {
+          sb.write('"');
+          i++; // skip escaped quote
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch == ',' && !inQuotes) {
+        fields.add(sb.toString().trim());
+        sb.clear();
+      } else {
+        sb.write(ch);
+      }
+    }
+    fields.add(sb.toString().trim());
+    // Unwrap surrounding quotes if present
+    for (var j = 0; j < fields.length; j++) {
+      var v = fields[j];
+      if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) {
+        v = v.substring(1, v.length - 1).replaceAll('""', '"');
+      }
+      fields[j] = v;
+    }
+    return fields;
   }
 }
