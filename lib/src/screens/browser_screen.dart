@@ -1,18 +1,14 @@
-// 'dart:typed_data' not needed; removed to satisfy analyzer.
-import 'dart:async';
 import 'dart:io';
+// 'dart:typed_data' is not required; Uint8List is available via flutter services import
 
-import 'package:flutter/foundation.dart'
-  show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import '../utils/screenshot_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../utils/snack.dart';
-import '../widgets/browser_shell.dart';
 
 import '../browser/adblock/adblock_service.dart';
 import '../browser/cast/cast_service.dart';
@@ -22,8 +18,6 @@ import '../browser/video/video_detector_service.dart';
 import '../data/browser_db.dart';
 import '../services/download_service.dart';
 import '../models/search_result.dart';
-import '../models/preview_item.dart';
-import '../state/app_controller.dart';
 import 'browser/browser_bottom_bar.dart';
 import 'browser/browser_toolbar.dart';
 import 'browser/cast/cast_picker_sheet.dart';
@@ -51,30 +45,19 @@ class BrowserScreen extends StatefulWidget {
 }
 
 class _BrowserScreenState extends State<BrowserScreen>
-  with
-    AutomaticKeepAliveClientMixin<BrowserScreen>,
-    TickerProviderStateMixin,
-    WidgetsBindingObserver {
-  // Maximum simultaneous tabs. Each live tab holds a WebView2 process;
-  // on low-RAM machines, more than a handful causes OOM crashes.
-  static const int _maxTabs = 5;
-
+    with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   // ── Services ──
   final BrowserRepository _repo = BrowserRepository();
   final AdBlockService _adBlock = AdBlockService();
   final UnifiedCastService _castService = UnifiedCastService();
   final TabManager _tabManager = TabManager();
-  final Map<String, InAppWebViewController> _controllers = {};
-  final Set<String> _mountedWebViews = {}; // track webview mount state
   VideoDetectorService _videoDetector = VideoDetectorService();
 
   InAppWebViewController? _webViewController;
   FindInteractionController? _findInteractionController;
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _findController = TextEditingController();
-  // Missing state fields reintroduced
-  late AnimationController _castBadgeController;
-  bool _createWebView = false;
+
   bool _isLoading = false;
   double _progress = 0;
   String _pageTitle = '';
@@ -84,36 +67,84 @@ class _BrowserScreenState extends State<BrowserScreen>
   bool _desktopMode = false;
   bool _showNewTabPage = true;
   bool _isFavourited = false;
-  bool _isSwitchingTab = false;
+  String _searchEngine = 'DuckDuckGo';
+
+  // Find-in-page state
   bool _showFindBar = false;
   int _findMatchCount = 0;
   int _findActiveIndex = 0;
-  bool _isDownloading = false;
-  String? _downloadError;
-  bool get _webViewSupported {
-    if (kIsWeb) return false;
-    if (defaultTargetPlatform == TargetPlatform.windows) {
-      try {
-        final ctrl = Provider.of<AppController>(context, listen: false);
-        return ctrl.webViewEnvironment != null;
-      } catch (e) {
-        debugPrint('[BROWSER] webViewSupported check failed: $e');
-        return false;
-      }
+
+  // Pending URL — loaded once the WebView controller is ready.
+  String? _pendingUrl;
+
+  // Cast badge animation
+  late final AnimationController _castBadgeController;
+
+  /// True when the platform supports an in-app WebView.
+  bool get _webViewSupported => !kIsWeb && !Platform.isLinux;
+
+  @override
+  void initState() {
+    super.initState();
+    _adBlock.init();
+    _castService.startDiscovery();
+    _castBadgeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    try {
+      _findInteractionController = FindInteractionController(
+        onFindResultReceived:
+            (controller, activeMatchOrdinal, numberOfMatches, isDoneCounting) {
+          if (isDoneCounting) {
+            if (mounted) {
+              setState(() {
+                _findMatchCount = numberOfMatches;
+                _findActiveIndex = activeMatchOrdinal;
+              });
+            }
+          }
+        },
+      );
+    } catch (e) {
+      if (kDebugMode) debugPrint('[BROWSER] FindInteractionController not supported: $e');
+      _findInteractionController = null;
     }
-    return true;
+    _videoDetector.addListener(_onVideoDetectorChanged);
+    _castService.addListener(_onCastChanged);
+    _loadPrefs();
+    if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
+      _showNewTabPage = false;
+      _pendingUrl = widget.initialUrl;
+    }
   }
 
-  String _searchEngine = 'DuckDuckGo';
-  // Horizontal tab strip removed — the toolbar tab button
-  // and the tab switcher sheet provide a consistent UX.
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _searchEngine = prefs.getString('browser_search_engine') ?? 'DuckDuckGo';
+      _desktopMode = prefs.getBool('browser_desktop_mode') ?? false;
+    });
+  }
+
+  void _onVideoDetectorChanged() {
+    if (_videoDetector.hasVideos) {
+      if (!_castBadgeController.isAnimating) {
+        _castBadgeController.repeat(reverse: true);
+      }
+    } else {
+      _castBadgeController.stop();
+      _castBadgeController.value = 0;
+    }
+    if (mounted) setState(() {});
+  }
+
+  void _onCastChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    // Tear down ad-block service to stop background fetch/isolate work.
-    try {
-      _adBlock.dispose();
-    } catch (_) {}
     _castBadgeController.dispose();
     _videoDetector.removeListener(_onVideoDetectorChanged);
     _castService.removeListener(_onCastChanged);
@@ -122,112 +153,22 @@ class _BrowserScreenState extends State<BrowserScreen>
     _findController.dispose();
     _castService.dispose();
     _videoDetector.dispose();
-    // Dispose all webview controllers safely.
-    disposeAllWebViewControllers();
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
+  /// Dispose any active WebView controllers (used during app shutdown).
+  Future<void>? disposeAllWebViewControllers() async {
     try {
-      if (state == AppLifecycleState.paused ||
-          state == AppLifecycleState.inactive ||
-          state == AppLifecycleState.detached) {
+      if (_webViewController != null) {
         try {
-          _castService.pausePolling();
+          await _webViewController!.stopLoading();
         } catch (_) {}
-      } else if (state == AppLifecycleState.resumed) {
         try {
-          _castService.resumePolling();
+          await _webViewController!
+              .loadUrl(urlRequest: URLRequest(url: WebUri('about:blank')));
         } catch (_) {}
       }
     } catch (_) {}
-  }
-
-  /// Dispose all held InAppWebView controllers. Public so external
-  /// callers (e.g. window close handler) can force-dispose before
-  /// the process exits to avoid WinRT DLL unload ordering hangs.
-  Future<void> disposeAllWebViewControllers() async {
-    try {
-      for (final entry in _controllers.entries) {
-        final id = entry.key;
-        final c = entry.value;
-        try {
-          c.stopLoading();
-        } catch (_) {}
-        // Only dispose controllers that were successfully created/mounted.
-        if (_mountedWebViews.contains(id)) {
-          try {
-            // Dispose is synchronous; wrap in a microtask to yield to the
-            // event loop so platform teardown can progress.
-            await Future.microtask(() => c.dispose());
-          } catch (_) {}
-        }
-      }
-    } catch (_) {}
-    _controllers.clear();
-    _mountedWebViews.clear();
-    _webViewController = null;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _castBadgeController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 300));
-    // Initialize ad-block (loads cached blocklist and refreshes in background)
-    try {
-      _adBlock.init();
-    } catch (_) {}
-    _videoDetector.addListener(_onVideoDetectorChanged);
-    _castService.addListener(_onCastChanged);
-    // Start cast discovery; stopDiscovery() is called in dispose().
-    unawaited(_castService.startDiscovery());
-    try {
-      _findInteractionController = FindInteractionController();
-    } catch (_) {
-      _findInteractionController = null;
-    }
-    // Listen for tab manager changes to update active controller and UI
-    _tabManager.addListener(_onTabManagerChanged);
-    // Always mount the WebView tree so new tabs get controllers created
-    _createWebView = true;
-  }
-
-  void _releaseWebViewFocus() {
-    // Forces WebView2 to release pointer capture on Windows
-    FocusScope.of(context).unfocus();
-    // Small delay to allow Windows message pump to process the focus change
-    Future.microtask(() {
-      if (mounted) FocusScope.of(context).unfocus();
-    });
-  }
-
-  void _onTabManagerChanged() {
-    final active = _tabManager.activeTab;
-    final ctrl = active != null ? _controllers[active.id] : null;
-    setState(() {
-      _showNewTabPage = (active?.url.isEmpty ?? true);
-      _isSwitchingTab = !_showNewTabPage && _controllers[active?.id ?? ''] == null;
-      _webViewController = ctrl;
-      if (ctrl != null && active?.url.isNotEmpty == true) {
-        _addressController.text = active!.url;
-        _pageTitle = active.title;
-      } else if (ctrl == null && active?.url.isNotEmpty == true) {
-        // Ensure a WebView is created for this tab and schedule loading.
-        _createWebView = true;
-      }
-    });
-  }
-
-  void _onVideoDetectorChanged() {
-    if (mounted) setState(() {});
-  }
-
-  void _onCastChanged() {
-    if (mounted) setState(() {});
   }
 
   @override
@@ -241,7 +182,8 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       return trimmed;
     }
-    final domainPattern = RegExp(r'^[^\s]+\.[a-zA-Z]{2,}(:\d+)?([/?#].*)?$');
+    final domainPattern =
+        RegExp(r'^[^\s]+\.[a-zA-Z]{2,}(:\d+)?([/?#].*)?$');
     if (domainPattern.hasMatch(trimmed)) return 'https://$trimmed';
     final ipPattern =
         RegExp(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?(/.*)?$');
@@ -263,31 +205,15 @@ class _BrowserScreenState extends State<BrowserScreen>
     setState(() {
       _showNewTabPage = false;
       _isFavourited = false;
-      final activeId = _tabManager.activeTab?.id ?? '';
-      _isSwitchingTab = _controllers[activeId] == null;
     });
     _addressController.text = normalized;
-    // Ensure the WebView is created when the user navigates.
-    _createWebView = true;
 
-    final active = _tabManager.activeTab;
-    if (active != null) {
-      _tabManager.updateTab(active.id, url: normalized, isLoading: true);
-      final ctrl = _controllers[active.id];
-      if (ctrl != null) {
-        ctrl.loadUrl(urlRequest: URLRequest(url: WebUri(normalized)));
-      } else {
-        // pending: stored in tab model url field
-      }
+    if (_webViewController != null) {
+      _webViewController!
+          .loadUrl(urlRequest: URLRequest(url: WebUri(normalized)));
+    } else {
+      _pendingUrl = normalized;
     }
-
-    // Safety net: if _isSwitchingTab is still true after 3 seconds,
-    // the load event was missed — clear it unconditionally.
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted && _isSwitchingTab) {
-        setState(() => _isSwitchingTab = false);
-      }
-    });
   }
 
   void _onNewTabPageNavigate(String url) => _navigateTo(url);
@@ -316,7 +242,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       cacheEnabled: true,
       mediaPlaybackRequiresUserGesture: false,
       allowsInlineMediaPlayback: true,
-      useHybridComposition: false,
+      useHybridComposition: true,
       transparentBackground: false,
       useShouldInterceptRequest: true,
       supportZoom: true,
@@ -330,9 +256,50 @@ class _BrowserScreenState extends State<BrowserScreen>
       incognito: _tabManager.activeTab?.isIncognito ?? false,
       userAgent: _desktopMode
           ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-              '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+            '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
           : null,
     );
+  }
+
+  void _onWebViewCreated(InAppWebViewController controller) {
+    debugPrint('[BROWSER] onWebViewCreated – controller ready');
+    _webViewController = controller;
+
+    controller.addJavaScriptHandler(
+      handlerName: 'onVideoFound',
+      callback: (args) {
+        if (args.isNotEmpty) {
+          _videoDetector.handleJsCallback(args[0].toString());
+        }
+      },
+    );
+
+    controller.addJavaScriptHandler(
+      handlerName: 'onVideoPlayback',
+      callback: (args) async {
+        try {
+          final activeTab = _tabManager.activeTab;
+          if (activeTab != null && _webViewController != null) {
+            try {
+              final bytes = await (_webViewController as dynamic).takeScreenshot();
+              if (bytes is Uint8List && bytes.isNotEmpty) {
+                await _tabManager.setScreenshot(activeTab.id, bytes);
+              }
+            } catch (e) {
+              debugPrint('[BROWSER] playback screenshot failed: $e');
+            }
+          }
+        } catch (_) {}
+      },
+    );
+
+    // Load any URL that was requested before the controller was ready.
+    final urlToLoad = _pendingUrl;
+    _pendingUrl = null;
+    if (urlToLoad != null && urlToLoad.isNotEmpty) {
+      controller.loadUrl(
+          urlRequest: URLRequest(url: WebUri(urlToLoad)));
+    }
   }
 
   void _onLoadStart(InAppWebViewController controller, WebUri? url) {
@@ -341,24 +308,13 @@ class _BrowserScreenState extends State<BrowserScreen>
     final urlStr = url?.toString() ?? '';
     // Ignore about:blank navigations caused by WebView initialisation.
     if (urlStr == 'about:blank') return;
-    // Always mark loading state, but only update visible UI fields when
-    // the event comes from the active tab's controller to avoid flashing
-    // when background tabs load.
-    _isLoading = true;
+    setState(() {
+      _isLoading = true;
+      _addressController.text = urlStr;
+      _isSecure = urlStr.startsWith('https://');
+      _isFavourited = false;
+    });
     final activeTab = _tabManager.activeTab;
-    final activeController =
-        activeTab != null ? _controllers[activeTab.id] : null;
-    if (activeController == controller) {
-      setState(() {
-        _addressController.text = urlStr;
-        _isSecure = urlStr.startsWith('https://');
-        _isFavourited = false;
-      });
-    } else {
-      // Ensure UI is refreshed for loading indicator changes.
-      if (mounted) setState(() {});
-    }
-
     if (activeTab != null) {
       _tabManager.updateTab(activeTab.id, url: urlStr, isLoading: true);
     }
@@ -369,37 +325,19 @@ class _BrowserScreenState extends State<BrowserScreen>
     final urlStr = url?.toString() ?? '';
     // Ignore about:blank completions.
     if (urlStr == 'about:blank') return;
-    // Only update visible UI elements if this controller belongs to the
-    // active tab. Background tab loads should not steal focus or change
-    // the address bar while the user is looking at another tab.
-    final activeTab = _tabManager.activeTab;
-    final activeController =
-        activeTab != null ? _controllers[activeTab.id] : null;
+    _addressController.text = urlStr;
 
     final title = await controller.getTitle() ?? '';
+    _canGoBack = await controller.canGoBack();
+    _canGoForward = await controller.canGoForward();
 
-    // Always clear the switching overlay — do NOT guard this on activeController
-    if (mounted) setState(() {
-      _isSwitchingTab = false;
-      if (urlStr.isNotEmpty && urlStr != 'about:blank') {
-        _showNewTabPage = false;
-      }
+    setState(() {
+      _isLoading = false;
+      _pageTitle = title;
     });
 
-    if (activeController == controller) {
-      _canGoBack = await controller.canGoBack();
-      _canGoForward = await controller.canGoForward();
-      setState(() {
-        _isLoading = false;
-        _pageTitle = title;
-        _addressController.text = urlStr;
-      });
-    } else {
-      // Background tab finished loading; still update its model.
-      if (mounted) setState(() {});
-    }
-
-    if (activeTab != null && activeController == controller) {
+    final activeTab = _tabManager.activeTab;
+    if (activeTab != null) {
       _tabManager.updateTab(activeTab.id,
           url: urlStr, title: title, isLoading: false);
     }
@@ -413,29 +351,64 @@ class _BrowserScreenState extends State<BrowserScreen>
       final faviconUrl = domain.isNotEmpty
           ? 'https://www.google.com/s2/favicons?sz=64&domain_url=$domain'
           : null;
-        _repo.addHistory(urlStr, title, faviconUrl);
-        final siteTitle = (title.isNotEmpty && title.toLowerCase() != 'new tab')
-          ? title
-          : (Uri.tryParse(urlStr)?.host ?? urlStr).replaceFirst('www.', '');
-        _repo.upsertRecentSite(urlStr, siteTitle, faviconUrl);
+      _repo.addHistory(urlStr, title, faviconUrl);
+      _repo.upsertRecentSite(urlStr, title, faviconUrl);
     }
 
     // Inject video detection JS.
-    controller.evaluateJavascript(source: VideoDetectorService.injectionJs);
+    controller.evaluateJavascript(
+        source: VideoDetectorService.injectionJs);
 
     // Inject popup blocker when ad-block is on.
     if (_adBlock.adBlockEnabled) {
       controller.evaluateJavascript(
           source: VideoDetectorService.popupBlockerJs);
     }
+
+    // Attach playback event listeners so the page can notify us when a
+    // video starts playing. The injected handler calls `onVideoPlayback`
+    // which we handle above to update the tab preview.
+    try {
+      controller.evaluateJavascript(source: r"""
+      (function(){
+        try {
+          if (window.__flutter_playback_injected) return; window.__flutter_playback_injected = true;
+          function notify() {
+            try { if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) { window.flutter_inappwebview.callHandler('onVideoPlayback', 'play'); } } catch(e){}
+          }
+          function attach(v){ try { if (!v.__flutter_playback_attached){ v.addEventListener('play', notify); v.__flutter_playback_attached = true; } } catch(e){} }
+          document.querySelectorAll('video').forEach(function(v){ attach(v); });
+          new MutationObserver(function(){ document.querySelectorAll('video').forEach(function(v){ attach(v); }); }).observe(document.body||document.documentElement, {childList:true, subtree:true});
+        } catch(e){}
+      })();
+      """);
+    } catch (_) {}
+
+    // Try to capture a screenshot of the page for the tab preview. Not all
+    // platforms/plugins implement this; guard against missing APIs.
+    try {
+      final activeTab2 = _tabManager.activeTab;
+      if (activeTab2 != null) {
+        try {
+          final bytes = await (controller as dynamic).takeScreenshot();
+          if (bytes is Uint8List && bytes.isNotEmpty) {
+            await _tabManager.setScreenshot(activeTab2.id, bytes);
+          }
+        } catch (e) {
+          debugPrint('[BROWSER] takeScreenshot not available: $e');
+        }
+      }
+    } catch (_) {}
   }
 
-  void _onProgressChanged(InAppWebViewController controller, int progress) {
+  void _onProgressChanged(
+      InAppWebViewController controller, int progress) {
     setState(() => _progress = progress / 100.0);
   }
 
   Future<NavigationActionPolicy?> _shouldOverrideUrlLoading(
-      InAppWebViewController controller, NavigationAction action) async {
+      InAppWebViewController controller,
+      NavigationAction action) async {
     final url = action.request.url?.toString() ?? '';
     // Handle external protocols (tel:, mailto:, etc.).
     if (url.startsWith('tel:') ||
@@ -443,7 +416,8 @@ class _BrowserScreenState extends State<BrowserScreen>
         url.startsWith('intent:') ||
         url.startsWith('market:')) {
       try {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        await launchUrl(Uri.parse(url),
+            mode: LaunchMode.externalApplication);
       } catch (_) {}
       return NavigationActionPolicy.CANCEL;
     }
@@ -451,7 +425,8 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   Future<WebResourceResponse?> _shouldInterceptRequest(
-      InAppWebViewController controller, WebResourceRequest request) async {
+      InAppWebViewController controller,
+      WebResourceRequest request) async {
     final url = request.url.toString();
 
     // Ad-block (skip on YouTube/Google sites whose players depend on Google ad
@@ -486,26 +461,22 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _onReceivedError(InAppWebViewController controller,
       WebResourceRequest request, WebResourceError error) {
-    // ignore about:blank startup error which is harmless and expected on
-    // Windows; the WebView is immediately navigated away from it.
-    final urlStr = request.url.toString();
-    if (urlStr == 'about:blank') return;
-
-    debugPrint(
-        '[BROWSER] onReceivedError – ${request.url} | ${error.type} | ${error.description}');
+    debugPrint('[BROWSER] onReceivedError – ${request.url} | ${error.type} | ${error.description}');
     if (request.isForMainFrame ?? false) {
-      setState(() {
-        _isLoading = false;
-        _isSwitchingTab = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
+  void _onScrollChanged(InAppWebViewController controller, int x, int y) {
+    controller.evaluateJavascript(
+        source: VideoDetectorService.injectionJs);
+  }
 
   // ── Actions ──
 
   void _goBack() async {
-    if (_webViewController != null && await _webViewController!.canGoBack()) {
+    if (_webViewController != null &&
+        await _webViewController!.canGoBack()) {
       _webViewController!.goBack();
     }
   }
@@ -530,7 +501,6 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _openCastSheet() {
-    _releaseWebViewFocus();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -547,33 +517,19 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _goHome() {
-    if (_showNewTabPage) {
-      // Already showing NewTabPage — try to return to the loaded page behind it.
-      final activeUrl = _tabManager.activeTab?.url ?? '';
-      if (activeUrl.isNotEmpty && activeUrl != 'about:blank') {
-        setState(() {
-          _showNewTabPage = false;
-        });
-        _addressController.text = activeUrl;
-      }
-      // Nothing else to do if there is no loaded page behind the NewTabPage.
-      return;
-    }
-
     setState(() {
-      _showNewTabPage = true;
-      _isFavourited = false;
+      final opening = !_showNewTabPage;
+      _showNewTabPage = !_showNewTabPage;
+      if (opening) {
+        _isFavourited = false;
+        _addressController.clear();
+      }
     });
-    _addressController.clear();
   }
 
   void _toggleIncognito() {
     final tab = _tabManager.activeTab;
     if (tab == null) return;
-    if (_tabManager.tabCount >= _maxTabs) {
-      Snack.show(context, 'Tab limit reached ($_maxTabs max). Close a tab first.', level: SnackLevel.warning);
-      return;
-    }
     _tabManager.addTab(incognito: !tab.isIncognito);
     setState(() => _showNewTabPage = true);
   }
@@ -581,38 +537,39 @@ class _BrowserScreenState extends State<BrowserScreen>
   void _toggleFavourite() async {
     final url = _addressController.text.trim();
     if (url.isEmpty || _showNewTabPage) return;
+    // Ensure we have a useful title to save; prefer the page title, but
+    // attempt to read it from the WebView controller if missing.
+    var titleToSave = _pageTitle;
+    if (titleToSave.isEmpty && _webViewController != null) {
+      try {
+        titleToSave = await (_webViewController as dynamic).getTitle();
+      } catch (_) {}
+    }
+
     if (_isFavourited) {
       await _repo.removeFavourite(url);
       setState(() => _isFavourited = false);
       if (mounted) {
-        Snack.show(context, 'Removed from favourites', level: SnackLevel.info);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Removed from favourites'),
+              duration: Duration(seconds: 1)),
+        );
       }
     } else {
       final domain = Uri.tryParse(url)?.host ?? '';
       final faviconUrl = domain.isNotEmpty
           ? 'https://www.google.com/s2/favicons?sz=64&domain_url=$domain'
           : null;
-      // Fetch the live title from the WebView in case _pageTitle is stale
-      final liveTitle = await _webViewController?.getTitle() ?? '';
-      final title = _getFavouriteTitle(url, liveTitle.isNotEmpty ? liveTitle : _pageTitle);
-      await _repo.addFavourite(url, title, faviconUrl);
+      await _repo.addFavourite(url, titleToSave, faviconUrl);
       setState(() => _isFavourited = true);
       if (mounted) {
-        Snack.show(context, 'Added to favourites', level: SnackLevel.success);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Added to favourites'),
+              duration: Duration(seconds: 1)),
+        );
       }
-    }
-  }
-
-  String _getFavouriteTitle(String url, String? webTitle) {
-    final lower = (webTitle ?? '').trim().toLowerCase();
-    if (webTitle != null && webTitle.trim().isNotEmpty && lower != 'new tab') {
-      return webTitle.trim();
-    }
-    try {
-      final host = Uri.parse(url).host;
-      return host.replaceFirst('www.', '');
-    } catch (_) {
-      return url;
     }
   }
 
@@ -664,7 +621,11 @@ class _BrowserScreenState extends State<BrowserScreen>
       ));
     }
     if (mounted) {
-      Snack.show(context, 'Added to queue', level: SnackLevel.success);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Added to queue'),
+            duration: Duration(seconds: 1)),
+      );
     }
   }
 
@@ -779,7 +740,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     super.build(context);
     final isIncognito = _tabManager.activeTab?.isIncognito ?? false;
     final viewPadding = MediaQuery.of(context).viewPadding;
-    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -790,8 +750,6 @@ class _BrowserScreenState extends State<BrowserScreen>
           children: [
             Column(
               children: [
-                // Old horizontal tab strip removed — toolbar + tab switcher used.
-
                 // ── Top toolbar ──
                 BrowserToolbar(
                   addressController: _addressController,
@@ -810,14 +768,9 @@ class _BrowserScreenState extends State<BrowserScreen>
                   onReload: _reload,
                   onSubmitted: _navigateTo,
                   onCastTap: _openCastSheet,
-                  onDownload: _handleDownload,
-                  isDownloading: _isDownloading,
-                  downloadEnabled: true,
-                  isKnownDifficultSite:
-                      DownloadService.isDifficultSite(_addressController.text),
-                  isCastConnected: _castService.activeDevice != null,
                   onMenuAction: _handleMenuAction,
-                  onReleaseWebViewFocus: _releaseWebViewFocus,
+                  onUrlBarTap: _showTabSwitcher,
+                  onReleaseWebViewFocus: () => FocusScope.of(context).unfocus(),
                   onTabs: _showTabSwitcher,
                   tabCount: _tabManager.tabCount,
                 ),
@@ -836,46 +789,17 @@ class _BrowserScreenState extends State<BrowserScreen>
                       // WebView always in tree (texture-based on
                       // Windows — no HWND overlay issues). NewTabPage
                       // is placed on top when active.
-                      if (_webViewSupported && _createWebView)
-                        Positioned.fill(child: _buildWebView()),
-                      // Tab-switch overlay — appears while a tab switch triggers
-                      // a webview load so the previous content doesn't flash.
-                      if (_isSwitchingTab)
-                        Positioned.fill(
-                          child: ColoredBox(
-                            color: cs.surface,
-                            child: Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  CircularProgressIndicator(
-                                    color: cs.primary,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text('Loading tab…',
-                                      style: TextStyle(
-                                        color: cs.onSurfaceVariant,
-                                        fontSize: 13,
-                                      )),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                      if (_webViewSupported)
+                        Positioned.fill(child: _buildWebView())
+                      else
+                        _buildPlatformUnavailable(),
 
-                      if (!_webViewSupported)
-                        Positioned.fill(child: _buildPlatformUnavailable()),
-
-                      // NewTabPage overlay with solid background to avoid
-                      // WebView content bleeding through.
+                      // NewTabPage overlay.
                       if (_showNewTabPage)
                         Positioned.fill(
-                          child: ColoredBox(
-                            color: Theme.of(context).colorScheme.surface,
-                            child: NewTabPage(
-                              repo: _repo,
-                              onNavigate: _onNewTabPageNavigate,
-                            ),
+                          child: NewTabPage(
+                            repo: _repo,
+                            onNavigate: _onNewTabPageNavigate,
                           ),
                         ),
 
@@ -911,8 +835,8 @@ class _BrowserScreenState extends State<BrowserScreen>
                 right: 0,
                 child: CastMiniBar(
                   deviceName: _castService.activeDevice!.name,
-                  isPlaying:
-                      _castService.playbackState == CastPlaybackState.playing,
+                  isPlaying: _castService.playbackState ==
+                      CastPlaybackState.playing,
                   onPlayPause: () {
                     if (_castService.playbackState ==
                         CastPlaybackState.playing) {
@@ -922,43 +846,6 @@ class _BrowserScreenState extends State<BrowserScreen>
                     }
                   },
                   onStop: () => _castService.stop(),
-                ),
-              ),
-
-            // ── Download error banner ──
-            if (_downloadError != null)
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: viewPadding.bottom + 136,
-                child: Material(
-                  elevation: 6,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: cs.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _downloadError!,
-                            style: TextStyle(color: cs.onError, fontSize: 13),
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.close, color: cs.onError),
-                          onPressed: () =>
-                              setState(() => _downloadError = null),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
               ),
 
@@ -982,161 +869,43 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   Widget _buildWebView() {
-    try {
-      // Only render the active tab's WebView. Keeping all tabs alive in
-      // an IndexedStack holds one WebView2 process per tab -- on a low-RAM
-      // machine this quickly exhausts memory and crashes the app.
-      final active = _tabManager.activeTab;
-      if (active == null) return const SizedBox.shrink();
-
-      return KeyedSubtree(
-        key: ValueKey('active_webview_' + active.id),
-        child: _buildWebViewForTab(active),
-      );
-    } catch (e) {
-      if (kDebugMode) debugPrint('InAppWebView construction failed: $e');
-      if (mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          try {
-            Snack.show(
-              context,
-              'In-app browser unavailable on this device.',
-              level: SnackLevel.error,
-              actionLabel: 'Open externally',
-              onAction: () => launchUrl(Uri.parse('about:blank'),
-                  mode: LaunchMode.externalApplication),
-            );
-          } catch (_) {}
-        });
-      }
-
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 48),
-              const SizedBox(height: 12),
-              const Text(
-                  'Browser unavailable. Microsoft Edge WebView2 Runtime is required.'),
-              const SizedBox(height: 8),
-              FilledButton(
-                onPressed: () => launchUrl(Uri.parse(
-                    'https://developer.microsoft.com/microsoft-edge/webview2/')),
-                child: const Text('Download WebView2'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-  }
-
-  InAppWebViewSettings _buildSettingsForTab(BrowserTab tab) {
-    final s = _buildSettings();
-    s.incognito = tab.isIncognito;
-    return s;
-  }
-
-  void _onWebViewCreatedForTab(
-      InAppWebViewController controller, String tabId, BrowserTab tab) {
-    debugPrint('[BROWSER] onWebViewCreated – controller ready for $tabId');
-    _controllers[tabId] = controller;
-    // Mark this webview as mounted/created so disposal is safe later.
-    _mountedWebViews.add(tabId);
-    if (_tabManager.activeTab?.id == tabId) {
-      _webViewController = controller;
-      // Ensure UI shows the created WebView and stop showing NewTabPage.
-      if (mounted) {
-        setState(() {
-          // Keep `_createWebView` true so the WebView widget remains in the
-          // tree — setting it false caused the widget to be removed and the
-          // native controller to be deallocated immediately after creation.
-          _showNewTabPage = false;
-          _isSwitchingTab = false;
-        });
-      }
-    }
-    debugPrint('[BROWSER] tabs=${_tabManager.tabCount} controllers=${_controllers.length} mounted=${_mountedWebViews.length} active=${_tabManager.activeTab?.id}');
-
-    controller.addJavaScriptHandler(
-      handlerName: 'onVideoFound',
-      callback: (args) {
-        if (args.isEmpty) return;
-        final payload = args[0]?.toString() ?? '';
-        // Only handle callbacks for mounted webviews to avoid races during
-        // disposal. Run in a microtask to avoid blocking the JS bridge.
-        if (!_mountedWebViews.contains(tabId)) return;
-        try {
-          scheduleMicrotask(() {
-            try {
-              if (mounted) _videoDetector.handleJsCallback(payload);
-            } catch (e) {
-              if (kDebugMode) debugPrint('VideoDetector handler failed: $e');
-            }
-          });
-        } catch (e) {
-          if (kDebugMode) debugPrint('VideoDetector scheduling failed: $e');
-        }
-      },
-    );
-
-    // If the tab already has a URL assigned, ensure it's loaded.
-    final tabUrl = tab.url;
-    if (tabUrl.isNotEmpty) {
-      try {
-        controller.loadUrl(urlRequest: URLRequest(url: WebUri(tabUrl)));
-      } catch (_) {}
-    }
-  }
-
-  Widget _buildWebViewForTab(BrowserTab tab) {
-    // Use a stable key so Flutter preserves each WebView widget instance.
-    final key = ValueKey('browser_webview_${tab.id}');
     return InAppWebView(
-      key: key,
-      initialSettings: _buildSettingsForTab(tab),
+      key: const ValueKey('browser_webview'),
+      initialSettings: _buildSettings(),
       findInteractionController: _findInteractionController,
-      onWebViewCreated: (controller) =>
-          _onWebViewCreatedForTab(controller, tab.id, tab),
-      onLoadStart: (controller, url) => _onLoadStart(controller, url),
-      onLoadStop: (controller, url) => _onLoadStop(controller, url),
+      onWebViewCreated: _onWebViewCreated,
+      onLoadStart: _onLoadStart,
+      onLoadStop: _onLoadStop,
       onProgressChanged: _onProgressChanged,
       shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
       shouldInterceptRequest: _shouldInterceptRequest,
       onConsoleMessage: _onConsoleMessage,
       onReceivedError: _onReceivedError,
+      onScrollChanged: _onScrollChanged,
       onUpdateVisitedHistory: (controller, url, androidIsReload) {
         final urlStr = url?.toString() ?? '';
         if (urlStr.isEmpty || urlStr == 'about:blank') return;
-        // Update model for this tab specifically.
-        _tabManager.updateTab(tab.id, url: urlStr);
-
-        if (_controllers[tab.id] == controller) {
-          if (mounted)
-            setState(() {
-              if (_tabManager.activeTab?.id == tab.id) {
-                _addressController.text = urlStr;
-                _isSecure = urlStr.startsWith('https://');
-              }
-            });
-
-          controller.canGoBack().then((v) {
-            if (mounted && _tabManager.activeTab?.id == tab.id)
-              setState(() => _canGoBack = v);
-          });
-          controller.canGoForward().then((v) {
-            if (mounted && _tabManager.activeTab?.id == tab.id)
-              setState(() => _canGoForward = v);
-          });
-          _checkFavouriteState();
+        setState(() {
+          _addressController.text = urlStr;
+          _isSecure = urlStr.startsWith('https://');
+        });
+        final activeTab = _tabManager.activeTab;
+        if (activeTab != null) {
+          _tabManager.updateTab(activeTab.id, url: urlStr);
         }
+        controller.canGoBack().then((v) {
+          if (mounted) setState(() => _canGoBack = v);
+        });
+        controller.canGoForward().then((v) {
+          if (mounted) setState(() => _canGoForward = v);
+        });
+        _checkFavouriteState();
       },
       onDownloadStartRequest: (controller, request) {
         launchUrl(request.url, mode: LaunchMode.externalApplication);
       },
       onCreateWindow: (controller, createWindowAction) async {
+        // Open new-window requests in the same WebView.
         final url = createWindowAction.request.url;
         if (url != null) {
           _navigateTo(url.toString());
@@ -1154,7 +923,8 @@ class _BrowserScreenState extends State<BrowserScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.public,
-                size: 64, color: Theme.of(context).colorScheme.primary),
+                size: 64,
+                color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 16),
             const Text(
               'In-app browser is not available on this platform.\n'
@@ -1235,217 +1005,133 @@ class _BrowserScreenState extends State<BrowserScreen>
     );
   }
 
-  void _handleMenuAction(String action) {
-    switch (action) {
-      case 'new_tab':
-        if (_tabManager.tabCount >= _maxTabs) {
-          Snack.show(context, 'Tab limit reached ($_maxTabs max). Close a tab first.', level: SnackLevel.warning);
-          break;
-        }
-        _tabManager.addTab();
-        setState(() {
-          _showNewTabPage = true;
-          _createWebView = true;
-        });
-        break;
-      case 'incognito':
-        _toggleIncognito();
-        break;
-      case 'add_favourite':
-        _toggleFavourite();
-        break;
-      case 'share':
-        final url = _addressController.text.trim();
-        if (url.isNotEmpty) {
-          // ignore: deprecated_member_use
-          Share.share(url);
-        }
-        break;
-      case 'desktop_mode':
-        _toggleDesktopMode();
-        break;
-      case 'adblock':
-        _adBlock.toggleAdBlock();
-        setState(() {});
-        break;
-      case 'download':
-        _addCurrentToQueue();
-        break;
-      case 'external':
-      case 'openExternal':
-        _openInExternal();
-        break;
-      case 'find':
-        _openFindInPage();
-        break;
-      case 'history':
-        _openHistory();
-        break;
-      case 'favourites':
-        _openFavourites();
-        break;
-      case 'settings':
-      case 'addCookies':
-        _openSettings();
-        break;
-      case 'cast':
-        _openCastSheet();
-        break;
-      case 'copyLink':
-        final url = _addressController.text.trim();
-        if (url.isNotEmpty) {
-          Clipboard.setData(ClipboardData(text: url));
-          if (mounted) Snack.show(context, 'Link copied to clipboard');
-        }
-        break;
-      case 'copy':
-        final url = _addressController.text.trim();
-        if (url.isNotEmpty) {
-          Clipboard.setData(ClipboardData(text: url));
-          if (mounted) Snack.show(context, 'Link copied to clipboard');
-        }
-        break;
-      case 'search':
-      case 'search.tab':
-        // Route to the app-level "Search" tab instead of treating as a URL.
-        // Find the surrounding BrowserShell widget and invoke its onNavigate
-        // callback so HomeScreen resolves the route -> page index.
-        try {
-          Navigator.of(context).pop();
-        } catch (_) {}
-        final shell = context.findAncestorWidgetOfExactType<BrowserShell>();
-        if (shell != null) {
-          final route = action.endsWith('.tab') ? action : '${action}.tab';
-          shell.onNavigate(route);
-        }
-        break;
-      default:
-        break;
-    }
-  }
-
-  Future<void> _handleDownload() async {
-    // Obtain fresh URL from the WebView controller to avoid stale state
-    final uri = await _webViewController?.getUrl();
-    final url = uri?.toString() ?? _addressController.text.trim();
-    if (url.isEmpty ||
-        url == 'about:blank' ||
-        url.startsWith('chrome:') ||
-        !(url.startsWith('http://') || url.startsWith('https://'))) {
-      if (mounted)
-        Snack.show(context, 'No downloadable page loaded.',
-            level: SnackLevel.warning);
+  void _handleMenuAction(String action) async {
+    if (action == 'new_tab') {
+      _tabManager.addTab();
+      setState(() => _showNewTabPage = true);
       return;
     }
-
-    setState(() {
-      _isDownloading = true;
-      _downloadError = null;
-    });
-
-    try {
-      final title = _pageTitle.isNotEmpty ? _pageTitle : '';
-      final previewItem = PreviewItem(
-        id: url,
-        title: title.isNotEmpty ? title : url,
-        url: url,
-        uploader: '',
-        duration: null,
-        thumbnailUrl: null,
-      );
-
-      final app = context.read<AppController>();
-
-      // Ask the user which format they want (video or audio).
-      final defaultFmt = app.settings?.defaultAudioFormat ?? 'mp3';
-      final chosen = await showDialog<String?>(
-        context: context,
-        builder: (ctx) {
-          String sel = defaultFmt;
-          return AlertDialog(
-            title: const Text('Choose download format'),
-            content: StatefulBuilder(builder: (c, setSt) {
-              return SizedBox(
-                width: 320,
-                child: DropdownButtonFormField<String>(
-                  initialValue: sel,
-                  items: const [
-                    DropdownMenuItem(value: 'mp4', child: Text('Video (MP4)')),
-                    DropdownMenuItem(value: 'mp3', child: Text('Audio (MP3)')),
-                    DropdownMenuItem(value: 'm4a', child: Text('Audio (M4A)')),
-                  ],
-                  onChanged: (v) => setSt(() => sel = v ?? sel),
-                  decoration: const InputDecoration(labelText: 'Format'),
-                ),
-              );
-            }),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Cancel')),
-              FilledButton(onPressed: () => Navigator.pop(ctx, sel), child: const Text('Download')),
-            ],
-          );
-        },
-      );
-
-      if (chosen == null) {
-        setState(() => _isDownloading = false);
-        return;
-      }
-
-      final format = chosen;
-      app.addToQueue(previewItem, format);
-
-      // Find the queued item
-      final queued =
-          app.queue.firstWhere((q) => q.url == url && q.format == format);
-
-      // Start download (don't await fully — show immediate feedback)
-      unawaited(app.downloadSingle(queued).then((_) {
-        if (mounted) setState(() => _isDownloading = false);
-      }).catchError((e) {
-        if (mounted) {
-          setState(() {
-            _downloadError = e.toString();
-            _isDownloading = false;
-          });
-          Snack.show(context, DownloadService.translateError(e.toString()),
-              level: SnackLevel.error);
+    if (action == 'incognito') {
+      _toggleIncognito();
+      return;
+    }
+    if (action == 'add_favourite') {
+      _toggleFavourite();
+      return;
+    }
+    if (action == 'share') {
+      final url = _addressController.text.trim();
+      if (url.isNotEmpty) {
+        final title = _pageTitle.isNotEmpty ? _pageTitle : null;
+        final text = title != null ? '$title\n$url' : url;
+        try {
+          // Use SharePlus instance API to avoid deprecated static API.
+          if (title != null) {
+            SharePlus.instance.share(ShareParams(text: text, title: title));
+          } else {
+            SharePlus.instance.share(ShareParams(text: text));
+          }
+        } catch (e) {
+          try {
+            await Clipboard.setData(ClipboardData(text: url));
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Link copied to clipboard')),
+            );
+          } catch (_) {}
         }
-      }));
-
-      if (mounted) {
-        Snack.show(
-            context, 'Download started: ${title.isNotEmpty ? title : url}',
-            level: SnackLevel.success);
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _downloadError = e.toString();
-          _isDownloading = false;
-        });
-        Snack.show(context, DownloadService.translateError(e.toString()),
-            level: SnackLevel.error);
+      return;
+    }
+    if (action == 'desktop_mode') {
+      _toggleDesktopMode();
+      return;
+    }
+    if (action == 'adblock') {
+      _adBlock.toggleAdBlock();
+      setState(() {});
+      return;
+    }
+    if (action == 'download') {
+      _addCurrentToQueue();
+      return;
+    }
+    if (action == 'openExternal' || action == 'external') {
+      _openInExternal();
+      return;
+    }
+    if (action == 'copyLink') {
+      final url = _addressController.text.trim();
+      if (url.isNotEmpty) {
+        try {
+          await Clipboard.setData(ClipboardData(text: url));
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Link copied to clipboard')),
+          );
+        } catch (_) {}
       }
+      return;
+    }
+    if (action == 'cast') {
+      try { _openCastSheet(); } catch (_) {}
+      return;
+    }
+    if (action == 'addCookies') {
+      // Guide user to settings where cookies can be added for downloads.
+      _openSettings();
+      return;
+    }
+    if (action == 'find') {
+      _openFindInPage();
+      return;
+    }
+    if (action == 'history') {
+      _openHistory();
+      return;
+    }
+    if (action == 'favourites') {
+      _openFavourites();
+      return;
+    }
+    if (action == 'settings') {
+      _openSettings();
+      return;
+    }
+    if (action == 'menu_open') {
+      try {
+        final activeTab = _tabManager.activeTab;
+        if (activeTab != null && _webViewController != null) {
+          final bytes = await (_webViewController as dynamic).takeScreenshot();
+          if (bytes is Uint8List && bytes.isNotEmpty) {
+            await _tabManager.setScreenshot(activeTab.id, bytes);
+          }
+        }
+      } catch (e) {
+        debugPrint('[BROWSER] menu_open screenshot failed: $e');
+      }
+      return;
     }
   }
 
   void _showTabSwitcher() {
-    // Release WebView focus so Windows WebView2 doesn't capture clicks
-    // intended for the upcoming overlay/sheet.
-    _releaseWebViewFocus();
-    // Kick off background screenshot captures for live WebViews so the
-    // tab switcher can show thumbnails. Fail silently — this is best-effort.
-    for (final tab in _tabManager.tabs) {
-      try {
-        final ctrl = _controllers[tab.id];
-        if (ctrl != null) {
-          ctrl.takeScreenshot().then((bytes) {
-            if (bytes != null) _tabManager.setScreenshot(tab.id, bytes);
-          }).catchError((_) {});
+    // Attempt to capture an up-to-date screenshot for the active tab
+    // before opening the sheet so previews reflect current playback.
+    try {
+      final activeTab = _tabManager.activeTab;
+      if (activeTab != null && _webViewController != null) {
+        try {
+          (_webViewController as dynamic).takeScreenshot().then((bytes) async {
+            if (bytes is Uint8List && bytes.isNotEmpty) {
+              await _tabManager.setScreenshot(activeTab.id, bytes);
+            }
+          }).catchError((e) {
+            debugPrint('[BROWSER] pre-sheet screenshot failed: $e');
+          });
+        } catch (e) {
+          debugPrint('[BROWSER] pre-sheet screenshot error: $e');
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1455,99 +1141,26 @@ class _BrowserScreenState extends State<BrowserScreen>
           _tabManager.switchToTab(index);
           final tab = _tabManager.activeTab;
           final showNew = tab?.url.isEmpty ?? true;
-          setState(() {
-            _showNewTabPage = showNew;
-            _isSwitchingTab = !showNew && _controllers[tab?.id ?? ''] == null;
-            if (tab != null) {
-              _addressController.text = tab.url;
-              _pageTitle = tab.title;
-              _isSecure = tab.url.startsWith('https://');
-              _canGoBack = false;
-              _canGoForward = false;
-            }
-          });
-          if (tab != null && !showNew && tab.url.isNotEmpty) {
-            _addressController.text = tab.url;
-            final ctrl = _controllers[tab.id];
-            _webViewController = ctrl;
-            if (ctrl != null) {
-              // Controller exists; refresh navigation state instead of
-              // forcing a reload which is unnecessary for alive WebViews.
-              ctrl.canGoBack().then((v) {
-                if (mounted) setState(() => _canGoBack = v);
-              });
-              ctrl.canGoForward().then((v) {
-                if (mounted) setState(() => _canGoForward = v);
-              });
-            } else {
-              _createWebView = true;
-            }
+          setState(() => _showNewTabPage = showNew);
+          if (!showNew && tab != null && tab.url.isNotEmpty) {
+            _webViewController?.loadUrl(
+                urlRequest: URLRequest(url: WebUri(tab.url)));
           }
           Navigator.pop(context);
         },
         onCloseTab: (index) {
-          // Dispose mapping for the tab being closed to avoid leaking
-          // controllers. Capture tab id before closing since the list
-          // will be mutated by closeTab().
-          try {
-            final closingTab = _tabManager.tabs[index];
-            final ctrl = _controllers.remove(closingTab.id);
-            if (ctrl != null) {
-              // Best-effort: stop loading and dispose controller.
-              try {
-                ctrl.stopLoading();
-              } catch (_) {}
-              try {
-                ctrl.dispose();
-              } catch (_) {}
-            }
-            _mountedWebViews.remove(closingTab.id);
-          } catch (_) {}
-
           _tabManager.closeTab(index);
           final tab = _tabManager.activeTab;
           final showNew = tab?.url.isEmpty ?? true;
-          setState(() {
-            _showNewTabPage = showNew;
-            _isSwitchingTab = !showNew && tab != null && _controllers[tab.id] == null;
-            _addressController.text = tab?.url ?? '';
-            _pageTitle = tab?.title ?? '';
-            _canGoBack = false;
-            _canGoForward = false;
-            _isSecure = (tab?.url ?? '').startsWith('https://');
-          });
+          setState(() => _showNewTabPage = showNew);
           if (!showNew && tab != null && tab.url.isNotEmpty) {
-            final ctrl = _controllers[tab.id];
-            _webViewController = ctrl;
-            if (ctrl != null) {
-              ctrl.canGoBack().then((v) {
-                if (mounted) setState(() => _canGoBack = v);
-              });
-              ctrl.canGoForward().then((v) {
-                if (mounted) setState(() => _canGoForward = v);
-              });
-            } else {
-              _createWebView = true;
-            }
+            _webViewController?.loadUrl(
+                urlRequest: URLRequest(url: WebUri(tab.url)));
           }
         },
         onNewTab: () {
-          if (_tabManager.tabCount >= _maxTabs) {
-            Navigator.pop(context);
-            Snack.show(context, 'Tab limit reached ($_maxTabs max). Close a tab first.', level: SnackLevel.warning);
-            return;
-          }
           _tabManager.addTab();
-          setState(() {
-            _showNewTabPage = true;
-            _isSwitchingTab = false;
-            _addressController.clear();
-            _pageTitle = '';
-            _isSecure = false;
-            _canGoBack = false;
-            _canGoForward = false;
-            _createWebView = true;
-          });
+          setState(() => _showNewTabPage = true);
           Navigator.pop(context);
         },
       ),
@@ -1557,7 +1170,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
 // ── Tab Switcher Sheet ──
 
-class _TabSwitcherSheet extends StatelessWidget {
+class _TabSwitcherSheet extends StatefulWidget {
   final TabManager tabManager;
   final ValueChanged<int> onSelectTab;
   final ValueChanged<int> onCloseTab;
@@ -1571,6 +1184,25 @@ class _TabSwitcherSheet extends StatelessWidget {
   });
 
   @override
+  State<_TabSwitcherSheet> createState() => _TabSwitcherSheetState();
+}
+
+class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
+  final GlobalKey _repaintKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await Future.delayed(const Duration(milliseconds: 200));
+        await ScreenshotHelper.captureToFile(
+            _repaintKey, 'results/screenshots/tab_switcher.png');
+      } catch (_) {}
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return DraggableScrollableSheet(
@@ -1579,18 +1211,26 @@ class _TabSwitcherSheet extends StatelessWidget {
       minChildSize: 0.3,
       expand: false,
       builder: (context, scrollController) {
-        return Column(
-          children: [
+        return Material(
+          color: Theme.of(context).colorScheme.surface,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: RepaintBoundary(
+            key: _repaintKey,
+            child: Column(
+            children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  Text('Tabs (${tabManager.tabCount})',
+                    Text('Tabs (${widget.tabManager.tabCount})',
                       style: Theme.of(context).textTheme.titleMedium),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.add),
-                    onPressed: onNewTab,
+                    onPressed: widget.onNewTab,
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -1604,18 +1244,22 @@ class _TabSwitcherSheet extends StatelessWidget {
               child: GridView.builder(
                 controller: scrollController,
                 padding: const EdgeInsets.all(12),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 0.75,
+                  // Make tiles wider relative to their height so the 16:9
+                  // preview occupies most of the tile and leaves less
+                  // whitespace below. 1.6 is a good compromise across sizes.
+                  childAspectRatio: 1.6,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
                 ),
-                itemCount: tabManager.tabCount,
+                    itemCount: widget.tabManager.tabCount,
                 itemBuilder: (context, index) {
-                  final tab = tabManager.tabs[index];
-                  final isActive = index == tabManager.activeIndex;
+                  final tab = widget.tabManager.tabs[index];
+                  final isActive = index == widget.tabManager.activeIndex;
                   return GestureDetector(
-                    onTap: () => onSelectTab(index),
+                    onTap: () => widget.onSelectTab(index),
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
@@ -1624,63 +1268,78 @@ class _TabSwitcherSheet extends StatelessWidget {
                           width: isActive ? 2 : 1,
                         ),
                         color: tab.isIncognito
-                            ? cs.surface
+                            ? const Color(0xFF1A1A2E)
                             : cs.surfaceContainerLow,
                       ),
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 6),
-                            child: Row(
-                              children: [
-                                if (tab.isIncognito)
-                                  Icon(Icons.visibility_off,
-                                      size: 14, color: cs.onSurfaceVariant),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    tab.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: tab.isIncognito
-                                          ? cs.onSurfaceVariant
-                                          : null,
-                                    ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            // Preview occupies most of the tile.
+                            Positioned.fill(
+                              child: Padding(
+                                padding: const EdgeInsets.all(6.0),
+                                child: AspectRatio(
+                                  aspectRatio: 16 / 9,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: (tab.screenshotPath != null)
+                                        ? Image.file(
+                                            File(tab.screenshotPath!),
+                                            key: ValueKey(tab.screenshotPath),
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                          )
+                                        : Container(
+                                            color: cs.surfaceContainerHighest,
+                                            child: Center(
+                                              child: Icon(Icons.web,
+                                                  size: 28,
+                                                  color: cs.outlineVariant),
+                                            ),
+                                          ),
                                   ),
                                 ),
-                                GestureDetector(
-                                  onTap: () => onCloseTab(index),
-                                  child: Icon(Icons.close,
-                                      size: 16,
-                                      color: tab.isIncognito
-                                          ? cs.onSurfaceVariant
-                                          : cs.onSurfaceVariant),
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                          Expanded(
-                            child: tab.screenshotPath != null
-                                ? ClipRRect(
-                                    borderRadius: const BorderRadius.only(
-                                      bottomLeft: Radius.circular(11),
-                                      bottomRight: Radius.circular(11),
+                            // Title / close overlay at top.
+                            Positioned(
+                              left: 8,
+                              right: 8,
+                              top: 8,
+                              child: Row(
+                                children: [
+                                  if (tab.isIncognito)
+                                    const Icon(Icons.visibility_off,
+                                        size: 14, color: Colors.white70),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      tab.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: tab.isIncognito
+                                            ? Colors.white70
+                                            : null,
+                                      ),
                                     ),
-                                    child: Image.file(
-                                      File(tab.screenshotPath!),
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                    ),
-                                  )
-                                : Center(
-                                    child: Icon(Icons.web,
-                                        size: 32, color: cs.outlineVariant),
                                   ),
-                          ),
-                        ],
+                                  GestureDetector(
+                                    onTap: () => widget.onCloseTab(index),
+                                    child: Icon(Icons.close,
+                                        size: 18,
+                                        color: tab.isIncognito
+                                            ? Colors.white70
+                                            : cs.onSurfaceVariant),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -1688,8 +1347,11 @@ class _TabSwitcherSheet extends StatelessWidget {
               ),
             ),
           ],
-        );
+        ),
+      ),
+    );
       },
     );
   }
 }
+

@@ -101,6 +101,7 @@ class TabManager extends ChangeNotifier {
       }
 
       if (data == null) {
+        debugPrint('[TabManager] cleared screenshot for ${tab.id}');
         notifyListeners();
         return;
       }
@@ -110,6 +111,7 @@ class TabManager extends ChangeNotifier {
       final file = File(filePath);
       await file.writeAsBytes(data, flush: true);
       tab.screenshotPath = file.path;
+      debugPrint('[TabManager] wrote screenshot for ${tab.id} -> ${file.path}');
       notifyListeners();
     } catch (_) {}
   }
