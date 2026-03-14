@@ -29,6 +29,7 @@ class BrowserTab {
 class TabManager extends ChangeNotifier {
   final List<BrowserTab> _tabs = [];
   int _activeIndex = 0;
+  final Map<String, Uint8List?> _screenshotCache = {};
 
   List<BrowserTab> get tabs => List.unmodifiable(_tabs);
   int get activeIndex => _activeIndex;
@@ -100,6 +101,8 @@ class TabManager extends ChangeNotifier {
         tab.screenshotPath = null;
       }
 
+      // Keep latest bytes in memory for fast UI rendering regardless of file writes.
+      _screenshotCache[tab.id] = data;
       if (data == null) {
         debugPrint('[TabManager] cleared screenshot for ${tab.id}');
         notifyListeners();
@@ -107,12 +110,18 @@ class TabManager extends ChangeNotifier {
       }
 
       final dir = await getTemporaryDirectory();
-      final filePath = p.join(dir.path, 'tab_screenshot_${tab.id}.png');
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final filePath = p.join(dir.path, 'tab_screenshot_${tab.id}_$ts.png');
       final file = File(filePath);
       await file.writeAsBytes(data, flush: true);
+      // Do not rely on a stable filename; set a unique path so UI can
+      // detect updates when screenshots are overwritten frequently.
       tab.screenshotPath = file.path;
       debugPrint('[TabManager] wrote screenshot for ${tab.id} -> ${file.path}');
       notifyListeners();
     } catch (_) {}
   }
+
+  /// Return latest in-memory screenshot bytes for [tabId], if available.
+  Uint8List? getScreenshotBytes(String tabId) => _screenshotCache[tabId];
 }
