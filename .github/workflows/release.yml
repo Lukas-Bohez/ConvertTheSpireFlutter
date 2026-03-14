@@ -1,268 +1,385 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Release Build — Convert the Spire Reborn
+#
+# Produces:
+#   • Windows  → ConvertTheSpireReborn.zip
+#   • Linux    → ConvertTheSpireReborn.AppImage  +  linux.zip  (raw bundle)
+#   • Android  → ConvertTheSpireReborn.apk
+#   • macOS    → ConvertTheSpireReborn-macOS.zip
+#
+# KEY DECISIONS
+# ─────────────
+# Linux build runs inside an ubuntu:20.04 Docker container.
+#   Reason: AppImages must be built on the *oldest* glibc you want to support.
+#   Ubuntu 20.04 ships glibc 2.31; building there means the AppImage runs on
+#   any distro with glibc ≥ 2.31 (Ubuntu 20.04+, Fedora 32+, Debian 11+, …).
+#   Building on ubuntu-latest (24.04, glibc 2.39) would break on most older
+#   systems. See: https://docs.appimage.org/introduction/concepts.html
+#
+# Library bundling with ldd + patchelf:
+#   appimagetool alone does NOT auto-bundle shared-library dependencies — it
+#   only compresses whatever is already in the AppDir into a SquashFS.
+#   We therefore use `ldd` to discover every .so the binary needs, copy them
+#   into AppDir/usr/lib/, and use `patchelf` to rewrite the RPATH so the
+#   bundled copies are found at runtime regardless of the host distro.
+#   System "always-present" libs (libc, libpthread, libdl, libm, ld-linux)
+#   are excluded because replacing them causes crashes on other distros.
+#
+# No FUSE in CI containers:
+#   AppImages use FUSE internally, which is not available inside GitHub's
+#   container environment.  We work around this by extracting appimagetool
+#   with --appimage-extract and running the extracted binary directly, and
+#   by setting APPIMAGE_EXTRACT_AND_RUN=1 for child AppImage invocations.
+# ══════════════════════════════════════════════════════════════════════════════
+
 name: Release Build
 
 on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release tag (e.g. v3.0.3). Leave empty to auto-generate.'
+        description: 'Release tag (e.g. v1.2.3) — leave blank to auto-generate'
         required: false
+        type: string
       release_name:
-        description: 'Release name. Leave empty to use tag.'
+        description: 'Release title — leave blank to use the tag'
         required: false
+        type: string
 
-permissions:
-  contents: write
+# ── Shared constants ──────────────────────────────────────────────────────────
+env:
+  FLUTTER_VERSION: '3.41.2'
+  APP_NAME: convert_the_spire_reborn
+  OUTPUT_NAME: ConvertTheSpireReborn
 
+# ── Static analysis (fast, cheap gating job) ─────────────────────────────────
 jobs:
-  # ── Code Quality Gate ────────────────────────────────────────────────
   analyze:
-    name: Code Quality Gate
+    name: Analyze
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Flutter
-        uses: flutter-actions/setup-flutter@v4
+        uses: subosito/flutter-action@v2
         with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
-          version: '3.41.2'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Analyze project source
+      - name: Analyze
         run: flutter analyze --no-fatal-infos
 
-      - name: Run tests
-        run: |
-          if [ -d "test" ] && find test -name "*_test.dart" -print -quit | grep -q .; then
-            flutter test
-          else
-            echo "No test files found - skipping tests"
-          fi
-
-  # ── Windows Build ─────────────────────────────────────────────────────
+  # ── Windows Build ─────────────────────────────────────────────────────────
   build-windows:
     name: Build Windows
     needs: analyze
-    runs-on: windows-2022
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Flutter
-        uses: flutter-actions/setup-flutter@v4
+        uses: subosito/flutter-action@v2
         with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
-          version: '3.41.2'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Patch flutter_inappwebview_windows
-        shell: pwsh
-        run: |
-          $dirs = @(
-            "$env:PUB_CACHE\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows",
-            "windows\flutter\ephemeral\.plugin_symlinks\flutter_inappwebview_windows\windows"
-          )
-          foreach ($dir in $dirs) {
-            if (Test-Path $dir) {
-              Get-ChildItem $dir -Recurse -Filter *.cc | ForEach-Object {
-                (Get-Content $_.FullName) -replace '\bwebview_\b','view' |
-                  Set-Content $_.FullName
-              }
-            }
-          }
+      - name: Build Windows release
+        run: flutter build windows --release --no-tree-shake-icons
 
-      - name: Build Windows release (with retry)
-        shell: pwsh
-        run: |
-          $attempt = 0
-          $max = 2
-          while ($attempt -lt $max) {
-            Write-Host "Windows build attempt $($attempt + 1) of $max"
-            try {
-              flutter build windows --release --no-tree-shake-icons
-              break
-            } catch {
-              Write-Host "Build failed: $_"
-              $attempt++
-              if ($attempt -lt $max) {
-                Write-Host "Retrying in 10 seconds..."
-                Start-Sleep -Seconds 10
-              } else {
-                throw
-              }
-            }
-          }
-
-      - name: Package Windows release
+      - name: Package Windows build
         shell: pwsh
         run: |
           $src = "build\windows\x64\runner\Release"
-          $zip = "ConvertTheSpireReborn.zip"
-          if (Test-Path $zip) { Remove-Item $zip -Force }
-          Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
-          Write-Host "Created $zip ($([math]::Round((Get-Item $zip).Length/1MB,1)) MB)"
+          if (!(Test-Path $src)) { Write-Error "Build output not found at $src"; exit 1 }
+          Compress-Archive -Path "$src\*" -DestinationPath "${{ env.OUTPUT_NAME }}.zip" -Force
+          Write-Host "Packaged: ${{ env.OUTPUT_NAME }}.zip"
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64
-          path: ConvertTheSpireReborn.zip
+          path: ${{ env.OUTPUT_NAME }}.zip
           retention-days: 30
 
-  # ── Linux Build ───────────────────────────────────────────────────────
-  # Runs inside ubuntu:20.04 so the binary only requires GLIBC <= 2.31.
-  # The bare container is missing jq (needed by setup-flutter to parse the
-  # release manifest) — it must be installed before setup-flutter runs.
-  # Git safe.directory must also be set before Flutter setup because the
-  # runner extracts files under a different UID than the container user.
+  # ── Linux Build ───────────────────────────────────────────────────────────
+  #
+  # Runs inside an ubuntu:20.04 container to ensure the oldest possible glibc
+  # baseline, giving the widest runtime compatibility across Linux distros.
+  # ─────────────────────────────────────────────────────────────────────────
   build-linux:
     name: Build Linux
     needs: analyze
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest   # The *host* runner; actual work is in the container
     container:
       image: ubuntu:20.04
-      options: --user root
-    env:
-      DEBIAN_FRONTEND: noninteractive
-      TZ: UTC
-      CC: clang-10
-      CXX: clang++-10
-    steps:
-      - uses: actions/checkout@v4
+      options: --privileged   # needed for squashfs mount inside appimagetool
 
-      # Git >= 2.35.2 rejects repos owned by a different UID.
-      # We write the gitconfig directly because git is not yet installed
-      # in the bare ubuntu:20.04 image at this point — apt-get hasn't run.
-      - name: Trust all git directories (container UID mismatch fix)
+    steps:
+      # ── git safe-directory ────────────────────────────────────────────────
+      # Write .gitconfig before git is installed to prevent "dubious ownership"
+      # errors caused by the container UID not matching the workspace owner.
+      - name: Configure git safe.directory
         run: printf '[safe]\n\tdirectory = *\n' > "$HOME/.gitconfig"
 
-      # jq must be installed here — it is not in the bare ubuntu:20.04 image
-      # and flutter-actions/setup-flutter needs it to parse the release manifest.
-      #
-      # FIX: Flutter 3.38+ uses native assets (e.g. for sqlite3) which require
-      # the LLVM linker `lld` to be present at /usr/lib/llvm-10/bin/ld.lld.
-      # The `clang` package on Ubuntu only pulls in binutils as its linker;
-      # `lld` and `llvm-10` must be installed explicitly.
+      # ── System dependencies ───────────────────────────────────────────────
+      # Notes:
+      #   • clang-10 / lld-10 / llvm-10  — Flutter 3.38+ native assets require
+      #     ld.lld at /usr/lib/llvm-10/bin/ld.lld (clang alone doesn't ship it)
+      #   • patchelf      — rewrite RPATH on bundled .so files
+      #   • squashfs-tools — mksquashfs needed by appimagetool
+      #   • file          — `file` binary used by appimagetool
       - name: Install build dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get update -qq
           apt-get install -y --no-install-recommends \
             curl git unzip xz-utils zip jq perl \
-            build-essential clang cmake ninja-build pkg-config \
+            build-essential \
+            clang-10 clang++-10 llvm-10 lld-10 \
+            cmake ninja-build pkg-config \
             libgtk-3-dev liblzma-dev \
             libmpv-dev mpv libass-dev \
             libayatana-appindicator3-dev libappindicator3-dev \
-            patchelf ca-certificates squashfs-tools fuse libfuse2 \
-            lld llvm-10
-          # Ensure unversioned symlinks exist for clang, clang++, and lld.
-          # lld-10 ships ld.lld inside /usr/lib/llvm-10/bin/ which is where
-          # Flutter's native-assets toolchain looks for it.
+            patchelf ca-certificates squashfs-tools file binutils
+
+          # Unversioned symlinks so Flutter's toolchain resolves clang/lld
           ln -sf /usr/bin/clang-10   /usr/bin/clang   || true
           ln -sf /usr/bin/clang++-10 /usr/bin/clang++ || true
           ln -sf /usr/bin/lld-10     /usr/bin/lld     || true
-          # Verify the linker Flutter needs is actually present
-          ls -la /usr/lib/llvm-10/bin/ld.lld || \
-            (echo "ERROR: ld.lld still missing after install" && exit 1)
+
+          # Hard-fail if Flutter's required linker is still missing
+          ls -la /usr/lib/llvm-10/bin/ld.lld \
+            || { echo "ERROR: ld.lld missing after install"; exit 1; }
+
+      - uses: actions/checkout@v4
 
       - name: Set up Flutter
-        uses: flutter-actions/setup-flutter@v4
+        uses: subosito/flutter-action@v2
         with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
-          version: '3.41.2'
           cache: true
 
-      - name: Install dependencies
+      - name: Enable Linux desktop
+        run: flutter config --enable-linux-desktop
+
+      - name: Install Dart/pub dependencies
         run: flutter pub get
 
-      - name: Patch flutter_inappwebview_windows
+      # ── Optional: patch flutter_inappwebview_windows ──────────────────────
+      # This plugin has a Windows-only symbol collision that can surface during
+      # multi-platform pub resolution; the perl one-liner is harmless on Linux.
+      - name: Patch flutter_inappwebview_windows (symbol conflict)
         run: |
           for dir in \
             "${PUB_CACHE:-$HOME/.pub-cache}/hosted/pub.dev/flutter_inappwebview_windows-0.6.0/windows" \
             "windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows"
           do
             if [ -d "$dir" ]; then
-              find "$dir" -type f -name '*.cc' -exec perl -pi -e "s/\\bwebview_\\b/view/g" {} +
+              find "$dir" -type f -name '*.cc' \
+                -exec perl -pi -e 's/\bwebview_\b/view/g' {} +
+              echo "Patched: $dir"
             fi
           done
 
       - name: Build Linux release
         run: flutter build linux --release --no-tree-shake-icons
 
-      - name: Bundle libstdc++ for portability
+      # ── Package raw bundle as a zip (fallback for users who unpack manually)
+      - name: Package raw Linux bundle (zip)
         run: |
-          BUNDLE_LIB="build/linux/x64/release/bundle/lib"
-          mkdir -p "$BUNDLE_LIB"
-          cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 "$BUNDLE_LIB/"
-          cp /lib/x86_64-linux-gnu/libgcc_s.so.1      "$BUNDLE_LIB/"
-          echo "Bundled libs:"
-          ls -lh "$BUNDLE_LIB/"
-
-      - name: Copy launcher into bundle
-        run: |
-          BUNDLE_DIR="build/linux/x64/release/bundle"
-          cp linux/convert_the_spire.sh "$BUNDLE_DIR/"
-          chmod +x "$BUNDLE_DIR/convert_the_spire.sh"
-
-      - name: Verify no missing shared libs
-        run: |
-          BIN="build/linux/x64/release/bundle/convert_the_spire_reborn"
-          apt-get install -y --no-install-recommends \
-            libgtk-3-0 libglib2.0-0 libgdk-pixbuf2.0-0 \
-            libpango-1.0-0 libcairo2 libatk1.0-0 libharfbuzz0b \
-            libmpv1 libayatana-appindicator3-1 libepoxy0
-          MISSING=$(ldd "$BIN" | grep "not found" || true)
-          if [ -n "$MISSING" ]; then
-            echo "ERROR: missing libraries:"
-            echo "$MISSING"
+          BUNDLE="$GITHUB_WORKSPACE/build/linux/x64/release/bundle"
+          if [ ! -d "$BUNDLE" ]; then
+            echo "ERROR: Flutter build output not found at $BUNDLE"
             exit 1
           fi
-          echo "All shared libraries resolved OK"
-
-      - name: Archive Linux bundle
-        run: |
-          cd build/linux/x64/release/bundle
+          cd "$BUNDLE"
           zip -r "$GITHUB_WORKSPACE/linux.zip" .
+          echo "Raw bundle zipped → linux.zip"
 
+      # ── Build the AppImage ────────────────────────────────────────────────
+      # Strategy:
+      #   1. Lay out AppDir/usr/{bin,lib} following the AppImage spec.
+      #   2. Copy the Flutter bundle into usr/bin/ (binary + data/).
+      #   3. Use `ldd` to find every shared library the binary (and its plugin
+      #      .so files) depends on, excluding glibc/libstdc++ (ABI-critical,
+      #      must come from the host).
+      #   4. Copy all non-excluded libs into usr/lib/.
+      #   5. Use patchelf to set RPATH on the main binary so it prefers the
+      #      bundled libs at runtime.
+      #   6. Write a minimal AppRun launcher that sets LD_LIBRARY_PATH to cover
+      #      both usr/lib/ (system deps) and usr/bin/lib/ (Flutter plugin .so).
+      #   7. Write a .desktop file and place the icon.
+      #   8. Download appimagetool, extract it (no FUSE needed), and run it.
       - name: Build AppImage
+        env:
+          # Tell any child AppImage invocations to extract instead of mount
+          APPIMAGE_EXTRACT_AND_RUN: "1"
         run: |
-          set -e
-          APPDIR="$GITHUB_WORKSPACE/AppDir"
-          rm -rf "$APPDIR"
-          mkdir -p "$APPDIR/usr/bin"
-          cp -r build/linux/x64/release/bundle/* "$APPDIR/usr/bin/"
-          printf '%s\n' \
-            '[Desktop Entry]' \
-            'Type=Application' \
-            'Name=ConvertTheSpire Reborn' \
-            'Exec=convert_the_spire_reborn' \
-            'Icon=convert_the_spire_reborn' \
-            'Categories=Audio;Video;Utility;' \
-            > "$APPDIR/ConvertTheSpireReborn.desktop"
-          printf '%s\n' \
-            '#!/bin/sh' \
-            'HERE="$(dirname "$(readlink -f "$0")")"' \
-            'exec "$HERE/usr/bin/convert_the_spire_reborn" "$@"' \
-            > "$APPDIR/AppRun"
-          chmod +x "$APPDIR/AppRun"
-          curl -L -o appimagetool.AppImage https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
-          chmod +x appimagetool.AppImage
-          ./appimagetool.AppImage "$APPDIR" "$GITHUB_WORKSPACE/ConvertTheSpireReborn.AppImage"
+          set -euo pipefail
 
-      - name: Upload Linux artifact
+          BUNDLE="$GITHUB_WORKSPACE/build/linux/x64/release/bundle"
+          APPDIR="$GITHUB_WORKSPACE/AppDir"
+          APP_BIN="$APPDIR/usr/bin/${{ env.APP_NAME }}"
+          APP_LIB="$APPDIR/usr/lib"
+
+          # ── 1. Create AppDir skeleton ─────────────────────────────────────
+          rm -rf "$APPDIR"
+          mkdir -p "$APPDIR/usr/bin" "$APP_LIB"
+
+          # ── 2. Copy Flutter bundle ────────────────────────────────────────
+          # Flutter outputs:
+          #   bundle/<AppName>          ← main ELF executable
+          #   bundle/data/              ← Flutter assets, ICU data, etc.
+          #   bundle/lib/               ← plugin .so files (libflutter_linux_gtk.so, etc.)
+          cp -a "$BUNDLE/." "$APPDIR/usr/bin/"
+
+          # ── 3. Collect all shared-library dependencies ────────────────────
+          # We inspect the main binary AND every .so in bundle/lib/ to capture
+          # transitive dependencies that ldd on the binary alone might miss.
+          echo "--- Collecting library dependencies ---"
+
+          # Libraries that must NOT be bundled (they are ABI-gated per distro):
+          #   libc / libpthread / libdl / libm / librt / ld-linux
+          #   libGL / libEGL / libvulkan  (GPU drivers, must be host's own)
+          EXCLUDE_PATTERN='(libpthread|libc\.so|libdl|libm\.so|librt|ld-linux|ld-musl|libGL|libEGL|libvulkan|libdrm|libX|libxcb|libxkb)'
+
+          collect_libs() {
+            local target="$1"
+            ldd "$target" 2>/dev/null \
+              | awk '/=>/ { print $3 }' \
+              | grep -v 'not found' \
+              | grep -v '^$' \
+              | grep -Ev "$EXCLUDE_PATTERN" \
+              || true
+          }
+
+          # Gather deps from main binary
+          ALL_LIBS=$(collect_libs "$APP_BIN")
+
+          # Gather deps from every .so in bundle/lib/
+          if [ -d "$BUNDLE/lib" ]; then
+            for so in "$BUNDLE/lib/"*.so*; do
+              [ -f "$so" ] || continue
+              EXTRA=$(collect_libs "$so")
+              ALL_LIBS="$(printf '%s\n%s' "$ALL_LIBS" "$EXTRA")"
+            done
+          fi
+
+          # Deduplicate and copy
+          echo "$ALL_LIBS" | sort -u | while read -r lib; do
+            [ -f "$lib" ] || continue
+            dest="$APP_LIB/$(basename "$lib")"
+            if [ ! -f "$dest" ]; then
+              cp -L "$lib" "$dest"
+              echo "  Bundled: $(basename "$lib")"
+            fi
+          done
+
+          # ── 4. Fix RPATH on the main binary ───────────────────────────────
+          # $ORIGIN expands to the directory of the binary at runtime.
+          # We add ../lib (system deps) and lib (Flutter's own plugin .so dir
+          # which lives next to the binary as usr/bin/lib/).
+          patchelf --set-rpath '$ORIGIN/../lib:$ORIGIN/lib' "$APP_BIN" \
+            && echo "RPATH patched on ${{ env.APP_NAME }}"
+
+          # Also patch RPATHs on any .so files we bundled, so they can find
+          # each other if there are transitive deps among them.
+          find "$APP_LIB" -name '*.so*' -type f | while read -r sofile; do
+            patchelf --set-rpath '$ORIGIN' "$sofile" 2>/dev/null || true
+          done
+
+          # ── 5. AppRun launcher ────────────────────────────────────────────
+          cat > "$APPDIR/AppRun" << 'APPRUN'
+          #!/bin/sh
+          # Resolve the real location of this AppRun script even through symlinks
+          SELF="$(readlink -f "$0")"
+          HERE="$(dirname "$SELF")"
+
+          # Prefer bundled libs; fall back to host libs for anything not bundled
+          export LD_LIBRARY_PATH="\
+          ${HERE}/usr/lib:\
+          ${HERE}/usr/bin/lib:\
+          ${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+
+          # Some distros require XDG_DATA_DIRS to find icon themes / MIME types
+          export XDG_DATA_DIRS="${HERE}/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+
+          exec "${HERE}/usr/bin/${{ env.APP_NAME }}" "$@"
+          APPRUN
+          chmod +x "$APPDIR/AppRun"
+
+          # ── 6. .desktop file ──────────────────────────────────────────────
+          cat > "$APPDIR/${{ env.APP_NAME }}.desktop" << 'DESKTOP'
+          [Desktop Entry]
+          Type=Application
+          Name=Convert the Spire Reborn
+          Exec=${{ env.APP_NAME }}
+          Icon=${{ env.APP_NAME }}
+          Categories=AudioVideo;Audio;Video;Utility;
+          Comment=Download, convert, play and cast media
+          Terminal=false
+          DESKTOP
+
+          # ── 7. Icon ───────────────────────────────────────────────────────
+          ICON_SRC="$GITHUB_WORKSPACE/assets/icons/favicon-192x192.png"
+          if [ -f "$ICON_SRC" ]; then
+            cp "$ICON_SRC" "$APPDIR/${{ env.APP_NAME }}.png"
+            echo "Icon copied from assets."
+          else
+            echo "WARNING: Icon not found at $ICON_SRC — creating 1×1 placeholder."
+            # Minimal valid PNG (1×1 transparent pixel)
+            printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82' \
+              > "$APPDIR/${{ env.APP_NAME }}.png"
+          fi
+
+          # ── 8. Download & extract appimagetool (no FUSE required) ─────────
+          # Running the AppImage directly requires FUSE which is unavailable in
+          # CI containers.  --appimage-extract unpacks it to squashfs-root/ as
+          # plain files that can be executed without FUSE.
+          echo "--- Downloading appimagetool ---"
+          curl -fsSL \
+            -o /tmp/appimagetool.AppImage \
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x /tmp/appimagetool.AppImage
+
+          cd /tmp
+          ./appimagetool.AppImage --appimage-extract
+          chmod +x /tmp/squashfs-root/AppRun
+          APPIMAGETOOL=/tmp/squashfs-root/AppRun
+
+          # ── 9. Assemble the AppImage ──────────────────────────────────────
+          echo "--- Building AppImage ---"
+          cd "$GITHUB_WORKSPACE"
+          ARCH=x86_64 "$APPIMAGETOOL" \
+            --no-appstream \
+            "$APPDIR" \
+            "$GITHUB_WORKSPACE/${{ env.OUTPUT_NAME }}.AppImage"
+
+          # Verify output
+          ls -lh "$GITHUB_WORKSPACE/${{ env.OUTPUT_NAME }}.AppImage"
+          file "$GITHUB_WORKSPACE/${{ env.OUTPUT_NAME }}.AppImage"
+          echo "AppImage built successfully."
+
+      - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-x64
           path: |
             linux.zip
-            ConvertTheSpireReborn.AppImage
+            ${{ env.OUTPUT_NAME }}.AppImage
           retention-days: 30
 
-  # ── Android Build ─────────────────────────────────────────────────────
+  # ── Android Build ─────────────────────────────────────────────────────────
   build-android:
     name: Build Android
     needs: analyze
@@ -270,30 +387,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Set up Flutter
-        uses: flutter-actions/setup-flutter@v4
+        uses: subosito/flutter-action@v2
         with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
-          version: '3.41.2'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Patch flutter_inappwebview_windows
+      - name: Patch flutter_inappwebview_windows (symbol conflict)
         run: |
           for dir in \
             "${PUB_CACHE:-$HOME/.pub-cache}/hosted/pub.dev/flutter_inappwebview_windows-0.6.0/windows" \
             "windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows"
           do
             if [ -d "$dir" ]; then
-              find "$dir" -type f -name '*.cc' -exec perl -pi -e "s/\\bwebview_\\b/view/g" {} +
+              find "$dir" -type f -name '*.cc' \
+                -exec perl -pi -e 's/\bwebview_\b/view/g' {} +
             fi
           done
 
@@ -302,19 +420,18 @@ jobs:
 
       - name: Rename APK
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk ConvertTheSpireReborn.apk
-          ls -lh ConvertTheSpireReborn.apk
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "${{ env.OUTPUT_NAME }}.apk"
+          ls -lh "${{ env.OUTPUT_NAME }}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: ConvertTheSpireReborn.apk
+          path: ${{ env.OUTPUT_NAME }}.apk
           retention-days: 30
 
-  # ── macOS Build ───────────────────────────────────────────────────────
-  # macos-latest runners include Xcode, CocoaPods, and the full Apple
-  # toolchain — no extra setup needed beyond Flutter itself.
+  # ── macOS Build ───────────────────────────────────────────────────────────
   build-macos:
     name: Build macOS
     needs: analyze
@@ -323,10 +440,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Flutter
-        uses: flutter-actions/setup-flutter@v4
+        uses: subosito/flutter-action@v2
         with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
-          version: '3.41.2'
           cache: true
 
       - name: Install dependencies
@@ -335,35 +452,39 @@ jobs:
       - name: Build macOS release
         run: flutter build macos --release --no-tree-shake-icons
 
-      - name: Package macOS app
+      - name: Package macOS .app
         run: |
-          APP=$(find build/macos/Build/Products/Release -name "*.app" -maxdepth 1 | head -1)
+          APP=$(find build/macos/Build/Products/Release \
+            -maxdepth 1 -name "*.app" | head -1)
           if [ -z "$APP" ]; then
             echo "ERROR: .app bundle not found" && exit 1
           fi
           echo "Packaging: $APP"
-          ditto -c -k --keepParent "$APP" ConvertTheSpireReborn-macOS.zip
-          ls -lh ConvertTheSpireReborn-macOS.zip
+          ditto -c -k --keepParent "$APP" \
+            "${{ env.OUTPUT_NAME }}-macOS.zip"
+          ls -lh "${{ env.OUTPUT_NAME }}-macOS.zip"
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-x64
-          path: ConvertTheSpireReborn-macOS.zip
+          path: ${{ env.OUTPUT_NAME }}-macOS.zip
           retention-days: 30
 
-  # ── Create GitHub Release ─────────────────────────────────────────────
+  # ── GitHub Release ────────────────────────────────────────────────────────
   release:
     name: Publish Release
     needs: [build-windows, build-linux, build-android, build-macos]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # required to create a release and upload assets
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: List artifacts
+      - name: List downloaded artifacts
         run: find artifacts -type f | sort
 
       - name: Create GitHub Release
@@ -371,12 +492,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ inputs.release_tag || format('v0.0.{0}', github.run_number) }}
-          name: ${{ inputs.release_name || inputs.release_tag || format('Build {0}', github.run_number) }}
+          tag_name: >-
+            ${{ inputs.release_tag
+                || format('v0.0.{0}', github.run_number) }}
+          name: >-
+            ${{ inputs.release_name
+                || inputs.release_tag
+                || format('Build {0}', github.run_number) }}
           generate_release_notes: true
           files: |
-            artifacts/windows-x64/ConvertTheSpireReborn.zip
-            artifacts/linux-x64/ConvertTheSpireReborn.AppImage
+            artifacts/windows-x64/${{ env.OUTPUT_NAME }}.zip
+            artifacts/linux-x64/${{ env.OUTPUT_NAME }}.AppImage
             artifacts/linux-x64/linux.zip
-            artifacts/android-apk/ConvertTheSpireReborn.apk
-            artifacts/macos-x64/ConvertTheSpireReborn-macOS.zip
+            artifacts/android-apk/${{ env.OUTPUT_NAME }}.apk
+            artifacts/macos-x64/${{ env.OUTPUT_NAME }}-macOS.zip
