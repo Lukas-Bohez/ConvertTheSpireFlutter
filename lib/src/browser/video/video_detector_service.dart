@@ -62,6 +62,16 @@ class VideoDetectorService extends ChangeNotifier {
   if (window.__videoDetectorInjected) return;
   window.__videoDetectorInjected = true;
 
+  function safeCall(name, payload) {
+    try {
+      if (window && window.flutter_inappwebview && typeof window.flutter_inappwebview.callHandler === 'function') {
+        window.flutter_inappwebview.callHandler(name, payload);
+      }
+    } catch (e) {
+      // swallow - injected script must never throw
+    }
+  }
+
   function scanVideos() {
     var found = [];
     document.querySelectorAll('video').forEach(function(v) {
@@ -77,7 +87,7 @@ class VideoDetectorService extends ChangeNotifier {
   var _open = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function(method, url) {
     if (typeof url === 'string' && /\.(m3u8|mp4|mpd|ts|webm)(\?|$)/i.test(url)) {
-      window.flutter_inappwebview.callHandler('onVideoFound', JSON.stringify({url: url, type: 'xhr'}));
+      safeCall('onVideoFound', JSON.stringify({url: url, type: 'xhr'}));
     }
     return _open.apply(this, arguments);
   };
@@ -86,20 +96,20 @@ class VideoDetectorService extends ChangeNotifier {
   window.fetch = function(input, init) {
     var url = (typeof input === 'string') ? input : (input && input.url) ? input.url : '';
     if (/\.(m3u8|mp4|mpd|ts|webm)(\?|$)/i.test(url)) {
-      window.flutter_inappwebview.callHandler('onVideoFound', JSON.stringify({url: url, type: 'fetch'}));
+      safeCall('onVideoFound', JSON.stringify({url: url, type: 'fetch'}));
     }
     return _fetch.apply(this, arguments);
   };
 
   var initial = scanVideos();
   if (initial.length > 0) {
-    window.flutter_inappwebview.callHandler('onVideoFound', JSON.stringify(initial[0]));
+    safeCall('onVideoFound', JSON.stringify(initial[0]));
   }
 
   new MutationObserver(function() {
     var vids = scanVideos();
     if (vids.length > 0) {
-      window.flutter_inappwebview.callHandler('onVideoFound', JSON.stringify(vids[0]));
+      safeCall('onVideoFound', JSON.stringify(vids[0]));
     }
   }).observe(document.body || document.documentElement, {childList: true, subtree: true});
 })();

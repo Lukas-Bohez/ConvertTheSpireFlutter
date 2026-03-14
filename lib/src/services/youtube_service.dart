@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 import '../models/preview_item.dart';
 
 class YouTubeService {
   final YoutubeExplode _yt;
+
+  static const Duration _playlistItemTimeout = Duration(seconds: 10);
+  static const Duration _singleVideoTimeout = Duration(seconds: 8);
 
   YouTubeService({required YoutubeExplode yt}) : _yt = yt;
 
@@ -15,42 +19,42 @@ class YouTubeService {
   }) async {
     if (expandPlaylist) {
       try {
-        // Try parsing as playlist using the URL pattern
-        // This handles both playlist URLs and video URLs with playlist parameters
         final parsedId = PlaylistId.parsePlaylistId(url);
-        
+
         if (parsedId != null && parsedId.isNotEmpty) {
-          if (_isAutoMixPlaylist(parsedId)) {
-            // YouTube Mix playlists cannot be expanded
-          } else {
+          if (!_isAutoMixPlaylist(parsedId)) {
             final playlistId = PlaylistId(parsedId);
-            final playlistVideos = _yt.playlists.getVideos(playlistId);
+            final playlistVideos = _yt.playlists.getVideos(playlistId).timeout(_playlistItemTimeout);
             final items = <PreviewItem>[];
             int index = 0;
 
             await for (final video in playlistVideos) {
               if (index >= startIndex) {
                 items.add(_toPreviewItem(video));
-                if (items.length >= limit) {
-                  break;
-                }
+                if (items.length >= limit) break;
               }
               index++;
             }
 
-            if (items.isNotEmpty) {
-              return items;
-            }
+            if (items.isNotEmpty) return items;
           }
         }
-      } catch (e) {
-        // If playlist parsing fails, fall through to single video
+      } on TimeoutException catch (_) {
+        // Playlist stream stalled — fall through to single video fallback
+      } catch (_) {
+        // Any other failure — fall back
       }
     }
 
-    // Fallback to single video
-    final video = await _yt.videos.get(url);
-    return <PreviewItem>[_toPreviewItem(video)];
+    // Fallback to single video with a timeout to avoid hangs
+    try {
+      final video = await _yt.videos.get(url).timeout(_singleVideoTimeout);
+      return <PreviewItem>[_toPreviewItem(video)];
+    } on TimeoutException catch (_) {
+      return <PreviewItem>[];
+    } catch (_) {
+      return <PreviewItem>[];
+    }
   }
 
   PreviewItem _toPreviewItem(Video video) {

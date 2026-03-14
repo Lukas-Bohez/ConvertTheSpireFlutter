@@ -53,11 +53,16 @@ class UpdateService {
       String linuxUrl = '';
       final assets = json['assets'] as List<dynamic>? ?? [];
       for (final asset in assets) {
-        final name = asset['name'] as String? ?? '';
+        final name = (asset['name'] as String? ?? '').toLowerCase();
         final url = asset['browser_download_url'] as String? ?? '';
-        if (name == 'ConvertTheSpireReborn.zip') windowsUrl = url;
-        if (name == 'ConvertTheSpireReborn.apk') androidUrl = url;
-        if (name == 'linux.zip') linuxUrl = url;
+        if (name.contains('rebor') && name.endsWith('.zip') && windowsUrl.isEmpty) windowsUrl = url;
+        if (name.endsWith('.apk') && androidUrl.isEmpty) androidUrl = url;
+        // Prefer AppImage on Linux if present; fall back to linux.zip
+        if (name.endsWith('.appimage')) {
+          linuxUrl = url; // prefer AppImage
+        } else if (name.endsWith('.zip') && linuxUrl.isEmpty) {
+          linuxUrl = url;
+        }
       }
 
       final info = await PackageInfo.fromPlatform();
