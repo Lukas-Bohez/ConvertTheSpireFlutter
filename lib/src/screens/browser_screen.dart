@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 // 'dart:typed_data' is not required; Uint8List is available via flutter services import
 
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
@@ -77,6 +78,13 @@ class _BrowserScreenState extends State<BrowserScreen>
   // Pending URL — loaded once the WebView controller is ready.
   String? _pendingUrl;
 
+  // Timer used to throttle periodic screenshots while video is playing.
+  Timer? _playbackScreenshotTimer;
+  // Timer used while TabSwitcher is visible to refresh previews.
+  Timer? _tabSwitcherScreenshotTimer;
+  // Whether the Tab Switcher sheet is currently visible.
+  bool _isTabSwitcherVisible = false;
+
   // Cast badge animation
   late final AnimationController _castBadgeController;
 
@@ -85,6 +93,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   @override
   void initState() {
+    _playbackScreenshotTimer?.cancel();
     super.initState();
     _adBlock.init();
     _castService.startDiscovery();
@@ -145,6 +154,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   @override
   void dispose() {
+    _playbackScreenshotTimer?.cancel();
     _castBadgeController.dispose();
     _videoDetector.removeListener(_onVideoDetectorChanged);
     _castService.removeListener(_onCastChanged);
@@ -278,16 +288,36 @@ class _BrowserScreenState extends State<BrowserScreen>
       handlerName: 'onVideoPlayback',
       callback: (args) async {
         try {
-          final activeTab = _tabManager.activeTab;
-          if (activeTab != null && _webViewController != null) {
-            try {
-              final bytes = await (_webViewController as dynamic).takeScreenshot();
-              if (bytes is Uint8List && bytes.isNotEmpty) {
-                await _tabManager.setScreenshot(activeTab.id, bytes);
+          final event = args.isNotEmpty ? args[0].toString() : 'play';
+          // Start/stop a throttled periodic screenshot while video plays.
+          if (event == 'play') {
+            // Only start background periodic captures when the tab switcher
+            // is visible to avoid continuous disk writes.
+            if (_isTabSwitcherVisible) {
+              if (_playbackScreenshotTimer == null || !_playbackScreenshotTimer!.isActive) {
+                _playbackScreenshotTimer = Timer.periodic(
+                  const Duration(seconds: 2),
+                  (t) async {
+                    final activeTab = _tabManager.activeTab;
+                    if (activeTab == null || _webViewController == null) {
+                      t.cancel();
+                      return;
+                    }
+                    try {
+                      final bytes = await (_webViewController as dynamic).takeScreenshot();
+                      if (bytes is Uint8List && bytes.isNotEmpty) {
+                        await _tabManager.setScreenshot(activeTab.id, bytes);
+                      }
+                    } catch (e) {
+                      debugPrint('[BROWSER] periodic playback screenshot failed: $e');
+                    }
+                  },
+                );
               }
-            } catch (e) {
-              debugPrint('[BROWSER] playback screenshot failed: $e');
             }
+          } else if (event == 'pause' || event == 'ended') {
+            _playbackScreenshotTimer?.cancel();
+            _playbackScreenshotTimer = null;
           }
         } catch (_) {}
       },
@@ -297,12 +327,14 @@ class _BrowserScreenState extends State<BrowserScreen>
     final urlToLoad = _pendingUrl;
     _pendingUrl = null;
     if (urlToLoad != null && urlToLoad.isNotEmpty) {
-      controller.loadUrl(
-          urlRequest: URLRequest(url: WebUri(urlToLoad)));
+      controller.loadUrl(urlRequest: URLRequest(url: WebUri(urlToLoad)));
     }
   }
 
   void _onLoadStart(InAppWebViewController controller, WebUri? url) {
+    // Stop any ongoing playback screenshot timer when navigating.
+    _playbackScreenshotTimer?.cancel();
+    _playbackScreenshotTimer = null;
     debugPrint('[BROWSER] onLoadStart – $url');
     _videoDetector.clearForPage();
     final urlStr = url?.toString() ?? '';
@@ -373,10 +405,10 @@ class _BrowserScreenState extends State<BrowserScreen>
       (function(){
         try {
           if (window.__flutter_playback_injected) return; window.__flutter_playback_injected = true;
-          function notify() {
-            try { if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) { window.flutter_inappwebview.callHandler('onVideoPlayback', 'play'); } } catch(e){}
+          function notify(e) {
+            try { if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) { window.flutter_inappwebview.callHandler('onVideoPlayback', e.type); } } catch(ex){}
           }
-          function attach(v){ try { if (!v.__flutter_playback_attached){ v.addEventListener('play', notify); v.__flutter_playback_attached = true; } } catch(e){} }
+          function attach(v){ try { if (!v.__flutter_playback_attached){ v.addEventListener('play', notify); v.addEventListener('pause', notify); v.addEventListener('ended', notify); v.__flutter_playback_attached = true; } } catch(ex){} }
           document.querySelectorAll('video').forEach(function(v){ attach(v); });
           new MutationObserver(function(){ document.querySelectorAll('video').forEach(function(v){ attach(v); }); }).observe(document.body||document.documentElement, {childList:true, subtree:true});
         } catch(e){}
@@ -1022,18 +1054,16 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (action == 'share') {
       final url = _addressController.text.trim();
       if (url.isNotEmpty) {
-        final title = _pageTitle.isNotEmpty ? _pageTitle : null;
-        final text = title != null ? '$title\n$url' : url;
+        // page title available in `_pageTitle` if needed in future
         try {
-          // Use SharePlus instance API to avoid deprecated static API.
-          if (title != null) {
-            SharePlus.instance.share(ShareParams(text: text, title: title));
-          } else {
-            SharePlus.instance.share(ShareParams(text: text));
-          }
+          // Share only the URL to avoid duplicate pastes in some targets.
+          SharePlus.instance.share(ShareParams(text: url));
         } catch (e) {
           try {
-            await Clipboard.setData(ClipboardData(text: url));
+            final existing = await Clipboard.getData('text/plain');
+            if (existing?.text != url) {
+              await Clipboard.setData(ClipboardData(text: url));
+            }
             if (mounted) ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Link copied to clipboard')),
             );
@@ -1113,6 +1143,22 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _showTabSwitcher() {
+    // Mark switcher visible and start a short-lived periodic capture to
+    // refresh previews while the sheet is open.
+    setState(() => _isTabSwitcherVisible = true);
+    _tabSwitcherScreenshotTimer?.cancel();
+    _tabSwitcherScreenshotTimer = Timer.periodic(const Duration(seconds: 2), (t) async {
+      final activeTab = _tabManager.activeTab;
+      if (activeTab == null || _webViewController == null) return;
+      try {
+        final bytes = await (_webViewController as dynamic).takeScreenshot();
+        if (bytes is Uint8List && bytes.isNotEmpty) {
+          await _tabManager.setScreenshot(activeTab.id, bytes);
+        }
+      } catch (e) {
+        debugPrint('[BROWSER] tab-switcher periodic screenshot failed: $e');
+      }
+    });
     // Attempt to capture an up-to-date screenshot for the active tab
     // before opening the sheet so previews reflect current playback.
     try {
@@ -1165,6 +1211,10 @@ class _BrowserScreenState extends State<BrowserScreen>
         },
       ),
     );
+    // Sheet closed — stop tab-switcher periodic captures.
+    _tabSwitcherScreenshotTimer?.cancel();
+    _tabSwitcherScreenshotTimer = null;
+    setState(() => _isTabSwitcherVisible = false);
   }
 }
 
@@ -1189,10 +1239,17 @@ class _TabSwitcherSheet extends StatefulWidget {
 
 class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
   final GlobalKey _repaintKey = GlobalKey();
+  void _onTabManagerChange() {
+    if (!mounted) return;
+    setState(() {});
+  }
 
   @override
   void initState() {
     super.initState();
+    // Rebuild when the TabManager emits changes (e.g., new screenshot path).
+    widget.tabManager.addListener(_onTabManagerChange);
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         await Future.delayed(const Duration(milliseconds: 200));
@@ -1200,6 +1257,12 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
             _repaintKey, 'results/screenshots/tab_switcher.png');
       } catch (_) {}
     });
+  }
+
+  @override
+  void dispose() {
+    widget.tabManager.removeListener(_onTabManagerChange);
+    super.dispose();
   }
 
   @override
@@ -1284,21 +1347,33 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                                   aspectRatio: 16 / 9,
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(8),
-                                    child: (tab.screenshotPath != null)
-                                        ? Image.file(
-                                            File(tab.screenshotPath!),
-                                            key: ValueKey(tab.screenshotPath),
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                          )
-                                        : Container(
-                                            color: cs.surfaceContainerHighest,
-                                            child: Center(
-                                              child: Icon(Icons.web,
-                                                  size: 28,
-                                                  color: cs.outlineVariant),
-                                            ),
-                                          ),
+                                    child: () {
+                                      final bytes = widget.tabManager.getScreenshotBytes(tab.id);
+                                      if (bytes != null && bytes.isNotEmpty) {
+                                        return Image.memory(
+                                          bytes,
+                                          key: ValueKey(widget.tabManager.getScreenshotBytes(tab.id) ?? tab.screenshotPath),
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                        );
+                                      }
+                                      if (tab.screenshotPath != null) {
+                                        return Image.file(
+                                          File(tab.screenshotPath!),
+                                          key: ValueKey(tab.screenshotPath),
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                        );
+                                      }
+                                      return Container(
+                                        color: cs.surfaceContainerHighest,
+                                        child: Center(
+                                          child: Icon(Icons.web,
+                                              size: 28,
+                                              color: cs.outlineVariant),
+                                        ),
+                                      );
+                                    }(),
                                   ),
                                 ),
                               ),

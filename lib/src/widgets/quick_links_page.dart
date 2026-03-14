@@ -102,7 +102,8 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
               crossAxisCount: crossAxisCount,
               mainAxisSpacing: 14,
               crossAxisSpacing: 14,
-              childAspectRatio: 1.0,
+              // Make tiles slightly taller to avoid tiny RenderFlex overflows
+              childAspectRatio: 0.95,
             ),
             itemCount: visibleLinks.length,
             itemBuilder: (context, index) {
