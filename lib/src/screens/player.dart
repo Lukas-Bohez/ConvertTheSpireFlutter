@@ -32,8 +32,8 @@ import '../services/audio_handler.dart';
 
 /// Wrapper widget that simply displays the screen. Actual state is
 /// provided above in the app so it survives navigation/tab switches.
-class playerPlayerPage extends StatelessWidget {
-  const playerPlayerPage({super.key});
+class PlayerPage extends StatelessWidget {
+  const PlayerPage({super.key});
 
   @override
   Widget build(BuildContext context) {

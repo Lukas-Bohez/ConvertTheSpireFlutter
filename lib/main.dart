@@ -29,9 +29,12 @@ void main() async {
             Pointer<Utf16>, Pointer<Utf16>)>('SetEnvironmentVariableW');
     final namePtr = 'WEBVIEW2_USER_DATA_FOLDER'.toNativeUtf16();
     final valuePtr = userData.path.toNativeUtf16();
-    setEnv(namePtr, valuePtr);
-    malloc.free(namePtr);
-    malloc.free(valuePtr);
+    try {
+      setEnv(namePtr, valuePtr);
+    } finally {
+      malloc.free(namePtr);
+      malloc.free(valuePtr);
+    }
   }
 
   WebViewEnvironment? webViewEnvironment;

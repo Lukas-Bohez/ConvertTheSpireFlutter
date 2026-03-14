@@ -36,6 +36,21 @@ class NotificationService {
 
     try {
       await _plugin.initialize(settings: settings);
+      // On Android 13+ (API 33+) the POST_NOTIFICATIONS permission must be
+      // requested at runtime. Attempt to request it if the platform impl
+      // exposes a request API. Wrap in try/catch so failures don't break init.
+      try {
+        if (Platform.isAndroid) {
+          final androidImpl =
+              _plugin.resolvePlatformSpecificImplementation<
+                  AndroidFlutterLocalNotificationsPlugin>();
+          if (androidImpl != null) {
+            try {
+              await (androidImpl as dynamic).requestPermission();
+            } catch (_) {}
+          }
+        }
+      } catch (_) {}
       _initialised = true;
     } catch (_) {
       // Platform not supported – silently disable notifications.
@@ -95,21 +110,21 @@ class NotificationService {
   /// Show an ongoing "downloads active" notification (Android).
   /// This acts as a lightweight foreground indicator so the OS is less likely
   /// to kill the process during long download queues.
-  Future<void> showActiveDownloadsBanner(int remaining) async {
+  Future<void> showActiveDownloadsBanner(int remaining, {bool ongoing = true}) async {
     if (!_initialised || kIsWeb || !Platform.isAndroid) return;
 
-    const details = NotificationDetails(
-      android: AndroidNotificationDetails(
-        'download_active',
-        'Active Downloads',
-        channelDescription: 'Shown while downloads are in progress',
-        importance: Importance.low,
-        priority: Priority.low,
-        ongoing: true,
-        autoCancel: false,
-        showProgress: false,
-      ),
+    final androidDetails = AndroidNotificationDetails(
+      'download_active',
+      'Active Downloads',
+      channelDescription: 'Shown while downloads are in progress',
+      importance: Importance.low,
+      priority: Priority.low,
+      ongoing: ongoing,
+      autoCancel: !ongoing,
+      showProgress: false,
     );
+
+    final details = NotificationDetails(android: androidDetails);
 
     try {
       await _plugin.show(

@@ -198,11 +198,37 @@ jobs:
           cd build/linux/x64/release/bundle
           zip -r "$GITHUB_WORKSPACE/linux.zip" .
 
+      - name: Package as AppImage (best-effort)
+        run: |
+          set -e
+          BUNDLE_DIR="build/linux/x64/release/bundle"
+          cd "$BUNDLE_DIR"
+          # Download appimagetool if not present
+          if [ ! -f appimagetool ] && ! command -v appimagetool >/dev/null 2>&1; then
+            echo "Downloading appimagetool"
+            curl -L -o appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage || true
+            chmod +x appimagetool || true
+          fi
+          # Create minimal AppDir and attempt to build AppImage. This is a best-effort
+          # step: adjust AppDir layout and bundled libs as needed for your project.
+          rm -rf AppDir
+          mkdir -p AppDir/usr/bin
+          cp -r * AppDir/usr/bin/ || true
+          if [ -f appimagetool ]; then
+            ./appimagetool AppDir ConvertTheSpireReborn.AppImage || true
+          elif command -v appimagetool >/dev/null 2>&1; then
+            appimagetool AppDir ConvertTheSpireReborn.AppImage || true
+          else
+            echo "appimagetool not available; skipping AppImage creation"
+          fi
+
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-release
-          path: linux.zip
+          path: |
+            linux.zip
+            build/linux/x64/release/bundle/ConvertTheSpireReborn.AppImage
           if-no-files-found: error
 
   # ── Android Build ─────────────────────────────────────────────────────

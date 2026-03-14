@@ -660,16 +660,39 @@ class NativeMinerService {
     _stderrSub = null;
     final proc = _process;
     _process = null;
+
+    // Attempt to kill the tracked process synchronously where possible,
+    // but perform heavier global cleanup asynchronously so `dispose()`
+    // remains non-blocking and won't hang app shutdown.
     if (proc != null) {
       try {
         if (Platform.isWindows) {
-          Process.run('taskkill', ['/F', '/T', '/PID', '${proc.pid}']);
+          // Fire-and-forget a quick taskkill; don't await to avoid blocking.
+          Future(() async {
+            try {
+              await Process.run('taskkill', ['/F', '/T', '/PID', '${proc.pid}'])
+                  .timeout(const Duration(seconds: 2));
+            } catch (_) {}
+          });
         } else {
-          proc.kill(ProcessSignal.sigkill);
+          try {
+            proc.kill(ProcessSignal.sigkill);
+          } catch (_) {}
         }
       } catch (_) {}
     }
-    killAllInstances();
+
+    // Ensure any stray qli-Client instances are cleaned up, but do this
+    // asynchronously with a short timeout so shutdown is not blocked.
+    Future(() async {
+      try {
+        await NativeMinerService.killAllInstances()
+            .timeout(const Duration(seconds: 3));
+      } catch (e) {
+        debugPrint('NativeMinerService.dispose: cleanup error: $e');
+      }
+    });
+
     _hashRate = 0;
     _state = MinerState.stopped;
     if (!_statsController.isClosed) _statsController.close();

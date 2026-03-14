@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' show Offset, Size;
 
@@ -111,10 +112,10 @@ class TrayService with TrayListener, WindowListener {
   }
 
   @override
-  void onWindowResized() => _saveWindowGeometry();
+  void onWindowResized() => _scheduleGeometrySave();
 
   @override
-  void onWindowMoved() => _saveWindowGeometry();
+  void onWindowMoved() => _scheduleGeometrySave();
 
   // ── Window geometry persistence ─────────────────────────────────────────
 
@@ -122,6 +123,7 @@ class TrayService with TrayListener, WindowListener {
   static const _kWindowY = 'window_y';
   static const _kWindowW = 'window_w';
   static const _kWindowH = 'window_h';
+  Timer? _geometryDebounce;
 
   Future<void> _saveWindowGeometry() async {
     try {
@@ -134,6 +136,13 @@ class TrayService with TrayListener, WindowListener {
     } catch (_) {}
   }
 
+  void _scheduleGeometrySave() {
+    _geometryDebounce?.cancel();
+    _geometryDebounce = Timer(const Duration(milliseconds: 500), () {
+      _saveWindowGeometry();
+    });
+  }
+
   Future<void> _restoreWindowGeometry() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -141,13 +150,23 @@ class TrayService with TrayListener, WindowListener {
       final y = prefs.getDouble(_kWindowY);
       final w = prefs.getDouble(_kWindowW);
       final h = prefs.getDouble(_kWindowH);
-      if (x != null && y != null && w != null && h != null && w > 100 && h > 100) {
-        await windowManager.setBounds(
-          null,
-          position: Offset(x, y),
-          size: Size(w, h),
-        );
-      }
+      if (x == null || y == null || w == null || h == null) return;
+      if (w < 100 || h < 100) return;
+
+      // Guard against off-screen position (e.g. after removing a monitor).
+      // Keep at least the top-left area visible. Allow slight negative X for
+      // multi-monitor setups (where left can be negative).
+      const minVisibleX = -200.0;
+      const minVisibleY = 0.0;
+      const maxSafe = 99999.0;
+      final safeX = (x).clamp(minVisibleX, maxSafe);
+      final safeY = (y).clamp(minVisibleY, maxSafe);
+
+      await windowManager.setBounds(
+        null,
+        position: Offset(safeX, safeY),
+        size: Size(w, h),
+      );
     } catch (_) {}
   }
 
@@ -163,6 +182,7 @@ class TrayService with TrayListener, WindowListener {
     if (!_initialised) return;
     trayManager.removeListener(this);
     windowManager.removeListener(this);
+    _geometryDebounce?.cancel();
     await trayManager.destroy();
     await windowManager.setPreventClose(false);
     await windowManager.destroy();

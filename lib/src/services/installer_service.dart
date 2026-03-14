@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
-
-import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
@@ -25,18 +23,19 @@ class InstallerService {
     final zipPath = '${downloadDir.path}${Platform.pathSeparator}ffmpeg.zip';
 
     onProgress?.call(0, 'Downloading');
-    final bytes = await _download(url, onProgress: onProgress);
-    await File(zipPath).writeAsBytes(bytes, flush: true);
+    final zipFile = await _downloadToFile(url, zipPath, onProgress: onProgress);
 
     if (checksumSha256 != null && checksumSha256.trim().isNotEmpty) {
-      final digest = sha256.convert(bytes).toString();
+      final digestObj = await sha256.bind(zipFile.openRead()).first;
+      final digest = digestObj.toString();
       if (digest.toLowerCase() != checksumSha256.toLowerCase()) {
         throw Exception('Checksum mismatch');
       }
     }
 
     onProgress?.call(60, 'Extracting');
-    final archive = ZipDecoder().decodeBytes(bytes);
+    final inStream = InputFileStream(zipFile.path);
+    final archive = ZipDecoder().decodeBuffer(inStream);
     for (final file in archive) {
       final outPath = '${downloadDir.path}${Platform.pathSeparator}${file.name}';
       if (file.isFile) {
@@ -57,7 +56,7 @@ class InstallerService {
     return ffmpegExe.path;
   }
 
-  Future<Uint8List> _download(Uri url, {void Function(int percent, String message)? onProgress}) async {
+  Future<File> _downloadToFile(Uri url, String outPath, {void Function(int percent, String message)? onProgress}) async {
     final client = http.Client();
     try {
       final response = await client.send(http.Request('GET', url))
@@ -67,25 +66,29 @@ class InstallerService {
         throw Exception('Download failed: ${response.statusCode}');
       }
       final total = response.contentLength ?? 0;
-      final bytes = <int>[];
+      final file = File(outPath);
+      final dir = file.parent;
+      await dir.create(recursive: true);
+      final sink = file.openWrite();
       int received = 0;
-      // Add stall detection: abort if no data for 60 seconds
       final streamData = response.stream.timeout(
         const Duration(seconds: 60),
-        onTimeout: (sink) {
-          sink.addError(TimeoutException('FFmpeg download stalled – no data for 60 seconds'));
-          sink.close();
+        onTimeout: (sinkErr) {
+          sinkErr.addError(TimeoutException('FFmpeg download stalled – no data for 60 seconds'));
+          sinkErr.close();
         },
       );
       await for (final chunk in streamData) {
-        bytes.addAll(chunk);
+        sink.add(chunk);
         received += chunk.length;
         if (total > 0) {
           final pct = ((received / total) * 100).clamp(0, 100).toInt();
           onProgress?.call(pct, 'Downloading');
         }
       }
-      return Uint8List.fromList(bytes);
+      await sink.flush();
+      await sink.close();
+      return file;
     } finally {
       client.close();
     }

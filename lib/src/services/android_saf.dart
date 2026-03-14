@@ -52,4 +52,9 @@ class AndroidSaf {
       'subdir': subdir,
     });
   }
+
+  Future<String?> copyToTemp({required String uri}) async {
+    if (!isSupported) return null;
+    return _channel.invokeMethod<String>('copyToTemp', {'uri': uri});
+  }
 }
