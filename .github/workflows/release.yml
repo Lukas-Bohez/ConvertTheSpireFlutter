@@ -19,7 +19,7 @@ jobs:
     name: Code Quality Gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v4
@@ -48,7 +48,7 @@ jobs:
     needs: analyze
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v4
@@ -108,7 +108,7 @@ jobs:
           Write-Host "Created $zip ($([math]::Round((Get-Item $zip).Length/1MB,1)) MB)"
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: windows-x64
           path: ConvertTheSpireReborn.zip
@@ -133,7 +133,7 @@ jobs:
       CC: clang-10
       CXX: clang++-10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       # Git >= 2.35.2 rejects repos owned by a different UID.
       # We write the gitconfig directly because git is not yet installed
@@ -235,26 +235,26 @@ jobs:
           rm -rf "$APPDIR"
           mkdir -p "$APPDIR/usr/bin"
           cp -r build/linux/x64/release/bundle/* "$APPDIR/usr/bin/"
-          cat > "$APPDIR/ConvertTheSpireReborn.desktop" <<'DESKTOP'
-[Desktop Entry]
-Type=Application
-Name=ConvertTheSpire Reborn
-Exec=convert_the_spire_reborn
-Icon=convert_the_spire_reborn
-Categories=Audio;Video;Utility;
-DESKTOP
-          cat > "$APPDIR/AppRun" <<'APPRUN'
-#!/bin/sh
-HERE="$(dirname "$(readlink -f "$0")")"
-exec "$HERE/usr/bin/convert_the_spire_reborn" "$@"
-APPRUN
+          printf '%s\n' \
+            '[Desktop Entry]' \
+            'Type=Application' \
+            'Name=ConvertTheSpire Reborn' \
+            'Exec=convert_the_spire_reborn' \
+            'Icon=convert_the_spire_reborn' \
+            'Categories=Audio;Video;Utility;' \
+            > "$APPDIR/ConvertTheSpireReborn.desktop"
+          printf '%s\n' \
+            '#!/bin/sh' \
+            'HERE="$(dirname "$(readlink -f "$0")")"' \
+            'exec "$HERE/usr/bin/convert_the_spire_reborn" "$@"' \
+            > "$APPDIR/AppRun"
           chmod +x "$APPDIR/AppRun"
           curl -L -o appimagetool.AppImage https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool.AppImage
           ./appimagetool.AppImage "$APPDIR" "$GITHUB_WORKSPACE/ConvertTheSpireReborn.AppImage"
 
       - name: Upload Linux artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: linux-x64
           path: |
@@ -268,7 +268,7 @@ APPRUN
     needs: analyze
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -306,7 +306,7 @@ APPRUN
           ls -lh ConvertTheSpireReborn.apk
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: ConvertTheSpireReborn.apk
@@ -320,7 +320,7 @@ APPRUN
     needs: analyze
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v4
@@ -346,7 +346,7 @@ APPRUN
           ls -lh ConvertTheSpireReborn-macOS.zip
 
       - name: Upload macOS artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: macos-x64
           path: ConvertTheSpireReborn-macOS.zip
@@ -359,7 +359,7 @@ APPRUN
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 

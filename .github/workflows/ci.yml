@@ -125,6 +125,8 @@ jobs:
     env:
       DEBIAN_FRONTEND: noninteractive
       TZ: UTC
+      CC: clang-10
+      CXX: clang++-10
     steps:
       - uses: actions/checkout@v4
 
@@ -147,6 +149,12 @@ jobs:
             libmpv-dev mpv libass-dev \
             libayatana-appindicator3-dev libappindicator3-dev \
             patchelf ca-certificates
+          # Create unversioned symlinks so cmake and tools can find the compiler/linker
+          ln -sf /usr/bin/clang-10   /usr/bin/clang   || true
+          ln -sf /usr/bin/clang++-10 /usr/bin/clang++ || true
+          ln -sf /usr/bin/lld-10     /usr/bin/lld     || true
+          # Verify the linker Flutter needs is present
+          ls -la /usr/lib/llvm-10/bin/ld.lld || (echo "ERROR: ld.lld missing" && exit 1)
 
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v4
