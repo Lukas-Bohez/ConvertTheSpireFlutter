@@ -60,14 +60,30 @@ class LocalMediaServer {
     debugPrint('LocalMediaServer: listening on $url  (serving $filePath)');
 
     server.listen((request) async {
-      if (request.uri.path == '/media' && _servingPath != null) {
-        await _handleMediaRequest(request);
-      } else {
-        request.response
-          ..statusCode = HttpStatus.notFound
-          ..write('Not found');
-        await request.response.close();
+      try {
+        if (request.uri.path == '/media' && _servingPath != null) {
+          await _handleMediaRequest(request);
+        } else {
+          request.response
+            ..statusCode = HttpStatus.notFound
+            ..write('Not found');
+          await request.response.close();
+        }
+      } catch (e, st) {
+        debugPrint('LocalMediaServer: request handler error: $e');
+        debugPrint('$st');
+        // Try to close the response if possible.
+        try {
+          try {
+            request.response.statusCode = HttpStatus.internalServerError;
+            request.response.write('Server error');
+          } catch (_) {}
+          await request.response.close();
+        } catch (_) {}
       }
+    }, onError: (e, st) {
+      debugPrint('LocalMediaServer: listen stream error: $e');
+      debugPrint('$st');
     });
 
     return url;
@@ -75,54 +91,82 @@ class LocalMediaServer {
 
   /// Handle a GET or HEAD request for the media file.
   Future<void> _handleMediaRequest(HttpRequest request) async {
-    final file = File(_servingPath!);
-    if (!await file.exists()) {
-      request.response
-        ..statusCode = HttpStatus.notFound
-        ..write('File no longer available');
-      await request.response.close();
-      return;
-    }
-
-    final length = await file.length();
-    final mime = _servingMime ?? 'application/octet-stream';
-
-    // Set headers that DLNA renderers expect
-    request.response.headers
-      ..contentType = ContentType.parse(mime)
-      ..contentLength = length
-      ..set('Accept-Ranges', 'bytes')
-      ..set('Connection', 'keep-alive')
-      ..set('transferMode.dlna.org', 'Streaming')
-      ..set('contentFeatures.dlna.org', _dlnaContentFeatures(mime));
-
-    // Handle Range requests (many TVs use these for seeking)
-    final rangeHeader = request.headers.value('range');
-    if (rangeHeader != null && request.method == 'GET') {
-      final rangeMatch = RegExp(r'bytes=(\d+)-(\d*)').firstMatch(rangeHeader);
-      if (rangeMatch != null) {
-        final start = int.parse(rangeMatch.group(1) ?? '0');
-        final endStr = rangeMatch.group(2) ?? '';
-        final end = endStr.isNotEmpty ? int.parse(endStr) : length - 1;
-        final rangeLength = end - start + 1;
-
+    try {
+      final file = File(_servingPath!);
+      if (!await file.exists()) {
         request.response
-          ..statusCode = HttpStatus.partialContent
-          ..headers.set('Content-Range', 'bytes $start-$end/$length')
-          ..headers.contentLength = rangeLength;
-
-        await file.openRead(start, end + 1).pipe(request.response);
+          ..statusCode = HttpStatus.notFound
+          ..write('File no longer available');
+        await request.response.close();
         return;
       }
-    }
 
-    if (request.method == 'HEAD') {
-      await request.response.close();
-      return;
-    }
+      final length = await file.length();
+      final mime = _servingMime ?? 'application/octet-stream';
 
-    // Full file
-    await file.openRead().pipe(request.response);
+      // Set headers that DLNA renderers expect
+      request.response.headers
+        ..contentType = ContentType.parse(mime)
+        ..contentLength = length
+        ..set('Accept-Ranges', 'bytes')
+        ..set('Connection', 'keep-alive')
+        ..set('transferMode.dlna.org', 'Streaming')
+        ..set('contentFeatures.dlna.org', _dlnaContentFeatures(mime));
+
+      // Handle Range requests (many TVs use these for seeking)
+      final rangeHeader = request.headers.value('range');
+      if (rangeHeader != null && request.method == 'GET') {
+        final rangeMatch = RegExp(r'bytes=(\d+)-(\d*)').firstMatch(rangeHeader);
+        if (rangeMatch != null) {
+          final start = int.parse(rangeMatch.group(1) ?? '0');
+          final endStr = rangeMatch.group(2) ?? '';
+          final end = endStr.isNotEmpty ? int.parse(endStr) : length - 1;
+          final rangeLength = end - start + 1;
+
+          request.response
+            ..statusCode = HttpStatus.partialContent
+            ..headers.set('Content-Range', 'bytes $start-$end/$length')
+            ..headers.contentLength = rangeLength;
+
+          try {
+            await file.openRead(start, end + 1).pipe(request.response);
+          } catch (e, st) {
+            debugPrint('LocalMediaServer: pipe error: $e');
+            debugPrint('$st');
+            try {
+              await request.response.close();
+            } catch (_) {}
+          }
+          return;
+        }
+      }
+
+      if (request.method == 'HEAD') {
+        await request.response.close();
+        return;
+      }
+
+      // Full file
+      try {
+        await file.openRead().pipe(request.response);
+      } catch (e, st) {
+        debugPrint('LocalMediaServer: pipe error: $e');
+        debugPrint('$st');
+        try {
+          await request.response.close();
+        } catch (_) {}
+      }
+    } catch (e, st) {
+      debugPrint('LocalMediaServer: request processing failed: $e');
+      debugPrint('$st');
+      try {
+        try {
+          request.response.statusCode = HttpStatus.internalServerError;
+          request.response.write('Server error');
+        } catch (_) {}
+        await request.response.close();
+      } catch (_) {}
+    }
   }
 
   /// Stop the server and release the port.

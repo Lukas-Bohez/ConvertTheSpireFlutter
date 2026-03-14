@@ -51,7 +51,7 @@ class SupportScreenState extends State<SupportScreen>
   int _batteryLevel = 100;
   BatteryState _batteryState = BatteryState.unknown;
   bool _batteryPaused = false;
-  Timer? _batteryTimer;
+  StreamSubscription<BatteryState>? _batteryStateSub;
   late final AnimationController _pulseController;
   StreamSubscription? _minerStatsSub;
 
@@ -218,8 +218,10 @@ class SupportScreenState extends State<SupportScreen>
 
   void _startBatteryMonitoring() {
     if (kIsWeb) return;
+    // Initial reading
     _checkBattery();
-    _batteryTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+    // React to plug/unplug events via the battery_plus stream
+    _batteryStateSub = _battery.onBatteryStateChanged.listen((_) {
       _checkBattery();
     });
   }
@@ -265,7 +267,7 @@ class SupportScreenState extends State<SupportScreen>
 
   @override
   void dispose() {
-    _batteryTimer?.cancel();
+    _batteryStateSub?.cancel();
     _miningTimer?.cancel();
     _minerStatsSub?.cancel();
     _pulseController.dispose();

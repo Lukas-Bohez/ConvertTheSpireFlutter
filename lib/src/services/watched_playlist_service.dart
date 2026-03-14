@@ -21,6 +21,13 @@ class WatchedPlaylistService {
     this.logs,
   });
 
+  bool _disposed = false;
+
+  /// Release any resources and stop background activity.
+  void dispose() {
+    _disposed = true;
+  }
+
   // ─── Persistence ─────────────────────────────────────────────────────────
 
   Future<List<String>> getWatchedUrls() async {
@@ -51,15 +58,18 @@ class WatchedPlaylistService {
   // ─── Checking for new tracks ─────────────────────────────────────────────
 
   Future<int> checkAllPlaylists() async {
+    if (_disposed) return 0;
     final urls = await getWatchedUrls();
     int totalNew = 0;
     for (final url in urls) {
+      if (_disposed) break;
       totalNew += await checkPlaylist(url);
     }
     return totalNew;
   }
 
   Future<int> checkPlaylist(String url) async {
+    if (_disposed) return 0;
     try {
       final currentTracks = await fetchPlaylistTracks(url);
       final currentHash = _hashTrackIds(currentTracks);
@@ -95,6 +105,7 @@ class WatchedPlaylistService {
   // ─── Internal helpers ────────────────────────────────────────────────────
 
   Future<void> _snapshotPlaylist(String url) async {
+    if (_disposed) return;
     try {
       final tracks = await fetchPlaylistTracks(url);
       final hash = _hashTrackIds(tracks);

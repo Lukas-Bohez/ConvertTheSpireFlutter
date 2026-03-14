@@ -25,6 +25,7 @@ import '../services/multi_source_search_service.dart';
 import '../services/notification_service.dart';
 import '../services/playlist_service.dart';
 import '../services/preview_player_service.dart';
+import '../services/android_saf.dart';
 import '../services/settings_store.dart';
 import '../services/statistics_service.dart';
 import '../services/watched_playlist_service.dart';
@@ -229,6 +230,26 @@ class AppController extends ChangeNotifier {
       onboardingChecked = true;
       notifyListeners();
     }
+  }
+
+  /// Called by the app when the lifecycle state changes. Used to adjust
+  /// Android notification behavior (allow dismissal when app is backgrounded).
+  void handleAppLifecycleState(AppLifecycleState state) {
+    try {
+      if (!kIsWeb && Platform.isAndroid) {
+        // If downloads banner is shown, make it dismissible while the app
+        // is backgrounded so the user can swipe it away. When the app
+        // resumes we re-show it as ongoing to indicate active work.
+        final remaining = queue.where((item) => item.status == DownloadStatus.queued).length;
+        if (remaining > 0) {
+          if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.detached) {
+            unawaited(notificationService.showActiveDownloadsBanner(remaining, ongoing: false));
+          } else if (state == AppLifecycleState.resumed) {
+            unawaited(notificationService.showActiveDownloadsBanner(remaining, ongoing: true));
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> completeOnboarding() async {
@@ -462,14 +483,14 @@ class AppController extends ChangeNotifier {
         await notificationService.showActiveDownloadsBanner(pending.length);
 
         final workers = (_settings?.maxWorkers ?? 3).clamp(1, 10);
-        int index = 0;
 
         Future<void> worker() async {
           while (true) {
-            final i = index;
-            if (i >= pending.length) break;
-            index++;
-            await downloadSingle(pending[i]);
+            QueueItem? next;
+            if (pending.isEmpty) break;
+            // Take the first pending item (work-stealing).
+            next = pending.removeAt(0);
+            await downloadSingle(next);
           }
         }
 
@@ -549,6 +570,36 @@ class AppController extends ChangeNotifier {
       logs.add('Saving files is not supported on web.');
       return;
     }
+    final settings = _settings;
+    // On Android, if the configured download folder is a SAF tree (content://)
+    // use the native channel to copy the file into the tree so it's visible
+    // to other apps. Otherwise fall back to writing to the resolved path.
+    if (Platform.isAndroid && settings != null && settings.downloadDir.startsWith('content://')) {
+      try {
+        final cache = await PlatformDirs.getCacheDir();
+        final tmp = File('${cache.path}${Platform.pathSeparator}${result.name}');
+        await tmp.writeAsBytes(result.bytes, flush: true);
+        final saf = AndroidSaf();
+        final mime = _mimeForExtension(result.name.split('.').last);
+        final dest = await saf.copyToTree(
+          treeUri: settings.downloadDir,
+          sourcePath: tmp.path,
+          displayName: result.name,
+          mimeType: mime,
+        );
+        try {
+          await tmp.delete();
+        } catch (_) {}
+        if (dest != null && dest.isNotEmpty) {
+          logs.add('Saved converted file: $dest');
+          return;
+        }
+      } catch (e) {
+        logs.add('SAF save failed: $e');
+        // fall through to legacy path
+      }
+    }
+
     final path = await _resolveSavePath(result.name);
     if (path == null) {
       return;
@@ -573,6 +624,31 @@ class AppController extends ChangeNotifier {
     }
 
     return FilePicker.platform.saveFile(fileName: filename);
+  }
+
+  String _mimeForExtension(String ext) {
+    final e = ext.toLowerCase();
+    switch (e) {
+      case 'mp3':
+        return 'audio/mpeg';
+      case 'm4a':
+        return 'audio/mp4';
+      case 'mp4':
+        return 'video/mp4';
+      case 'png':
+        return 'image/png';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'gif':
+        return 'image/gif';
+      case 'pdf':
+        return 'application/pdf';
+      case 'zip':
+        return 'application/zip';
+      default:
+        return 'application/octet-stream';
+    }
   }
 
   void _updateQueue(QueueItem original, QueueItem updated) {
@@ -861,6 +937,7 @@ class AppController extends ChangeNotifier {
 
   @override
   void dispose() {
+    watchedPlaylistService.dispose();
     previewPlayer.dispose();
     super.dispose();
   }

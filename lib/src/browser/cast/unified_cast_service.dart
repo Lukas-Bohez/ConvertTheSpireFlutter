@@ -84,4 +84,18 @@ class UnifiedCastService extends CastService {
     _dlna.dispose();
     super.dispose();
   }
+
+  /// Pause polling on underlying services (DLNA) when app is backgrounded.
+  void pausePolling() {
+    try {
+      _dlna.pausePolling();
+    } catch (_) {}
+  }
+
+  /// Resume polling on underlying services when app is foregrounded.
+  void resumePolling() {
+    try {
+      _dlna.resumePolling();
+    } catch (_) {}
+  }
 }

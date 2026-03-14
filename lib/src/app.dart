@@ -34,6 +34,7 @@ import 'services/youtube_service.dart';
 import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'data/browser_db.dart';
 
 class MyApp extends StatefulWidget {
   final String? mediaKitInitError;
@@ -45,7 +46,7 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> with WindowListener {
+class _MyAppState extends State<MyApp> with WindowListener, WidgetsBindingObserver {
   AppController? _controller;
   YoutubeExplode? _ytExplode;
   String? _initError;
@@ -59,6 +60,7 @@ class _MyAppState extends State<MyApp> with WindowListener {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initController();
     if (!kIsWeb && Platform.isWindows) {
       try {
@@ -122,6 +124,7 @@ class _MyAppState extends State<MyApp> with WindowListener {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (!kIsWeb && Platform.isWindows) {
       try {
         windowManager.removeListener(this);
@@ -129,8 +132,20 @@ class _MyAppState extends State<MyApp> with WindowListener {
     }
     _ytExplode?.close();
     _controller?.dispose();
+    // Attempt to close browser DB; do not await in dispose.
+    try {
+      BrowserDb.close();
+    } catch (_) {}
     _keyboardFocusNode.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    try {
+      _controller?.handleAppLifecycleState(state);
+    } catch (_) {}
   }
 
   void _handleKey(KeyEvent event) {
@@ -212,6 +227,7 @@ class _MyAppState extends State<MyApp> with WindowListener {
       final bulkImportService = BulkImportService();
       final musicBrainzService = MusicBrainzService();
       final lyricsService = LyricsService();
+      final albumArtService = AlbumArtService();
       final fileOrganizationService = FileOrganizationService();
       final statisticsService = StatisticsService();
       final notificationService = NotificationService();
@@ -246,6 +262,8 @@ class _MyAppState extends State<MyApp> with WindowListener {
         statisticsService: statisticsService,
         notificationService: notificationService,
       );
+      // Prune old album art cache in background.
+      albumArtService.pruneOldAlbumArt();
       // Allow DownloadService to ask the UI to re-grant SAF access when a
       // write to the configured tree fails. This callback shows a dialog
       // via the app-wide navigator and persists the new choice.
@@ -378,6 +396,11 @@ class _MyAppState extends State<MyApp> with WindowListener {
     }
 
     if (kDebugMode) debugPrint('[App] window manager destroyed; allowing exit');
+    try {
+      await BrowserDb.close();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[App] BrowserDb.close failed: $e');
+    }
     // Do not call exit() explicitly; let the Flutter/host process tear down
     // normally now that we've cleaned up resources.  Calling exit() earlier was
     // probably racing with the WebView2 teardown and caused ERROR_CLASS_HAS_WINDOWS.

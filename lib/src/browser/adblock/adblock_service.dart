@@ -21,6 +21,7 @@ class AdBlockService extends ChangeNotifier {
   HashSet<String> _blockedDomains = HashSet<String>();
   bool _enabled = true;
   bool _loaded = false;
+  bool _disposed = false;
   DateTime? _lastUpdated;
 
   bool get adBlockEnabled => _enabled;
@@ -134,8 +135,11 @@ class AdBlockService extends ChangeNotifier {
 
   Future<void> _fetchAndCache() async {
     try {
-      final domains = await Isolate.run(() => _fetchAndParse());
-      _blockedDomains = HashSet<String>.from(domains);
+      // Bound the isolate parse with a timeout to avoid long-running work.
+        final domains = await Isolate.run(() => _fetchAndParse())
+          .timeout(const Duration(seconds: 25));
+        if (_disposed) return;
+        _blockedDomains = HashSet<String>.from(domains);
 
       final file = await _cacheFile;
       await file.writeAsString(domains.join('\n'));
@@ -145,31 +149,47 @@ class AdBlockService extends ChangeNotifier {
       await prefs.setInt(
           _lastUpdatedKey, _lastUpdated!.millisecondsSinceEpoch);
     } catch (e) {
+      if (e is TimeoutException) {
+        if (kDebugMode) debugPrint('AdBlock fetch timed out');
+        return;
+      }
       if (kDebugMode) debugPrint('AdBlock update failed: $e');
     }
   }
 
   /// Fetched and parsed in an isolate to avoid blocking the UI.
   static Future<List<String>> _fetchAndParse() async {
-    final response = await http.get(Uri.parse(_easyListUrl));
-    if (response.statusCode != 200) return [];
+    try {
+      // Network timeout to avoid hanging on slow responses.
+      final response =
+          await http.get(Uri.parse(_easyListUrl)).timeout(Duration(seconds: 15));
+      if (response.statusCode != 200) return [];
 
-    final domains = <String>[];
-    for (final line in const LineSplitter().convert(response.body)) {
-      // Match: ||domain^ or ||domain/
-      if (!line.startsWith('||')) continue;
-      final rest = line.substring(2);
-      // Find the terminator — ^ or /
-      var end = rest.indexOf('^');
-      final slashEnd = rest.indexOf('/');
-      if (end < 0 || (slashEnd >= 0 && slashEnd < end)) end = slashEnd;
-      if (end <= 0) continue;
-      final domain = rest.substring(0, end).toLowerCase();
-      // Validate: must look like a domain (letters, digits, dots, hyphens)
-      if (domain.contains(RegExp(r'[^a-z0-9.\-]'))) continue;
-      if (!domain.contains('.')) continue;
-      domains.add(domain);
+      final domains = <String>[];
+      for (final line in const LineSplitter().convert(response.body)) {
+        // Match: ||domain^ or ||domain/
+        if (!line.startsWith('||')) continue;
+        final rest = line.substring(2);
+        // Find the terminator — ^ or /
+        var end = rest.indexOf('^');
+        final slashEnd = rest.indexOf('/');
+        if (end < 0 || (slashEnd >= 0 && slashEnd < end)) end = slashEnd;
+        if (end <= 0) continue;
+        final domain = rest.substring(0, end).toLowerCase();
+        // Validate: must look like a domain (letters, digits, dots, hyphens)
+        if (domain.contains(RegExp(r'[^a-z0-9.\-]'))) continue;
+        if (!domain.contains('.')) continue;
+        domains.add(domain);
+      }
+      return domains;
+    } on TimeoutException {
+      return [];
     }
-    return domains;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

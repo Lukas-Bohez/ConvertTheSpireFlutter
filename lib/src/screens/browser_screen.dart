@@ -1,5 +1,6 @@
 // 'dart:typed_data' not needed; removed to satisfy analyzer.
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart'
     show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
@@ -50,9 +51,10 @@ class BrowserScreen extends StatefulWidget {
 }
 
 class _BrowserScreenState extends State<BrowserScreen>
-    with
-        AutomaticKeepAliveClientMixin<BrowserScreen>,
-        TickerProviderStateMixin {
+  with
+    AutomaticKeepAliveClientMixin<BrowserScreen>,
+    TickerProviderStateMixin,
+    WidgetsBindingObserver {
   // Maximum simultaneous tabs. Each live tab holds a WebView2 process;
   // on low-RAM machines, more than a handful causes OOM crashes.
   static const int _maxTabs = 5;
@@ -107,6 +109,11 @@ class _BrowserScreenState extends State<BrowserScreen>
   // and the tab switcher sheet provide a consistent UX.
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // Tear down ad-block service to stop background fetch/isolate work.
+    try {
+      _adBlock.dispose();
+    } catch (_) {}
     _castBadgeController.dispose();
     _videoDetector.removeListener(_onVideoDetectorChanged);
     _castService.removeListener(_onCastChanged);
@@ -118,6 +125,24 @@ class _BrowserScreenState extends State<BrowserScreen>
     // Dispose all webview controllers safely.
     disposeAllWebViewControllers();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    try {
+      if (state == AppLifecycleState.paused ||
+          state == AppLifecycleState.inactive ||
+          state == AppLifecycleState.detached) {
+        try {
+          _castService.pausePolling();
+        } catch (_) {}
+      } else if (state == AppLifecycleState.resumed) {
+        try {
+          _castService.resumePolling();
+        } catch (_) {}
+      }
+    } catch (_) {}
   }
 
   /// Dispose all held InAppWebView controllers. Public so external
@@ -149,8 +174,13 @@ class _BrowserScreenState extends State<BrowserScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _castBadgeController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 300));
+    // Initialize ad-block (loads cached blocklist and refreshes in background)
+    try {
+      _adBlock.init();
+    } catch (_) {}
     _videoDetector.addListener(_onVideoDetectorChanged);
     _castService.addListener(_onCastChanged);
     // Start cast discovery; stopDiscovery() is called in dispose().
@@ -1033,8 +1063,21 @@ class _BrowserScreenState extends State<BrowserScreen>
     controller.addJavaScriptHandler(
       handlerName: 'onVideoFound',
       callback: (args) {
-        if (args.isNotEmpty) {
-          _videoDetector.handleJsCallback(args[0].toString());
+        if (args.isEmpty) return;
+        final payload = args[0]?.toString() ?? '';
+        // Only handle callbacks for mounted webviews to avoid races during
+        // disposal. Run in a microtask to avoid blocking the JS bridge.
+        if (!_mountedWebViews.contains(tabId)) return;
+        try {
+          scheduleMicrotask(() {
+            try {
+              if (mounted) _videoDetector.handleJsCallback(payload);
+            } catch (e) {
+              if (kDebugMode) debugPrint('VideoDetector handler failed: $e');
+            }
+          });
+        } catch (e) {
+          if (kDebugMode) debugPrint('VideoDetector scheduling failed: $e');
         }
       },
     );
@@ -1608,14 +1651,14 @@ class _TabSwitcherSheet extends StatelessWidget {
                             ),
                           ),
                           Expanded(
-                            child: tab.screenshot != null
+                            child: tab.screenshotPath != null
                                 ? ClipRRect(
                                     borderRadius: const BorderRadius.only(
                                       bottomLeft: Radius.circular(11),
                                       bottomRight: Radius.circular(11),
                                     ),
-                                    child: Image.memory(
-                                      tab.screenshot!,
+                                    child: Image.file(
+                                      File(tab.screenshotPath!),
                                       fit: BoxFit.cover,
                                       width: double.infinity,
                                     ),
