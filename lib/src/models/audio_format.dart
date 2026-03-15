@@ -1,7 +1,8 @@
 /// Supported audio output formats for conversion.
 enum AudioFormat {
   mp3('mp3', 'MP3', 'Widely compatible, good quality'),
-  m4a('m4a', 'M4A', 'Apple-compatible, higher quality than MP3 at same bitrate');
+  m4a('m4a', 'M4A',
+      'Apple-compatible, higher quality than MP3 at same bitrate');
 
   const AudioFormat(this.extension, this.label, this.description);
 

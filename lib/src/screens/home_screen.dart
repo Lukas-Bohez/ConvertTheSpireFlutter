@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
@@ -152,8 +152,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       // schedule a fake navigation after startup to reproduce the bounce bug
       // without user interaction.  If the bug remains this will show a
       // subsequent unexpected log shifting back to browser.
-      Future.delayed(const Duration(seconds: 5), () {
-      });
+      Future.delayed(const Duration(seconds: 5), () {});
     }
 
     // Load update preference and check for updates on launch
@@ -193,7 +192,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       // Stop mining before quitting.
       _coordinatorService.dispose();
       try {
-        await BrowserScreen.browserKey.currentState?.disposeAllWebViewControllers();
+        await BrowserScreen.browserKey.currentState
+            ?.disposeAllWebViewControllers();
       } catch (_) {}
       try {
         await _trayService?.destroy();
@@ -309,9 +309,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // NAVIGATION HELPERS
-  // ---------------------------------------------------------------------------
+  // Navigation helpers
 
   bool get _canGoBack => _navHistoryIndex > 0;
   bool get _canGoForward => _navHistoryIndex < _navHistory.length - 1;
@@ -647,7 +645,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         // Persist the new folder in settings so future downloads use it.
         final current = widget.controller.settings;
         if (current != null) {
-          await widget.controller.saveSettings(current.copyWith(downloadDir: uri));
+          await widget.controller
+              .saveSettings(current.copyWith(downloadDir: uri));
         }
 
         if (!mounted) return uri;
@@ -718,9 +717,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     await widget.controller.saveSettings(settings.copyWith(downloadDir: ''));
   }
 
-  // ---------------------------------------------------------------------------
-  // SEARCH TAB
-  // ---------------------------------------------------------------------------
+  // Search tab
 
   Widget _buildSearchTab(AppSettings? settings) {
     final isNarrow = _isNarrowLayout(context);
@@ -1303,9 +1300,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // PREVIEW LIST
-  // ---------------------------------------------------------------------------
+  // Preview list
 
   Widget _buildPreviewList() {
     final isNarrow = _isNarrowLayout(context);
@@ -1732,9 +1727,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // QUEUE TAB
-  // ---------------------------------------------------------------------------
+  // Queue tab
 
   Widget _buildQueueTab() {
     final items = widget.controller.queue;
@@ -2152,9 +2145,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // PLAYLISTS TAB (combines playlist manager + watched playlists)
-  // ---------------------------------------------------------------------------
+  // Playlists tab (playlist manager + watched playlists)
 
   Widget _buildPlaylistsTab() {
     return Column(
@@ -3213,9 +3204,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // CONVERT TAB
-  // ---------------------------------------------------------------------------
+  // Convert tab
 
   Widget _buildConvertTab(AppSettings? settings) {
     return Padding(
@@ -3486,9 +3475,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // LOGS TAB
-  // ---------------------------------------------------------------------------
+  // Logs tab
 
   Widget _buildLogsTab() {
     return ValueListenableBuilder<List<String>>(

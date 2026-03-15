@@ -116,7 +116,8 @@ class _BrowserScreenState extends State<BrowserScreen>
         },
       );
     } catch (e) {
-      if (kDebugMode) debugPrint('[BROWSER] FindInteractionController not supported: $e');
+      if (kDebugMode)
+        debugPrint('[BROWSER] FindInteractionController not supported: $e');
       _findInteractionController = null;
     }
     _videoDetector.addListener(_onVideoDetectorChanged);
@@ -192,8 +193,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       return trimmed;
     }
-    final domainPattern =
-        RegExp(r'^[^\s]+\.[a-zA-Z]{2,}(:\d+)?([/?#].*)?$');
+    final domainPattern = RegExp(r'^[^\s]+\.[a-zA-Z]{2,}(:\d+)?([/?#].*)?$');
     if (domainPattern.hasMatch(trimmed)) return 'https://$trimmed';
     final ipPattern =
         RegExp(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?(/.*)?$');
@@ -266,7 +266,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       incognito: _tabManager.activeTab?.isIncognito ?? false,
       userAgent: _desktopMode
           ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-            '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+              '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
           : null,
     );
   }
@@ -294,7 +294,8 @@ class _BrowserScreenState extends State<BrowserScreen>
             // Only start background periodic captures when the tab switcher
             // is visible to avoid continuous disk writes.
             if (_isTabSwitcherVisible) {
-              if (_playbackScreenshotTimer == null || !_playbackScreenshotTimer!.isActive) {
+              if (_playbackScreenshotTimer == null ||
+                  !_playbackScreenshotTimer!.isActive) {
                 _playbackScreenshotTimer = Timer.periodic(
                   const Duration(seconds: 2),
                   (t) async {
@@ -304,12 +305,14 @@ class _BrowserScreenState extends State<BrowserScreen>
                       return;
                     }
                     try {
-                      final bytes = await (_webViewController as dynamic).takeScreenshot();
+                      final bytes = await (_webViewController as dynamic)
+                          .takeScreenshot();
                       if (bytes is Uint8List && bytes.isNotEmpty) {
                         await _tabManager.setScreenshot(activeTab.id, bytes);
                       }
                     } catch (e) {
-                      debugPrint('[BROWSER] periodic playback screenshot failed: $e');
+                      debugPrint(
+                          '[BROWSER] periodic playback screenshot failed: $e');
                     }
                   },
                 );
@@ -388,8 +391,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
 
     // Inject video detection JS.
-    controller.evaluateJavascript(
-        source: VideoDetectorService.injectionJs);
+    controller.evaluateJavascript(source: VideoDetectorService.injectionJs);
 
     // Inject popup blocker when ad-block is on.
     if (_adBlock.adBlockEnabled) {
@@ -433,14 +435,12 @@ class _BrowserScreenState extends State<BrowserScreen>
     } catch (_) {}
   }
 
-  void _onProgressChanged(
-      InAppWebViewController controller, int progress) {
+  void _onProgressChanged(InAppWebViewController controller, int progress) {
     setState(() => _progress = progress / 100.0);
   }
 
   Future<NavigationActionPolicy?> _shouldOverrideUrlLoading(
-      InAppWebViewController controller,
-      NavigationAction action) async {
+      InAppWebViewController controller, NavigationAction action) async {
     final url = action.request.url?.toString() ?? '';
     // Handle external protocols (tel:, mailto:, etc.).
     if (url.startsWith('tel:') ||
@@ -448,8 +448,7 @@ class _BrowserScreenState extends State<BrowserScreen>
         url.startsWith('intent:') ||
         url.startsWith('market:')) {
       try {
-        await launchUrl(Uri.parse(url),
-            mode: LaunchMode.externalApplication);
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       } catch (_) {}
       return NavigationActionPolicy.CANCEL;
     }
@@ -457,8 +456,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   Future<WebResourceResponse?> _shouldInterceptRequest(
-      InAppWebViewController controller,
-      WebResourceRequest request) async {
+      InAppWebViewController controller, WebResourceRequest request) async {
     final url = request.url.toString();
 
     // Ad-block (skip on YouTube/Google sites whose players depend on Google ad
@@ -493,22 +491,21 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _onReceivedError(InAppWebViewController controller,
       WebResourceRequest request, WebResourceError error) {
-    debugPrint('[BROWSER] onReceivedError – ${request.url} | ${error.type} | ${error.description}');
+    debugPrint(
+        '[BROWSER] onReceivedError – ${request.url} | ${error.type} | ${error.description}');
     if (request.isForMainFrame ?? false) {
       setState(() => _isLoading = false);
     }
   }
 
   void _onScrollChanged(InAppWebViewController controller, int x, int y) {
-    controller.evaluateJavascript(
-        source: VideoDetectorService.injectionJs);
+    controller.evaluateJavascript(source: VideoDetectorService.injectionJs);
   }
 
   // ── Actions ──
 
   void _goBack() async {
-    if (_webViewController != null &&
-        await _webViewController!.canGoBack()) {
+    if (_webViewController != null && await _webViewController!.canGoBack()) {
       _webViewController!.goBack();
     }
   }
@@ -655,8 +652,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Added to queue'),
-            duration: Duration(seconds: 1)),
+            content: Text('Added to queue'), duration: Duration(seconds: 1)),
       );
     }
   }
@@ -805,6 +801,13 @@ class _BrowserScreenState extends State<BrowserScreen>
                   onReleaseWebViewFocus: () => FocusScope.of(context).unfocus(),
                   onTabs: _showTabSwitcher,
                   tabCount: _tabManager.tabCount,
+                  onDownload: _addCurrentToQueue,
+                  downloadEnabled: !_showNewTabPage &&
+                      _addressController.text.trim().isNotEmpty,
+                  isKnownDifficultSite: DownloadService.isDifficultSite(
+                      _addressController.text.trim()),
+                  isFavourited: _isFavourited,
+                  onFavouriteTap: _showNewTabPage ? null : _toggleFavourite,
                 ),
 
                 // ── Progress bar ──
@@ -867,8 +870,8 @@ class _BrowserScreenState extends State<BrowserScreen>
                 right: 0,
                 child: CastMiniBar(
                   deviceName: _castService.activeDevice!.name,
-                  isPlaying: _castService.playbackState ==
-                      CastPlaybackState.playing,
+                  isPlaying:
+                      _castService.playbackState == CastPlaybackState.playing,
                   onPlayPause: () {
                     if (_castService.playbackState ==
                         CastPlaybackState.playing) {
@@ -955,8 +958,7 @@ class _BrowserScreenState extends State<BrowserScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.public,
-                size: 64,
-                color: Theme.of(context).colorScheme.primary),
+                size: 64, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 16),
             const Text(
               'In-app browser is not available on this platform.\n'
@@ -1064,9 +1066,10 @@ class _BrowserScreenState extends State<BrowserScreen>
             if (existing?.text != url) {
               await Clipboard.setData(ClipboardData(text: url));
             }
-            if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Link copied to clipboard')),
-            );
+            if (mounted)
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Link copied to clipboard')),
+              );
           } catch (_) {}
         }
       }
@@ -1094,15 +1097,18 @@ class _BrowserScreenState extends State<BrowserScreen>
       if (url.isNotEmpty) {
         try {
           await Clipboard.setData(ClipboardData(text: url));
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Link copied to clipboard')),
-          );
+          if (mounted)
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Link copied to clipboard')),
+            );
         } catch (_) {}
       }
       return;
     }
     if (action == 'cast') {
-      try { _openCastSheet(); } catch (_) {}
+      try {
+        _openCastSheet();
+      } catch (_) {}
       return;
     }
     if (action == 'addCookies') {
@@ -1147,7 +1153,8 @@ class _BrowserScreenState extends State<BrowserScreen>
     // refresh previews while the sheet is open.
     setState(() => _isTabSwitcherVisible = true);
     _tabSwitcherScreenshotTimer?.cancel();
-    _tabSwitcherScreenshotTimer = Timer.periodic(const Duration(seconds: 2), (t) async {
+    _tabSwitcherScreenshotTimer =
+        Timer.periodic(const Duration(seconds: 2), (t) async {
       final activeTab = _tabManager.activeTab;
       if (activeTab == null || _webViewController == null) return;
       try {
@@ -1282,151 +1289,155 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
           child: RepaintBoundary(
             key: _repaintKey,
             child: Column(
-            children: [
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                    Text('Tabs (${widget.tabManager.tabCount})',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: widget.onNewTab,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: GridView.builder(
-                controller: scrollController,
-                padding: const EdgeInsets.all(12),
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  // Make tiles wider relative to their height so the 16:9
-                  // preview occupies most of the tile and leaves less
-                  // whitespace below. 1.6 is a good compromise across sizes.
-                  childAspectRatio: 1.6,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                ),
-                    itemCount: widget.tabManager.tabCount,
-                itemBuilder: (context, index) {
-                  final tab = widget.tabManager.tabs[index];
-                  final isActive = index == widget.tabManager.activeIndex;
-                  return GestureDetector(
-                    onTap: () => widget.onSelectTab(index),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isActive ? cs.primary : cs.outlineVariant,
-                          width: isActive ? 2 : 1,
-                        ),
-                        color: tab.isIncognito
-                            ? const Color(0xFF1A1A2E)
-                            : cs.surfaceContainerLow,
+              children: [
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Text('Tabs (${widget.tabManager.tabCount})',
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: widget.onNewTab,
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            // Preview occupies most of the tile.
-                            Positioned.fill(
-                              child: Padding(
-                                padding: const EdgeInsets.all(6.0),
-                                child: AspectRatio(
-                                  aspectRatio: 16 / 9,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: () {
-                                      final bytes = widget.tabManager.getScreenshotBytes(tab.id);
-                                      if (bytes != null && bytes.isNotEmpty) {
-                                        return Image.memory(
-                                          bytes,
-                                          key: ValueKey(widget.tabManager.getScreenshotBytes(tab.id) ?? tab.screenshotPath),
-                                          fit: BoxFit.cover,
-                                          width: double.infinity,
-                                        );
-                                      }
-                                      if (tab.screenshotPath != null) {
-                                        return Image.file(
-                                          File(tab.screenshotPath!),
-                                          key: ValueKey(tab.screenshotPath),
-                                          fit: BoxFit.cover,
-                                          width: double.infinity,
-                                        );
-                                      }
-                                      return Container(
-                                        color: cs.surfaceContainerHighest,
-                                        child: Center(
-                                          child: Icon(Icons.web,
-                                              size: 28,
-                                              color: cs.outlineVariant),
-                                        ),
-                                      );
-                                    }(),
-                                  ),
-                                ),
-                              ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: GridView.builder(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(12),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      // Make tiles wider relative to their height so the 16:9
+                      // preview occupies most of the tile and leaves less
+                      // whitespace below. 1.6 is a good compromise across sizes.
+                      childAspectRatio: 1.6,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                    ),
+                    itemCount: widget.tabManager.tabCount,
+                    itemBuilder: (context, index) {
+                      final tab = widget.tabManager.tabs[index];
+                      final isActive = index == widget.tabManager.activeIndex;
+                      return GestureDetector(
+                        onTap: () => widget.onSelectTab(index),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isActive ? cs.primary : cs.outlineVariant,
+                              width: isActive ? 2 : 1,
                             ),
-                            // Title / close overlay at top.
-                            Positioned(
-                              left: 8,
-                              right: 8,
-                              top: 8,
-                              child: Row(
-                                children: [
-                                  if (tab.isIncognito)
-                                    const Icon(Icons.visibility_off,
-                                        size: 14, color: Colors.white70),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      tab.title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: tab.isIncognito
-                                            ? Colors.white70
-                                            : null,
+                            color: tab.isIncognito
+                                ? const Color(0xFF1A1A2E)
+                                : cs.surfaceContainerLow,
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                // Preview occupies most of the tile.
+                                Positioned.fill(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(6.0),
+                                    child: AspectRatio(
+                                      aspectRatio: 16 / 9,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: () {
+                                          final bytes = widget.tabManager
+                                              .getScreenshotBytes(tab.id);
+                                          if (bytes != null &&
+                                              bytes.isNotEmpty) {
+                                            return Image.memory(
+                                              bytes,
+                                              key: ValueKey(widget.tabManager
+                                                      .getScreenshotBytes(
+                                                          tab.id) ??
+                                                  tab.screenshotPath),
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                            );
+                                          }
+                                          if (tab.screenshotPath != null) {
+                                            return Image.file(
+                                              File(tab.screenshotPath!),
+                                              key: ValueKey(tab.screenshotPath),
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                            );
+                                          }
+                                          return Container(
+                                            color: cs.surfaceContainerHighest,
+                                            child: Center(
+                                              child: Icon(Icons.web,
+                                                  size: 28,
+                                                  color: cs.outlineVariant),
+                                            ),
+                                          );
+                                        }(),
                                       ),
                                     ),
                                   ),
-                                  GestureDetector(
-                                    onTap: () => widget.onCloseTab(index),
-                                    child: Icon(Icons.close,
-                                        size: 18,
-                                        color: tab.isIncognito
-                                            ? Colors.white70
-                                            : cs.onSurfaceVariant),
+                                ),
+                                // Title / close overlay at top.
+                                Positioned(
+                                  left: 8,
+                                  right: 8,
+                                  top: 8,
+                                  child: Row(
+                                    children: [
+                                      if (tab.isIncognito)
+                                        const Icon(Icons.visibility_off,
+                                            size: 14, color: Colors.white70),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          tab.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: tab.isIncognito
+                                                ? Colors.white70
+                                                : null,
+                                          ),
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: () => widget.onCloseTab(index),
+                                        child: Icon(Icons.close,
+                                            size: 18,
+                                            color: tab.isIncognito
+                                                ? Colors.white70
+                                                : cs.onSurfaceVariant),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+        );
       },
     );
   }
 }
-

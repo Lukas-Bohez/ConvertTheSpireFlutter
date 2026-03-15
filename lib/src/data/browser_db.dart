@@ -46,14 +46,18 @@ class BrowserDb {
           )
         ''');
         // Create indexes to speed up pruning and lookups.
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_history_visited_at ON history(visited_at)');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_history_url ON history(url)');
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_history_visited_at ON history(visited_at)');
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_history_url ON history(url)');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         // Ensure indexes exist when upgrading from older DB versions.
         try {
-          await db.execute('CREATE INDEX IF NOT EXISTS idx_history_visited_at ON history(visited_at)');
-          await db.execute('CREATE INDEX IF NOT EXISTS idx_history_url ON history(url)');
+          await db.execute(
+              'CREATE INDEX IF NOT EXISTS idx_history_visited_at ON history(visited_at)');
+          await db.execute(
+              'CREATE INDEX IF NOT EXISTS idx_history_url ON history(url)');
         } catch (e) {
           if (kDebugMode) debugPrint('BrowserDb.onUpgrade: $e');
         }
@@ -128,14 +132,18 @@ class BrowserRepository extends ChangeNotifier {
   /// - Ensures at most [maxRows] rows remain by deleting oldest entries.
   Future<void> pruneHistory({int maxAgeDays = 365, int maxRows = 5000}) async {
     final db = await BrowserDb.database;
-    final cutoff = DateTime.now().subtract(Duration(days: maxAgeDays)).millisecondsSinceEpoch;
+    final cutoff = DateTime.now()
+        .subtract(Duration(days: maxAgeDays))
+        .millisecondsSinceEpoch;
     await db.delete('history', where: 'visited_at < ?', whereArgs: [cutoff]);
 
     final countRow = await db.rawQuery('SELECT COUNT(*) as c FROM history');
     final count = Sqflite.firstIntValue(countRow) ?? 0;
     if (count > maxRows) {
       final toDelete = count - maxRows;
-      await db.rawDelete('DELETE FROM history WHERE id IN (SELECT id FROM history ORDER BY visited_at ASC LIMIT ?)', [toDelete]);
+      await db.rawDelete(
+          'DELETE FROM history WHERE id IN (SELECT id FROM history ORDER BY visited_at ASC LIMIT ?)',
+          [toDelete]);
     }
     notifyListeners();
   }
@@ -195,8 +203,8 @@ class BrowserRepository extends ChangeNotifier {
 
   Future<List<String>> getFolders() async {
     final db = await BrowserDb.database;
-    final rows = await db.rawQuery(
-        'SELECT DISTINCT folder FROM favourites ORDER BY folder');
+    final rows = await db
+        .rawQuery('SELECT DISTINCT folder FROM favourites ORDER BY folder');
     return rows.map((r) => r['folder'] as String).toList();
   }
 
@@ -219,8 +227,7 @@ class BrowserRepository extends ChangeNotifier {
     if (url != null) updates['url'] = url;
     if (folder != null) updates['folder'] = folder;
     if (updates.isNotEmpty) {
-      await db.update('favourites', updates,
-          where: 'id = ?', whereArgs: [id]);
+      await db.update('favourites', updates, where: 'id = ?', whereArgs: [id]);
       notifyListeners();
     }
   }
@@ -229,8 +236,7 @@ class BrowserRepository extends ChangeNotifier {
 
   Future<List<Map<String, dynamic>>> getRecentSites({int limit = 8}) async {
     final db = await BrowserDb.database;
-    return db.query('recent_sites',
-        orderBy: 'last_visit DESC', limit: limit);
+    return db.query('recent_sites', orderBy: 'last_visit DESC', limit: limit);
   }
 
   Future<void> upsertRecentSite(

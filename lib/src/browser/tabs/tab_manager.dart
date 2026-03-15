@@ -11,6 +11,7 @@ class BrowserTab {
   String? favicon;
   bool isIncognito;
   bool isLoading;
+
   /// Path to cached screenshot file, or null.
   String? screenshotPath;
 
@@ -80,7 +81,8 @@ class TabManager extends ChangeNotifier {
 
   void updateTab(String tabId,
       {String? url, String? title, String? favicon, bool? isLoading}) {
-    final tab = _tabs.firstWhere((t) => t.id == tabId, orElse: () => _tabs.first);
+    final tab =
+        _tabs.firstWhere((t) => t.id == tabId, orElse: () => _tabs.first);
     if (url != null) tab.url = url;
     if (title != null) tab.title = title;
     if (favicon != null) tab.favicon = favicon;

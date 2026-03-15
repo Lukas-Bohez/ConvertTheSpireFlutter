@@ -136,7 +136,8 @@ class _CastDialogState extends State<CastDialog> {
       String servePath = widget.filePath;
       if (!kIsWeb && Platform.isAndroid && servePath.startsWith('content://')) {
         final copied = await PlatformDirs.copyToTemp(servePath);
-        if (copied == null) throw Exception('Failed to prepare file for casting');
+        if (copied == null)
+          throw Exception('Failed to prepare file for casting');
         servePath = copied;
         _tempServedPath = copied;
       }
@@ -267,7 +268,7 @@ class _CastDialogState extends State<CastDialog> {
                 const SizedBox(width: 16),
                 IconButton(
                   icon: const Icon(Icons.stop_circle, size: 40),
-                    onPressed: () async {
+                  onPressed: () async {
                     try {
                       await _control.stop(device);
                       await _server.stop();

@@ -38,7 +38,8 @@ class GuideScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Icon(Icons.music_note, size: 48, color: cs.onPrimaryContainer),
+                  Icon(Icons.music_note,
+                      size: 48, color: cs.onPrimaryContainer),
                   const SizedBox(height: 12),
                   Text('Convert the Spire Reborn',
                       style: theme.textTheme.headlineSmall?.copyWith(
@@ -46,8 +47,8 @@ class GuideScreen extends StatelessWidget {
                           color: cs.onPrimaryContainer)),
                   const SizedBox(height: 4),
                   Text('YouTube audio downloader & converter',
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: cs.onPrimaryContainer.withValues(alpha: 0.8))),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                          color: cs.onPrimaryContainer.withValues(alpha: 0.8))),
                 ],
               ),
             ),
@@ -82,7 +83,8 @@ class GuideScreen extends StatelessWidget {
                   icon: Icons.desktop_windows,
                   name: 'Windows',
                   status: 'Full support',
-                  detail: 'Downloads, conversion, notifications, file converter',
+                  detail:
+                      'Downloads, conversion, notifications, file converter',
                   supported: true,
                 ),
                 const Divider(height: 1),
@@ -99,7 +101,8 @@ class GuideScreen extends StatelessWidget {
                   icon: Icons.desktop_mac,
                   name: 'Linux',
                   status: 'Full support',
-                  detail: 'Downloads, conversion, notifications. Video playback requires the system libmpv runtime (install mpv/libmpv via your package manager).',
+                  detail:
+                      'Downloads, conversion, notifications. Video playback requires the system libmpv runtime (install mpv/libmpv via your package manager).',
                   supported: true,
                 ),
                 const Divider(height: 1),
@@ -139,8 +142,7 @@ class GuideScreen extends StatelessWidget {
                 SizedBox(height: 8),
                 _RequirementRow(
                   text: 'Internet connection',
-                  detail:
-                      'Needed to search and download from YouTube.',
+                  detail: 'Needed to search and download from YouTube.',
                 ),
                 SizedBox(height: 8),
                 _RequirementRow(
@@ -161,17 +163,29 @@ class GuideScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
-                _StepRow(number: '1', title: 'Set download folder',
-                    detail: 'Go to Settings and pick where files should be saved.'),
+                _StepRow(
+                    number: '1',
+                    title: 'Set download folder',
+                    detail:
+                        'Go to Settings and pick where files should be saved.'),
                 SizedBox(height: 12),
-                _StepRow(number: '2', title: 'Search for music',
-                    detail: 'Use the Search tab to find a YouTube video by name or URL.'),
+                _StepRow(
+                    number: '2',
+                    title: 'Search for music',
+                    detail:
+                        'Use the Search tab to find a YouTube video by name or URL.'),
                 SizedBox(height: 12),
-                _StepRow(number: '3', title: 'Add to queue',
-                    detail: 'Choose a format (MP3, M4A, or MP4) and add tracks to the download queue.'),
+                _StepRow(
+                    number: '3',
+                    title: 'Add to queue',
+                    detail:
+                        'Choose a format (MP3, M4A, or MP4) and add tracks to the download queue.'),
                 SizedBox(height: 12),
-                _StepRow(number: '4', title: 'Download',
-                    detail: 'Go to the Queue tab and press "Download All". The app downloads the video and converts it with FFmpeg.'),
+                _StepRow(
+                    number: '4',
+                    title: 'Download',
+                    detail:
+                        'Go to the Queue tab and press "Download All". The app downloads the video and converts it with FFmpeg.'),
               ],
             ),
           ),
@@ -185,41 +199,77 @@ class GuideScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
-                _FeatureRow(icon: Icons.search, name: 'Search',
-                    detail: 'Search YouTube by keyword or paste a URL. Preview results, choose format, and add to queue.'),
+                _FeatureRow(
+                    icon: Icons.search,
+                    name: 'Search',
+                    detail:
+                        'Search YouTube by keyword or paste a URL. Preview results, choose format, and add to queue.'),
                 SizedBox(height: 8),
-                _FeatureRow(icon: Icons.travel_explore, name: 'Multi-Search',
-                    detail: 'Search across multiple sources at once. Hover a result to hear a preview.'),
+                _FeatureRow(
+                    icon: Icons.travel_explore,
+                    name: 'Multi-Search',
+                    detail:
+                        'Search across multiple sources at once. Hover a result to hear a preview.'),
                 SizedBox(height: 8),
-                _FeatureRow(icon: Icons.open_in_browser, name: 'Browser',
-                    detail: 'Use an integrated web view to browse YouTube (or other sites) and add videos directly to the queue.'),
+                _FeatureRow(
+                    icon: Icons.open_in_browser,
+                    name: 'Browser',
+                    detail:
+                        'Use an integrated web view to browse YouTube (or other sites) and add videos directly to the queue.'),
                 SizedBox(height: 8),
-                _FeatureRow(icon: Icons.queue_music, name: 'Queue',
-                    detail: 'View and manage downloads. Start all, cancel, retry failed, or remove items.'),
+                _FeatureRow(
+                    icon: Icons.queue_music,
+                    name: 'Queue',
+                    detail:
+                        'View and manage downloads. Start all, cancel, retry failed, or remove items.'),
                 SizedBox(height: 8),
-                _FeatureRow(icon: Icons.playlist_play, name: 'Playlists',
-                    detail: 'Load a YouTube playlist, compare against a local folder to find missing tracks, and batch-download them.'),
+                _FeatureRow(
+                    icon: Icons.playlist_play,
+                    name: 'Playlists',
+                    detail:
+                        'Load a YouTube playlist, compare against a local folder to find missing tracks, and batch-download them.'),
                 SizedBox(height: 8),
-                _FeatureRow(icon: Icons.upload_file, name: 'Bulk Import',
-                    detail: 'Paste a list of track names (one per line) or import from a text/CSV file to add many items to the queue at once.'),
+                _FeatureRow(
+                    icon: Icons.upload_file,
+                    name: 'Bulk Import',
+                    detail:
+                        'Paste a list of track names (one per line) or import from a text/CSV file to add many items to the queue at once.'),
                 SizedBox(height: 8),
-                _FeatureRow(icon: Icons.bar_chart, name: 'Stats',
-                    detail: 'View download statistics: totals, success rate, format breakdown, top artists, and trends over time.'),
+                _FeatureRow(
+                    icon: Icons.bar_chart,
+                    name: 'Stats',
+                    detail:
+                        'View download statistics: totals, success rate, format breakdown, top artists, and trends over time.'),
                 SizedBox(height: 8),
-                _FeatureRow(icon: Icons.settings, name: 'Settings',
-                    detail: 'Configure download folder, parallel workers, FFmpeg, retry behavior, and notifications.'),
+                _FeatureRow(
+                    icon: Icons.settings,
+                    name: 'Settings',
+                    detail:
+                        'Configure download folder, parallel workers, FFmpeg, retry behavior, and notifications.'),
                 SizedBox(height: 8),
-                _FeatureRow(icon: Icons.transform, name: 'Convert',
-                    detail: 'Convert any local audio/video file between formats (MP3, M4A, MP4, WAV, FLAC, OGG, etc.) using FFmpeg.'),
+                _FeatureRow(
+                    icon: Icons.transform,
+                    name: 'Convert',
+                    detail:
+                        'Convert any local audio/video file between formats (MP3, M4A, MP4, WAV, FLAC, OGG, etc.) using FFmpeg.'),
                 SizedBox(height: 8),
-                _FeatureRow(icon: Icons.list_alt, name: 'Logs',
-                    detail: 'View detailed application logs for debugging. Copy or clear the log history.'),
+                _FeatureRow(
+                    icon: Icons.list_alt,
+                    name: 'Logs',
+                    detail:
+                        'View detailed application logs for debugging. Copy or clear the log history.'),
                 SizedBox(height: 8),
-                _FeatureRow(icon: Icons.menu_book, name: 'Guide',
-                    detail: 'This screen! Instructions, supported platforms, and tips.'),
+                _FeatureRow(
+                    icon: Icons.menu_book,
+                    name: 'Guide',
+                    detail:
+                        'This screen! Instructions, supported platforms, and tips.'),
                 SizedBox(height: 8),
-                _FeatureRow(icon: Icons.music_note, name: 'Player',
-                    detail: 'Built‑in media player for your local files; control playback, shuffle, repeat and manage a library.'),
+                _FeatureRow(
+                    icon: Icons.music_note,
+                    name: 'Player',
+                    detail:
+                        'Built‑in media player for your local files; control playback, shuffle, repeat and manage a library.'),
               ],
             ),
           ),
@@ -287,11 +337,20 @@ class GuideScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
-                _FormatRow(format: 'MP3', detail: 'Universal audio format. Best compatibility across all devices and players.'),
+                _FormatRow(
+                    format: 'MP3',
+                    detail:
+                        'Universal audio format. Best compatibility across all devices and players.'),
                 SizedBox(height: 6),
-                _FormatRow(format: 'M4A', detail: 'AAC audio in MP4 container. Better quality than MP3 at same bitrate. Works on Apple devices and modern players.'),
+                _FormatRow(
+                    format: 'M4A',
+                    detail:
+                        'AAC audio in MP4 container. Better quality than MP3 at same bitrate. Works on Apple devices and modern players.'),
                 SizedBox(height: 6),
-                _FormatRow(format: 'MP4', detail: 'Video with audio. Downloads the original YouTube video without re-encoding.'),
+                _FormatRow(
+                    format: 'MP4',
+                    detail:
+                        'Video with audio. Downloads the original YouTube video without re-encoding.'),
               ],
             ),
           ),
@@ -307,7 +366,9 @@ class GuideScreen extends StatelessWidget {
               children: [
                 _InfoRow(label: 'Platform', value: _platformName()),
                 const SizedBox(height: 4),
-                _InfoRow(label: 'Dart version', value: kIsWeb ? 'N/A' : Platform.version.split(' ').first),
+                _InfoRow(
+                    label: 'Dart version',
+                    value: kIsWeb ? 'N/A' : Platform.version.split(' ').first),
               ],
             ),
           ),
@@ -417,8 +478,9 @@ class _PlatformRow extends StatelessWidget {
                           style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color:
-                                  supported ? Colors.green.shade700 : Colors.grey.shade600)),
+                              color: supported
+                                  ? Colors.green.shade700
+                                  : Colors.grey.shade600)),
                     ),
                   ],
                 ),
@@ -426,9 +488,7 @@ class _PlatformRow extends StatelessWidget {
                 Text(detail,
                     style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurfaceVariant)),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant)),
               ],
             ),
           ),
@@ -501,12 +561,10 @@ class _StepRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 2),
               Text(detail,
-                  style: TextStyle(
-                      fontSize: 13, color: cs.onSurfaceVariant)),
+                  style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
             ],
           ),
         ),
@@ -563,8 +621,7 @@ class _TipRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.tips_and_updates, size: 18,
-            color: Colors.amber.shade700),
+        Icon(Icons.tips_and_updates, size: 18, color: Colors.amber.shade700),
         const SizedBox(width: 8),
         Expanded(
           child: RichText(

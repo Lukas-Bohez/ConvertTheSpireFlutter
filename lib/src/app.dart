@@ -46,7 +46,8 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> with WindowListener, WidgetsBindingObserver {
+class _MyAppState extends State<MyApp>
+    with WindowListener, WidgetsBindingObserver {
   AppController? _controller;
   YoutubeExplode? _ytExplode;
   String? _initError;
@@ -333,20 +334,24 @@ class _MyAppState extends State<MyApp> with WindowListener, WidgetsBindingObserv
     // window manager before exiting.  The previous implementation simply
     // called `exit(0)`, which still triggered ERROR_CLASS_HAS_WINDOWS (1412)
     // because WebView2 had not finished unregistering its window class.
-    if (kDebugMode) debugPrint('[App] Window close requested — disposing WebViews...');
+    if (kDebugMode)
+      debugPrint('[App] Window close requested — disposing WebViews...');
 
     // Dispose WebView controllers and wait (so WebView2 can unregister classes).
     try {
       try {
-        final future = BrowserScreen.browserKey.currentState?.disposeAllWebViewControllers();
+        final future = BrowserScreen.browserKey.currentState
+            ?.disposeAllWebViewControllers();
         if (future != null) {
           await future.timeout(const Duration(seconds: 3), onTimeout: () {
-            if (kDebugMode) debugPrint('[App] disposeAllWebViewControllers timed out');
+            if (kDebugMode)
+              debugPrint('[App] disposeAllWebViewControllers timed out');
             return;
           });
         }
       } catch (e) {
-        if (kDebugMode) debugPrint('[App] disposeAllWebViewControllers failed: $e');
+        if (kDebugMode)
+          debugPrint('[App] disposeAllWebViewControllers failed: $e');
       }
 
       // On Windows poll for WebView2 helper process to disappear, up to 5s.
@@ -357,7 +362,8 @@ class _MyAppState extends State<MyApp> with WindowListener, WidgetsBindingObserv
         var gone = false;
         while (elapsed < maxWaitMs) {
           try {
-            final listed = await Process.run('tasklist', ['/FI', 'IMAGENAME eq msedgewebview2.exe', '/NH']);
+            final listed = await Process.run(
+                'tasklist', ['/FI', 'IMAGENAME eq msedgewebview2.exe', '/NH']);
             final out = listed.stdout?.toString().toLowerCase() ?? '';
             if (!out.contains('msedgewebview2.exe')) {
               gone = true;
@@ -374,16 +380,19 @@ class _MyAppState extends State<MyApp> with WindowListener, WidgetsBindingObserv
         if (!gone) {
           // Still present — attempt a gentle kill before destroying windows.
           try {
-            final r = await Process.run('taskkill', ['/F', '/IM', 'msedgewebview2.exe']);
+            final r = await Process.run(
+                'taskkill', ['/F', '/IM', 'msedgewebview2.exe']);
             if (r.exitCode != 0) {
-              if (kDebugMode) debugPrint('[App] taskkill msedgewebview2 exit=${r.exitCode} stderr=${r.stderr}');
+              if (kDebugMode)
+                debugPrint(
+                    '[App] taskkill msedgewebview2 exit=${r.exitCode} stderr=${r.stderr}');
             }
           } catch (e) {
-            if (kDebugMode) debugPrint('[App] taskkill msedgewebview2 failed: $e');
+            if (kDebugMode)
+              debugPrint('[App] taskkill msedgewebview2 failed: $e');
           }
         }
       }
-
     } catch (_) {}
 
     // Allow the window manager to clean up its native resources now that

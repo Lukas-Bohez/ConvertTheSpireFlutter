@@ -63,14 +63,16 @@ class YtDlpService {
     if (existing != null) return existing;
 
     if (kIsWeb || Platform.isAndroid || Platform.isIOS) {
-      throw Exception('yt-dlp auto-download is only available on desktop platforms.');
+      throw Exception(
+          'yt-dlp auto-download is only available on desktop platforms.');
     }
 
     onProgress?.call(0, 'Downloading yt-dlp…');
 
     final appBin = await _getAppBinaryPath();
     if (appBin == null) {
-      throw Exception('Could not determine app data directory for yt-dlp installation.');
+      throw Exception(
+          'Could not determine app data directory for yt-dlp installation.');
     }
 
     // Download from GitHub releases (single self-contained binary)
@@ -88,14 +90,17 @@ class YtDlpService {
           onProgress?.call(5, 'Downloading yt-dlp (PowerShell)…');
           await _attemptShellDownload(url, appBin, enforceTls12: true);
           // Verify binary
-          final verify = await Process.run(appBin, ['--version']).timeout(const Duration(seconds: 5));
-          if (verify.exitCode == 0 && verify.stdout.toString().trim().isNotEmpty) {
+          final verify = await Process.run(appBin, ['--version'])
+              .timeout(const Duration(seconds: 5));
+          if (verify.exitCode == 0 &&
+              verify.stdout.toString().trim().isNotEmpty) {
             onProgress?.call(100, 'yt-dlp installed');
             debugPrint('yt-dlp installed to: $appBin (PowerShell)');
             return appBin;
           }
           await _safeDelete(appBin);
-          debugPrint('PowerShell download wrote binary but verification failed');
+          debugPrint(
+              'PowerShell download wrote binary but verification failed');
         } catch (e) {
           debugPrint('PowerShell download/verify failed: $e');
           await _safeDelete(appBin);
@@ -106,14 +111,17 @@ class YtDlpService {
       const maxAttempts = 3;
       for (var attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
-          onProgress?.call((attempt == 1) ? 10 : (10 + attempt * 10), 'Downloading yt-dlp (HTTP)…');
+          onProgress?.call((attempt == 1) ? 10 : (10 + attempt * 10),
+              'Downloading yt-dlp (HTTP)…');
           final request = http.Request('GET', Uri.parse(url));
           final response = await client.send(request).timeout(
-            const Duration(seconds: 30),
-            onTimeout: () => throw TimeoutException('yt-dlp download request timed out'),
-          );
+                const Duration(seconds: 30),
+                onTimeout: () =>
+                    throw TimeoutException('yt-dlp download request timed out'),
+              );
           if (response.statusCode >= 400) {
-            throw Exception('Failed to download yt-dlp: HTTP ${response.statusCode}');
+            throw Exception(
+                'Failed to download yt-dlp: HTTP ${response.statusCode}');
           }
 
           final total = response.contentLength ?? 0;
@@ -147,8 +155,10 @@ class YtDlpService {
 
           // Verify binary by calling `--version`.
           try {
-            final verify = await Process.run(appBin, ['--version']).timeout(const Duration(seconds: 5));
-            if (verify.exitCode == 0 && verify.stdout.toString().trim().isNotEmpty) {
+            final verify = await Process.run(appBin, ['--version'])
+                .timeout(const Duration(seconds: 5));
+            if (verify.exitCode == 0 &&
+                verify.stdout.toString().trim().isNotEmpty) {
               onProgress?.call(100, 'yt-dlp installed');
               debugPrint('yt-dlp installed to: $appBin (HTTP)');
               return appBin;
@@ -166,12 +176,16 @@ class YtDlpService {
             // Final attempt: on Windows try shell fallback one last time.
             if (Platform.isWindows) {
               try {
-                onProgress?.call(5, 'Downloading yt-dlp (PowerShell fallback)…');
+                onProgress?.call(
+                    5, 'Downloading yt-dlp (PowerShell fallback)…');
                 await _attemptShellDownload(url, appBin, enforceTls12: true);
-                final verify = await Process.run(appBin, ['--version']).timeout(const Duration(seconds: 5));
-                if (verify.exitCode == 0 && verify.stdout.toString().trim().isNotEmpty) {
+                final verify = await Process.run(appBin, ['--version'])
+                    .timeout(const Duration(seconds: 5));
+                if (verify.exitCode == 0 &&
+                    verify.stdout.toString().trim().isNotEmpty) {
                   onProgress?.call(100, 'yt-dlp installed');
-                  debugPrint('yt-dlp installed to: $appBin (PowerShell fallback)');
+                  debugPrint(
+                      'yt-dlp installed to: $appBin (PowerShell fallback)');
                   return appBin;
                 }
                 await _safeDelete(appBin);
@@ -180,7 +194,8 @@ class YtDlpService {
                 throw Exception('All download methods failed: $e; $e2');
               }
             }
-            throw Exception('yt-dlp download failed after $maxAttempts attempts: $e');
+            throw Exception(
+                'yt-dlp download failed after $maxAttempts attempts: $e');
           }
           // Exponential backoff before next try
           final backoff = Duration(seconds: 1 << (attempt - 1));
@@ -236,19 +251,21 @@ class YtDlpService {
       // Audio download: extract audio in target format
       args.addAll([
         '-x',
-        '--audio-format', formatLower,
-        '--audio-quality', '${audioBitrate.clamp(64, 320)}k',
+        '--audio-format',
+        formatLower,
+        '--audio-quality',
+        '${audioBitrate.clamp(64, 320)}k',
       ]);
     }
 
     // Common options
     args.addAll([
-      '--embed-thumbnail',    // embed cover art
-      '--no-playlist',        // single video only
-      '--newline',            // one progress line per update
-      '--no-colors',          // clean output for parsing
+      '--embed-thumbnail', // embed cover art
+      '--no-playlist', // single video only
+      '--newline', // one progress line per update
+      '--no-colors', // clean output for parsing
       '--no-overwrites',
-      '--no-part',            // don't use .part files
+      '--no-part', // don't use .part files
       '-o', _escapeTemplate(outputPath),
     ]);
 
@@ -351,7 +368,7 @@ class YtDlpService {
         final candidates = [
           outputPath,
           '$base.$formatLower',
-          '$base.mkv',           // yt-dlp sometimes outputs MKV
+          '$base.mkv', // yt-dlp sometimes outputs MKV
           '$base.webm',
         ];
         bool found = false;
@@ -365,7 +382,8 @@ class YtDlpService {
           }
         }
         if (!found) {
-          throw Exception('yt-dlp completed but the output file was not created.');
+          throw Exception(
+              'yt-dlp completed but the output file was not created.');
         }
       }
 
@@ -390,14 +408,22 @@ class YtDlpService {
 
   static int _qualityToHeight(String quality) {
     switch (quality) {
-      case '360p':  return 360;
-      case '480p':  return 480;
-      case '720p':  return 720;
-      case '1080p': return 1080;
-      case '1440p': return 1440;
-      case '2160p': return 2160;
-      case 'best':  return 9999;
-      default:      return 720;
+      case '360p':
+        return 360;
+      case '480p':
+        return 480;
+      case '720p':
+        return 720;
+      case '1080p':
+        return 1080;
+      case '1440p':
+        return 1440;
+      case '2160p':
+        return 2160;
+      case 'best':
+        return 9999;
+      default:
+        return 720;
     }
   }
 
@@ -410,7 +436,8 @@ class YtDlpService {
 
   /// Fallback downloader that uses OS tooling when the Dart HTTP stack
   /// fails (TLS handshake / proxy issues on some Windows installs).
-  static Future<void> _attemptShellDownload(String url, String dest, {bool enforceTls12 = false}) async {
+  static Future<void> _attemptShellDownload(String url, String dest,
+      {bool enforceTls12 = false}) async {
     // Ensure parent exists
     try {
       final f = File(dest);
@@ -424,16 +451,19 @@ class YtDlpService {
         final safeDest = dest.replaceAll("'", "''");
         final cmd = StringBuffer();
         if (enforceTls12) {
-          cmd.write('[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; ');
+          cmd.write(
+              '[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; ');
         }
-        cmd.write("try { (New-Object System.Net.WebClient).DownloadFile('$safeUrl','$safeDest') } catch { exit 1 }");
+        cmd.write(
+            "try { (New-Object System.Net.WebClient).DownloadFile('$safeUrl','$safeDest') } catch { exit 1 }");
         final args = [
           '-NoProfile',
           '-NonInteractive',
           '-Command',
           cmd.toString(),
         ];
-        final pr = await Process.run('powershell', args).timeout(const Duration(seconds: 60));
+        final pr = await Process.run('powershell', args)
+            .timeout(const Duration(seconds: 60));
         if (pr.exitCode != 0) {
           throw Exception('PowerShell download failed: ${pr.stderr}');
         }
@@ -445,23 +475,28 @@ class YtDlpService {
 
     // Unix-like fallback: try `curl` then `wget`.
     try {
-      final whichCurl = await Process.run('which', ['curl']).catchError((_) => ProcessResult(1, 1, '', ''));
+      final whichCurl = await Process.run('which', ['curl'])
+          .catchError((_) => ProcessResult(1, 1, '', ''));
       if (whichCurl.exitCode == 0) {
-        final r = await Process.run('curl', ['-L', '-f', '-o', dest, url]).timeout(const Duration(seconds: 60));
+        final r = await Process.run('curl', ['-L', '-f', '-o', dest, url])
+            .timeout(const Duration(seconds: 60));
         if (r.exitCode != 0) throw Exception('curl failed: ${r.stderr}');
         return;
       }
     } catch (_) {}
 
     try {
-      final whichWget = await Process.run('which', ['wget']).catchError((_) => ProcessResult(1, 1, '', ''));
+      final whichWget = await Process.run('which', ['wget'])
+          .catchError((_) => ProcessResult(1, 1, '', ''));
       if (whichWget.exitCode == 0) {
-        final r = await Process.run('wget', ['-O', dest, url]).timeout(const Duration(seconds: 60));
+        final r = await Process.run('wget', ['-O', dest, url])
+            .timeout(const Duration(seconds: 60));
         if (r.exitCode != 0) throw Exception('wget failed: ${r.stderr}');
         return;
       }
     } catch (_) {}
 
-    throw Exception('No suitable shell downloader found (curl/wget/PowerShell)');
+    throw Exception(
+        'No suitable shell downloader found (curl/wget/PowerShell)');
   }
 }

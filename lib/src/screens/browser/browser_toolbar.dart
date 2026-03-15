@@ -19,6 +19,8 @@ class BrowserToolbar extends StatelessWidget {
   final ValueChanged<String> onSubmitted;
   final VoidCallback onCastTap;
   final VoidCallback? onDownload;
+  final bool isFavourited;
+  final VoidCallback? onFavouriteTap;
   final bool isDownloading;
   final bool downloadEnabled;
   final bool isKnownDifficultSite;
@@ -48,6 +50,8 @@ class BrowserToolbar extends StatelessWidget {
     required this.onSubmitted,
     required this.onCastTap,
     this.onDownload,
+    this.isFavourited = false,
+    this.onFavouriteTap,
     this.isDownloading = false,
     this.downloadEnabled = false,
     this.isKnownDifficultSite = false,
@@ -196,6 +200,22 @@ class BrowserToolbar extends StatelessWidget {
                       icon: const Icon(Icons.refresh, size: 20),
                       onPressed: onReload,
                     ),
+                    // Favourite
+                    IconButton(
+                      padding: const EdgeInsets.all(4),
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        isFavourited
+                            ? Icons.star_rounded
+                            : Icons.star_border_rounded,
+                        size: 20,
+                        color: isFavourited ? Colors.amber : null,
+                      ),
+                      tooltip: isFavourited
+                          ? 'Remove from favourites'
+                          : 'Add to favourites',
+                      onPressed: onFavouriteTap,
+                    ),
                     // Download (primary action)
                     Padding(
                       padding: const EdgeInsets.only(right: 4),
@@ -255,11 +275,12 @@ class BrowserToolbar extends StatelessWidget {
                           // button's RenderBox so the menu is anchored to it.
                           final RenderBox button =
                               buttonContext.findRenderObject() as RenderBox;
-                          final Offset buttonPos = button.localToGlobal(Offset.zero);
+                          final Offset buttonPos =
+                              button.localToGlobal(Offset.zero);
                           final Size buttonSize = button.size;
-                          final RenderBox overlay =
-                              Overlay.of(buttonContext).context.findRenderObject()
-                                  as RenderBox;
+                          final RenderBox overlay = Overlay.of(buttonContext)
+                              .context
+                              .findRenderObject() as RenderBox;
 
                           final selection = await showMenu<String>(
                             context: buttonContext,
@@ -274,65 +295,65 @@ class BrowserToolbar extends StatelessWidget {
                               Offset.zero & overlay.size,
                             ),
                             items: [
-                            PopupMenuItem(
-                                value: 'cast',
-                                child: Row(children: [
-                                  Icon(Icons.cast,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface),
-                                  const SizedBox(width: 12),
-                                  const Text('Cast to device'),
-                                  const Spacer(),
-                                  if (isCastConnected)
-                                    Icon(Icons.circle,
-                                        size: 8,
+                              PopupMenuItem(
+                                  value: 'cast',
+                                  child: Row(children: [
+                                    Icon(Icons.cast,
                                         color: Theme.of(context)
                                             .colorScheme
-                                            .primary),
-                                ])),
-                            PopupMenuItem(
-                                value: 'openExternal',
-                                child: Row(children: [
-                                  Icon(Icons.open_in_browser,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface),
-                                  const SizedBox(width: 12),
-                                  const Text('Open in browser'),
-                                ])),
-                            PopupMenuItem(
-                                value: 'copyLink',
-                                child: Row(children: [
-                                  Icon(Icons.copy,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface),
-                                  const SizedBox(width: 12),
-                                  const Text('Copy link'),
-                                ])),
-                            PopupMenuItem(
-                                value: 'share',
-                                child: Row(children: [
-                                  Icon(Icons.share,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface),
-                                  const SizedBox(width: 12),
-                                  const Text('Share'),
-                                ])),
-                            PopupMenuItem(
-                                value: 'addCookies',
-                                child: Row(children: [
-                                  Icon(Icons.cookie_outlined,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface),
-                                  const SizedBox(width: 12),
-                                  const Text('Add cookies (for downloads)'),
-                                ])),
-                          ],
-                        );
+                                            .onSurface),
+                                    const SizedBox(width: 12),
+                                    const Text('Cast to device'),
+                                    const Spacer(),
+                                    if (isCastConnected)
+                                      Icon(Icons.circle,
+                                          size: 8,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary),
+                                  ])),
+                              PopupMenuItem(
+                                  value: 'openExternal',
+                                  child: Row(children: [
+                                    Icon(Icons.open_in_browser,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface),
+                                    const SizedBox(width: 12),
+                                    const Text('Open in browser'),
+                                  ])),
+                              PopupMenuItem(
+                                  value: 'copyLink',
+                                  child: Row(children: [
+                                    Icon(Icons.copy,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface),
+                                    const SizedBox(width: 12),
+                                    const Text('Copy link'),
+                                  ])),
+                              PopupMenuItem(
+                                  value: 'share',
+                                  child: Row(children: [
+                                    Icon(Icons.share,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface),
+                                    const SizedBox(width: 12),
+                                    const Text('Share'),
+                                  ])),
+                              PopupMenuItem(
+                                  value: 'addCookies',
+                                  child: Row(children: [
+                                    Icon(Icons.cookie_outlined,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface),
+                                    const SizedBox(width: 12),
+                                    const Text('Add cookies (for downloads)'),
+                                  ])),
+                            ],
+                          );
                           if (selection != null) onMenuAction(selection);
                         },
                       );

@@ -157,7 +157,8 @@ class NativeMinerService {
   Future<String> _getMinerDir() async {
     if (_minerDirCache != null) return _minerDirCache!;
     final appDir = await getApplicationSupportDirectory();
-    final minerDir = Directory('${appDir.path}${Platform.pathSeparator}qubic_miner');
+    final minerDir =
+        Directory('${appDir.path}${Platform.pathSeparator}qubic_miner');
     if (!minerDir.existsSync()) {
       minerDir.createSync(recursive: true);
     }
@@ -315,7 +316,9 @@ class NativeMinerService {
         try {
           final pid = proc.pid;
           final r = await Process.run('powershell', [
-            '-NoProfile', '-NonInteractive', '-Command',
+            '-NoProfile',
+            '-NonInteractive',
+            '-Command',
             '(Get-Process -Id $pid).PriorityClass = [System.Diagnostics.ProcessPriorityClass]::BelowNormal',
           ]);
           if (r.exitCode != 0) {
@@ -337,7 +340,9 @@ class NativeMinerService {
       _connectionTimeout?.cancel();
       _connectionTimeout = Timer(const Duration(seconds: 90), () {
         if (_disposed) return;
-        if (_hashRate <= 0 && _avgHashRate <= 0 && _state == MinerState.running) {
+        if (_hashRate <= 0 &&
+            _avgHashRate <= 0 &&
+            _state == MinerState.running) {
           debugPrint('NativeMinerService: connection timeout — restarting');
           _lastError = 'Connection timed out. Restarting\u2026';
           _restartCount++;
@@ -405,7 +410,8 @@ class NativeMinerService {
     _avgHashRate = 0;
     _lastError = null;
     _setState(MinerState.starting, msg: 'Restarting miner\u2026');
-    final backoff = Duration(seconds: 3 * (1 << (_restartCount - 1)).clamp(1, 4));
+    final backoff =
+        Duration(seconds: 3 * (1 << (_restartCount - 1)).clamp(1, 4));
     await Future.delayed(backoff);
     if (_disposed || _state == MinerState.stopped) return;
     await start();
@@ -485,14 +491,15 @@ class NativeMinerService {
   static final _ansiRe = RegExp(r'\x1B\[[0-9;]*[A-Za-z]');
 
   // Matches: "167 it/s", "13.1K it/s" (first occurrence = current rate)
-  static final _hashRateRe =
-      RegExp(r'(\d+(?:[.,]\d+)?)\s*([KkMmGg])?\s*(?:it/s|iterations/s|sol/s|h/s)', caseSensitive: false);
+  static final _hashRateRe = RegExp(
+      r'(\d+(?:[.,]\d+)?)\s*([KkMmGg])?\s*(?:it/s|iterations/s|sol/s|h/s)',
+      caseSensitive: false);
   // Matches: "163 avg it/s", "13.1K avg it/s"
-  static final _avgRateRe =
-      RegExp(r'(\d+(?:[.,]\d+)?)\s*([KkMmGg])?\s*avg\s*(?:it/s|h/s)', caseSensitive: false);
+  static final _avgRateRe = RegExp(
+      r'(\d+(?:[.,]\d+)?)\s*([KkMmGg])?\s*avg\s*(?:it/s|h/s)',
+      caseSensitive: false);
   // Matches: "SOLS: 0/0 (R:0)" → found/submitted (rejected)
-  static final _solsRe =
-      RegExp(r'SOLS:\s*(\d+)/(\d+)\s*\(R:(\d+)\)');
+  static final _solsRe = RegExp(r'SOLS:\s*(\d+)/(\d+)\s*\(R:(\d+)\)');
   // Matches: "E:202 |" → epoch number
   static final _epochRe = RegExp(r'E:(\d+)\s*\|');
   // Matches explicit solution messages from qli-Client
@@ -513,8 +520,10 @@ class NativeMinerService {
     final raw = m.group(1)!.replaceAll(',', '.');
     var value = double.tryParse(raw) ?? 0;
     final suffix = m.group(2)?.toUpperCase();
-    if (suffix == 'K') value *= 1000;
-    else if (suffix == 'M') value *= 1000000;
+    if (suffix == 'K')
+      value *= 1000;
+    else if (suffix == 'M')
+      value *= 1000000;
     else if (suffix == 'G') value *= 1000000000;
     return value;
   }
@@ -535,8 +544,10 @@ class NativeMinerService {
     final solsMatch = _solsRe.firstMatch(line);
     if (solsMatch != null) {
       _solutionsFound = int.tryParse(solsMatch.group(1)!) ?? _solutionsFound;
-      _solutionsSubmitted = int.tryParse(solsMatch.group(2)!) ?? _solutionsSubmitted;
-      _solutionsRejected = int.tryParse(solsMatch.group(3)!) ?? _solutionsRejected;
+      _solutionsSubmitted =
+          int.tryParse(solsMatch.group(2)!) ?? _solutionsSubmitted;
+      _solutionsRejected =
+          int.tryParse(solsMatch.group(3)!) ?? _solutionsRejected;
     }
 
     // ── Parse hash rate: current it/s (handles K/M/G suffixes)
@@ -567,7 +578,8 @@ class NativeMinerService {
         _restartCount = 0;
       }
       _lastError = null; // Clear stale errors once mining is confirmed
-      _statusMessage = 'Mining \u2022 Epoch $_epoch \u2022 ${_hashRate.round()} it/s';
+      _statusMessage =
+          'Mining \u2022 Epoch $_epoch \u2022 ${_hashRate.round()} it/s';
     } else if (epochMatch != null && _avgHashRate > 0) {
       _statusMessage = 'Mining \u2022 Epoch $_epoch \u2022 warming up';
     } else if (epochMatch != null) {
@@ -579,25 +591,28 @@ class NativeMinerService {
     } else if (lower.contains('idle') || lower.contains('waiting')) {
       _statusMessage = 'Idle (waiting for next round)';
     } else if (lower.contains('unable to connect') ||
-               lower.contains('connection refused') ||
-               lower.contains('could not connect') ||
-               lower.contains('no connection')) {
+        lower.contains('connection refused') ||
+        lower.contains('could not connect') ||
+        lower.contains('no connection')) {
       _lastError = line.length > 120 ? '${line.substring(0, 120)}\u2026' : line;
       _statusMessage = 'Unable to connect to pool';
       // Trigger auto-restart if we haven't exceeded retry limit
       if (!_everConnected && _restartCount <= 3) {
         _connectionTimeout?.cancel();
         _restartCount++;
-        debugPrint('NativeMinerService: pool connection failed, auto-restart #$_restartCount');
+        debugPrint(
+            'NativeMinerService: pool connection failed, auto-restart #$_restartCount');
         _autoRestart();
       } else if (_restartCount > 3) {
-        _setState(MinerState.error, msg: 'Unable to connect after multiple attempts');
+        _setState(MinerState.error,
+            msg: 'Unable to connect after multiple attempts');
       }
     } else if (lower.contains('error') || lower.contains('fail')) {
       // Filter known XMRig performance warnings
       final isKnownWarning = _ignoredWarnings.any((w) => lower.contains(w));
       if (!isKnownWarning) {
-        _lastError = line.length > 120 ? '${line.substring(0, 120)}\u2026' : line;
+        _lastError =
+            line.length > 120 ? '${line.substring(0, 120)}\u2026' : line;
         if (lower.contains('authentication')) {
           _statusMessage = 'Auth error \u2014 check pool settings';
         }

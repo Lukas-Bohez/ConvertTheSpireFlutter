@@ -55,11 +55,12 @@ class CoordinatorService {
   /// Whether the miner is actually producing hashes (not just starting).
   bool get _nativeMinerActuallyMining =>
       _nativeMiner.state == MinerState.running &&
-      (_nativeMiner.hashRate > 0 || _nativeMiner.avgHashRate > 0 || _nativeMiner.epoch > 0);
+      (_nativeMiner.hashRate > 0 ||
+          _nativeMiner.avgHashRate > 0 ||
+          _nativeMiner.epoch > 0);
 
   /// Whether the native mining binary is available for this platform.
-  bool get nativeMinerSupported =>
-      !kIsWeb && NativeMinerService.isSupported;
+  bool get nativeMinerSupported => !kIsWeb && NativeMinerService.isSupported;
 
   /// Expose the native miner so the UI can read stats directly.
   NativeMinerService get nativeMiner => _nativeMiner;
@@ -266,10 +267,10 @@ class CoordinatorService {
         payload = {'start': start, 'end': start + 1000 + rng.nextInt(4000)};
         break;
       case ComputeJobType.crc32Verify:
-        final data = List.generate(
-                500 + rng.nextInt(1500), (_) => rng.nextInt(128))
-            .map((c) => String.fromCharCode(c + 32))
-            .join();
+        final data =
+            List.generate(500 + rng.nextInt(1500), (_) => rng.nextInt(128))
+                .map((c) => String.fromCharCode(c + 32))
+                .join();
         payload = {'data': data};
         break;
       default:

@@ -12,7 +12,8 @@ class ScreenshotHelper {
       if (ctx == null) return;
       final boundary = ctx.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) return;
-      final pixelRatio = MediaQuery.maybeOf(ctx)?.devicePixelRatio ?? ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
+      final pixelRatio = MediaQuery.maybeOf(ctx)?.devicePixelRatio ??
+          ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
       final image = await boundary.toImage(pixelRatio: pixelRatio);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return;

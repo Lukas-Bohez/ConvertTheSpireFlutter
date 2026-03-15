@@ -22,7 +22,8 @@ class SettingsStore {
       // Try app-specific external storage (no permissions required)
       final extDir = await PlatformDirs.getExternalDir();
       if (extDir != null) {
-        final dlDir = Directory('${extDir.path}${Platform.pathSeparator}downloads');
+        final dlDir =
+            Directory('${extDir.path}${Platform.pathSeparator}downloads');
         await dlDir.create(recursive: true);
         return dlDir.path;
       }
@@ -30,7 +31,8 @@ class SettingsStore {
       // Try internal files directory
       final filesDir = await PlatformDirs.getFilesDir();
       if (filesDir != null) {
-        final dlDir = Directory('${filesDir.path}${Platform.pathSeparator}downloads');
+        final dlDir =
+            Directory('${filesDir.path}${Platform.pathSeparator}downloads');
         await dlDir.create(recursive: true);
         return dlDir.path;
       }

@@ -130,34 +130,34 @@ class _BulkImportScreenState extends State<BulkImportScreen>
               ),
             ],
           ),
-            if (_processing) ...[
-              const SizedBox(height: 16),
-              const CircularProgressIndicator(),
-            ],
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-            ],
-            if (_parsedQueries != null && !_processing) ...[
-              const SizedBox(height: 16),
-              Text('Parsed ${_parsedQueries!.length} tracks',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _parsedQueries!.length,
-                  itemBuilder: (context, i) {
-                    return ListTile(
-                      dense: true,
-                      leading: Text('${i + 1}'),
-                      title: Text(_parsedQueries![i]),
-                    );
-                  },
-                ),
-              ),
-            ],
+          if (_processing) ...[
+            const SizedBox(height: 16),
+            const CircularProgressIndicator(),
           ],
-        ),
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(_error!, style: const TextStyle(color: Colors.red)),
+          ],
+          if (_parsedQueries != null && !_processing) ...[
+            const SizedBox(height: 16),
+            Text('Parsed ${_parsedQueries!.length} tracks',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _parsedQueries!.length,
+                itemBuilder: (context, i) {
+                  return ListTile(
+                    dense: true,
+                    leading: Text('${i + 1}'),
+                    title: Text(_parsedQueries![i]),
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

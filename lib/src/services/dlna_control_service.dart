@@ -10,8 +10,7 @@ import 'dlna_discovery_service.dart';
 /// Implements the AVTransport:1 actions needed to play, pause, stop, and
 /// seek media on a DLNA TV or speaker.
 class DlnaControlService {
-  static const _avTransportUrn =
-      'urn:schemas-upnp-org:service:AVTransport:1';
+  static const _avTransportUrn = 'urn:schemas-upnp-org:service:AVTransport:1';
 
   /// Set the media URI on the renderer and start playback.
   ///
@@ -188,8 +187,9 @@ class DlnaControlService {
       soapBody,
     );
 
-    final match = RegExp(r'<CurrentTransportState>(.*?)</CurrentTransportState>')
-        .firstMatch(responseBody);
+    final match =
+        RegExp(r'<CurrentTransportState>(.*?)</CurrentTransportState>')
+            .firstMatch(responseBody);
     return match?.group(1) ?? 'UNKNOWN';
   }
 

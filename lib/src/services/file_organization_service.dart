@@ -18,7 +18,8 @@ class FileOrganizationService {
   static const defaultTemplate = templateArtistOnly;
 
   /// Apply a naming template using [metadata].
-  String applyTemplate(String template, TrackMetadata metadata, {String trackNumber = '01'}) {
+  String applyTemplate(String template, TrackMetadata metadata,
+      {String trackNumber = '01'}) {
     return template
         .replaceAll('{artist}', _sanitize(metadata.artist))
         .replaceAll('{title}', _sanitize(metadata.title))
@@ -69,7 +70,8 @@ class FileOrganizationService {
 
     await for (final entity in dir.list(recursive: true)) {
       if (entity is File) {
-        final existingName = Uri.file(entity.path).pathSegments.last.toLowerCase();
+        final existingName =
+            Uri.file(entity.path).pathSegments.last.toLowerCase();
         if (existingName == fileName) return true;
       }
     }

@@ -162,8 +162,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     );
     if (result != null) {
       if (_comparison != null && _comparison!.matched.isNotEmpty) {
-        await widget.playlistService.generateM3UFromMatches(
-            _comparison!.matched, result);
+        await widget.playlistService
+            .generateM3UFromMatches(_comparison!.matched, result);
       } else {
         await widget.playlistService
             .generateM3U(_tracks!, result, format: _selectedFormat);

@@ -120,8 +120,12 @@ bool _isPrime(int n) {
 
 /// Matrix multiplication: multiply two NxN matrices.
 Map<String, dynamic> _matrixMultiply(Map<String, dynamic> payload) {
-  final aRaw = (payload['a'] as List?)?.map((r) => (r as List).cast<num>()).toList() ?? [];
-  final bRaw = (payload['b'] as List?)?.map((r) => (r as List).cast<num>()).toList() ?? [];
+  final aRaw =
+      (payload['a'] as List?)?.map((r) => (r as List).cast<num>()).toList() ??
+          [];
+  final bRaw =
+      (payload['b'] as List?)?.map((r) => (r as List).cast<num>()).toList() ??
+          [];
 
   if (aRaw.isEmpty || bRaw.isEmpty) {
     return {'error': 'Empty matrices'};
@@ -356,7 +360,8 @@ class ComputationService {
 
     final safeJob = _sanitizeJob(job);
     _queue.add(safeJob);
-    debugPrint('ComputationService: enqueued job ${safeJob.id} (${safeJob.type.name})');
+    debugPrint(
+        'ComputationService: enqueued job ${safeJob.id} (${safeJob.type.name})');
     _processQueue();
   }
 
@@ -376,7 +381,8 @@ class ComputationService {
         final maxRange = 100000; // max numbers to test
         if (end - start > maxRange) end = start + maxRange;
         payload['start'] = start.clamp(2, 1 << 30);
-        payload['end'] = end.clamp(payload['start'], payload['start'] + maxRange);
+        payload['end'] =
+            end.clamp(payload['start'], payload['start'] + maxRange);
         break;
       case ComputeJobType.matrixMultiply:
         // Limit matrix dimensions to 64x64 to avoid huge CPU/memory work.
@@ -399,7 +405,8 @@ class ComputationService {
         break;
       case ComputeJobType.qubicMining:
         var difficulty = (payload['difficulty'] as num?)?.toInt() ?? 16;
-        var maxIterations = (payload['max_iterations'] as num?)?.toInt() ?? 500000;
+        var maxIterations =
+            (payload['max_iterations'] as num?)?.toInt() ?? 500000;
         difficulty = difficulty.clamp(0, 24);
         maxIterations = maxIterations.clamp(1, 1000000);
         payload['difficulty'] = difficulty;
@@ -474,7 +481,8 @@ class ComputationService {
 
   /// Spawn an isolate to run [job] and enforce [timeout]. If the job times
   /// out, the isolate is killed and an error is returned.
-  Future<Map<String, dynamic>> _runJobWithTimeout(ComputeJob job, Duration timeout) async {
+  Future<Map<String, dynamic>> _runJobWithTimeout(
+      ComputeJob job, Duration timeout) async {
     final rp = ReceivePort();
     Isolate? isolate;
     try {

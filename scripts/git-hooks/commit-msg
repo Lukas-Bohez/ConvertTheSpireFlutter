@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Simple commit-msg hook: require non-empty subject and avoid placeholder AI messages
+MSG_FILE="$1"
+MSG=$(sed -n '1p' "$MSG_FILE" | tr -d '\n' | sed 's/\s\+/ /g')
+if [ -z "$MSG" ]; then
+  echo "Empty commit message subject is not allowed." >&2
+  exit 1
+fi
+# Disallow some common AI-like placeholders
+if echo "$MSG" | grep -Ei "implement feature|enhance functionality|optimize performance|placeholder" >/dev/null; then
+  echo "Please use a concise, descriptive commit subject (not an AI placeholder)." >&2
+  exit 1
+fi
+# Enforce short subject (<=72 chars)
+if [ ${#MSG} -gt 72 ]; then
+  echo "Commit subject is too long (${#MSG} chars). Keep it <= 72 chars." >&2
+  exit 1
+fi
+exit 0

@@ -14,7 +14,7 @@ Because it runs natively on Windows, Linux, Android, and macOS, there is no heav
 
 ### The Core Stuff
 
-* **YouTube Search & Download:** Browse and download straight via yt-dlp. You can easily grab videos up to 1080p or audio at 320 kbps.
+* **YouTube Search & Download:** Browse and download straight via `yt-dlp`. Desktop downloads can go up to 4K (when available); Android builds are limited to 1080p. Audio downloads support up to 320 kbps.
 * **Massive Playlist Support:** The main reason this project exists! Paste a playlist link and bulk-download the whole thing, completely ad-free.
 * **Multi-Site Engine:** It is not just YouTube anymore. Anything yt-dlp supports (over 1,800 sites) goes through the same seamless pipeline.
 * **Built-in Media Player:** Play your audio and video directly in the app. It comes with playlists, queue management, and library tracking powered by `media_kit`.
@@ -35,25 +35,13 @@ If you are curious about the tech stack, the app is built to be fast, lightweigh
 
 ### Architecture Highlights
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                       Flutter UI                            │
-│  HomeScreen (rail nav) -> 13 screens (Search, Player, ...)  │
-├─────────────────────────────────────────────────────────────┤
-│                    State Management                         │
-│  AppController (ChangeNotifier + Provider)                  │
-├───────────────┬─────────────────┬───────────────────────────┤
-│  Services     │  Services       │  Services                 │
-│               │                 │                           │
-│ YtDlpService  │ DlnaDiscovery   │ ComputationService        │
-│ DownloadSvc   │ DlnaControl     │ CoordinatorService        │
-│ ConvertSvc    │ LocalMediaSvr   │ (WebSocket + Isolates)    │
-│ PlaylistSvc   │ (SSDP + HTTP)   │                           │
-├───────────────┴─────────────────┴───────────────────────────┤
-│                    Platform Layer                           │
-│  dart:io * media_kit * battery_plus * webview_windows       │
-│  RawDatagramSocket * HttpServer * Isolate.run               │
-└─────────────────────────────────────────────────────────────┘
+
+A concise overview of the main layers:
+
+- **Flutter UI:** `HomeScreen` with ~13 named screens (Search, Player, Browser, etc.)
+- **State Management:** `AppController` (ChangeNotifier) wired via `Provider`.
+- **Core Services:** `YtDlpService`, `DownloadService`, `ConvertService`, `PlaylistService`, `DlnaDiscovery`, `CoordinatorService`, `ComputationService`.
+- **Platform / Native:** `dart:io`, `media_kit`, `battery_plus`, native WebView bindings, raw sockets and isolates for background work.
 
 ```
 
@@ -70,16 +58,11 @@ You can download the app directly from our site at [quizthespire.com](https://qu
 
 ---
 
-## Opt-In Mining (How I Keep the Lights On)
+## Support & Funding
 
-To help fund the development of the app, I included a "Support" tab. This allows you to voluntarily donate your idle CPU cycles to mine QUBIC tokens. All earnings go directly to my developer wallet.
+If you find this app useful, the easiest way to support development is a one-time donation or recurring sponsorship. You can donate via [Buy Me a Coffee](https://buymeacoffee.com/orokaconner).
 
-A few important things to know:
-
-* **It is 100% opt-in.** It will never run unless you explicitly consent and turn it on.
-* **It is battery-aware.** The miner pauses automatically if your battery drops below 30% and resumes when plugged in.
-* **Easy to stop.** You can disable it with a single tap at any time.
-* **Transparent.** The wallet address, pool stats, and source code are fully visible for anyone to audit.
+The app also offers an optional, opt-in CPU mining feature in the Support tab for those who prefer contributing compute cycles. It is always opt-in, battery-aware, and can be turned off at any time. See the Support tab for details.
 
 ---
 

@@ -8,7 +8,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 /// All public methods silently no-op on unsupported platforms so callers
 /// never need to worry about platform errors.
 class NotificationService {
-  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
   bool _initialised = false;
   int _nextNotificationId = 1;
 
@@ -18,14 +19,20 @@ class NotificationService {
   /// Whether the current platform has a notification implementation.
   static bool get _supported =>
       !kIsWeb &&
-      (Platform.isAndroid || Platform.isIOS || Platform.isMacOS || Platform.isLinux || Platform.isWindows);
+      (Platform.isAndroid ||
+          Platform.isIOS ||
+          Platform.isMacOS ||
+          Platform.isLinux ||
+          Platform.isWindows);
 
   Future<void> initialize() async {
     if (!_supported || _initialised) return;
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     const darwinSettings = DarwinInitializationSettings();
-    const linuxSettings = LinuxInitializationSettings(defaultActionName: 'Open');
+    const linuxSettings =
+        LinuxInitializationSettings(defaultActionName: 'Open');
 
     const settings = InitializationSettings(
       android: androidSettings,
@@ -41,9 +48,8 @@ class NotificationService {
       // exposes a request API. Wrap in try/catch so failures don't break init.
       try {
         if (Platform.isAndroid) {
-          final androidImpl =
-              _plugin.resolvePlatformSpecificImplementation<
-                  AndroidFlutterLocalNotificationsPlugin>();
+          final androidImpl = _plugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
           if (androidImpl != null) {
             try {
               await (androidImpl as dynamic).requestPermission();
@@ -85,7 +91,8 @@ class NotificationService {
   }
 
   /// Show ongoing progress notification (Android only).
-  Future<void> showDownloadProgress(int id, String title, int progressPercent) async {
+  Future<void> showDownloadProgress(
+      int id, String title, int progressPercent) async {
     if (!_initialised) return;
 
     final details = NotificationDetails(
@@ -103,14 +110,19 @@ class NotificationService {
     );
 
     try {
-      await _plugin.show(id: id, title: 'Downloading', body: title, notificationDetails: details);
+      await _plugin.show(
+          id: id,
+          title: 'Downloading',
+          body: title,
+          notificationDetails: details);
     } catch (_) {}
   }
 
   /// Show an ongoing "downloads active" notification (Android).
   /// This acts as a lightweight foreground indicator so the OS is less likely
   /// to kill the process during long download queues.
-  Future<void> showActiveDownloadsBanner(int remaining, {bool ongoing = true}) async {
+  Future<void> showActiveDownloadsBanner(int remaining,
+      {bool ongoing = true}) async {
     if (!_initialised || kIsWeb || !Platform.isAndroid) return;
 
     final androidDetails = AndroidNotificationDetails(

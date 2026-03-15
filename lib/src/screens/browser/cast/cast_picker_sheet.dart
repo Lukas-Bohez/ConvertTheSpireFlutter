@@ -67,8 +67,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            Text('Cast Media',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text('Cast Media', style: Theme.of(context).textTheme.titleMedium),
             const Divider(),
 
             Expanded(
@@ -89,8 +88,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                                     cs.onSurfaceVariant.withValues(alpha: 0.5)),
                             const SizedBox(height: 8),
                             Text('No video streams detected',
-                                style: TextStyle(
-                                    color: cs.onSurfaceVariant)),
+                                style: TextStyle(color: cs.onSurfaceVariant)),
                           ],
                         ),
                       ),
@@ -119,9 +117,8 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                           _mediaTypeLabel(url),
                           style: TextStyle(
                             fontSize: 11,
-                            color: isSelected
-                                ? cs.primary
-                                : cs.onSurfaceVariant,
+                            color:
+                                isSelected ? cs.primary : cs.onSurfaceVariant,
                           ),
                         ),
                         onTap: () => setState(() => _selectedUrl = url),
@@ -145,13 +142,11 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                           const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2),
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           ),
                           const SizedBox(width: 12),
                           Text('Searching for devices…',
-                              style: TextStyle(
-                                  color: cs.onSurfaceVariant)),
+                              style: TextStyle(color: cs.onSurfaceVariant)),
                         ],
                       ),
                     )
@@ -173,9 +168,8 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                               : 'DLNA / UPnP',
                           style: TextStyle(
                             fontSize: 12,
-                            color: isSelected
-                                ? cs.primary
-                                : cs.onSurfaceVariant,
+                            color:
+                                isSelected ? cs.primary : cs.onSurfaceVariant,
                           ),
                         ),
                         trailing: Icon(
@@ -198,8 +192,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                 width: double.infinity,
                 child: FilledButton.icon(
                   onPressed: (_selectedUrl != null && _selectedDevice != null)
-                      ? () =>
-                          widget.onCast(_selectedDevice!, _selectedUrl!)
+                      ? () => widget.onCast(_selectedDevice!, _selectedUrl!)
                       : null,
                   icon: const Icon(Icons.cast),
                   label: const Text('Cast Selected Video'),

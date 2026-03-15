@@ -136,18 +136,17 @@ class AdBlockService extends ChangeNotifier {
   Future<void> _fetchAndCache() async {
     try {
       // Bound the isolate parse with a timeout to avoid long-running work.
-        final domains = await Isolate.run(() => _fetchAndParse())
+      final domains = await Isolate.run(() => _fetchAndParse())
           .timeout(const Duration(seconds: 25));
-        if (_disposed) return;
-        _blockedDomains = HashSet<String>.from(domains);
+      if (_disposed) return;
+      _blockedDomains = HashSet<String>.from(domains);
 
       final file = await _cacheFile;
       await file.writeAsString(domains.join('\n'));
 
       _lastUpdated = DateTime.now();
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(
-          _lastUpdatedKey, _lastUpdated!.millisecondsSinceEpoch);
+      await prefs.setInt(_lastUpdatedKey, _lastUpdated!.millisecondsSinceEpoch);
     } catch (e) {
       if (e is TimeoutException) {
         if (kDebugMode) debugPrint('AdBlock fetch timed out');
@@ -161,8 +160,9 @@ class AdBlockService extends ChangeNotifier {
   static Future<List<String>> _fetchAndParse() async {
     try {
       // Network timeout to avoid hanging on slow responses.
-      final response =
-          await http.get(Uri.parse(_easyListUrl)).timeout(Duration(seconds: 15));
+      final response = await http
+          .get(Uri.parse(_easyListUrl))
+          .timeout(Duration(seconds: 15));
       if (response.statusCode != 200) return [];
 
       final domains = <String>[];
