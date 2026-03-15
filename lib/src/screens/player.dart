@@ -650,13 +650,15 @@ class PlayerState with ChangeNotifier {
           debugPrint('audio load error for ${item.path}: $e');
         }
       } else {
-        // Switching to video: stop audio.
-        // just_audio_windows crashes with "Operation aborted" if stop() is
-        // called while a native callback is mid-flight. Yield one microtask
-        // cycle first to let any pending callbacks drain, then stop.
-        await Future.microtask(() async {
-          try { await _audio.stop(); } catch (_) {}
-        });
+        // Switching to video.
+        // CRASH FIX: just_audio_windows crashes with "Operation aborted" when
+        // stop() is called while its Media Foundation native thread is
+        // mid-callback. pause() + setVolume(0) suspends playback safely
+        // without tearing down the native pipeline.
+        try {
+          await _audio.pause();
+          _audio.setVolume(0);
+        } catch (_) {}
         if (generation != _loadGeneration) return;
 
         if (_useMediaKit && _mkPlayer != null) {
@@ -856,11 +858,12 @@ class PlayerState with ChangeNotifier {
   }
 
   void _applyVolume() {
-    // Always post to main thread — _applyVolume can be called from
-    // _loadPrefs().then() which may execute on a background zone.
-    _runOnMainThread(() {
-      _audio.setVolume(volume);
-    });
+    // Only restore audio volume when audio is actually active.
+    // When video is playing, audio is paused+muted; restoring volume here
+    // would un-mute it and cause double audio.
+    if (!isVideo) {
+      _runOnMainThread(() => _audio.setVolume(volume));
+    }
     if (_useMediaKit && _mkPlayer != null) {
       _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
     }
@@ -1877,20 +1880,20 @@ class _QueueTab extends StatelessWidget {
 
 // ─── Reusable tile / card components ─────────────────────────────────────────
 
-/// BUG 2 FIX: _SongTile uses a const key and requests thumbnail on first build,
-/// not through VisibilityDetector (which fired constantly during scroll).
-/// Instead we use a StatefulWidget that requests once on initState.
+/// Each tile is permanently bound to one track via ValueKey(path).
+/// Without this key, Flutter reuses StatefulWidget instances across rebuilds
+/// caused by thumbnail loads, handing the state the wrong entry and making
+/// taps play the wrong song.
 class _SongTile extends StatefulWidget {
   final PlayerState state;
   final MapEntry<int, MediaItem> entry;
   final void Function(PlayerState, int) onTap;
 
-  const _SongTile({
+  _SongTile({
     required this.state,
     required this.entry,
     required this.onTap,
-    Key? key,
-  }) : super(key: key);
+  }) : super(key: ValueKey(entry.value.path));
 
   @override
   State<_SongTile> createState() => _SongTileState();
@@ -1999,7 +2002,11 @@ class _VideoCard extends StatefulWidget {
   final MapEntry<int, MediaItem> entry;
   final void Function(PlayerState, int) onTap;
 
-  const _VideoCard({required this.state, required this.entry, required this.onTap});
+  _VideoCard({
+    required this.state,
+    required this.entry,
+    required this.onTap,
+  }) : super(key: ValueKey(entry.value.path));
 
   @override
   State<_VideoCard> createState() => _VideoCardState();
