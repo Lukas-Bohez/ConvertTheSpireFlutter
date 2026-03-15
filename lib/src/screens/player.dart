@@ -1167,25 +1167,6 @@ class _AllTabItem {
         entry = null;
 }
 
-// ─── Sliver pinned tab bar ────────────────────────────────────────────────────
-
-class _TabHeaderDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar tabBar;
-  final Color bg;
-
-  const _TabHeaderDelegate(this.tabBar, {required this.bg});
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) =>
-      ColoredBox(color: bg, child: tabBar);
-
-  @override
-  double get maxExtent => tabBar.preferredSize.height;
-  @override
-  double get minExtent => tabBar.preferredSize.height;
-  @override
-  bool shouldRebuild(_TabHeaderDelegate old) => tabBar != old.tabBar || bg != old.bg;
-}
 
 // ─── Persistent video widget ──────────────────────────────────────────────────
 
@@ -1222,13 +1203,17 @@ class _VideoPane extends StatelessWidget {
       child = const Center(child: CircularProgressIndicator(color: _PlayerTheme.accent));
     }
 
+    // Height is fully controlled by the AnimatedContainer in the parent.
+    // Just fill available space and handle the tap.
     return GestureDetector(
       onTap: onTap,
-      child: AspectRatio(
-        aspectRatio: 16 / 9,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox.expand(
         child: ColoredBox(
           color: Colors.black,
-          child: ready ? child : const Center(child: CircularProgressIndicator(color: _PlayerTheme.accent)),
+          child: ready
+              ? child
+              : const Center(child: CircularProgressIndicator(color: _PlayerTheme.accent)),
         ),
       ),
     );
@@ -1334,71 +1319,84 @@ class _PlayerScreenState extends State<PlayerScreen>
     final queueCount = state.manualQueue.length;
     final allCount = songCount + videoCount;
 
+    // Whether the video pane should be shown.
+    final showVideo = state.isVideo &&
+        (state.videoController != null ||
+            state.androidVideoController != null);
+
     return Scaffold(
       body: SafeArea(
         top: false,
         bottom: true,
+        // CRASH FIX: Replace CustomScrollView+SliverFillRemaining+TabBarView
+        // with a plain Column. SliverFillRemaining handing an unbounded-height
+        // TabBarView (which itself contains ListViews) causes a layout crash on
+        // Windows desktop where the render engine can't resolve constraints.
         child: Column(
           children: [
-            // ── Video pane (only visible when a video is playing) ──
-            _VideoPane(
-              mkController: state.videoController,
-              androidController: state.androidVideoController,
-              visible: state.isVideo &&
-                  (state.videoController != null || state.androidVideoController != null),
-              ready: state.videoReady,
-              onTap: state.togglePlay,
+            // ── Video pane ──────────────────────────────────────────────────
+            // CRASH FIX: AnimatedContainer height:null crashes Flutter layout.
+            // Use a fixed target height instead (0 ↔ 260).
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeInOut,
+              height: showVideo ? 260.0 : 0.0,
+              clipBehavior: Clip.hardEdge,
+              decoration: const BoxDecoration(color: Colors.black),
+              child: showVideo
+                  ? _VideoPane(
+                      mkController: state.videoController,
+                      androidController: state.androidVideoController,
+                      visible: true,
+                      ready: state.videoReady,
+                      onTap: state.togglePlay,
+                    )
+                  : const SizedBox.shrink(),
             ),
 
-            // ── Scrollable content ──
+            // ── Header + now-playing ─────────────────────────────────────
+            _buildHeader(),
+            _buildNowPlaying(state),
+            if (state.isLoading)
+              const LinearProgressIndicator(
+                color: _PlayerTheme.accent,
+                minHeight: 2,
+              ),
+
+            // ── Pinned tab bar ────────────────────────────────────────────
+            ColoredBox(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: TabBar(
+                controller: _tabController,
+                labelColor: _PlayerTheme.accent,
+                unselectedLabelColor: _PlayerTheme.sub(context),
+                indicatorColor: _PlayerTheme.accent,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                tabs: [
+                  Tab(text: 'All ($allCount)'),
+                  Tab(text: '♪ Songs ($songCount)'),
+                  Tab(text: '▶ Videos ($videoCount)'),
+                  Tab(text: '★ Fav ($favCount)'),
+                  Tab(text: '⏭ Queue ($queueCount)'),
+                ],
+              ),
+            ),
+
+            // ── Search bar ────────────────────────────────────────────────
+            _buildSearchBar(),
+
+            // ── Tab content — Expanded so it fills remaining space ────────
+            // Each tab manages its own scroll independently.
             Expanded(
-              child: CustomScrollView(
-                primary: false,
-                slivers: [
-                  SliverToBoxAdapter(child: _buildHeader()),
-                  SliverToBoxAdapter(child: _buildNowPlaying(state)),
-                  if (state.isLoading)
-                    const SliverToBoxAdapter(
-                      child: LinearProgressIndicator(
-                        color: _PlayerTheme.accent,
-                        minHeight: 2,
-                      ),
-                    ),
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _TabHeaderDelegate(
-                      TabBar(
-                        controller: _tabController,
-                        labelColor: _PlayerTheme.accent,
-                        unselectedLabelColor: _PlayerTheme.sub(context),
-                        indicatorColor: _PlayerTheme.accent,
-                        isScrollable: true,
-                        tabAlignment: TabAlignment.start,
-                        tabs: [
-                          Tab(text: 'All ($allCount)'),
-                          Tab(text: '♪ Songs ($songCount)'),
-                          Tab(text: '▶ Videos ($videoCount)'),
-                          Tab(text: '★ Fav ($favCount)'),
-                          Tab(text: '⏭ Queue ($queueCount)'),
-                        ],
-                      ),
-                      bg: Theme.of(context).scaffoldBackgroundColor,
-                    ),
-                  ),
-                  SliverToBoxAdapter(child: _buildSearchBar()),
-                  SliverFillRemaining(
-                    hasScrollBody: true,
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _AllTab(state: state, scrollCtl: _scrollControllers[0], matchFn: _matchesSearch, onTap: _onTrackTap),
-                        _SongsTab(state: state, scrollCtl: _scrollControllers[1], matchFn: _matchesSearch, onTap: _onTrackTap),
-                        _VideosTab(state: state, scrollCtl: _scrollControllers[2], matchFn: _matchesSearch, onTap: _onTrackTap),
-                        _FavouritesTab(state: state, scrollCtl: _scrollControllers[3], matchFn: _matchesSearch, onTap: _onTrackTap),
-                        _QueueTab(state: state, scrollCtl: _scrollControllers[4]),
-                      ],
-                    ),
-                  ),
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _AllTab(state: state, scrollCtl: _scrollControllers[0], matchFn: _matchesSearch, onTap: _onTrackTap),
+                  _SongsTab(state: state, scrollCtl: _scrollControllers[1], matchFn: _matchesSearch, onTap: _onTrackTap),
+                  _VideosTab(state: state, scrollCtl: _scrollControllers[2], matchFn: _matchesSearch, onTap: _onTrackTap),
+                  _FavouritesTab(state: state, scrollCtl: _scrollControllers[3], matchFn: _matchesSearch, onTap: _onTrackTap),
+                  _QueueTab(state: state, scrollCtl: _scrollControllers[4]),
                 ],
               ),
             ),
