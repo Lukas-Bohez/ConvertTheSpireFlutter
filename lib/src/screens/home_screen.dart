@@ -78,6 +78,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _audioBitrate = 320;
   bool _settingsInitialized = false;
   bool _supportEnabled = false;
+  bool _minimizeToTrayOnClose = false;
 
   // Fix: separate TabController for playlists tab; disposed exactly once.
   late final TabController _playlistTabController;
@@ -560,6 +561,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _downloadFormat = settings.defaultAudioFormat;
       _videoQuality = settings.preferredVideoQuality;
       _audioBitrate = settings.preferredAudioBitrate;
+      _minimizeToTrayOnClose = settings.minimizeToTrayOnClose;
+      TrayService.shouldMinimiseToTrayOnClose = _minimizeToTrayOnClose;
       _settingsInitialized = true;
     });
 
@@ -2064,6 +2067,17 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
 
+          // Close-to-tray behavior
+          SwitchListTile(
+            title: const Text('Minimize to tray on close'),
+            subtitle: const Text(
+              'Keep the app running in the background when you close the window.',
+            ),
+            value: _minimizeToTrayOnClose,
+            onChanged: (v) => setState(() => _minimizeToTrayOnClose = v),
+            secondary: const Icon(Icons.minimize),
+          ),
+
           // Mining support card (hidden on Android)
           if (!_isAndroid) ...[
             Card(
@@ -2954,10 +2968,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       preferredAudioBitrate: _audioBitrate,
       defaultAudioFormat: _downloadFormat,
       previewExpandPlaylist: _expandPlaylist,
+      minimizeToTrayOnClose: _minimizeToTrayOnClose,
       ffmpegPath: ffmpegText.isEmpty ? null : ffmpegText,
       ytDlpPath: ytDlpText.isEmpty ? null : ytDlpText,
     );
     await widget.controller.saveSettings(next);
+    TrayService.shouldMinimiseToTrayOnClose = next.minimizeToTrayOnClose;
     if (!mounted) return;
     Snack.show(context, 'Settings saved',
         level: SnackLevel.success, duration: const Duration(seconds: 2));
