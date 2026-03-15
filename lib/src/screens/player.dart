@@ -6,7 +6,6 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
-import '../utils/snack.dart';
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
@@ -19,6 +18,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:video_player/video_player.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import '../services/platform_dirs.dart';
 import '../services/audio_handler.dart';
 
@@ -30,8 +30,7 @@ import '../services/audio_handler.dart';
 
 // ─── Wrapper ──────────────────────────────────────────────────────────────────
 
-/// Wrapper widget that simply displays the screen. Actual state is
-/// provided above in the app so it survives navigation/tab switches.
+/// Public entry point used by HomeScreen (case-correct name).
 class PlayerPage extends StatelessWidget {
   const PlayerPage({super.key});
 
@@ -107,13 +106,8 @@ Future<Uint8List?> _transcodeToSafePng(Uint8List raw,
       }
     }
 
-    if (decoded == null) {
-      decoded = _decodeByMagic(raw);
-    }
-
-    if (decoded == null) {
-      decoded = img.decodeImage(raw);
-    }
+    decoded ??= _decodeByMagic(raw);
+    decoded ??= img.decodeImage(raw);
 
     if (decoded == null) {
       debugPrint(
@@ -178,7 +172,6 @@ class PlayerState with ChangeNotifier {
   bool isLoading = false;
 
   /// Which media type the player should stick to when auto-advancing.
-  /// Set by the UI based on which tab is active (null = all).
   MediaType? activeTabFilter;
 
   /// Whether playback is restricted to favourite items only.
@@ -190,58 +183,39 @@ class PlayerState with ChangeNotifier {
   /// Manual queue: indices of library items queued to play next.
   final List<int> manualQueue = [];
 
-  /// Whether the player is currently playing.
   bool get isActuallyPlaying => isPlaying;
 
-  /// Thumbnail cache directory (lazy-init).
   Directory? _thumbCacheDir;
 
-  /// Paths marked as favourites (persisted).
   Set<String> _favourites = {};
-
-  /// Cached metadata for favourite items (survives folder changes).
   Map<String, MediaItem> _favouriteCache = {};
 
-  /// Number of items from the currently loaded folder (excludes appended
-  /// cached favourites from other folders).
   int _folderItemCount = 0;
   int _loadVersion = 0;
 
   int get folderItemCount => _folderItemCount;
 
-  /// Volume boost multiplier for video playback (videos are often quieter).
   static const double _videoVolumeBoost = 1.8;
 
-  // Audio — just_audio works fine on all platforms
   final AudioPlayer _audio = AudioPlayer();
 
-  // Android background audio service (media notification + background playback).
   AppAudioHandler? _audioHandler;
 
   // media_kit is used on Windows/Linux/macOS/iOS.
-  // On Android we use the `video_player` plugin (ExoPlayer) instead, because
-  // media_kit throws "Unsupported platform: android" at runtime.
+  // On Android we use video_player (ExoPlayer) instead.
   final bool _videoSupported = kIsWeb || !Platform.isAndroid;
 
-  // Created once and reused — never recreate, the Video widget holds a ref.
   Player? _mkPlayer;
   VideoController? _mkController;
 
-  // Android-only: one VideoPlayerController per track, created/disposed each load.
   VideoPlayerController? _androidController;
-  // Stored so we can remove it before disposing the controller.
   VoidCallback? _androidListener;
 
-  // Auxiliary player for thumbnail screenshots (desktop/iOS only).
   Player? _thumbPlayer;
-  // Attached to _thumbPlayer so mpv decodes video frames for screenshots.
   // ignore: unused_field
   VideoController? _thumbVideoCtl;
 
-  // True once the first video frame has arrived (media_kit) or initialize()
-  // has completed (video_player on Android).
   bool _videoReady = false;
-
   bool _videoCompletionFired = false;
   bool _loadingTrack = false;
   bool _pendingReload = false;
@@ -260,14 +234,10 @@ class PlayerState with ChangeNotifier {
       try {
         _mkPlayer = Player();
         _mkController = VideoController(_mkPlayer!);
-        // Do not eagerly create the auxiliary thumbnail player here; create
-        // it lazily in _generateVideoThumbnail() to avoid allocating a
-        // second native VideoOutput texture at startup.
-        _thumbPlayer = null;
-        _thumbVideoCtl = null;
+        _thumbPlayer = Player();
+        _thumbVideoCtl = VideoController(_thumbPlayer!);
       } catch (e, st) {
-        debugPrint('media_kit player creation failed: $e');
-        debugPrint('$st');
+        debugPrint('media_kit player creation failed: $e\n$st');
         _videoReady = false;
         _mkPlayer = null;
         _mkController = null;
@@ -280,7 +250,6 @@ class PlayerState with ChangeNotifier {
 
     _loadPrefs().then((_) => _applyVolume());
 
-    // Android: initialise background audio service for media notification.
     if (!kIsWeb && Platform.isAndroid) {
       _initAudioHandler();
     }
@@ -348,13 +317,11 @@ class PlayerState with ChangeNotifier {
   Future<void> _initAudioHandler() async {
     _audioHandler = await initAudioService(_audio);
     if (_audioHandler != null) {
-      // Wire skip events from the notification back into PlayerState.
       _audioHandler!.onSkipToNext = () => next(only: MediaType.audio);
       _audioHandler!.onSkipToPrevious = () => previous(only: MediaType.audio);
     }
   }
 
-  /// Push the current track's metadata to the Android media notification.
   void _updateMediaNotification() {
     if (_audioHandler == null) return;
     final item = currentItem;
@@ -379,8 +346,6 @@ class PlayerState with ChangeNotifier {
 
   bool get isVideo => currentItem?.type == MediaType.video;
 
-  // Video is supported on every platform: media_kit on desktop/iOS,
-  // video_player on Android.
   bool get videoSupported => true;
 
   bool get videoReady => _videoReady;
@@ -388,8 +353,7 @@ class PlayerState with ChangeNotifier {
   bool get isPlaying {
     if (isVideo) {
       if (_videoSupported && _mkPlayer != null) return _mkPlayer!.state.playing;
-      if (_androidController != null)
-        return _androidController!.value.isPlaying;
+      if (_androidController != null) return _androidController!.value.isPlaying;
       return false;
     }
     return _audio.playing;
@@ -431,10 +395,8 @@ class PlayerState with ChangeNotifier {
     for (final path in _favourites) {
       final item = _favouriteCache[path];
       if (item != null) {
-        // tab-separated: path \t type \t title \t artist
         list.add(
             '${item.path}\t${item.type == MediaType.video ? 'v' : 'a'}\t${item.title ?? ''}\t${item.artist ?? ''}');
-        // Persist thumbnail to disk if available.
         if (item.thumbnailData != null) {
           _saveThumbToCache(path, item.thumbnailData!);
         }
@@ -443,7 +405,6 @@ class PlayerState with ChangeNotifier {
     prefs.setStringList('player_favourites_cache', list);
   }
 
-  /// Get or create the thumbnail cache directory.
   Future<Directory> _getThumbCacheDir() async {
     if (_thumbCacheDir != null) return _thumbCacheDir!;
     final appDir = await getApplicationSupportDirectory();
@@ -456,7 +417,6 @@ class PlayerState with ChangeNotifier {
   }
 
   String _thumbCacheKey(String path) {
-    // Simple hash of the path to create a filename.
     final hash = path.hashCode.toUnsigned(32).toRadixString(16).padLeft(8, '0');
     return hash;
   }
@@ -505,7 +465,6 @@ class PlayerState with ChangeNotifier {
     isLoading = true;
     _folderItemCount = 0;
 
-    // Stop any currently playing media to avoid stream listener interference.
     try {
       await _audio.stop();
     } catch (_) {}
@@ -523,7 +482,7 @@ class PlayerState with ChangeNotifier {
     notifyListeners();
 
     // ── Fast pass: read title & artist only (no images) ──
-    final lib = library; // capture reference for safe concurrent access
+    final lib = library;
     const batchSize = 20;
     for (int start = 0; start < lib.length; start += batchSize) {
       if (_loadVersion != version) return;
@@ -535,11 +494,9 @@ class PlayerState with ChangeNotifier {
       notifyListeners();
     }
 
-    // Mark how many items came from this folder.
     _folderItemCount = lib.length;
 
-    // Append cached favourites that are NOT in the current folder so the
-    // Favourites tab still shows them.
+    // Append cached favourites that are NOT in the current folder.
     final folderPaths = lib.map((e) => e.path).toSet();
     for (final path in _favourites) {
       if (!folderPaths.contains(path) && _favouriteCache.containsKey(path)) {
@@ -559,16 +516,11 @@ class PlayerState with ChangeNotifier {
     isLoading = false;
     notifyListeners();
 
-    // ── Background: load thumbnails for all items ──
     _loadAudioThumbnailsInBackground(version);
     _generateThumbnailsInBackground(version);
-
-    // ── Watch library directory for new/removed files (desktop only) ──
     _startDirectoryWatcher(items);
   }
 
-  /// Watches the common parent directory for file-system changes and
-  /// triggers a lightweight library refresh when files are added/removed.
   void _startDirectoryWatcher(List<MediaItem> items) {
     _dirWatcher?.cancel();
     _dirWatcher = null;
@@ -577,7 +529,6 @@ class PlayerState with ChangeNotifier {
     if (kIsWeb || Platform.isAndroid || Platform.isIOS) return;
     if (items.isEmpty) return;
 
-    // Determine common directory from first item's path
     final firstPath = items.first.path;
     if (firstPath.startsWith('content://')) return;
     final dirPath = p.dirname(firstPath);
@@ -587,11 +538,9 @@ class PlayerState with ChangeNotifier {
       final dir = Directory(dirPath);
       if (!dir.existsSync()) return;
       _dirWatcher = dir.watch().listen((event) {
-        if (_disposed || _loadVersion != _loadVersion) return;
+        if (_disposed) return;
         final ext = p.extension(event.path).toLowerCase();
         if (!_mediaExtensions.contains(ext)) return;
-        // Debounce: flag a pending reload; the next notifyListeners cycle
-        // will pick it up.
         if (!_pendingReload) {
           _pendingReload = true;
           Future.delayed(const Duration(seconds: 2), () {
@@ -607,25 +556,10 @@ class PlayerState with ChangeNotifier {
   }
 
   static const _mediaExtensions = {
-    '.mp3',
-    '.m4a',
-    '.flac',
-    '.wav',
-    '.ogg',
-    '.opus',
-    '.aac',
-    '.wma',
-    '.mp4',
-    '.mkv',
-    '.avi',
-    '.webm',
-    '.mov',
-    '.wmv',
-    '.flv',
-    '.m4v',
+    '.mp3', '.m4a', '.flac', '.wav', '.ogg', '.opus', '.aac', '.wma',
+    '.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v',
   };
 
-  /// Re-scan the watched directory and update the library in-place.
   Future<void> _refreshLibraryFromDisk() async {
     final dirPath = _watchedDirPath;
     if (dirPath == null) return;
@@ -638,33 +572,24 @@ class PlayerState with ChangeNotifier {
     }).map((f) {
       final ext = p.extension(f.path).toLowerCase();
       final type = {
-        '.mp4',
-        '.mkv',
-        '.avi',
-        '.webm',
-        '.mov',
-        '.wmv',
-        '.flv',
-        '.m4v'
+        '.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'
       }.contains(ext)
           ? MediaType.video
           : MediaType.audio;
       return MediaItem(f.path, type, title: p.basenameWithoutExtension(f.path));
     }).toList();
 
-    // Only refresh if the file set actually changed
     final currentPaths =
         library.take(_folderItemCount).map((e) => e.path).toSet();
     final newPaths = files.map((e) => e.path).toSet();
     if (currentPaths.length == newPaths.length &&
         currentPaths.containsAll(newPaths)) {
-      return; // no change
+      return;
     }
 
     await setLibrary(files);
   }
 
-  /// Sequential thumbnail generation — avoids races on shared _thumbPlayer.
   Future<void> _generateThumbnailsInBackground(int version) async {
     for (int i = 0; i < library.length; i++) {
       if (_loadVersion != version || i >= library.length) return;
@@ -673,7 +598,6 @@ class PlayerState with ChangeNotifier {
         continue;
       }
       final path = library[i].path;
-      // Skip files that don't exist (cached favourites from other folders)
       if (!path.startsWith('content://')) {
         try {
           if (!await File(path).exists()) continue;
@@ -685,8 +609,6 @@ class PlayerState with ChangeNotifier {
       Uint8List? thumb;
       Duration? dur;
 
-      // Strategy 0: read embedded artwork from container metadata.
-      // Works for MP4/M4V (yt-dlp --embed-thumbnail writes pictures here).
       try {
         final metaPath = await _resolveLocalPath(path);
         final tag = await readMetadata(File(metaPath), getImage: true);
@@ -697,9 +619,10 @@ class PlayerState with ChangeNotifier {
             thumb =
                 await _transcodeToSafePng(pic.bytes, mimeType: pic.mimetype);
             if (thumb != null) {
-              if (kDebugMode)
+              if (kDebugMode) {
                 debugPrint(
                     'video embedded art found for $path (${pic.bytes.length} bytes)');
+              }
               break;
             }
           }
@@ -708,7 +631,6 @@ class PlayerState with ChangeNotifier {
         debugPrint('video metadata read error for $path: $e');
       }
 
-      // Fall back to frame-based screenshot if no embedded art.
       thumb ??= await _generateVideoThumbnail(path);
 
       if (_loadVersion != version) return;
@@ -727,7 +649,53 @@ class PlayerState with ChangeNotifier {
     }
   }
 
-  /// Read only title/artist (no images) for fast initial loading.
+  Future<void> requestThumbnailForIndex(int index) async {
+    if (_disposed) return;
+    if (index < 0 || index >= library.length) return;
+    final item = library[index];
+    if (item.thumbnailData != null) return;
+
+    final path = item.path;
+    Uint8List? thumb;
+    Duration? dur;
+
+    try {
+      final metaPath = await _resolveLocalPath(path);
+      final tag = await readMetadata(File(metaPath), getImage: true);
+      dur = tag.duration;
+      if (tag.pictures.isNotEmpty) {
+        for (final pic in tag.pictures) {
+          if (pic.bytes.isEmpty) continue;
+          thumb = await _transcodeToSafePng(pic.bytes, mimeType: pic.mimetype);
+          if (thumb != null) break;
+        }
+      }
+    } catch (e) {
+      debugPrint('requestThumbnailForIndex metadata read error for $path: $e');
+    }
+
+    if (thumb == null && item.type == MediaType.video) {
+      thumb = await _generateVideoThumbnail(path);
+    }
+
+    if (_disposed) return;
+    if (index < library.length && library[index].path == path) {
+      if (thumb != null || dur != null) {
+        library[index] = library[index].copyWith(
+          thumbnailData: thumb ?? library[index].thumbnailData,
+          duration: dur,
+        );
+        if (_favourites.contains(path)) _favouriteCache[path] = library[index];
+        notifyListeners();
+        if (thumb != null) {
+          try {
+            await _saveThumbToCache(path, thumb);
+          } catch (_) {}
+        }
+      }
+    }
+  }
+
   Future<void> _enrichMetadataFast(int i, List<MediaItem> lib) async {
     if (i >= lib.length) return;
     final item = lib[i];
@@ -747,7 +715,6 @@ class PlayerState with ChangeNotifier {
     }
   }
 
-  /// Background: load audio cover art from metadata for all library items.
   Future<void> _loadAudioThumbnailsInBackground(int version) async {
     for (int i = 0; i < library.length; i++) {
       if (_loadVersion != version || i >= library.length) return;
@@ -812,48 +779,33 @@ class PlayerState with ChangeNotifier {
     }
 
     // Strategy 2: media_kit screenshot (desktop/iOS only)
-    if (_videoSupported) {
-      // Lazily create the auxiliary thumbnail player if needed. This avoids
-      // creating a second VideoOutput texture at app startup.
-      if (_thumbPlayer == null) {
+    if (_videoSupported && _thumbPlayer != null) {
+      try {
+        await _thumbPlayer!.setVolume(0);
+        await _thumbPlayer!.open(Media(_toUri(filePath)), play: false);
+
+        Duration? dur;
         try {
-          _thumbPlayer = Player();
-          _thumbVideoCtl = VideoController(_thumbPlayer!);
-        } catch (e) {
-          debugPrint('thumbnail player creation failed: $e');
-          _thumbPlayer = null;
-          _thumbVideoCtl = null;
-        }
-      }
+          dur = await _thumbPlayer!.stream.duration
+              .firstWhere((d) => d.inMilliseconds > 0)
+              .timeout(const Duration(seconds: 5));
+        } catch (_) {}
 
-      if (_thumbPlayer != null) {
+        if (dur != null && dur.inMilliseconds > 0) {
+          final seekMs = (dur.inMilliseconds * 0.1).round().clamp(0, 15000);
+          await _thumbPlayer!.seek(Duration(milliseconds: seekMs));
+        }
+
+        await Future.delayed(const Duration(milliseconds: 800));
+        snap = await _thumbPlayer!.screenshot();
+        debugPrint(
+            'screenshot() returned ${snap?.length ?? 0} bytes for $filePath');
+      } catch (e) {
+        debugPrint('screenshot error for $filePath: $e');
+      } finally {
         try {
-          await _thumbPlayer!.setVolume(0);
-          await _thumbPlayer!.open(Media(_toUri(filePath)), play: false);
-
-          Duration? dur;
-          try {
-            dur = await _thumbPlayer!.stream.duration
-                .firstWhere((d) => d.inMilliseconds > 0)
-                .timeout(const Duration(seconds: 5));
-          } catch (_) {}
-
-          if (dur != null && dur.inMilliseconds > 0) {
-            final seekMs = (dur.inMilliseconds * 0.1).round().clamp(0, 15000);
-            await _thumbPlayer!.seek(Duration(milliseconds: seekMs));
-          }
-
-          await Future.delayed(const Duration(milliseconds: 800));
-          snap = await _thumbPlayer!.screenshot();
-          debugPrint(
-              'screenshot() returned ${snap?.length ?? 0} bytes for $filePath');
-        } catch (e) {
-          debugPrint('screenshot error for $filePath: $e');
-        } finally {
-          try {
-            await _thumbPlayer!.stop();
-          } catch (_) {}
-        }
+          await _thumbPlayer!.stop();
+        } catch (_) {}
       }
     }
 
@@ -899,7 +851,6 @@ class PlayerState with ChangeNotifier {
   void _applyVolume() {
     _audio.setVolume(volume);
     if (currentItem?.type == MediaType.video) {
-      // media_kit (mpv) supports volume > 100 for amplification.
       if (_videoSupported && _mkPlayer != null) {
         _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
       }
@@ -910,7 +861,6 @@ class PlayerState with ChangeNotifier {
 
   // ── Playback ──
 
-  /// Get valid playback indices based on current mode and filters.
   List<int> _getPlaybackCandidates({MediaType? only}) {
     final scope = _folderItemCount > 0 ? _folderItemCount : library.length;
     return library
@@ -939,7 +889,6 @@ class PlayerState with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Remove the listener and dispose the Android controller safely.
   Future<void> _disposeAndroidController() async {
     if (_androidController == null) return;
     if (_androidListener != null) {
@@ -957,13 +906,10 @@ class PlayerState with ChangeNotifier {
   Future<void> _loadCurrent() async {
     if (currentItem == null) return;
     if (_loadingTrack) {
-      // Another load is in progress – mark pending so we reload
-      // the (now-updated) currentIndex once it finishes.
       _pendingReload = true;
       return;
     }
-    final item =
-        currentItem!; // Capture once – library may change across awaits
+    final item = currentItem!;
     _loadingTrack = true;
     _pendingReload = false;
     _videoCompletionFired = false;
@@ -997,17 +943,14 @@ class PlayerState with ChangeNotifier {
         await _audio.stop();
         try {
           if (_videoSupported && _mkPlayer != null) {
-            // ── Desktop / iOS: media_kit ──
             await _mkPlayer!.open(Media(_toUri(item.path)), play: true);
             await _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
           } else {
-            // ── Android: video_player (ExoPlayer) ──
             await _disposeAndroidController();
 
             final path = item.path;
             VideoPlayerController? ctrl;
 
-            // Try 1: content:// URI directly — ExoPlayer handles SAF URIs natively.
             if (path.startsWith('content://')) {
               try {
                 ctrl = VideoPlayerController.networkUrl(Uri.parse(path));
@@ -1021,7 +964,6 @@ class PlayerState with ChangeNotifier {
               }
             }
 
-            // Try 2: regular file path.
             if (ctrl == null && !path.startsWith('content://')) {
               try {
                 ctrl = VideoPlayerController.file(File(path));
@@ -1035,7 +977,6 @@ class PlayerState with ChangeNotifier {
               }
             }
 
-            // Try 3: copy content URI to a temp file, then open as file.
             if (ctrl == null && path.startsWith('content://')) {
               try {
                 final local = await _resolveLocalPath(path);
@@ -1059,12 +1000,8 @@ class PlayerState with ChangeNotifier {
               final videoVol = (volume * _videoVolumeBoost).clamp(0.0, 1.0);
               await ctrl.setVolume(videoVol);
               await ctrl.play();
-              // initialize() completes synchronously once the codec is ready,
-              // so the widget can be shown immediately.
               _videoReady = true;
 
-              // Mirror position/duration/completion back into PlayerState so
-              // the progress slider and next-track logic work correctly.
               void listener() {
                 if (_androidController == null) return;
                 final val = _androidController!.value;
@@ -1086,7 +1023,7 @@ class PlayerState with ChangeNotifier {
               ctrl.addListener(listener);
             } else {
               debugPrint('all android VP strategies failed for $path');
-              _videoReady = true; // Unblock UI — no video to show
+              _videoReady = true;
             }
 
             position = Duration.zero;
@@ -1098,7 +1035,6 @@ class PlayerState with ChangeNotifier {
     } finally {
       _loadingTrack = false;
       notifyListeners();
-      // If another track was requested while we were busy, load it now.
       if (_pendingReload) {
         _pendingReload = false;
         await _loadCurrent();
@@ -1214,7 +1150,6 @@ class PlayerState with ChangeNotifier {
     _applyPlaybackMode();
     _favourites = (prefs.getStringList('player_favourites') ?? []).toSet();
 
-    // Restore favourite metadata cache.
     _favouriteCache.clear();
     for (final raw in prefs.getStringList('player_favourites_cache') ?? []) {
       final parts = raw.split('\t');
@@ -1228,12 +1163,10 @@ class PlayerState with ChangeNotifier {
             MediaItem(path, type, title: title, artist: artist);
       }
     }
-    // Load cached thumbnails from disk for favourites.
     _loadFavouriteThumbsFromDisk();
     notifyListeners();
   }
 
-  /// Load persisted thumbnail images for all favourites in the background.
   Future<void> _loadFavouriteThumbsFromDisk() async {
     for (final path in _favouriteCache.keys.toList()) {
       final cached = _favouriteCache[path];
@@ -1241,7 +1174,6 @@ class PlayerState with ChangeNotifier {
       final bytes = await _loadThumbFromCache(path);
       if (bytes != null && _favouriteCache.containsKey(path)) {
         _favouriteCache[path] = cached.copyWith(thumbnailData: bytes);
-        // Also update library item if present.
         final idx = library.indexWhere((item) => item.path == path);
         if (idx >= 0 && library[idx].thumbnailData == null) {
           library[idx] = library[idx].copyWith(thumbnailData: bytes);
@@ -1251,7 +1183,6 @@ class PlayerState with ChangeNotifier {
     }
   }
 
-  /// Apply playback mode to the activeTabFilter and favouritesOnly flags.
   void _applyPlaybackMode() {
     switch (playbackMode) {
       case PlaybackMode.songs:
@@ -1278,21 +1209,18 @@ class PlayerState with ChangeNotifier {
 
   // ── Queue management ──
 
-  /// Add a library index to the manual play-next queue.
   void enqueue(int index) {
     if (index < 0 || index >= library.length) return;
     manualQueue.add(index);
     notifyListeners();
   }
 
-  /// Remove a specific position from the manual queue.
   void dequeue(int queuePosition) {
     if (queuePosition < 0 || queuePosition >= manualQueue.length) return;
     manualQueue.removeAt(queuePosition);
     notifyListeners();
   }
 
-  /// Move a queue item from one position to another.
   void reorderQueue(int oldIndex, int newIndex) {
     if (oldIndex < 0 || oldIndex >= manualQueue.length) return;
     if (newIndex < 0) newIndex = 0;
@@ -1309,7 +1237,6 @@ class PlayerState with ChangeNotifier {
   }
 
   Future<void> _handleCompletion() async {
-    // Manual queue takes priority.
     if (manualQueue.isNotEmpty) {
       currentIndex = manualQueue.removeAt(0);
       await _loadCurrent();
@@ -1325,7 +1252,6 @@ class PlayerState with ChangeNotifier {
       await next(only: activeTabFilter);
       return;
     }
-    // RepeatMode.off — advance unless at end of candidates
     final candidates = _getPlaybackCandidates(only: activeTabFilter);
     final pos = candidates.indexOf(currentIndex);
     if (shuffle || (pos >= 0 && pos < candidates.length - 1)) {
@@ -1379,6 +1305,92 @@ class _AllTabItem {
         entry = null;
 }
 
+// ─── Sliver pinned tab bar delegate ──────────────────────────────────────────
+
+class _TabHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar tabBar;
+  final Color bg;
+
+  const _TabHeaderDelegate(this.tabBar, {required this.bg});
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return ColoredBox(color: bg, child: tabBar);
+  }
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  bool shouldRebuild(_TabHeaderDelegate oldDelegate) =>
+      tabBar != oldDelegate.tabBar || bg != oldDelegate.bg;
+}
+
+// ─── Persistent video widget ─────────────────────────────────────────────────
+
+class _PersistentVideoWidget extends StatelessWidget {
+  final VideoController? mkController;
+  final VideoPlayerController? androidController;
+  final bool visible;
+  final bool ready;
+  final VoidCallback onTap;
+  final Color accent;
+  final Color tileBg;
+
+  const _PersistentVideoWidget({
+    required this.mkController,
+    required this.androidController,
+    required this.visible,
+    required this.ready,
+    required this.onTap,
+    required this.accent,
+    required this.tileBg,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!visible) return const SizedBox.shrink();
+
+    Widget videoChild;
+    if (mkController != null) {
+      videoChild = Video(controller: mkController!);
+    } else if (androidController != null) {
+      videoChild = ValueListenableBuilder<VideoPlayerValue>(
+        valueListenable: androidController!,
+        builder: (_, val, __) {
+          if (!val.isInitialized) {
+            return Center(
+                child: CircularProgressIndicator(color: accent));
+          }
+          return AspectRatio(
+            aspectRatio: val.aspectRatio,
+            child: VideoPlayer(androidController!),
+          );
+        },
+      );
+    } else {
+      videoChild = Center(child: CircularProgressIndicator(color: accent));
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: ColoredBox(
+          color: Colors.black,
+          child: ready
+              ? videoChild
+              : Center(child: CircularProgressIndicator(color: accent)),
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Root screen ──────────────────────────────────────────────────────────────
 
 class PlayerScreen extends StatefulWidget {
@@ -1406,13 +1418,9 @@ class _PlayerScreenState extends State<PlayerScreen>
   Color get _text => Theme.of(context).colorScheme.onSurface;
   Color get _sub =>
       Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55);
-  Color get _div => Theme.of(context).dividerColor;
-  Color get _tile {
-    final cs = Theme.of(context).colorScheme;
-    return cs.brightness == Brightness.dark
-        ? cs.surfaceContainerHighest
-        : cs.surface;
-  }
+  Color get _tile => Theme.of(context).brightness == Brightness.dark
+      ? const Color(0xFF2C2C2E)
+      : const Color(0xFFE0E0E0);
 
   static Color _a(double a) => _accent.withValues(alpha: a);
 
@@ -1426,13 +1434,10 @@ class _PlayerScreenState extends State<PlayerScreen>
     _favouritesScrollController = ScrollController();
     _queueScrollController = ScrollController();
 
-    // Update activeTabFilter on the PlayerState when tabs change.
     _tabController.addListener(_onTabChanged);
   }
 
   void _onTabChanged() {
-    // Playback mode is now managed from the Queue tab's mode selector.
-    // Tab switching only triggers a rebuild to update the UI.
     if (!_tabController.indexIsChanging) {
       setState(() {});
     }
@@ -1447,14 +1452,10 @@ class _PlayerScreenState extends State<PlayerScreen>
     _videosScrollController.dispose();
     _favouritesScrollController.dispose();
     _queueScrollController.dispose();
-    _songsScrollController.dispose();
-    _videosScrollController.dispose();
-    _favouritesScrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  /// Filter entries by search query.
   bool _matchesSearch(MediaItem item) {
     if (_searchQuery.isEmpty) return true;
     final q = _searchQuery.toLowerCase();
@@ -1464,9 +1465,60 @@ class _PlayerScreenState extends State<PlayerScreen>
     return title.contains(q) || artist.contains(q);
   }
 
+  // ── Pick folder ────────────────────────────────────────────────────────
+
+  Future<void> _pickFolder() async {
+    if (kIsWeb) return;
+    String? dirPath;
+    try {
+      dirPath = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: 'Select media folder',
+      );
+    } catch (e) {
+      debugPrint('folder picker error: $e');
+    }
+    if (dirPath == null || !mounted) return;
+
+    final dir = Directory(dirPath);
+    if (!dir.existsSync()) return;
+
+    final items = dir
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) {
+          final ext = p.extension(f.path).toLowerCase();
+          return PlayerState._mediaExtensions.contains(ext);
+        })
+        .map((f) {
+          final ext = p.extension(f.path).toLowerCase();
+          final isVideo = {
+            '.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'
+          }.contains(ext);
+          return MediaItem(
+            f.path,
+            isVideo ? MediaType.video : MediaType.audio,
+            title: p.basenameWithoutExtension(f.path),
+          );
+        })
+        .toList();
+
+    if (!mounted) return;
+    await context.read<PlayerState>().setLibrary(items);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<PlayerState>();
+
+    // Compute real counts for tab labels.
+    final allCount = state.library
+        .where((item) => state.folderItemCount == 0 ||
+            state.library.indexOf(item) < state.folderItemCount)
+        .length;
+    final songCount = state.audioEntries.length;
+    final videoCount = state.videoEntries.length;
+    final favCount = state.favouriteEntries.length;
+    final queueCount = state.manualQueue.length;
 
     return Scaffold(
       body: SafeArea(
@@ -1474,7 +1526,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         bottom: true,
         child: Column(
           children: [
-            // ── Persistent video renderer (always in tree, hidden when not needed) ──
+            // ── Persistent video renderer ──
             _PersistentVideoWidget(
               mkController: state.videoController,
               androidController: state.androidVideoController,
@@ -1509,13 +1561,11 @@ class _PlayerScreenState extends State<PlayerScreen>
                         isScrollable: true,
                         tabAlignment: TabAlignment.start,
                         tabs: [
-                          Tab(text: 'All (${state.folderItemCount})'),
-                          Tab(text: '♪ Songs (${state.audioEntries.length})'),
-                          Tab(text: '▶ Videos (${state.videoEntries.length})'),
-                          Tab(
-                              text:
-                                  '★ Favourites (${state.favouriteEntries.length})'),
-                          Tab(text: '⏭ Queue (${state.manualQueue.length})'),
+                          Tab(text: 'All ($allCount)'),
+                          Tab(text: '♪ Songs ($songCount)'),
+                          Tab(text: '▶ Videos ($videoCount)'),
+                          Tab(text: '★ Favourites ($favCount)'),
+                          Tab(text: '⏭ Queue ($queueCount)'),
                         ],
                       ),
                       bg: _bg,
@@ -1546,8 +1596,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                           contentPadding: const EdgeInsets.symmetric(
                               vertical: 8, horizontal: 12),
                         ),
-                        onChanged: (v) =>
-                            setState(() => _searchQuery = v.trim()),
+                        onChanged: (v) => setState(() => _searchQuery = v.trim()),
                       ),
                     ),
                   ),
@@ -1591,1150 +1640,575 @@ class _PlayerScreenState extends State<PlayerScreen>
                     color: _accent,
                     letterSpacing: -0.5)),
             const Spacer(),
-            Builder(
-                builder: (ctx) => IconButton(
-                      icon: Icon(Icons.folder_open,
-                          color: Theme.of(ctx).colorScheme.onSurface),
-                      tooltip: 'Open folder',
-                      onPressed: _pickFolder,
-                    )),
+            IconButton(
+              icon: Icon(Icons.folder_open,
+                  color: Theme.of(context).colorScheme.onSurface),
+              tooltip: 'Open folder',
+              onPressed: _pickFolder,
+            ),
           ],
         ),
       ),
     );
   }
 
-  // ── Now Playing ──────────────────────────────────────────────────────────
+  // ── Now playing bar ─────────────────────────────────────────────────────
 
   Widget _nowPlaying(PlayerState state) {
     final item = state.currentItem;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+    if (item == null) {
+      return const SizedBox.shrink();
+    }
+
+    final title = item.title ?? p.basenameWithoutExtension(item.path);
+    final artist = item.artist ?? '';
+    final dur = state.duration ?? Duration.zero;
+    final pos = state.position;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      decoration: BoxDecoration(
+        color: _tile,
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Art — only shown for audio; video uses the persistent widget above
-          if (!state.isVideo)
-            item?.thumbnailData != null
-                ? Center(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: _img(item!.thumbnailData!, height: 130),
+          // Track info row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+            child: Row(
+              children: [
+                // Thumbnail
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: item.thumbnailData != null
+                      ? Image.memory(item.thumbnailData!,
+                          width: 48, height: 48, fit: BoxFit.cover)
+                      : Container(
+                          width: 48,
+                          height: 48,
+                          color: _a(0.15),
+                          child: Icon(
+                            item.type == MediaType.video
+                                ? Icons.videocam
+                                : Icons.music_note,
+                            color: _accent,
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 10),
+                // Title / artist
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: _text)),
+                      if (artist.isNotEmpty)
+                        Text(artist,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style:
+                                TextStyle(fontSize: 12, color: _sub)),
+                    ],
+                  ),
+                ),
+                // Favourite toggle
+                IconButton(
+                  icon: Icon(
+                    state.isFavourite(item.path)
+                        ? Icons.star
+                        : Icons.star_border,
+                    color: state.isFavourite(item.path)
+                        ? Colors.amber
+                        : _sub,
+                    size: 22,
+                  ),
+                  onPressed: () => state.toggleFavourite(item.path),
+                ),
+              ],
+            ),
+          ),
+          // Progress slider
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Text(_fmtDur(pos),
+                    style: TextStyle(fontSize: 11, color: _sub)),
+                Expanded(
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      thumbShape: const RoundSliderThumbShape(
+                          enabledThumbRadius: 6),
+                      overlayShape: const RoundSliderOverlayShape(
+                          overlayRadius: 12),
+                      trackHeight: 3,
                     ),
-                  )
-                : SizedBox(
-                    height: 90,
-                    child: Center(
-                      child: Icon(Icons.music_note, size: 72, color: _a(0.25)),
+                    child: Slider(
+                      value: (dur.inMilliseconds > 0
+                              ? pos.inMilliseconds /
+                                  dur.inMilliseconds
+                              : 0.0)
+                          .clamp(0.0, 1.0),
+                      activeColor: _accent,
+                      inactiveColor: _a(0.25),
+                      onChanged: dur.inMilliseconds > 0
+                          ? (v) => state.seek(
+                              Duration(
+                                  milliseconds:
+                                      (v * dur.inMilliseconds)
+                                          .round()))
+                          : null,
                     ),
                   ),
-
-          const SizedBox(height: 10),
-
-          Text(
-            item?.title ??
-                (item != null ? p.basenameWithoutExtension(item.path) : '—'),
-            style: TextStyle(
-                fontSize: 15, fontWeight: FontWeight.w600, color: _text),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+                ),
+                Text(_fmtDur(dur),
+                    style: TextStyle(fontSize: 11, color: _sub)),
+              ],
+            ),
           ),
-
-          if (item?.artist != null) ...[
-            const SizedBox(height: 2),
-            Text(item!.artist!,
-                style: TextStyle(fontSize: 12, color: _sub),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
-          ],
-
-          const SizedBox(height: 10),
-          _progress(state),
-          const SizedBox(height: 4),
-          _controls(state),
-          const SizedBox(height: 6),
-          _volume(state),
-          Divider(height: 20, color: _div),
+          // Controls row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // Shuffle
+                IconButton(
+                  icon: Icon(Icons.shuffle,
+                      color: state.shuffle ? _accent : _sub, size: 20),
+                  onPressed: state.toggleShuffle,
+                  tooltip: 'Shuffle',
+                ),
+                // Previous
+                IconButton(
+                  icon: Icon(Icons.skip_previous, color: _text, size: 28),
+                  onPressed: () => state.previous(only: state.activeTabFilter),
+                ),
+                // Play / Pause
+                Container(
+                  decoration:
+                      BoxDecoration(color: _accent, shape: BoxShape.circle),
+                  child: IconButton(
+                    icon: Icon(
+                        state.isPlaying
+                            ? Icons.pause
+                            : Icons.play_arrow,
+                        color: Colors.white,
+                        size: 28),
+                    onPressed: state.togglePlay,
+                  ),
+                ),
+                // Next
+                IconButton(
+                  icon: Icon(Icons.skip_next, color: _text, size: 28),
+                  onPressed: () => state.next(only: state.activeTabFilter),
+                ),
+                // Repeat
+                IconButton(
+                  icon: Icon(
+                    state.repeatMode == RepeatMode.one
+                        ? Icons.repeat_one
+                        : Icons.repeat,
+                    color: state.repeatMode != RepeatMode.off
+                        ? _accent
+                        : _sub,
+                    size: 20,
+                  ),
+                  onPressed: state.cycleRepeat,
+                  tooltip: 'Repeat',
+                ),
+              ],
+            ),
+          ),
+          // Volume slider
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: Row(
+              children: [
+                Icon(Icons.volume_down, size: 18, color: _sub),
+                Expanded(
+                  child: Slider(
+                    value: state.volume,
+                    activeColor: _accent,
+                    inactiveColor: _a(0.2),
+                    onChanged: state.setVolume,
+                  ),
+                ),
+                Icon(Icons.volume_up, size: 18, color: _sub),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _progress(PlayerState state) {
-    final pos = state.position;
-    final dur = state.duration ?? Duration.zero;
-    final maxMs = dur.inMilliseconds.toDouble();
-    final val =
-        pos.inMilliseconds.toDouble().clamp(0.0, maxMs > 0 ? maxMs : 1.0);
-
-    return Column(children: [
-      SliderTheme(
-        data: SliderTheme.of(context).copyWith(
-          trackHeight: 3,
-          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-          overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-          activeTrackColor: _accent,
-          inactiveTrackColor: _a(0.2),
-          thumbColor: _accent,
-          overlayColor: _a(0.15),
-        ),
-        child: Slider(
-          value: val,
-          max: maxMs > 0 ? maxMs : 1.0,
-          onChanged: (v) => state.seek(Duration(milliseconds: v.round())),
-        ),
-      ),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(_fmt(pos), style: TextStyle(fontSize: 11, color: _sub)),
-            Text(_fmt(dur), style: TextStyle(fontSize: 11, color: _sub)),
-          ],
-        ),
-      ),
-    ]);
+  String _fmtDur(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return h > 0 ? '$h:$m:$s' : '$m:$s';
   }
 
-  Widget _controls(PlayerState state) {
-    final isFav =
-        state.currentItem != null && state.isFavourite(state.currentItem!.path);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _toggleBtn(
-          icon: state.shuffle ? Icons.shuffle_on : Icons.shuffle,
-          label: state.shuffle ? 'On' : 'Off',
-          active: state.shuffle,
-          onTap: state.toggleShuffle,
-        ),
-        const SizedBox(width: 4),
-        // Queue button — queue current song to play again
-        _iconBtn(
-          Icons.queue_music,
-          state.currentItem == null
-              ? () {}
-              : () {
-                  state.enqueue(state.currentIndex);
-                  Snack.show(
-                    context,
-                    'Queued: ${state.currentItem!.title ?? p.basenameWithoutExtension(state.currentItem!.path)}',
-                    level: SnackLevel.info,
-                    duration: const Duration(seconds: 2),
-                  );
-                },
-          size: 20,
-          tooltip: 'Add to queue',
-        ),
-        const SizedBox(width: 4),
-        _iconBtn(
-          Icons.skip_previous_rounded,
-          () {
-            state.previous(only: state.activeTabFilter);
-          },
-          size: 30,
-          tooltip: 'Previous',
-        ),
-        const SizedBox(width: 6),
-        Semantics(
-          button: true,
-          label: state.isPlaying ? 'Pause' : 'Play',
-          child: Tooltip(
-            message: state.isPlaying ? 'Pause' : 'Play',
-            child: GestureDetector(
-              onTap: state.library.isEmpty ? null : state.togglePlay,
-              child: Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: state.library.isEmpty ? _sub : _text,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  state.isPlaying
-                      ? Icons.pause_rounded
-                      : Icons.play_arrow_rounded,
-                  color: _bg,
-                  size: 30,
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 6),
-        _iconBtn(
-          Icons.skip_next_rounded,
-          () {
-            state.next(only: state.activeTabFilter);
-          },
-          size: 30,
-          tooltip: 'Next',
-        ),
-        const SizedBox(width: 4),
-        _toggleBtn(
-          icon: state.repeatMode == RepeatMode.one
-              ? Icons.repeat_one
-              : Icons.repeat,
-          label: switch (state.repeatMode) {
-            RepeatMode.off => 'Off',
-            RepeatMode.one => 'One',
-            RepeatMode.all => 'All',
-          },
-          active: state.repeatMode != RepeatMode.off,
-          onTap: state.cycleRepeat,
-        ),
-        const SizedBox(width: 4),
-        // Favourite button for current track
-        InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: state.currentItem == null
-              ? null
-              : () => state.toggleFavourite(state.currentItem!.path),
-          child: Padding(
-            padding: const EdgeInsets.all(4),
-            child: Icon(
-              isFav ? Icons.favorite : Icons.favorite_border,
-              size: 22,
-              color: isFav ? Colors.redAccent : _sub,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _volume(PlayerState state) {
-    return Row(children: [
-      Icon(Icons.volume_down, size: 18, color: _sub),
-      Expanded(
-        child: SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            trackHeight: 2,
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-            activeTrackColor: _accent,
-            inactiveTrackColor: _a(0.2),
-            thumbColor: _accent,
-          ),
-          child: Slider(value: state.volume, onChanged: state.setVolume),
-        ),
-      ),
-      Icon(Icons.volume_up, size: 18, color: _sub),
-      const SizedBox(width: 6),
-      SizedBox(
-        width: 36,
-        child: Text('${(state.volume * 100).round()}%',
-            style: TextStyle(fontSize: 11, color: _sub),
-            textAlign: TextAlign.right),
-      ),
-    ]);
-  }
-
-  Widget _toggleBtn({
-    required IconData icon,
-    required String label,
-    required bool active,
-    required VoidCallback onTap,
-  }) {
-    final color = active ? _accent : _sub;
-    return Semantics(
-      button: true,
-      label: '$label: ${active ? "on" : "off"}',
-      child: Tooltip(
-        message: label,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Icon(icon, color: color, size: 20),
-              Text(label, style: TextStyle(fontSize: 9, color: color)),
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _iconBtn(IconData icon, VoidCallback onTap,
-      {double size = 26, String? tooltip}) {
-    return Semantics(
-      button: true,
-      label: tooltip,
-      child: Tooltip(
-        message: tooltip ?? '',
-        child: InkWell(
-          borderRadius: BorderRadius.circular(size),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(6),
-            child: Icon(icon, size: size, color: _text),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Tab views ────────────────────────────────────────────────────────────
+  // ── Tabs ──────────────────────────────────────────────────────────────
 
   Widget _allTab(PlayerState state) {
-    if (state.library.isEmpty) return _empty();
-    final filteredAudio =
-        state.audioEntries.where((e) => _matchesSearch(e.value)).toList();
-    final filteredVideo =
-        state.videoEntries.where((e) => _matchesSearch(e.value)).toList();
-    if (filteredAudio.isEmpty && filteredVideo.isEmpty) return _noResults();
+    final audioFiltered = state.audioEntries
+        .where((e) => _matchesSearch(e.value))
+        .toList();
+    final videoFiltered = state.videoEntries
+        .where((e) => _matchesSearch(e.value))
+        .toList();
 
-    // Build a flat list of widgets for builder-based virtualisation.
-    // Each section header and tile gets a slot.
-    final items = <_AllTabItem>[];
-    if (filteredAudio.isNotEmpty) {
-      items.add(const _AllTabItem.header('♪ Songs'));
-      for (final e in filteredAudio) {
-        items.add(_AllTabItem.song(e));
+    if (audioFiltered.isEmpty && videoFiltered.isEmpty) {
+      return _emptyHint('No media in library.\nTap the folder icon to open a folder.');
+    }
+
+    // Build a flat list: songs header + songs + videos header + video grid rows
+    final rows = <_AllTabItem>[];
+    if (audioFiltered.isNotEmpty) {
+      rows.add(_AllTabItem.header('Songs'));
+      for (final e in audioFiltered) {
+        rows.add(_AllTabItem.song(e));
       }
     }
-    if (filteredVideo.isNotEmpty) {
-      items.add(const _AllTabItem.header('▶ Videos'));
-      items.add(_AllTabItem.videoGrid(filteredVideo));
+    if (videoFiltered.isNotEmpty) {
+      rows.add(_AllTabItem.header('Videos'));
+      // Group into rows of 2 for a grid
+      for (int i = 0; i < videoFiltered.length; i += 2) {
+        final pair = videoFiltered.sublist(
+            i, (i + 2).clamp(0, videoFiltered.length));
+        rows.add(_AllTabItem.videoGrid(pair));
+      }
     }
 
-    return Scrollbar(
+    return ListView.builder(
       controller: _allScrollController,
-      child: ListView.builder(
-        controller: _allScrollController,
-        primary: false,
-        itemCount: items.length,
-        itemBuilder: (_, i) {
-          final item = items[i];
-          switch (item.kind) {
-            case _AllTabKind.header:
-              return _sectionHeader(item.headerText!);
-            case _AllTabKind.song:
-              return _songTile(state, item.entry!.key, item.entry!.value);
-            case _AllTabKind.videoGrid:
-              return _videoGrid(state, item.entries!);
-          }
-        },
-      ),
+      itemCount: rows.length,
+      itemBuilder: (context, i) {
+        final row = rows[i];
+        switch (row.kind) {
+          case _AllTabKind.header:
+            return _sectionHeader(row.headerText!);
+          case _AllTabKind.song:
+            return _songTile(state, row.entry!);
+          case _AllTabKind.videoGrid:
+            return _videoGridRow(state, row.entries!);
+        }
+      },
     );
   }
 
   Widget _songsTab(PlayerState state) {
-    if (state.audioEntries.isEmpty) return _empty();
-    final filtered =
-        state.audioEntries.where((e) => _matchesSearch(e.value)).toList();
-    if (filtered.isEmpty) return _noResults();
-    return Scrollbar(
+    final filtered = state.audioEntries
+        .where((e) => _matchesSearch(e.value))
+        .toList();
+    if (filtered.isEmpty) {
+      return _emptyHint('No songs found.');
+    }
+    return ListView.builder(
       controller: _songsScrollController,
-      child: ListView.builder(
-        controller: _songsScrollController,
-        primary: false,
-        itemCount: filtered.length,
-        itemBuilder: (_, i) {
-          final e = filtered[i];
-          return _songTile(state, e.key, e.value);
-        },
-      ),
+      itemCount: filtered.length,
+      itemBuilder: (_, i) => _songTile(state, filtered[i]),
     );
   }
 
   Widget _videosTab(PlayerState state) {
-    if (state.videoEntries.isEmpty) return _empty();
-    final filtered =
-        state.videoEntries.where((e) => _matchesSearch(e.value)).toList();
-    if (filtered.isEmpty) return _noResults();
-    return Scrollbar(
+    final filtered = state.videoEntries
+        .where((e) => _matchesSearch(e.value))
+        .toList();
+    if (filtered.isEmpty) {
+      return _emptyHint('No videos found.');
+    }
+    return GridView.builder(
       controller: _videosScrollController,
-      child: ListView(
-        controller: _videosScrollController,
-        primary: false,
-        children: [_videoGrid(state, filtered)],
+      padding: const EdgeInsets.all(8),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 16 / 10,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
       ),
+      itemCount: filtered.length,
+      itemBuilder: (_, i) => _videoCard(state, filtered[i]),
     );
   }
 
   Widget _favouritesTab(PlayerState state) {
-    final favs =
-        state.favouriteEntries.where((e) => _matchesSearch(e.value)).toList();
-    if (favs.isEmpty) {
-      return Center(
-        child: Column(
+    final filtered = state.favouriteEntries
+        .where((e) => _matchesSearch(e.value))
+        .toList();
+    if (filtered.isEmpty) {
+      return _emptyHint('No favourites yet.\nTap ★ on a track to add it.');
+    }
+    return ListView.builder(
+      controller: _favouritesScrollController,
+      itemCount: filtered.length,
+      itemBuilder: (_, i) => _songTile(state, filtered[i]),
+    );
+  }
+
+  Widget _queueTab(PlayerState state) {
+    if (state.manualQueue.isEmpty) {
+      return _emptyHint('Queue is empty.\nLong-press a track to add it.');
+    }
+    return ReorderableListView.builder(
+      scrollController: _queueScrollController,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: state.manualQueue.length,
+      onReorder: state.reorderQueue,
+      itemBuilder: (_, i) {
+        final idx = state.manualQueue[i];
+        if (idx >= state.library.length) return const SizedBox.shrink(key: ValueKey(-1));
+        final item = state.library[idx];
+        final title = item.title ?? p.basenameWithoutExtension(item.path);
+        return ListTile(
+          key: ValueKey('q_$i'),
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: item.thumbnailData != null
+                ? Image.memory(item.thumbnailData!,
+                    width: 40, height: 40, fit: BoxFit.cover)
+                : Container(
+                    width: 40,
+                    height: 40,
+                    color: _a(0.15),
+                    child: Icon(
+                      item.type == MediaType.video
+                          ? Icons.videocam
+                          : Icons.music_note,
+                      color: _accent,
+                      size: 18,
+                    ),
+                  ),
+          ),
+          title: Text(title,
+              maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: item.artist != null
+              ? Text(item.artist!,
+                  maxLines: 1, overflow: TextOverflow.ellipsis)
+              : null,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.drag_handle),
+              IconButton(
+                icon: const Icon(Icons.close, size: 18),
+                onPressed: () => state.dequeue(i),
+              ),
+            ],
+          ),
+          onTap: () {
+            state.dequeue(i);
+            state.select(idx);
+          },
+        );
+      },
+    );
+  }
+
+  // ── Shared tile / card widgets ───────────────────────────────────────
+
+  Widget _sectionHeader(String text) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: _sub,
+              letterSpacing: 0.8)),
+    );
+  }
+
+  Widget _emptyHint(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Text(message,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: _sub, fontSize: 14)),
+      ),
+    );
+  }
+
+  Widget _songTile(PlayerState state, MapEntry<int, MediaItem> e) {
+    final item = e.value;
+    final idx = e.key;
+    final isPlaying =
+        state.currentIndex == idx && state.isActuallyPlaying;
+    final title = item.title ?? p.basenameWithoutExtension(item.path);
+
+    return VisibilityDetector(
+      key: Key('song_$idx'),
+      onVisibilityChanged: (info) {
+        if (info.visibleFraction > 0.1) {
+          state.requestThumbnailForIndex(idx);
+        }
+      },
+      child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: item.thumbnailData != null
+              ? Image.memory(item.thumbnailData!,
+                  width: 44, height: 44, fit: BoxFit.cover)
+              : Container(
+                  width: 44,
+                  height: 44,
+                  color: _a(0.12),
+                  child: Icon(Icons.music_note,
+                      color: _accent, size: 22),
+                ),
+        ),
+        title: Text(title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                fontWeight: isPlaying
+                    ? FontWeight.bold
+                    : FontWeight.normal,
+                color: isPlaying ? _accent : _text)),
+        subtitle: item.artist != null
+            ? Text(item.artist!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12, color: _sub))
+            : null,
+        trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.favorite_border,
-                size: 64, color: _sub.withValues(alpha: 0.4)),
-            const SizedBox(height: 12),
-            Text('No favourites yet',
-                style: TextStyle(color: _sub, fontSize: 14)),
-            const SizedBox(height: 4),
-            Text('Tap the heart icon on any track',
-                style: TextStyle(
-                    color: _sub.withValues(alpha: 0.6), fontSize: 12)),
+            if (isPlaying)
+              Icon(Icons.equalizer, color: _accent, size: 18),
+            IconButton(
+              icon: Icon(
+                state.isFavourite(item.path)
+                    ? Icons.star
+                    : Icons.star_border,
+                size: 18,
+                color: state.isFavourite(item.path)
+                    ? Colors.amber
+                    : _sub,
+              ),
+              onPressed: () => state.toggleFavourite(item.path),
+            ),
           ],
         ),
-      );
-    }
-    final favAudio =
-        favs.where((e) => e.value.type == MediaType.audio).toList();
-    final favVideo =
-        favs.where((e) => e.value.type == MediaType.video).toList();
-
-    final items = <_AllTabItem>[];
-    if (favAudio.isNotEmpty) {
-      items.add(const _AllTabItem.header('♪ Songs'));
-      for (final e in favAudio) {
-        items.add(_AllTabItem.song(e));
-      }
-    }
-    if (favVideo.isNotEmpty) {
-      items.add(const _AllTabItem.header('▶ Videos'));
-      items.add(_AllTabItem.videoGrid(favVideo));
-    }
-
-    return Scrollbar(
-      controller: _favouritesScrollController,
-      child: ListView.builder(
-        controller: _favouritesScrollController,
-        primary: false,
-        itemCount: items.length,
-        itemBuilder: (_, i) {
-          final item = items[i];
-          switch (item.kind) {
-            case _AllTabKind.header:
-              return _sectionHeader(item.headerText!);
-            case _AllTabKind.song:
-              return _songTile(state, item.entry!.key, item.entry!.value);
-            case _AllTabKind.videoGrid:
-              return _videoGrid(state, item.entries!);
-          }
+        onTap: () => state.select(idx),
+        onLongPress: () {
+          state.enqueue(idx);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Added "$title" to queue'),
+              duration: const Duration(seconds: 1),
+            ),
+          );
         },
       ),
     );
   }
 
-  Widget _queueTab(PlayerState state) {
-    return Scrollbar(
-      controller: _queueScrollController,
-      child: ListView(
-        controller: _queueScrollController,
-        primary: false,
-        children: [
-          // ── Playback mode selector ──
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Playback Mode',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: _accent,
-                        letterSpacing: 0.5)),
-                const SizedBox(height: 8),
-                Selector<PlayerState, PlaybackMode>(
-                  selector: (_, s) => s.playbackMode,
-                  builder: (_, selectedMode, __) {
-                    return Wrap(
-                      spacing: 8,
-                      children: PlaybackMode.values.map((mode) {
-                        final selected = selectedMode == mode;
-                        final label = switch (mode) {
-                          PlaybackMode.all => 'All',
-                          PlaybackMode.songs => 'Songs',
-                          PlaybackMode.videos => 'Videos',
-                          PlaybackMode.favourites => 'Favourites',
-                        };
-                        final icon = switch (mode) {
-                          PlaybackMode.all => Icons.library_music,
-                          PlaybackMode.songs => Icons.audiotrack,
-                          PlaybackMode.videos => Icons.videocam,
-                          PlaybackMode.favourites => Icons.favorite,
-                        };
-                        return ChoiceChip(
-                          key: ValueKey(mode),
-                          avatar: Icon(icon,
-                              size: 16, color: selected ? Colors.white : _sub),
-                          label: Text(label),
-                          selected: selected,
-                          selectedColor: _accent,
-                          showCheckmark: false,
-                          labelStyle: TextStyle(
-                              color: selected ? Colors.white : _text,
-                              fontSize: 12),
-                          onSelected: (_) =>
-                              context.read<PlayerState>().setPlaybackMode(mode),
-                        );
-                      }).toList(),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-          Divider(color: _div, indent: 16, endIndent: 16),
-          // ── Queue header ──
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Row(
-              children: [
-                Text('Up Next',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: _accent,
-                        letterSpacing: 0.5)),
-                const Spacer(),
-                if (state.manualQueue.isNotEmpty)
-                  TextButton.icon(
-                    onPressed: state.clearQueue,
-                    icon: const Icon(Icons.clear_all, size: 16),
-                    label: const Text('Clear', style: TextStyle(fontSize: 12)),
-                    style: TextButton.styleFrom(
-                        foregroundColor: Colors.redAccent,
-                        padding: const EdgeInsets.symmetric(horizontal: 8)),
-                  ),
-              ],
-            ),
-          ),
-          if (state.manualQueue.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(32),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.queue_music,
-                        size: 48, color: _sub.withValues(alpha: 0.4)),
-                    const SizedBox(height: 12),
-                    Text('Queue is empty',
-                        style: TextStyle(color: _sub, fontSize: 14)),
-                    const SizedBox(height: 4),
-                    Text('Tap the queue button to add songs',
-                        style: TextStyle(
-                            color: _sub.withValues(alpha: 0.6), fontSize: 12)),
-                  ],
-                ),
-              ),
-            )
-          else
-            ReorderableListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: state.manualQueue.length,
-              onReorder: state.reorderQueue,
-              itemBuilder: (_, i) {
-                final libIdx = state.manualQueue[i];
-                final item = libIdx < state.library.length
-                    ? state.library[libIdx]
-                    : null;
-                if (item == null) {
-                  return ListTile(
-                    key: ValueKey('q_$i'),
-                    title: Text('(removed)',
-                        style: TextStyle(color: _sub, fontSize: 13)),
-                  );
-                }
-                return Material(
-                  key: ValueKey('q_$i'),
-                  color: Colors.transparent,
-                  child: ListTile(
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                    leading: _thumb(
-                        item,
-                        40,
-                        item.type == MediaType.video
-                            ? Icons.videocam
-                            : Icons.audiotrack),
-                    title: Text(
-                      item.title ?? p.basenameWithoutExtension(item.path),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 13, color: _text),
-                    ),
-                    subtitle: item.artist != null
-                        ? Text(item.artist!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 11, color: _sub))
-                        : null,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.remove_circle_outline,
-                              size: 18, color: Colors.redAccent),
-                          onPressed: () => state.dequeue(i),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(Icons.drag_handle, size: 18, color: _sub),
-                      ],
-                    ),
-                    onTap: () {
-                      // Play this queued item immediately and remove from queue.
-                      final idx = state.manualQueue.removeAt(i);
-                      state.select(idx);
-                    },
-                  ),
-                );
-              },
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _empty() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.folder_open, size: 64, color: _sub.withValues(alpha: 0.4)),
-          const SizedBox(height: 12),
-          Text('Open a folder to load media',
-              style: TextStyle(color: _sub, fontSize: 14)),
-        ],
-      ),
-    );
-  }
-
-  Widget _noResults() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.search_off, size: 64, color: _sub.withValues(alpha: 0.4)),
-          const SizedBox(height: 12),
-          Text('No matches found', style: TextStyle(color: _sub, fontSize: 14)),
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionHeader(String title) {
+  Widget _videoGridRow(
+      PlayerState state, List<MapEntry<int, MediaItem>> entries) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(title,
-          style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: _accent,
-              letterSpacing: 0.8)),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        children: entries.map((e) {
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: _videoCard(state, e),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 
-  Widget _songTile(PlayerState state, int index, MediaItem item) {
-    final sel = index == state.currentIndex;
-    final isFav = state.isFavourite(item.path);
-    return Material(
-      color: sel ? _a(0.08) : Colors.transparent,
-      child: InkWell(
-        onTap: () => state.select(index),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          child: Row(
+  Widget _videoCard(PlayerState state, MapEntry<int, MediaItem> e) {
+    final item = e.value;
+    final idx = e.key;
+    final isPlaying =
+        state.currentIndex == idx && state.isActuallyPlaying;
+    final title = item.title ?? p.basenameWithoutExtension(item.path);
+
+    return VisibilityDetector(
+      key: Key('video_$idx'),
+      onVisibilityChanged: (info) {
+        if (info.visibleFraction > 0.1) {
+          state.requestThumbnailForIndex(idx);
+        }
+      },
+      child: GestureDetector(
+        onTap: () => state.select(idx),
+        onLongPress: () {
+          state.enqueue(idx);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Added "$title" to queue'),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Stack(
             children: [
-              // Thumbnail with playing indicator overlay
-              SizedBox(
-                width: 48,
-                height: 48,
-                child: Stack(
-                  children: [
-                    _thumb(item, 48, Icons.audiotrack),
-                    if (sel)
-                      Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Icon(Icons.equalizer,
-                              color: _accent, size: 22),
+              // Thumbnail
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: item.thumbnailData != null
+                    ? Image.memory(item.thumbnailData!,
+                        fit: BoxFit.cover)
+                    : Container(
+                        color: _tile,
+                        child: Icon(Icons.videocam,
+                            color: _accent, size: 32),
+                      ),
+              ),
+              // Overlay
+              Positioned.fill(
+                child: ColoredBox(
+                  color: Colors.black26,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500),
                         ),
                       ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Title & artist
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      item.title ?? p.basenameWithoutExtension(item.path),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: sel ? FontWeight.bold : FontWeight.w400,
-                          color: sel ? _accent : _text),
-                    ),
-                    if (item.artist != null) ...[
-                      const SizedBox(height: 2),
-                      Text(item.artist!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11, color: _sub)),
                     ],
-                  ],
-                ),
-              ),
-              // Actions
-              InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  state.enqueue(index);
-                  Snack.show(context, 'Added to queue',
-                      level: SnackLevel.info,
-                      duration: const Duration(seconds: 1));
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: Icon(Icons.queue_music, size: 18, color: _sub),
-                ),
-              ),
-              InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () => state.toggleFavourite(item.path),
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: Icon(
-                    isFav ? Icons.favorite : Icons.favorite_border,
-                    size: 18,
-                    color: isFav ? Colors.redAccent : _sub,
                   ),
                 ),
               ),
+              if (isPlaying)
+                const Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Icon(Icons.play_circle,
+                      color: Colors.white, size: 22),
+                ),
             ],
           ),
         ),
       ),
     );
   }
-
-  Widget _videoGrid(PlayerState state, List<MapEntry<int, MediaItem>> entries) {
-    return LayoutBuilder(builder: (context, constraints) {
-      // Responsive columns: 1 on narrow (phones), 2 on medium, 3+ on wide
-      final width = constraints.maxWidth;
-      final cols = width < 400
-          ? 1
-          : width < 600
-              ? 2
-              : width < 900
-                  ? 3
-                  : width < 1300
-                      ? 4
-                      : 5;
-      final spacing = 16.0;
-
-      return GridView.builder(
-        shrinkWrap: true,
-        primary: false,
-        physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: cols,
-          // Wide ratio so thumbnails stay rectangular (16:9-ish) with text below
-          childAspectRatio: cols == 1 ? 16 / 10.5 : 16 / 12,
-          mainAxisSpacing: spacing,
-          crossAxisSpacing: spacing,
-        ),
-        itemCount: entries.length,
-        itemBuilder: (_, i) =>
-            _videoCard(state, entries[i].key, entries[i].value),
-      );
-    });
-  }
-
-  Widget _videoCard(PlayerState state, int idx, MediaItem item) {
-    final sel = idx == state.currentIndex;
-    final isFav = state.isFavourite(item.path);
-    final durStr = item.duration != null ? _fmt(item.duration!) : null;
-
-    return GestureDetector(
-      onTap: () => state.select(idx),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Thumbnail ──
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Stack(fit: StackFit.expand, children: [
-                // Thumbnail or placeholder
-                item.thumbnailData != null
-                    ? _img(item.thumbnailData!, fit: BoxFit.cover)
-                    : Container(
-                        color: _tile,
-                        child: Icon(Icons.videocam, color: _sub, size: 40)),
-                // Selection tint
-                if (sel)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: _accent.withValues(alpha: 0.25),
-                      border: Border.all(color: _accent, width: 2),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                // Play/stop center icon (subtle, only on hover-like states)
-                Center(
-                  child: AnimatedOpacity(
-                    opacity: sel ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.7),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        sel ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ),
-                // Duration badge (bottom-right)
-                if (durStr != null)
-                  Positioned(
-                    bottom: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.75),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(durStr,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500)),
-                    ),
-                  ),
-                // Favourite button (top-right)
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: GestureDetector(
-                    onTap: () => state.toggleFavourite(item.path),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        isFav ? Icons.favorite : Icons.favorite_border,
-                        size: 16,
-                        color: isFav ? Colors.redAccent : Colors.white70,
-                      ),
-                    ),
-                  ),
-                ),
-              ]),
-            ),
-          ),
-          // ── Title & info row ──
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 8, left: 2, right: 2),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.title ?? p.basenameWithoutExtension(item.path),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: sel ? FontWeight.bold : FontWeight.w500,
-                            color: sel ? _accent : _text,
-                            height: 1.2,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (item.artist != null) ...[
-                          const SizedBox(height: 2),
-                          Text(item.artist!,
-                              style: TextStyle(fontSize: 11, color: _sub),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
-                        ],
-                      ],
-                    ),
-                  ),
-                  // Queue button
-                  GestureDetector(
-                    onTap: () {
-                      state.enqueue(idx);
-                      Snack.show(context, 'Added to queue',
-                          level: SnackLevel.info,
-                          duration: const Duration(seconds: 1));
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 4, top: 2),
-                      child: Icon(Icons.more_vert, size: 18, color: _sub),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Image helpers ─────────────────────────────────────────────────────────
-
-  Widget _thumb(MediaItem item, double size, IconData fallback) {
-    if (item.thumbnailData != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: _img(item.thumbnailData!,
-            width: size, height: size, fit: BoxFit.cover),
-      );
-    }
-    return Container(
-      width: size,
-      height: size,
-      decoration:
-          BoxDecoration(color: _tile, borderRadius: BorderRadius.circular(4)),
-      child: Icon(fallback, color: _sub, size: size * 0.5),
-    );
-  }
-
-  Widget _img(Uint8List bytes,
-      {double? width, double? height, BoxFit fit = BoxFit.cover}) {
-    return Image.memory(bytes,
-        width: width,
-        height: height,
-        fit: fit,
-        gaplessPlayback: true, errorBuilder: (_, e, __) {
-      debugPrint('image render error: $e');
-      return Container(
-          width: width,
-          height: height,
-          color: _tile,
-          child: Icon(Icons.broken_image, color: _sub, size: 24));
-    });
-  }
-
-  String _fmt(Duration d) {
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$m:$s';
-  }
-
-  Future<void> _pickFolder() async {
-    String? result;
-    if (!kIsWeb && Platform.isAndroid) {
-      result = await PlatformDirs.pickTree();
-      debugPrint('SAF pickTree returned: $result');
-    }
-    result ??= await FilePicker.platform.getDirectoryPath();
-    debugPrint('picked folder path: $result');
-    if (result == null || !mounted) return;
-
-    const audioExt = ['.mp3', '.wav', '.m4a', '.flac', '.aac', '.ogg', '.opus'];
-    const videoExt = ['.mp4', '.mov', '.mkv', '.avi', '.webm', '.flv', '.wmv'];
-
-    List<MediaItem> files = [];
-
-    try {
-      if (result.startsWith('content://')) {
-        final entries = await PlatformDirs.listTree(result);
-        debugPrint('listTree returned ${entries.length} entries');
-        for (final entry in entries) {
-          final uri = entry['uri'] ?? '';
-          if (uri.isEmpty) continue;
-          final name = entry['name'] ?? '';
-          final mime = entry['mime'] ?? '';
-          var ext = p.extension(name).toLowerCase();
-          debugPrint('SAF entry uri=$uri name=$name mime=$mime ext=$ext');
-          if (ext.isEmpty && mime.isNotEmpty) {
-            if (mime.contains('/')) {
-              final subtype = mime.split('/').last;
-              ext = '.$subtype';
-            }
-          }
-          if (!audioExt.contains(ext) && !videoExt.contains(ext)) continue;
-          final type =
-              videoExt.contains(ext) ? MediaType.video : MediaType.audio;
-          files.add(
-              MediaItem(uri, type, title: p.basenameWithoutExtension(name)));
-        }
-      } else {
-        final dir = Directory(result);
-        if (await dir.exists()) {
-          files = dir.listSync(recursive: true).whereType<File>().where((f) {
-            final ext = p.extension(f.path).toLowerCase();
-            return audioExt.contains(ext) || videoExt.contains(ext);
-          }).map((f) {
-            final ext = p.extension(f.path).toLowerCase();
-            final type =
-                videoExt.contains(ext) ? MediaType.video : MediaType.audio;
-            return MediaItem(f.path, type,
-                title: p.basenameWithoutExtension(f.path));
-          }).toList();
-        } else {
-          final picked = await FilePicker.platform.pickFiles(
-            allowMultiple: true,
-            type: FileType.custom,
-            allowedExtensions:
-                [...audioExt, ...videoExt].map((e) => e.substring(1)).toList(),
-          );
-          if (picked != null && picked.files.isNotEmpty) {
-            for (final pf in picked.files) {
-              final path = pf.path;
-              if (path == null) continue;
-              final ext = p.extension(path).toLowerCase();
-              final type =
-                  videoExt.contains(ext) ? MediaType.video : MediaType.audio;
-              files.add(MediaItem(path, type,
-                  title: p.basenameWithoutExtension(path)));
-            }
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('folder scan failed, falling back to file picker: $e');
-      final picked = await FilePicker.platform.pickFiles(
-        allowMultiple: true,
-        type: FileType.custom,
-        allowedExtensions:
-            [...audioExt, ...videoExt].map((e) => e.substring(1)).toList(),
-      );
-      if (picked != null && picked.files.isNotEmpty) {
-        for (final pf in picked.files) {
-          final path = pf.path;
-          if (path == null) continue;
-          final ext = p.extension(path).toLowerCase();
-          final type =
-              videoExt.contains(ext) ? MediaType.video : MediaType.audio;
-          files.add(
-              MediaItem(path, type, title: p.basenameWithoutExtension(path)));
-        }
-      }
-    }
-
-    if (mounted) await context.read<PlayerState>().setLibrary(files);
-  }
-}
-
-// ─── Persistent video widget ──────────────────────────────────────────────────
-
-class _PersistentVideoWidget extends StatefulWidget {
-  final VideoController? mkController;
-  final VideoPlayerController? androidController;
-  final bool visible;
-  final bool ready;
-  final VoidCallback onTap;
-  final Color accent;
-  final Color tileBg;
-
-  const _PersistentVideoWidget({
-    this.mkController,
-    this.androidController,
-    required this.visible,
-    required this.ready,
-    required this.onTap,
-    required this.accent,
-    required this.tileBg,
-  });
-
-  @override
-  State<_PersistentVideoWidget> createState() => _PersistentVideoWidgetState();
-}
-
-class _PersistentVideoWidgetState extends State<_PersistentVideoWidget>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-
-    if (!widget.visible) return const SizedBox.shrink();
-
-    return LayoutBuilder(builder: (ctx, bc) {
-      final screenH = MediaQuery.of(ctx).size.height;
-      final maxH = screenH * 0.35;
-      final targetH = bc.maxWidth * 9 / 16;
-      final height = targetH.clamp(0.0, maxH);
-
-      return SizedBox(
-        height: height,
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: Stack(fit: StackFit.expand, children: [
-            if (widget.androidController != null)
-              // ValueListenableBuilder ensures the widget rebuilds when
-              // isInitialized / aspectRatio becomes available.
-              ValueListenableBuilder<VideoPlayerValue>(
-                valueListenable: widget.androidController!,
-                builder: (_, value, __) {
-                  if (!value.isInitialized)
-                    return Container(color: widget.tileBg);
-                  return ClipRect(
-                    child: Center(
-                      child: AspectRatio(
-                        aspectRatio:
-                            value.aspectRatio == 0 ? 16 / 9 : value.aspectRatio,
-                        child: VideoPlayer(widget.androidController!),
-                      ),
-                    ),
-                  );
-                },
-              )
-            else if (widget.mkController != null)
-              ClipRect(child: Video(controller: widget.mkController!)),
-            if (!widget.ready)
-              Container(
-                color: widget.tileBg,
-                child: Center(
-                  child: CircularProgressIndicator(color: widget.accent),
-                ),
-              ),
-          ]),
-        ),
-      );
-    });
-  }
-}
-
-// ─── Tab bar sliver delegate ──────────────────────────────────────────────────
-
-class _TabHeaderDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar tabBar;
-  final Color bg;
-  const _TabHeaderDelegate(this.tabBar, {required this.bg});
-
-  @override
-  Widget build(
-          BuildContext context, double shrinkOffset, bool overlapsContent) =>
-      ColoredBox(color: bg, child: tabBar);
-
-  @override
-  double get maxExtent => tabBar.preferredSize.height;
-  @override
-  double get minExtent => tabBar.preferredSize.height;
-  @override
-  bool shouldRebuild(_TabHeaderDelegate old) => old.bg != bg;
 }
