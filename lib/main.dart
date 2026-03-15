@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'dart:ui' as ui;
+import 'dart:async';
 import 'dart:ffi';
 import 'dart:io' show Platform, Directory;
+import 'dart:ui' as ui;
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart'
     show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
@@ -13,8 +14,23 @@ import 'package:window_manager/window_manager.dart';
 
 import 'src/app.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // Catch all uncaught errors and print them so we can diagnose crashes.
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      if (kDebugMode) {
+        debugPrint('UNCAUGHT FLUTTER ERROR: ${details.exception}');
+        debugPrint(details.stack?.toString() ?? 'no stack');
+      }
+    };
+    ui.PlatformDispatcher.instance.onError = (error, stack) {
+      debugPrint('UNCAUGHT PLATFORM ERROR: $error');
+      debugPrint(stack.toString());
+      return true;
+    };
 
   // ensure WebView2 user data folder is short (avoids long-path crashes)
   if (!kIsWeb && Platform.isWindows) {
@@ -119,7 +135,11 @@ void main() async {
     } catch (_) {}
   }
 
-  runApp(MyApp(
-      mediaKitInitError: mediaKitError,
-      webViewEnvironment: webViewEnvironment));
+    runApp(MyApp(
+        mediaKitInitError: mediaKitError,
+        webViewEnvironment: webViewEnvironment));
+  }, (error, stack) {
+    debugPrint('UNCAUGHT ZONED ERROR: $error');
+    debugPrint(stack.toString());
+  });
 }

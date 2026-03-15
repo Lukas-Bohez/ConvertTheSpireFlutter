@@ -1,0 +1,1434 @@
+﻿[ +122 ms] Artifact Instance of 'MaterialFonts' is not required, skipping update.
+[        ] Artifact Instance of 'GradleWrapper' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterSdk' is not required, skipping update.
+[        ] Artifact Instance of 'WindowsEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FontSubsetArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'PubDependencies' is not required, skipping update.
+[   +1 ms] executing: [C:\flutter/] git -c log.showSignature=false log HEAD -n 1 --pretty=format:%ad --date=iso
+[  +52 ms] Exit code 0 from: git -c log.showSignature=false log HEAD -n 1 --pretty=format:%ad --date=iso
+[        ] 2026-02-18 13:54:59 -0800
+[  +26 ms] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterEngineStamp' is not required, skipping update.
+[        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[   +1 ms] Artifact Instance of 'WindowsEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[  +58 ms] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterEngineStamp' is not required, skipping update.
+[        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[   +2 ms] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[  +40 ms] Skipping pub get: version match.
+[  +70 ms] Found plugin window_manager at D:\pub-cache\hosted\pub.dev\window_manager-0.5.1\
+[   +5 ms] Found plugin screen_retriever at D:\pub-cache\hosted\pub.dev\screen_retriever-0.2.0\
+[   +1 ms] Found plugin screen_retriever_windows at D:\pub-cache\hosted\pub.dev\screen_retriever_windows-0.2.0\
+[   +3 ms] Found plugin screen_retriever_macos at D:\pub-cache\hosted\pub.dev\screen_retriever_macos-0.2.0\
+[   +1 ms] Found plugin screen_retriever_linux at D:\pub-cache\hosted\pub.dev\screen_retriever_linux-0.2.0\
+[   +5 ms] Found plugin video_thumbnail at D:\pub-cache\hosted\pub.dev\video_thumbnail-0.5.6\
+[   +2 ms] Found plugin video_player at D:\pub-cache\hosted\pub.dev\video_player-2.11.0\
+[   +1 ms] Found plugin video_player_web at D:\pub-cache\hosted\pub.dev\video_player_web-2.4.0\
+[   +3 ms] Found plugin video_player_avfoundation at D:\pub-cache\hosted\pub.dev\video_player_avfoundation-2.9.3\
+[   +1 ms] Found plugin video_player_android at D:\pub-cache\hosted\pub.dev\video_player_android-2.9.4\
+[   +3 ms] Found plugin url_launcher at D:\pub-cache\hosted\pub.dev\url_launcher-6.3.2\
+[   +1 ms] Found plugin url_launcher_windows at D:\pub-cache\hosted\pub.dev\url_launcher_windows-3.1.5\
+[   +3 ms] Found plugin url_launcher_web at D:\pub-cache\hosted\pub.dev\url_launcher_web-2.4.2\
+[   +1 ms] Found plugin url_launcher_macos at D:\pub-cache\hosted\pub.dev\url_launcher_macos-3.2.5\
+[   +1 ms] Found plugin url_launcher_linux at D:\pub-cache\hosted\pub.dev\url_launcher_linux-3.2.2\
+[   +1 ms] Found plugin url_launcher_ios at D:\pub-cache\hosted\pub.dev\url_launcher_ios-6.4.1\
+[   +1 ms] Found plugin url_launcher_android at D:\pub-cache\hosted\pub.dev\url_launcher_android-6.3.28\
+[   +1 ms] Found plugin tray_manager at D:\pub-cache\hosted\pub.dev\tray_manager-0.5.2\
+[  +19 ms] Found plugin sqflite at D:\pub-cache\hosted\pub.dev\sqflite-2.4.2\
+[   +5 ms] Found plugin sqflite_darwin at D:\pub-cache\hosted\pub.dev\sqflite_darwin-2.4.2\
+[   +1 ms] Found plugin sqflite_android at D:\pub-cache\hosted\pub.dev\sqflite_android-2.4.2+3\
+[   +1 ms] Found plugin shared_preferences at D:\pub-cache\hosted\pub.dev\shared_preferences-2.5.4\
+[   +1 ms] Found plugin shared_preferences_windows at D:\pub-cache\hosted\pub.dev\shared_preferences_windows-2.4.1\
+[   +3 ms] Found plugin path_provider_windows at D:\pub-cache\hosted\pub.dev\path_provider_windows-2.3.0\
+[   +2 ms] Found plugin shared_preferences_web at D:\pub-cache\hosted\pub.dev\shared_preferences_web-2.4.3\
+[   +1 ms] Found plugin shared_preferences_linux at D:\pub-cache\hosted\pub.dev\shared_preferences_linux-2.4.1\
+[   +1 ms] Found plugin path_provider_linux at D:\pub-cache\hosted\pub.dev\path_provider_linux-2.2.1\
+[   +1 ms] Found plugin shared_preferences_foundation at D:\pub-cache\hosted\pub.dev\shared_preferences_foundation-2.5.6\
+[        ] Found plugin shared_preferences_android at D:\pub-cache\hosted\pub.dev\shared_preferences_android-2.4.21\
+[   +1 ms] Found plugin share_plus at D:\pub-cache\hosted\pub.dev\share_plus-12.0.1\
+[   +3 ms] Found plugin path_provider at D:\pub-cache\hosted\pub.dev\path_provider-2.1.5\
+[   +1 ms] Found plugin path_provider_foundation at D:\pub-cache\hosted\pub.dev\path_provider_foundation-2.4.2\
+[   +1 ms] Found plugin path_provider_android at D:\pub-cache\hosted\pub.dev\path_provider_android-2.2.19\
+[  +11 ms] Found plugin package_info_plus at D:\pub-cache\hosted\pub.dev\package_info_plus-8.3.1\
+[   +2 ms] Found plugin media_kit_video at D:\pub-cache\hosted\pub.dev\media_kit_video-2.0.1\
+[   +1 ms] Found plugin wakelock_plus at D:\pub-cache\hosted\pub.dev\wakelock_plus-1.3.3\
+[   +5 ms] Found plugin media_kit_native_event_loop at D:\pub-cache\hosted\pub.dev\media_kit_native_event_loop-1.0.9\
+[   +1 ms] Found plugin media_kit_libs_windows_video at D:\pub-cache\hosted\pub.dev\media_kit_libs_windows_video-1.0.11\
+[   +1 ms] Found plugin media_kit_libs_linux at D:\pub-cache\hosted\pub.dev\media_kit_libs_linux-1.2.1\
+[        ] Found plugin media_kit_libs_android_video at D:\pub-cache\hosted\pub.dev\media_kit_libs_android_video-1.3.8\
+[        ] Found plugin just_audio_windows at D:\pub-cache\hosted\pub.dev\just_audio_windows-0.2.2\
+[        ] Found plugin just_audio at D:\pub-cache\hosted\pub.dev\just_audio-0.10.5\
+[   +1 ms] Found plugin just_audio_web at D:\pub-cache\hosted\pub.dev\just_audio_web-0.4.16\
+[   +2 ms] Found plugin audio_session at D:\pub-cache\hosted\pub.dev\audio_session-0.2.2\
+[   +1 ms] Found plugin flutter_local_notifications at D:\pub-cache\hosted\pub.dev\flutter_local_notifications-21.0.0\
+[   +1 ms] Found plugin flutter_local_notifications_windows at D:\pub-cache\hosted\pub.dev\flutter_local_notifications_windows-3.0.0\
+[   +2 ms] Found plugin flutter_local_notifications_linux at D:\pub-cache\hosted\pub.dev\flutter_local_notifications_linux-8.0.0\
+[   +1 ms] Found plugin flutter_inappwebview at D:\pub-cache\hosted\pub.dev\flutter_inappwebview-6.1.5\
+[   +1 ms] Found plugin flutter_inappwebview_windows at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\
+[   +4 ms] Found plugin flutter_inappwebview_web at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_web-1.1.2\
+[   +1 ms] Found plugin flutter_inappwebview_macos at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_macos-1.1.2\
+[   +1 ms] Found plugin flutter_inappwebview_ios at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_ios-1.1.2\
+[   +1 ms] Found plugin flutter_inappwebview_android at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\
+[   +3 ms] Found plugin file_picker at D:\pub-cache\hosted\pub.dev\file_picker-10.3.10\
+[        ] Found plugin flutter_plugin_android_lifecycle at D:\pub-cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.31\
+[        ] Found plugin ffmpeg_kit_flutter_new at D:\pub-cache\hosted\pub.dev\ffmpeg_kit_flutter_new-4.1.0\
+[   +2 ms] Found plugin battery_plus at D:\pub-cache\hosted\pub.dev\battery_plus-7.0.0\
+[   +2 ms] Found plugin audio_service at D:\pub-cache\hosted\pub.dev\audio_service-0.18.18\
+[   +1 ms] Found plugin audio_service_web at D:\pub-cache\hosted\pub.dev\audio_service_web-0.1.4\
+[  +45 ms] Found plugin window_manager at D:\pub-cache\hosted\pub.dev\window_manager-0.5.1\
+[   +1 ms] Found plugin screen_retriever at D:\pub-cache\hosted\pub.dev\screen_retriever-0.2.0\
+[   +1 ms] Found plugin screen_retriever_windows at D:\pub-cache\hosted\pub.dev\screen_retriever_windows-0.2.0\
+[   +1 ms] Found plugin screen_retriever_macos at D:\pub-cache\hosted\pub.dev\screen_retriever_macos-0.2.0\
+[        ] Found plugin screen_retriever_linux at D:\pub-cache\hosted\pub.dev\screen_retriever_linux-0.2.0\
+[   +1 ms] Found plugin video_thumbnail at D:\pub-cache\hosted\pub.dev\video_thumbnail-0.5.6\
+[   +1 ms] Found plugin video_player at D:\pub-cache\hosted\pub.dev\video_player-2.11.0\
+[        ] Found plugin video_player_web at D:\pub-cache\hosted\pub.dev\video_player_web-2.4.0\
+[   +1 ms] Found plugin video_player_avfoundation at D:\pub-cache\hosted\pub.dev\video_player_avfoundation-2.9.3\
+[        ] Found plugin video_player_android at D:\pub-cache\hosted\pub.dev\video_player_android-2.9.4\
+[   +1 ms] Found plugin url_launcher at D:\pub-cache\hosted\pub.dev\url_launcher-6.3.2\
+[        ] Found plugin url_launcher_windows at D:\pub-cache\hosted\pub.dev\url_launcher_windows-3.1.5\
+[   +1 ms] Found plugin url_launcher_web at D:\pub-cache\hosted\pub.dev\url_launcher_web-2.4.2\
+[        ] Found plugin url_launcher_macos at D:\pub-cache\hosted\pub.dev\url_launcher_macos-3.2.5\
+[        ] Found plugin url_launcher_linux at D:\pub-cache\hosted\pub.dev\url_launcher_linux-3.2.2\
+[        ] Found plugin url_launcher_ios at D:\pub-cache\hosted\pub.dev\url_launcher_ios-6.4.1\
+[        ] Found plugin url_launcher_android at D:\pub-cache\hosted\pub.dev\url_launcher_android-6.3.28\
+[        ] Found plugin tray_manager at D:\pub-cache\hosted\pub.dev\tray_manager-0.5.2\
+[   +8 ms] Found plugin sqflite at D:\pub-cache\hosted\pub.dev\sqflite-2.4.2\
+[   +1 ms] Found plugin sqflite_darwin at D:\pub-cache\hosted\pub.dev\sqflite_darwin-2.4.2\
+[   +2 ms] Found plugin sqflite_android at D:\pub-cache\hosted\pub.dev\sqflite_android-2.4.2+3\
+[        ] Found plugin shared_preferences at D:\pub-cache\hosted\pub.dev\shared_preferences-2.5.4\
+[   +1 ms] Found plugin shared_preferences_windows at D:\pub-cache\hosted\pub.dev\shared_preferences_windows-2.4.1\
+[   +1 ms] Found plugin path_provider_windows at D:\pub-cache\hosted\pub.dev\path_provider_windows-2.3.0\
+[        ] Found plugin shared_preferences_web at D:\pub-cache\hosted\pub.dev\shared_preferences_web-2.4.3\
+[   +1 ms] Found plugin shared_preferences_linux at D:\pub-cache\hosted\pub.dev\shared_preferences_linux-2.4.1\
+[   +1 ms] Found plugin path_provider_linux at D:\pub-cache\hosted\pub.dev\path_provider_linux-2.2.1\
+[   +1 ms] Found plugin shared_preferences_foundation at D:\pub-cache\hosted\pub.dev\shared_preferences_foundation-2.5.6\
+[        ] Found plugin shared_preferences_android at D:\pub-cache\hosted\pub.dev\shared_preferences_android-2.4.21\
+[   +1 ms] Found plugin share_plus at D:\pub-cache\hosted\pub.dev\share_plus-12.0.1\
+[   +3 ms] Found plugin path_provider at D:\pub-cache\hosted\pub.dev\path_provider-2.1.5\
+[        ] Found plugin path_provider_foundation at D:\pub-cache\hosted\pub.dev\path_provider_foundation-2.4.2\
+[        ] Found plugin path_provider_android at D:\pub-cache\hosted\pub.dev\path_provider_android-2.2.19\
+[   +6 ms] Found plugin package_info_plus at D:\pub-cache\hosted\pub.dev\package_info_plus-8.3.1\
+[   +1 ms] Found plugin media_kit_video at D:\pub-cache\hosted\pub.dev\media_kit_video-2.0.1\
+[        ] Found plugin wakelock_plus at D:\pub-cache\hosted\pub.dev\wakelock_plus-1.3.3\
+[   +3 ms] Found plugin media_kit_native_event_loop at D:\pub-cache\hosted\pub.dev\media_kit_native_event_loop-1.0.9\
+[        ] Found plugin media_kit_libs_windows_video at D:\pub-cache\hosted\pub.dev\media_kit_libs_windows_video-1.0.11\
+[        ] Found plugin media_kit_libs_linux at D:\pub-cache\hosted\pub.dev\media_kit_libs_linux-1.2.1\
+[        ] Found plugin media_kit_libs_android_video at D:\pub-cache\hosted\pub.dev\media_kit_libs_android_video-1.3.8\
+[        ] Found plugin just_audio_windows at D:\pub-cache\hosted\pub.dev\just_audio_windows-0.2.2\
+[        ] Found plugin just_audio at D:\pub-cache\hosted\pub.dev\just_audio-0.10.5\
+[   +1 ms] Found plugin just_audio_web at D:\pub-cache\hosted\pub.dev\just_audio_web-0.4.16\
+[   +1 ms] Found plugin audio_session at D:\pub-cache\hosted\pub.dev\audio_session-0.2.2\
+[   +1 ms] Found plugin flutter_local_notifications at D:\pub-cache\hosted\pub.dev\flutter_local_notifications-21.0.0\
+[   +1 ms] Found plugin flutter_local_notifications_windows at D:\pub-cache\hosted\pub.dev\flutter_local_notifications_windows-3.0.0\
+[   +1 ms] Found plugin flutter_local_notifications_linux at D:\pub-cache\hosted\pub.dev\flutter_local_notifications_linux-8.0.0\
+[        ] Found plugin flutter_inappwebview at D:\pub-cache\hosted\pub.dev\flutter_inappwebview-6.1.5\
+[        ] Found plugin flutter_inappwebview_windows at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\
+[   +1 ms] Found plugin flutter_inappwebview_web at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_web-1.1.2\
+[        ] Found plugin flutter_inappwebview_macos at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_macos-1.1.2\
+[        ] Found plugin flutter_inappwebview_ios at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_ios-1.1.2\
+[        ] Found plugin flutter_inappwebview_android at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\
+[   +1 ms] Found plugin file_picker at D:\pub-cache\hosted\pub.dev\file_picker-10.3.10\
+[        ] Found plugin flutter_plugin_android_lifecycle at D:\pub-cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.31\
+[        ] Found plugin ffmpeg_kit_flutter_new at D:\pub-cache\hosted\pub.dev\ffmpeg_kit_flutter_new-4.1.0\
+[   +1 ms] Found plugin battery_plus at D:\pub-cache\hosted\pub.dev\battery_plus-7.0.0\
+[   +1 ms] Found plugin audio_service at D:\pub-cache\hosted\pub.dev\audio_service-0.18.18\
+[   +1 ms] Found plugin audio_service_web at D:\pub-cache\hosted\pub.dev\audio_service_web-0.1.4\
+[  +11 ms] Skipping generating web_plugin_registrant.dart because it is up-to-date.
+[  +23 ms] Found plugin window_manager at D:\pub-cache\hosted\pub.dev\window_manager-0.5.1\
+[        ] Found plugin screen_retriever at D:\pub-cache\hosted\pub.dev\screen_retriever-0.2.0\
+[        ] Found plugin screen_retriever_windows at D:\pub-cache\hosted\pub.dev\screen_retriever_windows-0.2.0\
+[   +1 ms] Found plugin screen_retriever_macos at D:\pub-cache\hosted\pub.dev\screen_retriever_macos-0.2.0\
+[        ] Found plugin screen_retriever_linux at D:\pub-cache\hosted\pub.dev\screen_retriever_linux-0.2.0\
+[   +1 ms] Found plugin video_thumbnail at D:\pub-cache\hosted\pub.dev\video_thumbnail-0.5.6\
+[        ] Found plugin video_player at D:\pub-cache\hosted\pub.dev\video_player-2.11.0\
+[        ] Found plugin video_player_web at D:\pub-cache\hosted\pub.dev\video_player_web-2.4.0\
+[   +1 ms] Found plugin video_player_avfoundation at D:\pub-cache\hosted\pub.dev\video_player_avfoundation-2.9.3\
+[        ] Found plugin video_player_android at D:\pub-cache\hosted\pub.dev\video_player_android-2.9.4\
+[   +1 ms] Found plugin url_launcher at D:\pub-cache\hosted\pub.dev\url_launcher-6.3.2\
+[        ] Found plugin url_launcher_windows at D:\pub-cache\hosted\pub.dev\url_launcher_windows-3.1.5\
+[   +1 ms] Found plugin url_launcher_web at D:\pub-cache\hosted\pub.dev\url_launcher_web-2.4.2\
+[        ] Found plugin url_launcher_macos at D:\pub-cache\hosted\pub.dev\url_launcher_macos-3.2.5\
+[        ] Found plugin url_launcher_linux at D:\pub-cache\hosted\pub.dev\url_launcher_linux-3.2.2\
+[        ] Found plugin url_launcher_ios at D:\pub-cache\hosted\pub.dev\url_launcher_ios-6.4.1\
+[        ] Found plugin url_launcher_android at D:\pub-cache\hosted\pub.dev\url_launcher_android-6.3.28\
+[   +2 ms] Found plugin tray_manager at D:\pub-cache\hosted\pub.dev\tray_manager-0.5.2\
+[   +6 ms] Found plugin sqflite at D:\pub-cache\hosted\pub.dev\sqflite-2.4.2\
+[   +1 ms] Found plugin sqflite_darwin at D:\pub-cache\hosted\pub.dev\sqflite_darwin-2.4.2\
+[        ] Found plugin sqflite_android at D:\pub-cache\hosted\pub.dev\sqflite_android-2.4.2+3\
+[        ] Found plugin shared_preferences at D:\pub-cache\hosted\pub.dev\shared_preferences-2.5.4\
+[        ] Found plugin shared_preferences_windows at D:\pub-cache\hosted\pub.dev\shared_preferences_windows-2.4.1\
+[   +1 ms] Found plugin path_provider_windows at D:\pub-cache\hosted\pub.dev\path_provider_windows-2.3.0\
+[        ] Found plugin shared_preferences_web at D:\pub-cache\hosted\pub.dev\shared_preferences_web-2.4.3\
+[        ] Found plugin shared_preferences_linux at D:\pub-cache\hosted\pub.dev\shared_preferences_linux-2.4.1\
+[        ] Found plugin path_provider_linux at D:\pub-cache\hosted\pub.dev\path_provider_linux-2.2.1\
+[        ] Found plugin shared_preferences_foundation at D:\pub-cache\hosted\pub.dev\shared_preferences_foundation-2.5.6\
+[        ] Found plugin shared_preferences_android at D:\pub-cache\hosted\pub.dev\shared_preferences_android-2.4.21\
+[        ] Found plugin share_plus at D:\pub-cache\hosted\pub.dev\share_plus-12.0.1\
+[   +1 ms] Found plugin path_provider at D:\pub-cache\hosted\pub.dev\path_provider-2.1.5\
+[        ] Found plugin path_provider_foundation at D:\pub-cache\hosted\pub.dev\path_provider_foundation-2.4.2\
+[        ] Found plugin path_provider_android at D:\pub-cache\hosted\pub.dev\path_provider_android-2.2.19\
+[   +4 ms] Found plugin package_info_plus at D:\pub-cache\hosted\pub.dev\package_info_plus-8.3.1\
+[   +1 ms] Found plugin media_kit_video at D:\pub-cache\hosted\pub.dev\media_kit_video-2.0.1\
+[   +1 ms] Found plugin wakelock_plus at D:\pub-cache\hosted\pub.dev\wakelock_plus-1.3.3\
+[   +3 ms] Found plugin media_kit_native_event_loop at D:\pub-cache\hosted\pub.dev\media_kit_native_event_loop-1.0.9\
+[        ] Found plugin media_kit_libs_windows_video at D:\pub-cache\hosted\pub.dev\media_kit_libs_windows_video-1.0.11\
+[   +1 ms] Found plugin media_kit_libs_linux at D:\pub-cache\hosted\pub.dev\media_kit_libs_linux-1.2.1\
+[   +1 ms] Found plugin media_kit_libs_android_video at D:\pub-cache\hosted\pub.dev\media_kit_libs_android_video-1.3.8\
+[        ] Found plugin just_audio_windows at D:\pub-cache\hosted\pub.dev\just_audio_windows-0.2.2\
+[   +2 ms] Found plugin just_audio at D:\pub-cache\hosted\pub.dev\just_audio-0.10.5\
+[        ] Found plugin just_audio_web at D:\pub-cache\hosted\pub.dev\just_audio_web-0.4.16\
+[        ] Found plugin audio_session at D:\pub-cache\hosted\pub.dev\audio_session-0.2.2\
+[        ] Found plugin flutter_local_notifications at D:\pub-cache\hosted\pub.dev\flutter_local_notifications-21.0.0\
+[   +1 ms] Found plugin flutter_local_notifications_windows at D:\pub-cache\hosted\pub.dev\flutter_local_notifications_windows-3.0.0\
+[   +1 ms] Found plugin flutter_local_notifications_linux at D:\pub-cache\hosted\pub.dev\flutter_local_notifications_linux-8.0.0\
+[        ] Found plugin flutter_inappwebview at D:\pub-cache\hosted\pub.dev\flutter_inappwebview-6.1.5\
+[        ] Found plugin flutter_inappwebview_windows at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\
+[   +1 ms] Found plugin flutter_inappwebview_web at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_web-1.1.2\
+[        ] Found plugin flutter_inappwebview_macos at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_macos-1.1.2\
+[   +1 ms] Found plugin flutter_inappwebview_ios at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_ios-1.1.2\
+[   +1 ms] Found plugin flutter_inappwebview_android at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\
+[   +1 ms] Found plugin file_picker at D:\pub-cache\hosted\pub.dev\file_picker-10.3.10\
+[        ] Found plugin flutter_plugin_android_lifecycle at D:\pub-cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.31\
+[        ] Found plugin ffmpeg_kit_flutter_new at D:\pub-cache\hosted\pub.dev\ffmpeg_kit_flutter_new-4.1.0\
+[   +1 ms] Found plugin battery_plus at D:\pub-cache\hosted\pub.dev\battery_plus-7.0.0\
+[   +1 ms] Found plugin audio_service at D:\pub-cache\hosted\pub.dev\audio_service-0.18.18\
+[   +1 ms] Found plugin audio_service_web at D:\pub-cache\hosted\pub.dev\audio_service_web-0.1.4\
+[   +7 ms] Generating C:\development\ConversionFlutter\my_flutter_app\android\app\src\main\java\io\flutter\plugins\GeneratedPluginRegistrant.java
+[   +1 ms] Skipping generating GeneratedPluginRegistrant.java because it is up-to-date.
+[   +6 ms] Skipping generating generated_plugin_registrant.h because it is up-to-date.
+[   +1 ms] Skipping generating generated_plugin_registrant.cc because it is up-to-date.
+[   +1 ms] Skipping generating generated_plugins.cmake because it is up-to-date.
+[   +1 ms] Skipping generating generated_plugin_registrant.h because it is up-to-date.
+[        ] Skipping generating generated_plugin_registrant.cc because it is up-to-date.
+[        ] Skipping generating generated_plugins.cmake because it is up-to-date.
+[   +1 ms] Skipping generating GeneratedPluginRegistrant.swift because it is up-to-date.
+[  +93 ms] Initializing file store
+[   +1 ms] Done initializing file store
+[  +10 ms] Skipping target: gen_localizations
+[   +2 ms] gen_dart_plugin_registrant: Starting due to {InvalidatedReasonKind.inputChanged: The following inputs have updated contents: C:\development\ConversionFlutter\my_flutter_app\.dart_tool\package_config.json,C:\development\ConversionFlutter\my_flutter_app\.dart_tool\flutter_build\dart_plugin_registrant.dart}
+[  +48 ms] Found plugin window_manager at D:\pub-cache\hosted\pub.dev\window_manager-0.5.1\
+[   +3 ms] Found plugin screen_retriever at D:\pub-cache\hosted\pub.dev\screen_retriever-0.2.0\
+[        ] Found plugin screen_retriever_windows at D:\pub-cache\hosted\pub.dev\screen_retriever_windows-0.2.0\
+[   +1 ms] Found plugin screen_retriever_macos at D:\pub-cache\hosted\pub.dev\screen_retriever_macos-0.2.0\
+[        ] Found plugin screen_retriever_linux at D:\pub-cache\hosted\pub.dev\screen_retriever_linux-0.2.0\
+[   +1 ms] Found plugin video_thumbnail at D:\pub-cache\hosted\pub.dev\video_thumbnail-0.5.6\
+[        ] Found plugin video_player at D:\pub-cache\hosted\pub.dev\video_player-2.11.0\
+[        ] Found plugin video_player_web at D:\pub-cache\hosted\pub.dev\video_player_web-2.4.0\
+[   +1 ms] Found plugin video_player_avfoundation at D:\pub-cache\hosted\pub.dev\video_player_avfoundation-2.9.3\
+[        ] Found plugin video_player_android at D:\pub-cache\hosted\pub.dev\video_player_android-2.9.4\
+[   +4 ms] Found plugin url_launcher at D:\pub-cache\hosted\pub.dev\url_launcher-6.3.2\
+[        ] Found plugin url_launcher_windows at D:\pub-cache\hosted\pub.dev\url_launcher_windows-3.1.5\
+[   +4 ms] Found plugin url_launcher_web at D:\pub-cache\hosted\pub.dev\url_launcher_web-2.4.2\
+[   +1 ms] Found plugin url_launcher_macos at D:\pub-cache\hosted\pub.dev\url_launcher_macos-3.2.5\
+[        ] Found plugin url_launcher_linux at D:\pub-cache\hosted\pub.dev\url_launcher_linux-3.2.2\
+[        ] Found plugin url_launcher_ios at D:\pub-cache\hosted\pub.dev\url_launcher_ios-6.4.1\
+[        ] Found plugin url_launcher_android at D:\pub-cache\hosted\pub.dev\url_launcher_android-6.3.28\
+[        ] Found plugin tray_manager at D:\pub-cache\hosted\pub.dev\tray_manager-0.5.2\
+[   +6 ms] Found plugin sqflite at D:\pub-cache\hosted\pub.dev\sqflite-2.4.2\
+[   +1 ms] Found plugin sqflite_darwin at D:\pub-cache\hosted\pub.dev\sqflite_darwin-2.4.2\
+[   +1 ms] Found plugin sqflite_android at D:\pub-cache\hosted\pub.dev\sqflite_android-2.4.2+3\
+[   +1 ms] Found plugin shared_preferences at D:\pub-cache\hosted\pub.dev\shared_preferences-2.5.4\
+[        ] Found plugin shared_preferences_windows at D:\pub-cache\hosted\pub.dev\shared_preferences_windows-2.4.1\
+[        ] Found plugin path_provider_windows at D:\pub-cache\hosted\pub.dev\path_provider_windows-2.3.0\
+[   +1 ms] Found plugin shared_preferences_web at D:\pub-cache\hosted\pub.dev\shared_preferences_web-2.4.3\
+[        ] Found plugin shared_preferences_linux at D:\pub-cache\hosted\pub.dev\shared_preferences_linux-2.4.1\
+[        ] Found plugin path_provider_linux at D:\pub-cache\hosted\pub.dev\path_provider_linux-2.2.1\
+[   +1 ms] Found plugin shared_preferences_foundation at D:\pub-cache\hosted\pub.dev\shared_preferences_foundation-2.5.6\
+[        ] Found plugin shared_preferences_android at D:\pub-cache\hosted\pub.dev\shared_preferences_android-2.4.21\
+[        ] Found plugin share_plus at D:\pub-cache\hosted\pub.dev\share_plus-12.0.1\
+[   +1 ms] Found plugin path_provider at D:\pub-cache\hosted\pub.dev\path_provider-2.1.5\
+[        ] Found plugin path_provider_foundation at D:\pub-cache\hosted\pub.dev\path_provider_foundation-2.4.2\
+[        ] Found plugin path_provider_android at D:\pub-cache\hosted\pub.dev\path_provider_android-2.2.19\
+[   +5 ms] Found plugin package_info_plus at D:\pub-cache\hosted\pub.dev\package_info_plus-8.3.1\
+[   +1 ms] Found plugin media_kit_video at D:\pub-cache\hosted\pub.dev\media_kit_video-2.0.1\
+[        ] Found plugin wakelock_plus at D:\pub-cache\hosted\pub.dev\wakelock_plus-1.3.3\
+[   +3 ms] Found plugin media_kit_native_event_loop at D:\pub-cache\hosted\pub.dev\media_kit_native_event_loop-1.0.9\
+[        ] Found plugin media_kit_libs_windows_video at D:\pub-cache\hosted\pub.dev\media_kit_libs_windows_video-1.0.11\
+[        ] Found plugin media_kit_libs_linux at D:\pub-cache\hosted\pub.dev\media_kit_libs_linux-1.2.1\
+[        ] Found plugin media_kit_libs_android_video at D:\pub-cache\hosted\pub.dev\media_kit_libs_android_video-1.3.8\
+[        ] Found plugin just_audio_windows at D:\pub-cache\hosted\pub.dev\just_audio_windows-0.2.2\
+[        ] Found plugin just_audio at D:\pub-cache\hosted\pub.dev\just_audio-0.10.5\
+[        ] Found plugin just_audio_web at D:\pub-cache\hosted\pub.dev\just_audio_web-0.4.16\
+[        ] Found plugin audio_session at D:\pub-cache\hosted\pub.dev\audio_session-0.2.2\
+[        ] Found plugin flutter_local_notifications at D:\pub-cache\hosted\pub.dev\flutter_local_notifications-21.0.0\
+[   +1 ms] Found plugin flutter_local_notifications_windows at D:\pub-cache\hosted\pub.dev\flutter_local_notifications_windows-3.0.0\
+[   +1 ms] Found plugin flutter_local_notifications_linux at D:\pub-cache\hosted\pub.dev\flutter_local_notifications_linux-8.0.0\
+[        ] Found plugin flutter_inappwebview at D:\pub-cache\hosted\pub.dev\flutter_inappwebview-6.1.5\
+[        ] Found plugin flutter_inappwebview_windows at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\
+[   +1 ms] Found plugin flutter_inappwebview_web at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_web-1.1.2\
+[        ] Found plugin flutter_inappwebview_macos at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_macos-1.1.2\
+[        ] Found plugin flutter_inappwebview_ios at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_ios-1.1.2\
+[        ] Found plugin flutter_inappwebview_android at D:\pub-cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\
+[   +1 ms] Found plugin file_picker at D:\pub-cache\hosted\pub.dev\file_picker-10.3.10\
+[        ] Found plugin flutter_plugin_android_lifecycle at D:\pub-cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.31\
+[        ] Found plugin ffmpeg_kit_flutter_new at D:\pub-cache\hosted\pub.dev\ffmpeg_kit_flutter_new-4.1.0\
+[   +1 ms] Found plugin battery_plus at D:\pub-cache\hosted\pub.dev\battery_plus-7.0.0\
+[   +1 ms] Found plugin audio_service at D:\pub-cache\hosted\pub.dev\audio_service-0.18.18\
+[   +2 ms] Found plugin audio_service_web at D:\pub-cache\hosted\pub.dev\audio_service_web-0.1.4\
+[   +7 ms] Skipping generating dart_plugin_registrant.dart because it is up-to-date.
+[        ] gen_dart_plugin_registrant: Complete
+[   +1 ms] Skipping target: _composite
+[   +1 ms] complete
+[   +4 ms] Launching lib\main.dart on Windows in debug mode...
+[   +2 ms] C:\flutter\bin\cache\dart-sdk\bin\dartaotruntime.exe C:\flutter\bin\cache\dart-sdk\bin\snapshots\frontend_server_aot.dart.snapshot --sdk-root C:\flutter\bin\cache\artifacts\engine\common\flutter_patched_sdk/ --incremental --target=flutter --experimental-emit-debug-metadata -DFLUTTER_VERSION=3.41.2 -DFLUTTER_CHANNEL=stable -DFLUTTER_GIT_URL=https://github.com/flutter/flutter.git -DFLUTTER_FRAMEWORK_REVISION=90673a4eef -DFLUTTER_ENGINE_REVISION=6c0baaebf7 -DFLUTTER_DART_VERSION=3.11.0 --output-dill C:\Users\lukas\AppData\Local\Temp\flutter_tools.40f65f9f\flutter_tool.82d67221\app.dill --packages C:\development\ConversionFlutter\my_flutter_app\.dart_tool\package_config.json -Ddart.vm.profile=false -Ddart.vm.product=false --enable-asserts --track-widget-creation --filesystem-scheme org-dartlang-root --initialize-from-dill build\6f4a15e49d0bc622ec76656f5f470141.cache.dill.track.dill --source file:///C:/development/ConversionFlutter/my_flutter_app/.dart_tool/flutter_build/dart_plugin_registrant.dart --source package:flutter/src/dart_plugin_registrant.dart -Dflutter.dart_plugin_registrant=file:///C:/development/ConversionFlutter/my_flutter_app/.dart_tool/flutter_build/dart_plugin_registrant.dart --verbosity=error --enable-experiment=alternative-invalidation-strategy
+[  +24 ms] executing: C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe -format json -products * -utf8 -latest -version 16 -requires Microsoft.VisualStudio.Workload.NativeDesktop Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.CMake.Project
+[  +44 ms] Exit code 0 from: C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe -format json -products * -utf8 -latest -version 16 -requires Microsoft.VisualStudio.Workload.NativeDesktop Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.CMake.Project
+[        ] [
+             {
+               "instanceId": "5215466f",
+               "installDate": "2026-03-01T10:23:39Z",
+               "installationName": "VisualStudio/18.3.2+11520.95",
+               "installationPath": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community",
+               "installationVersion": "18.3.11520.95",
+               "productId": "Microsoft.VisualStudio.Product.Community",
+               "productPath": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\devenv.exe",
+               "state": 4294967295,
+               "isComplete": true,
+               "isLaunchable": true,
+               "isPrerelease": false,
+               "isRebootRequired": false,
+               "displayName": "Visual Studio Community 2026",
+               "description": "Everything you need to build modern apps ÔÇô free for you, built for impact.",
+               "channelId": "VisualStudio.18.Release",
+               "channelUri": "https://aka.ms/vs/18/stable/channel",
+               "enginePath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\resources\\app\\ServiceHub\\Services\\Microsoft.VisualStudio.Setup.Service",
+               "expirationDate": "2026-05-21T17:00:00+00:00",
+               "installedChannelId": "VisualStudio.18.Release",
+               "installedChannelUri": "https://aka.ms/vs/18/stable/channel",
+               "releaseNotes": "https://docs.microsoft.com/en-us/visualstudio/releases/18/release-notes-v18.3#18.3.2",
+               "resolvedInstallationPath": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community",
+               "retirementDate": "2026-08-19T17:00:00+00:00",
+               "thirdPartyNotices": "https://go.microsoft.com/fwlink/?LinkId=661480",
+               "updateDate": "2026-03-01T10:23:39.3826173Z",
+               "catalog": {
+                 "buildBranch": "d18.3",
+                 "buildVersion": "18.3.11520.95",
+                 "featureReleaseMonth": "02",
+                 "featureReleaseYear": "2026",
+                 "id": "VisualStudio/18.3.2+11520.95",
+                 "includeBuildVersionInDisplayVersion": "False",
+                 "localBuild": "build-lab",
+                 "manifestName": "VisualStudio",
+                 "manifestType": "installer",
+                 "productDisplayVersion": "18.3.2",
+                 "productLine": "Dev18",
+                 "productLineVersion": "18",
+                 "productMilestone": "RTW",
+                 "productMilestoneIsPreRelease": "False",
+                 "productName": "Visual Studio",
+                 "productPatchVersion": "2",
+                 "productPreReleaseMilestoneSuffix": "1.0",
+                 "productRelease": "RTW",
+                 "productSemanticVersion": "18.3.2+11520.95",
+                 "requiredEngineVersion": "4.3.2029.11392"
+               },
+               "properties": {
+                 "appLocalWPF": "false",
+                 "campaignId": "2500:4de24697949c412b9a490895d02f75e1",
+                 "channelManifestId": "VisualStudio.18.Release/18.3.2+11520.95",
+                 "includeRecommended": "1",
+                 "nickname": "",
+                 "setupEngineFilePath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\setup.exe"
+               }
+             }
+           ]
+[   +4 ms] Building Windows application...
+[   +6 ms] <- compile package:convert_the_spire_reborn/main.dart
+[   +1 ms] executing: C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe -S C:\development\ConversionFlutter\my_flutter_app\windows -B C:\development\ConversionFlutter\my_flutter_app\build\windows\x64 -G Visual Studio 18 2026 -A x64 -DFLUTTER_TARGET_PLATFORM=windows-x64
+[  +57 ms] -- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.
+[  +47 ms] -- Building with fallback PixelBuffer texture.
+[  +51 ms] -- Configuring done (0.1s)
+[ +269 ms] -- Generating done (0.3s)
+[   +1 ms] -- Build files have been written to: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64
+[  +15 ms] executing: C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe --build C:\development\ConversionFlutter\my_flutter_app\build\windows\x64 --config Debug --target INSTALL --verbose
+[  +67 ms] Change Dir: 'C:/development/ConversionFlutter/my_flutter_app/build/windows/x64'
+[        ] Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" INSTALL.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+[  +66 ms] MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+[  +48 ms] Build started 15/03/2026 17:30:24.
+[ +208 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\INSTALL.vcxproj" on node 1 (default targets).
+[        ] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\INSTALL.vcxproj" (1) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\ZERO_CHECK.vcxproj" (2) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +7 ms] InitializeBuildStatus:
+[        ]   Creating "x64\Debug\ZERO_CHECK\ZERO_CHECK.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "x64\Debug\ZERO_CHECK\ZERO_CHECK.tlog\unsuccessfulbuild".
+[  +18 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[  +33 ms] FinalizeBuildStatus:
+[        ]   Deleting file "x64\Debug\ZERO_CHECK\ZERO_CHECK.tlog\unsuccessfulbuild".
+[        ]   Touching "x64\Debug\ZERO_CHECK\ZERO_CHECK.tlog\ZERO_CHECK.lastbuildstate".
+[   +3 ms] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\ZERO_CHECK.vcxproj" (default targets).
+[  +55 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\INSTALL.vcxproj" (1) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\ALL_BUILD.vcxproj" (3) on node 1 (default targets).
+[        ] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\ALL_BUILD.vcxproj" (3) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\flutter_inappwebview_windows\flutter_inappwebview_windows_DEPENDENCIES_DOWNLOAD.vcxproj" (4) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +4 ms] InitializeBuildStatus:
+[        ]   Creating "x64\Debug\flutter_inappwebview_windows_DEPENDENCIES_DOWNLOAD\flutter_.52AAC9F3.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "x64\Debug\flutter_inappwebview_windows_DEPENDENCIES_DOWNLOAD\flutter_.52AAC9F3.tlog\unsuccessfulbuild".
+[   +2 ms] PreBuildEvent:
+[        ]   setlocal
+[        ]   C:\Users\lukas\AppData\Local\Microsoft\WinGet\Links\nuget.exe install Microsoft.Windows.ImplementationLibrary -Version 1.0.231216.1 -ExcludeVersion -OutputDirectory C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/packages
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   C:\Users\lukas\AppData\Local\Microsoft\WinGet\Links\nuget.exe install Microsoft.Web.WebView2 -Version 1.0.2792.45 -ExcludeVersion -OutputDirectory C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/packages
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   C:\Users\lukas\AppData\Local\Microsoft\WinGet\Links\nuget.exe install nlohmann.json -Version 3.11.2 -ExcludeVersion -OutputDirectory C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/packages
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   :VCEnd
+[ +668 ms]   Feeds used:
+[        ]     C:\Users\lukas\.nuget\packages\
+[        ]     https://api.nuget.org/v3/index.json
+[        ]     C:\Program Files (x86)\Microsoft SDKs\NuGetPackages\
+[  +82 ms]   Package "Microsoft.Windows.ImplementationLibrary.1.0.231216.1" is already installed.
+[ +582 ms]   Feeds used:
+[        ]     C:\Users\lukas\.nuget\packages\
+[        ]     https://api.nuget.org/v3/index.json
+[        ]     C:\Program Files (x86)\Microsoft SDKs\NuGetPackages\
+[  +61 ms]   Package "Microsoft.Web.WebView2.1.0.2792.45" is already installed.
+[ +548 ms]   Feeds used:
+[        ]     C:\Users\lukas\.nuget\packages\
+[        ]     https://api.nuget.org/v3/index.json
+[        ]     C:\Program Files (x86)\Microsoft SDKs\NuGetPackages\
+[  +59 ms]   Package "nlohmann.json.3.11.2" is already installed.
+[  +17 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[   +7 ms] FinalizeBuildStatus:
+[        ]   Deleting file "x64\Debug\flutter_inappwebview_windows_DEPENDENCIES_DOWNLOAD\flutter_.52AAC9F3.tlog\unsuccessfulbuild".
+[        ]   Touching "x64\Debug\flutter_inappwebview_windows_DEPENDENCIES_DOWNLOAD\flutter_.52AAC9F3.tlog\flutter_inappwebview_windows_DEPENDENCIES_DOWNLOAD.lastbuildstate".
+[   +1 ms] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\flutter_inappwebview_windows\flutter_inappwebview_windows_DEPENDENCIES_DOWNLOAD.vcxproj" (default targets).
+[  +65 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\ALL_BUILD.vcxproj" (3) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\battery_plus\battery_plus_plugin.vcxproj" (5) on node 1 (default targets).
+[        ] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\battery_plus\battery_plus_plugin.vcxproj" (5) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\flutter\flutter_assemble.vcxproj" (6) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +1 ms] InitializeBuildStatus:
+[        ]   Creating "x64\Debug\flutter_assemble\flutter_assemble.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "x64\Debug\flutter_assemble\flutter_assemble.tlog\unsuccessfulbuild".
+[   +4 ms] CustomBuild:
+[        ]   "The build of 'C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\CMakeFiles\c675835797b6d307c5e970a7f6bf135a\flutter_assemble.rule' depends on 'C:\DEVELOPMENT\CONVERSIONFLUTTER\MY_FLUTTER_APP\WINDOWS\FLUTTER\EPHEMERAL\FLUTTER_WINDOWS.DLL' which is produced by the build of 'C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\CMakeFiles\e02a66c331d613d2ec968b2223e91847\flutter_windows.dll.rule'. The items cannot be built in parallel."
+[  +71 ms]   Generating C:/development/ConversionFlutter/my_flutter_app/windows/flutter/ephemeral/flutter_windows.dll, C:/development/ConversionFlutter/my_flutter_app/windows/flutter/ephemeral/flutter_export.h, C:/development/ConversionFlutter/my_flutter_app/windows/flutter/ephemeral/flutter_windows.h, C:/development/ConversionFlutter/my_flutter_app/windows/flutter/ephemeral/flutter_messenger.h, C:/development/ConversionFlutter/my_flutter_app/windows/flutter/ephemeral/flutter_plugin_registrar.h, C:/development/ConversionFlutter/my_flutter_app/windows/flutter/ephemeral/flutter_texture_registrar.h, C:/development/ConversionFlutter/my_flutter_app/windows/flutter/ephemeral/cpp_client_wrapper/core_implementations.cc, C:/development/ConversionFlutter/my_flutter_app/windows/flutter/ephemeral/cpp_client_wrapper/standard_codec.cc, C:/development/ConversionFlutter/my_flutter_app/windows/flutter/ephemeral/cpp_client_wrapper/plugin_registrar.cc, C:/development/ConversionFlutter/my_flutter_app/windows/flutter/ephemeral/cpp_client_wrapper/flutter_engine.cc, C:/development/ConversionFlutter/my_flutter_app/windows/flutter/ephemeral/cpp_client_wrapper/flutter_view_controller.cc, _phony_
+[+1837 ms]   [ +126 ms] Artifact Instance of 'MaterialFonts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'GradleWrapper' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterSdk' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'WindowsEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FontSubsetArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'PubDependencies' is not required, skipping update.
+[   +4 ms]   [   +9 ms] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterEngineStamp' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[   +1 ms]   [   +1 ms] Artifact Instance of 'WindowsEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[  +51 ms]   [  +50 ms] Artifact Instance of 'MaterialFonts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'GradleWrapper' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterEngineStamp' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterSdk' is not required, skipping update.
+[   +1 ms]   [   +1 ms] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FontSubsetArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'PubDependencies' is not required, skipping update.
+[  +25 ms]   [  +24 ms] Initializing file store
+[  +24 ms]   [  +24 ms] Done initializing file store
+[  +78 ms]   [  +78 ms] Skipping target: dart_build
+[   +4 ms]   [   +4 ms] Skipping target: gen_dart_plugin_registrant
+[+2367 ms]   [+2367 ms] Skipping target: unpack_windows
+[   +7 ms]   [   +7 ms] Skipping target: install_code_assets
+[        ]   [        ] Skipping target: gen_localizations
+[ +948 ms]   [ +948 ms] Skipping target: kernel_snapshot_program
+[  +10 ms]   [  +10 ms] invalidated build due to missing files: C:\development\ConversionFlutter\my_flutter_app\DOES_NOT_EXIST_RERUN_FOR_WILDCARD79252488
+[ +389 ms]   [ +389 ms] debug_bundle_windows-x64_assets: Starting due to {InvalidatedReasonKind.inputMissing: The following inputs were missing: C:\development\ConversionFlutter\my_flutter_app\DOES_NOT_EXIST_RERUN_FOR_WILDCARD79252488}
+[ +256 ms]   [ +255 ms] Manifest contained wildcard assets. Inserting missing file into build graph to force rerun. for more information see #56466.
+[  +11 ms]   [  +12 ms] shaderc command: [C:\flutter\bin\cache\artifacts\engine\windows-x64\impellerc.exe, --sksl, --runtime-stage-gles, --runtime-stage-gles3, --runtime-stage-vulkan, --iplr, --sl=C:\development\ConversionFlutter\my_flutter_app\build\flutter_assets\shaders/ink_sparkle.frag, --spirv=C:\development\ConversionFlutter\my_flutter_app\build\flutter_assets\shaders/ink_sparkle.frag.spirv, --input=C:\flutter\packages\flutter\lib\src\material\shaders\ink_sparkle.frag, --input-type=frag, --include=C:\flutter\packages\flutter\lib\src\material\shaders, --include=C:\flutter\bin\cache\artifacts\engine\windows-x64\shader_lib]
+[        ]   [   +1 ms] shaderc command: [C:\flutter\bin\cache\artifacts\engine\windows-x64\impellerc.exe, --sksl, --runtime-stage-gles, --runtime-stage-gles3, --runtime-stage-vulkan, --iplr, --sl=C:\development\ConversionFlutter\my_flutter_app\build\flutter_assets\shaders/stretch_effect.frag, --spirv=C:\development\ConversionFlutter\my_flutter_app\build\flutter_assets\shaders/stretch_effect.frag.spirv, --input=C:\flutter\packages\flutter\lib\src\material\shaders\stretch_effect.frag, --input-type=frag, --include=C:\flutter\packages\flutter\lib\src\material\shaders, --include=C:\flutter\bin\cache\artifacts\engine\windows-x64\shader_lib]
+[ +819 ms]   [ +819 ms] debug_bundle_windows-x64_assets: Complete
+[ +360 ms]   [ +360 ms] Persisting file store
+[  +18 ms]   [  +18 ms] Done persisting file store
+[  +25 ms]   [  +25 ms] build succeeded.
+[        ]   [        ] "flutter assemble" took 5,413ms.
+[  +45 ms]   [  +45 ms] Running 1 shutdown hook
+[        ]   [        ] Shutdown hooks complete
+[  +54 ms]   [  +53 ms] exiting with code 0
+[  +64 ms] FinalizeBuildStatus:
+[        ]   Deleting file "x64\Debug\flutter_assemble\flutter_assemble.tlog\unsuccessfulbuild".
+[        ]   Touching "x64\Debug\flutter_assemble\flutter_assemble.tlog\flutter_assemble.lastbuildstate".
+[   +1 ms] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\flutter\flutter_assemble.vcxproj" (default targets).
+[  +27 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\battery_plus\battery_plus_plugin.vcxproj" (5) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\flutter\flutter_wrapper_plugin.vcxproj" (7) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "flutter_wrapper_plugin.dir\Debug\flutter_.F8A032D5.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "flutter_wrapper_plugin.dir\Debug\flutter_.F8A032D5.tlog\unsuccessfulbuild".
+[   +1 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[  +41 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[  +18 ms] Lib:
+[        ]   All outputs are up-to-date.
+[   +1 ms]   flutter_wrapper_plugin.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\flutter\Debug\flutter_wrapper_plugin.lib
+[  +16 ms] FinalizeBuildStatus:
+[        ]   Deleting file "flutter_wrapper_plugin.dir\Debug\flutter_.F8A032D5.tlog\unsuccessfulbuild".
+[        ]   Touching "flutter_wrapper_plugin.dir\Debug\flutter_.F8A032D5.tlog\flutter_wrapper_plugin.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\flutter\flutter_wrapper_plugin.vcxproj" (default targets).
+[   +4 ms] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "battery_plus_plugin.dir\Debug\battery_.A901FEC1.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "battery_plus_plugin.dir\Debug\battery_.A901FEC1.tlog\unsuccessfulbuild".
+[   +1 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[   +8 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[  +21 ms] Link:
+[        ]   All outputs are up-to-date.
+[   +2 ms]   battery_plus_plugin.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\battery_plus\Debug\battery_plus_plugin.dll
+[   +9 ms] FinalizeBuildStatus:
+[        ]   Deleting file "battery_plus_plugin.dir\Debug\battery_.A901FEC1.tlog\unsuccessfulbuild".
+[        ]   Touching "battery_plus_plugin.dir\Debug\battery_.A901FEC1.tlog\battery_plus_plugin.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\battery_plus\battery_plus_plugin.vcxproj" (default targets).
+[  +57 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\ALL_BUILD.vcxproj" (3) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\runner\convert_the_spire_reborn.vcxproj" (8) on node 1 (default targets).
+[        ] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\runner\convert_the_spire_reborn.vcxproj" (8) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\flutter_inappwebview_windows\flutter_inappwebview_windows_plugin.vcxproj" (9) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +3 ms] InitializeBuildStatus:
+[        ]   Creating "flutter_inappwebview_windows_plugin.dir\Debug\flutter_.3E572EA2.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "flutter_inappwebview_windows_plugin.dir\Debug\flutter_.3E572EA2.tlog\unsuccessfulbuild".
+[   +1 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[  +43 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[  +14 ms] Link:
+[        ]   All outputs are up-to-date.
+[   +1 ms]   flutter_inappwebview_windows_plugin.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\flutter_inappwebview_windows\Debug\flutter_inappwebview_windows_plugin.dll
+[   +8 ms] _CopyOutOfDateSourceItemsToOutputDirectoryAlways:
+[        ]   Copying file from "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\packages\Microsoft.Web.WebView2\build\native\x64\WebView2Loader.dll" to "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\flutter_inappwebview_windows\Debug\WebView2Loader.dll".
+[   +3 ms] FinalizeBuildStatus:
+[        ]   Deleting file "flutter_inappwebview_windows_plugin.dir\Debug\flutter_.3E572EA2.tlog\unsuccessfulbuild".
+[        ]   Touching "flutter_inappwebview_windows_plugin.dir\Debug\flutter_.3E572EA2.tlog\flutter_inappwebview_windows_plugin.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\flutter_inappwebview_windows\flutter_inappwebview_windows_plugin.vcxproj" (default targets).
+[  +24 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\runner\convert_the_spire_reborn.vcxproj" (8) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\flutter\flutter_wrapper_app.vcxproj" (10) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "flutter_wrapper_app.dir\Debug\flutter_.00647395.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "flutter_wrapper_app.dir\Debug\flutter_.00647395.tlog\unsuccessfulbuild".
+[   +1 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[   +8 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[   +3 ms] Lib:
+[        ]   All outputs are up-to-date.
+[        ]   flutter_wrapper_app.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\flutter\Debug\flutter_wrapper_app.lib
+[   +7 ms] FinalizeBuildStatus:
+[        ]   Deleting file "flutter_wrapper_app.dir\Debug\flutter_.00647395.tlog\unsuccessfulbuild".
+[        ]   Touching "flutter_wrapper_app.dir\Debug\flutter_.00647395.tlog\flutter_wrapper_app.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\flutter\flutter_wrapper_app.vcxproj" (default targets).
+[  +26 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\runner\convert_the_spire_reborn.vcxproj" (8) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\just_audio_windows\just_audio_windows_plugin.vcxproj" (11) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +3 ms] InitializeBuildStatus:
+[        ]   Creating "just_audio_windows_plugin.dir\Debug\just_aud.3ACFB02E.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "just_audio_windows_plugin.dir\Debug\just_aud.3ACFB02E.tlog\unsuccessfulbuild".
+[   +1 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[   +9 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[   +6 ms] Link:
+[        ]   All outputs are up-to-date.
+[        ]   just_audio_windows_plugin.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\just_audio_windows\Debug\just_audio_windows_plugin.dll
+[   +8 ms] FinalizeBuildStatus:
+[        ]   Deleting file "just_audio_windows_plugin.dir\Debug\just_aud.3ACFB02E.tlog\unsuccessfulbuild".
+[        ]   Touching "just_audio_windows_plugin.dir\Debug\just_aud.3ACFB02E.tlog\just_audio_windows_plugin.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\just_audio_windows\just_audio_windows_plugin.vcxproj" (default targets).
+[  +33 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\runner\convert_the_spire_reborn.vcxproj" (8) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\media_kit_libs_windows_video\media_kit_libs_windows_video_plugin.vcxproj" (12) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "media_kit_libs_windows_video_plugin.dir\Debug\media_ki.17120DBC.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "media_kit_libs_windows_video_plugin.dir\Debug\media_ki.17120DBC.tlog\unsuccessfulbuild".
+[   +1 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[   +6 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[   +5 ms] Link:
+[        ]   All outputs are up-to-date.
+[        ]   media_kit_libs_windows_video_plugin.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\media_kit_libs_windows_video\Debug\media_kit_libs_windows_video_plugin.dll
+[   +7 ms] FinalizeBuildStatus:
+[        ]   Deleting file "media_kit_libs_windows_video_plugin.dir\Debug\media_ki.17120DBC.tlog\unsuccessfulbuild".
+[        ]   Touching "media_kit_libs_windows_video_plugin.dir\Debug\media_ki.17120DBC.tlog\media_kit_libs_windows_video_plugin.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\media_kit_libs_windows_video\media_kit_libs_windows_video_plugin.vcxproj" (default targets).
+[  +25 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\runner\convert_the_spire_reborn.vcxproj" (8) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\media_kit_video\media_kit_video_plugin.vcxproj" (13) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "media_kit_video_plugin.dir\Debug\media_ki.5D96597A.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "media_kit_video_plugin.dir\Debug\media_ki.5D96597A.tlog\unsuccessfulbuild".
+[   +2 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[  +10 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[   +7 ms] Link:
+[        ]   All outputs are up-to-date.
+[        ]   media_kit_video_plugin.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\media_kit_video\Debug\media_kit_video_plugin.dll
+[   +7 ms] FinalizeBuildStatus:
+[        ]   Deleting file "media_kit_video_plugin.dir\Debug\media_ki.5D96597A.tlog\unsuccessfulbuild".
+[        ]   Touching "media_kit_video_plugin.dir\Debug\media_ki.5D96597A.tlog\media_kit_video_plugin.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\media_kit_video\media_kit_video_plugin.vcxproj" (default targets).
+[  +23 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\runner\convert_the_spire_reborn.vcxproj" (8) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\screen_retriever_windows\screen_retriever_windows_plugin.vcxproj" (14) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "screen_retriever_windows_plugin.dir\Debug\screen_r.5D26E20B.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "screen_retriever_windows_plugin.dir\Debug\screen_r.5D26E20B.tlog\unsuccessfulbuild".
+[   +2 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[  +10 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[   +6 ms] Link:
+[        ]   All outputs are up-to-date.
+[        ]   screen_retriever_windows_plugin.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\screen_retriever_windows\Debug\screen_retriever_windows_plugin.dll
+[   +7 ms] FinalizeBuildStatus:
+[        ]   Deleting file "screen_retriever_windows_plugin.dir\Debug\screen_r.5D26E20B.tlog\unsuccessfulbuild".
+[        ]   Touching "screen_retriever_windows_plugin.dir\Debug\screen_r.5D26E20B.tlog\screen_retriever_windows_plugin.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\screen_retriever_windows\screen_retriever_windows_plugin.vcxproj" (default targets).
+[  +22 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\runner\convert_the_spire_reborn.vcxproj" (8) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\share_plus\share_plus_plugin.vcxproj" (15) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "share_plus_plugin.dir\Debug\share_pl.71C517B2.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "share_plus_plugin.dir\Debug\share_pl.71C517B2.tlog\unsuccessfulbuild".
+[   +1 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[  +10 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[   +5 ms] Link:
+[        ]   All outputs are up-to-date.
+[        ]   share_plus_plugin.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\share_plus\Debug\share_plus_plugin.dll
+[   +6 ms] FinalizeBuildStatus:
+[        ]   Deleting file "share_plus_plugin.dir\Debug\share_pl.71C517B2.tlog\unsuccessfulbuild".
+[        ]   Touching "share_plus_plugin.dir\Debug\share_pl.71C517B2.tlog\share_plus_plugin.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\share_plus\share_plus_plugin.vcxproj" (default targets).
+[  +25 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\runner\convert_the_spire_reborn.vcxproj" (8) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\tray_manager\tray_manager_plugin.vcxproj" (16) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "tray_manager_plugin.dir\Debug\tray_man.A43F29AC.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "tray_manager_plugin.dir\Debug\tray_man.A43F29AC.tlog\unsuccessfulbuild".
+[   +1 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[   +7 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[   +5 ms] Link:
+[        ]   All outputs are up-to-date.
+[        ]   tray_manager_plugin.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\tray_manager\Debug\tray_manager_plugin.dll
+[   +7 ms] FinalizeBuildStatus:
+[        ]   Deleting file "tray_manager_plugin.dir\Debug\tray_man.A43F29AC.tlog\unsuccessfulbuild".
+[        ]   Touching "tray_manager_plugin.dir\Debug\tray_man.A43F29AC.tlog\tray_manager_plugin.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\tray_manager\tray_manager_plugin.vcxproj" (default targets).
+[  +26 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\runner\convert_the_spire_reborn.vcxproj" (8) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\url_launcher_windows\url_launcher_windows_plugin.vcxproj" (17) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "url_launcher_windows_plugin.dir\Debug\url_laun.E84FF677.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "url_launcher_windows_plugin.dir\Debug\url_laun.E84FF677.tlog\unsuccessfulbuild".
+[   +1 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[   +7 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[   +5 ms] Link:
+[        ]   All outputs are up-to-date.
+[        ]   url_launcher_windows_plugin.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\url_launcher_windows\Debug\url_launcher_windows_plugin.dll
+[   +7 ms] FinalizeBuildStatus:
+[        ]   Deleting file "url_launcher_windows_plugin.dir\Debug\url_laun.E84FF677.tlog\unsuccessfulbuild".
+[        ]   Touching "url_launcher_windows_plugin.dir\Debug\url_laun.E84FF677.tlog\url_launcher_windows_plugin.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\url_launcher_windows\url_launcher_windows_plugin.vcxproj" (default targets).
+[  +37 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\runner\convert_the_spire_reborn.vcxproj" (8) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\window_manager\window_manager_plugin.vcxproj" (18) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "window_manager_plugin.dir\Debug\window_m.A9A92F1C.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "window_manager_plugin.dir\Debug\window_m.A9A92F1C.tlog\unsuccessfulbuild".
+[   +1 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[   +7 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[   +6 ms] Link:
+[        ]   All outputs are up-to-date.
+[        ]   window_manager_plugin.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\window_manager\Debug\window_manager_plugin.dll
+[   +8 ms] FinalizeBuildStatus:
+[        ]   Deleting file "window_manager_plugin.dir\Debug\window_m.A9A92F1C.tlog\unsuccessfulbuild".
+[        ]   Touching "window_manager_plugin.dir\Debug\window_m.A9A92F1C.tlog\window_manager_plugin.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\window_manager\window_manager_plugin.vcxproj" (default targets).
+[  +18 ms] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "convert_the_spire_reborn.dir\Debug\convert_.E6DAE697.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "convert_the_spire_reborn.dir\Debug\convert_.E6DAE697.tlog\unsuccessfulbuild".
+[   +1 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[  +20 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[   +7 ms] ResourceCompile:
+[        ]   All outputs are up-to-date.
+[   +9 ms] Link:
+[        ]   All outputs are up-to-date.
+[        ]   convert_the_spire_reborn.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\runner\Debug\convert_the_spire_reborn.exe
+[  +10 ms] _CopyOutOfDateSourceItemsToOutputDirectoryAlways:
+[        ]   Copying file from "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\packages\Microsoft.Web.WebView2\build\native\x64\WebView2Loader.dll" to "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\runner\Debug\WebView2Loader.dll".
+[   +1 ms] PostBuildEvent:
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Redist/MSVC/14.50.35710/x64/Microsoft.VC145.CRT/msvcp140.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Redist/MSVC/14.50.35710/x64/Microsoft.VC145.CRT/msvcp140_1.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Redist/MSVC/14.50.35710/x64/Microsoft.VC145.CRT/msvcp140_2.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Redist/MSVC/14.50.35710/x64/Microsoft.VC145.CRT/msvcp140_atomic_wait.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Redist/MSVC/14.50.35710/x64/Microsoft.VC145.CRT/msvcp140_codecvt_ids.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Redist/MSVC/14.50.35710/x64/Microsoft.VC145.CRT/vcruntime140_1.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Redist/MSVC/14.50.35710/x64/Microsoft.VC145.CRT/vcruntime140.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Redist/MSVC/14.50.35710/x64/Microsoft.VC145.CRT/concrt140.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-console-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-console-l1-2-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-datetime-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-debug-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-errorhandling-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-fibers-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-fibers-l1-1-1.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-file-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-file-l1-2-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-file-l2-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-handle-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-heap-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-interlocked-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-kernel32-legacy-l1-1-1.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-libraryloader-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-localization-l1-2-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-memory-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-namedpipe-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-processenvironment-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-processthreads-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-processthreads-l1-1-1.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-profile-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-rtlsupport-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-string-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-synch-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-synch-l1-2-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-sysinfo-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-sysinfo-l1-2-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-timezone-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-core-util-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-conio-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-convert-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-environment-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-filesystem-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-heap-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-locale-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-math-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-multibyte-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-private-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-process-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-runtime-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-stdio-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-string-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-time-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/api-ms-win-crt-utility-l1-1-0.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different "C:/Program Files (x86)/Windows Kits/10/Redist/10.0.26100.0/ucrt/DLLs/x64/ucrtbase.dll" C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   :VCEnd
+[+1446 ms] FinalizeBuildStatus:
+[        ]   Deleting file "convert_the_spire_reborn.dir\Debug\convert_.E6DAE697.tlog\unsuccessfulbuild".
+[        ]   Touching "convert_the_spire_reborn.dir\Debug\convert_.E6DAE697.tlog\convert_the_spire_reborn.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\runner\convert_the_spire_reborn.vcxproj" (default targets).
+[  +24 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\ALL_BUILD.vcxproj" (3) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\flutter_local_notifications_windows\shared\flutter_local_notifications_windows.vcxproj" (19) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "flutter_local_notifications_windows.dir\Debug\flutter_.315C15EB.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "flutter_local_notifications_windows.dir\Debug\flutter_.315C15EB.tlog\unsuccessfulbuild".
+[   +1 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[   +8 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[   +6 ms] Link:
+[        ]   All outputs are up-to-date.
+[        ]   flutter_local_notifications_windows.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\flutter_local_notifications_windows\shared\Debug\flutter_local_notifications_windows.dll
+[   +7 ms] FinalizeBuildStatus:
+[        ]   Deleting file "flutter_local_notifications_windows.dir\Debug\flutter_.315C15EB.tlog\unsuccessfulbuild".
+[        ]   Touching "flutter_local_notifications_windows.dir\Debug\flutter_.315C15EB.tlog\flutter_local_notifications_windows.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\flutter_local_notifications_windows\shared\flutter_local_notifications_windows.vcxproj" (default targets).
+[  +24 ms] Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\ALL_BUILD.vcxproj" (3) is building "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\media_kit_native_event_loop\shared\media_kit_native_event_loop.vcxproj" (20) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "media_kit_native_event_loop.dir\Debug\media_ki.D2392479.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "media_kit_native_event_loop.dir\Debug\media_ki.D2392479.tlog\unsuccessfulbuild".
+[   +2 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[   +6 ms] ClCompile:
+[        ]   All outputs are up-to-date.
+[   +5 ms] Link:
+[        ]   All outputs are up-to-date.
+[        ]   media_kit_native_event_loop.vcxproj -> C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\media_kit_native_event_loop\shared\Debug\media_kit_native_event_loop.dll
+[   +7 ms] FinalizeBuildStatus:
+[        ]   Deleting file "media_kit_native_event_loop.dir\Debug\media_ki.D2392479.tlog\unsuccessfulbuild".
+[        ]   Touching "media_kit_native_event_loop.dir\Debug\media_ki.D2392479.tlog\media_kit_native_event_loop.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\plugins\media_kit_native_event_loop\shared\media_kit_native_event_loop.vcxproj" (default targets).
+[   +8 ms] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +7 ms] InitializeBuildStatus:
+[        ]   Creating "x64\Debug\ALL_BUILD\ALL_BUILD.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "x64\Debug\ALL_BUILD\ALL_BUILD.tlog\unsuccessfulbuild".
+[   +2 ms] CustomBuild:
+[        ]   All outputs are up-to-date.
+[  +11 ms] FinalizeBuildStatus:
+[        ]   Deleting file "x64\Debug\ALL_BUILD\ALL_BUILD.tlog\unsuccessfulbuild".
+[        ]   Touching "x64\Debug\ALL_BUILD\ALL_BUILD.tlog\ALL_BUILD.lastbuildstate".
+[        ] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\ALL_BUILD.vcxproj" (default targets).
+[   +4 ms] PrepareForBuild:
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "x64\Debug\INSTALL\INSTALL.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "x64\Debug\INSTALL\INSTALL.tlog\unsuccessfulbuild".
+[  +40 ms] CustomBuild:
+[        ]   1>
+[  +12 ms] PostBuildEvent:
+[        ]   setlocal
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -DBUILD_TYPE=Debug -P cmake_install.cmake
+[        ]   if %errorlevel% neq 0 goto :cmEnd
+[        ]   :cmEnd
+[        ]   endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+[        ]   :cmErrorLevel
+[        ]   exit /b %1
+[        ]   :cmDone
+[        ]   if %errorlevel% neq 0 goto :VCEnd
+[        ]   :VCEnd
+[  +51 ms]   -- Install configuration: "Debug"
+[   +3 ms]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/convert_the_spire_reborn.exe
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/icudtl.dat
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/flutter_windows.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/battery_plus_plugin.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/flutter_inappwebview_windows_plugin.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/just_audio_windows_plugin.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/media_kit_libs_windows_video_plugin.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/libmpv-2.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/d3dcompiler_47.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/libEGL.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/libGLESv2.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/vk_swiftshader.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/vulkan-1.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/media_kit_video_plugin.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/screen_retriever_windows_plugin.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/share_plus_plugin.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/tray_manager_plugin.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/url_launcher_windows_plugin.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/window_manager_plugin.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/flutter_local_notifications_windows.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/media_kit_native_event_loop.dll
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release
+[        ]   -- Up-to-date: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/sqlite3.dll
+[  +16 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets
+[        ]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/AssetManifest.bin
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/assets
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/assets/icons
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/assets/icons/app_icon.ico
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/assets/icons/favicon-192x192.png
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/assets/images
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/assets/images/.gitkeep
+[        ]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/FontManifest.json
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/fonts
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/fonts/MaterialIcons-Regular.otf
+[   +6 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/kernel_blob.bin
+[ +219 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/NativeAssetsManifest.json
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/NOTICES.Z
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/flutter_inappwebview
+[        ]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/flutter_inappwebview/assets
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/flutter_inappwebview/assets/t_rex_runner
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/flutter_inappwebview/assets/t_rex_runner/t-rex.css
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/flutter_inappwebview/assets/t_rex_runner/t-rex.html
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/flutter_inappwebview_web
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/flutter_inappwebview_web/assets
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/flutter_inappwebview_web/assets/web
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/flutter_inappwebview_web/assets/web/web_support.js
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/media_kit
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/media_kit/assets
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/media_kit/assets/web
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/media_kit/assets/web/hls1.4.10.js
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/wakelock_plus
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/wakelock_plus/assets
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/packages/wakelock_plus/assets/no_sleep.js
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/shaders
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/shaders/ink_sparkle.frag
+[   +1 ms]   -- Installing: C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Release/data/flutter_assets/shaders/stretch_effect.frag
+[  +23 ms]   -- Mirrored bundle to C:/development/ConversionFlutter/my_flutter_app/build/windows/x64/runner/Debug
+[  +11 ms] FinalizeBuildStatus:
+[        ]   Deleting file "x64\Debug\INSTALL\INSTALL.tlog\unsuccessfulbuild".
+[        ]   Touching "x64\Debug\INSTALL\INSTALL.tlog\INSTALL.lastbuildstate".
+[   +1 ms] Done Building Project "C:\development\ConversionFlutter\my_flutter_app\build\windows\x64\INSTALL.vcxproj" (default targets).
+[   +1 ms] Build succeeded.
+[        ]     0 Warning(s)
+[        ]     0 Error(s)
+[        ] Time Elapsed 00:00:12.86
+[  +22 ms] Building Windows application... (completed in 13.5s)
+[   +1 ms] ÔêÜ Built build\windows\x64\runner\Debug\convert_the_spire_reborn.exe
+[ +205 ms] VM Service URL on device: http://127.0.0.1:64734/r996KdMwL7I=/
+[   +2 ms] Caching compiled dill
+[  +52 ms] Connecting to service protocol: http://127.0.0.1:64734/r996KdMwL7I=/
+[  +97 ms] Launching a Dart Developer Service (DDS) instance at http://127.0.0.1:0, connecting to VM service at http://127.0.0.1:64734/r996KdMwL7I=/.
+[ +107 ms] package:media_kit_libs_windows_video registered.
+[ +132 ms] Successfully connected to service protocol: http://127.0.0.1:64734/r996KdMwL7I=/
+[   +8 ms] DevFS: Creating new filesystem on the device (null)
+[  +47 ms] DevFS: Created new filesystem on the device (file:///C:/Users/lukas/AppData/Local/Temp/my_flutter_appaddb82b4/my_flutter_app/)
+[   +1 ms] Updating assets for windows
+[        ] runHooks() with {TargetFile: C:\development\ConversionFlutter\my_flutter_app\lib\main.dart, BuildMode: debug} and TargetPlatform.windows_x64
+[        ] runHooks() - will perform dart build
+[        ] Initializing file store
+[        ] Done initializing file store
+[  +10 ms] Skipping target: dart_build
+[        ] Persisting file store
+[   +2 ms] Done persisting file store
+[   +8 ms] runHooks() - done
+[ +157 ms] Manifest contained wildcard assets. Inserting missing file into build graph to force rerun. for more information see #56466.
+[   +4 ms] Syncing files to device Windows...
+[   +1 ms] Compiling dart to kernel with 0 updated files
+[        ] Processing bundle.
+[        ] <- recompile package:convert_the_spire_reborn/main.dart 5c529f6b-d43e-439f-a1c9-ebb4defa3806
+[        ] <- 5c529f6b-d43e-439f-a1c9-ebb4defa3806
+[   +3 ms] Bundle processing done.
+[  +34 ms] [WebView] created environment at C:\Users\lukas\AppData\Roaming\Oroka Conner\Convert the Spire Reborn\WebView2UserData
+[  +68 ms] media_kit: NativeReferenceHolder: Allocated 2196330033024
+[  +50 ms] Updating files.
+[        ] Pending asset builds completed. Writing dirty entries.
+[        ] DevFS: Sync finished
+[        ] Syncing files to device Windows... (completed in 160ms)
+[        ] Synced 0.0MB.
+[        ] <- accept
+[   +1 ms] Connected to _flutterView/0x1ff6a766820.
+[   +1 ms] Flutter run key commands.
+[        ] r Hot reload. 
+[        ] R Hot restart.
+[        ] h List all available interactive commands.
+[        ] d Detach (terminate "flutter run" but leave application running).
+[        ] c Clear the screen
+[        ] q Quit (terminate the application on the device).
+[        ] A Dart VM Service on Windows is available at: http://127.0.0.1:64739/9tVsvgCmUZ4=/
+[        ] The Flutter DevTools debugger and profiler on Windows is available at: http://127.0.0.1:64739/9tVsvgCmUZ4=/devtools/?uri=ws://127.0.0.1:64739/9tVsvgCmUZ4=/ws
+[ +121 ms] MyApp: starting controller initialization
+[   +7 ms] MyApp: all services created, calling init()
+[ +513 ms] [AppController] restored last_tab -> 12
+[  +12 ms] MyApp: init() completed
+[  +98 ms] [NAV] QuickLinks routeToIndex keys: search.tab, multisearch.tab, browser.tab, queue.tab, playlists.tab, bulkimport.tab, stats.tab, settings.tab, support.tab, convert.tab, logs.tab, guide.tab, player.tab, home
+[+1534 ms] ShortcutService: desktop shortcut OK
+[+52979 ms] Service protocol connection closed.
+[        ] Lost connection to device.
+[        ] DevFS: Deleting filesystem on the device (file:///C:/Users/lukas/AppData/Local/Temp/my_flutter_appaddb82b4/my_flutter_app/)
+[        ] DevFS: Deleted filesystem on the device (file:///C:/Users/lukas/AppData/Local/Temp/my_flutter_appaddb82b4/my_flutter_app/)
+[   +2 ms] "flutter run" took 70,706ms.
+[   +9 ms] Running 3 shutdown hooks
+[  +25 ms] Shutdown hooks complete
+[  +89 ms] exiting with code 0
