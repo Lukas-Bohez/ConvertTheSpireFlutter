@@ -77,7 +77,7 @@ class _CastDialogState extends State<CastDialog> {
     super.dispose();
   }
 
-  Future<void> _startScan() async {
+  Future<void> _startScan({bool forceRefresh = false}) async {
     final isRescan = _devices != null;
     setState(() {
       _scanning = true;
@@ -88,6 +88,7 @@ class _CastDialogState extends State<CastDialog> {
     try {
       final devices = await _discovery.discover(
         timeout: const Duration(seconds: 5),
+        forceRefresh: forceRefresh,
       );
       if (mounted) {
         setState(() {
@@ -340,7 +341,7 @@ class _CastDialogState extends State<CastDialog> {
                   IconButton(
                     icon: const Icon(Icons.refresh),
                     tooltip: 'Rescan',
-                    onPressed: _startScan,
+                    onPressed: () => _startScan(forceRefresh: true),
                   ),
               ],
             ),
@@ -406,7 +407,7 @@ class _CastDialogState extends State<CastDialog> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           OutlinedButton.icon(
-                            onPressed: _startScan,
+                            onPressed: () => _startScan(forceRefresh: true),
                             icon: const Icon(Icons.refresh),
                             label: const Text('Rescan'),
                           ),

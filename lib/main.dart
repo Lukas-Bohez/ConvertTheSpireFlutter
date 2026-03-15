@@ -9,14 +9,39 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'src/app.dart';
+import 'src/services/yt_dlp_update_controller.dart';
 
 void main() {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+
+    // Request Android runtime permissions early to ensure local file access
+    // (Android 13+ needs granular media permissions; requesting storage
+    // and manageExternalStorage covers older and many newer devices).
+    Future<void> _requestAndroidPermissions() async {
+      if (kIsWeb || !Platform.isAndroid) return;
+      try {
+        final perms = [
+          Permission.storage,
+          Permission.manageExternalStorage,
+          Permission.notification,
+        ];
+        for (final p in perms) {
+          try {
+            final st = await p.status;
+            if (st.isDenied || st.isRestricted) await p.request();
+          } catch (_) {}
+        }
+      } catch (e) {
+        debugPrint('Android permission request failed: $e');
+      }
+    }
+    await _requestAndroidPermissions();
 
     // Catch all uncaught errors and print them so we can diagnose crashes.
     FlutterError.onError = (details) {
@@ -138,6 +163,12 @@ void main() {
     runApp(MyApp(
         mediaKitInitError: mediaKitError,
         webViewEnvironment: webViewEnvironment));
+    // Start background yt-dlp update checks while the app is running.
+    try {
+      YtDlpUpdateController.start();
+    } catch (e) {
+      debugPrint('yt-dlp updater controller failed to start: $e');
+    }
   }, (error, stack) {
     debugPrint('UNCAUGHT ZONED ERROR: $error');
     debugPrint(stack.toString());

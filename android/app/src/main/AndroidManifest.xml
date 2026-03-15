@@ -20,7 +20,8 @@
     <application
         android:label="Convert the Spire Reborn"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -52,6 +53,11 @@
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
+        <!-- Foreground service used for long-running background downloads -->
+        <service
+            android:name=".ForegroundDownloadService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
         <receiver android:name="com.ryanheise.audioservice.MediaButtonReceiver"
             android:exported="true">
             <intent-filter>

@@ -31,6 +31,7 @@ dependencies:
   sqflite: 2.4.2
   sqflite_common_ffi: 2.4.0+2
   window_manager: 0.5.1
+  shimmer: ^2.0.0
   media_kit: 1.2.6
   media_kit_video: 2.0.1
   media_kit_libs_windows_video: ^1.0.9
@@ -39,6 +40,7 @@ dependencies:
   media_kit_native_event_loop: ^1.0.2
   flutter_inappwebview: 6.1.5
   share_plus: 12.0.1
+  permission_handler: ^10.4.0
   just_audio: 0.10.5
   just_audio_windows: ^0.2.2
   audio_service: 0.18.18
