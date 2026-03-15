@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'quick_links_service.dart';
+import 'm3_home_grid.dart';
 
 /// Clean home page with a grid of quick-link tiles.
 class QuickLinksPage extends StatefulWidget {
@@ -94,29 +95,22 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
           const SizedBox(height: 36),
 
           // Quick links grid
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 14,
-              crossAxisSpacing: 14,
-              // Make tiles slightly taller to avoid tiny RenderFlex overflows
-              childAspectRatio: 0.95,
+          SizedBox(
+            height: (crossAxisCount * 140).toDouble(),
+            child: M3HomeGrid<QuickLink>(
+              loading: _links.isEmpty,
+              items: visibleLinks,
+              onRetry: _loadLinks,
+              itemBuilder: (ctx, link) {
+                return _QuickLinkTile(
+                  link: link,
+                  onTap: () {
+                    FocusScope.of(context).unfocus();
+                    widget.onNavigate(link.route);
+                  },
+                );
+              },
             ),
-            itemCount: visibleLinks.length,
-            itemBuilder: (context, index) {
-              final link = visibleLinks[index];
-              return _QuickLinkTile(
-                link: link,
-                onTap: () {
-                  // remove focus from search field/URL bar before navigation so
-                  // the tap isn't swallowed by a still-focused TextField.
-                  FocusScope.of(context).unfocus();
-                  widget.onNavigate(link.route);
-                },
-              );
-            },
           ),
         ],
       ),

@@ -40,6 +40,18 @@ android {
         }
     }
 
+    // ABI split configuration: enable generating per-ABI APKs to reduce
+    // download size for native-heavy apps (libmpv, ffmpeg, etc.). For Play
+    // distribution prefer App Bundles, but per-ABI APKs are useful for
+    // direct distribution or testing.
+    splits {
+        abi {
+            isEnable = true
+            isUniversalApk = false
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.

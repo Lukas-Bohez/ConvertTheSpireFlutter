@@ -71,13 +71,55 @@ class DlnaDiscoveryService {
   static const _multicastPort = 1900;
   static const _searchTarget = 'urn:schemas-upnp-org:service:AVTransport:1';
 
+  // Throttle/cache settings
+  static Duration defaultThrottle = const Duration(minutes: 2);
+  DateTime? _lastDiscoveryAt;
+  List<DlnaDevice> _cachedDevices = [];
+  Future<List<DlnaDevice>>? _ongoingDiscovery;
+
   /// Scan for DLNA renderers and Cast/AirPlay devices. Returns discovered
   /// devices sorted with Panasonic Viera TVs first, then by name.
   ///
   /// Runs SSDP and mDNS discovery in parallel and merges the results.
   /// [timeout] controls how long we listen for responses.
+  /// Discover devices with optional throttling.
+  ///
+  /// By default discovery calls are throttled to `defaultThrottle` and
+  /// will return cached results when called frequently. Set [forceRefresh]
+  /// to `true` to bypass the cache and run a fresh network discovery.
   Future<List<DlnaDevice>> discover({
     Duration timeout = const Duration(seconds: 5),
+    bool forceRefresh = false,
+    Duration? throttle,
+  }) async {
+    final effectiveThrottle = throttle ?? defaultThrottle;
+
+    if (!forceRefresh) {
+      final now = DateTime.now();
+      if (_lastDiscoveryAt != null && now.difference(_lastDiscoveryAt!) < effectiveThrottle) {
+        // Return cached devices immediately
+        return _cachedDevices;
+      }
+      if (_ongoingDiscovery != null) {
+        // Coalesce concurrent requests
+        return _ongoingDiscovery!;
+      }
+    }
+
+    // Start discovery and remember the future so concurrent callers can wait on it
+    _ongoingDiscovery = _doDiscover(timeout: timeout).whenComplete(() {
+      _ongoingDiscovery = null;
+    });
+
+    final results = await _ongoingDiscovery!;
+    _cachedDevices = results;
+    _lastDiscoveryAt = DateTime.now();
+    return results;
+  }
+
+  // Internal: performs the actual network discovery work.
+  Future<List<DlnaDevice>> _doDiscover({
+    required Duration timeout,
   }) async {
     final results = await Future.wait([
       _discoverViaSsdp(timeout: timeout),

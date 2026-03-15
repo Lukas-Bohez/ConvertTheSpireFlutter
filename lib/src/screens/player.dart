@@ -1,3 +1,5 @@
+// ignore_for_file: unused_element, deprecated_member_use
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
@@ -242,21 +244,7 @@ class PlayerState with ChangeNotifier {
 
   PlayerState(this.prefs) {
     if (_useMediaKit) {
-      try {
-        _mkPlayer = Player();
-        _mkController = VideoController(_mkPlayer!);
-        // Create dedicated players for audio-only playback and thumbnail
-        // generation. These are shared and protected by locks to avoid creating
-        // many temporary players which can destabilize desktop builds.
-        _audioMkPlayer = Player();
-        _thumbPlayer = Player();
-      } catch (e) {
-        debugPrint('media_kit init failed: $e');
-      }
-      // Attach media_kit streams to a dedicated list so they can be
-      // cancelled when the underlying Player is recreated.
-      _attachMkPlayerStreams(_mkPlayer);
-      if (_audioMkPlayer != null) _attachMkPlayerStreams(_audioMkPlayer, isAudio: true);
+      _initMkPlayers();
     }
 
     _loadPrefs().then((_) => _applyVolume());
@@ -295,6 +283,31 @@ class PlayerState with ChangeNotifier {
     // they live in `_mkSubs` and can be cancelled / recreated safely.
   }
 
+  // Ensure media_kit Player instances are created on the main isolate.
+  // Running player construction on a background isolate can cause native
+  // binding failures (libmpv). We dispatch creation via a microtask which
+  // runs on the main Dart thread.
+  Future<void> _initMkPlayers() async {
+    try {
+      await Future.microtask(() {});
+      try {
+        _mkPlayer ??= Player();
+        _mkController ??= VideoController(_mkPlayer!);
+        _audioMkPlayer ??= Player();
+        _thumbPlayer ??= Player();
+      } catch (e) {
+        debugPrint('media_kit init failed: $e');
+      }
+      // Attach media_kit streams to a dedicated list so they can be
+      // cancelled when the underlying Player is recreated.
+      _attachMkPlayerStreams(_mkPlayer);
+      if (_audioMkPlayer != null) _attachMkPlayerStreams(_audioMkPlayer, isAudio: true);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('InitMkPlayers outer error: $e');
+    }
+  }
+
   /// Fully dispose and recreate the media_kit video player and controller.
   /// Preserves play position and attempts to restore playing state.
   Future<void> safeRecreateMkPlayer() async {
@@ -327,10 +340,13 @@ class PlayerState with ChangeNotifier {
       } catch (_) {}
       _mkPlayer = null;
 
-      // Recreate
+      // Recreate on the main isolate to ensure native bindings initialize
+      // correctly (libmpv / media_kit must be created on the platform thread).
       try {
-        _mkPlayer = Player();
-        _mkController = VideoController(_mkPlayer!);
+        await Future.microtask(() {
+          _mkPlayer = Player();
+          _mkController = VideoController(_mkPlayer!);
+        });
         // Reattach streams to the new player and any auxiliary audio player.
         _attachMkPlayerStreams(_mkPlayer);
         if (_audioMkPlayer != null) _attachMkPlayerStreams(_audioMkPlayer, isAudio: true);
@@ -814,7 +830,7 @@ class PlayerState with ChangeNotifier {
                   debugPrint('Skipping rapid audio open — too soon');
                 } else {
                   _lastMkOpenTime = now;
-                  await player.open(Media(_toUri(item.path)), play: true);
+                  await _openMediaWithFallback(player, item.path, play: true);
                 }
                 await player.setVolume(volume * _videoVolumeBoost * 100);
                 // attempt to read duration; may be zero until stream updates
@@ -865,7 +881,7 @@ class PlayerState with ChangeNotifier {
               debugPrint('Skipping rapid mk open — too soon');
             } else {
               _lastMkOpenTime = now;
-              await _mkPlayer!.open(Media(_toUri(item.path)), play: true);
+              await _openMediaWithFallback(_mkPlayer!, item.path, play: true);
             }
             if (generation != _loadGeneration) {
               try { await _mkPlayer!.stop(); } catch (_) {}
@@ -1490,7 +1506,7 @@ class PlayerState with ChangeNotifier {
           debugPrint('Skipping rapid thumb open — too soon');
         } else {
           _lastThumbOpenTime = now;
-          await _thumbPlayer!.open(Media(_toUri(filePath)), play: false);
+          await _openMediaWithFallback(_thumbPlayer!, filePath, play: false);
         }
 
         Duration? dur;
@@ -1588,6 +1604,47 @@ class PlayerState with ChangeNotifier {
     return Uri.file(path).toString();
   }
 
+  // Try multiple URI formats to improve compatibility with Android file paths
+  // (spaces, special characters, and plugins that expect different schemes).
+  Future<void> _openMediaWithFallback(Player player, String path, {bool play = false}) async {
+    final tried = <String>{};
+    final candidates = <String>[];
+    try {
+      candidates.add(_toUri(path));
+    } catch (_) {}
+    try {
+      // raw file:// prefix
+      if (!path.startsWith('file://')) candidates.add('file://$path');
+    } catch (_) {}
+    try {
+      // encoded path
+      final encoded = Uri.file(path).toString();
+      if (!candidates.contains(encoded)) candidates.add(encoded);
+    } catch (_) {}
+    try {
+      // fallback to plain path
+      if (!candidates.contains(path)) candidates.add(path);
+    } catch (_) {}
+
+    for (final uri in candidates) {
+      if (tried.contains(uri)) continue;
+      tried.add(uri);
+      try {
+        await player.open(Media(uri), play: play);
+        return;
+      } catch (e) {
+        debugPrint('media open failed for $uri: $e');
+        // try next
+      }
+    }
+    // If all attempts failed, finally try the original and let caller handle the error
+    try {
+      await player.open(Media(_toUri(path)), play: play);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> _disposeAndroidController() async {
     if (_androidController == null) return;
     if (_androidListener != null) {
@@ -1674,9 +1731,9 @@ class PlayerState with ChangeNotifier {
             if (_lastMkOpenTime != null &&
                 now.difference(_lastMkOpenTime!).inMilliseconds < 350) {
               debugPrint('Skipping rapid audioMk open — too soon');
-            } else {
+              } else {
               _lastMkOpenTime = now;
-              await _audioMkPlayer!.open(Media(_toUri(path)), play: true);
+              await _openMediaWithFallback(_audioMkPlayer!, path, play: true);
             }
             await _audioMkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
             duration = await _audioMkPlayer!.stream.duration
@@ -1720,7 +1777,7 @@ class PlayerState with ChangeNotifier {
             debugPrint('Skipping rapid mk open (playFileDirect) — too soon');
           } else {
             _lastMkOpenTime = now;
-            await _mkPlayer!.open(Media(_toUri(path)), play: true);
+            await _openMediaWithFallback(_mkPlayer!, path, play: true);
           }
           await _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
         } else {
@@ -2425,34 +2482,29 @@ class _AllTab extends StatelessWidget {
 
     if (audio.isEmpty && video.isEmpty) {
       return _EmptyHint(message: state.library.isEmpty
-          ? 'No media loaded.\nTap the folder icon to open a folder.'
+          ? 'Your library is empty.\nTap the folder icon to open a folder or download media.'
           : 'No results for this search.');
     }
 
-    final rows = <_AllTabItem>[];
-    if (audio.isNotEmpty) {
-      rows.add(_AllTabItem.header('Songs — ${audio.length}'));
-      for (final e in audio) rows.add(_AllTabItem.song(e));
-    }
-    if (video.isNotEmpty) {
-      rows.add(_AllTabItem.header('Videos — ${video.length}'));
-      for (final e in video) rows.add(_AllTabItem.song(e));
-    }
-
-    return ListView.builder(
+    return SingleChildScrollView(
       controller: scrollCtl,
-      itemCount: rows.length,
-      itemBuilder: (ctx, i) {
-        final row = rows[i];
-        return switch (row.kind) {
-          _AllTabKind.header => _SectionHeader(text: row.headerText!),
-          _AllTabKind.song => _SongTile(
-              state: state,
-              entry: row.entry!,
-              onTap: onTap,
-            ),
-        };
-      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (audio.isNotEmpty) ...[
+              _SectionHeader(text: 'Songs — ${audio.length}'),
+              _MediaGrid(entries: audio, state: state, onTap: onTap),
+              const SizedBox(height: 12),
+            ],
+            if (video.isNotEmpty) ...[
+              _SectionHeader(text: 'Videos — ${video.length}'),
+              _MediaGrid(entries: video, state: state, onTap: onTap),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -2469,10 +2521,9 @@ class _SongsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final filtered = state.audioEntries.where((e) => matchFn(e.value)).toList();
     if (filtered.isEmpty) return const _EmptyHint(message: 'No songs found.');
-    return ListView.builder(
-      controller: scrollCtl,
-      itemCount: filtered.length,
-      itemBuilder: (ctx, i) => _SongTile(state: state, entry: filtered[i], onTap: onTap),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: _MediaGrid(entries: filtered, state: state, onTap: onTap),
     );
   }
 }
@@ -2489,10 +2540,9 @@ class _VideosTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final filtered = state.videoEntries.where((e) => matchFn(e.value)).toList();
     if (filtered.isEmpty) return const _EmptyHint(message: 'No videos found.');
-    return ListView.builder(
-      controller: scrollCtl,
-      itemCount: filtered.length,
-      itemBuilder: (ctx, i) => _SongTile(state: state, entry: filtered[i], onTap: onTap),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: _MediaGrid(entries: filtered, state: state, onTap: onTap),
     );
   }
 }
@@ -2511,11 +2561,134 @@ class _FavouritesTab extends StatelessWidget {
     if (filtered.isEmpty) {
       return const _EmptyHint(message: 'No favourites yet.\nTap ★ on any track to add it here.');
     }
-    return ListView.builder(
-      controller: scrollCtl,
-      itemCount: filtered.length,
-      itemBuilder: (ctx, i) => _SongTile(state: state, entry: filtered[i], onTap: onTap),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: _MediaGrid(entries: filtered, state: state, onTap: onTap),
     );
+  }
+}
+
+class _MediaGrid extends StatelessWidget {
+  final List<MapEntry<int, MediaItem>> entries;
+  final PlayerState state;
+  final void Function(PlayerState, int) onTap;
+
+  const _MediaGrid({required this.entries, required this.state, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final crossAxisCount = width < 500 ? 2 : (width < 900 ? 3 : 5);
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.78,
+      ),
+      itemCount: entries.length,
+      itemBuilder: (ctx, i) {
+        final entry = entries[i];
+        return _MediaCard(entry: entry, state: state, onTap: onTap);
+      },
+    );
+  }
+}
+
+class _MediaCard extends StatelessWidget {
+  final MapEntry<int, MediaItem> entry;
+  final PlayerState state;
+  final void Function(PlayerState, int) onTap;
+
+  const _MediaCard({required this.entry, required this.state, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final item = entry.value;
+    final idx = entry.key;
+    final cs = Theme.of(context).colorScheme;
+    if (item.thumbnailData == null) Future.microtask(() => state.requestThumbnailForIndex(idx));
+    return Card(
+      clipBehavior: Clip.hardEdge,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () => onTap(state, idx),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: state.thumbnailForItem(item, size: 400) ?? Container(color: cs.surfaceContainerHighest),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.transparent, cs.surface.withOpacity(0.9)],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.title ?? p.basename(item.path),
+                              style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          if (item.type == MediaType.video) Icon(Icons.videocam, size: 18, color: cs.onSurface),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.artist ?? '',
+                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (item.duration != null) ...[
+                    const SizedBox(width: 8),
+                    Text(_formatDuration(item.duration!), style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
+                  ]
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _formatDuration(Duration d) {
+    final mm = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final hh = d.inHours;
+    if (hh > 0) return '$hh:$mm:$ss';
+    return '$mm:$ss';
   }
 }
 

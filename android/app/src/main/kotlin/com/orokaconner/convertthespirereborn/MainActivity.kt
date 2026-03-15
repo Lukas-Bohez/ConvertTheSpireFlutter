@@ -12,6 +12,7 @@ import androidx.documentfile.provider.DocumentFile
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import androidx.core.content.ContextCompat
 import java.io.File
 import java.io.FileInputStream
 
@@ -170,6 +171,36 @@ class MainActivity : FlutterActivity() {
                 }
             }
     }
+
+        // Foreground service control channel
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "convert_the_spire/foreground")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "startForegroundService" -> {
+                        try {
+                            val intent = ForegroundDownloadService.createStartIntent(this)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                ContextCompat.startForegroundService(this, intent)
+                            } else {
+                                startService(intent)
+                            }
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("START_FAILED", e.message, null)
+                        }
+                    }
+                    "stopForegroundService" -> {
+                        try {
+                            val intent = ForegroundDownloadService.createStopIntent(this)
+                            startService(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("STOP_FAILED", e.message, null)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == pickTreeRequestCode) {
