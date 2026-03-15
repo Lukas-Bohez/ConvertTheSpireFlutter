@@ -137,7 +137,7 @@ img.Image? _decodeByMagic(Uint8List raw) {
 //
 // BUG 4 — just_audio_windows threading error:
 //   Root cause: setVolume called on non-platform thread from stream listeners.
-//   FIX: All just_audio calls are wrapped in _runOnPlatformThread().
+//   FIX: All just_audio calls are wrapped in _runOnMainThread().
 
 class PlayerState with ChangeNotifier {
   final SharedPreferences prefs;
@@ -276,14 +276,20 @@ class PlayerState with ChangeNotifier {
   }
 
   // BUG 3/4 FIX: coalescing, always-on-platform-thread notifier.
+  // All stream listeners on just_audio / media_kit fire on background threads
+  // (Windows thread pool). We must NEVER call any plugin method or
+  // notifyListeners() synchronously from those callbacks.
+  // _scheduleNotify posts everything as a microtask which always executes on
+  // the main Dart isolate thread, satisfying the platform channel requirement.
   void _scheduleNotify({VoidCallback? callback}) {
-    callback?.call();
-    if (_notifyPending) return;
-    _notifyPending = true;
-    // scheduleMicrotask runs on the platform thread, coalesces rapid bursts.
+    // CRITICAL: do NOT call callback synchronously here — the caller is on a
+    // background thread. Queue it alongside the notify.
+    if (_notifyPending && callback == null) return;
+    if (!_notifyPending) _notifyPending = true;
     Future.microtask(() {
       if (_disposed) return;
       _notifyPending = false;
+      callback?.call();   // now on main isolate — safe to call plugin methods
       notifyListeners();
     });
   }
@@ -624,7 +630,6 @@ class PlayerState with ChangeNotifier {
           try { await _mkPlayer!.stop(); } catch (_) {}
         }
         await _disposeAndroidController();
-
         // BUG 1 FIX: check generation again after every await.
         if (generation != _loadGeneration) return;
 
@@ -635,7 +640,7 @@ class PlayerState with ChangeNotifier {
             await _audio.setFilePath(item.path);
           }
           if (generation != _loadGeneration) return;
-          await _runOnPlatformThread(() => _audio.setVolume(volume));
+          _runOnMainThread(() => _audio.setVolume(volume));
           duration = _audio.duration;
           position = Duration.zero;
           if (generation != _loadGeneration) return;
@@ -645,8 +650,13 @@ class PlayerState with ChangeNotifier {
           debugPrint('audio load error for ${item.path}: $e');
         }
       } else {
-        // Stop audio.
-        try { await _audio.stop(); } catch (_) {}
+        // Switching to video: stop audio.
+        // just_audio_windows crashes with "Operation aborted" if stop() is
+        // called while a native callback is mid-flight. Yield one microtask
+        // cycle first to let any pending callbacks drain, then stop.
+        await Future.microtask(() async {
+          try { await _audio.stop(); } catch (_) {}
+        });
         if (generation != _loadGeneration) return;
 
         if (_useMediaKit && _mkPlayer != null) {
@@ -846,7 +856,11 @@ class PlayerState with ChangeNotifier {
   }
 
   void _applyVolume() {
-    _runOnPlatformThread(() => _audio.setVolume(volume));
+    // Always post to main thread — _applyVolume can be called from
+    // _loadPrefs().then() which may execute on a background zone.
+    _runOnMainThread(() {
+      _audio.setVolume(volume);
+    });
     if (_useMediaKit && _mkPlayer != null) {
       _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
     }
@@ -855,10 +869,10 @@ class PlayerState with ChangeNotifier {
     }
   }
 
-  // BUG 4 FIX: ensure just_audio calls happen on platform thread.
-  Future<void> _runOnPlatformThread(VoidCallback fn) async {
-    // WidgetsBinding ensures we're on the main isolate.
-    WidgetsBinding.instance.addPostFrameCallback((_) => fn());
+  // Post a call to the main isolate. microtask is always processed on the
+  // main Dart thread regardless of whether a frame is being rendered.
+  void _runOnMainThread(VoidCallback fn) {
+    Future.microtask(fn);
   }
 
   // ─── Queue ────────────────────────────────────────────────────────────────
