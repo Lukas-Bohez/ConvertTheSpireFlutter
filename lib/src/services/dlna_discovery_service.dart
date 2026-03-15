@@ -152,7 +152,8 @@ class DlnaDiscoveryService {
             final datagram = socket?.receive();
             if (datagram == null) return;
             final response = utf8.decode(datagram.data, allowMalformed: true);
-            final future = _parseResponse(response, datagram.address).catchError((e) {
+            final future =
+                _parseResponse(response, datagram.address).catchError((e) {
               debugPrint('DLNA: failed to parse response: $e');
               return null;
             });

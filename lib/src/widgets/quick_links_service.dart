@@ -225,7 +225,8 @@ class QuickLinksService {
 
   static Future<void> save(List<QuickLink> links) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, jsonEncode(links.map((e) => e.toJson()).toList()));
+    await prefs.setString(
+        _key, jsonEncode(links.map((e) => e.toJson()).toList()));
   }
 
   static Future<void> resetToDefaults() async {

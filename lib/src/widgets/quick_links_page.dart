@@ -39,8 +39,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
 
     // Filter out only the queue tile (always in sidebar).
     // Browser remains available so users can tap it directly.
-    final visibleLinks =
-        _links.where((l) => l.route != 'queue.tab').toList();
+    final visibleLinks = _links.where((l) => l.route != 'queue.tab').toList();
 
     return Container(
       color: cs.surfaceContainerLowest,
@@ -163,7 +162,7 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
           child: InkWell(
             onTap: widget.onTap,
             borderRadius: BorderRadius.circular(14),
-              child: Padding(
+            child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -175,8 +174,7 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
                       color: cs.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Icon(widget.link.icon,
-                        color: cs.primary, size: 36),
+                    child: Icon(widget.link.icon, color: cs.primary, size: 36),
                   ),
                   const SizedBox(height: 12),
                   Text(

@@ -79,7 +79,8 @@ if (Test-Path \$lnk) { exit 0 }
     final exePath = Platform.resolvedExecutable;
     final exeDir = File(exePath).parent.path;
     // Look for an icon next to the exe
-    final iconPath = '$exeDir/data/flutter_assets/assets/icons/favicon-192x192.png';
+    final iconPath =
+        '$exeDir/data/flutter_assets/assets/icons/favicon-192x192.png';
 
     final content = '''[Desktop Entry]
 Type=Application

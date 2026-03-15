@@ -43,23 +43,20 @@ class DownloadService {
   /// tree URI chosen by the user, or null to fall back to Downloads.
   Future<String?> Function()? onSafAccessDenied;
 
-  DownloadService({required this.yt, required this.ffmpeg, required this.ytDlp});
+  DownloadService(
+      {required this.yt, required this.ffmpeg, required this.ytDlp});
 
   /// Supported download formats.
   static const supportedFormats = {'mp3', 'm4a', 'mp4'};
 
   /// Known difficult sites that require browser-like headers and/or cookies.
   static const Map<String, String> knownDifficultSites = {
-    'hianime.to':
-        'Uses Cloudflare bot protection \u2014 cookies required.',
+    'hianime.to': 'Uses Cloudflare bot protection \u2014 cookies required.',
     'crunchyroll.com':
         'Requires authentication. Sign in via browser and export cookies.',
-    'funimation.com':
-        'Requires authentication and may be geo-restricted.',
-    'bilibili.com':
-        'May require cookies for high-quality streams.',
-    'nicovideo.jp':
-        'Requires login cookies for most content.',
+    'funimation.com': 'Requires authentication and may be geo-restricted.',
+    'bilibili.com': 'May require cookies for high-quality streams.',
+    'nicovideo.jp': 'Requires login cookies for most content.',
   };
 
   /// Browser-like headers for difficult sites.
@@ -154,7 +151,8 @@ class DownloadService {
     final isAndroid = !kIsWeb && Platform.isAndroid;
     final useMediaStoreOnly = isAndroid && outputDir.trim().isEmpty;
     if (outputDir.trim().isEmpty && !useMediaStoreOnly) {
-      throw Exception('Download folder is not configured. Set one in Settings.');
+      throw Exception(
+          'Download folder is not configured. Set one in Settings.');
     }
     final isSafOutput = _isSafOutput(outputDir);
 
@@ -162,7 +160,6 @@ class DownloadService {
 
     onProgress(0, DownloadStatus.downloading);
 
-    // Resolve output folder
     final outputFolder = (isSafOutput || useMediaStoreOnly)
         ? await _resolveTempFolder()
         : await _resolveOutputFolder(outputDir, formatLower);
@@ -240,8 +237,11 @@ class DownloadService {
             cookiesFromBrowser: cookiesFromBrowser,
             forceGenericExtractor: true,
             onProgress: (pct) {
-              onProgress((pct * 0.95).toInt(),
-                  pct >= 100 ? DownloadStatus.converting : DownloadStatus.downloading);
+              onProgress(
+                  (pct * 0.95).toInt(),
+                  pct >= 100
+                      ? DownloadStatus.converting
+                      : DownloadStatus.downloading);
             },
           );
           if (!token.cancelled) {
@@ -279,7 +279,8 @@ class DownloadService {
     int preferredAudioBitrate = 192,
   }) async {
     if (kIsWeb) {
-      throw Exception('Downloads are not supported on web. Please use the desktop or mobile app.');
+      throw Exception(
+          'Downloads are not supported on web. Please use the desktop or mobile app.');
     }
     final formatLower = format.toLowerCase();
     if (!supportedFormats.contains(formatLower)) {
@@ -288,12 +289,14 @@ class DownloadService {
     final isAndroid = Platform.isAndroid;
     final useMediaStoreOnly = isAndroid && outputDir.trim().isEmpty;
     if (outputDir.trim().isEmpty && !useMediaStoreOnly) {
-      throw Exception('Download folder is not configured. Set one in Settings.');
+      throw Exception(
+          'Download folder is not configured. Set one in Settings.');
     }
     final isSafOutput = _isSafOutput(outputDir);
-    final video = await yt.videos.get(item.url)
-        .timeout(const Duration(seconds: 30),
-            onTimeout: () => throw TimeoutException('Timed out fetching video info'));
+    final video = await yt.videos.get(item.url).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () =>
+            throw TimeoutException('Timed out fetching video info'));
 
     final safeTitle = _sanitizeFileName(video.title);
 
@@ -328,43 +331,48 @@ class DownloadService {
     // Fetch stream manifest with retry using different YouTube API clients
     StreamManifest streams;
     try {
-      streams = await yt.videos.streamsClient.getManifest(video.id)
-          .timeout(const Duration(seconds: 30),
-              onTimeout: () => throw TimeoutException('Timed out fetching stream manifest'));
+      streams = await yt.videos.streamsClient.getManifest(video.id).timeout(
+          const Duration(seconds: 30),
+          onTimeout: () =>
+              throw TimeoutException('Timed out fetching stream manifest'));
     } catch (_) {
       // Retry with safari + androidVr clients for broader stream availability
       streams = await yt.videos.streamsClient.getManifest(
         video.id,
         ytClients: [YoutubeApiClient.safari, YoutubeApiClient.androidVr],
       ).timeout(const Duration(seconds: 45),
-          onTimeout: () => throw TimeoutException('Timed out fetching stream manifest (retry)'));
+          onTimeout: () => throw TimeoutException(
+              'Timed out fetching stream manifest (retry)'));
     }
 
     final needsConversion = formatLower != 'mp4';
     // Muxed streams are limited to 360p. Anything above 360p requires
     // separate video + audio streams merged via FFmpeg.
-    final wantHd = !needsConversion && _qualityToHeight(preferredVideoQuality) > 360;
+    final wantHd =
+        !needsConversion && _qualityToHeight(preferredVideoQuality) > 360;
     if ((needsConversion || wantHd) && !await ffmpeg.isAvailable(ffmpegPath)) {
       if (wantHd) {
         // Fall back to muxed (360p max) if FFmpeg unavailable for merge
       } else {
-        throw Exception('FFmpeg is required for $formatLower conversion. Configure it in Settings.');
+        throw Exception(
+            'FFmpeg is required for $formatLower conversion. Configure it in Settings.');
       }
     }
     final bool ffmpegAvailable = await ffmpeg.isAvailable(ffmpegPath);
 
-    // Create output directory
     final outputFolder = (isSafOutput || useMediaStoreOnly)
-      ? await _resolveTempFolder()
-      : await _resolveOutputFolder(outputDir, formatLower);
+        ? await _resolveTempFolder()
+        : await _resolveOutputFolder(outputDir, formatLower);
     await outputFolder.create(recursive: true);
 
     // Track all temp files so we can clean up on success OR failure
     final tempFiles = <String>[];
 
-    Uint8List? thumbBytes = await _fetchThumbnailBytes(video.thumbnails.highResUrl);
+    Uint8List? thumbBytes =
+        await _fetchThumbnailBytes(video.thumbnails.highResUrl);
     thumbBytes = _prepareCoverBytes(thumbBytes);
-    final thumbPath = await _writeThumbnailFile(outputFolder.path, safeTitle, thumbBytes);
+    final thumbPath =
+        await _writeThumbnailFile(outputFolder.path, safeTitle, thumbBytes);
     if (thumbPath != null) tempFiles.add(thumbPath);
 
     final needsMp4Embed = formatLower == 'mp4' && thumbBytes != null;
@@ -376,35 +384,45 @@ class DownloadService {
     // (c) MP4 360p: use muxed stream directly
     final StreamInfo sourceStream;
     final String tempFilePath;
-    StreamInfo? separateAudioStream;  // non-null when doing HD merge
+    StreamInfo? separateAudioStream; // non-null when doing HD merge
     String? tempAudioPath;
 
     if (needsConversion) {
       // Audio formats: prefer muxed (reliable), fall back to audio-only
       if (streams.muxed.isNotEmpty) {
         sourceStream = streams.muxed.withHighestBitrate();
-        tempFilePath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.mp4';
+        tempFilePath =
+            '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.mp4';
       } else if (streams.audioOnly.isNotEmpty) {
         sourceStream = streams.audioOnly.withHighestBitrate();
-        tempFilePath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.webm';
+        tempFilePath =
+            '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.webm';
       } else {
-        throw Exception('No downloadable streams found for this video. It may be region-restricted or DRM-protected.');
+        throw Exception(
+            'No downloadable streams found for this video. It may be region-restricted or DRM-protected.');
       }
-    } else if (wantHd && ffmpegAvailable && streams.videoOnly.isNotEmpty && streams.audioOnly.isNotEmpty) {
+    } else if (wantHd &&
+        ffmpegAvailable &&
+        streams.videoOnly.isNotEmpty &&
+        streams.audioOnly.isNotEmpty) {
       // HD MP4: download separate video + audio, then merge
       final targetHeight = _qualityToHeight(preferredVideoQuality);
       final videoStream = _pickBestVideoStream(streams.videoOnly, targetHeight);
       sourceStream = videoStream;
-      tempFilePath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.video.${_containerExt(videoStream)}';
+      tempFilePath =
+          '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.video.${_containerExt(videoStream)}';
       separateAudioStream = streams.audioOnly.withHighestBitrate();
-      tempAudioPath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.audio.${_containerExt(separateAudioStream)}';
+      tempAudioPath =
+          '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.audio.${_containerExt(separateAudioStream)}';
     } else {
       // Standard muxed MP4 (720p max)
       if (streams.muxed.isEmpty) {
-        throw Exception('No downloadable video streams found for this video. It may be region-restricted or DRM-protected.');
+        throw Exception(
+            'No downloadable video streams found for this video. It may be region-restricted or DRM-protected.');
       }
       sourceStream = streams.muxed.withHighestBitrate();
-      tempFilePath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.mp4';
+      tempFilePath =
+          '${outputFolder.path}${Platform.pathSeparator}$safeTitle.temp.mp4';
     }
     tempFiles.add(tempFilePath);
     if (tempAudioPath != null) tempFiles.add(tempAudioPath);
@@ -419,7 +437,8 @@ class DownloadService {
           onProgress(adjustedPct, status);
         }, videoId: video.id);
         if (token.cancelled) throw Exception('Cancelled');
-        await _downloadStream(separateAudioStream, tempAudioPath!, token, (pct, status) {
+        await _downloadStream(separateAudioStream, tempAudioPath!, token,
+            (pct, status) {
           final adjustedPct = 60 + (pct * 0.2).toInt();
           onProgress(adjustedPct, status);
         }, videoId: video.id);
@@ -439,9 +458,11 @@ class DownloadService {
 
       if (needsConversion) {
         // ── Convert to the requested audio format ─────────────────────
-        final coverPath = await _writeCoverFile(outputFolder.path, safeTitle, thumbBytes);
+        final coverPath =
+            await _writeCoverFile(outputFolder.path, safeTitle, thumbBytes);
         if (coverPath != null) tempFiles.add(coverPath);
-        outputPath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.$formatLower';
+        outputPath =
+            '${outputFolder.path}${Platform.pathSeparator}$safeTitle.$formatLower';
         onProgress(95, DownloadStatus.converting);
 
         final args = _buildAudioConvertArgs(
@@ -458,15 +479,18 @@ class DownloadService {
 
         // Verify the output file was actually created
         if (!await File(outputPath).exists()) {
-          throw Exception('FFmpeg completed but output file was not created for format: $formatLower');
+          throw Exception(
+              'FFmpeg completed but output file was not created for format: $formatLower');
         }
       } else {
         // ── MP4: keep as video ────────────────────────────────────────
-        outputPath = '${outputFolder.path}${Platform.pathSeparator}$safeTitle.mp4';
+        outputPath =
+            '${outputFolder.path}${Platform.pathSeparator}$safeTitle.mp4';
         onProgress(isHdMerge ? 85 : 95, DownloadStatus.converting);
         if (isHdMerge) {
           // Merge separate video + audio streams into final MP4
-          final coverPath = await _writeCoverFile(outputFolder.path, safeTitle, thumbBytes);
+          final coverPath =
+              await _writeCoverFile(outputFolder.path, safeTitle, thumbBytes);
           if (coverPath != null) tempFiles.add(coverPath);
           await _mergeVideoAudio(
             videoPath: tempFilePath,
@@ -476,9 +500,11 @@ class DownloadService {
             ffmpegPath: ffmpegPath,
           );
         } else if (needsMp4Embed) {
-          final coverPath = await _writeCoverFile(outputFolder.path, safeTitle, thumbBytes);
+          final coverPath =
+              await _writeCoverFile(outputFolder.path, safeTitle, thumbBytes);
           if (coverPath != null) tempFiles.add(coverPath);
-          await _embedMp4Cover(tempFilePath, outputPath, coverPath, ffmpegPath: ffmpegPath);
+          await _embedMp4Cover(tempFilePath, outputPath, coverPath,
+              ffmpegPath: ffmpegPath);
         } else {
           await File(tempFilePath).rename(outputPath);
           tempFiles.remove(tempFilePath); // renamed, no longer needs cleanup
@@ -616,7 +642,12 @@ class DownloadService {
       args.addAll(['-i', coverPath]);
       args.addAll(['-map', '0:a', '-map', '1:v']);
       args.addAll(['-c:v', 'mjpeg', '-disposition:v', 'attached_pic']);
-      args.addAll(['-metadata:s:v', 'title=Album cover', '-metadata:s:v', 'comment=Cover (front)']);
+      args.addAll([
+        '-metadata:s:v',
+        'title=Album cover',
+        '-metadata:s:v',
+        'comment=Cover (front)'
+      ]);
     } else {
       // No cover – explicitly map only the audio stream (important when input
       // is a muxed MP4 that also contains a video track).
@@ -627,7 +658,8 @@ class DownloadService {
     final bitrateStr = '${bitrate.clamp(64, 320)}k';
     switch (format) {
       case 'mp3':
-        args.addAll(['-c:a', 'libmp3lame', '-b:a', bitrateStr, '-id3v2_version', '3']);
+        args.addAll(
+            ['-c:a', 'libmp3lame', '-b:a', bitrateStr, '-id3v2_version', '3']);
         break;
       case 'm4a':
         args.addAll(['-c:a', 'aac', '-b:a', bitrateStr]);
@@ -638,10 +670,14 @@ class DownloadService {
 
     // Metadata
     args.addAll([
-      '-metadata', 'title=$title',
-      '-metadata', 'artist=$artist',
-      '-metadata', 'album=$artist',
-      '-metadata', 'date=$date',
+      '-metadata',
+      'title=$title',
+      '-metadata',
+      'artist=$artist',
+      '-metadata',
+      'album=$artist',
+      '-metadata',
+      'date=$date',
     ]);
 
     args.add(outputPath);
@@ -744,7 +780,10 @@ class DownloadService {
     // On Android, use HTTP Range headers with smaller chunks.
     if (!kIsWeb && Platform.isAndroid) {
       await _downloadStreamAndroid(
-        stream, outputPath, token, onProgress,
+        stream,
+        outputPath,
+        token,
+        onProgress,
         videoId: videoId,
       );
       return;
@@ -779,7 +818,8 @@ class DownloadService {
           token: token,
         );
         // Append the completed chunk to the file
-        await file.writeAsBytes(chunkBytes, mode: FileMode.writeOnlyAppend, flush: true);
+        await file.writeAsBytes(chunkBytes,
+            mode: FileMode.writeOnlyAppend, flush: true);
         received += chunkBytes.length;
         requestNum++;
         final pct = ((received / total) * 100).clamp(0, 100).toInt();
@@ -810,7 +850,8 @@ class DownloadService {
     params.remove('rn');
     params.remove('rbuf');
     final cleaned = baseUrl.replace(
-      queryParameters: params.map((k, v) => MapEntry(k, v.length == 1 ? v.first : v.join(','))),
+      queryParameters: params
+          .map((k, v) => MapEntry(k, v.length == 1 ? v.first : v.join(','))),
     );
     final urlStr = cleaned.toString();
     final sep = urlStr.contains('?') ? '&' : '?';
@@ -833,9 +874,10 @@ class DownloadService {
         final chunkUrl = _buildChunkUrl(streamUrl, start, end, requestNum);
         final request = http.Request('GET', chunkUrl);
         final response = await client.send(request).timeout(
-          const Duration(seconds: 30),
-          onTimeout: () => throw TimeoutException('Chunk request timed out'),
-        );
+              const Duration(seconds: 30),
+              onTimeout: () =>
+                  throw TimeoutException('Chunk request timed out'),
+            );
         if (response.statusCode >= 400) {
           throw Exception('HTTP ${response.statusCode} for range $start-$end');
         }
@@ -883,7 +925,8 @@ class DownloadService {
       final streamData = rawStream.timeout(
         const Duration(seconds: 60),
         onTimeout: (sink) {
-          sink.addError(TimeoutException('Download stalled – no data received for 60 seconds'));
+          sink.addError(TimeoutException(
+              'Download stalled – no data received for 60 seconds'));
           sink.close();
         },
       );
@@ -907,7 +950,9 @@ class DownloadService {
       await sink.flush();
       await sink.close();
     } catch (e) {
-      try { await sink.close(); } catch (_) {}
+      try {
+        await sink.close();
+      } catch (_) {}
       rethrow;
     }
   }
@@ -927,11 +972,13 @@ class DownloadService {
   }) async {
     final total = originalStream.size.totalBytes;
     if (total <= 0) {
-      await _downloadStreamLegacy(originalStream, outputPath, token, onProgress);
+      await _downloadStreamLegacy(
+          originalStream, outputPath, token, onProgress);
       return;
     }
 
-    const chunkSize = 1 * 1024 * 1024; // 1 MB — smaller chunks reduce stall window
+    const chunkSize =
+        1 * 1024 * 1024; // 1 MB — smaller chunks reduce stall window
     const maxRetries = 20; // more retries for flaky mobile networks
     final file = File(outputPath);
     int received = 0;
@@ -971,18 +1018,23 @@ class DownloadService {
               request.headers['Connection'] = 'keep-alive';
 
               final response = await client.send(request).timeout(
-                const Duration(seconds: 45),
-                onTimeout: () => throw TimeoutException('Chunk request timed out'),
-              );
+                    const Duration(seconds: 45),
+                    onTimeout: () =>
+                        throw TimeoutException('Chunk request timed out'),
+                  );
 
               if (response.statusCode == 403 || response.statusCode == 429) {
                 // Signature expired or rate-limited – refresh stream URL
                 if (videoId != null) {
-                  debugPrint('Android download: HTTP ${response.statusCode} on chunk $start-$end, refreshing manifest...');
+                  debugPrint(
+                      'Android download: HTTP ${response.statusCode} on chunk $start-$end, refreshing manifest...');
                   try {
                     final fresh = await yt.videos.streamsClient.getManifest(
                       videoId,
-                      ytClients: [YoutubeApiClient.safari, YoutubeApiClient.androidVr],
+                      ytClients: [
+                        YoutubeApiClient.safari,
+                        YoutubeApiClient.androidVr
+                      ],
                     ).timeout(const Duration(seconds: 30));
                     final match = _findStreamByTag(fresh, originalTag);
                     if (match != null) {
@@ -990,14 +1042,16 @@ class DownloadService {
                       debugPrint('Android download: refreshed stream URL');
                     }
                   } catch (e2) {
-                    debugPrint('Android download: manifest refresh failed: $e2');
+                    debugPrint(
+                        'Android download: manifest refresh failed: $e2');
                   }
                 }
                 throw Exception('HTTP ${response.statusCode}');
               }
 
               if (response.statusCode >= 400) {
-                throw Exception('HTTP ${response.statusCode} for range $start-$end');
+                throw Exception(
+                    'HTTP ${response.statusCode} for range $start-$end');
               }
 
               final buffer = BytesBuilder(copy: false);
@@ -1024,20 +1078,26 @@ class DownloadService {
             if (attempt < maxRetries - 1) {
               // Exponential back-off: 2s, 4s, 6s, ... up to 30s
               final delay = Duration(seconds: (2 * (attempt + 1)).clamp(2, 30));
-              debugPrint('Android download: chunk $start-$end attempt ${attempt + 1} failed: $e, retrying in ${delay.inSeconds}s');
+              debugPrint(
+                  'Android download: chunk $start-$end attempt ${attempt + 1} failed: $e, retrying in ${delay.inSeconds}s');
               await Future.delayed(delay);
               // After 3 consecutive failures, try refreshing the manifest
               if (consecutiveFailures >= 3 && videoId != null) {
-                debugPrint('Android download: $consecutiveFailures consecutive failures, refreshing manifest...');
+                debugPrint(
+                    'Android download: $consecutiveFailures consecutive failures, refreshing manifest...');
                 try {
                   final fresh = await yt.videos.streamsClient.getManifest(
                     videoId,
-                    ytClients: [YoutubeApiClient.safari, YoutubeApiClient.androidVr],
+                    ytClients: [
+                      YoutubeApiClient.safari,
+                      YoutubeApiClient.androidVr
+                    ],
                   ).timeout(const Duration(seconds: 30));
                   final match = _findStreamByTag(fresh, originalTag);
                   if (match != null) {
                     currentUrl = _stripRangeParams(match.url);
-                    debugPrint('Android download: refreshed stream URL after consecutive failures');
+                    debugPrint(
+                        'Android download: refreshed stream URL after consecutive failures');
                     consecutiveFailures = 0;
                   }
                 } catch (_) {}
@@ -1047,10 +1107,13 @@ class DownloadService {
         }
 
         if (chunkBytes == null) {
-          throw lastError ?? Exception('Download failed after $maxRetries retries at byte $received');
+          throw lastError ??
+              Exception(
+                  'Download failed after $maxRetries retries at byte $received');
         }
 
-        await file.writeAsBytes(chunkBytes, mode: FileMode.writeOnlyAppend, flush: true);
+        await file.writeAsBytes(chunkBytes,
+            mode: FileMode.writeOnlyAppend, flush: true);
         received += chunkBytes.length;
 
         final pct = ((received / total) * 100).clamp(0, 100).toInt();
@@ -1107,7 +1170,8 @@ class DownloadService {
     return null;
   }
 
-  Future<String?> _writeCoverFile(String dir, String name, Uint8List? bytes) async {
+  Future<String?> _writeCoverFile(
+      String dir, String name, Uint8List? bytes) async {
     if (bytes == null) {
       return null;
     }
@@ -1116,7 +1180,8 @@ class DownloadService {
     return path;
   }
 
-  Future<String?> _writeThumbnailFile(String dir, String name, Uint8List? bytes) async {
+  Future<String?> _writeThumbnailFile(
+      String dir, String name, Uint8List? bytes) async {
     if (bytes == null) {
       return null;
     }
@@ -1133,20 +1198,25 @@ class DownloadService {
     if (decoded == null) {
       return bytes;
     }
-    
+
     // Detect and crop black bars first
     final trimmed = _trimBlackBars(decoded);
-    
+
     // Now crop to center square from the trimmed image
-    final size = trimmed.width < trimmed.height ? trimmed.width : trimmed.height;
+    final size =
+        trimmed.width < trimmed.height ? trimmed.width : trimmed.height;
     final offsetX = (trimmed.width - size) ~/ 2;
     final offsetY = (trimmed.height - size) ~/ 2;
-    final cropped = img.copyCrop(trimmed, x: offsetX, y: offsetY, width: size, height: size);
-    
+    final cropped = img.copyCrop(trimmed,
+        x: offsetX, y: offsetY, width: size, height: size);
+
     // Resize to target size if needed
     final targetSize = size > 1200 ? 1200 : size;
     final resized = size > targetSize
-        ? img.copyResize(cropped, width: targetSize, height: targetSize, interpolation: img.Interpolation.cubic)
+        ? img.copyResize(cropped,
+            width: targetSize,
+            height: targetSize,
+            interpolation: img.Interpolation.cubic)
         : cropped;
     final encoded = img.encodeJpg(resized, quality: 90);
     return Uint8List.fromList(encoded);
@@ -1158,16 +1228,16 @@ class DownloadService {
     int minY = image.height;
     int maxX = 0;
     int maxY = 0;
-    
+
     const blackThreshold = 20; // Pixels darker than this are considered black
-    
+
     for (int y = 0; y < image.height; y++) {
       for (int x = 0; x < image.width; x++) {
         final pixel = image.getPixel(x, y);
         final r = pixel.r.toInt();
         final g = pixel.g.toInt();
         final b = pixel.b.toInt();
-        
+
         // If pixel is not black
         if (r > blackThreshold || g > blackThreshold || b > blackThreshold) {
           if (x < minX) minX = x;
@@ -1177,14 +1247,15 @@ class DownloadService {
         }
       }
     }
-    
+
     // If we found content bounds, crop to them
     if (maxX > minX && maxY > minY) {
       final width = maxX - minX + 1;
       final height = maxY - minY + 1;
-      return img.copyCrop(image, x: minX, y: minY, width: width, height: height);
+      return img.copyCrop(image,
+          x: minX, y: minY, width: width, height: height);
     }
-    
+
     // No black bars detected, return original
     return image;
   }
@@ -1225,7 +1296,8 @@ class DownloadService {
     await ffmpeg.run(args, ffmpegPath: ffmpegPath);
   }
 
-  Future<Directory> _resolveOutputFolder(String outputDir, String formatLower) async {
+  Future<Directory> _resolveOutputFolder(
+      String outputDir, String formatLower) async {
     final base = Directory(outputDir);
     // Organise into sub-folders by format
     return Directory('${base.path}${Platform.pathSeparator}$formatLower');
@@ -1244,10 +1316,14 @@ class DownloadService {
 
   static String _mimeForFormat(String fmt) {
     switch (fmt) {
-      case 'mp3':  return 'audio/mpeg';
-      case 'm4a':  return 'audio/mp4';
-      case 'mp4':  return 'video/mp4';
-      default:     return 'application/octet-stream';
+      case 'mp3':
+        return 'audio/mpeg';
+      case 'm4a':
+        return 'audio/mp4';
+      case 'mp4':
+        return 'video/mp4';
+      default:
+        return 'application/octet-stream';
     }
   }
 
@@ -1286,14 +1362,22 @@ class DownloadService {
   /// Convert quality string like '1080p' to pixel height.
   static int _qualityToHeight(String quality) {
     switch (quality) {
-      case '360p': return 360;
-      case '480p': return 480;
-      case '720p': return 720;
-      case '1080p': return 1080;
-      case '1440p': return 1440;
-      case '2160p': return 2160;
-      case 'best': return 9999;
-      default: return 720;
+      case '360p':
+        return 360;
+      case '480p':
+        return 480;
+      case '720p':
+        return 720;
+      case '1080p':
+        return 1080;
+      case '1440p':
+        return 1440;
+      case '2160p':
+        return 2160;
+      case 'best':
+        return 9999;
+      default:
+        return 720;
     }
   }
 
@@ -1308,9 +1392,11 @@ class DownloadService {
     final mp4Streams = streams
         .where((s) => s.container.name.toLowerCase().contains('mp4'))
         .toList()
-      ..sort((a, b) => b.videoResolution.height.compareTo(a.videoResolution.height));
+      ..sort((a, b) =>
+          b.videoResolution.height.compareTo(a.videoResolution.height));
     final allSorted = streams.toList()
-      ..sort((a, b) => b.videoResolution.height.compareTo(a.videoResolution.height));
+      ..sort((a, b) =>
+          b.videoResolution.height.compareTo(a.videoResolution.height));
 
     if (targetHeight >= 9999) {
       // 'best' quality: prefer highest-res MP4, fall back to any
@@ -1360,10 +1446,20 @@ class DownloadService {
     if (coverPath != null) {
       args.addAll(['-i', coverPath]);
       args.addAll(['-map', '0:v', '-map', '1:a', '-map', '2:v']);
-      args.addAll(['-c:v:0', videoCodec, '-c:a', 'aac', '-c:v:1', 'mjpeg',
-                   '-disposition:v:1', 'attached_pic',
-                   '-metadata:s:v:1', 'title=Album cover',
-                   '-metadata:s:v:1', 'comment=Cover (front)']);
+      args.addAll([
+        '-c:v:0',
+        videoCodec,
+        '-c:a',
+        'aac',
+        '-c:v:1',
+        'mjpeg',
+        '-disposition:v:1',
+        'attached_pic',
+        '-metadata:s:v:1',
+        'title=Album cover',
+        '-metadata:s:v:1',
+        'comment=Cover (front)'
+      ]);
     } else {
       args.addAll(['-map', '0:v', '-map', '1:a']);
       args.addAll(['-c:v', videoCodec, '-c:a', 'aac']);

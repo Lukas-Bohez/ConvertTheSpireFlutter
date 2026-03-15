@@ -87,7 +87,8 @@ class WatchedPlaylistService {
 
       // Something changed
       final storedIds = await _getStoredIds(url);
-      final newTracks = currentTracks.where((t) => !storedIds.contains(t.id)).toList();
+      final newTracks =
+          currentTracks.where((t) => !storedIds.contains(t.id)).toList();
 
       for (final track in newTracks) {
         await onNewTrack(track);
@@ -113,7 +114,8 @@ class WatchedPlaylistService {
     } catch (_) {}
   }
 
-  Future<void> _storeTracks(String url, List<SearchResult> tracks, String hash) async {
+  Future<void> _storeTracks(
+      String url, List<SearchResult> tracks, String hash) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('pl_hash_$url', hash);
     final ids = tracks.map((t) => t.id).toList();

@@ -22,8 +22,7 @@ class OnboardingTooltipService {
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
     _step = _prefs!.getInt(_stepKey) ?? 0;
-    _visitedScreens =
-        (_prefs!.getStringList(_visitedScreensKey) ?? []).toSet();
+    _visitedScreens = (_prefs!.getStringList(_visitedScreensKey) ?? []).toSet();
   }
 
   Future<void> advanceTo(int newStep) async {
@@ -36,8 +35,7 @@ class OnboardingTooltipService {
 
   Future<void> markScreenVisited(String route) async {
     _visitedScreens.add(route);
-    await _prefs?.setStringList(
-        _visitedScreensKey, _visitedScreens.toList());
+    await _prefs?.setStringList(_visitedScreensKey, _visitedScreens.toList());
   }
 
   Future<void> reset() async {
@@ -63,7 +61,8 @@ class OnboardingTooltipService {
     'settings.tab': 'Configure download directory, format, quality, and tools.',
     'support.tab':
         'Support the project by contributing compute power via QUBIC mining.',
-    'convert.tab': 'Convert audio and video files between formats using FFmpeg.',
+    'convert.tab':
+        'Convert audio and video files between formats using FFmpeg.',
     'logs.tab': 'View the activity log for debugging and monitoring.',
     'guide.tab': 'Documentation, tips, and troubleshooting.',
     'player.tab':
@@ -96,8 +95,8 @@ class _OnboardingBannerState extends State<OnboardingBanner>
     super.initState();
     _ctrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 400));
-    _opacity = Tween(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
+    _opacity = Tween(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
     _ctrl.forward();
   }
 

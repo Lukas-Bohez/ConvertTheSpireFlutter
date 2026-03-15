@@ -74,8 +74,10 @@ class DownloadStats {
   }
 
   /// Top N entries from a count-map, sorted descending.
-  static List<MapEntry<String, int>> topEntries(Map<String, int> map, [int n = 10]) {
-    final entries = map.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+  static List<MapEntry<String, int>> topEntries(Map<String, int> map,
+      [int n = 10]) {
+    final entries = map.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
     return entries.take(n).toList();
   }
 }

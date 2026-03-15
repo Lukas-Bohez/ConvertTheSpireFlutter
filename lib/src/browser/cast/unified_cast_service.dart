@@ -73,8 +73,7 @@ class UnifiedCastService extends CastService {
   }
 
   @override
-  Future<void> seek(Duration position) async =>
-      _activeCaster?.seek(position);
+  Future<void> seek(Duration position) async => _activeCaster?.seek(position);
 
   @override
   void dispose() {

@@ -51,8 +51,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                     ?.copyWith(color: cs.onSurfaceVariant)),
             const SizedBox(height: 8),
             Text('Statistics will appear here after your first download.',
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: cs.outline)),
+                style: theme.textTheme.bodyMedium?.copyWith(color: cs.outline)),
           ],
         ),
       );
@@ -162,8 +161,9 @@ class _StatisticsScreenState extends State<StatisticsScreen>
       children: [
         Icon(icon, size: 20, color: theme.colorScheme.primary),
         const SizedBox(width: 8),
-        Text(title, style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold)),
+        Text(title,
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -240,8 +240,10 @@ class _StatisticsScreenState extends State<StatisticsScreen>
 
   Widget _buildTimelineChart(ColorScheme cs) {
     final sorted = _stats.downloadsByDate.keys.toList()..sort();
-    final spots = List.generate(sorted.length,
-        (i) => FlSpot(i.toDouble(), _stats.downloadsByDate[sorted[i]]!.toDouble()));
+    final spots = List.generate(
+        sorted.length,
+        (i) => FlSpot(
+            i.toDouble(), _stats.downloadsByDate[sorted[i]]!.toDouble()));
 
     // Show up to 7 date labels
     final step = (sorted.length / 7).ceil().clamp(1, sorted.length);
@@ -382,8 +384,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                       child: LinearProgressIndicator(
                         value: fraction,
                         minHeight: 20,
-                        backgroundColor:
-                            cs.surfaceContainerHighest,
+                        backgroundColor: cs.surfaceContainerHighest,
                         color: cs.primary,
                       ),
                     ),
@@ -394,8 +395,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                     child: Text('${e.value}',
                         textAlign: TextAlign.end,
                         style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: cs.onSurface)),
+                            fontWeight: FontWeight.bold, color: cs.onSurface)),
                   ),
                 ],
               ),
@@ -409,8 +409,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   // ─── Source pie chart ─────────────────────────────────────────────────
 
   Widget _buildSourceChart(ColorScheme cs) {
-    final total =
-        _stats.downloadsBySource.values.fold(0, (s, v) => s + v);
+    final total = _stats.downloadsBySource.values.fold(0, (s, v) => s + v);
     const sourceColors = {
       'youtube': Colors.red,
       'soundcloud': Colors.orange,
@@ -453,8 +452,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
               spacing: 16,
               runSpacing: 4,
               children: entries.map((e) {
-                final color =
-                    sourceColors[e.key.toLowerCase()] ?? cs.tertiary;
+                final color = sourceColors[e.key.toLowerCase()] ?? cs.tertiary;
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -615,12 +613,11 @@ class _OverviewCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(value,
                 style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: fgColor)),
+                    fontSize: 24, fontWeight: FontWeight.bold, color: fgColor)),
             const SizedBox(height: 2),
             Text(label,
-                style: TextStyle(fontSize: 12, color: fgColor.withValues(alpha: 0.7))),
+                style: TextStyle(
+                    fontSize: 12, color: fgColor.withValues(alpha: 0.7))),
           ],
         ),
       ),

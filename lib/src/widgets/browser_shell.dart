@@ -132,11 +132,11 @@ class _BrowserShellState extends State<BrowserShell> {
   bool _looksLikeUrl(String text) {
     final lower = text.toLowerCase();
     return lower.startsWith('http://') ||
-      lower.startsWith('https://') ||
-      lower.startsWith('www.') ||
-      (lower.contains('.') &&
-        !lower.contains(' ') &&
-        RegExp(r'\.[a-z]{2,}$', caseSensitive: false).hasMatch(lower));
+        lower.startsWith('https://') ||
+        lower.startsWith('www.') ||
+        (lower.contains('.') &&
+            !lower.contains(' ') &&
+            RegExp(r'\.[a-z]{2,}$', caseSensitive: false).hasMatch(lower));
   }
 
   void _cancelEditing() {
@@ -368,7 +368,8 @@ class _BrowserShellState extends State<BrowserShell> {
       final route = QuickLinksService.indexToRoute[entry.key];
       if (route == null) continue;
       final icon = QuickLinksService.indexToIcon[entry.key] ?? Icons.link;
-      allPages.add(_PageSuggestion(title: entry.value, route: route, icon: icon));
+      allPages
+          .add(_PageSuggestion(title: entry.value, route: route, icon: icon));
     }
 
     return RawAutocomplete<_PageSuggestion>(
@@ -378,7 +379,8 @@ class _BrowserShellState extends State<BrowserShell> {
         final q = textEditingValue.text.trim().toLowerCase();
         if (q.isEmpty) return allPages;
         return allPages.where((p) =>
-            p.title.toLowerCase().contains(q) || p.route.toLowerCase().contains(q));
+            p.title.toLowerCase().contains(q) ||
+            p.route.toLowerCase().contains(q));
       },
       onSelected: (suggestion) {
         setState(() => _isEditing = false);
@@ -440,7 +442,8 @@ class _BrowserShellState extends State<BrowserShell> {
                     borderRadius: BorderRadius.circular(8),
                     onTap: () => onSelected(p),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       child: Row(
                         children: [
                           Container(
@@ -450,7 +453,8 @@ class _BrowserShellState extends State<BrowserShell> {
                               color: cs.primaryContainer,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(p.icon, size: 16, color: cs.onPrimaryContainer),
+                            child: Icon(p.icon,
+                                size: 16, color: cs.onPrimaryContainer),
                           ),
                           const SizedBox(width: 10),
                           Expanded(

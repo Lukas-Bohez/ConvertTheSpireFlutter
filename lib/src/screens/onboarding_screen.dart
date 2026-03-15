@@ -38,8 +38,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.download_rounded,
       title: 'Welcome',
-      detail:
-          'Convert the Spire Reborn is a cross-platform media toolkit. '
+      detail: 'Convert the Spire Reborn is a cross-platform media toolkit. '
           'Download audio & video from dozens of sites, convert formats, '
           'cast to your TV, and more \u2014 all from one app.',
       color: Color(0xFF00897B),
@@ -50,8 +49,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.language_rounded,
       title: 'Supported Platforms',
-      detail:
-          'Not just YouTube! This app uses yt-dlp under the hood, '
+      detail: 'Not just YouTube! This app uses yt-dlp under the hood, '
           'supporting 1\u202F000+ websites. Here are some popular ones:',
       color: Color(0xFFFF6D00),
       preview: _PlatformsPreview(),
@@ -61,8 +59,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.search_rounded,
       title: 'Search',
-      detail:
-          'Look up a video by keyword or paste a link from any supported '
+      detail: 'Look up a video by keyword or paste a link from any supported '
           'site. Preview the result and pick a format before downloading.',
       color: Color(0xFF6C63FF),
       preview: _SearchPreview(),
@@ -72,8 +69,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.travel_explore_rounded,
       title: 'Multi-Search',
-      detail:
-          'Fetch results from YouTube and SoundCloud simultaneously. '
+      detail: 'Fetch results from YouTube and SoundCloud simultaneously. '
           'Tap a row to hear a preview.',
       color: Color(0xFF43CFBB),
     ),
@@ -82,8 +78,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.open_in_browser_rounded,
       title: 'Browser',
-      detail:
-          'Browse the web in the built-in view and add videos directly '
+      detail: 'Browse the web in the built-in view and add videos directly '
           'to the queue without leaving the app.',
       color: Color(0xFF4A90D9),
     ),
@@ -92,8 +87,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.queue_music_rounded,
       title: 'Queue',
-      detail:
-          'Manage your downloads. Start all, cancel, retry failures, '
+      detail: 'Manage your downloads. Start all, cancel, retry failures, '
           'cast to your TV, or show completed files in your file manager.',
       color: Color(0xFFE07B54),
       preview: _QueuePreview(),
@@ -103,8 +97,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.playlist_play_rounded,
       title: 'Playlists',
-      detail:
-          'Load a playlist, compare against a local folder to spot '
+      detail: 'Load a playlist, compare against a local folder to spot '
           'missing tracks, and batch-download.',
       color: Color(0xFFAB6BD9),
     ),
@@ -113,8 +106,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.upload_file_rounded,
       title: 'Bulk Import',
-      detail:
-          'Paste a list of names or import a text/CSV file to enqueue '
+      detail: 'Paste a list of names or import a text/CSV file to enqueue '
           'many items at once.',
       color: Color(0xFF5BA85A),
     ),
@@ -123,8 +115,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.bar_chart_rounded,
       title: 'Stats',
-      detail:
-          'See download totals, success rate, format breakdown, top '
+      detail: 'See download totals, success rate, format breakdown, top '
           'artists, and trends over time.',
       color: Color(0xFFD4A017),
     ),
@@ -133,8 +124,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.settings_rounded,
       title: 'Settings',
-      detail:
-          'Choose download folder, quality defaults (1080p video, '
+      detail: 'Choose download folder, quality defaults (1080p video, '
           '320\u202Fkbps audio), FFmpeg options, retry behaviour, and '
           'appearance.',
       color: Color(0xFF607D8B),
@@ -144,8 +134,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.transform_rounded,
       title: 'Convert',
-      detail:
-          'Convert any local audio/video file between popular formats '
+      detail: 'Convert any local audio/video file between popular formats '
           'using FFmpeg.',
       color: Color(0xFFE57373),
     ),
@@ -154,7 +143,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.list_alt_rounded,
       title: 'Logs',
-      detail: 'Inspect the internal application log. Copy or clear at any time.',
+      detail:
+          'Inspect the internal application log. Copy or clear at any time.',
       color: Color(0xFF78909C),
     ),
 
@@ -170,8 +160,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.music_note_rounded,
       title: 'Player',
-      detail:
-          'Built-in media player for your files. Playback, shuffle, '
+      detail: 'Built-in media player for your files. Playback, shuffle, '
           'repeat, and a simple library.',
       color: Color(0xFF7E57C2),
     ),
@@ -180,8 +169,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.toll_rounded,
       title: 'Support Us',
-      detail:
-          'You can help the project by mining QUBIC tokens with idle '
+      detail: 'You can help the project by mining QUBIC tokens with idle '
           'CPU cycles. It\u2019s 100\u202F% opt-in, battery-aware, '
           'and runs in sandboxed isolates.\n\n'
           'Enable it now or later from Settings. Every bit helps!',
@@ -210,8 +198,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _slideAnim = Tween<Offset>(
       begin: const Offset(0, 0.08),
       end: Offset.zero,
-    ).animate(
-        CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
   }
 
   @override
@@ -246,8 +233,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   void _cycleTheme() {
     final next = switch (_themeMode) {
-      ThemeMode.light  => ThemeMode.dark,
-      ThemeMode.dark   => ThemeMode.system,
+      ThemeMode.light => ThemeMode.dark,
+      ThemeMode.dark => ThemeMode.system,
       ThemeMode.system => ThemeMode.light,
     };
     setState(() => _themeMode = next);
@@ -255,14 +242,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   IconData get _themeIcon => switch (_themeMode) {
-        ThemeMode.light  => Icons.light_mode_rounded,
-        ThemeMode.dark   => Icons.dark_mode_rounded,
+        ThemeMode.light => Icons.light_mode_rounded,
+        ThemeMode.dark => Icons.dark_mode_rounded,
         ThemeMode.system => Icons.brightness_auto_rounded,
       };
 
   String get _themeLabel => switch (_themeMode) {
-        ThemeMode.light  => 'Light',
-        ThemeMode.dark   => 'Dark',
+        ThemeMode.light => 'Light',
+        ThemeMode.dark => 'Dark',
         ThemeMode.system => 'Auto',
       };
 
@@ -389,8 +376,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 onPressed: _back,
                 style: TextButton.styleFrom(
                   foregroundColor: onSurface.withValues(alpha: 0.65),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
                 icon: const Icon(Icons.arrow_back_ios_rounded, size: 15),
                 label: const Text(
@@ -404,8 +391,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 onPressed: widget.onFinish,
                 style: TextButton.styleFrom(
                   foregroundColor: onSurface.withValues(alpha: 0.55),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
                 child: const Text(
                   'Skip',
@@ -758,8 +745,7 @@ class _SearchPreview extends StatelessWidget {
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               hintText: 'Search or paste a link\u2026',
               hintStyle: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.withValues(alpha: 0.7)),
+                  fontSize: 13, color: Colors.grey.withValues(alpha: 0.7)),
               prefixIcon: const Icon(Icons.search_rounded, size: 18),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -859,12 +845,11 @@ class _QueuePreview extends StatelessWidget {
                           children: [
                             Text(item.label,
                                 style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500),
+                                    fontSize: 13, fontWeight: FontWeight.w500),
                                 overflow: TextOverflow.ellipsis),
                             Text(item.status,
-                                style: TextStyle(
-                                    fontSize: 11, color: item.color)),
+                                style:
+                                    TextStyle(fontSize: 11, color: item.color)),
                           ],
                         ),
                       ),
@@ -901,7 +886,8 @@ class _SupportPreview extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.shield_outlined, size: 18, color: Colors.green.shade600),
+              Icon(Icons.shield_outlined,
+                  size: 18, color: Colors.green.shade600),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text('Mines QUBIC tokens for the developer',
@@ -912,7 +898,8 @@ class _SupportPreview extends StatelessWidget {
           const SizedBox(height: 6),
           Row(
             children: [
-              Icon(Icons.battery_charging_full, size: 18, color: Colors.green.shade600),
+              Icon(Icons.battery_charging_full,
+                  size: 18, color: Colors.green.shade600),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text('Auto-pauses below 30% battery',
@@ -923,7 +910,8 @@ class _SupportPreview extends StatelessWidget {
           const SizedBox(height: 6),
           Row(
             children: [
-              Icon(Icons.pause_circle_outline, size: 18, color: Colors.green.shade600),
+              Icon(Icons.pause_circle_outline,
+                  size: 18, color: Colors.green.shade600),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text('One tap to stop, instantly',
@@ -943,9 +931,7 @@ class _SupportPreview extends StatelessWidget {
               child: Text(
                 'Enable in Settings \u2192 Support the Project',
                 style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: accent),
+                    fontSize: 12, fontWeight: FontWeight.w600, color: accent),
               ),
             ),
           ),

@@ -18,7 +18,8 @@ class InstallerService {
     var support = await PlatformDirs.getAppSupportDir();
     support ??= await PlatformDirs.getFilesDir();
     support ??= await Directory.systemTemp.createTemp('ffmpeg_install');
-    final downloadDir = Directory('${support.path}${Platform.pathSeparator}ffmpeg');
+    final downloadDir =
+        Directory('${support.path}${Platform.pathSeparator}ffmpeg');
     await downloadDir.create(recursive: true);
     final zipPath = '${downloadDir.path}${Platform.pathSeparator}ffmpeg.zip';
 
@@ -37,7 +38,8 @@ class InstallerService {
     final inStream = InputFileStream(zipFile.path);
     final archive = ZipDecoder().decodeBuffer(inStream);
     for (final file in archive) {
-      final outPath = '${downloadDir.path}${Platform.pathSeparator}${file.name}';
+      final outPath =
+          '${downloadDir.path}${Platform.pathSeparator}${file.name}';
       if (file.isFile) {
         final data = file.content as List<int>;
         await File(outPath).create(recursive: true);
@@ -56,12 +58,14 @@ class InstallerService {
     return ffmpegExe.path;
   }
 
-  Future<File> _downloadToFile(Uri url, String outPath, {void Function(int percent, String message)? onProgress}) async {
+  Future<File> _downloadToFile(Uri url, String outPath,
+      {void Function(int percent, String message)? onProgress}) async {
     final client = http.Client();
     try {
-      final response = await client.send(http.Request('GET', url))
-          .timeout(const Duration(seconds: 30),
-              onTimeout: () => throw TimeoutException('FFmpeg download request timed out'));
+      final response = await client.send(http.Request('GET', url)).timeout(
+          const Duration(seconds: 30),
+          onTimeout: () =>
+              throw TimeoutException('FFmpeg download request timed out'));
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception('Download failed: ${response.statusCode}');
       }
@@ -74,7 +78,8 @@ class InstallerService {
       final streamData = response.stream.timeout(
         const Duration(seconds: 60),
         onTimeout: (sinkErr) {
-          sinkErr.addError(TimeoutException('FFmpeg download stalled – no data for 60 seconds'));
+          sinkErr.addError(TimeoutException(
+              'FFmpeg download stalled – no data for 60 seconds'));
           sinkErr.close();
         },
       );

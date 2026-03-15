@@ -13,21 +13,21 @@ class AppSettings {
   final int convertCleanupMinutes;
   final int convertMaxAgeHours;
 
-  final String themeMode;             // 'system', 'light', 'dark'
+  final String themeMode; // 'system', 'light', 'dark'
 
   // ── New feature settings ─────────────────────────────────────────────
-  final String defaultAudioFormat;   // mp3, m4a
-  final int defaultBitrate;          // kbps (0 = format default)
-  final int minimumBitrate;          // quality gate; 0 = disabled
-  final String namingTemplate;       // file organisation template
-  final String? soundcloudClientId;  // optional SoundCloud API key
+  final String defaultAudioFormat; // mp3, m4a
+  final int defaultBitrate; // kbps (0 = format default)
+  final int minimumBitrate; // quality gate; 0 = disabled
+  final String namingTemplate; // file organisation template
+  final String? soundcloudClientId; // optional SoundCloud API key
 
   // ── Quality settings ──────────────────────────────────────────────────
   final String preferredVideoQuality; // '360p', '480p', '720p', '1080p', 'best'
-  final int preferredAudioBitrate;    // 128, 192, 256, 320 (kbps)
+  final int preferredAudioBitrate; // 128, 192, 256, 320 (kbps)
 
   // ── yt-dlp settings ───────────────────────────────────────────────────
-  final String? ytDlpPath;            // custom binary path (null = auto-resolve)
+  final String? ytDlpPath; // custom binary path (null = auto-resolve)
 
   const AppSettings({
     required this.downloadDir,
@@ -110,14 +110,16 @@ class AppSettings {
       maxWorkers: maxWorkers ?? this.maxWorkers,
       showNotifications: showNotifications ?? this.showNotifications,
       previewMaxEntries: previewMaxEntries ?? this.previewMaxEntries,
-      previewExpandPlaylist: previewExpandPlaylist ?? this.previewExpandPlaylist,
+      previewExpandPlaylist:
+          previewExpandPlaylist ?? this.previewExpandPlaylist,
       ffmpegPath: ffmpegPath ?? this.ffmpegPath,
       autoInstallFfmpeg: autoInstallFfmpeg ?? this.autoInstallFfmpeg,
       autoRetryInstall: autoRetryInstall ?? this.autoRetryInstall,
       retryBackoffSeconds: retryBackoffSeconds ?? this.retryBackoffSeconds,
       retryCount: retryCount ?? this.retryCount,
       convertMaxMb: convertMaxMb ?? this.convertMaxMb,
-      convertCleanupMinutes: convertCleanupMinutes ?? this.convertCleanupMinutes,
+      convertCleanupMinutes:
+          convertCleanupMinutes ?? this.convertCleanupMinutes,
       convertMaxAgeHours: convertMaxAgeHours ?? this.convertMaxAgeHours,
       themeMode: themeMode ?? this.themeMode,
       defaultAudioFormat: defaultAudioFormat ?? this.defaultAudioFormat,
@@ -125,13 +127,16 @@ class AppSettings {
       minimumBitrate: minimumBitrate ?? this.minimumBitrate,
       namingTemplate: namingTemplate ?? this.namingTemplate,
       soundcloudClientId: soundcloudClientId ?? this.soundcloudClientId,
-      preferredVideoQuality: preferredVideoQuality ?? this.preferredVideoQuality,
-      preferredAudioBitrate: preferredAudioBitrate ?? this.preferredAudioBitrate,
+      preferredVideoQuality:
+          preferredVideoQuality ?? this.preferredVideoQuality,
+      preferredAudioBitrate:
+          preferredAudioBitrate ?? this.preferredAudioBitrate,
       ytDlpPath: ytDlpPath ?? this.ytDlpPath,
     );
   }
 
-  factory AppSettings.fromJson(Map<String, dynamic> json, {required String fallbackDownloadDir}) {
+  factory AppSettings.fromJson(Map<String, dynamic> json,
+      {required String fallbackDownloadDir}) {
     return AppSettings(
       downloadDir: (json['download_dir'] as String?)?.trim().isNotEmpty == true
           ? json['download_dir'] as String
@@ -146,7 +151,8 @@ class AppSettings {
       retryBackoffSeconds: (json['retry_backoff'] as num?)?.toInt() ?? 3,
       retryCount: (json['retry_count'] as num?)?.toInt() ?? 2,
       convertMaxMb: (json['convert_max_mb'] as num?)?.toInt() ?? 0,
-      convertCleanupMinutes: (json['convert_cleanup_minutes'] as num?)?.toInt() ?? 15,
+      convertCleanupMinutes:
+          (json['convert_cleanup_minutes'] as num?)?.toInt() ?? 15,
       convertMaxAgeHours: (json['convert_max_age_hours'] as num?)?.toInt() ?? 2,
       themeMode: json['theme_mode'] as String? ?? 'system',
       defaultAudioFormat: json['default_audio_format'] as String? ?? 'mp3',
@@ -154,8 +160,10 @@ class AppSettings {
       minimumBitrate: (json['minimum_bitrate'] as num?)?.toInt() ?? 0,
       namingTemplate: json['naming_template'] as String? ?? '{artist}/{title}',
       soundcloudClientId: json['soundcloud_client_id'] as String?,
-      preferredVideoQuality: json['preferred_video_quality'] as String? ?? '1080p',
-      preferredAudioBitrate: (json['preferred_audio_bitrate'] as num?)?.toInt() ?? 320,
+      preferredVideoQuality:
+          json['preferred_video_quality'] as String? ?? '1080p',
+      preferredAudioBitrate:
+          (json['preferred_audio_bitrate'] as num?)?.toInt() ?? 320,
       ytDlpPath: (json['yt_dlp_path'] as String?)?.trim(),
     );
   }

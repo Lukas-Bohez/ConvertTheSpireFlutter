@@ -55,7 +55,9 @@ class UpdateService {
       for (final asset in assets) {
         final name = (asset['name'] as String? ?? '').toLowerCase();
         final url = asset['browser_download_url'] as String? ?? '';
-        if (name.contains('rebor') && name.endsWith('.zip') && windowsUrl.isEmpty) windowsUrl = url;
+        if (name.contains('rebor') &&
+            name.endsWith('.zip') &&
+            windowsUrl.isEmpty) windowsUrl = url;
         if (name.endsWith('.apk') && androidUrl.isEmpty) androidUrl = url;
         // Prefer AppImage on Linux if present; fall back to linux.zip
         if (name.endsWith('.appimage')) {

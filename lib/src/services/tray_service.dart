@@ -41,10 +41,10 @@ class TrayService with TrayListener, WindowListener {
     if (Platform.isWindows) {
       // tray_manager on Windows requires .ico format.
       final exeDir = p.dirname(Platform.resolvedExecutable);
-      final ico = p.join(exeDir, 'data', 'flutter_assets', 'assets',
-          'icons', 'app_icon.ico');
-      final png = p.join(exeDir, 'data', 'flutter_assets', 'assets',
-          'icons', 'favicon-192x192.png');
+      final ico = p.join(
+          exeDir, 'data', 'flutter_assets', 'assets', 'icons', 'app_icon.ico');
+      final png = p.join(exeDir, 'data', 'flutter_assets', 'assets', 'icons',
+          'favicon-192x192.png');
       iconPath = File(ico).existsSync() ? ico : png;
     } else {
       iconPath = 'assets/icons/favicon-192x192.png';

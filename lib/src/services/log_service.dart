@@ -3,7 +3,8 @@ import 'package:flutter/foundation.dart';
 class LogService {
   static const int _maxEntries = 500;
 
-  final ValueNotifier<List<String>> logs = ValueNotifier<List<String>>(<String>[]);
+  final ValueNotifier<List<String>> logs =
+      ValueNotifier<List<String>>(<String>[]);
 
   void add(String message) {
     final timestamp = DateTime.now().toIso8601String().substring(11, 19);

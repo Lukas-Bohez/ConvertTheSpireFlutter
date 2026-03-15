@@ -18,7 +18,8 @@ class ConvertService {
 
   ConvertService({required this.ffmpeg});
 
-  Future<ConvertResult> convertFile(File input, String target, {required String? ffmpegPath}) async {
+  Future<ConvertResult> convertFile(File input, String target,
+      {required String? ffmpegPath}) async {
     final targetLower = target.toLowerCase().replaceAll('.', '');
     final inputName = _sanitizeFileName(input.uri.pathSegments.last);
     final baseName = _stripExtension(inputName);
@@ -27,7 +28,8 @@ class ConvertService {
     // Avoid reading the entire file into memory for media conversions;
     // FFmpeg can operate on file paths directly.
     if (_isMediaTarget(targetLower)) {
-      return _convertMedia(input, targetLower, baseName, ffmpegPath: ffmpegPath);
+      return _convertMedia(input, targetLower, baseName,
+          ffmpegPath: ffmpegPath);
     }
 
     // For other conversions we need the bytes; read them on demand.
@@ -52,7 +54,8 @@ class ConvertService {
     if (targetLower == 'txt') {
       final text = _extractTextContent(inputBytes, inputExt);
       if (text == null || text.trim().isEmpty) {
-        return _report(inputName, 'txt', 'Text extraction failed – unsupported or binary file');
+        return _report(inputName, 'txt',
+            'Text extraction failed – unsupported or binary file');
       }
       return ConvertResult(
         name: '$baseName.txt',
@@ -72,13 +75,25 @@ class ConvertService {
   // ===== Format detection helpers =====
 
   bool _isImageTarget(String target) {
-    return <String>{'jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tiff', 'tif'}.contains(target);
+    return <String>{'jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tiff', 'tif'}
+        .contains(target);
   }
 
   bool _isMediaTarget(String target) {
     return <String>{
-      'mp3', 'm4a', 'mp4', 'avi', 'mov', 'mkv', 'wmv', 'webm',
-      'wav', 'flac', 'ogg', 'aac', 'wma',
+      'mp3',
+      'm4a',
+      'mp4',
+      'avi',
+      'mov',
+      'mkv',
+      'wmv',
+      'webm',
+      'wav',
+      'flac',
+      'ogg',
+      'aac',
+      'wma',
     }.contains(target);
   }
 
@@ -142,11 +157,11 @@ class ConvertService {
   /// Detects PDF magic bytes (%PDF-)
   bool _looksLikePdf(List<int> bytes) {
     if (bytes.length < 5) return false;
-    return bytes[0] == 0x25 &&  // %
-           bytes[1] == 0x50 &&  // P
-           bytes[2] == 0x44 &&  // D
-           bytes[3] == 0x46 &&  // F
-           bytes[4] == 0x2D;    // -
+    return bytes[0] == 0x25 && // %
+        bytes[1] == 0x50 && // P
+        bytes[2] == 0x44 && // D
+        bytes[3] == 0x46 && // F
+        bytes[4] == 0x2D; // -
   }
 
   /// Extracts text from a PDF by parsing content streams.
@@ -240,8 +255,12 @@ class ConvertService {
       final archive = ZipDecoder().decodeBytes(bytes);
       final buffer = StringBuffer();
       for (final file in archive) {
-        if (file.isFile && (file.name.endsWith('.xhtml') || file.name.endsWith('.html') || file.name.endsWith('.htm'))) {
-          final content = utf8.decode(file.content as List<int>, allowMalformed: true);
+        if (file.isFile &&
+            (file.name.endsWith('.xhtml') ||
+                file.name.endsWith('.html') ||
+                file.name.endsWith('.htm'))) {
+          final content =
+              utf8.decode(file.content as List<int>, allowMalformed: true);
           buffer.writeln(_stripHtmlTags(content));
           buffer.writeln();
         }
@@ -272,19 +291,34 @@ class ConvertService {
 
   String _stripHtmlTags(String html) {
     // Remove script and style blocks first
-    var clean = html.replaceAll(RegExp(r'<script[^>]*>.*?</script>', caseSensitive: false, dotAll: true), '');
-    clean = clean.replaceAll(RegExp(r'<style[^>]*>.*?</style>', caseSensitive: false, dotAll: true), '');
+    var clean = html.replaceAll(
+        RegExp(r'<script[^>]*>.*?</script>',
+            caseSensitive: false, dotAll: true),
+        '');
+    clean = clean.replaceAll(
+        RegExp(r'<style[^>]*>.*?</style>', caseSensitive: false, dotAll: true),
+        '');
     // Replace block elements with newlines
-    clean = clean.replaceAll(RegExp(r'<(br|p|div|h[1-6]|li|tr)[^>]*>', caseSensitive: false), '\n');
+    clean = clean.replaceAll(
+        RegExp(r'<(br|p|div|h[1-6]|li|tr)[^>]*>', caseSensitive: false), '\n');
     // Strip remaining tags
     clean = clean.replaceAll(RegExp(r'<[^>]+>'), '');
     // Decode common entities
-    clean = clean.replaceAll('&amp;', '&').replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&quot;', '"').replaceAll('&#39;', "'").replaceAll('&nbsp;', ' ');
+    clean = clean
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .replaceAll('&nbsp;', ' ');
     return clean.trim();
   }
 
   String _stripXmlTags(String xml) {
-    return xml.replaceAll(RegExp(r'<[^>]+>'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+    return xml
+        .replaceAll(RegExp(r'<[^>]+>'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 
   /// Heuristic: checks if text is mostly printable characters
@@ -301,13 +335,15 @@ class ConvertService {
 
   // ===== Archive =====
 
-  ConvertResult _zipBytes(List<int> inputBytes, String outputName, String originalName) {
+  ConvertResult _zipBytes(
+      List<int> inputBytes, String outputName, String originalName) {
     final archive = Archive();
     archive.addFile(ArchiveFile(originalName, inputBytes.length, inputBytes));
     final encoded = ZipEncoder().encode(archive) ?? <int>[];
     return ConvertResult(
       name: outputName,
-      mime: outputName.endsWith('.cbz') ? 'application/x-cbz' : 'application/zip',
+      mime:
+          outputName.endsWith('.cbz') ? 'application/x-cbz' : 'application/zip',
       bytes: encoded,
       message: 'Archived to ${outputName.endsWith(".cbz") ? "CBZ" : "ZIP"}',
     );
@@ -315,7 +351,8 @@ class ConvertService {
 
   // ===== Image =====
 
-  ConvertResult _convertImage(Uint8List inputBytes, String target, String baseName) {
+  ConvertResult _convertImage(
+      Uint8List inputBytes, String target, String baseName) {
     final image = img.decodeImage(inputBytes);
     if (image == null) {
       return _report(baseName, target, 'Image decode failed');
@@ -375,20 +412,26 @@ class ConvertService {
 
   // ===== Media (audio/video via FFmpeg) =====
 
-  Future<ConvertResult> _convertMedia(File input, String target, String baseName, {required String? ffmpegPath}) async {
+  Future<ConvertResult> _convertMedia(
+      File input, String target, String baseName,
+      {required String? ffmpegPath}) async {
     if (kIsWeb) {
-      return _report(baseName, target, 'Media conversion is not supported on web. Use the desktop or mobile app.');
+      return _report(baseName, target,
+          'Media conversion is not supported on web. Use the desktop or mobile app.');
     }
     final tempDir = await PlatformDirs.getCacheDir();
-    final outputPath = '${tempDir.path}${Platform.pathSeparator}$baseName.$target';
+    final outputPath =
+        '${tempDir.path}${Platform.pathSeparator}$baseName.$target';
 
     final args = <String>[
       '-y',
-      '-i', input.path,
+      '-i',
+      input.path,
     ];
 
     // Audio-only targets: strip video track
-    if (<String>{'mp3', 'm4a', 'wav', 'flac', 'ogg', 'aac', 'wma'}.contains(target)) {
+    if (<String>{'mp3', 'm4a', 'wav', 'flac', 'ogg', 'aac', 'wma'}
+        .contains(target)) {
       args.add('-vn');
       // Add codec settings per format
       switch (target) {
@@ -421,7 +464,8 @@ class ConvertService {
 
       final outputFile = File(outputPath);
       if (!await outputFile.exists()) {
-        return _report(baseName, target, 'FFmpeg completed but output file was not created');
+        return _report(baseName, target,
+            'FFmpeg completed but output file was not created');
       }
 
       final outputBytes = await outputFile.readAsBytes();
@@ -441,7 +485,8 @@ class ConvertService {
 
   // ===== PDF generation =====
 
-  Future<ConvertResult> _convertToPdf(Uint8List inputBytes, String inputName, String baseName, String inputExt) async {
+  Future<ConvertResult> _convertToPdf(Uint8List inputBytes, String inputName,
+      String baseName, String inputExt) async {
     final doc = pw.Document();
     final image = img.decodeImage(inputBytes);
     if (image != null) {
@@ -464,12 +509,14 @@ class ConvertService {
           final chunk = lines.skip(i).take(linesPerPage).join('\n');
           doc.addPage(
             pw.Page(
-              build: (context) => pw.Text(chunk, style: const pw.TextStyle(fontSize: 10)),
+              build: (context) =>
+                  pw.Text(chunk, style: const pw.TextStyle(fontSize: 10)),
             ),
           );
         }
       } else {
-        final report = _buildReport(inputName, 'pdf', 'Unsupported input for PDF conversion');
+        final report = _buildReport(
+            inputName, 'pdf', 'Unsupported input for PDF conversion');
         doc.addPage(
           pw.Page(
             build: (context) => pw.Text(report),
@@ -492,16 +539,14 @@ class ConvertService {
   ConvertResult _buildEpub(String text, String baseName) {
     final bookId = const Uuid().v4();
     final safeTitle = baseName.isEmpty ? 'Document' : baseName;
-    final containerXml =
-        '<?xml version="1.0" encoding="UTF-8"?>\n'
+    final containerXml = '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">\n'
         '  <rootfiles>\n'
         '    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>\n'
         '  </rootfiles>\n'
         '</container>\n';
 
-    final contentOpf =
-        '<?xml version="1.0" encoding="UTF-8"?>\n'
+    final contentOpf = '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="bookid" version="2.0">\n'
         '  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">\n'
         '    <dc:title>$safeTitle</dc:title>\n'
@@ -516,9 +561,11 @@ class ConvertService {
         '  </spine>\n'
         '</package>\n';
 
-    final escaped = text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-    final chapterXhtml =
-        '<?xml version="1.0" encoding="UTF-8"?>\n'
+    final escaped = text
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+    final chapterXhtml = '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<!DOCTYPE html>\n'
         '<html xmlns="http://www.w3.org/1999/xhtml">\n'
         '<head>\n'
@@ -537,9 +584,12 @@ class ConvertService {
     final opfBytes = utf8.encode(contentOpf);
     final chapterBytes = utf8.encode(chapterXhtml);
     archive.addFile(ArchiveFile('mimetype', mimeBytes.length, mimeBytes));
-    archive.addFile(ArchiveFile('META-INF/container.xml', containerBytes.length, containerBytes));
-    archive.addFile(ArchiveFile('OEBPS/content.opf', opfBytes.length, opfBytes));
-    archive.addFile(ArchiveFile('OEBPS/chapter1.xhtml', chapterBytes.length, chapterBytes));
+    archive.addFile(ArchiveFile(
+        'META-INF/container.xml', containerBytes.length, containerBytes));
+    archive
+        .addFile(ArchiveFile('OEBPS/content.opf', opfBytes.length, opfBytes));
+    archive.addFile(
+        ArchiveFile('OEBPS/chapter1.xhtml', chapterBytes.length, chapterBytes));
 
     final bytes = ZipEncoder().encode(archive) ?? <int>[];
     return ConvertResult(

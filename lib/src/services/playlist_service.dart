@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:youtube_explode_dart/youtube_explode_dart.dart' hide SearchResult;
+import 'package:youtube_explode_dart/youtube_explode_dart.dart'
+    hide SearchResult;
 
 import '../models/search_result.dart';
 
@@ -18,13 +19,15 @@ class PlaylistService {
 
   // ─── YouTube playlists ───────────────────────────────────────────────────
 
-  Future<List<SearchResult>> getYouTubePlaylistTracks(String playlistUrl, {int? maxVideos}) async {
+  Future<List<SearchResult>> getYouTubePlaylistTracks(String playlistUrl,
+      {int? maxVideos}) async {
     final playlistId = PlaylistId(playlistUrl);
     final cap = maxVideos ?? _defaultMaxPlaylistVideos;
     final videos = <Video>[];
 
     try {
-      final stream = _yt.playlists.getVideos(playlistId).timeout(_playlistStreamTimeout);
+      final stream =
+          _yt.playlists.getVideos(playlistId).timeout(_playlistStreamTimeout);
       await for (final video in stream) {
         videos.add(video);
         if (videos.length >= cap) break;
@@ -81,11 +84,13 @@ class PlaylistService {
 
   // ─── M3U generation ──────────────────────────────────────────────────────
 
-  Future<void> generateM3U(List<SearchResult> tracks, String outputPath, {String format = 'mp3'}) async {
+  Future<void> generateM3U(List<SearchResult> tracks, String outputPath,
+      {String format = 'mp3'}) async {
     final ext = format.toLowerCase();
     final buf = StringBuffer('#EXTM3U\n');
     for (final track in tracks) {
-      buf.writeln('#EXTINF:${track.duration.inSeconds},${track.artist} - ${track.title}');
+      buf.writeln(
+          '#EXTINF:${track.duration.inSeconds},${track.artist} - ${track.title}');
       buf.writeln('${track.artist}/${track.title}.$ext');
     }
     final file = File(outputPath);
@@ -95,10 +100,12 @@ class PlaylistService {
   /// Generate an M3U using actual local file paths from `TrackMatch` results.
   /// This ensures the M3U contains real file locations (with correct extensions)
   /// when a playlist has been compared against a folder.
-  Future<void> generateM3UFromMatches(List<TrackMatch> matches, String outputPath) async {
+  Future<void> generateM3UFromMatches(
+      List<TrackMatch> matches, String outputPath) async {
     final buf = StringBuffer('#EXTM3U\n');
     for (final m in matches) {
-      buf.writeln('#EXTINF:${m.track.duration.inSeconds},${m.track.artist} - ${m.track.title}');
+      buf.writeln(
+          '#EXTINF:${m.track.duration.inSeconds},${m.track.artist} - ${m.track.title}');
       buf.writeln(m.filePath);
     }
     final file = File(outputPath);
@@ -141,7 +148,17 @@ class PlaylistService {
     }
 
     // ── 1. Index all audio files in the folder ──────────────────────────
-    final audioExtensions = {'.mp3', '.flac', '.m4a', '.opus', '.ogg', '.wav', '.aac', '.wma', '.webm'};
+    final audioExtensions = {
+      '.mp3',
+      '.flac',
+      '.m4a',
+      '.opus',
+      '.ogg',
+      '.wav',
+      '.aac',
+      '.wma',
+      '.webm'
+    };
     final localFiles = <_LocalFile>[];
 
     await for (final entity in dir.list(recursive: recursive)) {
@@ -166,7 +183,8 @@ class PlaylistService {
     final missing = <SearchResult>[];
 
     for (final track in playlistTracks) {
-      final result = _findBestMatch(track, localFiles, usedFileIndices, matchThreshold);
+      final result =
+          _findBestMatch(track, localFiles, usedFileIndices, matchThreshold);
       if (result != null) {
         matched.add(result);
         usedFileIndices.add(result._fileIndex);
@@ -233,7 +251,8 @@ class PlaylistService {
       }
 
       // Strategy 2 – normalised containment (either direction)
-      if (f.normalised.contains(trackTitle) || trackTitle.contains(f.normalised)) {
+      if (f.normalised.contains(trackTitle) ||
+          trackTitle.contains(f.normalised)) {
         final score = 0.90;
         if (score > bestScore) {
           bestScore = score;
@@ -300,7 +319,8 @@ class PlaylistService {
     s = s.replaceAll(RegExp(r'\(.*?\)'), '');
     s = s.replaceAll(RegExp(r'\[.*?\]'), '');
     // Remove common YouTube suffixes
-    s = s.replaceAll(RegExp(r'official\s*(music\s*)?video', caseSensitive: false), '');
+    s = s.replaceAll(
+        RegExp(r'official\s*(music\s*)?video', caseSensitive: false), '');
     s = s.replaceAll(RegExp(r'official\s*audio', caseSensitive: false), '');
     s = s.replaceAll(RegExp(r'lyrics?\s*video', caseSensitive: false), '');
     s = s.replaceAll(RegExp(r'visuali[sz]er', caseSensitive: false), '');
@@ -315,15 +335,25 @@ class PlaylistService {
   /// Tokenise into unique lowercase words ≥ 2 chars.
   static Set<String> _tokenise(String input) {
     final n = _normalise(input);
-    return n
-        .split(' ')
-        .where((w) => w.length >= 2)
-        .toSet();
+    return n.split(' ').where((w) => w.length >= 2).toSet();
   }
 
   static const _stopWords = <String>{
-    'the', 'and', 'for', 'feat', 'featuring', 'with', 'from', 'remix',
-    'mix', 'edit', 'version', 'original', 'extended', 'radio', 'live',
+    'the',
+    'and',
+    'for',
+    'feat',
+    'featuring',
+    'with',
+    'from',
+    'remix',
+    'mix',
+    'edit',
+    'version',
+    'original',
+    'extended',
+    'radio',
+    'live',
   };
 
   static String _extensionOf(String path) {
@@ -413,9 +443,9 @@ class TrackMatch {
   final SearchResult track;
   final String filePath;
   final String fileName;
-  final double confidence;     // 0..1
+  final double confidence; // 0..1
   final MatchMethod method;
-  final int _fileIndex;        // internal index for de-duplication
+  final int _fileIndex; // internal index for de-duplication
 
   const TrackMatch({
     required this.track,

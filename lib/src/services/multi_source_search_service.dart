@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import 'package:youtube_explode_dart/youtube_explode_dart.dart' hide SearchResult;
+import 'package:youtube_explode_dart/youtube_explode_dart.dart'
+    hide SearchResult;
 
 import '../models/search_result.dart';
 
@@ -63,7 +64,8 @@ class SoundCloudSearcher {
           id: track['id'].toString(),
           title: track['title'] ?? '',
           artist: track['user']?['username'] ?? '',
-          duration: Duration(milliseconds: (track['duration'] as num?)?.toInt() ?? 0),
+          duration:
+              Duration(milliseconds: (track['duration'] as num?)?.toInt() ?? 0),
           thumbnailUrl: track['artwork_url'] ?? '',
           source: 'soundcloud',
         );
@@ -90,17 +92,19 @@ class MultiSourceSearchService {
   });
 
   /// Search YouTube and SoundCloud in parallel, merge and rank results.
-  Future<List<SearchResult>> searchAll(String query, {int limitPerSource = 10}) async {
+  Future<List<SearchResult>> searchAll(String query,
+      {int limitPerSource = 10}) async {
     final per = perSourceTimeout;
     final global = globalTimeout;
 
-    final futYouTube = youtubeSearcher.search(query, limit: limitPerSource)
-      .timeout(per, onTimeout: () => <SearchResult>[]);
+    final futYouTube = youtubeSearcher
+        .search(query, limit: limitPerSource)
+        .timeout(per, onTimeout: () => <SearchResult>[]);
     final futSoundCloud = _safeSoundCloudSearch(query, limit: limitPerSource)
-      .timeout(per, onTimeout: () => <SearchResult>[]);
+        .timeout(per, onTimeout: () => <SearchResult>[]);
 
     final results = await Future.wait([futYouTube, futSoundCloud])
-      .timeout(global, onTimeout: () => [<SearchResult>[], <SearchResult>[]]);
+        .timeout(global, onTimeout: () => [<SearchResult>[], <SearchResult>[]]);
 
     final combined = results.expand((list) => list).toList();
 
@@ -119,7 +123,8 @@ class MultiSourceSearchService {
     return combined;
   }
 
-  Future<List<SearchResult>> _safeSoundCloudSearch(String query, {int limit = 10}) async {
+  Future<List<SearchResult>> _safeSoundCloudSearch(String query,
+      {int limit = 10}) async {
     try {
       return await soundcloudSearcher.search(query, limit: limit);
     } catch (_) {

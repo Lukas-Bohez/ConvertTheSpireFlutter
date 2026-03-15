@@ -24,7 +24,9 @@ class YouTubeService {
         if (parsedId != null && parsedId.isNotEmpty) {
           if (!_isAutoMixPlaylist(parsedId)) {
             final playlistId = PlaylistId(parsedId);
-            final playlistVideos = _yt.playlists.getVideos(playlistId).timeout(_playlistItemTimeout);
+            final playlistVideos = _yt.playlists
+                .getVideos(playlistId)
+                .timeout(_playlistItemTimeout);
             final items = <PreviewItem>[];
             int index = 0;
 

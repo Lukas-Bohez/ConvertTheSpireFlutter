@@ -44,7 +44,8 @@ class _SearchScreenState extends State<SearchScreen>
     });
 
     try {
-      final results = await widget.searchService.searchAll(query, limitPerSource: 15);
+      final results =
+          await widget.searchService.searchAll(query, limitPerSource: 15);
       if (!mounted) return;
       setState(() {
         _results = results;
@@ -58,7 +59,6 @@ class _SearchScreenState extends State<SearchScreen>
       });
     }
   }
-
 
   @override
   void dispose() {
@@ -147,7 +147,8 @@ class _SearchScreenState extends State<SearchScreen>
         if (_error != null)
           Padding(
             padding: const EdgeInsets.all(8),
-            child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            child: Text(_error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ),
         Expanded(
           child: ListView.separated(
@@ -201,8 +202,7 @@ class _SearchScreenState extends State<SearchScreen>
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                    fontSize: 12,
-                                    color: cs.onSurfaceVariant),
+                                    fontSize: 12, color: cs.onSurfaceVariant),
                               ),
                               const SizedBox(height: 2),
                               Container(

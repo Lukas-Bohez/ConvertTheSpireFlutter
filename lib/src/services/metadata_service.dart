@@ -32,13 +32,14 @@ class MusicBrainzService {
         return cached.value;
       }
 
-      final query = Uri.encodeComponent('artist:"$artist" AND recording:"$title"');
+      final query =
+          Uri.encodeComponent('artist:"$artist" AND recording:"$title"');
       final url = '$_baseUrl/recording/?query=$query&fmt=json&limit=5';
 
       final response = await _withMbRateLimit(() {
-        return http
-            .get(Uri.parse(url), headers: {'User-Agent': _userAgent})
-            .timeout(const Duration(seconds: 15));
+        return http.get(Uri.parse(url), headers: {
+          'User-Agent': _userAgent
+        }).timeout(const Duration(seconds: 15));
       });
       if (response.statusCode != 200) return null;
 
@@ -50,7 +51,8 @@ class MusicBrainzService {
       final releaseTitle = (best['releases'] as List?)?.firstOrNull;
 
       final result = TrackMetadata(
-        artist: (best['artist-credit'] as List?)?.firstOrNull?['name'] ?? artist,
+        artist:
+            (best['artist-credit'] as List?)?.firstOrNull?['name'] ?? artist,
         title: best['title'] ?? title,
         album: releaseTitle?['title'] ?? 'Singles',
         year: _extractYear(best['first-release-date']),
@@ -101,9 +103,9 @@ class MusicBrainzService {
     final url = '$_baseUrl/recording/$recordingId?inc=genres&fmt=json';
     try {
       final response = await _withMbRateLimit(() {
-        return http
-            .get(Uri.parse(url), headers: {'User-Agent': _userAgent})
-            .timeout(const Duration(seconds: 10));
+        return http.get(Uri.parse(url), headers: {
+          'User-Agent': _userAgent
+        }).timeout(const Duration(seconds: 10));
       });
       if (response.statusCode != 200) return null;
       final data = jsonDecode(response.body);
@@ -141,7 +143,8 @@ class AlbumArtService {
         } catch (_) {}
       }
 
-      final response = await http.get(Uri.parse(thumbnailUrl))
+      final response = await http
+          .get(Uri.parse(thumbnailUrl))
           .timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) return null;
       await file.writeAsBytes(response.bodyBytes);
@@ -187,7 +190,8 @@ class LyricsService {
   Future<void> _lyricsQueue = Future.value();
 
   /// Fetch lyrics (prefer synced/LRC, fallback to plain).
-  Future<String?> fetchLyrics(String artist, String title, {int? durationSeconds}) async {
+  Future<String?> fetchLyrics(String artist, String title,
+      {int? durationSeconds}) async {
     final key = '$artist|$title'.toLowerCase();
     final now = DateTime.now();
     final cached = _lyricsCache[key];

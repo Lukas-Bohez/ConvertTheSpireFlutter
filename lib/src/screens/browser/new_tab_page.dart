@@ -62,197 +62,240 @@ class _NewTabPageState extends State<NewTabPage> {
   }
 
   static const _defaultSites = [
-    {'url': 'https://www.youtube.com', 'title': 'YouTube', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=youtube.com'},
-    {'url': 'https://www.google.com', 'title': 'Google', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=google.com'},
-    {'url': 'https://www.wikipedia.org', 'title': 'Wikipedia', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=wikipedia.org'},
-    {'url': 'https://www.reddit.com', 'title': 'Reddit', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=reddit.com'},
-    {'url': 'https://github.com', 'title': 'GitHub', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=github.com'},
-    {'url': 'https://music.youtube.com', 'title': 'YouTube Music', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=music.youtube.com'},
-    {'url': 'https://soundcloud.com', 'title': 'SoundCloud', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=soundcloud.com'},
-    {'url': 'https://www.twitch.tv', 'title': 'Twitch', 'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=twitch.tv'},
+    {
+      'url': 'https://www.youtube.com',
+      'title': 'YouTube',
+      'favicon':
+          'https://www.google.com/s2/favicons?sz=64&domain_url=youtube.com'
+    },
+    {
+      'url': 'https://www.google.com',
+      'title': 'Google',
+      'favicon':
+          'https://www.google.com/s2/favicons?sz=64&domain_url=google.com'
+    },
+    {
+      'url': 'https://www.wikipedia.org',
+      'title': 'Wikipedia',
+      'favicon':
+          'https://www.google.com/s2/favicons?sz=64&domain_url=wikipedia.org'
+    },
+    {
+      'url': 'https://www.reddit.com',
+      'title': 'Reddit',
+      'favicon':
+          'https://www.google.com/s2/favicons?sz=64&domain_url=reddit.com'
+    },
+    {
+      'url': 'https://github.com',
+      'title': 'GitHub',
+      'favicon':
+          'https://www.google.com/s2/favicons?sz=64&domain_url=github.com'
+    },
+    {
+      'url': 'https://music.youtube.com',
+      'title': 'YouTube Music',
+      'favicon':
+          'https://www.google.com/s2/favicons?sz=64&domain_url=music.youtube.com'
+    },
+    {
+      'url': 'https://soundcloud.com',
+      'title': 'SoundCloud',
+      'favicon':
+          'https://www.google.com/s2/favicons?sz=64&domain_url=soundcloud.com'
+    },
+    {
+      'url': 'https://www.twitch.tv',
+      'title': 'Twitch',
+      'favicon': 'https://www.google.com/s2/favicons?sz=64&domain_url=twitch.tv'
+    },
   ];
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final quickAccessSites = _recentSites.isNotEmpty ? _recentSites : _defaultSites;
+    final quickAccessSites =
+        _recentSites.isNotEmpty ? _recentSites : _defaultSites;
     return Material(
       color: cs.surface,
       child: RepaintBoundary(
         key: _repaintKey,
         child: CustomScrollView(
-      slivers: [
-        const SliverToBoxAdapter(child: SizedBox(height: 32)),
+          slivers: [
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
-        // ── Search bar ──
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search or enter URL',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: cs.surfaceContainerHighest,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(28),
-                  borderSide: BorderSide.none,
+            // ── Search bar ──
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search or enter URL',
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: cs.surfaceContainerHighest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(28),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  textInputAction: TextInputAction.go,
+                  onSubmitted: (val) {
+                    if (val.trim().isNotEmpty) {
+                      widget.onNavigate(val.trim());
+                      _searchController.clear();
+                    }
+                  },
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              textInputAction: TextInputAction.go,
-              onSubmitted: (val) {
-                if (val.trim().isNotEmpty) {
-                  widget.onNavigate(val.trim());
-                  _searchController.clear();
-                }
-              },
-            ),
-          ),
-        ),
-
-        const SliverToBoxAdapter(child: SizedBox(height: 28)),
-
-        // ── Quick access (most visited / suggested) ──
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-                _recentSites.isNotEmpty ? 'Quick Access' : 'Suggested Sites',
-                style: Theme.of(context).textTheme.titleSmall),
-          ),
-        ),
-        const SliverToBoxAdapter(child: SizedBox(height: 8)),
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          sliver: SliverToBoxAdapter(
-            child: LayoutBuilder(builder: (context, constraints) {
-              final width = constraints.maxWidth;
-              final crossAxisCount = width < 500 ? 2 : (width < 900 ? 3 : 4);
-              return GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: crossAxisCount,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childAspectRatio: 1.6,
-                children: quickAccessSites.take(8).map((site) {
-                  final url = site['url'] as String;
-                  final title = site['title'] as String? ?? '';
-                  final favicon = site['favicon'] as String?;
-                  final host = Uri.tryParse(url)?.host ?? url;
-                  final label = title.isNotEmpty ? title : host;
-                  return _QuickAccessTile(
-                    label: label,
-                    faviconUrl: favicon,
-                    onTap: () => widget.onNavigate(url),
-                  );
-                }).toList(),
-              );
-            }),
-          ),
-        ),
-
-        const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-        // ── Favourites horizontal scroll ──
-        if (_favourites.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text('Favourites',
-                  style: Theme.of(context).textTheme.titleSmall),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 48,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _favourites.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final fav = _favourites[index];
-                  final url = fav['url'] as String;
-                  final rawTitle = fav['title'] as String? ?? '';
-                  final host = (Uri.tryParse(url)?.host ?? url)
-                      .replaceFirst('www.', '');
-                  final title = (rawTitle.isNotEmpty &&
-                          rawTitle.toLowerCase() != 'new tab')
-                      ? rawTitle
-                      : host;
-                  return ActionChip(
-                    avatar: const Icon(Icons.star, size: 16),
-                    label: Text(
-                      title,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    onPressed: () => widget.onNavigate(url),
-                  );
-                },
               ),
             ),
-          ),
-        ],
 
-        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
-        // ── Recent history ──
-        if (_recentHistory.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text('Recent',
-                  style: Theme.of(context).textTheme.titleSmall),
+            // ── Quick access (most visited / suggested) ──
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                    _recentSites.isNotEmpty
+                        ? 'Quick Access'
+                        : 'Suggested Sites',
+                    style: Theme.of(context).textTheme.titleSmall),
+              ),
             ),
-          ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final item = _recentHistory[index];
-                final url = item['url'] as String;
-                final title = item['title'] as String? ?? '';
-                final favicon = item['favicon'] as String?;
-                final host = Uri.tryParse(url)?.host ?? url;
-                final time = DateTime.fromMillisecondsSinceEpoch(
-                    item['visited_at'] as int);
-                return ListTile(
-                  leading: _FaviconWidget(faviconUrl: favicon),
-                  title: Text(
-                    title.isNotEmpty ? title : host,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    host,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurfaceVariant,
-                    ),
-                  ),
-                  trailing: Text(
-                    _formatTime(time),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: cs.onSurfaceVariant,
-                    ),
-                  ),
-                  onTap: () => widget.onNavigate(url),
-                );
-              },
-              childCount: _recentHistory.length,
+            const SliverToBoxAdapter(child: SizedBox(height: 8)),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverToBoxAdapter(
+                child: LayoutBuilder(builder: (context, constraints) {
+                  final width = constraints.maxWidth;
+                  final crossAxisCount =
+                      width < 500 ? 2 : (width < 900 ? 3 : 4);
+                  return GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: crossAxisCount,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    childAspectRatio: 1.6,
+                    children: quickAccessSites.take(8).map((site) {
+                      final url = site['url'] as String;
+                      final title = site['title'] as String? ?? '';
+                      final favicon = site['favicon'] as String?;
+                      final host = Uri.tryParse(url)?.host ?? url;
+                      final label = title.isNotEmpty ? title : host;
+                      return _QuickAccessTile(
+                        label: label,
+                        faviconUrl: favicon,
+                        onTap: () => widget.onNavigate(url),
+                      );
+                    }).toList(),
+                  );
+                }),
+              ),
             ),
-          ),
-        ],
 
-        const SliverToBoxAdapter(child: SizedBox(height: 24)),
-      ],
-    ),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+            // ── Favourites horizontal scroll ──
+            if (_favourites.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text('Favourites',
+                      style: Theme.of(context).textTheme.titleSmall),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 48,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _favourites.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final fav = _favourites[index];
+                      final url = fav['url'] as String;
+                      final rawTitle = fav['title'] as String? ?? '';
+                      final host = (Uri.tryParse(url)?.host ?? url)
+                          .replaceFirst('www.', '');
+                      final title = (rawTitle.isNotEmpty &&
+                              rawTitle.toLowerCase() != 'new tab')
+                          ? rawTitle
+                          : host;
+                      return ActionChip(
+                        avatar: const Icon(Icons.star, size: 16),
+                        label: Text(
+                          title,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        onPressed: () => widget.onNavigate(url),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+            // ── Recent history ──
+            if (_recentHistory.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text('Recent',
+                      style: Theme.of(context).textTheme.titleSmall),
+                ),
+              ),
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final item = _recentHistory[index];
+                    final url = item['url'] as String;
+                    final title = item['title'] as String? ?? '';
+                    final favicon = item['favicon'] as String?;
+                    final host = Uri.tryParse(url)?.host ?? url;
+                    final time = DateTime.fromMillisecondsSinceEpoch(
+                        item['visited_at'] as int);
+                    return ListTile(
+                      leading: _FaviconWidget(faviconUrl: favicon),
+                      title: Text(
+                        title.isNotEmpty ? title : host,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        host,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      trailing: Text(
+                        _formatTime(time),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      onTap: () => widget.onNavigate(url),
+                    );
+                  },
+                  childCount: _recentHistory.length,
+                ),
+              ),
+            ],
+
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          ],
+        ),
       ),
     );
   }
@@ -340,8 +383,7 @@ class _FaviconWidget extends StatelessWidget {
         faviconUrl!,
         width: size,
         height: size,
-        errorBuilder: (_, __, ___) =>
-            Icon(Icons.language, size: size),
+        errorBuilder: (_, __, ___) => Icon(Icons.language, size: size),
       );
     }
     return Icon(Icons.language, size: size);

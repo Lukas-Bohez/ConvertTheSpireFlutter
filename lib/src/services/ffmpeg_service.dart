@@ -43,8 +43,11 @@ class FfmpegService {
     if (result.exitCode != 0) {
       final stderr = result.stderr?.toString().trim() ?? '';
       final stdout = result.stdout?.toString().trim() ?? '';
-      final details = [stderr, stdout].where((text) => text.isNotEmpty).join(' ');
-      throw Exception(details.isEmpty ? 'FFmpeg failed with exit code ${result.exitCode}' : 'FFmpeg failed: $details');
+      final details =
+          [stderr, stdout].where((text) => text.isNotEmpty).join(' ');
+      throw Exception(details.isEmpty
+          ? 'FFmpeg failed with exit code ${result.exitCode}'
+          : 'FFmpeg failed: $details');
     }
   }
 

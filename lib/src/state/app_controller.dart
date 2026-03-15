@@ -122,7 +122,8 @@ class AppController extends ChangeNotifier {
         var selected = saved;
         if (selected == 2) selected = 13; // never restore directly into browser
         _activeTabIndex = selected;
-        if (kDebugMode) debugPrint('[AppController] restored last_tab -> $_activeTabIndex');
+        if (kDebugMode)
+          debugPrint('[AppController] restored last_tab -> $_activeTabIndex');
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[AppController] prefs restore failed: $e');
@@ -148,10 +149,13 @@ class AppController extends ChangeNotifier {
   void switchToTab(int index) {
     if (index < 0 || index > 13) return;
     if (index == _activeTabIndex) return;
-    if (kDebugMode) debugPrint('[AppController] switchToTab requested: $_activeTabIndex -> $index\n${StackTrace.current}');
+    if (kDebugMode)
+      debugPrint(
+          '[AppController] switchToTab requested: $_activeTabIndex -> $index\n${StackTrace.current}');
     _activeTabIndex = index;
     // Persist asynchronously; don't await here.
-    SharedPreferences.getInstance().then((prefs) => prefs.setInt('last_tab', index));
+    SharedPreferences.getInstance()
+        .then((prefs) => prefs.setInt('last_tab', index));
     notifyListeners();
   }
 
@@ -240,12 +244,17 @@ class AppController extends ChangeNotifier {
         // If downloads banner is shown, make it dismissible while the app
         // is backgrounded so the user can swipe it away. When the app
         // resumes we re-show it as ongoing to indicate active work.
-        final remaining = queue.where((item) => item.status == DownloadStatus.queued).length;
+        final remaining =
+            queue.where((item) => item.status == DownloadStatus.queued).length;
         if (remaining > 0) {
-          if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.detached) {
-            unawaited(notificationService.showActiveDownloadsBanner(remaining, ongoing: false));
+          if (state == AppLifecycleState.paused ||
+              state == AppLifecycleState.inactive ||
+              state == AppLifecycleState.detached) {
+            unawaited(notificationService.showActiveDownloadsBanner(remaining,
+                ongoing: false));
           } else if (state == AppLifecycleState.resumed) {
-            unawaited(notificationService.showActiveDownloadsBanner(remaining, ongoing: true));
+            unawaited(notificationService.showActiveDownloadsBanner(remaining,
+                ongoing: true));
           }
         }
       }
@@ -574,10 +583,13 @@ class AppController extends ChangeNotifier {
     // On Android, if the configured download folder is a SAF tree (content://)
     // use the native channel to copy the file into the tree so it's visible
     // to other apps. Otherwise fall back to writing to the resolved path.
-    if (Platform.isAndroid && settings != null && settings.downloadDir.startsWith('content://')) {
+    if (Platform.isAndroid &&
+        settings != null &&
+        settings.downloadDir.startsWith('content://')) {
       try {
         final cache = await PlatformDirs.getCacheDir();
-        final tmp = File('${cache.path}${Platform.pathSeparator}${result.name}');
+        final tmp =
+            File('${cache.path}${Platform.pathSeparator}${result.name}');
         await tmp.writeAsBytes(result.bytes, flush: true);
         final saf = AndroidSaf();
         final mime = _mimeForExtension(result.name.split('.').last);
