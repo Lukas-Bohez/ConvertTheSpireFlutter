@@ -38,6 +38,8 @@ enum RepeatMode { off, one, all }
 
 enum PlaybackMode { all, songs, videos, favourites }
 
+enum QueueScope { all, songs, videos, favourites, favSongs, favVideos }
+
 class MediaItem {
   final String path;
   final MediaType type;
@@ -156,6 +158,10 @@ class PlayerState with ChangeNotifier {
   bool favouritesOnly = false;
   PlaybackMode playbackMode = PlaybackMode.all;
   final List<int> manualQueue = [];
+  // Preserve canonical insertion order so we can restore ordering when shuffle
+  // is toggled off. _manualQueueBase always reflects insertion/reorder order
+  // while `manualQueue` is the visible (possibly shuffled) queue.
+  final List<int> _manualQueueBase = [];
 
   Directory? _thumbCacheDir;
   Set<String> _favourites = {};
@@ -191,13 +197,16 @@ class PlayerState with ChangeNotifier {
   };
 
   // ── Audio ──
-  final AudioPlayer _audio = AudioPlayer();
+  AudioPlayer? _audio;
   AppAudioHandler? _audioHandler;
 
   // ── Video ──
   final bool _useMediaKit = kIsWeb || !Platform.isAndroid;
   Player? _mkPlayer;
   VideoController? _mkController;
+  // Dedicated media_kit player for audio-only playback on desktop so that
+  // audio doesn't reuse the video player's texture/controller.
+  Player? _audioMkPlayer;
   VideoPlayerController? _androidController;
   VoidCallback? _androidListener;
   Player? _thumbPlayer;
@@ -215,6 +224,7 @@ class PlayerState with ChangeNotifier {
         _mkPlayer = Player();
         _mkController = VideoController(_mkPlayer!);
         _thumbPlayer = Player();
+        _audioMkPlayer = Player();
       } catch (e) {
         debugPrint('media_kit init failed: $e');
       }
@@ -222,29 +232,35 @@ class PlayerState with ChangeNotifier {
 
     _loadPrefs().then((_) => _applyVolume());
 
-    if (!kIsWeb && Platform.isAndroid) _initAudioHandler();
+    if (!_useMediaKit && !kIsWeb && Platform.isAndroid) _initAudioHandler();
 
     // ── Audio streams ──
     // BUG 3/4 FIX: route all callbacks through _scheduleNotify so they always
-    // execute on the platform thread.
-    _subs.add(_audio.positionStream.listen((pos) {
-      if (_disposed || currentItem?.type != MediaType.audio) return;
-      position = pos;
-      _scheduleNotify();
-    }));
-    _subs.add(_audio.durationStream.listen((dur) {
-      if (_disposed || currentItem?.type != MediaType.audio) return;
-      duration = dur;
-      _scheduleNotify();
-    }));
-    _subs.add(_audio.playerStateStream.listen((ps) {
-      if (_disposed) return;
-      if (ps.processingState == ProcessingState.completed) {
-        _scheduleNotify(callback: _handleCompletion);
-      } else {
+    // execute on the platform thread. Only create the just_audio player when
+    // media_kit is not used (mobile/Android).
+    if (!_useMediaKit) {
+      _audio = AudioPlayer();
+      _subs.add(_audio!.positionStream.listen((pos) {
+        if (_disposed || currentItem?.type != MediaType.audio) return;
+        position = pos;
         _scheduleNotify();
-      }
-    }));
+      }));
+      _subs.add(_audio!.durationStream.listen((dur) {
+        if (_disposed || currentItem?.type != MediaType.audio) return;
+        duration = dur;
+        _scheduleNotify();
+      }));
+      _subs.add(_audio!.playerStateStream.listen((ps) {
+        if (_disposed) return;
+        if (ps.processingState == ProcessingState.completed) {
+          _scheduleNotify(callback: _handleCompletion);
+        } else {
+          _scheduleNotify();
+        }
+      }));
+    } else {
+      _audio = null;
+    }
 
     // ── Video streams (media_kit) ──
     if (_useMediaKit && _mkPlayer != null) {
@@ -272,6 +288,24 @@ class PlayerState with ChangeNotifier {
           _scheduleNotify(callback: _handleCompletion);
         }
       }));
+      // If we created a separate audio-only player, wire its streams too so
+      // position/duration updates work for audio played via media_kit.
+      if (_audioMkPlayer != null) {
+        _subs.add(_audioMkPlayer!.stream.position.listen((pos) {
+          if (_disposed || currentItem?.type != MediaType.audio) return;
+          position = pos;
+          _scheduleNotify();
+        }));
+        _subs.add(_audioMkPlayer!.stream.duration.listen((dur) {
+          if (_disposed || currentItem?.type != MediaType.audio) return;
+          duration = dur;
+          _scheduleNotify();
+        }));
+        _subs.add(_audioMkPlayer!.stream.completed.listen((done) {
+          if (_disposed || !done || currentItem?.type != MediaType.audio) return;
+          _scheduleNotify(callback: _handleCompletion);
+        }));
+      }
     }
   }
 
@@ -310,7 +344,7 @@ class PlayerState with ChangeNotifier {
       if (_useMediaKit && _mkPlayer != null) return _mkPlayer!.state.playing;
       return _androidController?.value.isPlaying ?? false;
     }
-    return _audio.playing;
+    return _audio?.playing ?? false;
   }
 
   bool get isActuallyPlaying => isPlaying;
@@ -406,7 +440,12 @@ class PlayerState with ChangeNotifier {
     _folderItemCount = 0;
     _thumbInFlight.clear();
 
-    try { await _audio.stop(); } catch (_) {}
+    if (_audio != null) {
+      try { await _audio!.stop(); } catch (_) {}
+    }
+    if (_audioMkPlayer != null) {
+      try { await _audioMkPlayer!.stop(); } catch (_) {}
+    }
     if (_useMediaKit && _mkPlayer != null) {
       try { await _mkPlayer!.stop(); } catch (_) {}
     }
@@ -634,18 +673,34 @@ class PlayerState with ChangeNotifier {
         if (generation != _loadGeneration) return;
 
         try {
-          if (item.path.startsWith('content://')) {
-            await _audio.setUrl(item.path);
+          if (_audio != null) {
+            if (item.path.startsWith('content://')) {
+              await _audio!.setUrl(item.path);
+            } else {
+              await _audio!.setFilePath(item.path);
+            }
+            if (generation != _loadGeneration) return;
+            _runOnMainThread(() => _audio!.setVolume(volume));
+            duration = _audio!.duration;
+            position = Duration.zero;
+            if (generation != _loadGeneration) return;
+            await _audio!.play();
+            _updateMediaNotification(item);
+          } else if (_useMediaKit && _audioMkPlayer != null) {
+            try {
+              await _audioMkPlayer!.open(Media(_toUri(item.path)), play: true);
+              await _audioMkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+              // attempt to read duration; may be zero until stream updates
+              try {
+                duration = await _audioMkPlayer!.stream.duration.firstWhere((d) => d.inMilliseconds > 0).timeout(const Duration(seconds: 1), onTimeout: () => Duration.zero);
+              } catch (_) {}
+              position = Duration.zero;
+            } catch (e) {
+              debugPrint('media_kit audio load error for ${item.path}: $e');
+            }
           } else {
-            await _audio.setFilePath(item.path);
+            debugPrint('audio player unavailable on this platform for ${item.path}');
           }
-          if (generation != _loadGeneration) return;
-          _runOnMainThread(() => _audio.setVolume(volume));
-          duration = _audio.duration;
-          position = Duration.zero;
-          if (generation != _loadGeneration) return;
-          await _audio.play();
-          _updateMediaNotification(item);
         } catch (e) {
           debugPrint('audio load error for ${item.path}: $e');
         }
@@ -656,8 +711,13 @@ class PlayerState with ChangeNotifier {
         // mid-callback. pause() + setVolume(0) suspends playback safely
         // without tearing down the native pipeline.
         try {
-          await _audio.pause();
-          _audio.setVolume(0);
+          if (_audio != null) {
+            await _audio!.pause();
+            _audio!.setVolume(0);
+          }
+          if (_audioMkPlayer != null) {
+            try { await _audioMkPlayer!.pause(); _audioMkPlayer!.setVolume(0); } catch (_) {}
+          }
         } catch (_) {}
         if (generation != _loadGeneration) return;
 
@@ -786,24 +846,67 @@ class PlayerState with ChangeNotifier {
             : _androidController!.play();
       }
     } else {
-      _audio.playing ? _audio.pause() : _audio.play();
+      if (_useMediaKit && _audioMkPlayer != null) {
+        _audioMkPlayer!.state.playing ? _audioMkPlayer!.pause() : _audioMkPlayer!.play();
+      } else if (_audio != null) {
+        _audio!.playing ? _audio!.pause() : _audio!.play();
+      }
     }
     notifyListeners();
   }
 
-  void seek(Duration d) {
+  Future<void> seek(Duration d) async {
+    debugPrint('PlayerState.seek requested: $d, isVideo=$isVideo, _useMediaKit=$_useMediaKit');
     if (isVideo) {
       _videoCompletionFired = false;
       if (_useMediaKit && _mkPlayer != null) {
-        _mkPlayer!.seek(d);
+        debugPrint('Seeking media_kit video player to $d');
+        try {
+          await _mkPlayer!.seek(d);
+        } catch (e) {
+          debugPrint('media_kit video seek error: $e');
+        }
       } else {
-        _androidController?.seekTo(d);
+        debugPrint('Seeking android video controller to $d');
+        try {
+          await _androidController?.seekTo(d);
+        } catch (e) {
+          debugPrint('android video seek error: $e');
+        }
       }
     } else {
-      _audio.seek(d);
+      if (_useMediaKit && _audioMkPlayer != null) {
+        debugPrint('Seeking media_kit audio player to $d');
+        try {
+          await _audioMkPlayer!.seek(d);
+        } catch (e) {
+          debugPrint('media_kit audio seek error: $e');
+        }
+      } else if (_audio != null) {
+        debugPrint('Seeking just_audio to $d');
+        try {
+          await _audio!.seek(d);
+        } catch (e) {
+          debugPrint('just_audio seek error: $e');
+        }
+      } else {
+        debugPrint('No audio player available to seek');
+      }
     }
+
     position = d;
     notifyListeners();
+
+    // After a short delay log the effective position/duration and player states
+    // to help diagnose seek-not-applying issues on desktop.
+    Future.delayed(const Duration(milliseconds: 250), () {
+      try {
+        debugPrint('Post-seek: position=$position, duration=$duration, '
+            'mkPlayer=${_mkPlayer != null ? _mkPlayer!.state.playing : 'null'}, '
+            'audioMk=${_audioMkPlayer != null ? _audioMkPlayer!.state.playing : 'null'}, '
+            'justAudio=${_audio != null ? _audio!.playing : 'null'}');
+      } catch (_) {}
+    });
   }
 
   Future<void> next({MediaType? only}) async {
@@ -848,6 +951,22 @@ class PlayerState with ChangeNotifier {
   void toggleShuffle() {
     shuffle = !shuffle;
     prefs.setBool('shuffle', shuffle);
+    // If shuffle is enabled, create a shuffled view of the manual queue
+    if (shuffle) {
+      // Preserve original order in _manualQueueBase (mutate, not reassign)
+      _manualQueueBase.clear();
+      _manualQueueBase.addAll(manualQueue);
+      final shuffled = List<int>.from(_manualQueueBase);
+      shuffled.shuffle(_random);
+      manualQueue
+        ..clear()
+        ..addAll(shuffled);
+    } else {
+      // Restore original ordering
+      manualQueue
+        ..clear()
+        ..addAll(_manualQueueBase);
+    }
     notifyListeners();
   }
 
@@ -862,10 +981,11 @@ class PlayerState with ChangeNotifier {
     // When video is playing, audio is paused+muted; restoring volume here
     // would un-mute it and cause double audio.
     if (!isVideo) {
-      _runOnMainThread(() => _audio.setVolume(volume));
+      if (_audio != null) _runOnMainThread(() => _audio!.setVolume(volume));
     }
-    if (_useMediaKit && _mkPlayer != null) {
-      _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+    if (_useMediaKit) {
+      if (_mkPlayer != null) _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+      if (_audioMkPlayer != null) _audioMkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
     }
     if (_androidController != null) {
       _androidController!.setVolume((volume * _videoVolumeBoost).clamp(0.0, 1.0));
@@ -882,26 +1002,45 @@ class PlayerState with ChangeNotifier {
 
   void enqueue(int index) {
     if (index < 0 || index >= library.length) return;
-    manualQueue.add(index);
+    // Always append to base order
+    _manualQueueBase.add(index);
+    if (shuffle) {
+      // Insert into visible queue at a random position
+      final pos = _random.nextInt(manualQueue.length + 1);
+      manualQueue.insert(pos, index);
+    } else {
+      manualQueue.add(index);
+    }
     notifyListeners();
   }
 
   void dequeue(int queuePosition) {
     if (queuePosition < 0 || queuePosition >= manualQueue.length) return;
-    manualQueue.removeAt(queuePosition);
+    final val = manualQueue.removeAt(queuePosition);
+    final basePos = _manualQueueBase.indexOf(val);
+    if (basePos >= 0) _manualQueueBase.removeAt(basePos);
     notifyListeners();
   }
 
   void reorderQueue(int oldIndex, int newIndex) {
+    if (shuffle) return; // disable reordering while shuffled
     if (oldIndex < 0 || oldIndex >= manualQueue.length) return;
     final item = manualQueue.removeAt(oldIndex);
     final adjusted = newIndex > oldIndex ? newIndex - 1 : newIndex;
-    manualQueue.insert(adjusted.clamp(0, manualQueue.length), item);
+    final dest = adjusted.clamp(0, manualQueue.length);
+    manualQueue.insert(dest, item);
+    // keep base order in sync when not shuffled
+    final baseOld = _manualQueueBase.indexOf(item);
+    if (baseOld >= 0) {
+      final baseItem = _manualQueueBase.removeAt(baseOld);
+      _manualQueueBase.insert(dest.clamp(0, _manualQueueBase.length), baseItem);
+    }
     notifyListeners();
   }
 
   void clearQueue() {
     manualQueue.clear();
+    _manualQueueBase.clear();
     notifyListeners();
   }
 
@@ -979,6 +1118,51 @@ class PlayerState with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Enqueue a set of tracks determined by [scope]. Returns the number of
+  /// tracks actually added (duplicates are ignored).
+  int enqueueScope(QueueScope scope) {
+    final List<int> candidates = [];
+    final limit = _folderItemCount > 0 ? _folderItemCount : library.length;
+    for (var i = 0; i < limit; i++) {
+      final item = library[i];
+      switch (scope) {
+        case QueueScope.all:
+          candidates.add(i);
+          break;
+        case QueueScope.songs:
+          if (item.type == MediaType.audio) candidates.add(i);
+          break;
+        case QueueScope.videos:
+          if (item.type == MediaType.video) candidates.add(i);
+          break;
+        case QueueScope.favourites:
+          if (_favourites.contains(item.path)) candidates.add(i);
+          break;
+        case QueueScope.favSongs:
+          if (_favourites.contains(item.path) && item.type == MediaType.audio) candidates.add(i);
+          break;
+        case QueueScope.favVideos:
+          if (_favourites.contains(item.path) && item.type == MediaType.video) candidates.add(i);
+          break;
+      }
+    }
+
+    int added = 0;
+    for (final idx in candidates) {
+      if (_manualQueueBase.contains(idx)) continue;
+      _manualQueueBase.add(idx);
+      if (shuffle) {
+        final pos = _random.nextInt(manualQueue.length + 1);
+        manualQueue.insert(pos, idx);
+      } else {
+        manualQueue.add(idx);
+      }
+      added++;
+    }
+    if (added > 0) notifyListeners();
+    return added;
+  }
+
   Future<void> _loadFavouriteThumbsFromDisk() async {
     for (final path in _favouriteCache.keys.toList()) {
       final cached = _favouriteCache[path];
@@ -998,7 +1182,8 @@ class PlayerState with ChangeNotifier {
   // ─── Audio handler (Android) ──────────────────────────────────────────────
 
   Future<void> _initAudioHandler() async {
-    _audioHandler = await initAudioService(_audio);
+    // _audio is non-null when this is called (guarded by caller).
+    _audioHandler = await initAudioService(_audio!);
     if (_audioHandler != null) {
       _audioHandler!.onSkipToNext = () => next(only: MediaType.audio);
       _audioHandler!.onSkipToPrevious = () => previous(only: MediaType.audio);
@@ -1148,13 +1333,108 @@ class PlayerState with ChangeNotifier {
     _dirWatcher?.cancel();
     for (final sub in _subs) { sub.cancel(); }
     _subs.clear();
-    _audio.dispose();
+    if (_audio != null) {
+      try { _audio!.dispose(); } catch (_) {}
+    }
     if (_useMediaKit) {
       _mkPlayer?.dispose();
       _thumbPlayer?.dispose();
+      _audioMkPlayer?.dispose();
     }
     _disposeAndroidController();
     super.dispose();
+  }
+
+  /// Immediately play a file by its filesystem path. This bypasses any
+  /// id/index-based indirection so taps reliably play the exact file.
+  Future<void> playFileDirect(String path) async {
+    if (_disposed) return;
+
+    // Try to find a library index for UI bookkeeping; not required to play.
+    final idx = library.indexWhere((m) => m.path == path);
+    if (idx >= 0) {
+      currentIndex = idx;
+      notifyListeners();
+    }
+
+    // Bump generation to cancel any in-flight _loadCurrent calls.
+    final generation = ++_loadGeneration;
+
+    // Stop existing playback first (best-effort).
+    if (_audio != null) {
+      try { await _audio!.stop(); } catch (_) {}
+    }
+    if (_audioMkPlayer != null) {
+      try { await _audioMkPlayer!.stop(); } catch (_) {}
+    }
+    if (_useMediaKit && _mkPlayer != null) {
+      try {
+        await _mkPlayer!.stop();
+      } catch (_) {}
+    }
+    await _disposeAndroidController();
+
+    if (generation != _loadGeneration) return;
+
+    // Decide audio vs video using library entry if available, otherwise use
+    // extension heuristic.
+    MediaType type = MediaType.audio;
+    if (idx >= 0) type = library[idx].type;
+    else {
+      final ext = p.extension(path).toLowerCase();
+      final videoExts = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'};
+      if (videoExts.contains(ext)) type = MediaType.video;
+    }
+
+    try {
+      if (type == MediaType.audio) {
+        if (_useMediaKit && _audioMkPlayer != null) {
+          // Use the dedicated media_kit audio-only player on desktop to avoid
+          // reusing the video player's texture and to keep audio streams
+          // consistent with _loadCurrent.
+          try {
+            await _audioMkPlayer!.open(Media(_toUri(path)), play: true);
+            await _audioMkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+            duration = await _audioMkPlayer!.stream.duration.firstWhere((d) => d.inMilliseconds > 0).timeout(const Duration(seconds: 1), onTimeout: () => Duration.zero);
+            position = Duration.zero;
+          } catch (e) {
+            debugPrint('playFileDirect media_kit audio load error for $path: $e');
+          }
+        } else {
+          // Use just_audio on mobile/Android where media_kit isn't used.
+          // Use a microtask to ensure we run on the main isolate thread.
+          if (_audio != null) {
+            await Future.microtask(() async {
+              try {
+                if (path.startsWith('content://')) {
+                  await _audio!.setUrl(path);
+                } else {
+                  await _audio!.setFilePath(path);
+                }
+                await _audio!.setVolume(volume);
+                duration = _audio!.duration;
+                position = Duration.zero;
+                await _audio!.play();
+                if (idx >= 0) _updateMediaNotification(library[idx]);
+              } catch (e) {
+                debugPrint('playFileDirect audio load error for $path: $e');
+              }
+            });
+          }
+        }
+      } else {
+        // Video: prefer media_kit on supported platforms.
+        if (_useMediaKit && _mkPlayer != null) {
+          await _mkPlayer!.open(Media(_toUri(path)), play: true);
+          await _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+        } else {
+          // Android fallback
+          await _loadAndroidVideo(path, generation);
+        }
+      }
+    } catch (e) {
+      debugPrint('playFileDirect failed for $path: $e');
+    }
   }
 }
 
@@ -1426,7 +1706,13 @@ class _PlayerScreenState extends State<PlayerScreen>
   // BUG 1 FIX: all taps go through this single method which immediately captures
   // the index and calls select() — no intermediate setState() that could shift indices.
   void _onTrackTap(PlayerState state, int index) {
-    state.select(index);
+    // Play by file path to avoid any index/id races in the UI layer or native
+    // plugins. This ensures taps map directly to the file the user tapped.
+    final idx = index;
+    if (idx >= 0 && idx < state.library.length) {
+      final path = state.library[idx].path;
+      state.playFileDirect(path);
+    }
   }
 
   Widget _buildHeader() {
@@ -1448,6 +1734,27 @@ class _PlayerScreenState extends State<PlayerScreen>
               ),
             ),
             const Spacer(),
+            PopupMenuButton<QueueScope>(
+              icon: Icon(Icons.playlist_add, color: Theme.of(context).colorScheme.onSurface),
+              tooltip: 'Add scope to queue',
+              itemBuilder: (ctx) => [
+                const PopupMenuItem(value: QueueScope.all, child: Text('Add All to queue')),
+                const PopupMenuItem(value: QueueScope.songs, child: Text('Add Songs to queue')),
+                const PopupMenuItem(value: QueueScope.videos, child: Text('Add Videos to queue')),
+                const PopupMenuItem(value: QueueScope.favourites, child: Text('Add Favourites to queue')),
+                const PopupMenuItem(value: QueueScope.favSongs, child: Text('Add Favourite Songs')),
+                const PopupMenuItem(value: QueueScope.favVideos, child: Text('Add Favourite Videos')),
+              ],
+              onSelected: (scope) {
+                final player = context.read<PlayerState>();
+                final added = player.enqueueScope(scope);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(added > 0 ? 'Added $added tracks to queue' : 'No new tracks added'),
+                  duration: const Duration(seconds: 1),
+                  behavior: SnackBarBehavior.floating,
+                ));
+              },
+            ),
             IconButton(
               icon: Icon(Icons.folder_open_rounded,
                   color: Theme.of(context).colorScheme.onSurface),
@@ -1842,7 +2149,17 @@ class _QueueTab extends StatelessWidget {
           child: ReorderableListView.builder(
             scrollController: scrollCtl,
             itemCount: state.manualQueue.length,
-            onReorder: state.reorderQueue,
+            onReorder: (oldIndex, newIndex) {
+              if (state.shuffle) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Disable shuffle to reorder the queue'),
+                  duration: Duration(seconds: 1),
+                  behavior: SnackBarBehavior.floating,
+                ));
+                return;
+              }
+              state.reorderQueue(oldIndex, newIndex);
+            },
             itemBuilder: (ctx, i) {
               final idx = state.manualQueue[i];
               if (idx >= state.library.length) return const SizedBox.shrink(key: ValueKey(-1));
