@@ -1903,7 +1903,21 @@ class _SongTileState extends State<_SongTile> {
   @override
   void initState() {
     super.initState();
-    // Request thumbnail lazily on first build, deduped by PlayerState.
+    _requestThumb();
+  }
+
+  @override
+  void didUpdateWidget(_SongTile old) {
+    super.didUpdateWidget(old);
+    // Entry can change if the library list was mutated (thumbnail loaded,
+    // metadata refreshed). Re-request thumb if still missing.
+    if (old.entry.key != widget.entry.key ||
+        old.entry.value.path != widget.entry.value.path) {
+      _requestThumb();
+    }
+  }
+
+  void _requestThumb() {
     if (widget.entry.value.thumbnailData == null) {
       Future.microtask(() {
         if (mounted) widget.state.requestThumbnailForIndex(widget.entry.key);
@@ -1914,6 +1928,8 @@ class _SongTileState extends State<_SongTile> {
   @override
   Widget build(BuildContext context) {
     final item = widget.entry.value;
+    // Always read idx fresh — never capture it in initState or a local that
+    // could go stale across rebuilds.
     final idx = widget.entry.key;
     final isActive = widget.state.currentIndex == idx;
     final isPlaying = isActive && widget.state.isActuallyPlaying;
@@ -2016,6 +2032,19 @@ class _VideoCardState extends State<_VideoCard> {
   @override
   void initState() {
     super.initState();
+    _requestThumb();
+  }
+
+  @override
+  void didUpdateWidget(_VideoCard old) {
+    super.didUpdateWidget(old);
+    if (old.entry.key != widget.entry.key ||
+        old.entry.value.path != widget.entry.value.path) {
+      _requestThumb();
+    }
+  }
+
+  void _requestThumb() {
     if (widget.entry.value.thumbnailData == null) {
       Future.microtask(() {
         if (mounted) widget.state.requestThumbnailForIndex(widget.entry.key);
