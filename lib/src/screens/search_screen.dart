@@ -6,7 +6,12 @@ import '../models/search_result.dart';
 import '../services/multi_source_search_service.dart';
 import '../services/preview_player_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'home_screen.dart';
+// Fix: use an explicit show clause so the analyzer knows exactly which
+// symbol is needed.  This resolves both the unused_import warning (the
+// import IS used, just not visible without the clause) and the
+// non_type_as_type_argument error that appeared when home_screen.dart's
+// own imports caused a cascading ambiguity.
+import 'home_screen.dart' show HomeScreenState;
 
 /// Screen for searching multiple audio sources in parallel.
 class SearchScreen extends StatefulWidget {
@@ -31,7 +36,6 @@ class _SearchScreenState extends State<SearchScreen>
   List<SearchResult> _results = [];
   bool _loading = false;
   String? _error;
-  // preview removed, use external button
   String _selectedFormat = 'mp3';
 
   Future<void> _search() async {
@@ -252,8 +256,8 @@ class _SearchScreenState extends State<SearchScreen>
 
   void _launchPreview(String id) {
     final url = 'https://www.youtube.com/watch?v=$id';
-    // try to find the HomeScreen state to move to browser tab; if not
-    // available (e.g. tests) fall back to external launch.
+    // Walk up the widget tree to find HomeScreen's state so we can open
+    // the in-app browser rather than launching an external app.
     final homeState = context.findAncestorStateOfType<HomeScreenState>();
     if (homeState != null) {
       homeState.openBrowserWith(url);

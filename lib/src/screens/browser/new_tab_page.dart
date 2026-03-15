@@ -25,6 +25,7 @@ class _NewTabPageState extends State<NewTabPage> {
   List<Map<String, dynamic>> _favourites = [];
   List<Map<String, dynamic>> _recentHistory = [];
   final GlobalKey _repaintKey = GlobalKey();
+  final ScrollController _favouritesScrollController = ScrollController();
 
   @override
   void initState() {
@@ -45,6 +46,7 @@ class _NewTabPageState extends State<NewTabPage> {
   void dispose() {
     widget.repo.removeListener(_load);
     _searchController.dispose();
+    _favouritesScrollController.dispose();
     super.dispose();
   }
 
@@ -210,33 +212,80 @@ class _NewTabPageState extends State<NewTabPage> {
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 8)),
               SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 48,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _favourites.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      final fav = _favourites[index];
-                      final url = fav['url'] as String;
-                      final rawTitle = fav['title'] as String? ?? '';
-                      final host = (Uri.tryParse(url)?.host ?? url)
-                          .replaceFirst('www.', '');
-                      final title = (rawTitle.isNotEmpty &&
-                              rawTitle.toLowerCase() != 'new tab')
-                          ? rawTitle
-                          : host;
-                      return ActionChip(
-                        avatar: const Icon(Icons.star, size: 16),
-                        label: Text(
-                          title,
-                          overflow: TextOverflow.ellipsis,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: LayoutBuilder(builder: (context, constraints) {
+                    final width = constraints.maxWidth;
+                    // On narrow screens keep a single horizontal scroll row with a visible scrollbar.
+                    if (width < 700) {
+                      return SizedBox(
+                        height: 56,
+                        child: Scrollbar(
+                          controller: _favouritesScrollController,
+                          thumbVisibility: true,
+                          child: ListView.separated(
+                            controller: _favouritesScrollController,
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            itemCount: _favourites.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 8),
+                            itemBuilder: (context, index) {
+                              final fav = _favourites[index];
+                              final url = fav['url'] as String;
+                              final rawTitle = fav['title'] as String? ?? '';
+                              final host = (Uri.tryParse(url)?.host ?? url)
+                                  .replaceFirst('www.', '');
+                              final title = (rawTitle.isNotEmpty &&
+                                      rawTitle.toLowerCase() != 'new tab')
+                                  ? rawTitle
+                                  : host;
+                              return ActionChip(
+                                avatar: const Icon(Icons.star, size: 16),
+                                label: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 240),
+                                  child: Text(
+                                    title,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                onPressed: () => widget.onNavigate(url),
+                              );
+                            },
+                          ),
                         ),
-                        onPressed: () => widget.onNavigate(url),
                       );
-                    },
-                  ),
+                    }
+
+                    // On wide screens allow chips to wrap into multiple rows so all favourites are visible and keyboard/mouse accessible.
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _favourites.map((fav) {
+                          final url = fav['url'] as String;
+                          final rawTitle = fav['title'] as String? ?? '';
+                          final host = (Uri.tryParse(url)?.host ?? url)
+                              .replaceFirst('www.', '');
+                          final title = (rawTitle.isNotEmpty &&
+                                  rawTitle.toLowerCase() != 'new tab')
+                              ? rawTitle
+                              : host;
+                          return ActionChip(
+                            avatar: const Icon(Icons.star, size: 16),
+                            label: ConstrainedBox(
+                              constraints: BoxConstraints(maxWidth: width * 0.33),
+                              child: Text(
+                                title,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            onPressed: () => widget.onNavigate(url),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  }),
                 ),
               ),
             ],

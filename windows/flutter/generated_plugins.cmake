@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   battery_plus
   flutter_inappwebview_windows
+  just_audio_windows
   media_kit_libs_windows_video
   media_kit_video
   screen_retriever_windows

@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import '../utils/snack.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-// shared_preferences no longer used directly in HomeScreen; handled by AppController
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
@@ -28,7 +27,8 @@ import 'statistics_screen.dart';
 import 'watched_playlists_screen.dart';
 import 'browser_screen.dart';
 import 'support_screen.dart';
-import 'player.dart';
+// Fix: use the correctly-cased class name exported from player.dart.
+import 'player.dart' show PlayerPage, PlayerState;
 import '../widgets/browser_shell.dart';
 import '../widgets/onboarding_tooltip_service.dart';
 import '../widgets/quick_links_page.dart';
@@ -49,7 +49,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   static final Uri _buyMeCoffeeUri =
       Uri.parse('https://buymeacoffee.com/orokaconner');
 
-  ThemeMode _resolveThemeMode(String? mode) {
+  static ThemeMode _resolveThemeMode(String? mode) {
     switch (mode) {
       case 'light':
         return ThemeMode.light;
@@ -78,8 +78,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _audioBitrate = 320;
   bool _settingsInitialized = false;
   bool _supportEnabled = false;
-  // Removed unused player state field (was causing analyzer unused_field warning).
+
+  // Fix: separate TabController for playlists tab; disposed exactly once.
   late final TabController _playlistTabController;
+
   File? _convertFile;
   String _convertTarget = 'mp4';
   String _androidDownloadUri = '';
@@ -91,76 +93,58 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _navHistoryIndex = 0;
   bool _queueOnRight = true;
 
-  /// Progressive onboarding tooltip system.
   final OnboardingTooltipService _onboarding = OnboardingTooltipService();
   String? _dismissedBannerRoute;
-  // Update checker
+
   UpdateInfo? _updateInfo;
   bool _updateBannerDismissed = false;
   bool _checkUpdatesOnLaunch = true;
 
-  /// Mining services — owned here so they survive tab switches.
   late final ComputationService _computeService;
   late final CoordinatorService _coordinatorService;
 
-  /// System-tray close-to-tray logic (desktop only).
   TrayService? _trayService;
 
-  /// Playlist preview amount: '10', '25', '50', '100', 'all', 'custom'
   String _previewPreset = '25';
   bool get _isAndroid => !kIsWeb && Platform.isAndroid;
   bool _isNarrowLayout(BuildContext context) =>
       MediaQuery.of(context).size.width < 600;
 
-  /// Pages that have been visited at least once in the narrow (mobile) layout.
-  /// Used by IndexedStack to lazily build pages while keeping them alive.
   final Set<int> _visitedPages = {13};
 
-  // Range selector for adding subset of preview results to queue
   int _addRangeFrom = 1;
   int _addRangeTo = 1;
 
   @override
   void initState() {
     super.initState();
+    // Fix: initialise _playlistTabController in initState to avoid
+    // "used before init" issues when the widget tree is first built.
     _playlistTabController = TabController(length: 2, vsync: this);
 
-    // Progressive onboarding — await then refresh UI with loaded state.
     _onboarding.init().then((_) {
       if (mounted) setState(() {});
     });
 
-    // Mining services — survive tab switches.
     _computeService = ComputationService(maxConcurrent: 2);
     _coordinatorService = CoordinatorService(compute: _computeService);
     _coordinatorService.nativeMiner.loadSavedSettings();
 
-    // Desktop: system-tray & shortcut.
     _initDesktopFeatures();
 
-    // Initialise selected tab from controller (controller restores prefs once
-    // during its own `init()` call). This avoids restoring prefs multiple
-    // times from different places and eliminates races with manual nav.
     try {
       _selectedPageIndex = widget.controller.activeTabIndex;
     } catch (_) {}
 
-    // Debug: print available quick-links map for developer diagnostics.
     if (kDebugMode) {
       debugPrint('[NAV] QuickLinks routeToIndex keys: ' +
           QuickLinksService.routeToIndex.keys.join(', '));
-      // schedule a fake navigation after startup to reproduce the bounce bug
-      // without user interaction.  If the bug remains this will show a
-      // subsequent unexpected log shifting back to browser.
-      Future.delayed(const Duration(seconds: 5), () {});
     }
 
-    // Load update preference and check for updates on launch
     UpdateService.isCheckOnLaunchEnabled().then((v) {
       if (mounted) setState(() => _checkUpdatesOnLaunch = v);
     });
 
-    // Kick off update check (silent on network failure)
     _checkForUpdate();
   }
 
@@ -189,7 +173,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _trayService = TrayService(shouldMinimiseToTray: () => true);
 
     _trayService!.onTrayQuit = () async {
-      // Stop mining before quitting.
       _coordinatorService.dispose();
       try {
         await BrowserScreen.browserKey.currentState
@@ -201,13 +184,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       exit(0);
     };
 
-    _trayService!.onTrayShow = () {
-      // Bring window to front when tray icon is clicked.
-      try {
-        // window_manager operations are handled inside TrayService; keep
-        // this callback minimal to avoid duplicating platform logic.
-      } catch (_) {}
-    };
+    _trayService!.onTrayShow = () {};
 
     _trayService!.init().catchError((e) {
       debugPrint('HomeScreen: tray init failed: $e');
@@ -222,6 +199,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void dispose() {
     _coordinatorService.dispose();
     _trayService?.destroy();
+    // Fix: each controller is disposed exactly once here.
     _playlistTabController.dispose();
     _urlController.dispose();
     _downloadDirController.dispose();
@@ -289,6 +267,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           themeMode: tm,
           onThemeChanged: (mode) => widget.controller.setThemeMode(mode),
         );
+      // Fix: case 12 now uses PlayerPage (correctly-cased class name).
       case 12:
         return const PlayerPage(key: ValueKey('player-player'));
       case 13:
@@ -309,7 +288,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // Navigation helpers
+  // ── Navigation helpers ──────────────────────────────────────────────────
 
   bool get _canGoBack => _navHistoryIndex > 0;
   bool get _canGoForward => _navHistoryIndex < _navHistory.length - 1;
@@ -321,7 +300,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       debugPrint('[NAV] _navigateToPage: $_selectedPageIndex -> $index');
     }
     setState(() {
-      // Truncate forward history when navigating to a new page.
       if (_navHistoryIndex < _navHistory.length - 1) {
         _navHistory.removeRange(_navHistoryIndex + 1, _navHistory.length);
       }
@@ -330,17 +308,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _selectedPageIndex = index;
       _visitedPages.add(index);
     });
-    // Keep controller in sync and let it persist the preference.
     try {
       widget.controller.switchToTab(index);
     } catch (_) {}
-    // Record that we initiated a navigation locally so controller-driven
-    // AnimatedBuilder sync does not immediately override it (avoid feedback).
     _lastLocalNavigation = DateTime.now();
   }
-
-  /// Alias used by tappable top-bar UI items to navigate to a tab index.
-  /// (Removed unused alias to satisfy analyzer.)
 
   void _goBack() {
     if (!_canGoBack) return;
@@ -381,10 +353,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           });
         }
 
-        // Keep local selected index in sync with controller if it changed.
-        // However, if we just performed a local (user) navigation, avoid
-        // immediately syncing from the controller to prevent a feedback
-        // bounce where two different widgets fight for control.
+        // Keep local index in sync with controller, but avoid feedback bounce.
         final ctrlIndex = widget.controller.activeTabIndex;
         final recentLocalNav = _lastLocalNavigation != null &&
             DateTime.now().difference(_lastLocalNavigation!).inMilliseconds <
@@ -406,27 +375,18 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           currentIndex: _selectedPageIndex,
           queueWidget: _buildQueueTab(),
           onNavigate: (route) {
-            if (kDebugMode) {
-              debugPrint('[NAV] requested route: "$route"');
-              if (route == 'browser.tab') {
-                debugPrint('[NAV] caller stack trace:\n${StackTrace.current}');
-              }
-            }
+            if (kDebugMode) debugPrint('[NAV] requested route: "$route"');
             if (route == 'home') {
               _navigateHome();
               return;
             }
 
-            // Attempt direct lookup first.
             var idx = QuickLinksService.routeToIndex[route];
 
-            // If not found, try appending ".tab" (some callers pass labels).
             if (idx == null && !route.endsWith('.tab')) {
-              final cand = '$route.tab';
-              idx = QuickLinksService.routeToIndex[cand];
+              idx = QuickLinksService.routeToIndex['$route.tab'];
             }
 
-            // If still not found, try matching by display title (case-insensitive).
             if (idx == null) {
               final lower = route.toLowerCase();
               for (final entry in QuickLinksService.indexToTitle.entries) {
@@ -441,8 +401,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               if (kDebugMode) debugPrint('[NAV] resolved "$route" -> $idx');
               _navigateToPage(idx);
             } else {
-              if (kDebugMode)
+              if (kDebugMode) {
                 debugPrint('[NAV] WARNING: no index for route "$route"');
+              }
             }
           },
           onBack: _canGoBack ? _goBack : null,
@@ -457,8 +418,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: _buildPageWithBanner(settings),
         );
 
-        // Wrap in CallbackShortcuts for desktop media key support
-        // Also wrap shell in a PopScope so Android back navigates to home instead of exiting.
         final popWrapped = PopScope(
           canPop: _selectedPageIndex == 13,
           onPopInvokedWithResult: (didPop, result) {
@@ -527,7 +486,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       }),
     );
 
-    // Show update banner above onboarding banner when appropriate
     if (_updateInfo != null && !_updateBannerDismissed) {
       return Column(
         children: [
@@ -540,18 +498,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             onDownload: () {
               String url = _updateInfo!.releaseUrl;
               if (!kIsWeb) {
-                if (Platform.isWindows)
-                  url = _updateInfo!.windowsAssetUrl.isNotEmpty
-                      ? _updateInfo!.windowsAssetUrl
-                      : url;
-                if (Platform.isAndroid)
-                  url = _updateInfo!.androidAssetUrl.isNotEmpty
-                      ? _updateInfo!.androidAssetUrl
-                      : url;
-                if (Platform.isLinux)
-                  url = _updateInfo!.linuxAssetUrl.isNotEmpty
-                      ? _updateInfo!.linuxAssetUrl
-                      : url;
+                if (Platform.isWindows && _updateInfo!.windowsAssetUrl.isNotEmpty) {
+                  url = _updateInfo!.windowsAssetUrl;
+                } else if (Platform.isAndroid && _updateInfo!.androidAssetUrl.isNotEmpty) {
+                  url = _updateInfo!.androidAssetUrl;
+                } else if (Platform.isLinux && _updateInfo!.linuxAssetUrl.isNotEmpty) {
+                  url = _updateInfo!.linuxAssetUrl;
+                }
               }
               if (url.isNotEmpty) {
                 launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
@@ -610,8 +563,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _settingsInitialized = true;
     });
 
-    // Wire SAF access-denied callback so DownloadService can ask the UI to
-    // prompt the user to re-grant folder access or pick a new folder.
     try {
       widget.controller.downloadService.onSafAccessDenied = () async {
         if (!mounted) return null;
@@ -642,7 +593,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         final uri = await _androidSaf.pickTree();
         if (uri == null || uri.isEmpty) return null;
 
-        // Persist the new folder in settings so future downloads use it.
         final current = widget.controller.settings;
         if (current != null) {
           await widget.controller
@@ -660,19 +610,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     } catch (_) {}
   }
 
-  /// Open a web URL in the **in-app browser**.
   void openBrowserWith(String url) {
-    _navigateToPage(2); // Switch to the browser tab
-    BrowserScreen.navigate(url); // Load URL in the in-app WebView
+    _navigateToPage(2);
+    BrowserScreen.navigate(url);
   }
 
   String _formatAndroidFolderLabel(String uriString) {
-    if (uriString.trim().isEmpty) {
-      return 'Not set';
-    }
-    if (!uriString.startsWith('content://')) {
-      return uriString;
-    }
+    if (uriString.trim().isEmpty) return 'Not set';
+    if (!uriString.startsWith('content://')) return uriString;
     final decoded = Uri.decodeComponent(uriString);
     final treeIndex = decoded.indexOf('tree/');
     if (treeIndex >= 0) {
@@ -686,9 +631,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _pickAndroidFolder(AppSettings settings) async {
     final uri = await _androidSaf.pickTree();
-    if (uri == null || uri.isEmpty) {
-      return;
-    }
+    if (uri == null || uri.isEmpty) return;
     if (!mounted) return;
     setState(() {
       _androidDownloadUri = uri;
@@ -717,7 +660,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     await widget.controller.saveSettings(settings.copyWith(downloadDir: ''));
   }
 
-  // Search tab
+  // ── Search tab ─────────────────────────────────────────────────────────
 
   Widget _buildSearchTab(AppSettings? settings) {
     final isNarrow = _isNarrowLayout(context);
@@ -725,7 +668,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       padding: const EdgeInsets.all(16),
       child: ListView(
         children: [
-          // URL input
           Row(
             children: [
               Expanded(
@@ -740,9 +682,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ? IconButton(
                             icon: const Icon(Icons.clear),
                             onPressed: () {
-                              setState(() {
-                                _urlController.clear();
-                              });
+                              setState(() => _urlController.clear());
                             },
                             tooltip: 'Clear URL',
                           )
@@ -757,10 +697,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 onPressed: () async {
                   final clipboardData = await Clipboard.getData('text/plain');
                   if (!mounted) return;
-                  if (clipboardData != null && clipboardData.text != null) {
-                    setState(() {
-                      _urlController.text = clipboardData.text!;
-                    });
+                  if (clipboardData?.text != null) {
+                    setState(() => _urlController.text = clipboardData!.text!);
                   }
                 },
                 tooltip: 'Paste from clipboard',
@@ -803,10 +741,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 value: 'mp4', child: Text('MP4 (Video)')),
                           ],
                           onChanged: (value) {
-                            if (value == null) return;
-                            setState(() {
-                              _downloadFormat = value;
-                            });
+                            if (value != null) setState(() => _downloadFormat = value);
                           },
                         ),
                         const SizedBox(height: 12),
@@ -819,10 +754,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             prefixIcon: Icon(Icons.high_quality),
                           ),
                           items: const [
-                            DropdownMenuItem(
-                                value: '360p', child: Text('360p')),
-                            DropdownMenuItem(
-                                value: '480p', child: Text('480p')),
+                            DropdownMenuItem(value: '360p', child: Text('360p')),
+                            DropdownMenuItem(value: '480p', child: Text('480p')),
                             DropdownMenuItem(
                                 value: '720p', child: Text('720p (HD)')),
                             DropdownMenuItem(
@@ -831,10 +764,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 value: 'best', child: Text('Best Available')),
                           ],
                           onChanged: (value) {
-                            if (value == null) return;
-                            setState(() {
-                              _videoQuality = value;
-                            });
+                            if (value != null) setState(() => _videoQuality = value);
                           },
                         ),
                         const SizedBox(height: 12),
@@ -847,29 +777,20 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             prefixIcon: Icon(Icons.equalizer),
                           ),
                           items: const [
-                            DropdownMenuItem(
-                                value: 128, child: Text('128 kbps')),
-                            DropdownMenuItem(
-                                value: 192, child: Text('192 kbps')),
-                            DropdownMenuItem(
-                                value: 256, child: Text('256 kbps')),
-                            DropdownMenuItem(
-                                value: 320, child: Text('320 kbps')),
+                            DropdownMenuItem(value: 128, child: Text('128 kbps')),
+                            DropdownMenuItem(value: 192, child: Text('192 kbps')),
+                            DropdownMenuItem(value: 256, child: Text('256 kbps')),
+                            DropdownMenuItem(value: 320, child: Text('320 kbps')),
                           ],
                           onChanged: (value) {
-                            if (value == null) return;
-                            setState(() {
-                              _audioBitrate = value;
-                            });
+                            if (value != null) setState(() => _audioBitrate = value);
                           },
                         ),
                         const SizedBox(height: 12),
                         CheckboxListTile(
                           value: _expandPlaylist,
                           onChanged: (value) {
-                            setState(() {
-                              _expandPlaylist = value ?? false;
-                            });
+                            setState(() => _expandPlaylist = value ?? false);
                           },
                           title: const Text('Expand playlist'),
                           subtitle: const Text('Show all videos'),
@@ -900,10 +821,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       value: 'mp4', child: Text('MP4 (Video)')),
                                 ],
                                 onChanged: (value) {
-                                  if (value == null) return;
-                                  setState(() {
-                                    _downloadFormat = value;
-                                  });
+                                  if (value != null) setState(() => _downloadFormat = value);
                                 },
                               ),
                             ),
@@ -932,10 +850,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       child: Text('Best Available')),
                                 ],
                                 onChanged: (value) {
-                                  if (value == null) return;
-                                  setState(() {
-                                    _videoQuality = value;
-                                  });
+                                  if (value != null) setState(() => _videoQuality = value);
                                 },
                               ),
                             ),
@@ -960,10 +875,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       value: 320, child: Text('320 kbps')),
                                 ],
                                 onChanged: (value) {
-                                  if (value == null) return;
-                                  setState(() {
-                                    _audioBitrate = value;
-                                  });
+                                  if (value != null) setState(() => _audioBitrate = value);
                                 },
                               ),
                             ),
@@ -973,9 +885,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         CheckboxListTile(
                           value: _expandPlaylist,
                           onChanged: (value) {
-                            setState(() {
-                              _expandPlaylist = value ?? false;
-                            });
+                            setState(() => _expandPlaylist = value ?? false);
                           },
                           title: const Text('Expand playlist'),
                           subtitle: const Text('Show all videos'),
@@ -989,7 +899,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 12),
 
-          // Playlist Range card (only visible when expand playlist is checked)
           if (_expandPlaylist)
             Card(
               elevation: 2,
@@ -1021,25 +930,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               isDense: true,
                             ),
                             items: const [
+                              DropdownMenuItem(value: '10', child: Text('First 10')),
+                              DropdownMenuItem(value: '25', child: Text('First 25')),
+                              DropdownMenuItem(value: '50', child: Text('First 50')),
+                              DropdownMenuItem(value: '100', child: Text('First 100')),
+                              DropdownMenuItem(value: 'all', child: Text('All')),
                               DropdownMenuItem(
-                                  value: '10', child: Text('First 10')),
-                              DropdownMenuItem(
-                                  value: '25', child: Text('First 25')),
-                              DropdownMenuItem(
-                                  value: '50', child: Text('First 50')),
-                              DropdownMenuItem(
-                                  value: '100', child: Text('First 100')),
-                              DropdownMenuItem(
-                                  value: 'all', child: Text('All')),
-                              DropdownMenuItem(
-                                  value: 'custom',
-                                  child: Text('Custom range...')),
+                                  value: 'custom', child: Text('Custom range...')),
                             ],
                             onChanged: (value) {
-                              if (value == null) return;
-                              setState(() {
-                                _previewPreset = value;
-                              });
+                              if (value != null) setState(() => _previewPreset = value);
                             },
                           ),
                         ),
@@ -1091,9 +991,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Text(
                         'Video numbers are 1-based (e.g. 1 to 25 = first 25 videos)',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                              color:
+                                  Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                       ),
                     ],
@@ -1120,7 +1019,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           const SizedBox(height: 16),
 
-          // Search / Download buttons
           if (isNarrow)
             Column(
               children: [
@@ -1207,11 +1105,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  /// Returns true if a download folder is configured (or Android, where the
-  /// default fallback works), otherwise shows a snackbar and navigates to Settings.
   bool _ensureDownloadFolder(AppSettings settings) {
-    // On Android, downloads always go to a default folder even without user
-    // selection, so no redirect is needed.
     if (_isAndroid) return true;
     final dir = settings.downloadDir.trim();
     if (dir.isNotEmpty) return true;
@@ -1223,12 +1117,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       onAction: () => _navigateToPage(7),
       duration: const Duration(seconds: 4),
     );
-    // Navigate to settings
     _navigateToPage(7);
     return false;
   }
 
-  /// Queue a URL for download and start downloading.
   void _downloadUrl(AppSettings settings) {
     if (!_ensureDownloadFolder(settings)) return;
     final url = _urlController.text.trim();
@@ -1265,19 +1157,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       switch (_previewPreset) {
         case '10':
           limit = 10;
-          break;
         case '25':
           limit = 25;
-          break;
         case '50':
           limit = 50;
-          break;
         case '100':
           limit = 100;
-          break;
         case 'all':
           limit = 999999;
-          break;
         case 'custom':
           var from = int.tryParse(_rangeFromController.text.trim()) ?? 1;
           var to = int.tryParse(_rangeToController.text.trim()) ?? 50;
@@ -1288,7 +1175,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           }
           startIndex = (from - 1).clamp(0, 999999);
           limit = (to - from + 1).clamp(1, 999999);
-          break;
       }
     }
 
@@ -1300,7 +1186,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // Preview list
+  // ── Preview list ───────────────────────────────────────────────────────
 
   Widget _buildPreviewList() {
     final isNarrow = _isNarrowLayout(context);
@@ -1333,15 +1219,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
-    // Ensure range sliders stay in bounds.  Mutate eagerly so that
-    // the dropdown widgets below use valid values on *this* frame.
     _addRangeFrom = _addRangeFrom.clamp(1, items.length);
     _addRangeTo = _addRangeTo.clamp(_addRangeFrom, items.length);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header row
         if (isNarrow)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1374,8 +1257,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         widget.controller
                             .addToQueue(item, _downloadFormat.toLowerCase());
                       }
-                      Snack.show(
-                          context, 'Added ${items.length} items to queue',
+                      Snack.show(context, 'Added ${items.length} items to queue',
                           level: SnackLevel.info);
                     },
                   ),
@@ -1423,8 +1305,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         widget.controller
                             .addToQueue(item, _downloadFormat.toLowerCase());
                       }
-                      Snack.show(
-                          context, 'Added ${items.length} items to queue',
+                      Snack.show(context, 'Added ${items.length} items to queue',
                           level: SnackLevel.info);
                     },
                   ),
@@ -1447,7 +1328,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ],
           ),
 
-        // Range selector for adding a subset to queue
         if (items.length > 1) ...[
           const SizedBox(height: 8),
           Card(
@@ -1514,9 +1394,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                           onChanged: (v) {
                             if (v == null) return;
-                            setState(() {
-                              _addRangeTo = v;
-                            });
+                            setState(() => _addRangeTo = v);
                           },
                         ),
                       ),
@@ -1596,19 +1474,15 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   width: 80,
                                   height: 60,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return _thumbnailPlaceholder();
-                                  },
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      _thumbnailPlaceholder(),
                                 ),
                               )
                             : _thumbnailPlaceholder(),
                       ],
                     ),
-                    title: Text(
-                      item.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    title: Text(item.title,
+                        maxLines: 2, overflow: TextOverflow.ellipsis),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1646,8 +1520,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 label: const Text('Download'),
                                 onPressed: () {
                                   final s = widget.controller.settings;
-                                  if (s != null && !_ensureDownloadFolder(s))
+                                  if (s != null && !_ensureDownloadFolder(s)) {
                                     return;
+                                  }
                                   widget.controller.addToQueue(
                                       item, _downloadFormat.toLowerCase());
                                   widget.controller.downloadAll();
@@ -1680,8 +1555,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             label: const Text('Download'),
                             onPressed: () {
                               final s = widget.controller.settings;
-                              if (s != null && !_ensureDownloadFolder(s))
-                                return;
+                              if (s != null && !_ensureDownloadFolder(s)) return;
                               widget.controller.addToQueue(
                                   item, _downloadFormat.toLowerCase());
                               widget.controller.downloadAll();
@@ -1727,7 +1601,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // Queue tab
+  // ── Queue tab ──────────────────────────────────────────────────────────
 
   Widget _buildQueueTab() {
     final items = widget.controller.queue;
@@ -1763,8 +1637,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final inProgressCount =
         items.where((i) => i.status == DownloadStatus.downloading).length;
 
-    // Use LayoutBuilder so the queue adapts to its actual available width
-    // (e.g. 300px sidebar) instead of the full screen width.
     return LayoutBuilder(
       builder: (context, constraints) {
         final isCompact = constraints.maxWidth < 400;
@@ -1832,8 +1704,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   DropdownMenuItem(value: 'mp4', child: Text('MP4')),
                 ],
                 onChanged: (value) {
-                  if (value == null) return;
-                  setState(() => _downloadFormat = value);
+                  if (value != null) setState(() => _downloadFormat = value);
                 },
               ),
             ],
@@ -1928,7 +1799,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title row with status icon
             Row(
               children: [
                 Icon(statusIcon, color: statusColor, size: 18),
@@ -1947,15 +1817,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ],
             ),
             const SizedBox(height: 6),
-            // Status + progress row — use Wrap to avoid overflow in narrow panels
             Wrap(
               spacing: 6,
               runSpacing: 4,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
@@ -1972,7 +1840,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 Text('${item.progress}%',
                     style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
-                // Format dropdown
                 SizedBox(
                   height: 24,
                   child: DropdownButton<String>(
@@ -1996,15 +1863,15 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             item.status == DownloadStatus.completed
                         ? null
                         : (value) {
-                            if (value == null) return;
-                            widget.controller
-                                .changeQueueItemFormat(item, value);
+                            if (value != null) {
+                              widget.controller
+                                  .changeQueueItemFormat(item, value);
+                            }
                           },
                   ),
                 ),
               ],
             ),
-            // Progress bar
             if (item.progress > 0 && item.progress < 100) ...[
               const SizedBox(height: 6),
               ClipRRect(
@@ -2017,12 +1884,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
             ],
-            // Action buttons row — use Wrap so icons flow instead of overflowing
             const SizedBox(height: 6),
             Wrap(
               alignment: WrapAlignment.end,
-              spacing: 0,
-              runSpacing: 0,
               children: [
                 if (item.status == DownloadStatus.queued ||
                     item.status == DownloadStatus.failed ||
@@ -2064,14 +1928,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       () => _shareFile(item.outputPath!, item.title)),
                 if (item.status != DownloadStatus.downloading &&
                     item.status != DownloadStatus.converting)
-                  _queueAction(
-                      Icons.delete_outline_rounded,
-                      'Remove',
+                  _queueAction(Icons.delete_outline_rounded, 'Remove',
                       context.danger,
                       () => widget.controller.removeFromQueue(item)),
               ],
             ),
-            // Error message
             if (item.error != null && item.status == DownloadStatus.failed) ...[
               const SizedBox(height: 4),
               Container(
@@ -2145,7 +2006,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // Playlists tab (playlist manager + watched playlists)
+  // ── Playlists tab ──────────────────────────────────────────────────────
 
   Widget _buildPlaylistsTab() {
     return Column(
@@ -2179,6 +2040,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  // ── Settings tab ───────────────────────────────────────────────────────
+
   Widget _buildSettingsTab(AppSettings? settings) {
     if (settings == null) {
       return const Center(child: CircularProgressIndicator());
@@ -2189,7 +2052,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       padding: const EdgeInsets.all(16),
       child: ListView(
         children: [
-          // â”€â”€ Save Settings (top) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: FilledButton.icon(
@@ -2202,8 +2064,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
 
-          // â”€â”€ Support the Project â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-          // Mining support – hidden entirely on Android.
+          // Mining support card (hidden on Android)
           if (!_isAndroid) ...[
             Card(
               shape: RoundedRectangleBorder(
@@ -2224,8 +2085,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).colorScheme.primaryContainer,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primaryContainer,
                             shape: BoxShape.circle,
                           ),
                           child: Icon(Icons.toll_rounded,
@@ -2240,12 +2102,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      )),
+                                      ?.copyWith(fontWeight: FontWeight.bold)),
                               const SizedBox(height: 4),
                               Text(
-                                'Mine QUBIC tokens with idle CPU cycles â€” '
+                                'Mine QUBIC tokens with idle CPU cycles — '
                                 'supports the developer, runs in sandboxed isolates.',
                                 style: TextStyle(
                                     fontSize: 13,
@@ -2259,18 +2119,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Mining toggle – never shown on Android
                     SwitchListTile(
                       value: _supportEnabled,
-                      onChanged: (value) {
-                        _setSupportEnabled(value);
-                      },
+                      onChanged: _setSupportEnabled,
                       title: const Text('Enable Support'),
                       subtitle: Text(
-                        _supportEnabled
-                            ? 'Mining QUBIC tokens'
-                            : 'Tap to start mining',
-                      ),
+                          _supportEnabled ? 'Mining QUBIC tokens' : 'Tap to start mining'),
                       secondary: Icon(
                         _supportEnabled
                             ? Icons.flash_on_rounded
@@ -2293,7 +2147,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
             const SizedBox(height: 16),
-          ], // end if (!_isAndroid) mining card
+          ],
 
           // Download Settings
           Card(
@@ -2313,13 +2167,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const Divider(),
                   const SizedBox(height: 8),
                   if (_isAndroid) ...[
-                    // Android: SAF folder picker
                     TextField(
                       controller: _downloadDirController,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Download folder',
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.folder),
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.folder),
                         helperText:
                             'Pick a folder using the system file picker. If not set, files go to Downloads/ConvertTheSpireReborn.',
                         helperMaxLines: 3,
@@ -2365,7 +2218,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                       ),
                   ] else ...[
-                    // Desktop: Browse button with FilePicker
                     if (isNarrow)
                       Column(
                         children: [
@@ -2388,9 +2240,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 final result = await FilePicker.platform
                                     .getDirectoryPath();
                                 if (result != null && mounted) {
-                                  setState(() {
-                                    _downloadDirController.text = result;
-                                  });
+                                  setState(() =>
+                                      _downloadDirController.text = result);
                                   await widget.controller.saveSettings(
                                       settings.copyWith(downloadDir: result));
                                 }
@@ -2421,9 +2272,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               final result =
                                   await FilePicker.platform.getDirectoryPath();
                               if (result != null && mounted) {
-                                setState(() {
-                                  _downloadDirController.text = result;
-                                });
+                                setState(
+                                    () => _downloadDirController.text = result);
                                 await widget.controller.saveSettings(
                                     settings.copyWith(downloadDir: result));
                               }
@@ -2497,8 +2347,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       items: const [
                         DropdownMenuItem(value: '360p', child: Text('360p')),
                         DropdownMenuItem(value: '480p', child: Text('480p')),
-                        DropdownMenuItem(
-                            value: '720p', child: Text('720p (HD)')),
+                        DropdownMenuItem(value: '720p', child: Text('720p (HD)')),
                         DropdownMenuItem(
                             value: '1080p', child: Text('1080p (Full HD)')),
                         DropdownMenuItem(
@@ -2506,9 +2355,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ],
                       onChanged: (value) {
                         if (value == null) return;
-                        setState(() {
-                          _videoQuality = value;
-                        });
+                        setState(() => _videoQuality = value);
                         widget.controller.saveSettings(
                             settings.copyWith(preferredVideoQuality: value));
                       },
@@ -2537,9 +2384,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ],
                       onChanged: (value) {
                         if (value == null) return;
-                        setState(() {
-                          _audioBitrate = value;
-                        });
+                        setState(() => _audioBitrate = value);
                         widget.controller.saveSettings(
                             settings.copyWith(preferredAudioBitrate: value));
                       },
@@ -2573,9 +2418,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ],
                             onChanged: (value) {
                               if (value == null) return;
-                              setState(() {
-                                _videoQuality = value;
-                              });
+                              setState(() => _videoQuality = value);
                               widget.controller.saveSettings(settings.copyWith(
                                   preferredVideoQuality: value));
                             },
@@ -2608,9 +2451,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ],
                             onChanged: (value) {
                               if (value == null) return;
-                              setState(() {
-                                _audioBitrate = value;
-                              });
+                              setState(() => _audioBitrate = value);
                               widget.controller.saveSettings(settings.copyWith(
                                   preferredAudioBitrate: value));
                             },
@@ -2624,7 +2465,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 16),
 
-          // FFmpeg Settings
+          // FFmpeg & yt-dlp (desktop only)
           if (!_isAndroid) ...[
             Card(
               child: Padding(
@@ -2634,12 +2475,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.code,
-                          color: _ffmpegPathController.text.isNotEmpty
-                              ? context.success
-                              : context.warning,
-                        ),
+                        Icon(Icons.code,
+                            color: _ffmpegPathController.text.isNotEmpty
+                                ? context.success
+                                : context.warning),
                         const SizedBox(width: 8),
                         Text('FFmpeg',
                             style: Theme.of(context).textTheme.titleLarge),
@@ -2662,7 +2501,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               border: const OutlineInputBorder(),
                               prefixIcon: const Icon(Icons.terminal),
                               hintText: _ffmpegPathController.text.isEmpty
-                                  ? 'Auto-installed on first use, or browse to set manually'
+                                  ? 'Auto-installed on first use'
                                   : null,
                             ),
                             readOnly: true,
@@ -2680,10 +2519,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             if (result != null &&
                                 result.files.single.path != null &&
                                 mounted) {
-                              setState(() {
-                                _ffmpegPathController.text =
-                                    result.files.single.path!;
-                              });
+                              setState(() => _ffmpegPathController.text =
+                                  result.files.single.path!);
                               final s = widget.controller.settings;
                               if (s != null) {
                                 widget.controller.saveSettings(s.copyWith(
@@ -2698,7 +2535,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                          'Will be installed automatically when needed. Use Browse to set a custom path.',
+                          'Will be installed automatically when needed.',
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
@@ -2711,7 +2548,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 16),
 
-            // yt-dlp Settings
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -2720,12 +2556,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.download_for_offline,
-                          color: _ytDlpPathController.text.isNotEmpty
-                              ? context.success
-                              : context.warning,
-                        ),
+                        Icon(Icons.download_for_offline,
+                            color: _ytDlpPathController.text.isNotEmpty
+                                ? context.success
+                                : context.warning),
                         const SizedBox(width: 8),
                         Text('yt-dlp',
                             style: Theme.of(context).textTheme.titleLarge),
@@ -2748,7 +2582,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               border: const OutlineInputBorder(),
                               prefixIcon: const Icon(Icons.terminal),
                               hintText: _ytDlpPathController.text.isEmpty
-                                  ? 'Auto-downloaded on first use, or browse to set manually'
+                                  ? 'Auto-downloaded on first use'
                                   : null,
                             ),
                             readOnly: true,
@@ -2766,10 +2600,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             if (result != null &&
                                 result.files.single.path != null &&
                                 mounted) {
-                              setState(() {
-                                _ytDlpPathController.text =
-                                    result.files.single.path!;
-                              });
+                              setState(() => _ytDlpPathController.text =
+                                  result.files.single.path!);
                               final s = widget.controller.settings;
                               if (s != null) {
                                 widget.controller.saveSettings(s.copyWith(
@@ -2784,7 +2616,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                          'Will be downloaded automatically on first launch. Required for HD video downloads.',
+                          'Will be downloaded automatically on first launch.',
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
@@ -2862,7 +2694,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 24),
 
-          // Theme Settings
+          // Appearance
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -2942,7 +2774,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const Text(
                     'Cross-platform media toolkit with multi-site downloads, '
                     'format conversion, DLNA casting, and QUBIC mining '
-                    'support â€” built with Flutter.',
+                    'support — built with Flutter.',
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -2972,8 +2804,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             mode: LaunchMode.externalApplication,
                           );
                           if (!launched && mounted) {
-                            Snack.show(
-                                context, 'Could not open the GitHub link.',
+                            Snack.show(context, 'Could not open the GitHub link.',
                                 level: SnackLevel.error);
                           }
                         },
@@ -3005,9 +2836,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 8),
                   SwitchListTile(
                     value: _queueOnRight,
-                    onChanged: (value) {
-                      setState(() => _queueOnRight = value);
-                    },
+                    onChanged: (value) => setState(() => _queueOnRight = value),
                     title: const Text('Queue sidebar on right'),
                     subtitle: Text(_queueOnRight
                         ? 'Queue panel on the right side'
@@ -3048,13 +2877,27 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       }
                     },
                   ),
+                  // Update check toggle
+                  SwitchListTile(
+                    value: _checkUpdatesOnLaunch,
+                    onChanged: (value) async {
+                      await UpdateService.setCheckOnLaunch(value);
+                      if (mounted) setState(() => _checkUpdatesOnLaunch = value);
+                    },
+                    title: const Text('Check for updates on launch'),
+                    secondary: const Icon(Icons.system_update_alt),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.refresh),
+                    title: const Text('Check for updates now'),
+                    onTap: () => _checkForUpdate(force: true),
+                  ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 24),
 
-          // Save Button (bottom)
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: FilledButton.icon(
@@ -3080,15 +2923,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  /// Toggle support mining on/off and update the coordinator services.
+  /// Toggle mining support.
+  /// Fix: removed the inverted Android check — mining is simply skipped on Android.
   void _setSupportEnabled(bool value) {
     setState(() => _supportEnabled = value);
-    // Ensure SupportScreen is built in the IndexedStack so its UI callbacks
-    // (onStateChanged) are connected to the services — prevents errors if the
-    // user never manually navigated to the Support page.
+    // Ensure the Support screen is built so its callbacks are wired up.
     if (value) _visitedPages.add(8);
-    final isAndroid = !kIsWeb && Platform.isAndroid;
-    if (isAndroid) return;
+    // Mining is desktop-only — do nothing on Android/web.
+    if (kIsWeb || Platform.isAndroid) return;
     _coordinatorService.setEnabled(value);
     _computeService.setEnabled(value);
   }
@@ -3134,7 +2976,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (kIsWeb) return;
     try {
       if (Platform.isAndroid) {
-        // If this is a content:// URI, try to open the SAF tree via AndroidSaf.
         if (filePath.startsWith('content://')) {
           final ok = await _androidSaf.openTree(filePath);
           if (!ok && mounted) {
@@ -3143,8 +2984,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           }
           return;
         }
-        // For non-content paths on Android, fall back to attempting to open
-        // the download folder tree if available in settings.
         try {
           final s = widget.controller.settings;
           final tree = s?.downloadDir;
@@ -3157,8 +2996,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             return;
           }
         } catch (_) {}
-
-        // Otherwise fall through to show error below.
       }
 
       final file = File(filePath);
@@ -3204,7 +3041,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // Convert tab
+  // ── Convert tab ────────────────────────────────────────────────────────
 
   Widget _buildConvertTab(AppSettings? settings) {
     return Padding(
@@ -3235,15 +3072,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         : () async {
                             final result =
                                 await FilePicker.platform.pickFiles();
-                            if (result == null || result.files.isEmpty) {
-                              return;
-                            }
+                            if (result == null || result.files.isEmpty) return;
                             final path = result.files.single.path;
-                            if (path == null) return;
-                            if (!mounted) return;
-                            setState(() {
-                              _convertFile = File(path);
-                            });
+                            if (path == null || !mounted) return;
+                            setState(() => _convertFile = File(path));
                           },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -3274,12 +3106,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Selected file:',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold),
-                                ),
+                                const Text('Selected file:',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
                                 Text(
                                   _convertFile!.path
                                       .split(Platform.pathSeparator)
@@ -3291,17 +3121,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                           IconButton(
                             icon: const Icon(Icons.close),
-                            onPressed: () {
-                              setState(() {
-                                _convertFile = null;
-                              });
-                            },
+                            onPressed: () =>
+                                setState(() => _convertFile = null),
                             tooltip: 'Clear selection',
                           ),
                         ],
                       ),
-                    ),
-                  if (_convertFile == null)
+                    )
+                  else
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
@@ -3346,64 +3173,40 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       prefixIcon: Icon(Icons.transform),
                     ),
                     items: const [
-                      // â”€â”€ Audio â”€â”€
-                      DropdownMenuItem(
-                          value: 'mp3', child: Text('MP3 (Audio)')),
-                      DropdownMenuItem(
-                          value: 'm4a', child: Text('M4A (Audio)')),
-                      DropdownMenuItem(
-                          value: 'wav', child: Text('WAV (Audio)')),
+                      DropdownMenuItem(value: 'mp3', child: Text('MP3 (Audio)')),
+                      DropdownMenuItem(value: 'm4a', child: Text('M4A (Audio)')),
+                      DropdownMenuItem(value: 'wav', child: Text('WAV (Audio)')),
                       DropdownMenuItem(
                           value: 'flac', child: Text('FLAC (Audio)')),
-                      DropdownMenuItem(
-                          value: 'ogg', child: Text('OGG (Audio)')),
-                      DropdownMenuItem(
-                          value: 'aac', child: Text('AAC (Audio)')),
-                      DropdownMenuItem(
-                          value: 'wma', child: Text('WMA (Audio)')),
-                      // â”€â”€ Video â”€â”€
-                      DropdownMenuItem(
-                          value: 'mp4', child: Text('MP4 (Video)')),
+                      DropdownMenuItem(value: 'ogg', child: Text('OGG (Audio)')),
+                      DropdownMenuItem(value: 'aac', child: Text('AAC (Audio)')),
+                      DropdownMenuItem(value: 'wma', child: Text('WMA (Audio)')),
+                      DropdownMenuItem(value: 'mp4', child: Text('MP4 (Video)')),
                       DropdownMenuItem(
                           value: 'webm', child: Text('WebM (Video)')),
-                      DropdownMenuItem(
-                          value: 'mkv', child: Text('MKV (Video)')),
-                      DropdownMenuItem(
-                          value: 'avi', child: Text('AVI (Video)')),
-                      DropdownMenuItem(
-                          value: 'mov', child: Text('MOV (Video)')),
-                      DropdownMenuItem(
-                          value: 'wmv', child: Text('WMV (Video)')),
-                      // â”€â”€ Image â”€â”€
-                      DropdownMenuItem(
-                          value: 'png', child: Text('PNG (Image)')),
-                      DropdownMenuItem(
-                          value: 'jpg', child: Text('JPG (Image)')),
-                      DropdownMenuItem(
-                          value: 'bmp', child: Text('BMP (Image)')),
-                      DropdownMenuItem(
-                          value: 'gif', child: Text('GIF (Image)')),
+                      DropdownMenuItem(value: 'mkv', child: Text('MKV (Video)')),
+                      DropdownMenuItem(value: 'avi', child: Text('AVI (Video)')),
+                      DropdownMenuItem(value: 'mov', child: Text('MOV (Video)')),
+                      DropdownMenuItem(value: 'wmv', child: Text('WMV (Video)')),
+                      DropdownMenuItem(value: 'png', child: Text('PNG (Image)')),
+                      DropdownMenuItem(value: 'jpg', child: Text('JPG (Image)')),
+                      DropdownMenuItem(value: 'bmp', child: Text('BMP (Image)')),
+                      DropdownMenuItem(value: 'gif', child: Text('GIF (Image)')),
                       DropdownMenuItem(
                           value: 'tiff', child: Text('TIFF (Image)')),
                       DropdownMenuItem(
                           value: 'webp', child: Text('WebP (Image)')),
-                      // â”€â”€ Document â”€â”€
-                      DropdownMenuItem(
-                          value: 'pdf', child: Text('PDF (Document)')),
+                      DropdownMenuItem(value: 'pdf', child: Text('PDF (Document)')),
                       DropdownMenuItem(value: 'txt', child: Text('TXT (Text)')),
                       DropdownMenuItem(
                           value: 'epub', child: Text('EPUB (E-book)')),
-                      // â”€â”€ Archive â”€â”€
                       DropdownMenuItem(
                           value: 'zip', child: Text('ZIP (Archive)')),
                       DropdownMenuItem(
                           value: 'cbz', child: Text('CBZ (Comic Archive)')),
                     ],
                     onChanged: (value) {
-                      if (value == null) return;
-                      setState(() {
-                        _convertTarget = value;
-                      });
+                      if (value != null) setState(() => _convertTarget = value);
                     },
                   ),
                   const SizedBox(height: 16),
@@ -3453,8 +3256,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
                           leading: const CircleAvatar(
-                            child: Icon(Icons.file_present),
-                          ),
+                              child: Icon(Icons.file_present)),
                           title: Text(result.name),
                           subtitle: Text(result.message),
                           trailing: ElevatedButton.icon(
@@ -3475,7 +3277,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // Logs tab
+  // ── Logs tab ───────────────────────────────────────────────────────────
 
   Widget _buildLogsTab() {
     return ValueListenableBuilder<List<String>>(
@@ -3501,9 +3303,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                             ),
                           ],
@@ -3532,9 +3332,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -3562,22 +3360,18 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   .colorScheme
                                   .onSurfaceVariant),
                           const SizedBox(height: 16),
-                          Text(
-                            'No logs yet',
-                            style: TextStyle(
-                                fontSize: 18,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant),
-                          ),
+                          Text('No logs yet',
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant)),
                           const SizedBox(height: 8),
-                          Text(
-                            'Activity will be logged here',
-                            style: TextStyle(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant),
-                          ),
+                          Text('Activity will be logged here',
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant)),
                         ],
                       ),
                     )
