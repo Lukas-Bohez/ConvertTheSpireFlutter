@@ -13,6 +13,9 @@ import 'package:window_manager/window_manager.dart';
 /// When [shouldMinimiseToTray] returns `true` the window is hidden instead
 /// of destroyed, so background downloads and mining continue.
 class TrayService with TrayListener, WindowListener {
+  static bool enabled = false;
+  static bool shouldMinimiseToTrayOnClose = false;
+
   bool _initialised = false;
   bool Function() shouldMinimiseToTray;
   VoidCallback? onTrayShow;
@@ -26,6 +29,8 @@ class TrayService with TrayListener, WindowListener {
   Future<void> init() async {
     if (!isDesktop || _initialised) return;
     _initialised = true;
+    enabled = true;
+    shouldMinimiseToTrayOnClose = shouldMinimiseToTray();
 
     await windowManager.ensureInitialized();
     await _restoreWindowGeometry();
@@ -180,6 +185,9 @@ class TrayService with TrayListener, WindowListener {
 
   Future<void> destroy() async {
     if (!_initialised) return;
+    enabled = false;
+    shouldMinimiseToTrayOnClose = false;
+
     trayManager.removeListener(this);
     windowManager.removeListener(this);
     _geometryDebounce?.cancel();

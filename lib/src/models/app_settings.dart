@@ -14,6 +14,7 @@ class AppSettings {
   final int convertMaxAgeHours;
 
   final String themeMode; // 'system', 'light', 'dark'
+  final bool minimizeToTrayOnClose; // keep running when window is closed (desktop)
 
   // ── New feature settings ─────────────────────────────────────────────
   final String defaultAudioFormat; // mp3, m4a
@@ -44,6 +45,7 @@ class AppSettings {
     required this.convertCleanupMinutes,
     required this.convertMaxAgeHours,
     this.themeMode = 'system',
+    this.minimizeToTrayOnClose = false,
     this.defaultAudioFormat = 'mp3',
     this.defaultBitrate = 0,
     this.minimumBitrate = 0,
@@ -78,6 +80,7 @@ class AppSettings {
       preferredVideoQuality: '1080p',
       preferredAudioBitrate: 320,
       ytDlpPath: null,
+      minimizeToTrayOnClose: false,
     );
   }
 
@@ -104,6 +107,7 @@ class AppSettings {
     String? preferredVideoQuality,
     int? preferredAudioBitrate,
     String? ytDlpPath,
+    bool? minimizeToTrayOnClose,
   }) {
     return AppSettings(
       downloadDir: downloadDir ?? this.downloadDir,
@@ -122,6 +126,8 @@ class AppSettings {
           convertCleanupMinutes ?? this.convertCleanupMinutes,
       convertMaxAgeHours: convertMaxAgeHours ?? this.convertMaxAgeHours,
       themeMode: themeMode ?? this.themeMode,
+      minimizeToTrayOnClose:
+          minimizeToTrayOnClose ?? this.minimizeToTrayOnClose,
       defaultAudioFormat: defaultAudioFormat ?? this.defaultAudioFormat,
       defaultBitrate: defaultBitrate ?? this.defaultBitrate,
       minimumBitrate: minimumBitrate ?? this.minimumBitrate,
@@ -165,6 +171,7 @@ class AppSettings {
       preferredAudioBitrate:
           (json['preferred_audio_bitrate'] as num?)?.toInt() ?? 320,
       ytDlpPath: (json['yt_dlp_path'] as String?)?.trim(),
+      minimizeToTrayOnClose: json['minimize_to_tray_on_close'] as bool? ?? false,
     );
   }
 
@@ -192,6 +199,7 @@ class AppSettings {
       'preferred_video_quality': preferredVideoQuality,
       'preferred_audio_bitrate': preferredAudioBitrate,
       'yt_dlp_path': ytDlpPath,
+      'minimize_to_tray_on_close': minimizeToTrayOnClose,
     };
   }
 }

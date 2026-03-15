@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/services.dart'
     show LogicalKeyboardKey, KeyEvent, KeyDownEvent;
 import 'package:window_manager/window_manager.dart';
+import 'services/tray_service.dart';
 import 'dart:io' show Platform, Process;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -361,6 +362,14 @@ class _MyAppState extends State<MyApp>
           if (kDebugMode) debugPrint('[App] taskkill msedgewebview2 failed: $e');
         }
       }
+    }
+
+    // If tray mode is enabled then hiding the window is the expected behaviour
+    // (so playback and background tasks can continue) instead of tearing down.
+    if (TrayService.enabled && TrayService.shouldMinimiseToTrayOnClose) {
+      if (kDebugMode) debugPrint('[App] Tray mode active; hiding window instead of destroying');
+      await windowManager.hide();
+      return;
     }
 
     try {
