@@ -1928,10 +1928,10 @@ class _SongTileState extends State<_SongTile> {
   @override
   Widget build(BuildContext context) {
     final item = widget.entry.value;
-    // Always read idx fresh — never capture it in initState or a local that
-    // could go stale across rebuilds.
-    final idx = widget.entry.key;
-    final isActive = widget.state.currentIndex == idx;
+    // NEVER capture idx as a local variable — closures (onTap, onLongPress)
+    // would bake in a stale value if notifyListeners fires between build and tap.
+    // Always read widget.entry.key at the moment the closure executes.
+    final isActive = widget.state.currentIndex == widget.entry.key;
     final isPlaying = isActive && widget.state.isActuallyPlaying;
     final title = item.title ?? p.basenameWithoutExtension(item.path);
 
@@ -1940,7 +1940,6 @@ class _SongTileState extends State<_SongTile> {
       leading: Stack(
         children: [
           _TrackThumbnail(data: item.thumbnailData, isVideo: item.type == MediaType.video, size: 46, radius: 8),
-          // Clear audio/video type indicator on the thumbnail corner.
           Positioned(
             bottom: 0,
             right: 0,
@@ -1965,8 +1964,7 @@ class _SongTileState extends State<_SongTile> {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isPlaying)
-            const _EqIndicator(),
+          if (isPlaying) const _EqIndicator(),
           IconButton(
             icon: Icon(
               widget.state.isFavourite(item.path) ? Icons.star_rounded : Icons.star_border_rounded,
@@ -1977,9 +1975,9 @@ class _SongTileState extends State<_SongTile> {
           ),
         ],
       ),
-      onTap: () => widget.onTap(widget.state, idx),
+      onTap: () => widget.onTap(widget.state, widget.entry.key),
       onLongPress: () {
-        widget.state.enqueue(idx);
+        widget.state.enqueue(widget.entry.key);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Added "$title" to queue'),
           duration: const Duration(seconds: 1),
@@ -2055,15 +2053,15 @@ class _VideoCardState extends State<_VideoCard> {
   @override
   Widget build(BuildContext context) {
     final item = widget.entry.value;
-    final idx = widget.entry.key;
-    final isActive = widget.state.currentIndex == idx;
+    // Same fix as _SongTile: never capture entry.key as a local.
+    final isActive = widget.state.currentIndex == widget.entry.key;
     final title = item.title ?? p.basenameWithoutExtension(item.path);
     final tileBg = _PlayerTheme.tileBg(context);
 
     return GestureDetector(
-      onTap: () => widget.onTap(widget.state, idx),
+      onTap: () => widget.onTap(widget.state, widget.entry.key),
       onLongPress: () {
-        widget.state.enqueue(idx);
+        widget.state.enqueue(widget.entry.key);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Added "$title" to queue'),
           duration: const Duration(seconds: 1),
