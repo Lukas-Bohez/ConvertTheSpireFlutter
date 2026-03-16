@@ -72,7 +72,14 @@ dependencies {
 // After APKs are produced by Gradle/Flutter, copy them to the workspace releases/android folder
 tasks.register("copyApkToReleases") {
     doLast {
-        val apkDir = file("${buildDir.absolutePath}/outputs/flutter-apk")
+        // Flutter may emit APKs in the module build dir or the project root build dir.
+        val moduleApkDir = file("${buildDir.absolutePath}/outputs/flutter-apk")
+        val projectApkDir = file("${project.rootDir}/build/app/outputs/flutter-apk")
+        val apkDir = when {
+            moduleApkDir.exists() -> moduleApkDir
+            projectApkDir.exists() -> projectApkDir
+            else -> moduleApkDir
+        }
         val destDir = file("${project.rootDir}/releases/android")
         if (!destDir.exists()) destDir.mkdirs()
         if (apkDir.exists()) {
