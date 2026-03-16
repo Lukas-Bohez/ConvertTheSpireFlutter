@@ -444,6 +444,8 @@ class YtDlpService {
         return 1440;
       case '2160p':
         return 2160;
+      case '4320p':
+        return 4320;
       case 'best':
         return 9999;
       default:

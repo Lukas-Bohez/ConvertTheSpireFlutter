@@ -305,7 +305,8 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  void addToQueue(PreviewItem item, String format) {
+  void addToQueue(PreviewItem item, String format,
+      {String? videoQuality}) {
     if (queue.any((q) => q.url == item.url && q.format == format)) {
       return;
     }
@@ -321,6 +322,7 @@ class AppController extends ChangeNotifier {
           status: DownloadStatus.queued,
           outputPath: null,
           error: null,
+          videoQuality: videoQuality,
         ),
       );
     notifyListeners();
@@ -405,11 +407,13 @@ class AppController extends ChangeNotifier {
             ffmpegPath: ffmpegPath,
             token: token,
             ytDlpPath: settings.ytDlpPath,
+            sponsorBlockEnabled: settings.sponsorBlockEnabled,
             onProgress: (pct, status) {
               final updated = item.copyWith(progress: pct, status: status);
               _updateQueue(item, updated);
             },
-            preferredVideoQuality: settings.preferredVideoQuality,
+            preferredVideoQuality:
+                item.videoQuality ?? settings.preferredVideoQuality,
             preferredAudioBitrate: settings.preferredAudioBitrate,
           );
         } else {
@@ -421,6 +425,7 @@ class AppController extends ChangeNotifier {
             ffmpegPath: ffmpegPath,
             token: token,
             ytDlpPath: settings.ytDlpPath,
+            sponsorBlockEnabled: settings.sponsorBlockEnabled,
             onProgress: (pct, status) {
               final updated = item.copyWith(progress: pct, status: status);
               _updateQueue(item, updated);
@@ -884,7 +889,8 @@ class AppController extends ChangeNotifier {
   ///
   /// YouTube results are queued with a `youtube.com/watch?v=` URL.
   /// Generic (non-YouTube) results are queued with the raw URL stored in [id].
-  void addSearchResultToQueue(models.SearchResult result, {String? format}) {
+  void addSearchResultToQueue(models.SearchResult result,
+      {String? format, String? videoQuality}) {
     final fmt = format ?? _settings?.defaultAudioFormat ?? 'mp3';
 
     // If source is 'generic', the ID *is* the URL (set by BrowserScreen)
@@ -902,6 +908,7 @@ class AppController extends ChangeNotifier {
         thumbnailUrl: result.thumbnailUrl,
       ),
       fmt,
+      videoQuality: videoQuality,
     );
   }
 

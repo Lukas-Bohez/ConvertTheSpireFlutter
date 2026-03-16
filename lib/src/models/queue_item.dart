@@ -22,6 +22,9 @@ class QueueItem {
   final String? outputPath;
   final String? error;
 
+  /// Optional per-item video quality override (e.g., 1080p, 4K). If null, app-wide setting is used.
+  final String? videoQuality;
+
   const QueueItem({
     required this.url,
     required this.title,
@@ -32,6 +35,7 @@ class QueueItem {
     required this.status,
     required this.outputPath,
     required this.error,
+    this.videoQuality,
   });
 
   QueueItem copyWith({
@@ -42,6 +46,7 @@ class QueueItem {
     DownloadStatus? status,
     Object? outputPath = _unset,
     Object? error = _unset,
+    String? videoQuality,
   }) {
     return QueueItem(
       url: url,
@@ -54,6 +59,7 @@ class QueueItem {
       outputPath:
           outputPath == _unset ? this.outputPath : outputPath as String?,
       error: error == _unset ? this.error : error as String?,
+      videoQuality: videoQuality ?? this.videoQuality,
     );
   }
 
@@ -74,6 +80,7 @@ class QueueItem {
         'progress': progress,
         'outputPath': outputPath,
         'error': error,
+        'videoQuality': videoQuality,
       };
 
   factory QueueItem.fromJson(Map<String, dynamic> json) => QueueItem(
@@ -94,5 +101,6 @@ class QueueItem {
         }(),
         outputPath: json['outputPath'] as String?,
         error: null,
+        videoQuality: json['videoQuality'] as String?,
       );
 }

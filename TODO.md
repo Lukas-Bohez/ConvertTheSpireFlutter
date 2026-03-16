@@ -58,7 +58,7 @@ This file tracks the work needed to make ConvertTheSpireFlutter feel like a mode
 - [ ] When a playlist URL is entered, list items and allow users to uncheck tracks before downloading.
 
 ### ✅ SponsorBlock Integration
-- [ ] Provide an optional setting to use SponsorBlock API to skip sponsored segments during download/conversion.
+- [x] Provide an optional setting to use SponsorBlock API to skip sponsored segments during download/conversion.
 
 ---
 

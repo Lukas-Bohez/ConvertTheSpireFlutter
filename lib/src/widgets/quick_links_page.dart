@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../models/search_result.dart';
+import 'quick_download_card.dart';
 import 'quick_links_service.dart';
 import 'm3_home_grid.dart';
 
 /// Clean home page with a grid of quick-link tiles.
 class QuickLinksPage extends StatefulWidget {
   final ValueChanged<String> onNavigate;
-  final ValueChanged<String> onSearch;
+  final Future<void> Function(SearchResult result, String format, String quality)
+      onDownload;
 
   const QuickLinksPage({
     super.key,
     required this.onNavigate,
-    required this.onSearch,
+    required this.onDownload,
   });
 
   @override
@@ -51,7 +54,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
         ),
         children: [
           const SizedBox(height: 28),
-          // App branding
+          // App branding + quick download
           Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -83,16 +86,21 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Use the address bar above to navigate or enter a URL',
+                  'Paste a video or playlist URL below to start downloading.',
                   style: TextStyle(
                     fontSize: 18,
                     color: cs.onSurfaceVariant.withValues(alpha: 0.7),
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 36),
+          const SizedBox(height: 24),
+
+          // Quick URL download input
+          QuickDownloadCard(onDownload: widget.onDownload),
+          const SizedBox(height: 24),
 
           // Quick links grid
           SizedBox(
