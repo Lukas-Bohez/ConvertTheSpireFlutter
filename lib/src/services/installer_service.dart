@@ -35,8 +35,8 @@ class InstallerService {
     }
 
     onProgress?.call(60, 'Extracting');
-    final inStream = InputFileStream(zipFile.path);
-    final archive = ZipDecoder().decodeBuffer(inStream);
+    final bytes = await zipFile.readAsBytes();
+    final archive = ZipDecoder().decodeBytes(bytes);
     for (final file in archive) {
       final outPath =
           '${downloadDir.path}${Platform.pathSeparator}${file.name}';

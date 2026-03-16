@@ -339,7 +339,7 @@ class ConvertService {
       List<int> inputBytes, String outputName, String originalName) {
     final archive = Archive();
     archive.addFile(ArchiveFile(originalName, inputBytes.length, inputBytes));
-    final encoded = ZipEncoder().encode(archive) ?? <int>[];
+    final encoded = ZipEncoder().encode(archive);
     return ConvertResult(
       name: outputName,
       mime:
@@ -591,7 +591,7 @@ class ConvertService {
     archive.addFile(
         ArchiveFile('OEBPS/chapter1.xhtml', chapterBytes.length, chapterBytes));
 
-    final bytes = ZipEncoder().encode(archive) ?? <int>[];
+    final bytes = ZipEncoder().encode(archive);
     return ConvertResult(
       name: '$baseName.epub',
       mime: 'application/epub+zip',

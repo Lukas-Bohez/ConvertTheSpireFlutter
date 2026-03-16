@@ -29,6 +29,7 @@ class AppSettings {
 
   // ── yt-dlp settings ───────────────────────────────────────────────────
   final String? ytDlpPath; // custom binary path (null = auto-resolve)
+  final bool sponsorBlockEnabled; // remove sponsored segments when using yt-dlp
 
   const AppSettings({
     required this.downloadDir,
@@ -54,6 +55,7 @@ class AppSettings {
     this.preferredVideoQuality = '1080p',
     this.preferredAudioBitrate = 320,
     this.ytDlpPath,
+    this.sponsorBlockEnabled = false,
   });
 
   factory AppSettings.defaults({required String downloadDir}) {
@@ -80,6 +82,7 @@ class AppSettings {
       preferredVideoQuality: '1080p',
       preferredAudioBitrate: 320,
       ytDlpPath: null,
+      sponsorBlockEnabled: false,
       minimizeToTrayOnClose: false,
     );
   }
@@ -107,6 +110,7 @@ class AppSettings {
     String? preferredVideoQuality,
     int? preferredAudioBitrate,
     String? ytDlpPath,
+    bool? sponsorBlockEnabled,
     bool? minimizeToTrayOnClose,
   }) {
     return AppSettings(
@@ -138,6 +142,7 @@ class AppSettings {
       preferredAudioBitrate:
           preferredAudioBitrate ?? this.preferredAudioBitrate,
       ytDlpPath: ytDlpPath ?? this.ytDlpPath,
+      sponsorBlockEnabled: sponsorBlockEnabled ?? this.sponsorBlockEnabled,
     );
   }
 
@@ -171,6 +176,7 @@ class AppSettings {
       preferredAudioBitrate:
           (json['preferred_audio_bitrate'] as num?)?.toInt() ?? 320,
       ytDlpPath: (json['yt_dlp_path'] as String?)?.trim(),
+      sponsorBlockEnabled: json['sponsor_block_enabled'] as bool? ?? false,
       minimizeToTrayOnClose: json['minimize_to_tray_on_close'] as bool? ?? false,
     );
   }
@@ -199,6 +205,7 @@ class AppSettings {
       'preferred_video_quality': preferredVideoQuality,
       'preferred_audio_bitrate': preferredAudioBitrate,
       'yt_dlp_path': ytDlpPath,
+      'sponsor_block_enabled': sponsorBlockEnabled,
       'minimize_to_tray_on_close': minimizeToTrayOnClose,
     };
   }

@@ -32,6 +32,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   List<SearchResult>? _tracks;
   PlaylistInfo? _playlistInfo;
   PlaylistFolderComparison? _comparison;
+  Set<SearchResult> _missingSelection = {};
   String? _error;
   String _selectedFormat = 'mp3';
 
@@ -76,6 +77,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         _loading = false;
         _loadingMessage = null;
         _tabController.index = 0; // Switch to Overview tab
+        _missingSelection.clear();
       });
     } catch (e) {
       if (!mounted) return;
@@ -116,6 +118,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         _comparison = comparison;
         _loading = false;
         _loadingMessage = null;
+        _missingSelection = comparison.missing.toSet();
         // Jump to the most interesting tab
         if (comparison.missingCount > 0) {
           _tabController.index = 2; // Missing tab
@@ -670,16 +673,38 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
     return Column(
       children: [
-        // Action bar
+        // Action bar (selection + download)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Row(
             children: [
               FilledButton.icon(
-                onPressed: () => widget.onDownloadMissing(
-                    _comparison!.missing, _selectedFormat),
+                onPressed: _missingSelection.isEmpty
+                    ? null
+                    : () => widget.onDownloadMissing(
+                          _missingSelection.toList(),
+                          _selectedFormat,
+                        ),
                 icon: const Icon(Icons.download, size: 18),
-                label: Text('Download All (${_comparison!.missingCount})'),
+                label: Text(
+                    'Download Selected (${_missingSelection.length}/${_comparison!.missingCount})'),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    if (_missingSelection.length == _comparison!.missingCount) {
+                      _missingSelection.clear();
+                    } else {
+                      _missingSelection = _comparison!.missing.toSet();
+                    }
+                  });
+                },
+                icon: const Icon(Icons.check_box, size: 18),
+                label: Text(_missingSelection.length ==
+                        _comparison!.missingCount
+                    ? 'Clear Selection'
+                    : 'Select All'),
               ),
               const SizedBox(width: 8),
               OutlinedButton.icon(
@@ -695,9 +720,21 @@ class _PlaylistScreenState extends State<PlaylistScreen>
             itemCount: _comparison!.missing.length,
             itemBuilder: (context, i) {
               final t = _comparison!.missing[i];
+              final selected = _missingSelection.contains(t);
               return ListTile(
                 dense: true,
-                leading: const Icon(Icons.music_off, color: Colors.orange),
+                leading: Checkbox(
+                  value: selected,
+                  onChanged: (value) {
+                    setState(() {
+                      if (value == true) {
+                        _missingSelection.add(t);
+                      } else {
+                        _missingSelection.remove(t);
+                      }
+                    });
+                  },
+                ),
                 title:
                     Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                 subtitle:

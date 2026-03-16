@@ -170,7 +170,6 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
-    }
 
         // Foreground service control channel
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "convert_the_spire/foreground")
@@ -201,6 +200,7 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == pickTreeRequestCode) {

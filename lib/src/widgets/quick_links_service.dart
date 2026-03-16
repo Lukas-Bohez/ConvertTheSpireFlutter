@@ -100,7 +100,7 @@ class QuickLinksService {
       name: 'Support',
       icon: Icons.volunteer_activism,
       route: 'support.tab',
-      description: 'Support via mining',
+      description: 'Support via donations',
     ),
     QuickLink(
       name: 'Convert',

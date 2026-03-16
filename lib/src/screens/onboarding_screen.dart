@@ -167,12 +167,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     // Support CTA (last page)
     _OnboardingPage(
-      icon: Icons.toll_rounded,
+      icon: Icons.favorite_rounded,
       title: 'Support Us',
-      detail: 'You can help the project by mining QUBIC tokens with idle '
-          'CPU cycles. It\u2019s 100\u202F% opt-in, battery-aware, '
-          'and runs in sandboxed isolates.\n\n'
-          'Enable it now or later from Settings. Every bit helps!',
+      detail: 'Help keep this app open-source and ad-free by supporting the project. '
+          'You can donate via Buy Me a Coffee or GitHub Sponsors.',
       color: Color(0xFFE91E63),
       preview: _SupportPreview(),
     ),
@@ -655,7 +653,7 @@ class _WelcomePreview extends StatelessWidget {
       (Icons.download_rounded, 'Multi-site downloads'),
       (Icons.transform_rounded, 'Format conversion'),
       (Icons.cast_rounded, 'DLNA / Cast to TV'),
-      (Icons.toll_rounded, 'QUBIC mining support'),
+      (Icons.favorite_outline, 'Support via donations'),
     ];
 
     return Container(
@@ -927,11 +925,11 @@ class _SupportPreview extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.shield_outlined,
+              Icon(Icons.favorite_outline,
                   size: 18, color: Colors.green.shade600),
               const SizedBox(width: 8),
               const Expanded(
-                child: Text('Mines QUBIC tokens for the developer',
+                child: Text('Support with a donation',
                     style: TextStyle(fontSize: 12)),
               ),
             ],
@@ -939,11 +937,11 @@ class _SupportPreview extends StatelessWidget {
           const SizedBox(height: 6),
           Row(
             children: [
-              Icon(Icons.battery_charging_full,
+              Icon(Icons.coffee_outlined,
                   size: 18, color: Colors.green.shade600),
               const SizedBox(width: 8),
               const Expanded(
-                child: Text('Auto-pauses below 30% battery',
+                child: Text('Buy Me a Coffee or sponsor on GitHub',
                     style: TextStyle(fontSize: 12)),
               ),
             ],
@@ -951,11 +949,11 @@ class _SupportPreview extends StatelessWidget {
           const SizedBox(height: 6),
           Row(
             children: [
-              Icon(Icons.pause_circle_outline,
+              Icon(Icons.privacy_tip_outlined,
                   size: 18, color: Colors.green.shade600),
               const SizedBox(width: 8),
               const Expanded(
-                child: Text('One tap to stop, instantly',
+                child: Text('No analytics — everything runs locally',
                     style: TextStyle(fontSize: 12)),
               ),
             ],
@@ -970,7 +968,7 @@ class _SupportPreview extends StatelessWidget {
             ),
             child: const Center(
               child: Text(
-                'Enable in Settings \u2192 Support the Project',
+                'Go to Settings → Support to donate',
                 style: TextStyle(
                     fontSize: 12, fontWeight: FontWeight.w600, color: accent),
               ),
