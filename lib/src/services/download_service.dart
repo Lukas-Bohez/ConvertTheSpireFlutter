@@ -239,12 +239,12 @@ class DownloadService {
             cookiesFile: cookiesFile,
             cookiesFromBrowser: cookiesFromBrowser,
             forceGenericExtractor: true,
-            onProgress: (pct) {
-              onProgress(
-                  (pct * 0.95).toInt(),
-                  pct >= 100
-                      ? DownloadStatus.converting
-                      : DownloadStatus.downloading);
+            onProgress: (pct, speed, eta) {
+              final adjusted = (pct * 0.95).toInt();
+              final status = pct >= 100
+                  ? DownloadStatus.converting
+                  : DownloadStatus.downloading;
+              onProgress(adjusted, status, speed: speed, eta: eta);
             },
           );
           if (!token.cancelled) {
@@ -589,13 +589,13 @@ class DownloadService {
         videoQuality: videoQuality,
         audioBitrate: audioBitrate,
         isCancelled: () => token.cancelled,
-        onProgress: (pct) {
+        onProgress: (pct, speed, eta) {
           // Scale yt-dlp's 0-100 into 0-95 (leave room for finalization)
           final adjusted = (pct * 0.95).toInt();
           final status = pct >= 100
               ? DownloadStatus.converting
               : DownloadStatus.downloading;
-          onProgress(adjusted, status);
+          onProgress(adjusted, status, speed: speed, eta: eta);
         },
       );
 

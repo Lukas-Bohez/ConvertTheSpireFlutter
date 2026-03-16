@@ -132,6 +132,8 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
     }
   }
 // Playlist checklist modal
+  }
+// Playlist checklist modal
 class _PlaylistChecklistSheet extends StatefulWidget {
   final List<SearchResult> tracks;
   const _PlaylistChecklistSheet({required this.tracks});
