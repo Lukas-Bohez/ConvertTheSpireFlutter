@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart' hide SearchResult;
 
 import '../models/search_result.dart';
+import '../services/playlist_service.dart';
+import '../services/yt_dlp_service.dart';
 
 /// A small card used on the Home page for quickly pasting a URL and starting a download.
 ///
@@ -131,71 +133,6 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-// Playlist checklist modal
-  }
-// Playlist checklist modal
-class _PlaylistChecklistSheet extends StatefulWidget {
-  final List<SearchResult> tracks;
-  const _PlaylistChecklistSheet({required this.tracks});
-
-  @override
-  State<_PlaylistChecklistSheet> createState() => _PlaylistChecklistSheetState();
-}
-
-class _PlaylistChecklistSheetState extends State<_PlaylistChecklistSheet> {
-  late List<bool> _checked;
-
-  @override
-  void initState() {
-    super.initState();
-    _checked = List<bool>.filled(widget.tracks.length, true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('Select tracks to download', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 300,
-            child: ListView.builder(
-              itemCount: widget.tracks.length,
-              itemBuilder: (ctx, i) {
-                final track = widget.tracks[i];
-                return CheckboxListTile(
-                  value: _checked[i],
-                  onChanged: (val) {
-                    setState(() => _checked[i] = val ?? false);
-                  },
-                  title: Text(track.title),
-                  subtitle: Text(track.artist),
-                  secondary: track.thumbnailUrl.isNotEmpty
-                      ? CircleAvatar(backgroundImage: NetworkImage(track.thumbnailUrl))
-                      : null,
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: () {
-              final selected = <SearchResult>[];
-              for (int i = 0; i < widget.tracks.length; i++) {
-                if (_checked[i]) selected.add(widget.tracks[i]);
-              }
-              Navigator.pop(context, selected);
-            },
-            child: const Text('Download Selected'),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
   @override
   void dispose() {
@@ -308,6 +245,70 @@ class _PlaylistChecklistSheetState extends State<_PlaylistChecklistSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// Playlist checklist modal
+class _PlaylistChecklistSheet extends StatefulWidget {
+  final List<SearchResult> tracks;
+  const _PlaylistChecklistSheet({required this.tracks});
+
+  @override
+  State<_PlaylistChecklistSheet> createState() => _PlaylistChecklistSheetState();
+}
+
+class _PlaylistChecklistSheetState extends State<_PlaylistChecklistSheet> {
+  late List<bool> _checked;
+
+  @override
+  void initState() {
+    super.initState();
+    _checked = List<bool>.filled(widget.tracks.length, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Select tracks to download', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 300,
+            child: ListView.builder(
+              itemCount: widget.tracks.length,
+              itemBuilder: (ctx, i) {
+                final track = widget.tracks[i];
+                return CheckboxListTile(
+                  value: _checked[i],
+                  onChanged: (val) {
+                    setState(() => _checked[i] = val ?? false);
+                  },
+                  title: Text(track.title),
+                  subtitle: Text(track.artist),
+                  secondary: track.thumbnailUrl.isNotEmpty
+                      ? CircleAvatar(backgroundImage: NetworkImage(track.thumbnailUrl))
+                      : null,
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: () {
+              final selected = <SearchResult>[];
+              for (int i = 0; i < widget.tracks.length; i++) {
+                if (_checked[i]) selected.add(widget.tracks[i]);
+              }
+              Navigator.pop(context, selected);
+            },
+            child: const Text('Download Selected'),
+          ),
+        ],
       ),
     );
   }

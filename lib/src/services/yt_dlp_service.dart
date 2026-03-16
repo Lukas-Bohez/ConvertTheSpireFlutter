@@ -23,6 +23,7 @@ class YtDlpService {
     Future<int?> fetchEstimatedSize({
       required String url,
       required String ytDlpPath,
+      String? ffmpegPath,
       String videoQuality = 'best',
       Map<String, String>? extraHeaders,
       String? cookiesFile,
@@ -408,7 +409,7 @@ class YtDlpService {
     args.add(url);
 
     debugPrint('yt-dlp command: $ytDlpPath ${args.join(' ')}');
-    onProgress(0);
+    onProgress(0, null, null);
 
     final process = await Process.start(ytDlpPath, args, runInShell: false);
 
@@ -430,7 +431,6 @@ class YtDlpService {
         final match = _progressRegex.firstMatch(line);
         if (match != null) {
           final pct = double.tryParse(match.group(1)!)?.toInt() ?? 0;
-          final totalSize = match.group(2) ?? "";
           final speed = match.group(3) ?? "";
           final eta = match.group(4) ?? "";
           onProgress(pct.clamp(0, 100), speed, eta);
@@ -493,7 +493,7 @@ class YtDlpService {
         }
       }
 
-      onProgress(100);
+      onProgress(100, null, null);
     } finally {
       cancelTimer.cancel();
     }

@@ -275,7 +275,7 @@ class DownloadService {
     required String format,
     required String outputDir,
     required String? ffmpegPath,
-    required void Function(int pct, DownloadStatus status) onProgress,
+    required void Function(int pct, DownloadStatus status, {String? speed, String? eta}) onProgress,
     required DownloadToken token,
     String? ytDlpPath,
     String preferredVideoQuality = '720p',
@@ -435,22 +435,25 @@ class DownloadService {
       final bool isHdMerge = separateAudioStream != null;
       if (isHdMerge) {
         // Download video (0-60%) then audio (60-80%)
-        await _downloadStream(sourceStream, tempFilePath, token, (pct, status) {
+        await _downloadStream(sourceStream, tempFilePath, token,
+            (pct, status, {String? speed, String? eta}) {
           final adjustedPct = (pct * 0.6).toInt();
-          onProgress(adjustedPct, status);
+          onProgress(adjustedPct, status, speed: speed, eta: eta);
         }, videoId: video.id);
         if (token.cancelled) throw Exception('Cancelled');
         await _downloadStream(separateAudioStream, tempAudioPath!, token,
-            (pct, status) {
+            (pct, status, {String? speed, String? eta}) {
           final adjustedPct = 60 + (pct * 0.2).toInt();
-          onProgress(adjustedPct, status);
+          onProgress(adjustedPct, status, speed: speed, eta: eta);
         }, videoId: video.id);
       } else {
         // Single stream download (0-90%)
-        await _downloadStream(sourceStream, tempFilePath, token, (pct, status) {
+        await _downloadStream(sourceStream, tempFilePath, token,
+            (pct, status, {String? speed, String? eta}) {
           final adjustedPct = (pct * 0.9).toInt();
-          onProgress(adjustedPct, status);
-        }, videoId: video.id);
+          onProgress(adjustedPct, status, speed: speed, eta: eta);
+        },
+            videoId: video.id);
       }
 
       if (token.cancelled) {
@@ -552,7 +555,7 @@ class DownloadService {
     required String outputDir,
     required String? ffmpegPath,
     required String ytDlpPath,
-    required void Function(int pct, DownloadStatus status) onProgress,
+    required void Function(int pct, DownloadStatus status, {String? speed, String? eta}) onProgress,
     required DownloadToken token,
     required String videoQuality,
     required int audioBitrate,
@@ -773,7 +776,7 @@ class DownloadService {
     StreamInfo stream,
     String outputPath,
     DownloadToken token,
-    void Function(int pct, DownloadStatus status) onProgress, {
+    void Function(int pct, DownloadStatus status, {String? speed, String? eta}) onProgress, {
     dynamic videoId,
   }) async {
     final total = stream.size.totalBytes;
@@ -922,7 +925,7 @@ class DownloadService {
     StreamInfo stream,
     String outputPath,
     DownloadToken token,
-    void Function(int pct, DownloadStatus status) onProgress,
+    void Function(int pct, DownloadStatus status, {String? speed, String? eta}) onProgress,
   ) async {
     final file = File(outputPath);
     final sink = file.openWrite();
@@ -973,7 +976,7 @@ class DownloadService {
     StreamInfo originalStream,
     String outputPath,
     DownloadToken token,
-    void Function(int pct, DownloadStatus status) onProgress, {
+    void Function(int pct, DownloadStatus status, {String? speed, String? eta}) onProgress, {
     dynamic videoId,
   }) async {
     final total = originalStream.size.totalBytes;
