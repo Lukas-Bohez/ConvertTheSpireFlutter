@@ -128,6 +128,7 @@ class DownloadService {
     String? ytDlpPath,
     String preferredVideoQuality = '720p',
     int preferredAudioBitrate = 192,
+    bool sponsorBlockEnabled = false,
     String? cookiesFile,
     String? cookiesFromBrowser,
   }) async {
@@ -182,6 +183,7 @@ class DownloadService {
         ytDlpPath: resolvedYtDlp,
         videoQuality: preferredVideoQuality,
         audioBitrate: preferredAudioBitrate,
+        sponsorBlockEnabled: sponsorBlockEnabled,
         isCancelled: () => token.cancelled,
         extraHeaders: isDifficultSite(item.url) ? headers : null,
         cookiesFile: cookiesFile,
@@ -231,6 +233,7 @@ class DownloadService {
             ytDlpPath: resolvedYtDlp,
             videoQuality: preferredVideoQuality,
             audioBitrate: preferredAudioBitrate,
+            sponsorBlockEnabled: sponsorBlockEnabled,
             isCancelled: () => token.cancelled,
             extraHeaders: headers,
             cookiesFile: cookiesFile,
@@ -277,6 +280,7 @@ class DownloadService {
     String? ytDlpPath,
     String preferredVideoQuality = '720p',
     int preferredAudioBitrate = 192,
+    bool sponsorBlockEnabled = false,
   }) async {
     if (kIsWeb) {
       throw Exception(
@@ -318,6 +322,7 @@ class DownloadService {
         token: token,
         videoQuality: preferredVideoQuality,
         audioBitrate: preferredAudioBitrate,
+        sponsorBlockEnabled: sponsorBlockEnabled,
         isSafOutput: isSafOutput,
         useMediaStoreOnly: useMediaStoreOnly,
       );
@@ -550,6 +555,7 @@ class DownloadService {
     required DownloadToken token,
     required String videoQuality,
     required int audioBitrate,
+    required bool sponsorBlockEnabled,
     required bool isSafOutput,
     required bool useMediaStoreOnly,
   }) async {
@@ -1372,6 +1378,8 @@ class DownloadService {
         return 1440;
       case '2160p':
         return 2160;
+      case '4320p':
+        return 4320;
       case 'best':
         return 9999;
       default:

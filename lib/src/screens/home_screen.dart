@@ -265,10 +265,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             final idx = QuickLinksService.routeToIndex[route];
             if (idx != null) _navigateToPage(idx);
           },
-          onSearch: (query) {
-            _urlController.text = query;
-            _navigateToPage(0);
-            _onSearch();
+          onDownload: (result, format, quality) async {
+            widget.controller.addSearchResultToQueue(
+              result,
+              format: format,
+              videoQuality: quality,
+            );
+            _navigateToPage(3); // show queue
           },
         );
       default:
@@ -757,6 +760,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 value: '720p', child: Text('720p (HD)')),
                             DropdownMenuItem(
                                 value: '1080p', child: Text('1080p (Full HD)')),
+                            DropdownMenuItem(
+                                value: '1440p', child: Text('1440p (2K)')),
+                            DropdownMenuItem(
+                                value: '2160p', child: Text('2160p (4K)')),
+                            DropdownMenuItem(
+                                value: '4320p', child: Text('4320p (8K)')),
                             DropdownMenuItem(
                                 value: 'best', child: Text('Best Available')),
                           ],
@@ -2361,7 +2370,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.videocam),
                         helperText:
-                            '1080p+ downloads separate video & audio and merges them (requires FFmpeg)',
+                            'High resolutions (1080p+/4K/8K) download separate video + audio and merge using FFmpeg (requires yt-dlp).',
                         helperMaxLines: 2,
                       ),
                       items: const [
@@ -2421,7 +2430,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               labelText: 'Video Quality',
                               border: OutlineInputBorder(),
                               prefixIcon: Icon(Icons.videocam),
-                              helperText: '1080p+ merges separate streams',
+                              helperText: 'High resolutions (1080p+/4K/8K) merge separate video + audio streams (requires yt-dlp + FFmpeg)',
                               helperMaxLines: 2,
                             ),
                             items: const [
@@ -2434,6 +2443,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               DropdownMenuItem(
                                   value: '1080p',
                                   child: Text('1080p (Full HD)')),
+                              DropdownMenuItem(
+                                  value: '1440p', child: Text('1440p (2K)')),
+                              DropdownMenuItem(
+                                  value: '2160p', child: Text('2160p (4K)')),
+                              DropdownMenuItem(
+                                  value: '4320p', child: Text('4320p (8K)')),
                               DropdownMenuItem(
                                   value: 'best', child: Text('Best Available')),
                             ],
