@@ -19,7 +19,66 @@ import 'platform_dirs.dart';
 /// On mobile/web, yt-dlp is not available — the app falls back to
 /// youtube_explode_dart for stream downloads.
 class YtDlpService {
-  static final _progressRegex = RegExp(r'\[download\]\s+(\d+\.?\d*)%');
+    /// Fetches video metadata using yt-dlp --dump-json and returns filesize_approx in bytes (if available).
+    Future<int?> fetchEstimatedSize({
+      required String url,
+      required String ytDlpPath,
+      String videoQuality = 'best',
+      Map<String, String>? extraHeaders,
+      String? cookiesFile,
+      String? cookiesFromBrowser,
+      bool sponsorBlockEnabled = false,
+      bool forceGenericExtractor = false,
+    }) async {
+      final args = <String>['--dump-json'];
+      final height = _qualityToHeight(videoQuality);
+      args.addAll([
+        '-f',
+        'bestvideo[height<=$height]+bestaudio/best[height<=$height]'
+      ]);
+      if (sponsorBlockEnabled) {
+        args.addAll(['--sponsorblock-remove', 'all']);
+      }
+      if (ffmpegPath != null &&
+          ffmpegPath.trim().isNotEmpty &&
+          ffmpegPath.trim() != 'ffmpeg') {
+        args.addAll(['--ffmpeg-location', ffmpegPath]);
+      }
+      if (extraHeaders != null) {
+        for (final entry in extraHeaders.entries) {
+          if (entry.key.toLowerCase() == 'user-agent') {
+            args.addAll(['--user-agent', entry.value]);
+          } else if (entry.key.toLowerCase() == 'referer') {
+            args.addAll(['--referer', entry.value]);
+          } else {
+            args.addAll(['--add-header', '${entry.key}:${entry.value}']);
+          }
+        }
+      }
+      if (cookiesFile != null && cookiesFile.trim().isNotEmpty) {
+        args.addAll(['--cookies', cookiesFile]);
+      } else if (cookiesFromBrowser != null && cookiesFromBrowser.trim().isNotEmpty) {
+        args.addAll(['--cookies-from-browser', cookiesFromBrowser]);
+      }
+      if (forceGenericExtractor) {
+        args.add('--force-generic-extractor');
+      }
+      args.add(url);
+
+      final process = await Process.start(ytDlpPath, args, runInShell: false);
+      final output = await process.stdout.transform(utf8.decoder).join();
+      await process.stderr.drain();
+      final exitCode = await process.exitCode;
+      if (exitCode != 0) return null;
+      try {
+        final json = jsonDecode(output);
+        if (json is Map<String, dynamic> && json.containsKey('filesize_approx')) {
+          return json['filesize_approx'] as int?;
+        }
+      } catch (_) {}
+      return null;
+    }
+  static final _progressRegex = RegExp(r'\[download\]\s+(\d+\.?\d*)%.*?of.*?(\d+\.?\d*\s*\w+B).*?at\s*([\d\.]+\s*\w+/s).*?ETA\s*(\d+:\d+)');
 
   /// Resolve yt-dlp executable path.
   /// Checks: configured path → app data dir → system PATH → null.
@@ -262,7 +321,7 @@ class YtDlpService {
     required String outputPath,
     required String format,
     required String? ffmpegPath,
-    required void Function(int pct) onProgress,
+    required void Function(int pct, String? speed, String? eta) onProgress,
     required String ytDlpPath,
     String videoQuality = '720p',
     int audioBitrate = 192,
@@ -371,7 +430,10 @@ class YtDlpService {
         final match = _progressRegex.firstMatch(line);
         if (match != null) {
           final pct = double.tryParse(match.group(1)!)?.toInt() ?? 0;
-          onProgress(pct.clamp(0, 100));
+          final totalSize = match.group(2) ?? "";
+          final speed = match.group(3) ?? "";
+          final eta = match.group(4) ?? "";
+          onProgress(pct.clamp(0, 100), speed, eta);
         }
       });
 

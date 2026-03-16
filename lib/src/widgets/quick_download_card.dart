@@ -29,59 +29,96 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
 
     setState(() => _isLoading = true);
     try {
-      // If it's a YouTube URL, fetch some metadata for a nice preview.
       final isYouTube = url.contains('youtube.com') || url.contains('youtu.be');
-      SearchResult result;
-
-      if (isYouTube) {
+      final isPlaylist = url.contains('list=');
+      if (isYouTube && isPlaylist) {
+        // Playlist detected
         final yt = YoutubeExplode();
-        try {
-          final video = await yt.videos.get(url);
-          result = SearchResult(
-            id: video.id.value,
-            title: video.title,
-            artist: video.author,
-            duration: video.duration ?? Duration.zero,
-            thumbnailUrl: video.thumbnails.highResUrl,
-            source: 'youtube',
-          );
-        } finally {
-          yt.close();
+        final playlistService = PlaylistService(yt: yt);
+        List<SearchResult> tracks = await playlistService.getYouTubePlaylistTracks(url);
+        yt.close();
+        if (!mounted) return;
+        final selected = await showModalBottomSheet<List<SearchResult>>(
+          context: context,
+          isScrollControlled: true,
+          builder: (ctx) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              ),
+              child: _PlaylistChecklistSheet(tracks: tracks),
+            );
+          },
+        );
+        if (selected != null && selected.isNotEmpty) {
+          for (final track in selected) {
+            await widget.onDownload(track, _format, _quality);
+          }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Queued ${selected.length} tracks for download')),
+            );
+            _controller.clear();
+          }
         }
       } else {
-        result = SearchResult(
-          id: url,
-          title: url,
-          artist: '',
-          duration: Duration.zero,
-          thumbnailUrl: '',
-          source: 'generic',
-        );
-      }
-
-      if (!mounted) return;
-
-      final confirmed = await showModalBottomSheet<bool>(
-        context: context,
-        isScrollControlled: true,
-        builder: (ctx) {
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(ctx).viewInsets.bottom,
-            ),
-            child: _DownloadPreviewSheet(
-              result: result,
-              format: _format,
-              quality: _quality,
-            ),
+        // Single video logic
+        SearchResult result;
+        if (isYouTube) {
+          final yt = YoutubeExplode();
+          try {
+            final video = await yt.videos.get(url);
+            result = SearchResult(
+              id: video.id.value,
+              title: video.title,
+              artist: video.author,
+              duration: video.duration ?? Duration.zero,
+              thumbnailUrl: video.thumbnails.highResUrl,
+              source: 'youtube',
+            );
+          } finally {
+            yt.close();
+          }
+        } else {
+          result = SearchResult(
+            id: url,
+            title: url,
+            artist: '',
+            duration: Duration.zero,
+            thumbnailUrl: '',
+            source: 'generic',
           );
-        },
-      );
-
-      if (confirmed == true) {
-        await widget.onDownload(result, _format, _quality);
-        if (mounted) {
-          _controller.clear();
+        }
+        if (!mounted) return;
+        final confirmed = await showModalBottomSheet<bool>(
+          context: context,
+          isScrollControlled: true,
+          builder: (ctx) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              ),
+              child: _DownloadPreviewSheet(
+                result: result,
+                format: _format,
+                quality: _quality,
+              ),
+            );
+          },
+        );
+        if (confirmed == true) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Queued for download')),
+            );
+          }
+          await widget.onDownload(result, _format, _quality);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Download started')),
+            );
+            _controller.clear();
+          }
         }
       }
     } catch (_) {
@@ -94,6 +131,69 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+// Playlist checklist modal
+class _PlaylistChecklistSheet extends StatefulWidget {
+  final List<SearchResult> tracks;
+  const _PlaylistChecklistSheet({required this.tracks});
+
+  @override
+  State<_PlaylistChecklistSheet> createState() => _PlaylistChecklistSheetState();
+}
+
+class _PlaylistChecklistSheetState extends State<_PlaylistChecklistSheet> {
+  late List<bool> _checked;
+
+  @override
+  void initState() {
+    super.initState();
+    _checked = List<bool>.filled(widget.tracks.length, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Select tracks to download', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 300,
+            child: ListView.builder(
+              itemCount: widget.tracks.length,
+              itemBuilder: (ctx, i) {
+                final track = widget.tracks[i];
+                return CheckboxListTile(
+                  value: _checked[i],
+                  onChanged: (val) {
+                    setState(() => _checked[i] = val ?? false);
+                  },
+                  title: Text(track.title),
+                  subtitle: Text(track.artist),
+                  secondary: track.thumbnailUrl.isNotEmpty
+                      ? CircleAvatar(backgroundImage: NetworkImage(track.thumbnailUrl))
+                      : null,
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: () {
+              final selected = <SearchResult>[];
+              for (int i = 0; i < widget.tracks.length; i++) {
+                if (_checked[i]) selected.add(widget.tracks[i]);
+              }
+              Navigator.pop(context, selected);
+            },
+            child: const Text('Download Selected'),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
   @override
   void dispose() {
@@ -211,7 +311,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
   }
 }
 
-class _DownloadPreviewSheet extends StatelessWidget {
+class _DownloadPreviewSheet extends StatefulWidget {
   final SearchResult result;
   final String format;
   final String quality;
@@ -221,6 +321,65 @@ class _DownloadPreviewSheet extends StatelessWidget {
     required this.format,
     required this.quality,
   });
+
+  @override
+  State<_DownloadPreviewSheet> createState() => _DownloadPreviewSheetState();
+}
+
+class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
+  int? _estimatedSize;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchEstimatedSize();
+  }
+
+  Future<void> _fetchEstimatedSize() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      // You may need to adjust how you get ytDlpPath and ffmpegPath in your app context
+      final ytDlpService = YtDlpService();
+      final ytDlpPath = await ytDlpService.resolveAvailablePath(null);
+      if (ytDlpPath == null) {
+        setState(() {
+          _error = 'yt-dlp not available';
+          _loading = false;
+        });
+        return;
+      }
+      final size = await ytDlpService.fetchEstimatedSize(
+        url: widget.result.id,
+        ytDlpPath: ytDlpPath,
+        videoQuality: widget.quality,
+      );
+      setState(() {
+        _estimatedSize = size;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Could not fetch size';
+        _loading = false;
+      });
+    }
+  }
+
+  String _formatSize(int? bytes) {
+    if (bytes == null) return 'Unknown';
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    } else if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(2)} MB';
+    } else {
+      return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -235,10 +394,10 @@ class _DownloadPreviewSheet extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 26,
-                backgroundImage: result.thumbnailUrl.isNotEmpty
-                    ? NetworkImage(result.thumbnailUrl)
+                backgroundImage: widget.result.thumbnailUrl.isNotEmpty
+                    ? NetworkImage(widget.result.thumbnailUrl)
                     : null,
-                child: result.thumbnailUrl.isEmpty
+                child: widget.result.thumbnailUrl.isEmpty
                     ? const Icon(Icons.photo, size: 28)
                     : null,
               ),
@@ -247,13 +406,13 @@ class _DownloadPreviewSheet extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(result.title,
+                    Text(widget.result.title,
                         style: Theme.of(context)
                             .textTheme
                             .titleMedium
                             ?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text(result.artist.isNotEmpty ? result.artist : result.source,
+                    Text(widget.result.artist.isNotEmpty ? widget.result.artist : widget.result.source,
                         style: Theme.of(context).textTheme.bodyMedium),
                   ],
                 ),
@@ -265,9 +424,25 @@ class _DownloadPreviewSheet extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text('Format: $format', style: Theme.of(context).textTheme.bodyMedium),
+          Text('Format: ${widget.format}', style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 4),
-          Text('Quality: $quality', style: Theme.of(context).textTheme.bodyMedium),
+          Text('Quality: ${widget.quality}', style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 4),
+          _loading
+              ? const Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 8),
+                    Text('Fetching estimated size...'),
+                  ],
+                )
+              : _error != null
+                  ? Text(_error!, style: TextStyle(color: cs.error))
+                  : Text('Estimated size: ${_formatSize(_estimatedSize)}', style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,

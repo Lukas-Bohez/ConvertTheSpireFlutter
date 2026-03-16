@@ -1913,6 +1913,22 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                 ),
               ),
+              if (item.speed != null || item.eta != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    children: [
+                      if (item.speed != null)
+                        Text('Speed: ${item.speed}',
+                            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+                      if (item.eta != null) ...[
+                        const SizedBox(width: 12),
+                        Text('ETA: ${item.eta}',
+                            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+                      ],
+                    ],
+                  ),
+                ),
             ],
             const SizedBox(height: 6),
             Wrap(
