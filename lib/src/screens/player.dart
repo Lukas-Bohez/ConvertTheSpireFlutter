@@ -619,6 +619,8 @@ class PlayerState with ChangeNotifier {
     if (!Platform.isWindows) {
       _loadThumbnailsSequentially(version, maxItems: 30);
     }
+    // Ensure the current playing item has a thumbnail request pending.
+    requestThumbnailForIndex(currentIndex);
     _startDirectoryWatcher(items);
   }
 
@@ -900,6 +902,8 @@ class PlayerState with ChangeNotifier {
     } finally {
       if (generation == _loadGeneration) {
         notifyListeners();
+        // Make sure we have a thumbnail for the now-playing item.
+        requestThumbnailForIndex(currentIndex);
       }
     }
   }
@@ -2172,7 +2176,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -2791,7 +2795,7 @@ class _SongTile extends StatelessWidget {
               width: 56,
               height: 56,
               color: Theme.of(context).colorScheme.onSurface.withAlpha(13),
-              child: const Icon(Icons.music_note, color: Colors.grey),
+              child: Icon(Icons.music_note, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
       ),
       title: Text(

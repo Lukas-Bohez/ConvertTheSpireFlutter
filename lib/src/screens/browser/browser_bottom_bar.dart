@@ -23,7 +23,12 @@ class BrowserBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Container(
-      color: cs.surface,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        border: Border(
+          top: BorderSide(color: cs.outline.withValues(alpha: 0.4), width: 1),
+        ),
+      ),
       padding: EdgeInsets.only(bottom: bottomPadding),
       child: SizedBox(
         height: 48,
