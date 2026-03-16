@@ -68,3 +68,28 @@ dependencies {
     implementation("androidx.documentfile:documentfile:1.0.1")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
+
+// After APKs are produced by Gradle/Flutter, copy them to the workspace releases/android folder
+tasks.register("copyApkToReleases") {
+    doLast {
+        val apkDir = file("${buildDir.absolutePath}/outputs/flutter-apk")
+        val destDir = file("${project.rootDir}/releases/android")
+        if (!destDir.exists()) destDir.mkdirs()
+        if (apkDir.exists()) {
+            apkDir.listFiles()?.filter { it.extension == "apk" }?.forEach { apk ->
+                copy {
+                    from(apk)
+                    into(destDir)
+                }
+            }
+        }
+    }
+}
+
+// Ensure the copy runs after assembling release APKs
+// Attach the copy task to any assemble*Release task (accounts for variant names)
+tasks.matching { task ->
+    task.name.startsWith("assemble", ignoreCase = true) && task.name.contains("Release")
+}.configureEach {
+    finalizedBy("copyApkToReleases")
+}
