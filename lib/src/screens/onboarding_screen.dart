@@ -190,7 +190,22 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       duration: const Duration(milliseconds: 500),
     );
     _setupAnimations();
-    _animController.forward();
+
+    // Delay the initial animation until after the first frame is rendered to
+    // avoid blocking the UI thread during initial layout on slower devices.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _animController.forward();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Precache any images used in the onboarding flow so that swiping between
+    // pages doesn't cause a decode/paint jank (black flash) on first display.
+    // If you add image assets to onboarding pages, add them here with
+    // `precacheImage(AssetImage(...), context);`.
   }
 
   void _setupAnimations() {
@@ -477,93 +492,96 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             const SizedBox(height: 8),
             _buildProgressBar(theme),
             Expanded(
-              child: PageView.builder(
+              child: PageView(
                 controller: _controller,
                 onPageChanged: _onPageChanged,
-                itemCount: _pages.length,
-                itemBuilder: (context, index) {
+                children: List.generate(_pages.length, (index) {
                   final p = _pages[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 28.0, vertical: 12),
-                    child: FadeTransition(
-                      opacity: _fadeAnim,
-                      child: SlideTransition(
-                        position: _slideAnim,
-                        child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const SizedBox(height: 8),
-                              // Icon card with coloured glow
-                              Container(
-                                width: squareSide,
-                                height: squareSide,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      p.color.withValues(alpha: 0.18),
-                                      p.color.withValues(alpha: 0.06),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(28),
-                                  border: Border.all(
-                                    color: p.color.withValues(alpha: 0.30),
-                                    width: 1.5,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: p.color.withValues(alpha: 0.15),
-                                      blurRadius: 28,
-                                      offset: const Offset(0, 8),
+                  return _KeepAlivePage(
+                    key: ValueKey('onboarding_page_$index'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 28.0, vertical: 12),
+                      child: FadeTransition(
+                        opacity: _fadeAnim,
+                        child: SlideTransition(
+                          position: _slideAnim,
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(height: 8),
+                                // Icon card with coloured glow
+                                Container(
+                                  width: squareSide,
+                                  height: squareSide,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        p.color.withValues(alpha: 0.18),
+                                        p.color.withValues(alpha: 0.06),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
-                                  ],
+                                    borderRadius: BorderRadius.circular(28),
+                                    border: Border.all(
+                                      color: p.color.withValues(alpha: 0.30),
+                                      width: 1.5,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: p.color.withValues(alpha: 0.15),
+                                        blurRadius: 28,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    p.icon,
+                                    size: squareSide * 0.42,
+                                    color: p.color,
+                                  ),
                                 ),
-                                child: Icon(
-                                  p.icon,
-                                  size: squareSide * 0.42,
-                                  color: p.color,
-                                ),
-                              ),
 
-                              // Optional preview
-                              if (p.preview != null) ...[
-                                const SizedBox(height: 20),
-                                p.preview!,
+                                // Optional preview
+                                if (p.preview != null) ...[
+                                  const SizedBox(height: 20),
+                                  p.preview!,
+                                ],
+
+                                const SizedBox(height: 28),
+
+                                Text(
+                                  p.title,
+                                  style:
+                                      theme.textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: p.color,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                Text(
+                                  p.detail,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    height: 1.65,
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.78),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
                               ],
-
-                              const SizedBox(height: 28),
-
-                              Text(
-                                p.title,
-                                style: theme.textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: p.color,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              Text(
-                                p.detail,
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  height: 1.65,
-                                  color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.78),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                            ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   );
-                },
+                }),
               ),
             ),
             _buildDots(theme),
@@ -596,6 +614,29 @@ class _OnboardingPage {
     required this.color,
     this.preview,
   });
+}
+
+/// Keeps a page alive once it has been built, preventing transient black
+/// flashes when the user rapidly swipes between pages.
+class _KeepAlivePage extends StatefulWidget {
+  const _KeepAlivePage({required this.child, Key? key}) : super(key: key);
+
+  final Widget child;
+
+  @override
+  State<_KeepAlivePage> createState() => _KeepAlivePageState();
+}
+
+class _KeepAlivePageState extends State<_KeepAlivePage>
+    with AutomaticKeepAliveClientMixin<_KeepAlivePage> {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
 }
 
 // ─── Preview widgets ────────────────────────────────────────────────────────
