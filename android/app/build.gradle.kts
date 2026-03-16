@@ -40,17 +40,12 @@ android {
         }
     }
 
-    // ABI split configuration: enable generating per-ABI APKs to reduce
-    // download size for native-heavy apps (libmpv, ffmpeg, etc.). For Play
-    // distribution prefer App Bundles, but per-ABI APKs are useful for
-    // direct distribution or testing.
-    splits {
-        abi {
-            isEnable = true
-            isUniversalApk = false
-            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-        }
-    }
+    // NOTE: Flutter tooling can set ndk abiFilters (e.g. when using
+    // `flutter build apk --split-per-abi`). Having a `splits { abi { ... } }`
+    // block here leads to a conflict (ndk abiFilters cannot be present when
+    // splits abi filters are set). We intentionally avoid configuring ABI
+    // splits in Gradle and instead let Flutter handle ABI splitting when
+    // requested via its build flags.
 
     buildTypes {
         release {
