@@ -190,24 +190,6 @@ class _BrowserShellState extends State<BrowserShell> {
             child: isDesktop
                 ? Row(
                     children: [
-                      // Left navigation rail for desktop
-                      SafeArea(
-                        child: NavigationRail(
-                          selectedIndex: _primaryIndexForRail(widget.currentIndex),
-                          onDestinationSelected: (i) {
-                            final idx = _primaryRailIndices[i];
-                            final route = QuickLinksService.indexToRoute[idx];
-                            if (route != null) widget.onNavigate(route);
-                          },
-                          labelType: NavigationRailLabelType.all,
-                          destinations: _primaryRailIndices
-                              .map((i) => NavigationRailDestination(
-                                  icon: Icon(QuickLinksService.indexToIcon[i]),
-                                  selectedIcon: Icon(QuickLinksService.indexToIcon[i]),
-                                  label: Text(QuickLinksService.indexToTitle[i] ?? '')))
-                              .toList(),
-                        ),
-                      ),
                       if (!widget.queueOnRight && _showQueueDesktop)
                         _buildDesktopQueuePanel(cs),
                       Expanded(child: widget.child),
@@ -227,11 +209,7 @@ class _BrowserShellState extends State<BrowserShell> {
 
   // Primary indices shown in NavigationRail / BottomNavigationBar.
   static const List<int> _primaryRailIndices = [13, 0, 4, 7];
-
-  int _primaryIndexForRail(int currentIndex) {
-    final pos = _primaryRailIndices.indexOf(currentIndex);
-    return pos < 0 ? 0 : pos;
-  }
+  // Primary indices shown in BottomNavigationBar.
 
   Widget _buildBottomNav(ColorScheme cs, int currentIndex) {
     final items = _primaryRailIndices

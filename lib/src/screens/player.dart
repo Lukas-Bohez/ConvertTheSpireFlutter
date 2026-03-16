@@ -2486,25 +2486,54 @@ class _AllTab extends StatelessWidget {
           : 'No results for this search.');
     }
 
-    return SingleChildScrollView(
+    // Use a CustomScrollView with Slivers so grids are the primary scrollable
+    // and only visible items are built.
+    return CustomScrollView(
       controller: scrollCtl,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (audio.isNotEmpty) ...[
-              _SectionHeader(text: 'Songs — ${audio.length}'),
-              _MediaGrid(entries: audio, state: state, onTap: onTap),
-              const SizedBox(height: 12),
-            ],
-            if (video.isNotEmpty) ...[
-              _SectionHeader(text: 'Videos — ${video.length}'),
-              _MediaGrid(entries: video, state: state, onTap: onTap),
-            ],
-          ],
-        ),
-      ),
+      slivers: [
+        if (audio.isNotEmpty) ...[
+          SliverToBoxAdapter(child: _SectionHeader(text: 'Songs — ${audio.length}')),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            sliver: SliverGrid(
+              delegate: SliverChildBuilderDelegate(
+                (ctx, i) {
+                  final entry = audio[i];
+                  return _MediaCard(entry: entry, state: state, onTap: onTap);
+                },
+                childCount: audio.length,
+              ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: MediaQuery.of(context).size.width < 500 ? 2 : (MediaQuery.of(context).size.width < 900 ? 3 : 5),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.78,
+              ),
+            ),
+          ),
+        ],
+        if (video.isNotEmpty) ...[
+          SliverToBoxAdapter(child: _SectionHeader(text: 'Videos — ${video.length}')),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            sliver: SliverGrid(
+              delegate: SliverChildBuilderDelegate(
+                (ctx, i) {
+                  final entry = video[i];
+                  return _MediaCard(entry: entry, state: state, onTap: onTap);
+                },
+                childCount: video.length,
+              ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: MediaQuery.of(context).size.width < 500 ? 2 : (MediaQuery.of(context).size.width < 900 ? 3 : 5),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.78,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -2521,10 +2550,7 @@ class _SongsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final filtered = state.audioEntries.where((e) => matchFn(e.value)).toList();
     if (filtered.isEmpty) return const _EmptyHint(message: 'No songs found.');
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: _MediaGrid(entries: filtered, state: state, onTap: onTap),
-    );
+    return _MediaGrid(entries: filtered, state: state, onTap: onTap);
   }
 }
 
@@ -2540,10 +2566,7 @@ class _VideosTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final filtered = state.videoEntries.where((e) => matchFn(e.value)).toList();
     if (filtered.isEmpty) return const _EmptyHint(message: 'No videos found.');
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: _MediaGrid(entries: filtered, state: state, onTap: onTap),
-    );
+    return _MediaGrid(entries: filtered, state: state, onTap: onTap);
   }
 }
 
@@ -2561,10 +2584,7 @@ class _FavouritesTab extends StatelessWidget {
     if (filtered.isEmpty) {
       return const _EmptyHint(message: 'No favourites yet.\nTap ★ on any track to add it here.');
     }
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: _MediaGrid(entries: filtered, state: state, onTap: onTap),
-    );
+    return _MediaGrid(entries: filtered, state: state, onTap: onTap);
   }
 }
 
@@ -2572,7 +2592,6 @@ class _MediaGrid extends StatelessWidget {
   final List<MapEntry<int, MediaItem>> entries;
   final PlayerState state;
   final void Function(PlayerState, int) onTap;
-
   const _MediaGrid({required this.entries, required this.state, required this.onTap});
 
   @override
@@ -2580,8 +2599,8 @@ class _MediaGrid extends StatelessWidget {
     final width = MediaQuery.of(context).size.width;
     final crossAxisCount = width < 500 ? 2 : (width < 900 ? 3 : 5);
     return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: false,
+      physics: null,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
         mainAxisSpacing: 12,
@@ -2753,8 +2772,15 @@ class _SongTile extends StatelessWidget {
     final index = entry.key;
 
     // Ensure thumbnails are generated for visible items.
-    if (item.thumbnailData == null) {
+    // Request thumbnail lazily. If this item is currently playing, request immediately.
+    if (state.isPlayingPath(item.path)) {
       Future.microtask(() => state.requestThumbnailForIndex(index));
+    } else {
+      if (item.thumbnailData == null) {
+        // For offscreen items the grid/list builder won't create widgets,
+        // so this call typically runs only for visible items.
+        Future.microtask(() => state.requestThumbnailForIndex(index));
+      }
     }
 
     return ListTile(
@@ -2768,8 +2794,14 @@ class _SongTile extends StatelessWidget {
               child: const Icon(Icons.music_note, color: Colors.grey),
             ),
       ),
-      title: Text(item.title ?? p.basename(item.path)),
-      subtitle: Text(item.artist ?? ''),
+      title: Text(
+        item.title ?? p.basename(item.path),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+      ),
+      subtitle: Text(
+        item.artist ?? '',
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+      ),
       trailing: state.isPlayingPath(item.path)
           ? const Icon(Icons.equalizer, color: Colors.green)
           : null,
