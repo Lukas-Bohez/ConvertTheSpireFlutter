@@ -1889,7 +1889,7 @@ class _VideoPaneState extends State<_VideoPane> {
       behavior: HitTestBehavior.opaque,
       child: SizedBox.expand(
         child: ColoredBox(
-          color: Colors.black,
+          color: Theme.of(context).colorScheme.background,
           child: widget.ready
               ? child
               : const Center(child: CircularProgressIndicator(color: _PlayerTheme.accent)),
@@ -2020,7 +2020,7 @@ class _PlayerScreenState extends State<PlayerScreen>
               curve: Curves.easeInOut,
               height: showVideo ? 260.0 : 0.0,
               clipBehavior: Clip.hardEdge,
-              decoration: const BoxDecoration(color: Colors.black),
+              decoration: BoxDecoration(color: Theme.of(context).colorScheme.background),
               child: showVideo
                   ? _VideoPane(
                       mkController: state.videoController,
