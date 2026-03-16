@@ -171,7 +171,6 @@ class _BrowserShellState extends State<BrowserShell> {
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width > 1024;
-    final isNarrow = width < 600;
     final cs = Theme.of(context).colorScheme;
 
     final queueDrawer = SizedBox(
@@ -201,36 +200,11 @@ class _BrowserShellState extends State<BrowserShell> {
           ),
         ],
       ),
-      // Bottom navigation for narrow/mobile layouts
-      bottomNavigationBar:
-          (!isDesktop && isNarrow) ? _buildBottomNav(cs, widget.currentIndex) : null,
+        // Bottom navigation removed on mobile — keep null to hide it completely
+        bottomNavigationBar: null,
     );
   }
 
-  // Primary indices shown in NavigationRail / BottomNavigationBar.
-  static const List<int> _primaryRailIndices = [13, 0, 4, 7];
-  // Primary indices shown in BottomNavigationBar.
-
-  Widget _buildBottomNav(ColorScheme cs, int currentIndex) {
-    final items = _primaryRailIndices
-        .map((i) => BottomNavigationBarItem(
-            icon: Icon(QuickLinksService.indexToIcon[i]),
-            label: QuickLinksService.indexToTitle[i]))
-        .toList();
-    final selected = _primaryRailIndices.indexOf(currentIndex);
-    return BottomNavigationBar(
-      currentIndex: selected < 0 ? 0 : selected,
-      items: items,
-      type: BottomNavigationBarType.fixed,
-      onTap: (i) {
-        final idx = _primaryRailIndices[i];
-        final route = QuickLinksService.indexToRoute[idx];
-        if (route != null) widget.onNavigate(route);
-      },
-      selectedItemColor: cs.primary,
-      unselectedItemColor: cs.onSurface.withValues(alpha: 0.7),
-    );
-  }
 
   Widget _buildDesktopQueuePanel(ColorScheme cs) {
     return Container(
