@@ -809,11 +809,12 @@ class PlayerState with ChangeNotifier {
 
         try {
           if (_audio != null) {
-            if (item.path.startsWith('content://')) {
-              await _audio!.setUrl(item.path);
-            } else {
-              await _audio!.setFilePath(item.path);
-            }
+              final localPath = await _resolveLocalPath(item.path);
+              if (localPath.startsWith('http') || localPath.startsWith('content://')) {
+                await _audio!.setUrl(localPath);
+              } else {
+                await _audio!.setFilePath(localPath);
+              }
             if (generation != _loadGeneration) return;
             _runOnMainThread(() => _audio!.setVolume(volume));
             duration = _audio!.duration;
@@ -1757,10 +1758,11 @@ class PlayerState with ChangeNotifier {
           if (_audio != null) {
             await Future.microtask(() async {
               try {
-                if (path.startsWith('content://')) {
-                  await _audio!.setUrl(path);
+                final local = await _resolveLocalPath(path);
+                if (local.startsWith('http') || local.startsWith('content://')) {
+                  await _audio!.setUrl(local);
                 } else {
-                  await _audio!.setFilePath(path);
+                  await _audio!.setFilePath(local);
                 }
                 await _audio!.setVolume(volume);
                 duration = _audio!.duration;

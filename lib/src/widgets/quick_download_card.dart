@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart' hide SearchResult;
@@ -143,6 +144,8 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final width = MediaQuery.of(context).size.width;
+    final isNarrow = width < 600;
 
     return Card(
       elevation: 2,
@@ -174,67 +177,132 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
               onSubmitted: (_) => _doDownload(),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _format,
-                    decoration: const InputDecoration(
-                      labelText: 'Format',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'mp3', child: Text('MP3')),
-                      DropdownMenuItem(value: 'm4a', child: Text('M4A')),
-                      DropdownMenuItem(value: 'mp4', child: Text('MP4')),
+            isNarrow
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _format,
+                              decoration: const InputDecoration(
+                                labelText: 'Format',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: const [
+                                DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+                                DropdownMenuItem(value: 'm4a', child: Text('M4A')),
+                                DropdownMenuItem(value: 'mp4', child: Text('MP4')),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) setState(() => _format = value);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _quality,
+                              decoration: const InputDecoration(
+                                labelText: 'Quality',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: const [
+                                DropdownMenuItem(value: '360p', child: Text('360p')),
+                                DropdownMenuItem(value: '480p', child: Text('480p')),
+                                DropdownMenuItem(value: '720p', child: Text('720p')),
+                                DropdownMenuItem(value: '1080p', child: Text('1080p')),
+                                DropdownMenuItem(value: '1440p', child: Text('1440p')),
+                                DropdownMenuItem(value: '2160p', child: Text('2160p')),
+                                DropdownMenuItem(value: '4320p', child: Text('4320p')),
+                                DropdownMenuItem(value: 'best', child: Text('Best')),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) setState(() => _quality = value);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 48,
+                        child: FilledButton.icon(
+                          icon: _isLoading
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.download),
+                          label: const Text('Download'),
+                          onPressed: _isLoading ? null : _doDownload,
+                        ),
+                      ),
                     ],
-                    onChanged: (value) {
-                      if (value != null) setState(() => _format = value);
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _quality,
-                    decoration: const InputDecoration(
-                      labelText: 'Quality',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: '360p', child: Text('360p')),
-                      DropdownMenuItem(value: '480p', child: Text('480p')),
-                      DropdownMenuItem(value: '720p', child: Text('720p')),
-                      DropdownMenuItem(value: '1080p', child: Text('1080p')),
-                      DropdownMenuItem(value: '1440p', child: Text('1440p')),
-                      DropdownMenuItem(value: '2160p', child: Text('2160p')),
-                      DropdownMenuItem(value: '4320p', child: Text('4320p')),
-                      DropdownMenuItem(value: 'best', child: Text('Best')),
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _format,
+                          decoration: const InputDecoration(
+                            labelText: 'Format',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+                            DropdownMenuItem(value: 'm4a', child: Text('M4A')),
+                            DropdownMenuItem(value: 'mp4', child: Text('MP4')),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) setState(() => _format = value);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _quality,
+                          decoration: const InputDecoration(
+                            labelText: 'Quality',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: '360p', child: Text('360p')),
+                            DropdownMenuItem(value: '480p', child: Text('480p')),
+                            DropdownMenuItem(value: '720p', child: Text('720p')),
+                            DropdownMenuItem(value: '1080p', child: Text('1080p')),
+                            DropdownMenuItem(value: '1440p', child: Text('1440p')),
+                            DropdownMenuItem(value: '2160p', child: Text('2160p')),
+                            DropdownMenuItem(value: '4320p', child: Text('4320p')),
+                            DropdownMenuItem(value: 'best', child: Text('Best')),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) setState(() => _quality = value);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        height: 48,
+                        child: FilledButton.icon(
+                          icon: _isLoading
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.download),
+                          label: const Text('Download'),
+                          onPressed: _isLoading ? null : _doDownload,
+                        ),
+                      ),
                     ],
-                    onChanged: (value) {
-                      if (value != null) setState(() => _quality = value);
-                    },
                   ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  height: 48,
-                  child: FilledButton.icon(
-                    icon: _isLoading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.download),
-                    label: const Text('Download'),
-                    onPressed: _isLoading ? null : _doDownload,
-                  ),
-                ),
-              ],
-            ),
             const SizedBox(height: 8),
             Text(
               'Enter a video or playlist URL to preview it and add to the download queue.',
@@ -346,13 +414,24 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
       _error = null;
     });
     try {
+      if (Platform.isAndroid) {
+        // yt-dlp/FFmpeg tooling is irrelevant on Android — skip size estimation.
+        setState(() {
+          _estimatedSize = null;
+          _loading = false;
+          _error = null;
+        });
+        return;
+      }
       // You may need to adjust how you get ytDlpPath and ffmpegPath in your app context
       final ytDlpService = YtDlpService();
       final ytDlpPath = await ytDlpService.resolveAvailablePath(null);
       if (ytDlpPath == null) {
+        // Don't surface "not available" on platforms where yt-dlp isn't relevant.
         setState(() {
-          _error = 'yt-dlp not available';
+          _estimatedSize = null;
           _loading = false;
+          _error = null;
         });
         return;
       }

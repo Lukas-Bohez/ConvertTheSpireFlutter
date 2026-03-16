@@ -185,7 +185,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _controller = PageController();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 320),
     );
     _setupAnimations();
 
@@ -207,9 +207,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   void _setupAnimations() {
-    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+    // Use a subtle fade (0.92 -> 1.0) instead of full fade-from-black to
+    // avoid transient black flashes on slower mobile devices when pages are
+    // rebuilt during fast swipes.
+    _fadeAnim = Tween<double>(begin: 0.92, end: 1.0)
+        .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.08),
+      begin: const Offset(0, 0.04),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
   }
