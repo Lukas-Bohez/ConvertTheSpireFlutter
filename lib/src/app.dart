@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 import 'services/tray_service.dart';
 import 'dart:io' show Platform, Process;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
@@ -399,16 +400,26 @@ class _MyAppState extends State<MyApp>
           navigatorKey: _navigatorKey,
           title: 'Convert the Spire',
           theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-              useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+            useMaterial3: true,
+            textTheme: GoogleFonts.interTextTheme(),
+            primaryTextTheme: GoogleFonts.interTextTheme(),
+            iconTheme: const IconThemeData(size: 20),
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.deepPurple,
+              brightness: Brightness.dark,
             ),
-            darkTheme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.deepPurple,
-                brightness: Brightness.dark,
-              ),
-              useMaterial3: true,
+            useMaterial3: true,
+            textTheme: GoogleFonts.interTextTheme(
+              ThemeData(brightness: Brightness.dark).textTheme,
             ),
+            primaryTextTheme: GoogleFonts.interTextTheme(
+              ThemeData(brightness: Brightness.dark).textTheme,
+            ),
+            iconTheme: const IconThemeData(size: 20),
+          ),
           themeMode: themeMode,
           home: _buildHome(),
         );
