@@ -4,7 +4,8 @@ import 'dart:ffi';
 import 'dart:io' show Platform, Directory;
 import 'dart:ui' as ui;
 import 'package:ffi/ffi.dart';
-import 'package:flutter/foundation.dart'
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
     show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:path_provider/path_provider.dart';
@@ -15,25 +16,27 @@ import 'package:window_manager/window_manager.dart';
 
 import 'src/app.dart';
 import 'src/services/yt_dlp_update_controller.dart';
-
-void main() {
-  runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
-
-    // Request Android runtime permissions early to ensure local file access
-    // (Android 13+ needs granular media permissions; requesting storage
-    // and manageExternalStorage covers older and many newer devices).
-    Future<void> _requestAndroidPermissions() async {
-      if (kIsWeb || !Platform.isAndroid) return;
-      try {
-        final perms = [
-          Permission.storage,
-          Permission.manageExternalStorage,
-          Permission.notification,
-        ];
-        for (final p in perms) {
-          try {
-            final st = await p.status;
+    return MaterialApp(
+      title: 'ConvertTheSpire',
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.light,
+        ),
+        textTheme: GoogleFonts.interTextTheme(),
+      ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
+        textTheme: GoogleFonts.interTextTheme(),
+      ),
+      themeMode: ThemeMode.system,
+      home: const HomePage(),
+    );
             if (st.isDenied || st.isRestricted) await p.request();
           } catch (_) {}
         }

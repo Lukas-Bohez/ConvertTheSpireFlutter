@@ -123,7 +123,7 @@ class DownloadService {
     required String format,
     required String outputDir,
     required String? ffmpegPath,
-    required void Function(int pct, DownloadStatus status) onProgress,
+    required void Function(int pct, DownloadStatus status, {String? speed, String? eta}) onProgress,
     required DownloadToken token,
     String? ytDlpPath,
     String preferredVideoQuality = '720p',
@@ -188,12 +188,12 @@ class DownloadService {
         extraHeaders: isDifficultSite(item.url) ? headers : null,
         cookiesFile: cookiesFile,
         cookiesFromBrowser: cookiesFromBrowser,
-        onProgress: (pct) {
+        onProgress: (pct, speed, eta) {
           final adjusted = (pct * 0.95).toInt();
           final status = pct >= 100
               ? DownloadStatus.converting
               : DownloadStatus.downloading;
-          onProgress(adjusted, status);
+          onProgress(adjusted, status, speed: speed, eta: eta);
         },
       );
 
@@ -475,6 +475,7 @@ class DownloadService {
           coverPath: coverPath,
           title: video.title,
           artist: video.author,
+          album: video.author,
           date: video.uploadDate?.toIso8601String() ?? '',
           bitrate: preferredAudioBitrate,
         );
@@ -631,6 +632,7 @@ class DownloadService {
     required String? coverPath,
     required String title,
     required String artist,
+    required String album,
     required String date,
     int bitrate = 192,
   }) {
@@ -679,7 +681,7 @@ class DownloadService {
       '-metadata',
       'artist=$artist',
       '-metadata',
-      'album=$artist',
+      'album=$album',
       '-metadata',
       'date=$date',
     ]);

@@ -408,8 +408,8 @@ class AppController extends ChangeNotifier {
             token: token,
             ytDlpPath: settings.ytDlpPath,
             sponsorBlockEnabled: settings.sponsorBlockEnabled,
-            onProgress: (pct, status) {
-              final updated = item.copyWith(progress: pct, status: status);
+            onProgress: (pct, status, {String? speed, String? eta}) {
+              final updated = item.copyWith(progress: pct, status: status, speed: speed, eta: eta);
               _updateQueue(item, updated);
             },
             preferredVideoQuality:
@@ -426,8 +426,8 @@ class AppController extends ChangeNotifier {
             token: token,
             ytDlpPath: settings.ytDlpPath,
             sponsorBlockEnabled: settings.sponsorBlockEnabled,
-            onProgress: (pct, status) {
-              final updated = item.copyWith(progress: pct, status: status);
+            onProgress: (pct, status, {String? speed, String? eta}) {
+              final updated = item.copyWith(progress: pct, status: status, speed: speed, eta: eta);
               _updateQueue(item, updated);
             },
             preferredVideoQuality: settings.preferredVideoQuality,
