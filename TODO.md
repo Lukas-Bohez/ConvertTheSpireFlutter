@@ -26,20 +26,23 @@ This file tracks the work needed to make ConvertTheSpireFlutter feel like a mode
 
 ### ✅ Integrate `yt-dlp` via process execution
 - [ ] Add a bridge using a package like `process_run` (or equivalent) to execute `yt-dlp` commands.
-- [ ] Enable 4K/8K/HDR stream selection and proper audio/video merging.
+- [x] Enable 4K/8K/HDR stream selection and proper audio/video merging.
 - [ ] Ensure cross-platform compatibility (Windows/macOS/Linux and mobile platforms if supported).
+- [x] Add an engine health indicator that shows whether `yt-dlp` is present and the version.
 
 ---
 
 ## 3) UI/UX: From “Busy” to “Boutique”
 
 ### ✅ Simplify the Download Flow
-- [ ] Replace cluttered dashboard with a single “Paste Link” entry point.
-- [ ] Expand into a configuration panel after parsing a link (quality, format, destination, etc.).
+- [x] Replace cluttered dashboard with a single “Paste Link” entry point.
+- [x] Add a preview modal showing title/thumbnail/quality before download starts.
+- [x] Support per-download quality selection (1080p/4K/8K) in the preview.
 - [ ] Remove or hide non-essential UI elements.
 
 ### ✅ Implement Modern Theming
 - [ ] Adopt Material 3 / Fluent design (Android/Desktop) and Cupertino (iOS) where appropriate.
+- [x] Use a clean system font (Inter) across the app for premium typography.
 - [ ] Add dynamic theming support (Monet-style dynamic colors) and dark mode.
 
 ### ✅ Improve Progress Visualization
