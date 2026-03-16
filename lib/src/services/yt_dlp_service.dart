@@ -25,9 +25,8 @@ class YtDlpService {
   /// Checks: configured path → app data dir → system PATH → null.
   Future<String?> resolveAvailablePath(String? configuredPath) async {
     if (kIsWeb) return null;
-    if (Platform.isAndroid || Platform.isIOS) return null;
 
-    // 1. Check configured path
+    // 1. Check configured path (works on all platforms)
     if (configuredPath != null && configuredPath.trim().isNotEmpty) {
       if (await File(configuredPath).exists()) return configuredPath;
     }
@@ -209,6 +208,24 @@ class YtDlpService {
     }
   }
 
+  /// Force-update the local yt-dlp binary by re-downloading it.
+  ///
+  /// This is useful when YouTube breaks and a newer yt-dlp release is needed.
+  Future<String> update({
+    String? configuredPath,
+    void Function(int percent, String message)? onProgress,
+  }) async {
+    // Delete any existing binary so ensureAvailable will fetch the latest.
+    final existing = await resolveAvailablePath(configuredPath);
+    if (existing != null) {
+      await _safeDelete(existing);
+    }
+    return ensureAvailable(
+      configuredPath: configuredPath,
+      onProgress: onProgress,
+    );
+  }
+
   /// Download media using yt-dlp.
   ///
   /// [url]            – Video / media URL (YouTube, SoundCloud, etc.)
@@ -233,6 +250,7 @@ class YtDlpService {
     Map<String, String>? extraHeaders,
     String? cookiesFile,
     String? cookiesFromBrowser,
+    bool sponsorBlockEnabled = false,
     bool forceGenericExtractor = false,
   }) async {
     final args = <String>[];
@@ -261,6 +279,7 @@ class YtDlpService {
     // Common options
     args.addAll([
       '--embed-thumbnail', // embed cover art
+      '--add-metadata', // include title/artist/date tags
       '--no-playlist', // single video only
       '--newline', // one progress line per update
       '--no-colors', // clean output for parsing
@@ -268,6 +287,11 @@ class YtDlpService {
       '--no-part', // don't use .part files
       '-o', _escapeTemplate(outputPath),
     ]);
+
+    if (sponsorBlockEnabled) {
+      // Use SponsorBlock to strip sponsored/intro/outro segments on download.
+      args.addAll(['--sponsorblock-remove', 'all']);
+    }
 
     // FFmpeg location — only pass when we have an explicit path (not 'ffmpeg' on PATH)
     if (ffmpegPath != null &&

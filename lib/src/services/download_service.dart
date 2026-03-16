@@ -300,29 +300,27 @@ class DownloadService {
 
     final safeTitle = _sanitizeFileName(video.title);
 
-    // ── yt-dlp fast-path (desktop only) ─────────────────────────────────
+    // ── yt-dlp fast-path (when available)
     // yt-dlp handles throttle-token decryption, chunked downloads, and
     // adaptive stream merging natively — bypassing the youtube_explode_dart
     // stream issues that cause 403 errors on HD adaptive streams.
-    if (!Platform.isAndroid && !Platform.isIOS) {
-      final resolvedYtDlp = await ytDlp.resolveAvailablePath(ytDlpPath);
-      if (resolvedYtDlp != null) {
-        return _downloadWithYtDlp(
-          video: video,
-          url: item.url,
-          safeTitle: safeTitle,
-          format: formatLower,
-          outputDir: outputDir,
-          ffmpegPath: ffmpegPath,
-          ytDlpPath: resolvedYtDlp,
-          onProgress: onProgress,
-          token: token,
-          videoQuality: preferredVideoQuality,
-          audioBitrate: preferredAudioBitrate,
-          isSafOutput: isSafOutput,
-          useMediaStoreOnly: useMediaStoreOnly,
-        );
-      }
+    final resolvedYtDlp = await ytDlp.resolveAvailablePath(ytDlpPath);
+    if (resolvedYtDlp != null) {
+      return _downloadWithYtDlp(
+        video: video,
+        url: item.url,
+        safeTitle: safeTitle,
+        format: formatLower,
+        outputDir: outputDir,
+        ffmpegPath: ffmpegPath,
+        ytDlpPath: resolvedYtDlp,
+        onProgress: onProgress,
+        token: token,
+        videoQuality: preferredVideoQuality,
+        audioBitrate: preferredAudioBitrate,
+        isSafOutput: isSafOutput,
+        useMediaStoreOnly: useMediaStoreOnly,
+      );
     }
 
     // ── Fallback: youtube_explode_dart ───────────────────────────────────

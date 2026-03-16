@@ -60,9 +60,9 @@ You can download the app directly from our site at [quizthespire.com](https://qu
 
 ## Support & Funding
 
-If you find this app useful, the easiest way to support development is a one-time donation or recurring sponsorship. You can donate via [Buy Me a Coffee](https://buymeacoffee.com/orokaconner).
+If you find this app useful, the easiest way to support development is a one-time donation or recurring sponsorship. You can donate via [Buy Me a Coffee](https://buymeacoffee.com/orokaconner) or become a GitHub Sponsor.
 
-The app also offers an optional, opt-in CPU mining feature in the Support tab for those who prefer contributing compute cycles. It is always opt-in, battery-aware, and can be turned off at any time. See the Support tab for details.
+This app is open source, privacy-focused, and does not track what you download.
 
 ---
 

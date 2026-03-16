@@ -60,7 +60,7 @@ class OnboardingTooltipService {
     'stats.tab': 'View your download statistics and trends.',
     'settings.tab': 'Configure download directory, format, quality, and tools.',
     'support.tab':
-        'Support the project by contributing compute power via QUBIC mining.',
+        'Support the project via donations or by contributing feedback.',
     'convert.tab':
         'Convert audio and video files between formats using FFmpeg.',
     'logs.tab': 'View the activity log for debugging and monitoring.',
