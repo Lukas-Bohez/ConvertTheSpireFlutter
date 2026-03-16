@@ -6,7 +6,6 @@ import 'package:window_manager/window_manager.dart';
 import 'services/tray_service.dart';
 import 'dart:io' show Platform, Process;
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
@@ -396,30 +395,61 @@ class _MyAppState extends State<MyApp>
       animation: _controller ?? Listenable.merge([]),
       builder: (context, _) {
         final themeMode = _resolveThemeMode(_controller?.settings?.themeMode);
+        final lightScheme = ColorScheme.fromSeed(seedColor: Colors.deepPurple);
+        final darkScheme = ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        );
+
+        final lightTheme = ThemeData.from(
+          colorScheme: lightScheme,
+          useMaterial3: true,
+        ).copyWith(
+          iconTheme: const IconThemeData(size: 20),
+          appBarTheme: AppBarTheme(
+            backgroundColor: lightScheme.surface,
+            foregroundColor: lightScheme.onSurface,
+            iconTheme: IconThemeData(color: lightScheme.onSurface),
+            titleTextStyle: TextStyle(
+              color: lightScheme.onSurface,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          bottomNavigationBarTheme: BottomNavigationBarThemeData(
+            backgroundColor: lightScheme.surface,
+            selectedItemColor: lightScheme.primary,
+            unselectedItemColor: lightScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        );
+
+        final darkTheme = ThemeData.from(
+          colorScheme: darkScheme,
+          useMaterial3: true,
+        ).copyWith(
+          iconTheme: const IconThemeData(size: 20),
+          appBarTheme: AppBarTheme(
+            backgroundColor: darkScheme.surface,
+            foregroundColor: darkScheme.onSurface,
+            iconTheme: IconThemeData(color: darkScheme.onSurface),
+            titleTextStyle: TextStyle(
+              color: darkScheme.onSurface,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          bottomNavigationBarTheme: BottomNavigationBarThemeData(
+            backgroundColor: darkScheme.surface,
+            selectedItemColor: darkScheme.primary,
+            unselectedItemColor: darkScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        );
+
         return MaterialApp(
           navigatorKey: _navigatorKey,
           title: 'Convert the Spire',
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-            useMaterial3: true,
-            textTheme: GoogleFonts.interTextTheme(),
-            primaryTextTheme: GoogleFonts.interTextTheme(),
-            iconTheme: const IconThemeData(size: 20),
-          ),
-          darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.deepPurple,
-              brightness: Brightness.dark,
-            ),
-            useMaterial3: true,
-            textTheme: GoogleFonts.interTextTheme(
-              ThemeData(brightness: Brightness.dark).textTheme,
-            ),
-            primaryTextTheme: GoogleFonts.interTextTheme(
-              ThemeData(brightness: Brightness.dark).textTheme,
-            ),
-            iconTheme: const IconThemeData(size: 20),
-          ),
+          theme: lightTheme,
+          darkTheme: darkTheme,
           themeMode: themeMode,
           home: _buildHome(),
         );
