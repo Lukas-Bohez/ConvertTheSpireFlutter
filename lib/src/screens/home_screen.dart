@@ -273,6 +273,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             );
             _navigateToPage(3); // show queue
           },
+          getYtDlpVersion: () async {
+            final settings = widget.controller.settings;
+            return await widget.controller.downloadService.ytDlp
+                .getVersion(configuredPath: settings?.ytDlpPath);
+          },
         );
       default:
         return _buildSearchTab(settings);

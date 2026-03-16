@@ -8,13 +8,15 @@ import 'm3_home_grid.dart';
 /// Clean home page with a grid of quick-link tiles.
 class QuickLinksPage extends StatefulWidget {
   final ValueChanged<String> onNavigate;
-  final Future<void> Function(SearchResult result, String format, String quality)
-      onDownload;
+  final Future<void> Function(
+      SearchResult result, String format, String quality) onDownload;
+  final Future<String?> Function() getYtDlpVersion;
 
   const QuickLinksPage({
     super.key,
     required this.onNavigate,
     required this.onDownload,
+    required this.getYtDlpVersion,
   });
 
   @override
@@ -23,16 +25,40 @@ class QuickLinksPage extends StatefulWidget {
 
 class _QuickLinksPageState extends State<QuickLinksPage> {
   List<QuickLink> _links = [];
+  String? _ytDlpVersion;
+  bool _ytDlpChecking = true;
+  bool _ytDlpFailed = false;
 
   @override
   void initState() {
     super.initState();
     _loadLinks();
+    _checkYtDlpVersion();
   }
 
   Future<void> _loadLinks() async {
     final links = await QuickLinksService.load();
     if (mounted) setState(() => _links = links);
+  }
+
+  Future<void> _checkYtDlpVersion() async {
+    setState(() {
+      _ytDlpChecking = true;
+      _ytDlpFailed = false;
+    });
+    try {
+      final v = await widget.getYtDlpVersion();
+      if (mounted) {
+        setState(() {
+          _ytDlpVersion = v;
+          _ytDlpFailed = v == null;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _ytDlpFailed = true);
+    } finally {
+      if (mounted) setState(() => _ytDlpChecking = false);
+    }
   }
 
   @override
@@ -101,6 +127,36 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
           // Quick URL download input
           QuickDownloadCard(onDownload: widget.onDownload),
           const SizedBox(height: 24),
+
+          // Engine health / version indicator
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.memory,
+                size: 18,
+                color: _ytDlpFailed
+                    ? Colors.redAccent
+                    : (_ytDlpChecking ? Colors.amber : Colors.green),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _ytDlpChecking
+                    ? 'Checking engine...'
+                    : _ytDlpFailed
+                        ? 'yt-dlp not available (click Settings)'
+                        : 'yt-dlp ${_ytDlpVersion ?? 'unknown'}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(width: 12),
+              if (_ytDlpFailed)
+                TextButton(
+                  onPressed: _checkYtDlpVersion,
+                  child: const Text('Retry'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
           // Quick links grid
           SizedBox(

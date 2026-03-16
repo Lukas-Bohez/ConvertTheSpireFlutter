@@ -226,6 +226,26 @@ class YtDlpService {
     );
   }
 
+  /// Returns the local yt-dlp binary version if available.
+  ///
+  /// Returns `null` when yt-dlp cannot be found or cannot be executed.
+  Future<String?> getVersion({String? configuredPath}) async {
+    final path = await resolveAvailablePath(configuredPath);
+    if (path == null) return null;
+
+    try {
+      final result = await Process.run(path, ['--version'])
+          .timeout(const Duration(seconds: 5));
+      if (result.exitCode == 0) {
+        final out = result.stdout.toString().trim();
+        if (out.isNotEmpty) return out.split('\n').first.trim();
+      }
+    } catch (_) {
+      // ignore
+    }
+    return null;
+  }
+
   /// Download media using yt-dlp.
   ///
   /// [url]            – Video / media URL (YouTube, SoundCloud, etc.)
