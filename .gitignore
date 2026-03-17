@@ -95,9 +95,6 @@ local_src.zip
 v5_source.zip
 temp_src/
 *.zip
-<<<<<<< HEAD
 
 # Screenshots accidentally committed; keep locally but don't track
 /results/screenshots/
-=======
->>>>>>> d9d879a28a92b8a62796145596aae51273ad1c73
