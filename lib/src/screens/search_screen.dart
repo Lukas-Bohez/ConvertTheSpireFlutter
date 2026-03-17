@@ -1,10 +1,15 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 
 import '../models/search_result.dart';
 import '../services/multi_source_search_service.dart';
 import '../services/preview_player_service.dart';
+import '../state/app_controller.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 // Fix: use an explicit show clause so the analyzer knows exactly which
 // symbol is needed.  This resolves both the unused_import warning (the
@@ -38,6 +43,115 @@ class _SearchScreenState extends State<SearchScreen>
   String? _error;
   String _selectedFormat = 'mp3';
 
+  // Tracks what files already exist in the user-selected download directory.
+  Set<String> _downloadedFileKeys = {};
+  final List<Set<String>> _downloadedFileTokens = [];
+  bool _scanningDownloadFolder = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshDownloadedFiles();
+  }
+
+  String _normalizeKey(String input) {
+    var s = input.toLowerCase();
+    // Remove common featuring markers
+    s = s.replaceAll(RegExp(r'\b(feat|ft|featuring)\b\.?', caseSensitive: false), '');
+    // Replace ampersands
+    s = s.replaceAll('&', ' and ');
+    // Remove bracketed info (e.g. (remix), [live], {explicit})
+    s = s.replaceAll(RegExp(r'[\[\(\{].*?[\]\)\}]'), '');
+    // Keep only alphanumeric + spaces
+    s = s.replaceAll(RegExp(r'[^a-z0-9 ]+'), ' ');
+    // Collapse whitespace
+    s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return s;
+  }
+
+  Set<String> _tokenize(String input) {
+    return _normalizeKey(input).split(' ').where((t) => t.isNotEmpty).toSet();
+  }
+
+  bool _isAlreadyDownloaded(SearchResult r) {
+    if (_downloadedFileKeys.isEmpty) return false;
+
+    final title = _normalizeKey(r.title);
+    final full = _normalizeKey('${r.artist} ${r.title}');
+    final tokens = _tokenize('${r.artist} ${r.title}');
+
+    if (_downloadedFileKeys.contains(full) || _downloadedFileKeys.contains(title)) {
+      return true;
+    }
+
+    for (final key in _downloadedFileKeys) {
+      if (key.contains(title) || title.contains(key) || key.contains(full) || full.contains(key)) {
+        return true;
+      }
+    }
+
+    if (tokens.isNotEmpty) {
+      for (final existing in _downloadedFileTokens) {
+        if (existing.isEmpty) continue;
+        final intersection = tokens.intersection(existing).length;
+        final minSize = min(tokens.length, existing.length);
+        if (minSize > 0 && intersection / minSize >= 0.65) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  Future<void> _refreshDownloadedFiles({bool showSnack = true}) async {
+    if (!mounted) return;
+    final settings = context.read<AppController>().settings;
+    final folder = settings?.downloadDir;
+    if (folder == null || folder.isEmpty) return;
+    if (folder.startsWith('content://')) return;
+
+    setState(() => _scanningDownloadFolder = true);
+
+    // Scan the download folder so we can mark already-downloaded results.
+    // Only support the three target output formats.
+    final extWhitelist = {'.mp3', '.m4a', '.mp4'};
+
+    final scanned = <String>{};
+    final scannedTokens = <Set<String>>[];
+    try {
+      final dir = Directory(folder);
+      if (!await dir.exists()) return;
+      await for (final entity in dir.list(recursive: true, followLinks: false)) {
+        if (entity is! File) continue;
+        final ext = p.extension(entity.path).toLowerCase();
+        if (!extWhitelist.contains(ext)) continue;
+        final base = p.basenameWithoutExtension(entity.path);
+        final key = _normalizeKey(base);
+        scanned.add(key);
+        scannedTokens.add(_tokenize(base));
+      }
+    } catch (e) {
+      // Ignore scan errors; just don't mark any results as downloaded.
+      debugPrint('Download folder scan failed: $e');
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _downloadedFileKeys = scanned;
+      _downloadedFileTokens
+        ..clear()
+        ..addAll(scannedTokens);
+      _scanningDownloadFolder = false;
+    });
+
+    if (showSnack && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Download folder scan complete')),
+      );
+    }
+  }
+
   Future<void> _search() async {
     final query = _controller.text.trim();
     if (query.isEmpty) return;
@@ -55,6 +169,7 @@ class _SearchScreenState extends State<SearchScreen>
         _results = results;
         _loading = false;
       });
+      _refreshDownloadedFiles();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -110,11 +225,24 @@ class _SearchScreenState extends State<SearchScreen>
                 onPressed: _loading ? null : _search,
                 child: const Text('Search'),
               );
+              final refreshButton = IconButton(
+                icon: _scanningDownloadFolder
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                tooltip: _scanningDownloadFolder
+                    ? 'Scanning download folder…'
+                    : 'Refresh downloaded file status',
+                onPressed: _scanningDownloadFolder ? null : () => _refreshDownloadedFiles(),
+              );
 
               if (narrow) {
                 return Column(
                   children: [
-                    Row(children: [searchField]),
+                    Row(children: [searchField, refreshButton]),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -130,6 +258,8 @@ class _SearchScreenState extends State<SearchScreen>
               return Row(
                 children: [
                   searchField,
+                  const SizedBox(width: 8),
+                  refreshButton,
                   const SizedBox(width: 8),
                   formatDropdown,
                   const SizedBox(width: 8),
@@ -162,6 +292,7 @@ class _SearchScreenState extends State<SearchScreen>
             itemBuilder: (context, index) {
               final r = _results[index];
               final cs = Theme.of(context).colorScheme;
+              final alreadyDownloaded = _isAlreadyDownloaded(r);
               final leadingWidget = r.thumbnailUrl.isNotEmpty
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(6),
@@ -181,6 +312,9 @@ class _SearchScreenState extends State<SearchScreen>
 
               return Card(
                 margin: EdgeInsets.zero,
+                color: alreadyDownloaded
+                    ? cs.surfaceContainerHighest.withValues(alpha: 0.65)
+                    : null,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(12),
                   onTap: () => widget.onDownload(r, _selectedFormat),
@@ -225,6 +359,10 @@ class _SearchScreenState extends State<SearchScreen>
                             ],
                           ),
                         ),
+                        if (alreadyDownloaded) ...[
+                          Icon(Icons.check_circle, size: 18, color: cs.primary),
+                          const SizedBox(width: 8),
+                        ],
                         IconButton(
                           icon: const Icon(Icons.play_arrow),
                           tooltip: 'Preview in browser',
