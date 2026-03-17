@@ -15,33 +15,36 @@ import 'src/app.dart';
 import 'src/services/yt_dlp_update_controller.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // Ensure bindings are initialized in the same zone that runs runApp.
+  // This avoids `Zone mismatch` errors from Flutter.
+  await runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Request storage permission on Android (if needed).
-  Future<void> _requestAndroidPermissions() async {
-    if (kIsWeb) return;
-    if (!Platform.isAndroid) return;
+    // Request storage permission on Android (if needed).
+    Future<void> _requestAndroidPermissions() async {
+      if (kIsWeb) return;
+      if (!Platform.isAndroid) return;
 
-    try {
-      // Android 13+ requires granular media permissions (audio/video/photos).
-      // Request both storage and media permissions to cover older and newer OS versions.
-      final statuses = await [
-        Permission.storage,
-        Permission.audio,
-        Permission.videos,
-      ].request();
+      try {
+        // Android 13+ requires granular media permissions (audio/video/photos).
+        // Request both storage and media permissions to cover older and newer OS versions.
+        final statuses = await [
+          Permission.storage,
+          Permission.audio,
+          Permission.videos,
+        ].request();
 
-      if (kDebugMode) {
-        for (final entry in statuses.entries) {
-          debugPrint('Android permission ${entry.key}: ${entry.value}');
+        if (kDebugMode) {
+          for (final entry in statuses.entries) {
+            debugPrint('Android permission ${entry.key}: ${entry.value}');
+          }
         }
+      } catch (e) {
+        debugPrint('Android permission request failed: $e');
       }
-    } catch (e) {
-      debugPrint('Android permission request failed: $e');
     }
-  }
 
-  // Global error handlers.
+    // Global error handlers.
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
     if (kDebugMode) {
@@ -57,7 +60,6 @@ Future<void> main() async {
 
   await _requestAndroidPermissions();
 
-  runZonedGuarded(() async {
     // Ensure WebView2 user data folder is short (avoids long-path crashes).
     // Note: setting the environment variable via Win32 APIs was removed for
     // compilation stability in this environment.
@@ -145,3 +147,4 @@ Future<void> main() async {
     debugPrint(stack.toString());
   });
 }
+

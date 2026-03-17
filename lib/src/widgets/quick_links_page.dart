@@ -78,9 +78,10 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
           SliverPersistentHeader(
             pinned: true,
             delegate: _HomeHeaderDelegate(
-              minExtent: 260,
-              maxExtent: 520,
-              child: Padding(
+              minExtent: 160,
+              maxExtent: 380,
+              persistentHeight: 160,
+              expanded: Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: width < 600 ? 20 : 56,
                   vertical: 24,
@@ -89,7 +90,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const SizedBox(height: 28),
-                    // App branding + quick download
+                    // App branding (fades away when collapsed)
                     Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -133,10 +134,19 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    // Quick URL download input
+                  ],
+                ),
+              ),
+              pinned: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: width < 600 ? 20 : 56,
+                  vertical: 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     QuickDownloadCard(onDownload: widget.onDownload),
-                    const SizedBox(height: 24),
-                    // Engine health / version indicator (hide on Android — irrelevant)
+                    const SizedBox(height: 12),
                     if (!Platform.isAndroid)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -165,7 +175,6 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                             ),
                         ],
                       ),
-                    const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -314,18 +323,46 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
 class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double _minExtent;
   final double _maxExtent;
-  final Widget child;
+  final double _persistentHeight;
+  final Widget expanded;
+  final Widget pinned;
 
   _HomeHeaderDelegate({
     required double minExtent,
     required double maxExtent,
-    required this.child,
+    required double persistentHeight,
+    required this.expanded,
+    required this.pinned,
   })  : _minExtent = minExtent,
-        _maxExtent = maxExtent;
+        _maxExtent = maxExtent,
+        _persistentHeight = persistentHeight;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return child;
+    final t = (shrinkOffset / (_maxExtent - _minExtent)).clamp(0.0, 1.0);
+    final height = (_maxExtent - shrinkOffset).clamp(_persistentHeight, _maxExtent);
+
+    return SizedBox(
+      height: height,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // The expanded content shrinks smoothly by adjusting its height factor.
+          ClipRect(
+            child: Align(
+              alignment: Alignment.topCenter,
+              heightFactor: 1.0 - t,
+              child: expanded,
+            ),
+          ),
+          // Pin the search/card area to the bottom so it never scrolls away.
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: pinned,
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -338,6 +375,8 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _HomeHeaderDelegate oldDelegate) {
     return minExtent != oldDelegate.minExtent ||
         maxExtent != oldDelegate.maxExtent ||
-        child != oldDelegate.child;
+        _persistentHeight != oldDelegate._persistentHeight ||
+        expanded != oldDelegate.expanded ||
+        pinned != oldDelegate.pinned;
   }
 }
