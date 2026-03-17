@@ -2150,7 +2150,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                 ),
               ),
               if (!(isMobile && showVideoPane))
-                SliverToBoxAdapter(child: _buildSearchBar()),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _FixedHeightSliverDelegate(
+                    height: 68,
+                    child: _buildSearchBar(),
+                  ),
+                ),
             ];
           },
           body: TabBarView(
@@ -2841,6 +2847,29 @@ class _SectionHeader extends StatelessWidget {
         style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
       ),
     );
+  }
+}
+
+class _FixedHeightSliverDelegate extends SliverPersistentHeaderDelegate {
+  final double height;
+  final Widget child;
+
+  _FixedHeightSliverDelegate({required this.height, required this.child});
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox(height: height, child: child);
+  }
+
+  @override
+  bool shouldRebuild(covariant _FixedHeightSliverDelegate oldDelegate) {
+    return height != oldDelegate.height || child != oldDelegate.child;
   }
 }
 
