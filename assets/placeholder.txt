@@ -1,0 +1,1 @@
+Placeholder asset file to satisfy flutter analyzer asset directory existence requirement.

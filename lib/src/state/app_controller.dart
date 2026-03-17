@@ -496,7 +496,9 @@ class AppController extends ChangeNotifier {
         // Show ongoing notification so OS keeps process alive
         await notificationService.showActiveDownloadsBanner(pending.length);
 
-        final workers = (_settings?.maxWorkers ?? 3).clamp(1, 10);
+        final workers = Platform.isAndroid
+            ? 1
+            : (_settings?.maxWorkers ?? 3).clamp(1, 10);
 
         Future<void> worker() async {
           while (true) {
