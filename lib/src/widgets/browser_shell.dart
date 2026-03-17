@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../screens/player.dart' show PlayerState;
 import '../state/app_controller.dart';
 
 import 'quick_links_service.dart';
@@ -167,11 +168,17 @@ class _BrowserShellState extends State<BrowserShell> {
 
   // ── Build ──
 
+  static const double _playerOverlayHeight = 64.0;
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width > 1024;
     final cs = Theme.of(context).colorScheme;
+
+    // Show a small player control bar when we have something loaded.
+    final playerState = context.watch<PlayerState>();
+    final showPlayerOverlay = playerState.currentItem != null;
 
     final queueDrawer = SizedBox(
       width: width < 600 ? width * 0.85 : 320,
@@ -186,22 +193,38 @@ class _BrowserShellState extends State<BrowserShell> {
         children: [
           _buildNavBar(cs, isDesktop),
           Expanded(
-            child: isDesktop
-                ? Row(
-                    children: [
-                      if (!widget.queueOnRight && _showQueueDesktop)
-                        _buildDesktopQueuePanel(cs),
-                      Expanded(child: widget.child),
-                      if (widget.queueOnRight && _showQueueDesktop)
-                        _buildDesktopQueuePanel(cs),
-                    ],
-                  )
-                : widget.child,
+            child: Stack(
+              children: [
+                // Ensure the content doesn't get hidden behind the overlay.
+                Padding(
+                  padding: EdgeInsets.only(
+                      bottom: showPlayerOverlay ? _playerOverlayHeight : 0),
+                  child: isDesktop
+                      ? Row(
+                          children: [
+                            if (!widget.queueOnRight && _showQueueDesktop)
+                              _buildDesktopQueuePanel(cs),
+                            Expanded(child: widget.child),
+                            if (widget.queueOnRight && _showQueueDesktop)
+                              _buildDesktopQueuePanel(cs),
+                          ],
+                        )
+                      : widget.child,
+                ),
+                if (showPlayerOverlay)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: _buildPlayerOverlay(playerState, cs),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
-        // Bottom navigation removed on mobile — keep null to hide it completely
-        bottomNavigationBar: null,
+      // Bottom navigation removed on mobile — keep null to hide it completely
+      bottomNavigationBar: null,
     );
   }
 
@@ -328,6 +351,74 @@ class _BrowserShellState extends State<BrowserShell> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayerOverlay(PlayerState state, ColorScheme cs) {
+    final item = state.currentItem;
+    if (item == null) return const SizedBox.shrink();
+
+    final title = item.title ?? item.path.split('/').last;
+    final artist = item.artist ?? '';
+
+    return Container(
+      height: _playerOverlayHeight,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        border: Border(
+          top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.2)),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: () => widget.onNavigate('player.tab'),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  if (artist.isNotEmpty)
+                    Text(
+                      artist,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: () => state.togglePlay(),
+            icon: Icon(
+              state.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              size: 22,
+            ),
+            tooltip: state.isPlaying ? 'Pause' : 'Play',
+            splashRadius: 20,
+          ),
+          IconButton(
+            onPressed: () => widget.onNavigate('player.tab'),
+            icon: Icon(Icons.expand_less_rounded, size: 22),
+            tooltip: 'Open player',
+            splashRadius: 20,
+          ),
         ],
       ),
     );
