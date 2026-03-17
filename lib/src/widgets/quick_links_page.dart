@@ -75,93 +75,99 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
       color: cs.surfaceContainerLowest,
       child: CustomScrollView(
         slivers: [
-          SliverPadding(
-            padding: EdgeInsets.symmetric(
-              horizontal: width < 600 ? 20 : 56,
-              vertical: 24,
-            ),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate(
-                [
-                  const SizedBox(height: 28),
-                  // App branding + quick download
-                  Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                cs.primary.withValues(alpha: 0.15),
-                                cs.tertiary.withValues(alpha: 0.10),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _HomeHeaderDelegate(
+              minExtent: 260,
+              maxExtent: 520,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: width < 600 ? 20 : 56,
+                  vertical: 24,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 28),
+                    // App branding + quick download
+                    Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  cs.primary.withValues(alpha: 0.15),
+                                  cs.tertiary.withValues(alpha: 0.10),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(24),
                             ),
-                            borderRadius: BorderRadius.circular(24),
+                            child: Icon(Icons.music_note_rounded,
+                                size: 56, color: cs.primary),
                           ),
-                          child: Icon(Icons.music_note_rounded,
-                              size: 56, color: cs.primary),
-                        ),
-                        const SizedBox(height: 18),
-                        Text(
-                          'Convert the Spire',
-                          style:
-                              Theme.of(context).textTheme.headlineLarge?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.3,
-                                    color: cs.onSurface,
-                                  ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Paste a video or playlist URL below to start downloading.',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                          const SizedBox(height: 18),
+                          Text(
+                            'Convert the Spire',
+                            style:
+                                Theme.of(context).textTheme.headlineLarge?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.3,
+                                      color: cs.onSurface,
+                                    ),
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Text(
+                            'Paste a video or playlist URL below to start downloading.',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  // Quick URL download input
-                  QuickDownloadCard(onDownload: widget.onDownload),
-                  const SizedBox(height: 24),
-                  // Engine health / version indicator (hide on Android — irrelevant)
-                  if (!Platform.isAndroid)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.memory,
-                          size: 18,
-                          color: _ytDlpFailed
-                              ? Colors.redAccent
-                              : (_ytDlpChecking ? Colors.amber : Colors.green),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _ytDlpChecking
-                              ? 'Checking engine...'
-                              : _ytDlpFailed
-                                  ? 'yt-dlp not available (click Settings)'
-                                  : 'yt-dlp ${_ytDlpVersion ?? 'unknown'}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        const SizedBox(width: 12),
-                        if (_ytDlpFailed)
-                          TextButton(
-                            onPressed: _checkYtDlpVersion,
-                            child: const Text('Retry'),
+                    const SizedBox(height: 24),
+                    // Quick URL download input
+                    QuickDownloadCard(onDownload: widget.onDownload),
+                    const SizedBox(height: 24),
+                    // Engine health / version indicator (hide on Android — irrelevant)
+                    if (!Platform.isAndroid)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.memory,
+                            size: 18,
+                            color: _ytDlpFailed
+                                ? Colors.redAccent
+                                : (_ytDlpChecking ? Colors.amber : Colors.green),
                           ),
-                      ],
-                    ),
-                  const SizedBox(height: 16),
-                ],
+                          const SizedBox(width: 8),
+                          Text(
+                            _ytDlpChecking
+                                ? 'Checking engine...'
+                                : _ytDlpFailed
+                                    ? 'yt-dlp not available (click Settings)'
+                                    : 'yt-dlp ${_ytDlpVersion ?? 'unknown'}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(width: 12),
+                          if (_ytDlpFailed)
+                            TextButton(
+                              onPressed: _checkYtDlpVersion,
+                              child: const Text('Retry'),
+                            ),
+                        ],
+                      ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             ),
           ),
@@ -303,5 +309,35 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
         ),
       ),
     );
+  }
+}
+class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double _minExtent;
+  final double _maxExtent;
+  final Widget child;
+
+  _HomeHeaderDelegate({
+    required double minExtent,
+    required double maxExtent,
+    required this.child,
+  })  : _minExtent = minExtent,
+        _maxExtent = maxExtent;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  double get maxExtent => _maxExtent;
+
+  @override
+  double get minExtent => _minExtent;
+
+  @override
+  bool shouldRebuild(covariant _HomeHeaderDelegate oldDelegate) {
+    return minExtent != oldDelegate.minExtent ||
+        maxExtent != oldDelegate.maxExtent ||
+        child != oldDelegate.child;
   }
 }
