@@ -21,11 +21,20 @@ Future<void> main() async {
   Future<void> _requestAndroidPermissions() async {
     if (kIsWeb) return;
     if (!Platform.isAndroid) return;
+
     try {
-      final storage = Permission.storage;
-      final status = await storage.status;
-      if (status.isDenied || status.isRestricted) {
-        await storage.request();
+      // Android 13+ requires granular media permissions (audio/video/photos).
+      // Request both storage and media permissions to cover older and newer OS versions.
+      final statuses = await [
+        Permission.storage,
+        Permission.audio,
+        Permission.videos,
+      ].request();
+
+      if (kDebugMode) {
+        for (final entry in statuses.entries) {
+          debugPrint('Android permission ${entry.key}: ${entry.value}');
+        }
       }
     } catch (e) {
       debugPrint('Android permission request failed: $e');

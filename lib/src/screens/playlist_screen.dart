@@ -33,6 +33,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   PlaylistInfo? _playlistInfo;
   PlaylistFolderComparison? _comparison;
   Set<SearchResult> _missingSelection = {};
+  int? _lastMissingSelectedIndex;
   String? _error;
   String _selectedFormat = 'mp3';
 
@@ -723,14 +724,48 @@ class _PlaylistScreenState extends State<PlaylistScreen>
               final selected = _missingSelection.contains(t);
               return ListTile(
                 dense: true,
+                onLongPress: () {
+                  setState(() {
+                    _lastMissingSelectedIndex = i;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text(
+                      'Range select started. Tap another item to select a range.',
+                    ),
+                    duration: Duration(seconds: 2),
+                  ));
+                },
                 leading: Checkbox(
                   value: selected,
                   onChanged: (value) {
                     setState(() {
-                      if (value == true) {
-                        _missingSelection.add(t);
+                      if (value == null) return;
+
+                      // Range selection (shift-click style): long-press to set a
+                      // starting point, then tap another item to select the range.
+                      if (_lastMissingSelectedIndex != null &&
+                          _lastMissingSelectedIndex != i) {
+                        final start = _lastMissingSelectedIndex!;
+                        final end = i;
+                        final range = start < end
+                            ? List.generate(end - start + 1, (j) => start + j)
+                            : List.generate(start - end + 1, (j) => end + j);
+                        for (final idx in range) {
+                          final item = _comparison!.missing[idx];
+                          if (value) {
+                            _missingSelection.add(item);
+                          } else {
+                            _missingSelection.remove(item);
+                          }
+                        }
+                        _lastMissingSelectedIndex = null;
                       } else {
-                        _missingSelection.remove(t);
+                        if (value) {
+                          _missingSelection.add(t);
+                        } else {
+                          _missingSelection.remove(t);
+                        }
+                        _lastMissingSelectedIndex = i;
                       }
                     });
                   },

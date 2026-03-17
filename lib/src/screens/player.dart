@@ -1103,7 +1103,12 @@ class PlayerState with ChangeNotifier {
 
   Future<void> next({MediaType? only}) async {
     if (library.isEmpty) return;
-    final candidates = _getPlaybackCandidates(only: only);
+    var candidates = _getPlaybackCandidates(only: only);
+    if (candidates.isEmpty && only != null) {
+      // If the current filter yields nothing (e.g. songs-only while in a video
+      // folder), fall back to whatever is actually available.
+      candidates = _getPlaybackCandidates(only: null);
+    }
     if (candidates.isEmpty) return;
     int nextIndex;
     if (shuffle) {
@@ -1118,7 +1123,12 @@ class PlayerState with ChangeNotifier {
 
   Future<void> previous({MediaType? only}) async {
     if (library.isEmpty) return;
-    final candidates = _getPlaybackCandidates(only: only);
+    var candidates = _getPlaybackCandidates(only: only);
+    if (candidates.isEmpty && only != null) {
+      // If the current filter yields nothing (e.g. songs-only while in a video
+      // folder), fall back to whatever is actually available.
+      candidates = _getPlaybackCandidates(only: null);
+    }
     if (candidates.isEmpty) return;
     int prevIndex;
     if (shuffle) {

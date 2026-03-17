@@ -45,9 +45,11 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
           context: context,
           isScrollControlled: true,
           builder: (ctx) {
+            // Ensure the modal sheet content is positioned above system UI (e.g., navigation bar)
+            final mq = MediaQuery.of(ctx);
             return Padding(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                bottom: mq.viewInsets.bottom + mq.padding.bottom,
               ),
               child: _PlaylistChecklistSheet(tracks: tracks),
             );
@@ -97,9 +99,11 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
           context: context,
           isScrollControlled: true,
           builder: (ctx) {
+            // Ensure the modal sheet content is positioned above system UI (e.g., navigation bar)
+            final mq = MediaQuery.of(ctx);
             return Padding(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                bottom: mq.viewInsets.bottom + mq.padding.bottom,
               ),
               child: _DownloadPreviewSheet(
                 result: result,

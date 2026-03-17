@@ -405,7 +405,7 @@ class _MyAppState extends State<MyApp>
           colorScheme: lightScheme,
           useMaterial3: true,
         ).copyWith(
-          iconTheme: const IconThemeData(size: 20),
+          iconTheme: IconThemeData(size: 20, color: lightScheme.onSurface),
           appBarTheme: AppBarTheme(
             backgroundColor: lightScheme.surface,
             foregroundColor: lightScheme.onSurface,
@@ -427,7 +427,7 @@ class _MyAppState extends State<MyApp>
           colorScheme: darkScheme,
           useMaterial3: true,
         ).copyWith(
-          iconTheme: const IconThemeData(size: 20),
+          iconTheme: IconThemeData(size: 20, color: darkScheme.onSurface),
           appBarTheme: AppBarTheme(
             backgroundColor: darkScheme.surface,
             foregroundColor: darkScheme.onSurface,
