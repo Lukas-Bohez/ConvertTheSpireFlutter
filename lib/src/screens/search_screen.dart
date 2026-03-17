@@ -46,6 +46,7 @@ class _SearchScreenState extends State<SearchScreen>
   // Tracks what files already exist in the user-selected download directory.
   Set<String> _downloadedFileKeys = {};
   final List<Set<String>> _downloadedFileTokens = [];
+  DateTime? _lastDownloadFolderScan;
   bool _scanningDownloadFolder = false;
 
   @override
@@ -143,6 +144,7 @@ class _SearchScreenState extends State<SearchScreen>
         ..clear()
         ..addAll(scannedTokens);
       _scanningDownloadFolder = false;
+      _lastDownloadFolderScan = DateTime.now();
     });
 
     if (showSnack && mounted) {
@@ -283,6 +285,17 @@ class _SearchScreenState extends State<SearchScreen>
             padding: const EdgeInsets.all(8),
             child: Text(_error!,
                 style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          ),
+        if (_lastDownloadFolderScan != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Text(
+              'Last scan: ${TimeOfDay.fromDateTime(_lastDownloadFolderScan!).format(context)}',
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
         Expanded(
           child: ListView.separated(

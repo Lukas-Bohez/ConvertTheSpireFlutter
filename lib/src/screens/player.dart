@@ -8,7 +8,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show MissingPluginException;
+import 'package:flutter/services.dart' show MissingPluginException, DeviceOrientation, SystemChrome, SystemUiMode;
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
@@ -1833,7 +1833,9 @@ class _VideoPane extends StatefulWidget {
   final VideoPlayerController? androidController;
   final bool visible;
   final bool ready;
+  final bool isFullScreen;
   final VoidCallback onTap;
+  final VoidCallback onToggleFullScreen;
 
   const _VideoPane({
     required this.mkController,
@@ -1841,6 +1843,8 @@ class _VideoPane extends StatefulWidget {
     required this.visible,
     required this.ready,
     required this.onTap,
+    required this.isFullScreen,
+    required this.onToggleFullScreen,
     Key? key,
   }) : super(key: key);
 
@@ -1907,7 +1911,28 @@ class _VideoPaneState extends State<_VideoPane> {
         child: ColoredBox(
           color: Theme.of(context).colorScheme.background,
           child: widget.ready
-              ? child
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    child,
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: IconButton(
+                        icon: Icon(
+                          widget.isFullScreen
+                              ? Icons.fullscreen_exit
+                              : Icons.fullscreen,
+                          color: Colors.white.withOpacity(0.85),
+                        ),
+                        tooltip: widget.isFullScreen
+                            ? 'Exit fullscreen'
+                            : 'Fullscreen',
+                        onPressed: widget.onToggleFullScreen,
+                      ),
+                    ),
+                  ],
+                )
               : const Center(child: CircularProgressIndicator(color: _PlayerTheme.accent)),
         ),
       ),
@@ -1947,6 +1972,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   late final TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _isFullScreen = false;
 
   // One scroll controller per tab to avoid cross-tab controller conflicts.
   final _scrollControllers = List.generate(4, (_) => ScrollController());
@@ -1960,10 +1986,28 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   @override
   void dispose() {
+    _exitFullScreen();
     _tabController.dispose();
     _searchController.dispose();
     for (final sc in _scrollControllers) { sc.dispose(); }
     super.dispose();
+  }
+
+  Future<void> _enterFullScreen() async {
+    if (_isFullScreen) return;
+    _isFullScreen = true;
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  Future<void> _exitFullScreen() async {
+    if (!_isFullScreen) return;
+    _isFullScreen = false;
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
   }
 
   bool _matchesSearch(MediaItem item) {
@@ -2018,81 +2062,106 @@ class _PlayerScreenState extends State<PlayerScreen>
         (state.videoController != null ||
             state.androidVideoController != null);
 
+    if (_isFullScreen) {
+      return Scaffold(
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: _VideoPane(
+            mkController: state.videoController,
+            androidController: state.androidVideoController,
+            visible: true,
+            ready: state.videoReady,
+            isFullScreen: true,
+            onTap: state.togglePlay,
+            onToggleFullScreen: () async {
+              await _exitFullScreen();
+              setState(() {});
+            },
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: SafeArea(
         top: false,
         bottom: true,
-        // CRASH FIX: Replace CustomScrollView+SliverFillRemaining+TabBarView
-        // with a plain Column. SliverFillRemaining handing an unbounded-height
-        // TabBarView (which itself contains ListViews) causes a layout crash on
-        // Windows desktop where the render engine can't resolve constraints.
-        child: Column(
-          children: [
-            // ── Video pane ──────────────────────────────────────────────────
-            // CRASH FIX: AnimatedContainer height:null crashes Flutter layout.
-            // Use a fixed target height instead (0 ↔ 260).
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeInOut,
-              height: showVideo ? 260.0 : 0.0,
-              clipBehavior: Clip.hardEdge,
-              decoration: BoxDecoration(color: Theme.of(context).colorScheme.background),
-              child: showVideo
-                  ? _VideoPane(
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) {
+            final isMobile = MediaQuery.of(context).size.width < 600;
+            final showVideoPane = showVideo;
+            return [
+              if (showVideoPane)
+                SliverToBoxAdapter(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeInOut,
+                    height: 260.0,
+                    clipBehavior: Clip.hardEdge,
+                    decoration:
+                        BoxDecoration(color: Theme.of(context).colorScheme.background),
+                    child: _VideoPane(
                       mkController: state.videoController,
                       androidController: state.androidVideoController,
                       visible: true,
                       ready: state.videoReady,
+                      isFullScreen: _isFullScreen,
                       onTap: state.togglePlay,
-                    )
-                  : const SizedBox.shrink(),
-            ),
-
-            // ── Header + now-playing ─────────────────────────────────────
-            _buildHeader(),
-            _buildNowPlaying(state),
-            if (state.isLoading)
-              const LinearProgressIndicator(
-                color: _PlayerTheme.accent,
-                minHeight: 2,
+                      onToggleFullScreen: () async {
+                        if (_isFullScreen) {
+                          await _exitFullScreen();
+                        } else {
+                          await _enterFullScreen();
+                        }
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                ),
+              if (!(isMobile && showVideoPane))
+                SliverToBoxAdapter(child: _buildHeader()),
+              if (!(isMobile && showVideoPane))
+                SliverToBoxAdapter(child: _buildNowPlaying(state)),
+              if (state.isLoading)
+                SliverToBoxAdapter(
+                  child: const LinearProgressIndicator(
+                    color: _PlayerTheme.accent,
+                    minHeight: 2,
+                  ),
+                ),
+              SliverToBoxAdapter(
+                child: ColoredBox(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: TabBar(
+                    controller: _tabController,
+                    labelColor: _PlayerTheme.accent,
+                    unselectedLabelColor: _PlayerTheme.sub(context),
+                    indicatorColor: _PlayerTheme.accent,
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    tabs: [
+                      Tab(text: 'All ($allCount)'),
+                      Tab(text: '♪ Songs ($songCount)'),
+                      Tab(text: '▶ Videos ($videoCount)'),
+                      Tab(text: '★ Fav ($favCount)'),
+                    ],
+                  ),
+                ),
               ),
-
-            // ── Pinned tab bar ────────────────────────────────────────────
-            ColoredBox(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              child: TabBar(
-                controller: _tabController,
-                labelColor: _PlayerTheme.accent,
-                unselectedLabelColor: _PlayerTheme.sub(context),
-                indicatorColor: _PlayerTheme.accent,
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                tabs: [
-                  Tab(text: 'All ($allCount)'),
-                  Tab(text: '♪ Songs ($songCount)'),
-                  Tab(text: '▶ Videos ($videoCount)'),
-                  Tab(text: '★ Fav ($favCount)'),
-                ],
-              ),
-            ),
-
-            // ── Search bar ────────────────────────────────────────────────
-            _buildSearchBar(),
-
-            // ── Tab content — Expanded so it fills remaining space ────────
-            // Each tab manages its own scroll independently.
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _AllTab(state: state, scrollCtl: _scrollControllers[0], matchFn: _matchesSearch, onTap: _onTrackTap),
-                  _SongsTab(state: state, scrollCtl: _scrollControllers[1], matchFn: _matchesSearch, onTap: _onTrackTap),
-                  _VideosTab(state: state, scrollCtl: _scrollControllers[2], matchFn: _matchesSearch, onTap: _onTrackTap),
-                  _FavouritesTab(state: state, scrollCtl: _scrollControllers[3], matchFn: _matchesSearch, onTap: _onTrackTap),
-                ],
-              ),
-            ),
-          ],
+              if (!(isMobile && showVideoPane))
+                SliverToBoxAdapter(child: _buildSearchBar()),
+            ];
+          },
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              _AllTab(state: state, scrollCtl: _scrollControllers[0], matchFn: _matchesSearch, onTap: _onTrackTap),
+              _SongsTab(state: state, scrollCtl: _scrollControllers[1], matchFn: _matchesSearch, onTap: _onTrackTap),
+              _VideosTab(state: state, scrollCtl: _scrollControllers[2], matchFn: _matchesSearch, onTap: _onTrackTap),
+              _FavouritesTab(state: state, scrollCtl: _scrollControllers[3], matchFn: _matchesSearch, onTap: _onTrackTap),
+            ],
+          ),
         ),
       ),
     );
