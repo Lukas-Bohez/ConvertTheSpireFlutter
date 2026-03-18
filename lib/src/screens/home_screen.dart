@@ -56,7 +56,8 @@ class _SearchHeaderDelegate extends SliverPersistentHeaderDelegate {
   });
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return SizedBox.expand(child: child);
   }
 
@@ -124,7 +125,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _updateBannerDismissed = false;
   bool _checkUpdatesOnLaunch = true;
 
-
   TrayService? _trayService;
 
   String _previewPreset = '25';
@@ -147,7 +147,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _onboarding.init().then((_) {
       if (mounted) setState(() {});
     });
-
 
     _initDesktopFeatures();
 
@@ -599,6 +598,22 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _settingsInitialized = true;
     });
 
+    if (_isAndroid && _hasAndroidFolder) {
+      _androidSaf.testWriteAccess(_androidDownloadUri).then((canWrite) {
+        if (!canWrite && mounted) {
+          setState(() {
+            _androidDownloadUri = '';
+            _downloadDirController.text = 'Not set';
+          });
+          Snack.show(
+            context,
+            'Configured folder is not writable. Please choose a different folder.',
+            level: SnackLevel.error,
+          );
+        }
+      });
+    }
+
     try {
       widget.controller.downloadService.onSafAccessDenied = () async {
         if (!mounted) return null;
@@ -668,6 +683,19 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _pickAndroidFolder(AppSettings settings) async {
     final uri = await _androidSaf.pickTree();
     if (uri == null || uri.isEmpty) return;
+
+    final canWrite = await _androidSaf.testWriteAccess(uri);
+    if (!canWrite) {
+      if (mounted) {
+        Snack.show(
+          context,
+          'Selected folder is not writable. Please choose a different folder.',
+          level: SnackLevel.error,
+        );
+      }
+      return;
+    }
+
     if (!mounted) return;
     setState(() {
       _androidDownloadUri = uri;
@@ -692,7 +720,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _downloadDirController.text = result;
     });
 
-    await widget.controller.saveSettings(settings.copyWith(downloadDir: result));
+    await widget.controller
+        .saveSettings(settings.copyWith(downloadDir: result));
     if (mounted) {
       Snack.show(context, 'Download folder updated', level: SnackLevel.info);
     }
@@ -809,8 +838,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   prefixIcon: Icon(Icons.audio_file),
                                 ),
                                 items: const [
-                                  DropdownMenuItem(value: 'mp3', child: Text('MP3')),
-                                  DropdownMenuItem(value: 'm4a', child: Text('M4A')),
+                                  DropdownMenuItem(
+                                      value: 'mp3', child: Text('MP3')),
+                                  DropdownMenuItem(
+                                      value: 'm4a', child: Text('M4A')),
                                   DropdownMenuItem(
                                       value: 'mp4', child: Text('MP4 (Video)')),
                                 ],
@@ -836,15 +867,20 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   DropdownMenuItem(
                                       value: '720p', child: Text('720p (HD)')),
                                   DropdownMenuItem(
-                                      value: '1080p', child: Text('1080p (Full HD)')),
+                                      value: '1080p',
+                                      child: Text('1080p (Full HD)')),
                                   DropdownMenuItem(
-                                      value: '1440p', child: Text('1440p (2K)')),
+                                      value: '1440p',
+                                      child: Text('1440p (2K)')),
                                   DropdownMenuItem(
-                                      value: '2160p', child: Text('2160p (4K)')),
+                                      value: '2160p',
+                                      child: Text('2160p (4K)')),
                                   DropdownMenuItem(
-                                      value: '4320p', child: Text('4320p (8K)')),
+                                      value: '4320p',
+                                      child: Text('4320p (8K)')),
                                   DropdownMenuItem(
-                                      value: 'best', child: Text('Best Available')),
+                                      value: 'best',
+                                      child: Text('Best Available')),
                                 ],
                                 onChanged: (value) {
                                   if (value != null)
@@ -879,7 +915,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               CheckboxListTile(
                                 value: _expandPlaylist,
                                 onChanged: (value) {
-                                  setState(() => _expandPlaylist = value ?? false);
+                                  setState(
+                                      () => _expandPlaylist = value ?? false);
                                 },
                                 title: const Text('Expand playlist'),
                                 subtitle: const Text('Show all videos'),
@@ -894,7 +931,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 children: [
                                   Expanded(
                                     child: DropdownButtonFormField<String>(
-                                      key: ValueKey('fmt-wide-$_downloadFormat'),
+                                      key:
+                                          ValueKey('fmt-wide-$_downloadFormat'),
                                       initialValue: _downloadFormat,
                                       decoration: const InputDecoration(
                                         labelText: 'Format',
@@ -907,11 +945,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                         DropdownMenuItem(
                                             value: 'm4a', child: Text('M4A')),
                                         DropdownMenuItem(
-                                            value: 'mp4', child: Text('MP4 (Video)')),
+                                            value: 'mp4',
+                                            child: Text('MP4 (Video)')),
                                       ],
                                       onChanged: (value) {
                                         if (value != null)
-                                          setState(() => _downloadFormat = value);
+                                          setState(
+                                              () => _downloadFormat = value);
                                       },
                                     ),
                                   ),
@@ -931,7 +971,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                         DropdownMenuItem(
                                             value: '480p', child: Text('480p')),
                                         DropdownMenuItem(
-                                            value: '720p', child: Text('720p (HD)')),
+                                            value: '720p',
+                                            child: Text('720p (HD)')),
                                         DropdownMenuItem(
                                             value: '1080p',
                                             child: Text('1080p (Full HD)')),
@@ -957,13 +998,17 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       ),
                                       items: const [
                                         DropdownMenuItem(
-                                            value: 128, child: Text('128 kbps')),
+                                            value: 128,
+                                            child: Text('128 kbps')),
                                         DropdownMenuItem(
-                                            value: 192, child: Text('192 kbps')),
+                                            value: 192,
+                                            child: Text('192 kbps')),
                                         DropdownMenuItem(
-                                            value: 256, child: Text('256 kbps')),
+                                            value: 256,
+                                            child: Text('256 kbps')),
                                         DropdownMenuItem(
-                                            value: 320, child: Text('320 kbps')),
+                                            value: 320,
+                                            child: Text('320 kbps')),
                                       ],
                                       onChanged: (value) {
                                         if (value != null)
@@ -977,7 +1022,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               CheckboxListTile(
                                 value: _expandPlaylist,
                                 onChanged: (value) {
-                                  setState(() => _expandPlaylist = value ?? false);
+                                  setState(
+                                      () => _expandPlaylist = value ?? false);
                                 },
                                 title: const Text('Expand playlist'),
                                 subtitle: const Text('Show all videos'),
@@ -1004,7 +1050,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               const Icon(Icons.playlist_play),
                               const SizedBox(width: 8),
                               Text('Playlist Options',
-                                  style: Theme.of(context).textTheme.titleMedium),
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -1018,7 +1065,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   decoration: const InputDecoration(
                                     labelText: 'Preview amount',
                                     border: OutlineInputBorder(),
-                                    prefixIcon: Icon(Icons.format_list_numbered),
+                                    prefixIcon:
+                                        Icon(Icons.format_list_numbered),
                                     isDense: true,
                                   ),
                                   items: const [
@@ -1066,7 +1114,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 ),
                                 const Padding(
                                   padding: EdgeInsets.symmetric(horizontal: 12),
-                                  child: Text('to', style: TextStyle(fontSize: 16)),
+                                  child: Text('to',
+                                      style: TextStyle(fontSize: 16)),
                                 ),
                                 Expanded(
                                   child: TextField(
@@ -1089,7 +1138,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             const SizedBox(height: 4),
                             Text(
                               'Video numbers are 1-based (e.g. 1 to 25 = first 25 videos)',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurfaceVariant,
@@ -1127,10 +1179,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         child: ElevatedButton.icon(
                           icon: const Icon(Icons.search),
                           label: const Text('Search / Preview'),
-                          onPressed:
-                              settings == null || _urlController.text.trim().isEmpty
-                                  ? null
-                                  : _onSearch,
+                          onPressed: settings == null ||
+                                  _urlController.text.trim().isEmpty
+                              ? null
+                              : _onSearch,
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
@@ -1142,10 +1194,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         child: OutlinedButton.icon(
                           icon: const Icon(Icons.download),
                           label: const Text('Download'),
-                          onPressed:
-                              settings == null || _urlController.text.trim().isEmpty
-                                  ? null
-                                  : () => _downloadUrl(settings),
+                          onPressed: settings == null ||
+                                  _urlController.text.trim().isEmpty
+                              ? null
+                              : () => _downloadUrl(settings),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
@@ -1160,10 +1212,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         child: ElevatedButton.icon(
                           icon: const Icon(Icons.search),
                           label: const Text('Search / Preview'),
-                          onPressed:
-                              settings == null || _urlController.text.trim().isEmpty
-                                  ? null
-                                  : _onSearch,
+                          onPressed: settings == null ||
+                                  _urlController.text.trim().isEmpty
+                              ? null
+                              : _onSearch,
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
@@ -1174,10 +1226,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         child: OutlinedButton.icon(
                           icon: const Icon(Icons.download),
                           label: const Text('Download'),
-                          onPressed:
-                              settings == null || _urlController.text.trim().isEmpty
-                                  ? null
-                                  : () => _downloadUrl(settings),
+                          onPressed: settings == null ||
+                                  _urlController.text.trim().isEmpty
+                              ? null
+                              : () => _downloadUrl(settings),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
@@ -2008,11 +2060,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     children: [
                       if (item.speed != null)
                         Text('Speed: ${item.speed}',
-                            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+                            style: TextStyle(
+                                fontSize: 11, color: cs.onSurfaceVariant)),
                       if (item.eta != null) ...[
                         const SizedBox(width: 12),
                         Text('ETA: ${item.eta}',
-                            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+                            style: TextStyle(
+                                fontSize: 11, color: cs.onSurfaceVariant)),
                       ],
                     ],
                   ),
@@ -2223,8 +2277,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color:
-                              Theme.of(context).colorScheme.primaryContainer,
+                          color: Theme.of(context).colorScheme.primaryContainer,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(Icons.favorite,
@@ -2539,7 +2592,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               labelText: 'Video Quality',
                               border: OutlineInputBorder(),
                               prefixIcon: Icon(Icons.videocam),
-                              helperText: 'High resolutions (1080p+/4K/8K) merge separate video + audio streams (requires yt-dlp + FFmpeg)',
+                              helperText:
+                                  'High resolutions (1080p+/4K/8K) merge separate video + audio streams (requires yt-dlp + FFmpeg)',
                               helperMaxLines: 2,
                             ),
                             items: const [
@@ -2765,14 +2819,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             Snack.show(context, 'Updating yt-dlp...',
                                 level: SnackLevel.info);
                             try {
-                              final updated =
-                                  await widget.controller.downloadService.ytDlp
-                                      .update(
+                              final updated = await widget
+                                  .controller.downloadService.ytDlp
+                                  .update(
                                 configuredPath: current,
                                 onProgress: (pct, msg) {
                                   if (pct % 25 == 0 || pct == 100) {
-                                    Snack.show(context,
-                                        'yt-dlp: $msg ($pct%)',
+                                    Snack.show(context, 'yt-dlp: $msg ($pct%)',
                                         level: SnackLevel.info);
                                   }
                                 },
@@ -2802,8 +2855,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         setState(() => _sponsorBlockEnabled = value);
                         final s = widget.controller.settings;
                         if (s != null) {
-                          await widget.controller
-                              .saveSettings(s.copyWith(sponsorBlockEnabled: value));
+                          await widget.controller.saveSettings(
+                              s.copyWith(sponsorBlockEnabled: value));
                         }
                       },
                       title: const Text('Use SponsorBlock'),

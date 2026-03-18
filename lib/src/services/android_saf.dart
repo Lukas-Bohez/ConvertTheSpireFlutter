@@ -30,6 +30,16 @@ class AndroidSaf {
     });
   }
 
+  /// Tests whether we can write to the given SAF tree URI.
+  ///
+  /// Returns true if a small temporary file can be created and deleted.
+  Future<bool> testWriteAccess(String treeUri) async {
+    if (!isSupported) return false;
+    return await _channel.invokeMethod<bool>('testTreeWrite', {
+          'treeUri': treeUri,
+        }) ?? false;
+  }
+
   Future<bool> openTree(String treeUri) async {
     if (!isSupported) return false;
     final result = await _channel.invokeMethod<bool>('openTree', {
