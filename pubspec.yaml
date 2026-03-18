@@ -63,7 +63,6 @@ dependencies:
 
 flutter:
   uses-material-design: true
-  # assets:
-  #   - assets/
-  #   - assets/images/
-  #   - assets/icons/
+  assets:
+    - assets/icons/app_icon.ico
+    - assets/icons/favicon-192x192.png
