@@ -1912,9 +1912,9 @@ class _VideoPaneState extends State<_VideoPane> {
           color: Theme.of(context).colorScheme.background,
           child: widget.ready
               ? Stack(
-                  fit: StackFit.expand,
+                  fit: StackFit.loose,
                   children: [
-                    child,
+                    Center(child: child),
                     Positioned(
                       top: 10,
                       right: 10,
@@ -2093,29 +2093,33 @@ class _PlayerScreenState extends State<PlayerScreen>
             final showVideoPane = showVideo;
             return [
               if (showVideoPane)
-                SliverToBoxAdapter(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeInOut,
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _FixedHeightSliverDelegate(
                     height: 260.0,
-                    clipBehavior: Clip.hardEdge,
-                    decoration:
-                        BoxDecoration(color: Theme.of(context).colorScheme.background),
-                    child: _VideoPane(
-                      mkController: state.videoController,
-                      androidController: state.androidVideoController,
-                      visible: true,
-                      ready: state.videoReady,
-                      isFullScreen: _isFullScreen,
-                      onTap: state.togglePlay,
-                      onToggleFullScreen: () async {
-                        if (_isFullScreen) {
-                          await _exitFullScreen();
-                        } else {
-                          await _enterFullScreen();
-                        }
-                        setState(() {});
-                      },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeInOut,
+                      height: 260.0,
+                      clipBehavior: Clip.hardEdge,
+                      decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.background),
+                      child: _VideoPane(
+                        mkController: state.videoController,
+                        androidController: state.androidVideoController,
+                        visible: true,
+                        ready: state.videoReady,
+                        isFullScreen: _isFullScreen,
+                        onTap: state.togglePlay,
+                        onToggleFullScreen: () async {
+                          if (_isFullScreen) {
+                            await _exitFullScreen();
+                          } else {
+                            await _enterFullScreen();
+                          }
+                          setState(() {});
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -2130,22 +2134,26 @@ class _PlayerScreenState extends State<PlayerScreen>
                     minHeight: 2,
                   ),
                 ),
-              SliverToBoxAdapter(
-                child: ColoredBox(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  child: TabBar(
-                    controller: _tabController,
-                    labelColor: _PlayerTheme.accent,
-                    unselectedLabelColor: _PlayerTheme.sub(context),
-                    indicatorColor: _PlayerTheme.accent,
-                    isScrollable: true,
-                    tabAlignment: TabAlignment.start,
-                    tabs: [
-                      Tab(text: 'All ($allCount)'),
-                      Tab(text: '♪ Songs ($songCount)'),
-                      Tab(text: '▶ Videos ($videoCount)'),
-                      Tab(text: '★ Fav ($favCount)'),
-                    ],
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _FixedHeightSliverDelegate(
+                  height: 48,
+                  child: ColoredBox(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: TabBar(
+                      controller: _tabController,
+                      labelColor: _PlayerTheme.accent,
+                      unselectedLabelColor: _PlayerTheme.sub(context),
+                      indicatorColor: _PlayerTheme.accent,
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      tabs: [
+                        Tab(text: 'All ($allCount)'),
+                        Tab(text: '♪ Songs ($songCount)'),
+                        Tab(text: '▶ Videos ($videoCount)'),
+                        Tab(text: '★ Fav ($favCount)'),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -2217,7 +2225,8 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   Widget _buildSearchBar() {
-    return Padding(
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: TextField(
         controller: _searchController,
