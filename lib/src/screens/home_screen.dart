@@ -303,11 +303,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             return await widget.controller.downloadService.ytDlp
                 .getVersion(configuredPath: settings?.ytDlpPath);
           },
-          downloadFolder: _androidDownloadUri,
+          downloadFolder: _isAndroid
+              ? _androidDownloadUri
+              : (widget.controller.settings?.downloadDir ?? ''),
           onPickDownloadFolder: () async {
             final settings = widget.controller.settings;
             if (settings != null) {
-              await _pickAndroidFolder(settings);
+              await _pickDownloadFolder(settings);
             }
           },
         );
@@ -672,6 +674,25 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _downloadDirController.text = _formatAndroidFolderLabel(uri);
     });
     await widget.controller.saveSettings(settings.copyWith(downloadDir: uri));
+    if (mounted) {
+      Snack.show(context, 'Download folder updated', level: SnackLevel.info);
+    }
+  }
+
+  Future<void> _pickDownloadFolder(AppSettings settings) async {
+    if (_isAndroid) {
+      await _pickAndroidFolder(settings);
+      return;
+    }
+
+    final result = await FilePicker.platform.getDirectoryPath();
+    if (result == null || !mounted) return;
+
+    setState(() {
+      _downloadDirController.text = result;
+    });
+
+    await widget.controller.saveSettings(settings.copyWith(downloadDir: result));
     if (mounted) {
       Snack.show(context, 'Download folder updated', level: SnackLevel.info);
     }
