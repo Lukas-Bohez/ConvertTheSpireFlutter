@@ -53,28 +53,11 @@ class _QuickLinksPageState extends State<QuickLinksPage> with SingleTickerProvid
     _loadLinks();
     _checkYtDlpVersion();
 
-    _updateFlashState();
-  }
-
-  void _updateFlashState() {
-    final android = Platform.isAndroid;
-    final hasPath = widget.downloadFolder?.trim().isNotEmpty ?? false;
-    final should = android && !hasPath;
-    if (should != _shouldFlash) {
-      _shouldFlash = should;
-      if (should) {
-        _flashController.repeat(reverse: true);
-      } else {
-        _flashController.stop();
-      }
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant QuickLinksPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.downloadFolder != oldWidget.downloadFolder) {
-      _updateFlashState();
+    // Always remind Android users once per app launch to re-select the download
+    // folder so permissions are kept valid.
+    if (Platform.isAndroid) {
+      _shouldFlash = true;
+      _flashController.repeat(reverse: true);
     }
   }
 
@@ -119,154 +102,201 @@ class _QuickLinksPageState extends State<QuickLinksPage> with SingleTickerProvid
     // Browser remains available so users can tap it directly.
     final visibleLinks = _links.where((l) => l.route != 'queue.tab').toList();
 
+    Widget buildHeader() {
+      return Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: width < 600 ? 20 : 56,
+          vertical: 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 28),
+            // App branding
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          cs.primary.withValues(alpha: 0.15),
+                          cs.tertiary.withValues(alpha: 0.10),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Icon(Icons.music_note_rounded,
+                        size: 56, color: cs.primary),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Convert the Spire',
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
+                          color: cs.onSurface,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Paste a video or playlist URL below to start downloading.',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      );
+    }
+
+    Widget buildDownloadSection() {
+      final showAndroidReminder = Platform.isAndroid && _shouldFlash;
+      final hasFolder = (widget.downloadFolder?.trim().isNotEmpty ?? false);
+      final folderLabel = widget.downloadFolder?.trim().isNotEmpty == true
+          ? widget.downloadFolder!
+          : 'Not set';
+
+      return Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: width < 600 ? 20 : 56,
+          vertical: 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showAndroidReminder)
+              AnimatedBuilder(
+                animation: _flashController,
+                builder: (context, child) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _flashColor.value,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Android: please select your download folder each time you launch the app to ensure permissions are valid.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        FilledButton(
+                          onPressed: () async {
+                            await widget.onPickDownloadFolder?.call();
+                            if (mounted) {
+                              setState(() {
+                                _shouldFlash = false;
+                                _flashController.stop();
+                              });
+                            }
+                          },
+                          child: const Text('Set folder'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            if (widget.onPickDownloadFolder != null) ...[
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.folder, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        folderLabel,
+                        style: TextStyle(
+                          color: cs.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: () async {
+                        await widget.onPickDownloadFolder?.call();
+                        if (mounted) {
+                          setState(() {
+                            _shouldFlash = false;
+                            _flashController.stop();
+                          });
+                        }
+                      },
+                      child: Text(hasFolder ? 'Change' : 'Choose'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            QuickDownloadCard(onDownload: widget.onDownload),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.memory,
+                  size: 18,
+                  color: _ytDlpFailed
+                      ? Colors.redAccent
+                      : (_ytDlpChecking ? Colors.amber : Colors.green),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _ytDlpChecking
+                      ? 'Checking engine...'
+                      : _ytDlpFailed
+                          ? 'yt-dlp not available (click Settings)'
+                          : 'yt-dlp ${_ytDlpVersion ?? 'unknown'}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(width: 12),
+                if (_ytDlpFailed)
+                  TextButton(
+                    onPressed: _checkYtDlpVersion,
+                    child: const Text('Retry'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       color: cs.surfaceContainerLowest,
       child: CustomScrollView(
         slivers: [
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _HomeHeaderDelegate(
-              // Ensure the pinned area is tall enough to keep the search/card
-              // UI visible when collapsed.
-              minExtent: 260,
-              maxExtent: 420,
-              persistentHeight: 260,
-              expanded: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: width < 600 ? 20 : 56,
-                  vertical: 24,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(height: 28),
-                    // App branding (fades away when collapsed)
-                    Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  cs.primary.withValues(alpha: 0.15),
-                                  cs.tertiary.withValues(alpha: 0.10),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: Icon(Icons.music_note_rounded,
-                                size: 56, color: cs.primary),
-                          ),
-                          const SizedBox(height: 18),
-                          Text(
-                            'Convert the Spire',
-                            style:
-                                Theme.of(context).textTheme.headlineLarge?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: -0.3,
-                                      color: cs.onSurface,
-                                    ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Paste a video or playlist URL below to start downloading.',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: cs.onSurfaceVariant.withValues(alpha: 0.7),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-              pinned: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: width < 600 ? 20 : 56,
-                  vertical: 16,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (Platform.isAndroid && (widget.downloadFolder?.trim().isEmpty ?? true))
-                      AnimatedBuilder(
-                        animation: _flashController,
-                        builder: (context, child) {
-                          return Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: _flashColor.value,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .primary
-                                    .withValues(alpha: 0.35),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    'Android: set download folder to avoid permission issues',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Theme.of(context).colorScheme.onSurface,
-                                    ),
-                                  ),
-                                ),
-                                FilledButton(
-                                  onPressed: widget.onPickDownloadFolder,
-                                  child: const Text('Set folder'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    QuickDownloadCard(onDownload: widget.onDownload),
-                    const SizedBox(height: 12),
-                    if (!Platform.isAndroid)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.memory,
-                            size: 18,
-                            color: _ytDlpFailed
-                                ? Colors.redAccent
-                                : (_ytDlpChecking ? Colors.amber : Colors.green),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _ytDlpChecking
-                                ? 'Checking engine...'
-                                : _ytDlpFailed
-                                    ? 'yt-dlp not available (click Settings)'
-                                    : 'yt-dlp ${_ytDlpVersion ?? 'unknown'}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          const SizedBox(width: 12),
-                          if (_ytDlpFailed)
-                            TextButton(
-                              onPressed: _checkYtDlpVersion,
-                              child: const Text('Retry'),
-                            ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          SliverToBoxAdapter(child: buildHeader()),
+          SliverToBoxAdapter(child: buildDownloadSection()),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             sliver: _buildLinksGrid(crossAxisCount, visibleLinks),
@@ -407,63 +437,4 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
     );
   }
 }
-class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
-  final double _minExtent;
-  final double _maxExtent;
-  final double _persistentHeight;
-  final Widget expanded;
-  final Widget pinned;
 
-  _HomeHeaderDelegate({
-    required double minExtent,
-    required double maxExtent,
-    required double persistentHeight,
-    required this.expanded,
-    required this.pinned,
-  })  : _minExtent = minExtent,
-        _maxExtent = maxExtent,
-        _persistentHeight = persistentHeight;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final t = (shrinkOffset / (_maxExtent - _minExtent)).clamp(0.0, 1.0);
-    final height = (_maxExtent - shrinkOffset).clamp(_persistentHeight, _maxExtent);
-
-    return SizedBox(
-      height: height,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // The expanded content shrinks smoothly by adjusting its height factor.
-          ClipRect(
-            child: Align(
-              alignment: Alignment.topCenter,
-              heightFactor: 1.0 - t,
-              child: expanded,
-            ),
-          ),
-          // Pin the search/card area to the bottom so it never scrolls away.
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: pinned,
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  double get maxExtent => _maxExtent;
-
-  @override
-  double get minExtent => _minExtent;
-
-  @override
-  bool shouldRebuild(covariant _HomeHeaderDelegate oldDelegate) {
-    return minExtent != oldDelegate.minExtent ||
-        maxExtent != oldDelegate.maxExtent ||
-        _persistentHeight != oldDelegate._persistentHeight ||
-        expanded != oldDelegate.expanded ||
-        pinned != oldDelegate.pinned;
-  }
-}
