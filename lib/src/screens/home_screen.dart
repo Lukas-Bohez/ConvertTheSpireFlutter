@@ -43,6 +43,31 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => HomeScreenState();
 }
 
+/// Sliver delegate used to keep the search bar pinned at the top.
+class _SearchHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double minExtent;
+  final double maxExtent;
+  final Widget child;
+
+  _SearchHeaderDelegate({
+    required this.minExtent,
+    required this.maxExtent,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox.expand(child: child);
+  }
+
+  @override
+  bool shouldRebuild(covariant _SearchHeaderDelegate oldDelegate) {
+    return oldDelegate.child != child ||
+        oldDelegate.maxExtent != maxExtent ||
+        oldDelegate.minExtent != minExtent;
+  }
+}
+
 class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   static final Uri _buyMeCoffeeUri =
       Uri.parse('https://buymeacoffee.com/orokaconner');
@@ -277,6 +302,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             final settings = widget.controller.settings;
             return await widget.controller.downloadService.ytDlp
                 .getVersion(configuredPath: settings?.ytDlpPath);
+          },
+          downloadFolder: _androidDownloadUri,
+          onPickDownloadFolder: () async {
+            final settings = widget.controller.settings;
+            if (settings != null) {
+              await _pickAndroidFolder(settings);
+            }
           },
         );
       default:
@@ -666,163 +698,89 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildSearchTab(AppSettings? settings) {
     final isNarrow = _isNarrowLayout(context);
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: ListView(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _urlController,
-                  decoration: InputDecoration(
-                    labelText: 'YouTube URL',
-                    border: const OutlineInputBorder(),
-                    hintText: 'Enter or paste a YouTube URL',
-                    prefixIcon: const Icon(Icons.link),
-                    suffixIcon: _urlController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              setState(() => _urlController.clear());
-                            },
-                            tooltip: 'Clear URL',
-                          )
-                        : null,
-                  ),
-                  onChanged: (value) => setState(() {}),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.content_paste),
-                onPressed: () async {
-                  final clipboardData = await Clipboard.getData('text/plain');
-                  if (!mounted) return;
-                  if (clipboardData?.text != null) {
-                    setState(() => _urlController.text = clipboardData!.text!);
-                  }
-                },
-                tooltip: 'Paste from clipboard',
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
 
-          // Download Options card
-          Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.settings),
-                      const SizedBox(width: 8),
-                      Text('Download Options',
-                          style: Theme.of(context).textTheme.titleMedium),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (isNarrow)
-                    Column(
-                      children: [
-                        DropdownButtonFormField<String>(
-                          key: ValueKey('fmt-narrow-$_downloadFormat'),
-                          initialValue: _downloadFormat,
-                          decoration: const InputDecoration(
-                            labelText: 'Format',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.audio_file),
-                          ),
-                          items: const [
-                            DropdownMenuItem(value: 'mp3', child: Text('MP3')),
-                            DropdownMenuItem(value: 'm4a', child: Text('M4A')),
-                            DropdownMenuItem(
-                                value: 'mp4', child: Text('MP4 (Video)')),
-                          ],
-                          onChanged: (value) {
-                            if (value != null)
-                              setState(() => _downloadFormat = value);
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<String>(
-                          key: ValueKey('vq-narrow-$_videoQuality'),
-                          initialValue: _videoQuality,
-                          decoration: const InputDecoration(
-                            labelText: 'Video Quality',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.high_quality),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                                value: '360p', child: Text('360p')),
-                            DropdownMenuItem(
-                                value: '480p', child: Text('480p')),
-                            DropdownMenuItem(
-                                value: '720p', child: Text('720p (HD)')),
-                            DropdownMenuItem(
-                                value: '1080p', child: Text('1080p (Full HD)')),
-                            DropdownMenuItem(
-                                value: '1440p', child: Text('1440p (2K)')),
-                            DropdownMenuItem(
-                                value: '2160p', child: Text('2160p (4K)')),
-                            DropdownMenuItem(
-                                value: '4320p', child: Text('4320p (8K)')),
-                            DropdownMenuItem(
-                                value: 'best', child: Text('Best Available')),
-                          ],
-                          onChanged: (value) {
-                            if (value != null)
-                              setState(() => _videoQuality = value);
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<int>(
-                          key: ValueKey('abr-narrow-$_audioBitrate'),
-                          initialValue: _audioBitrate,
-                          decoration: const InputDecoration(
-                            labelText: 'Audio Bitrate',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.equalizer),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                                value: 128, child: Text('128 kbps')),
-                            DropdownMenuItem(
-                                value: 192, child: Text('192 kbps')),
-                            DropdownMenuItem(
-                                value: 256, child: Text('256 kbps')),
-                            DropdownMenuItem(
-                                value: 320, child: Text('320 kbps')),
-                          ],
-                          onChanged: (value) {
-                            if (value != null)
-                              setState(() => _audioBitrate = value);
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        CheckboxListTile(
-                          value: _expandPlaylist,
-                          onChanged: (value) {
-                            setState(() => _expandPlaylist = value ?? false);
-                          },
-                          title: const Text('Expand playlist'),
-                          subtitle: const Text('Show all videos'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ],
-                    )
-                  else
-                    Column(
+    // Keep the top search row pinned while the rest of the UI scrolls.
+    final searchHeader = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _urlController,
+              decoration: InputDecoration(
+                labelText: 'YouTube URL',
+                border: const OutlineInputBorder(),
+                hintText: 'Enter or paste a YouTube URL',
+                prefixIcon: const Icon(Icons.link),
+                suffixIcon: _urlController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setState(() => _urlController.clear());
+                        },
+                        tooltip: 'Clear URL',
+                      )
+                    : null,
+              ),
+              onChanged: (value) => setState(() {}),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.content_paste),
+            onPressed: () async {
+              final clipboardData = await Clipboard.getData('text/plain');
+              if (!mounted) return;
+              if (clipboardData?.text != null) {
+                setState(() => _urlController.text = clipboardData!.text!);
+              }
+            },
+            tooltip: 'Paste from clipboard',
+          ),
+        ],
+      ),
+    );
+
+    return CustomScrollView(
+      slivers: [
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _SearchHeaderDelegate(
+            minExtent: 80,
+            maxExtent: 80,
+            child: Material(
+              color: Theme.of(context).colorScheme.surface,
+              elevation: 2,
+              child: searchHeader,
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.all(16),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate(
+              [
+                // Download options section
+                Card(
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
                       children: [
                         Row(
                           children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                key: ValueKey('fmt-wide-$_downloadFormat'),
+                            const Icon(Icons.settings),
+                            const SizedBox(width: 8),
+                            Text('Download Options',
+                                style: Theme.of(context).textTheme.titleMedium),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        if (isNarrow)
+                          Column(
+                            children: [
+                              DropdownButtonFormField<String>(
+                                key: ValueKey('fmt-narrow-$_downloadFormat'),
                                 initialValue: _downloadFormat,
                                 decoration: const InputDecoration(
                                   labelText: 'Format',
@@ -830,10 +788,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   prefixIcon: Icon(Icons.audio_file),
                                 ),
                                 items: const [
-                                  DropdownMenuItem(
-                                      value: 'mp3', child: Text('MP3')),
-                                  DropdownMenuItem(
-                                      value: 'm4a', child: Text('M4A')),
+                                  DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+                                  DropdownMenuItem(value: 'm4a', child: Text('M4A')),
                                   DropdownMenuItem(
                                       value: 'mp4', child: Text('MP4 (Video)')),
                                 ],
@@ -842,11 +798,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     setState(() => _downloadFormat = value);
                                 },
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                key: ValueKey('vq-wide-$_videoQuality'),
+                              const SizedBox(height: 12),
+                              DropdownButtonFormField<String>(
+                                key: ValueKey('vq-narrow-$_videoQuality'),
                                 initialValue: _videoQuality,
                                 decoration: const InputDecoration(
                                   labelText: 'Video Quality',
@@ -861,22 +815,24 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   DropdownMenuItem(
                                       value: '720p', child: Text('720p (HD)')),
                                   DropdownMenuItem(
-                                      value: '1080p',
-                                      child: Text('1080p (Full HD)')),
+                                      value: '1080p', child: Text('1080p (Full HD)')),
                                   DropdownMenuItem(
-                                      value: 'best',
-                                      child: Text('Best Available')),
+                                      value: '1440p', child: Text('1440p (2K)')),
+                                  DropdownMenuItem(
+                                      value: '2160p', child: Text('2160p (4K)')),
+                                  DropdownMenuItem(
+                                      value: '4320p', child: Text('4320p (8K)')),
+                                  DropdownMenuItem(
+                                      value: 'best', child: Text('Best Available')),
                                 ],
                                 onChanged: (value) {
                                   if (value != null)
                                     setState(() => _videoQuality = value);
                                 },
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: DropdownButtonFormField<int>(
-                                key: ValueKey('abr-wide-$_audioBitrate'),
+                              const SizedBox(height: 12),
+                              DropdownButtonFormField<int>(
+                                key: ValueKey('abr-narrow-$_audioBitrate'),
                                 initialValue: _audioBitrate,
                                 decoration: const InputDecoration(
                                   labelText: 'Audio Bitrate',
@@ -898,243 +854,354 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     setState(() => _audioBitrate = value);
                                 },
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        CheckboxListTile(
-                          value: _expandPlaylist,
-                          onChanged: (value) {
-                            setState(() => _expandPlaylist = value ?? false);
-                          },
-                          title: const Text('Expand playlist'),
-                          subtitle: const Text('Show all videos'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          if (_expandPlaylist)
-            Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.playlist_play),
-                        const SizedBox(width: 8),
-                        Text('Playlist Options',
-                            style: Theme.of(context).textTheme.titleMedium),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: DropdownButtonFormField<String>(
-                            key: ValueKey('preset-$_previewPreset'),
-                            initialValue: _previewPreset,
-                            decoration: const InputDecoration(
-                              labelText: 'Preview amount',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.format_list_numbered),
-                              isDense: true,
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                  value: '10', child: Text('First 10')),
-                              DropdownMenuItem(
-                                  value: '25', child: Text('First 25')),
-                              DropdownMenuItem(
-                                  value: '50', child: Text('First 50')),
-                              DropdownMenuItem(
-                                  value: '100', child: Text('First 100')),
-                              DropdownMenuItem(
-                                  value: 'all', child: Text('All')),
-                              DropdownMenuItem(
-                                  value: 'custom',
-                                  child: Text('Custom range...')),
+                              const SizedBox(height: 12),
+                              CheckboxListTile(
+                                value: _expandPlaylist,
+                                onChanged: (value) {
+                                  setState(() => _expandPlaylist = value ?? false);
+                                },
+                                title: const Text('Expand playlist'),
+                                subtitle: const Text('Show all videos'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
                             ],
-                            onChanged: (value) {
-                              if (value != null)
-                                setState(() => _previewPreset = value);
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (_previewPreset == 'custom') ...[
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _rangeFromController,
-                              decoration: const InputDecoration(
-                                labelText: 'From #',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.first_page),
-                                hintText: '1',
-                                isDense: true,
+                          )
+                        else
+                          Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: DropdownButtonFormField<String>(
+                                      key: ValueKey('fmt-wide-$_downloadFormat'),
+                                      initialValue: _downloadFormat,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Format',
+                                        border: OutlineInputBorder(),
+                                        prefixIcon: Icon(Icons.audio_file),
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(
+                                            value: 'mp3', child: Text('MP3')),
+                                        DropdownMenuItem(
+                                            value: 'm4a', child: Text('M4A')),
+                                        DropdownMenuItem(
+                                            value: 'mp4', child: Text('MP4 (Video)')),
+                                      ],
+                                      onChanged: (value) {
+                                        if (value != null)
+                                          setState(() => _downloadFormat = value);
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: DropdownButtonFormField<String>(
+                                      key: ValueKey('vq-wide-$_videoQuality'),
+                                      initialValue: _videoQuality,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Video Quality',
+                                        border: OutlineInputBorder(),
+                                        prefixIcon: Icon(Icons.high_quality),
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(
+                                            value: '360p', child: Text('360p')),
+                                        DropdownMenuItem(
+                                            value: '480p', child: Text('480p')),
+                                        DropdownMenuItem(
+                                            value: '720p', child: Text('720p (HD)')),
+                                        DropdownMenuItem(
+                                            value: '1080p',
+                                            child: Text('1080p (Full HD)')),
+                                        DropdownMenuItem(
+                                            value: 'best',
+                                            child: Text('Best Available')),
+                                      ],
+                                      onChanged: (value) {
+                                        if (value != null)
+                                          setState(() => _videoQuality = value);
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: DropdownButtonFormField<int>(
+                                      key: ValueKey('abr-wide-$_audioBitrate'),
+                                      initialValue: _audioBitrate,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Audio Bitrate',
+                                        border: OutlineInputBorder(),
+                                        prefixIcon: Icon(Icons.equalizer),
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(
+                                            value: 128, child: Text('128 kbps')),
+                                        DropdownMenuItem(
+                                            value: 192, child: Text('192 kbps')),
+                                        DropdownMenuItem(
+                                            value: 256, child: Text('256 kbps')),
+                                        DropdownMenuItem(
+                                            value: 320, child: Text('320 kbps')),
+                                      ],
+                                      onChanged: (value) {
+                                        if (value != null)
+                                          setState(() => _audioBitrate = value);
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ),
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly
-                              ],
-                            ),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text('to', style: TextStyle(fontSize: 16)),
-                          ),
-                          Expanded(
-                            child: TextField(
-                              controller: _rangeToController,
-                              decoration: const InputDecoration(
-                                labelText: 'To #',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.last_page),
-                                hintText: '50',
-                                isDense: true,
+                              const SizedBox(height: 12),
+                              CheckboxListTile(
+                                value: _expandPlaylist,
+                                onChanged: (value) {
+                                  setState(() => _expandPlaylist = value ?? false);
+                                },
+                                title: const Text('Expand playlist'),
+                                subtitle: const Text('Show all videos'),
+                                contentPadding: EdgeInsets.zero,
                               ),
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly
-                              ],
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Video numbers are 1-based (e.g. 1 to 25 = first 25 videos)',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.warning_amber_rounded,
-                            size: 18, color: context.warning),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'YouTube Mix playlists (IDs starting with RD) cannot be expanded.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: context.warning),
-                          ),
-                        ),
                       ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          const SizedBox(height: 16),
-
-          if (isNarrow)
-            Column(
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.search),
-                    label: const Text('Search / Preview'),
-                    onPressed:
-                        settings == null || _urlController.text.trim().isEmpty
-                            ? null
-                            : _onSearch,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.download),
-                    label: const Text('Download'),
-                    onPressed:
-                        settings == null || _urlController.text.trim().isEmpty
-                            ? null
-                            : () => _downloadUrl(settings),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+
+                if (_expandPlaylist)
+                  Card(
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.playlist_play),
+                              const SizedBox(width: 8),
+                              Text('Playlist Options',
+                                  style: Theme.of(context).textTheme.titleMedium),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: DropdownButtonFormField<String>(
+                                  key: ValueKey('preset-$_previewPreset'),
+                                  initialValue: _previewPreset,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Preview amount',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.format_list_numbered),
+                                    isDense: true,
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(
+                                        value: '10', child: Text('First 10')),
+                                    DropdownMenuItem(
+                                        value: '25', child: Text('First 25')),
+                                    DropdownMenuItem(
+                                        value: '50', child: Text('First 50')),
+                                    DropdownMenuItem(
+                                        value: '100', child: Text('First 100')),
+                                    DropdownMenuItem(
+                                        value: 'all', child: Text('All')),
+                                    DropdownMenuItem(
+                                        value: 'custom',
+                                        child: Text('Custom range...')),
+                                  ],
+                                  onChanged: (value) {
+                                    if (value != null)
+                                      setState(() => _previewPreset = value);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (_previewPreset == 'custom') ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _rangeFromController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'From #',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.first_page),
+                                      hintText: '1',
+                                      isDense: true,
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly
+                                    ],
+                                  ),
+                                ),
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 12),
+                                  child: Text('to', style: TextStyle(fontSize: 16)),
+                                ),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _rangeToController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'To #',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.last_page),
+                                      hintText: '50',
+                                      isDense: true,
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Video numbers are 1-based (e.g. 1 to 25 = first 25 videos)',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(Icons.warning_amber_rounded,
+                                  size: 18, color: context.warning),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'YouTube Mix playlists (IDs starting with RD) cannot be expanded.',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(color: context.warning),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
-            )
-          else
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.search),
-                    label: const Text('Search / Preview'),
-                    onPressed:
-                        settings == null || _urlController.text.trim().isEmpty
-                            ? null
-                            : _onSearch,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                const SizedBox(height: 16),
+
+                if (isNarrow)
+                  Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.search),
+                          label: const Text('Search / Preview'),
+                          onPressed:
+                              settings == null || _urlController.text.trim().isEmpty
+                                  ? null
+                                  : _onSearch,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.download),
+                          label: const Text('Download'),
+                          onPressed:
+                              settings == null || _urlController.text.trim().isEmpty
+                                  ? null
+                                  : () => _downloadUrl(settings),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.search),
+                          label: const Text('Search / Preview'),
+                          onPressed:
+                              settings == null || _urlController.text.trim().isEmpty
+                                  ? null
+                                  : _onSearch,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.download),
+                          label: const Text('Download'),
+                          onPressed:
+                              settings == null || _urlController.text.trim().isEmpty
+                                  ? null
+                                  : () => _downloadUrl(settings),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 24),
+                if (widget.controller.previewLoading)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Loading preview...'),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.download),
-                    label: const Text('Download'),
-                    onPressed:
-                        settings == null || _urlController.text.trim().isEmpty
-                            ? null
-                            : () => _downloadUrl(settings),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                  ),
-                ),
+                if (!widget.controller.previewLoading) _buildPreviewList(),
               ],
             ),
-          const SizedBox(height: 24),
-          if (widget.controller.previewLoading)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Column(
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Loading preview...'),
-                  ],
-                ),
-              ),
-            ),
-          if (!widget.controller.previewLoading) _buildPreviewList(),
-        ],
-      ),
+          ),
+        ),
+      ],
     );
   }
 
   bool _ensureDownloadFolder(AppSettings settings) {
-    if (_isAndroid) return true;
+    if (_isAndroid) {
+      if (_hasAndroidFolder) return true;
+      Snack.show(
+        context,
+        'Android needs a download folder set to work properly. Tap "Set folder" below.',
+        level: SnackLevel.warning,
+        actionLabel: 'Go to Settings',
+        onAction: () => _navigateToPage(7),
+        duration: const Duration(seconds: 5),
+      );
+      _navigateToPage(7);
+      return false;
+    }
+
     final dir = settings.downloadDir.trim();
     if (dir.isNotEmpty) return true;
     Snack.show(

@@ -11,29 +11,77 @@ class QuickLinksPage extends StatefulWidget {
   final Future<void> Function(
       SearchResult result, String format, String quality) onDownload;
   final Future<String?> Function() getYtDlpVersion;
+  final String? downloadFolder;
+  final Future<void> Function()? onPickDownloadFolder;
 
   const QuickLinksPage({
     super.key,
     required this.onNavigate,
     required this.onDownload,
     required this.getYtDlpVersion,
+    this.downloadFolder,
+    this.onPickDownloadFolder,
   });
 
   @override
   State<QuickLinksPage> createState() => _QuickLinksPageState();
 }
 
-class _QuickLinksPageState extends State<QuickLinksPage> {
+class _QuickLinksPageState extends State<QuickLinksPage> with SingleTickerProviderStateMixin {
   List<QuickLink> _links = [];
   String? _ytDlpVersion;
   bool _ytDlpChecking = true;
   bool _ytDlpFailed = false;
 
+  late final AnimationController _flashController;
+  late final Animation<Color?> _flashColor;
+  bool _shouldFlash = false;
+
   @override
   void initState() {
     super.initState();
+
+    _flashController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _flashColor = ColorTween(
+      begin: Colors.transparent,
+      end: Colors.amber.withValues(alpha: 0.25),
+    ).animate(CurvedAnimation(parent: _flashController, curve: Curves.easeInOut));
+
     _loadLinks();
     _checkYtDlpVersion();
+
+    _updateFlashState();
+  }
+
+  void _updateFlashState() {
+    final android = Platform.isAndroid;
+    final hasPath = widget.downloadFolder?.trim().isNotEmpty ?? false;
+    final should = android && !hasPath;
+    if (should != _shouldFlash) {
+      _shouldFlash = should;
+      if (should) {
+        _flashController.repeat(reverse: true);
+      } else {
+        _flashController.stop();
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant QuickLinksPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.downloadFolder != oldWidget.downloadFolder) {
+      _updateFlashState();
+    }
+  }
+
+  @override
+  void dispose() {
+    _flashController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadLinks() async {
@@ -78,9 +126,11 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
           SliverPersistentHeader(
             pinned: true,
             delegate: _HomeHeaderDelegate(
-              minExtent: 160,
-              maxExtent: 380,
-              persistentHeight: 160,
+              // Ensure the pinned area is tall enough to keep the search/card
+              // UI visible when collapsed.
+              minExtent: 260,
+              maxExtent: 420,
+              persistentHeight: 260,
               expanded: Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: width < 600 ? 20 : 56,
@@ -145,6 +195,43 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (Platform.isAndroid && (widget.downloadFolder?.trim().isEmpty ?? true))
+                      AnimatedBuilder(
+                        animation: _flashController,
+                        builder: (context, child) {
+                          return Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: _flashColor.value,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Android: set download folder to avoid permission issues',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ),
+                                FilledButton(
+                                  onPressed: widget.onPickDownloadFolder,
+                                  child: const Text('Set folder'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     QuickDownloadCard(onDownload: widget.onDownload),
                     const SizedBox(height: 12),
                     if (!Platform.isAndroid)
