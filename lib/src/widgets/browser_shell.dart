@@ -182,8 +182,12 @@ class _BrowserShellState extends State<BrowserShell> {
     final playerState = context.watch<PlayerState>();
     final showPlayerOverlay = playerState.currentItem != null;
 
+    final safeBottom = MediaQuery.of(context).padding.bottom;
     final overlayHeight = showPlayerOverlay
-        ? (_playerCollapsed ? _playerOverlayCollapsedHeight : _playerOverlayExpandedHeight)
+        ? (_playerCollapsed
+                ? _playerOverlayCollapsedHeight
+                : _playerOverlayExpandedHeight) +
+            safeBottom
         : 0.0;
 
     final queueDrawer = SizedBox(
@@ -213,11 +217,11 @@ class _BrowserShellState extends State<BrowserShell> {
           ),
         ],
       ),
-      bottomNavigationBar:
-          showPlayerOverlay ? _buildPlayerOverlay(playerState, cs, overlayHeight) : null,
+      bottomNavigationBar: showPlayerOverlay
+          ? _buildPlayerOverlay(playerState, cs, overlayHeight)
+          : null,
     );
   }
-
 
   Widget _buildDesktopQueuePanel(ColorScheme cs) {
     return Container(
@@ -346,7 +350,8 @@ class _BrowserShellState extends State<BrowserShell> {
     );
   }
 
-  Widget _buildPlayerOverlay(PlayerState state, ColorScheme cs, double overlayHeight) {
+  Widget _buildPlayerOverlay(
+      PlayerState state, ColorScheme cs, double overlayHeight) {
     final item = state.currentItem;
     if (item == null) return const SizedBox.shrink();
 
@@ -417,19 +422,25 @@ class _BrowserShellState extends State<BrowserShell> {
                       IconButton(
                         onPressed: () => state.togglePlay(),
                         icon: Icon(
-                          state.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                          state.isPlaying
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
                           size: 22,
                         ),
                         tooltip: state.isPlaying ? 'Pause' : 'Play',
                         splashRadius: 20,
                       ),
                       IconButton(
-                        onPressed: () => setState(() => _playerCollapsed = !_playerCollapsed),
+                        onPressed: () => setState(
+                            () => _playerCollapsed = !_playerCollapsed),
                         icon: Icon(
-                          collapsed ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                          collapsed
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
                           size: 22,
                         ),
-                        tooltip: collapsed ? 'Expand player' : 'Collapse player',
+                        tooltip:
+                            collapsed ? 'Expand player' : 'Collapse player',
                         splashRadius: 20,
                       ),
                     ],
@@ -442,7 +453,9 @@ class _BrowserShellState extends State<BrowserShell> {
                     activeColor: cs.primary,
                     inactiveColor: cs.onSurface.withValues(alpha: 0.2),
                     onChanged: duration.inMilliseconds > 0
-                        ? (v) => state.seek(Duration(milliseconds: (v * duration.inMilliseconds).round()))
+                        ? (v) => state.seek(Duration(
+                            milliseconds:
+                                (v * duration.inMilliseconds).round()))
                         : null,
                   ),
                   Row(
@@ -450,11 +463,13 @@ class _BrowserShellState extends State<BrowserShell> {
                     children: [
                       Text(
                         _formatDuration(position),
-                        style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+                        style:
+                            TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
                       ),
                       Text(
                         _formatDuration(duration),
-                        style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+                        style:
+                            TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -464,19 +479,22 @@ class _BrowserShellState extends State<BrowserShell> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.skip_previous_rounded),
-                        onPressed: () => state.previous(only: state.activeTabFilter),
+                        onPressed: () =>
+                            state.previous(only: state.activeTabFilter),
                         tooltip: 'Previous',
                         splashRadius: 20,
                       ),
                       IconButton(
-                        icon: Icon(state.isPlaying ? Icons.pause : Icons.play_arrow),
+                        icon: Icon(
+                            state.isPlaying ? Icons.pause : Icons.play_arrow),
                         onPressed: state.togglePlay,
                         tooltip: state.isPlaying ? 'Pause' : 'Play',
                         splashRadius: 20,
                       ),
                       IconButton(
                         icon: const Icon(Icons.skip_next_rounded),
-                        onPressed: () => state.next(only: state.activeTabFilter),
+                        onPressed: () =>
+                            state.next(only: state.activeTabFilter),
                         tooltip: 'Next',
                         splashRadius: 20,
                       ),
@@ -669,4 +687,3 @@ class _PageSuggestion {
     required this.icon,
   });
 }
-

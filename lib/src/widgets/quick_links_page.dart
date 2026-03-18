@@ -27,44 +27,18 @@ class QuickLinksPage extends StatefulWidget {
   State<QuickLinksPage> createState() => _QuickLinksPageState();
 }
 
-class _QuickLinksPageState extends State<QuickLinksPage> with SingleTickerProviderStateMixin {
+class _QuickLinksPageState extends State<QuickLinksPage> {
   List<QuickLink> _links = [];
   String? _ytDlpVersion;
   bool _ytDlpChecking = true;
   bool _ytDlpFailed = false;
 
-  late final AnimationController _flashController;
-  late final Animation<Color?> _flashColor;
-  bool _shouldFlash = false;
-
   @override
   void initState() {
     super.initState();
 
-    _flashController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _flashColor = ColorTween(
-      begin: Colors.transparent,
-      end: Colors.amber.withValues(alpha: 0.25),
-    ).animate(CurvedAnimation(parent: _flashController, curve: Curves.easeInOut));
-
     _loadLinks();
     _checkYtDlpVersion();
-
-    // Always remind Android users once per app launch to re-select the download
-    // folder so permissions are kept valid.
-    if (Platform.isAndroid) {
-      _shouldFlash = true;
-      _flashController.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void dispose() {
-    _flashController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadLinks() async {
@@ -161,11 +135,12 @@ class _QuickLinksPageState extends State<QuickLinksPage> with SingleTickerProvid
     }
 
     Widget buildDownloadSection() {
-      final showAndroidReminder = Platform.isAndroid && _shouldFlash;
       final hasFolder = (widget.downloadFolder?.trim().isNotEmpty ?? false);
       final folderLabel = widget.downloadFolder?.trim().isNotEmpty == true
           ? widget.downloadFolder!
           : 'Not set';
+
+      final showAndroidReminder = Platform.isAndroid && !hasFolder;
 
       return Padding(
         padding: EdgeInsets.symmetric(
@@ -176,46 +151,30 @@ class _QuickLinksPageState extends State<QuickLinksPage> with SingleTickerProvid
           mainAxisSize: MainAxisSize.min,
           children: [
             if (showAndroidReminder)
-              AnimatedBuilder(
-                animation: _flashController,
-                builder: (context, child) {
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: _flashColor.value,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Android: please select your download folder each time you launch the app to ensure permissions are valid.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        FilledButton(
-                          onPressed: () async {
-                            await widget.onPickDownloadFolder?.call();
-                            if (mounted) {
-                              setState(() {
-                                _shouldFlash = false;
-                                _flashController.stop();
-                              });
-                            }
-                          },
-                          child: const Text('Set folder'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Text(
+                  'Android: please select your download folder once so permissions remain valid.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
               ),
             if (widget.onPickDownloadFolder != null) ...[
               Container(
@@ -243,12 +202,6 @@ class _QuickLinksPageState extends State<QuickLinksPage> with SingleTickerProvid
                     ElevatedButton(
                       onPressed: () async {
                         await widget.onPickDownloadFolder?.call();
-                        if (mounted) {
-                          setState(() {
-                            _shouldFlash = false;
-                            _flashController.stop();
-                          });
-                        }
                       },
                       child: Text(hasFolder ? 'Change' : 'Choose'),
                     ),
@@ -259,33 +212,34 @@ class _QuickLinksPageState extends State<QuickLinksPage> with SingleTickerProvid
             ],
             QuickDownloadCard(onDownload: widget.onDownload),
             const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.memory,
-                  size: 18,
-                  color: _ytDlpFailed
-                      ? Colors.redAccent
-                      : (_ytDlpChecking ? Colors.amber : Colors.green),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _ytDlpChecking
-                      ? 'Checking engine...'
-                      : _ytDlpFailed
-                          ? 'yt-dlp not available (click Settings)'
-                          : 'yt-dlp ${_ytDlpVersion ?? 'unknown'}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(width: 12),
-                if (_ytDlpFailed)
-                  TextButton(
-                    onPressed: _checkYtDlpVersion,
-                    child: const Text('Retry'),
+            if (!Platform.isAndroid)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.memory,
+                    size: 18,
+                    color: _ytDlpFailed
+                        ? Colors.redAccent
+                        : (_ytDlpChecking ? Colors.amber : Colors.green),
                   ),
-              ],
-            ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _ytDlpChecking
+                        ? 'Checking engine...'
+                        : _ytDlpFailed
+                            ? 'yt-dlp not available (click Settings)'
+                            : 'yt-dlp ${_ytDlpVersion ?? 'unknown'}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(width: 12),
+                  if (_ytDlpFailed)
+                    TextButton(
+                      onPressed: _checkYtDlpVersion,
+                      child: const Text('Retry'),
+                    ),
+                ],
+              ),
           ],
         ),
       );
@@ -318,9 +272,11 @@ class _QuickLinksPageState extends State<QuickLinksPage> with SingleTickerProvid
             children: [
               Icon(Icons.library_music, size: 64, color: cs.outline),
               const SizedBox(height: 12),
-              Text('No media yet', style: TextStyle(color: cs.onSurfaceVariant)),
+              Text('No media yet',
+                  style: TextStyle(color: cs.onSurfaceVariant)),
               const SizedBox(height: 8),
-              FilledButton(onPressed: _loadLinks, child: const Text('Scan library')),
+              FilledButton(
+                  onPressed: _loadLinks, child: const Text('Scan library')),
             ],
           ),
         ),
@@ -437,4 +393,3 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
     );
   }
 }
-
