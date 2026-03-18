@@ -104,6 +104,42 @@ class MainActivity : FlutterActivity() {
                             }
                         }.start()
                     }
+                    "testTreeWrite" -> {
+                        val treeUri = call.argument<String>("treeUri")
+                        if (treeUri.isNullOrBlank()) {
+                            result.success(false)
+                            return@setMethodCallHandler
+                        }
+                        Thread {
+                            try {
+                                val tree = DocumentFile.fromTreeUri(this, Uri.parse(treeUri))
+                                if (tree == null) {
+                                    runOnUiThread { result.success(false) }
+                                    return@Thread
+                                }
+
+                                val tempName = "cts_test_${System.currentTimeMillis()}.tmp"
+                                val tempFile = tree.createFile("application/octet-stream", tempName)
+                                if (tempFile == null) {
+                                    runOnUiThread { result.success(false) }
+                                    return@Thread
+                                }
+
+                                contentResolver.openOutputStream(tempFile.uri)?.use { output ->
+                                    output.write(byteArrayOf(0))
+                                } ?: run {
+                                    tempFile.delete()
+                                    runOnUiThread { result.success(false) }
+                                    return@Thread
+                                }
+
+                                val deleted = tempFile.delete()
+                                runOnUiThread { result.success(deleted) }
+                            } catch (e: Exception) {
+                                runOnUiThread { result.success(false) }
+                            }
+                        }.start()
+                    }
                     "listTree" -> {
                         val treeUri = call.argument<String>("treeUri")
                         if (treeUri.isNullOrBlank()) {
