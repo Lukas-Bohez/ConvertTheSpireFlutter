@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../utils/snack.dart';
 import '../widgets/empty_state.dart';
@@ -18,6 +19,7 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
     with AutomaticKeepAliveClientMixin {
   final _urlController = TextEditingController();
   List<String> _urls = [];
+  final Map<String, String?> _playlistFolders = {};
   bool _checking = false;
 
   @override
@@ -31,7 +33,21 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
 
   Future<void> _loadUrls() async {
     final urls = await widget.watchedService.getWatchedUrls();
-    if (mounted) setState(() => _urls = urls);
+    if (!mounted) return;
+    setState(() => _urls = urls);
+    await _loadPlaylistFolders(urls);
+  }
+
+  Future<void> _loadPlaylistFolders(List<String> urls) async {
+    final folders = <String, String?>{};
+    for (final url in urls) {
+      folders[url] = await widget.watchedService.getFolderForPlaylist(url);
+    }
+    if (mounted) {
+      setState(() => _playlistFolders
+        ..clear()
+        ..addAll(folders));
+    }
   }
 
   Future<void> _addPlaylist() async {
@@ -70,6 +86,18 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
     if (confirmed != true) return;
     await widget.watchedService.removePlaylist(url);
     await _loadUrls();
+  }
+
+  Future<void> _pickPlaylistFolder(String url) async {
+    final directory = await FilePicker.platform.getDirectoryPath();
+    if (directory == null || !mounted) return;
+    await widget.watchedService.setFolderForPlaylist(url, directory);
+    if (mounted) {
+      setState(() {
+        _playlistFolders[url] = directory;
+      });
+      Snack.show(context, 'Folder set for playlist', level: SnackLevel.info);
+    }
   }
 
   Future<void> _checkNow() async {
@@ -153,17 +181,42 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
                   itemCount: _urls.length,
                   itemBuilder: (context, index) {
                     final url = _urls[index];
+                    final folder = _playlistFolders[url];
                     return Card(
                       child: ListTile(
                         leading: Icon(Icons.playlist_play, color: cs.primary),
                         title: Text(url,
                             maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle:
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             const Text('Checked periodically for new tracks'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          tooltip: 'Remove playlist',
-                          onPressed: () => _removePlaylist(url),
+                            const SizedBox(height: 2),
+                            Text(
+                              folder == null
+                                  ? 'Download folder: (default)'
+                                  : 'Download folder: ${folder.split(RegExp(r'[/\\]')).last}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: cs.onSurfaceVariant, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.folder_open),
+                              tooltip: 'Set folder for this playlist',
+                              onPressed: () => _pickPlaylistFolder(url),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              tooltip: 'Remove playlist',
+                              onPressed: () => _removePlaylist(url),
+                            ),
+                          ],
                         ),
                       ),
                     );

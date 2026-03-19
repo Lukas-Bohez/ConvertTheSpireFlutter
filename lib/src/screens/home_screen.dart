@@ -14,6 +14,7 @@ import '../models/app_settings.dart';
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
 import '../services/android_saf.dart';
+import '../services/folder_access_service.dart';
 import '../services/shortcut_service.dart';
 import '../services/tray_service.dart';
 import '../state/app_controller.dart';
@@ -103,6 +104,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _settingsInitialized = false;
   bool _minimizeToTrayOnClose = false;
   bool _sponsorBlockEnabled = false;
+  bool _isRefreshing = false;
 
   // Fix: separate TabController for playlists tab; disposed exactly once.
   late final TabController _playlistTabController;
@@ -367,6 +369,24 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     } catch (_) {}
   }
 
+  Future<void> _refreshApp() async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+    try {
+      await widget.controller.refreshAll();
+      if (mounted) {
+        Snack.show(context, 'App refreshed successfully',
+            level: SnackLevel.info);
+      }
+    } catch (e) {
+      if (mounted) {
+        Snack.show(context, 'Refresh failed: $e', level: SnackLevel.error);
+      }
+    } finally {
+      if (mounted) setState(() => _isRefreshing = false);
+    }
+  }
+
   void _navigateHome() => _navigateToPage(13);
 
   @override
@@ -437,7 +457,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           },
           onBack: _canGoBack ? _goBack : null,
           onForward: _canGoForward ? _goForward : null,
-          onRefresh: () => setState(() {}),
+          onRefresh: _refreshApp,
+          isRefreshing: _isRefreshing,
           canGoBack: _canGoBack,
           canGoForward: _canGoForward,
           queueOnRight: _queueOnRight,
@@ -574,7 +595,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return stack;
   }
 
-  void _initSettings(AppSettings settings) {
+  Future<void> _initSettings(AppSettings settings) async {
     setState(() {
       if (_isAndroid) {
         _androidDownloadUri = settings.downloadDir;
@@ -599,19 +620,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
 
     if (_isAndroid && _hasAndroidFolder) {
-      _androidSaf.testWriteAccess(_androidDownloadUri).then((canWrite) {
-        if (!canWrite && mounted) {
-          setState(() {
-            _androidDownloadUri = '';
-            _downloadDirController.text = 'Not set';
-          });
-          Snack.show(
-            context,
-            'Configured folder is not writable. Please choose a different folder.',
-            level: SnackLevel.error,
-          );
-        }
-      });
+      final writable = await FolderAccessService.ensureSafeFolderIsWritable(
+        context,
+        _androidDownloadUri,
+      );
+      if (!writable && mounted) {
+        setState(() {
+          _androidDownloadUri = '';
+          _downloadDirController.text = 'Not set';
+        });
+      }
     }
 
     try {
@@ -621,6 +639,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         final choose = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: const Text('Folder access lost'),
             content: const Text(
               'The app can no longer access your selected download folder. '
@@ -686,13 +707,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     final canWrite = await _androidSaf.testWriteAccess(uri);
     if (!canWrite) {
-      if (mounted) {
-        Snack.show(
-          context,
-          'Selected folder is not writable. Please choose a different folder.',
-          level: SnackLevel.error,
-        );
-      }
+      await FolderAccessService.ensureSafeFolderIsWritable(context, uri);
       return;
     }
 

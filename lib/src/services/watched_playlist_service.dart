@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,10 +23,28 @@ class WatchedPlaylistService {
   });
 
   bool _disposed = false;
+  Timer? _pollTimer;
+
+  /// Starts periodic playlist checks in-process (while app is alive).
+  void startAutoCheck({Duration interval = const Duration(hours: 3)}) {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(interval, (_) async {
+      if (_disposed) return;
+      await checkAllPlaylists();
+    });
+  }
+
+  /// Stops periodic auto-checking.
+  void stopAutoCheck() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+  }
 
   /// Release any resources and stop background activity.
   void dispose() {
     _disposed = true;
+    _pollTimer?.cancel();
+    _pollTimer = null;
   }
 
   // ─── Persistence ─────────────────────────────────────────────────────────
@@ -53,6 +72,22 @@ class WatchedPlaylistService {
     await prefs.setStringList('watched_playlists', list);
     await prefs.remove('pl_hash_$url');
     await prefs.remove('pl_tracks_$url');
+    await prefs.remove('pl_folder_$url');
+  }
+
+  Future<String?> getFolderForPlaylist(String url) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('pl_folder_$url');
+  }
+
+  Future<void> setFolderForPlaylist(String url, String folder) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('pl_folder_$url', folder);
+  }
+
+  Future<void> removeFolderForPlaylist(String url) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('pl_folder_$url');
   }
 
   // ─── Checking for new tracks ─────────────────────────────────────────────

@@ -14,6 +14,7 @@ class BrowserShell extends StatefulWidget {
   final VoidCallback? onBack;
   final VoidCallback? onForward;
   final VoidCallback onRefresh;
+  final bool isRefreshing;
   final VoidCallback onHome;
   final bool canGoBack;
   final bool canGoForward;
@@ -31,6 +32,7 @@ class BrowserShell extends StatefulWidget {
     required this.onBack,
     required this.onForward,
     required this.onRefresh,
+    required this.isRefreshing,
     required this.onHome,
     required this.canGoBack,
     required this.canGoForward,
@@ -199,23 +201,26 @@ class _BrowserShellState extends State<BrowserShell> {
       key: widget.scaffoldKey,
       endDrawer: !isDesktop && widget.queueOnRight ? queueDrawer : null,
       drawer: !isDesktop && !widget.queueOnRight ? queueDrawer : null,
-      body: Column(
-        children: [
-          _buildNavBar(cs, isDesktop),
-          Expanded(
-            child: isDesktop
-                ? Row(
-                    children: [
-                      if (!widget.queueOnRight && _showQueueDesktop)
-                        _buildDesktopQueuePanel(cs),
-                      Expanded(child: widget.child),
-                      if (widget.queueOnRight && _showQueueDesktop)
-                        _buildDesktopQueuePanel(cs),
-                    ],
-                  )
-                : widget.child,
-          ),
-        ],
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            _buildNavBar(cs, isDesktop),
+            Expanded(
+              child: isDesktop
+                  ? Row(
+                      children: [
+                        if (!widget.queueOnRight && _showQueueDesktop)
+                          _buildDesktopQueuePanel(cs),
+                        Expanded(child: widget.child),
+                        if (widget.queueOnRight && _showQueueDesktop)
+                          _buildDesktopQueuePanel(cs),
+                      ],
+                    )
+                  : widget.child,
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: showPlayerOverlay
           ? _buildPlayerOverlay(playerState, cs, overlayHeight)
@@ -260,8 +265,26 @@ class _BrowserShellState extends State<BrowserShell> {
                     widget.canGoBack ? widget.onBack : null, cs),
                 _navButton(Icons.arrow_forward_ios_rounded, 'Forward',
                     widget.canGoForward ? widget.onForward : null, cs),
-                _navButton(
-                    Icons.refresh_rounded, 'Refresh', widget.onRefresh, cs),
+                widget.isRefreshing
+                    ? SizedBox(
+                        width: 34,
+                        height: 34,
+                        child: Center(
+                            child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(cs.primary),
+                          ),
+                        )),
+                      )
+                    : _navButton(
+                        Icons.refresh_rounded,
+                        'Refresh',
+                        widget.onRefresh,
+                        cs,
+                      ),
                 _navButton(Icons.home_rounded, 'Home', widget.onHome, cs),
                 const SizedBox(width: 6),
                 Expanded(child: _buildUrlBar(cs)),
