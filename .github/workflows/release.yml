@@ -76,13 +76,13 @@ jobs:
         run: |
           $src = "build\windows\x64\runner\Release"
           if (!(Test-Path $src)) { Write-Error "Not found: $src"; exit 1 }
-          Compress-Archive -Path "$src\*" -DestinationPath "${{ env.OUTPUT_NAME }}.zip" -Force
+          Compress-Archive -Path "$src\*" -DestinationPath "${{ env.OUTPUT_NAME }}-windows.zip" -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64
-          path: ${{ env.OUTPUT_NAME }}.zip
+          path: ${{ env.OUTPUT_NAME }}-windows.zip
           retention-days: 30
 
   build-linux:
@@ -153,7 +153,7 @@ jobs:
           set -euo pipefail
           BUNDLE="$GITHUB_WORKSPACE/build/linux/x64/release/bundle"
           [ -d "$BUNDLE" ] || { echo "ERROR: bundle missing at $BUNDLE"; exit 1; }
-          cd "$BUNDLE" && zip -r "$GITHUB_WORKSPACE/linux.zip" .
+          cd "$BUNDLE" && zip -r "$GITHUB_WORKSPACE/${{ env.OUTPUT_NAME }}-linux.zip" .
 
       - name: Build AppImage
         env:
@@ -250,16 +250,16 @@ jobs:
 
           cd "$GITHUB_WORKSPACE"
           ARCH=x86_64 /tmp/squashfs-root/AppRun --no-appstream \
-            "$APPDIR" "$GITHUB_WORKSPACE/$OUT.AppImage"
-          ls -lh "$GITHUB_WORKSPACE/$OUT.AppImage"
+            "$APPDIR" "$GITHUB_WORKSPACE/${{ env.OUTPUT_NAME }}-linux.AppImage"
+          ls -lh "$GITHUB_WORKSPACE/${{ env.OUTPUT_NAME }}-linux.AppImage"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-x64
           path: |
-            linux.zip
-            ${{ env.OUTPUT_NAME }}.AppImage
+            ${{ env.OUTPUT_NAME }}-linux.zip
+            ${{ env.OUTPUT_NAME }}-linux.AppImage
           retention-days: 30
 
   build-android:
@@ -300,7 +300,7 @@ jobs:
         run: flutter build apk --release --no-tree-shake-icons
 
       - name: Rename APK
-        run: cp build/app/outputs/flutter-apk/app-release.apk ${{ env.OUTPUT_NAME }}.apk
+        run: cp build/app/outputs/flutter-apk/app-release.apk ${{ env.OUTPUT_NAME }}-android.apk
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

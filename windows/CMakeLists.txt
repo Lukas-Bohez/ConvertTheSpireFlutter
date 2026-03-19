@@ -70,6 +70,10 @@ function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
+  if(MSVC)
+    # Use shared file lock for PDB writes in parallel compile scenarios.
+    target_compile_options(${TARGET} PRIVATE /FS)
+  endif()
 endfunction()
 
 # Flutter library and tool build rules.
