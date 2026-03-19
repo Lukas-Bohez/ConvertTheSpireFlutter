@@ -20,7 +20,7 @@ cp -a "$BUNDLE/." "$APPDIR/usr/bin/"
 # Collect and bundle .so dependencies (excluding ABI-gated system libs)
 EXCLUDE='(libpthread|libc\.so|libdl\.so|libm\.so|librt\.so|ld-linux|ld-musl|libGL|libEGL|libvulkan|libdrm|libX|libxcb|libxkb)'
 collect_libs() {
-    ldd "$1" 2>/dev/null | awk '/=>/ { print $3 }' 
+    ldd "$1" 2>/dev/null | awk '/=>/ { print $3 }' \
         | grep -Ev '(not found|^$)' | grep -Ev "$EXCLUDE" || true
 }
 
@@ -29,8 +29,7 @@ if [ -d "$BUNDLE/lib" ]; then
     while IFS= read -r so; do
         [ -f "$so" ] || continue
         MORE_LIBS=$(collect_libs "$so")
-        ALL_LIBS=$(printf '%s
-%s' "$ALL_LIBS" "$MORE_LIBS")
+        ALL_LIBS=$(printf '%s\n%s' "$ALL_LIBS" "$MORE_LIBS")
     done < <(find "$BUNDLE/lib" -name '*.so*' -type f)
 fi
 
@@ -46,7 +45,7 @@ done
 
 # Patch RPATHs
 patchelf --set-rpath '$ORIGIN/../lib:$ORIGIN/lib' "$APPDIR/usr/bin/$APP"
-find "$APPDIR/usr/lib" -name '*.so*' -type f -print0 
+find "$APPDIR/usr/lib" -name '*.so*' -type f -print0 \
     | xargs -0 -I{} patchelf --set-rpath '$ORIGIN' {} 2>/dev/null || true
 
 # Write AppRun script
@@ -97,7 +96,7 @@ chmod +x /tmp/appimagetool.AppImage
 
 echo "Running appimagetool..."
 cd "$GITHUB_WORKSPACE"
-ARCH=x86_64 /tmp/appimagetool.AppImage --no-appstream 
+ARCH=x86_64 /tmp/appimagetool.AppImage --no-appstream \
   "$APPDIR" "$GITHUB_WORKSPACE/${OUT}-linux.AppImage"
 
 echo "AppImage build complete."
