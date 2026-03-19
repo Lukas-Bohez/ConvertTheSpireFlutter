@@ -71,7 +71,8 @@ The CI pipeline runs automatically on every push and PR — check the **Actions*
 ```bash
 sudo apt install clang cmake ninja-build pkg-config \
   libgtk-3-dev liblzma-dev libstdc++-9-dev \
-  libmpv-dev mpv libass-dev
+  libmpv-dev mpv libass-dev \
+  libayatana-appindicator3-dev
 ```
 
 ### Android

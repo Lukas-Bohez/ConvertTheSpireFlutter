@@ -30,7 +30,8 @@ already installed.
 **Android:** Enable "Install from unknown sources", install APK.
 
 **Linux:** Extract ZIP, run `bundle/convert_the_spire_reborn`.
-Requires libmpv: `sudo apt install libmpv1` (Ubuntu/Debian)
+Requires libmpv and development headers for builds:
+`sudo apt install libmpv1 libmpv-dev mpv libass-dev libayatana-appindicator3-dev` (Ubuntu/Debian)
 
 ### Known limitations in this pre-release
 - DLNA casting may drop on some older renderers
