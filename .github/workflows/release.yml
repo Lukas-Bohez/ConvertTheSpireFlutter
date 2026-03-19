@@ -61,7 +61,7 @@ jobs:
     name: Test and Analyze
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2
         with:
@@ -79,7 +79,7 @@ jobs:
         run: flutter test --coverage
 
       # Upload coverage so it's available in the release notes / CI history
-      - uses: actions/upload-artifact@834a14441a05b3c3c1e5c392419730f5761895a2 # v4
+      - uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage/
@@ -93,7 +93,7 @@ jobs:
     needs: test-and-analyze
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2
         with:
@@ -119,7 +119,7 @@ jobs:
             -DestinationPath "${{ env.OUTPUT_NAME }}-windows-x64.zip" `
             -Force
 
-      - uses: actions/upload-artifact@834a14441a05b3c3c1e5c392419730f5761895a2 # v4
+      - uses: actions/upload-artifact@v4
         with:
           name: windows-x64
           path: ${{ env.OUTPUT_NAME }}-windows-x64.zip
@@ -133,7 +133,7 @@ jobs:
     needs: test-and-analyze
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: actions/checkout@v4
 
       # Flutter Linux requires these system libraries
       - name: Install Linux build dependencies
@@ -182,7 +182,7 @@ jobs:
           fi
 
       # Upload zip unconditionally; AppImage only if it was actually built
-      - uses: actions/upload-artifact@834a14441a05b3c3c1e5c392419730f5761895a2 # v4
+      - uses: actions/upload-artifact@v4
         with:
           name: linux-x64
           path: |
@@ -198,7 +198,7 @@ jobs:
     needs: test-and-analyze
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2
         with:
@@ -280,7 +280,7 @@ jobs:
           ditto -c -k --keepParent "$APP" \
             "${{ env.OUTPUT_NAME }}-macOS.zip"
 
-      - uses: actions/upload-artifact@834a14441a05b3c3c1e5c392419730f5761895a2 # v4
+      - uses: actions/upload-artifact@v4
         with:
           name: macos-x64
           path: ${{ env.OUTPUT_NAME }}-macOS.zip
@@ -294,9 +294,9 @@ jobs:
     needs: test-and-analyze
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@a407338b2512f4b4e3346914b4e6a3605e54d896 # v4
+      - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -351,7 +351,7 @@ jobs:
           cp build/app/outputs/bundle/release/app-release.aab \
              android-builds/${{ env.OUTPUT_NAME }}.aab
 
-      - uses: actions/upload-artifact@834a14441a05b3c3c1e5c392419730f5761895a2 # v4
+      - uses: actions/upload-artifact@v4
         with:
           name: android-builds
           path: android-builds/
@@ -369,7 +369,7 @@ jobs:
 
     steps:
       - name: Download all build artifacts
-        uses: actions/download-artifact@b01b63200a39f60a927a72b2d07e69a033e085c8 # v4
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 
@@ -403,7 +403,7 @@ jobs:
           cat ../SHA256SUMS.txt
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@b2b5455938b8158564cf965e0a0a552e463cf61d # v2
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
