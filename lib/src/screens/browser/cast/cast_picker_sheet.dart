@@ -55,151 +55,154 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
       minChildSize: 0.3,
       expand: false,
       builder: (context, scrollController) {
-        return Column(
-          children: [
-            // Handle
-            Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: cs.onSurfaceVariant.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
+        return SafeArea(
+          top: false,
+          bottom: true,
+          child: Column(
+            children: [
+              // Handle
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            Text('Cast Media', style: Theme.of(context).textTheme.titleMedium),
-            const Divider(),
+              Text('Cast Media', style: Theme.of(context).textTheme.titleMedium),
+              const Divider(),
 
-            Expanded(
-              child: ListView(
-                controller: scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  // ── Detected videos ──
-                  if (urls.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Center(
-                        child: Column(
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
+                    // ── Detected videos ──
+                    if (urls.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(Icons.videocam_off,
+                                  size: 48,
+                                  color: cs.onSurfaceVariant
+                                      .withValues(alpha: 0.5)),
+                              const SizedBox(height: 8),
+                              Text('No video streams detected',
+                                  style:
+                                      TextStyle(color: cs.onSurfaceVariant)),
+                            ],
+                          ),
+                        ),
+                      )
+                    else ...[
+                      Text('Detected Videos',
+                          style: Theme.of(context).textTheme.labelLarge),
+                      const SizedBox(height: 4),
+                      ...urls.map((url) {
+                        final isSelected = url == _selectedUrl;
+                        return ListTile(
+                          dense: true,
+                          leading: Icon(
+                            isSelected
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_unchecked,
+                            color: isSelected ? cs.primary : cs.onSurfaceVariant,
+                          ),
+                          title: Text(
+                            _truncateUrl(url),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                          subtitle: Text(
+                            _mediaTypeLabel(url),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isSelected ? cs.primary : cs.onSurfaceVariant,
+                            ),
+                          ),
+                          onTap: () => setState(() => _selectedUrl = url),
+                        );
+                      }),
+                    ],
+
+                    const Divider(height: 24),
+
+                    // ── Devices ──
+                    Text('Cast Devices',
+                        style: Theme.of(context).textTheme.labelLarge),
+                    const SizedBox(height: 4),
+
+                    if (devices.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.videocam_off,
-                                size: 48,
-                                color:
-                                    cs.onSurfaceVariant.withValues(alpha: 0.5)),
-                            const SizedBox(height: 8),
-                            Text('No video streams detected',
+                            const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            const SizedBox(width: 12),
+                            Text('Searching for devices…',
                                 style: TextStyle(color: cs.onSurfaceVariant)),
                           ],
                         ),
-                      ),
-                    )
-                  else ...[
-                    Text('Detected Videos',
-                        style: Theme.of(context).textTheme.labelLarge),
-                    const SizedBox(height: 4),
-                    ...urls.map((url) {
-                      final isSelected = url == _selectedUrl;
-                      return ListTile(
-                        dense: true,
-                        leading: Icon(
-                          isSelected
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_unchecked,
-                          color: isSelected ? cs.primary : cs.onSurfaceVariant,
-                        ),
-                        title: Text(
-                          _truncateUrl(url),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        subtitle: Text(
-                          _mediaTypeLabel(url),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color:
-                                isSelected ? cs.primary : cs.onSurfaceVariant,
+                      )
+                    else
+                      ...devices.map((device) {
+                        final isSelected = device == _selectedDevice;
+                        return ListTile(
+                          dense: true,
+                          leading: Icon(
+                            isSelected
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_unchecked,
+                            color: isSelected ? cs.primary : cs.onSurfaceVariant,
                           ),
-                        ),
-                        onTap: () => setState(() => _selectedUrl = url),
-                      );
-                    }),
+                          title: Text(device.name),
+                          subtitle: Text(
+                            device.type == CastDeviceType.chromecast
+                                ? 'Chromecast'
+                                : 'DLNA / UPnP',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isSelected ? cs.primary : cs.onSurfaceVariant,
+                            ),
+                          ),
+                          trailing: Icon(
+                            device.type == CastDeviceType.chromecast
+                                ? Icons.cast
+                                : Icons.tv,
+                            color: isSelected ? cs.primary : null,
+                          ),
+                          onTap: () => setState(() => _selectedDevice = device),
+                        );
+                      }),
                   ],
-
-                  const Divider(height: 24),
-
-                  // ── Devices ──
-                  Text('Cast Devices',
-                      style: Theme.of(context).textTheme.labelLarge),
-                  const SizedBox(height: 4),
-
-                  if (devices.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          const SizedBox(width: 12),
-                          Text('Searching for devices…',
-                              style: TextStyle(color: cs.onSurfaceVariant)),
-                        ],
-                      ),
-                    )
-                  else
-                    ...devices.map((device) {
-                      final isSelected = device == _selectedDevice;
-                      return ListTile(
-                        dense: true,
-                        leading: Icon(
-                          isSelected
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_unchecked,
-                          color: isSelected ? cs.primary : cs.onSurfaceVariant,
-                        ),
-                        title: Text(device.name),
-                        subtitle: Text(
-                          device.type == CastDeviceType.chromecast
-                              ? 'Chromecast'
-                              : 'DLNA / UPnP',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color:
-                                isSelected ? cs.primary : cs.onSurfaceVariant,
-                          ),
-                        ),
-                        trailing: Icon(
-                          device.type == CastDeviceType.chromecast
-                              ? Icons.cast
-                              : Icons.tv,
-                          color: isSelected ? cs.primary : null,
-                        ),
-                        onTap: () => setState(() => _selectedDevice = device),
-                      );
-                    }),
-                ],
-              ),
-            ),
-
-            // ── Cast button ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: (_selectedUrl != null && _selectedDevice != null)
-                      ? () => widget.onCast(_selectedDevice!, _selectedUrl!)
-                      : null,
-                  icon: const Icon(Icons.cast),
-                  label: const Text('Cast Selected Video'),
                 ),
               ),
-            ),
-          ],
+
+              // ── Cast button ──
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: (_selectedUrl != null && _selectedDevice != null)
+                        ? () => widget.onCast(_selectedDevice!, _selectedUrl!)
+                        : null,
+                    icon: const Icon(Icons.cast),
+                    label: const Text('Cast Selected Video'),
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
