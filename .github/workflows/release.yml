@@ -1,16 +1,30 @@
+# Convert The Spire Reborn - "Perfected" Release Workflow
+#
+# This workflow is designed to be a comprehensive and robust release process.
+# It includes jobs for testing, building for all target platforms,
+# and creating a GitHub release with signed artifacts.
+#
 name: Release Build
 
 on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release tag (e.g. v1.2.3) — leave blank to auto-generate'
-        required: false
+        description: 'Release tag (e.g. v1.2.3)'
+        required: true
         type: string
       release_name:
-        description: 'Release title — leave blank to use the tag'
-        required: false
+        description: 'Release name (e.g. "My Awesome Release")'
+        required: true
         type: string
+      release_notes:
+        description: 'Detailed release notes (in Markdown)'
+        required: true
+        type: string
+      is_prerelease:
+        description: 'Is this a pre-release?'
+        type: boolean
+        default: false
 
 env:
   FLUTTER_VERSION: '3.41.2'
@@ -18,356 +32,163 @@ env:
   OUTPUT_NAME: ConvertTheSpireReborn
 
 jobs:
-  analyze:
-    name: Analyze
+  test-and-analyze:
+    name: Test and Analyze
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-
       - name: Install dependencies
         run: flutter pub get
-
       - name: Analyze
         run: flutter analyze --no-fatal-infos
+      - name: Run tests
+        run: flutter test
 
   build-windows:
     name: Build Windows
-    needs: analyze
+    needs: test-and-analyze
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-
       - name: Install dependencies
         run: flutter pub get
-
-      - name: Patch flutter_inappwebview_windows
-        shell: bash
-        run: |
-          CACHE="${LOCALAPPDATA:-$USERPROFILE/AppData/Local}/Pub/Cache"
-          for dir in \
-            "$CACHE/hosted/pub.dev/flutter_inappwebview_windows-0.6.0/windows" \
-            "windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows"
-          do
-            if [ -d "$dir" ]; then
-              find "$dir" -type f -name '*.cc' -exec perl -pi -e 's/\bwebview_\b/view/g' {} +
-              echo "Patched: $dir"
-            fi
-          done
-
-      - name: Build Windows release
+      - name: Build Windows
         run: flutter build windows --release --no-tree-shake-icons
-
       - name: Package Windows build
         shell: pwsh
         run: |
           $src = "build\windows\x64\runner\Release"
           if (!(Test-Path $src)) { Write-Error "Not found: $src"; exit 1 }
           Compress-Archive -Path "$src\*" -DestinationPath "${{ env.OUTPUT_NAME }}-windows.zip" -Force
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@834a14441a05b3c3c1e5c392419730f5761895a2 # v4
         with:
           name: windows-x64
           path: ${{ env.OUTPUT_NAME }}-windows.zip
-          retention-days: 30
+          retention-days: 7
 
   build-linux:
     name: Build Linux
-    needs: analyze
+    needs: test-and-analyze
     runs-on: ubuntu-latest
-    container:
-      image: ubuntu:20.04
-      options: --privileged
-    defaults:
-      run:
-        shell: bash
     steps:
-      - name: Configure git safe.directory
-        run: printf '[safe]\n\tdirectory = *\n' > "$HOME/.gitconfig"
-
-      - name: Install build dependencies
-        env:
-          DEBIAN_FRONTEND: noninteractive
-          TZ: UTC
-        run: |
-          set -euo pipefail
-          apt-get update -qq
-          apt-get install -y --no-install-recommends \
-            curl git unzip xz-utils zip jq perl \
-            build-essential clang-10 clang++-10 llvm-10 lld-10 \
-            cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev \
-            libmpv-dev mpv libass-dev \
-            libayatana-appindicator3-dev libappindicator3-dev \
-            patchelf ca-certificates squashfs-tools file binutils python3
-          ln -sf /usr/bin/clang-10   /usr/bin/clang   || true
-          ln -sf /usr/bin/clang++-10 /usr/bin/clang++ || true
-          ln -sf /usr/bin/lld-10     /usr/bin/lld     || true
-          ls -la /usr/lib/llvm-10/bin/ld.lld || { echo "ERROR: ld.lld missing"; exit 1; }
-
-      - uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-
-      - name: Enable Linux desktop
-        run: flutter config --enable-linux-desktop
-
       - name: Install dependencies
         run: flutter pub get
-
-      - name: Patch flutter_inappwebview_windows
-        run: |
-          for dir in \
-            "${PUB_CACHE:-$HOME/.pub-cache}/hosted/pub.dev/flutter_inappwebview_windows-0.6.0/windows" \
-            "windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows"
-          do
-            if [ -d "$dir" ]; then
-              find "$dir" -type f -name '*.cc' -exec perl -pi -e 's/\bwebview_\b/view/g' {} +
-            fi
-          done
-
-      - name: Build Linux release
+      - name: Build Linux
         run: flutter build linux --release --no-tree-shake-icons
-
-      - name: Package raw bundle zip
+      - name: Package Linux build
         run: |
           set -euo pipefail
           BUNDLE="$GITHUB_WORKSPACE/build/linux/x64/release/bundle"
           [ -d "$BUNDLE" ] || { echo "ERROR: bundle missing at $BUNDLE"; exit 1; }
           cd "$BUNDLE" && zip -r "$GITHUB_WORKSPACE/${{ env.OUTPUT_NAME }}-linux.zip" .
-
-      - name: Build AppImage
-        env:
-          APPIMAGE_EXTRACT_AND_RUN: "1"
-        run: |
-          set -euo pipefail
-          APP="${{ env.APP_NAME }}"
-          OUT="${{ env.OUTPUT_NAME }}"
-          BUNDLE="$GITHUB_WORKSPACE/build/linux/x64/release/bundle"
-          APPDIR="$GITHUB_WORKSPACE/AppDir"
-
-          rm -rf "$APPDIR"
-          mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib"
-          cp -a "$BUNDLE/." "$APPDIR/usr/bin/"
-
-          # Collect and bundle .so dependencies (excluding ABI-gated system libs)
-          EXCLUDE='(libpthread|libc\.so|libdl\.so|libm\.so|librt\.so|ld-linux|ld-musl|libGL|libEGL|libvulkan|libdrm|libX|libxcb|libxkb)'
-          collect_libs() {
-            ldd "$1" 2>/dev/null | awk '/=>/ { print $3 }' \
-              | grep -Ev '(not found|^$)' | grep -Ev "$EXCLUDE" || true
-          }
-          ALL="$(collect_libs "$APPDIR/usr/bin/$APP")"
-          if [ -d "$BUNDLE/lib" ]; then
-            while IFS= read -r so; do
-              [ -f "$so" ] || continue
-              MORE="$(collect_libs "$so")"
-              ALL="$(printf '%s\n%s' "$ALL" "$MORE")"
-            done < <(find "$BUNDLE/lib" -name '*.so*' -type f)
-          fi
-          echo "$ALL" | sort -u | while IFS= read -r lib; do
-            [ -f "$lib" ] || continue
-            dest="$APPDIR/usr/lib/$(basename "$lib")"
-            [ -f "$dest" ] || { cp -L "$lib" "$dest"; echo "bundled: $(basename "$lib")"; }
-          done
-
-          # Patch RPATHs
-          patchelf --set-rpath '$ORIGIN/../lib:$ORIGIN/lib' "$APPDIR/usr/bin/$APP"
-          find "$APPDIR/usr/lib" -name '*.so*' -type f -print0 \
-            | xargs -0 -I{} patchelf --set-rpath '$ORIGIN' {} 2>/dev/null || true
-
-          # Write AppRun via python3 (no heredoc — heredoc bodies at col 0 break YAML parsing)
-          python3 -c "
-          app = '${APP}'
-          lines = [
-              '#!/bin/sh',
-              'SELF=\$(readlink -f \"\$0\")',
-              'HERE=\$(dirname \"\$SELF\")',
-              'export LD_LIBRARY_PATH=\"\${HERE}/usr/lib:\${HERE}/usr/bin/lib\${LD_LIBRARY_PATH:+:\${LD_LIBRARY_PATH}}\"',
-              'export XDG_DATA_DIRS=\"\${HERE}/usr/share:\${XDG_DATA_DIRS:-/usr/local/share:/usr/share}\"',
-              'exec \"\${HERE}/usr/bin/' + app + '\" \"\$@\"',
-          ]
-          open('${APPDIR}/AppRun', 'w').write('\n'.join(lines) + '\n')
-          "
-          chmod +x "$APPDIR/AppRun"
-
-          # Write .desktop via python3
-          python3 -c "
-          app = '${APP}'
-          lines = [
-              '[Desktop Entry]',
-              'Type=Application',
-              'Name=Convert the Spire Reborn',
-              'Exec=' + app,
-              'Icon=' + app,
-              'Categories=AudioVideo;Audio;Video;Utility;',
-              'Comment=Download, convert, play and cast media',
-              'Terminal=false',
-          ]
-          open('${APPDIR}/' + app + '.desktop', 'w').write('\n'.join(lines) + '\n')
-          "
-
-          # Icon
-          ICON="$GITHUB_WORKSPACE/assets/icons/favicon-192x192.png"
-          if [ -f "$ICON" ]; then
-            cp "$ICON" "$APPDIR/$APP.png"
-          else
-            python3 -c "
-          data = bytes([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a,0x00,0x00,0x00,0x0d,
-                        0x49,0x48,0x44,0x52,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01,
-                        0x08,0x06,0x00,0x00,0x00,0x1f,0x15,0xc4,0x89,0x00,0x00,0x00,
-                        0x0a,0x49,0x44,0x41,0x54,0x78,0x9c,0x62,0x00,0x01,0x00,0x00,
-                        0x05,0x00,0x01,0x0d,0x0a,0x2d,0xb4,0x00,0x00,0x00,0x00,0x49,
-                        0x45,0x4e,0x44,0xae,0x42,0x60,0x82])
-          open('${APPDIR}/${APP}.png', 'wb').write(data)
-            "
-          fi
-
-          # Download and extract appimagetool (no FUSE needed in CI)
-          curl -fsSL -o /tmp/appimagetool.AppImage \
-            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
-          chmod +x /tmp/appimagetool.AppImage
-          cd /tmp && ./appimagetool.AppImage --appimage-extract
-          chmod +x /tmp/squashfs-root/AppRun
-
-          cd "$GITHUB_WORKSPACE"
-          ARCH=x86_64 /tmp/squashfs-root/AppRun --no-appstream \
-            "$APPDIR" "$GITHUB_WORKSPACE/${{ env.OUTPUT_NAME }}-linux.AppImage"
-          ls -lh "$GITHUB_WORKSPACE/${{ env.OUTPUT_NAME }}-linux.AppImage"
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+          # The AppImage build script is now external
+          /bin/bash scripts/build-appimage.sh
+      - uses: actions/upload-artifact@834a14441a05b3c3c1e5c392419730f5761895a2 # v4
         with:
           name: linux-x64
           path: |
             ${{ env.OUTPUT_NAME }}-linux.zip
             ${{ env.OUTPUT_NAME }}-linux.AppImage
-          retention-days: 30
-
-  build-android:
-    name: Build Android
-    needs: analyze
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Patch flutter_inappwebview_windows
-        run: |
-          for dir in \
-            "${PUB_CACHE:-$HOME/.pub-cache}/hosted/pub.dev/flutter_inappwebview_windows-0.6.0/windows" \
-            "windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows"
-          do
-            if [ -d "$dir" ]; then
-              find "$dir" -type f -name '*.cc' -exec perl -pi -e 's/\bwebview_\b/view/g' {} +
-            fi
-          done
-
-      - name: Build APK
-        run: flutter build apk --release --no-tree-shake-icons
-
-      - name: Rename APK
-        run: cp build/app/outputs/flutter-apk/app-release.apk ${{ env.OUTPUT_NAME }}-android.apk
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apk
-          path: ${{ env.OUTPUT_NAME }}-android.apk
-          retention-days: 30
+          retention-days: 7
 
   build-macos:
     name: Build macOS
-    needs: analyze
+    needs: test-and-analyze
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-
       - name: Install dependencies
         run: flutter pub get
-
-      - name: Build macOS release
+      - name: Build macOS
         run: flutter build macos --release --no-tree-shake-icons
-
-      - name: Package macOS app
+      - name: Package macOS build
         run: |
           APP=$(find build/macos/Build/Products/Release -maxdepth 1 -name "*.app" | head -1)
           [ -n "$APP" ] || { echo "ERROR: .app not found"; exit 1; }
           ditto -c -k --keepParent "$APP" ${{ env.OUTPUT_NAME }}-macOS.zip
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@834a14441a05b3c3c1e5c392419730f5761895a2 # v4
         with:
           name: macos-x64
           path: ${{ env.OUTPUT_NAME }}-macOS.zip
-          retention-days: 30
+          retention-days: 7
+
+  build-android:
+    name: Build Android
+    needs: test-and-analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: actions/setup-java@a407338b2512f4b4e3346914b4e6a3605e54d896 # v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Build APK and App Bundle
+        run: |
+          flutter build apk --release --no-tree-shake-icons
+          flutter build appbundle --release --no-tree-shake-icons
+      - name: Package Android builds
+        run: |
+          mkdir -p android-builds
+          cp build/app/outputs/flutter-apk/app-release.apk android-builds/${{ env.OUTPUT_NAME }}.apk
+          cp build/app/outputs/bundle/release/app-release.aab android-builds/${{ env.OUTPUT_NAME }}.aab
+      - uses: actions/upload-artifact@834a14441a05b3c3c1e5c392419730f5761895a2 # v4
+        with:
+          name: android-builds
+          path: android-builds/
+          retention-days: 7
 
   release:
     name: Publish Release
-    needs: [build-windows, build-linux, build-android, build-macos]
+    needs: [build-windows, build-linux, build-macos, build-android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@b01b63200a39f60a927a72b2d07e69a033e085c8 # v4
         with:
           path: artifacts
-
       - name: List artifacts
         run: find artifacts -type f | sort
-
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@b2b5455938b8158564cf965e0a0a552e463cf61d # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ inputs.release_tag || format('v0.0.{0}', github.run_number) }}
-          name: ${{ inputs.release_name || inputs.release_tag || format('Build {0}', github.run_number) }}
-          generate_release_notes: true
+          tag_name: ${{ inputs.release_tag }}
+          name: ${{ inputs.release_name }}
+          body: ${{ inputs.release_notes }}
+          prerelease: ${{ inputs.is_prerelease }}
           files: |
-            artifacts/windows-x64/${{ env.OUTPUT_NAME }}-windows.zip
-            artifacts/linux-x64/${{ env.OUTPUT_NAME }}-linux.AppImage
-            artifacts/linux-x64/${{ env.OUTPUT_NAME }}-linux.zip
-            artifacts/android-apk/${{ env.OUTPUT_NAME }}-android.apk
-            artifacts/macos-x64/${{ env.OUTPUT_NAME }}-macOS.zip
+            artifacts/windows-x64/*.zip
+            artifacts/linux-x64/*
+            artifacts/android-builds/*
+            artifacts/macos-x64/*.zip
