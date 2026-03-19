@@ -1,8 +1,23 @@
-# Convert The Spire Reborn - "Perfected" Release Workflow
+# Convert The Spire Reborn — Release Workflow
 #
-# This workflow is designed to be a comprehensive and robust release process.
-# It includes jobs for testing, building for all target platforms,
-# and creating a GitHub release with signed artifacts.
+# Triggered manually via workflow_dispatch. Runs tests, builds for all
+# platforms, signs artifacts where credentials are provided, and publishes
+# a GitHub Release with a SHA-256 checksum manifest.
+#
+# Required secrets (configure in Settings → Secrets and variables → Actions):
+#
+#   Android signing (optional but strongly recommended for production):
+#     ANDROID_KEYSTORE_BASE64   – base64-encoded .jks / .keystore file
+#     ANDROID_KEYSTORE_PASSWORD – keystore password
+#     ANDROID_KEY_ALIAS         – key alias inside the keystore
+#     ANDROID_KEY_PASSWORD      – key password
+#
+#   macOS signing & notarization (optional; omit to ship unsigned):
+#     MACOS_CERTIFICATE_BASE64  – base64-encoded .p12 Developer ID certificate
+#     MACOS_CERTIFICATE_PASSWORD – .p12 import password
+#     MACOS_NOTARIZE_APPLE_ID   – Apple ID used for notarization
+#     MACOS_NOTARIZE_PASSWORD   – App-specific password for that Apple ID
+#     MACOS_NOTARIZE_TEAM_ID    – 10-character Apple Team ID
 #
 name: Release Build
 
@@ -14,15 +29,15 @@ on:
         required: true
         type: string
       release_name:
-        description: 'Release name (e.g. "My Awesome Release")'
+        description: 'Release name (e.g. "Version 1.2.3 — My Awesome Release")'
         required: true
         type: string
       release_notes:
-        description: 'Detailed release notes (in Markdown)'
+        description: 'Detailed release notes (Markdown)'
         required: true
         type: string
       is_prerelease:
-        description: 'Is this a pre-release?'
+        description: 'Mark as pre-release?'
         type: boolean
         default: false
 
@@ -31,153 +46,362 @@ env:
   APP_NAME: convert_the_spire_reborn
   OUTPUT_NAME: ConvertTheSpireReborn
 
+# ---------------------------------------------------------------------------
+# Shared permissions: contents:write only on the publish job; all others
+# use the minimal read-only default.
+# ---------------------------------------------------------------------------
+permissions:
+  contents: read
+
 jobs:
+  # =========================================================================
+  # 1. Test & static analysis — gate for all build jobs
+  # =========================================================================
   test-and-analyze:
     name: Test and Analyze
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
       - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
       - name: Install dependencies
         run: flutter pub get
+
       - name: Analyze
         run: flutter analyze --no-fatal-infos
-      - name: Run tests
-        run: flutter test
 
+      - name: Run tests
+        run: flutter test --coverage
+
+      # Upload coverage so it's available in the release notes / CI history
+      - uses: actions/upload-artifact@834a14441a05b3c3c1e5c392419730f5761895a2 # v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  # =========================================================================
+  # 2. Windows x64
+  # =========================================================================
   build-windows:
     name: Build Windows
     needs: test-and-analyze
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
       - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
       - name: Install dependencies
         run: flutter pub get
-      - name: Build Windows
+
+      - name: Build Windows release
         run: flutter build windows --release --no-tree-shake-icons
+
       - name: Package Windows build
         shell: pwsh
         run: |
           $src = "build\windows\x64\runner\Release"
-          if (!(Test-Path $src)) { Write-Error "Not found: $src"; exit 1 }
-          Compress-Archive -Path "$src\*" -DestinationPath "${{ env.OUTPUT_NAME }}-windows.zip" -Force
+          if (!(Test-Path $src)) {
+            Write-Error "Build output not found: $src"
+            exit 1
+          }
+          Compress-Archive -Path "$src\*" `
+            -DestinationPath "${{ env.OUTPUT_NAME }}-windows-x64.zip" `
+            -Force
+
       - uses: actions/upload-artifact@834a14441a05b3c3c1e5c392419730f5761895a2 # v4
         with:
           name: windows-x64
-          path: ${{ env.OUTPUT_NAME }}-windows.zip
+          path: ${{ env.OUTPUT_NAME }}-windows-x64.zip
           retention-days: 7
 
+  # =========================================================================
+  # 3. Linux x64  (zip + AppImage when build script is present)
+  # =========================================================================
   build-linux:
     name: Build Linux
     needs: test-and-analyze
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      # Flutter Linux requires these system libraries
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            fuse libfuse2
+
       - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
       - name: Install dependencies
         run: flutter pub get
-      - name: Build Linux
+
+      - name: Build Linux release
         run: flutter build linux --release --no-tree-shake-icons
-      - name: Package Linux build
+
+      - name: Package Linux zip
         run: |
           set -euo pipefail
           BUNDLE="$GITHUB_WORKSPACE/build/linux/x64/release/bundle"
-          [ -d "$BUNDLE" ] || { echo "ERROR: bundle missing at $BUNDLE"; exit 1; }
-          cd "$BUNDLE" && zip -r "$GITHUB_WORKSPACE/${{ env.OUTPUT_NAME }}-linux.zip" .
-          # The AppImage build script is now external
-          /bin/bash scripts/build-appimage.sh
+          if [ ! -d "$BUNDLE" ]; then
+            echo "ERROR: bundle not found at $BUNDLE"
+            exit 1
+          fi
+          cd "$BUNDLE"
+          zip -r "$GITHUB_WORKSPACE/${{ env.OUTPUT_NAME }}-linux-x64.zip" .
+
+      # Build the AppImage only when the helper script is present in the repo.
+      # If you haven't added one yet, this step is skipped gracefully.
+      - name: Build AppImage (if script exists)
+        id: appimage
+        run: |
+          if [ -f "scripts/build-appimage.sh" ]; then
+            chmod +x scripts/build-appimage.sh
+            bash scripts/build-appimage.sh
+            echo "built=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "scripts/build-appimage.sh not found — skipping AppImage build."
+            echo "built=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Upload zip unconditionally; AppImage only if it was actually built
       - uses: actions/upload-artifact@834a14441a05b3c3c1e5c392419730f5761895a2 # v4
         with:
           name: linux-x64
           path: |
-            ${{ env.OUTPUT_NAME }}-linux.zip
-            ${{ env.OUTPUT_NAME }}-linux.AppImage
+            ${{ env.OUTPUT_NAME }}-linux-x64.zip
+            ${{ steps.appimage.outputs.built == 'true' && format('{0}-linux-x64.AppImage', env.OUTPUT_NAME) || '' }}
           retention-days: 7
 
+  # =========================================================================
+  # 4. macOS (universal / arm64 + x64)
+  # =========================================================================
   build-macos:
     name: Build macOS
     needs: test-and-analyze
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
       - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
       - name: Install dependencies
         run: flutter pub get
-      - name: Build macOS
+
+      - name: Build macOS release
         run: flutter build macos --release --no-tree-shake-icons
+
+      # -----------------------------------------------------------------------
+      # Code-sign and notarize when Developer ID certificate secrets are set.
+      # This is required for the app to run on Macs without security warnings.
+      # If secrets are absent the step is skipped and the unsigned build ships.
+      # -----------------------------------------------------------------------
+      - name: Sign and notarize macOS app
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          NOTARIZE_APPLE_ID: ${{ secrets.MACOS_NOTARIZE_APPLE_ID }}
+          NOTARIZE_PASSWORD: ${{ secrets.MACOS_NOTARIZE_PASSWORD }}
+          NOTARIZE_TEAM_ID: ${{ secrets.MACOS_NOTARIZE_TEAM_ID }}
+        run: |
+          # Skip when signing secrets are not configured
+          if [ -z "$CERTIFICATE_BASE64" ] || [ -z "$NOTARIZE_APPLE_ID" ]; then
+            echo "macOS signing secrets not set — shipping unsigned build."
+            exit 0
+          fi
+          set -euo pipefail
+
+          # Import the signing certificate into a temporary keychain
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+          CERT_PATH="$RUNNER_TEMP/certificate.p12"
+          echo "$CERTIFICATE_BASE64" | base64 --decode > "$CERT_PATH"
+
+          security create-keychain -p "" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -k "$KEYCHAIN_PATH" \
+            -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "" "$KEYCHAIN_PATH"
+
+          APP=$(find build/macos/Build/Products/Release \
+            -maxdepth 1 -name "*.app" | head -1)
+          [ -n "$APP" ] || { echo "ERROR: .app bundle not found"; exit 1; }
+
+          # Deep-sign the bundle (entitlements file is optional; adjust path if needed)
+          ENTITLEMENTS=""
+          [ -f "macos/Runner/Release.entitlements" ] && \
+            ENTITLEMENTS="--entitlements macos/Runner/Release.entitlements"
+          codesign --deep --force --options runtime \
+            --sign "Developer ID Application" \
+            $ENTITLEMENTS "$APP"
+
+          # Notarize
+          ditto -c -k --keepParent "$APP" /tmp/notarize.zip
+          xcrun notarytool submit /tmp/notarize.zip \
+            --apple-id "$NOTARIZE_APPLE_ID" \
+            --password "$NOTARIZE_PASSWORD" \
+            --team-id "$NOTARIZE_TEAM_ID" \
+            --wait
+          xcrun stapler staple "$APP"
+
+          # Cleanup
+          security delete-keychain "$KEYCHAIN_PATH"
+          rm -f "$CERT_PATH" /tmp/notarize.zip
+
       - name: Package macOS build
         run: |
-          APP=$(find build/macos/Build/Products/Release -maxdepth 1 -name "*.app" | head -1)
-          [ -n "$APP" ] || { echo "ERROR: .app not found"; exit 1; }
-          ditto -c -k --keepParent "$APP" ${{ env.OUTPUT_NAME }}-macOS.zip
+          set -euo pipefail
+          APP=$(find build/macos/Build/Products/Release \
+            -maxdepth 1 -name "*.app" | head -1)
+          [ -n "$APP" ] || { echo "ERROR: .app bundle not found"; exit 1; }
+          ditto -c -k --keepParent "$APP" \
+            "${{ env.OUTPUT_NAME }}-macOS.zip"
+
       - uses: actions/upload-artifact@834a14441a05b3c3c1e5c392419730f5761895a2 # v4
         with:
           name: macos-x64
           path: ${{ env.OUTPUT_NAME }}-macOS.zip
           retention-days: 7
 
+  # =========================================================================
+  # 5. Android (signed APK + AAB)
+  # =========================================================================
   build-android:
     name: Build Android
     needs: test-and-analyze
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
       - uses: actions/setup-java@a407338b2512f4b4e3346914b4e6a3605e54d896 # v4
         with:
           distribution: 'temurin'
           java-version: '17'
+
       - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
+      # -----------------------------------------------------------------------
+      # Decode the keystore when secrets are present and write a key.properties
+      # file for Gradle to pick up.  Omitting secrets produces an unsigned
+      # debug-signed release — functional but not suitable for Play Store.
+      # -----------------------------------------------------------------------
+      - name: Configure Android signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "Android keystore secrets not set — building with debug signing."
+            exit 0
+          fi
+          set -euo pipefail
+          KEYSTORE_PATH="$GITHUB_WORKSPACE/android/app/release.keystore"
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+
+          cat > "$GITHUB_WORKSPACE/android/key.properties" <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=release.keystore
+          EOF
+
       - name: Install dependencies
         run: flutter pub get
-      - name: Build APK and App Bundle
-        run: |
-          flutter build apk --release --no-tree-shake-icons
-          flutter build appbundle --release --no-tree-shake-icons
-      - name: Package Android builds
+
+      - name: Build APK
+        run: flutter build apk --release --no-tree-shake-icons
+
+      - name: Build App Bundle
+        run: flutter build appbundle --release --no-tree-shake-icons
+
+      - name: Collect Android artifacts
         run: |
           mkdir -p android-builds
-          cp build/app/outputs/flutter-apk/app-release.apk android-builds/${{ env.OUTPUT_NAME }}.apk
-          cp build/app/outputs/bundle/release/app-release.aab android-builds/${{ env.OUTPUT_NAME }}.aab
+          cp build/app/outputs/flutter-apk/app-release.apk \
+             android-builds/${{ env.OUTPUT_NAME }}.apk
+          cp build/app/outputs/bundle/release/app-release.aab \
+             android-builds/${{ env.OUTPUT_NAME }}.aab
+
       - uses: actions/upload-artifact@834a14441a05b3c3c1e5c392419730f5761895a2 # v4
         with:
           name: android-builds
           path: android-builds/
           retention-days: 7
 
+  # =========================================================================
+  # 6. Publish GitHub Release
+  # =========================================================================
   release:
     name: Publish Release
     needs: [build-windows, build-linux, build-macos, build-android]
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write   # Required to create releases and upload assets
+
     steps:
-      - name: Download all artifacts
+      - name: Download all build artifacts
         uses: actions/download-artifact@b01b63200a39f60a927a72b2d07e69a033e085c8 # v4
         with:
           path: artifacts
-      - name: List artifacts
+
+      - name: List downloaded artifacts
         run: find artifacts -type f | sort
+
+      # Verify that every expected platform produced at least one file
+      - name: Verify artifact completeness
+        run: |
+          set -euo pipefail
+          missing=0
+          for dir in windows-x64 linux-x64 macos-x64 android-builds; do
+            count=$(find "artifacts/$dir" -type f 2>/dev/null | wc -l)
+            if [ "$count" -eq 0 ]; then
+              echo "ERROR: No files found in artifacts/$dir"
+              missing=1
+            else
+              echo "OK: artifacts/$dir ($count file(s))"
+            fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
+
+      # Generate a SHA-256 manifest so users can verify downloads
+      - name: Generate SHA-256 checksums
+        run: |
+          cd artifacts
+          find . -type f \
+            ! -name "*.sha256" \
+            ! -path "*/coverage-report/*" \
+          | sort | xargs sha256sum > ../SHA256SUMS.txt
+          cat ../SHA256SUMS.txt
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@b2b5455938b8158564cf965e0a0a552e463cf61d # v2
         env:
@@ -187,8 +411,10 @@ jobs:
           name: ${{ inputs.release_name }}
           body: ${{ inputs.release_notes }}
           prerelease: ${{ inputs.is_prerelease }}
+          fail_on_unmatched_files: true
           files: |
             artifacts/windows-x64/*.zip
             artifacts/linux-x64/*
-            artifacts/android-builds/*
             artifacts/macos-x64/*.zip
+            artifacts/android-builds/*
+            SHA256SUMS.txt
