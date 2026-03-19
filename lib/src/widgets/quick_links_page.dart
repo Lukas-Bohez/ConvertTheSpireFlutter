@@ -1,7 +1,10 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/search_result.dart';
+import '../services/folder_access_service.dart';
 import 'quick_download_card.dart';
 import 'quick_links_service.dart';
 
@@ -32,6 +35,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
   String? _ytDlpVersion;
   bool _ytDlpChecking = true;
   bool _ytDlpFailed = false;
+  bool _isFolderWritable = true;
 
   @override
   void initState() {
@@ -39,6 +43,34 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
 
     _loadLinks();
     _checkYtDlpVersion();
+    _validateDownloadFolder();
+  }
+
+  @override
+  void didUpdateWidget(covariant QuickLinksPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.downloadFolder != widget.downloadFolder) {
+      _validateDownloadFolder();
+    }
+  }
+
+  Future<void> _validateDownloadFolder() async {
+    final ok = await FolderAccessService.ensureSafeFolderIsWritable(
+      context,
+      widget.downloadFolder,
+    );
+    if (mounted) {
+      setState(() => _isFolderWritable = ok);
+    }
+  }
+
+  String _formatFolderLabel(String path) {
+    final p = path.trim();
+    if (p.isEmpty) return 'Not set';
+    const maxLength = 44;
+    if (p.length <= maxLength) return p;
+    const segment = 18;
+    return '${p.substring(0, segment)}...${p.substring(p.length - segment)}';
   }
 
   Future<void> _loadLinks() async {
@@ -136,16 +168,15 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
 
     Widget buildDownloadSection() {
       final hasFolder = (widget.downloadFolder?.trim().isNotEmpty ?? false);
-      final folderLabel = widget.downloadFolder?.trim().isNotEmpty == true
-          ? widget.downloadFolder!
-          : 'Not set';
+      final folderLabel =
+          _formatFolderLabel(widget.downloadFolder ?? 'Not set');
 
       final showAndroidReminder = Platform.isAndroid && !hasFolder;
 
       return Padding(
         padding: EdgeInsets.symmetric(
           horizontal: width < 600 ? 20 : 56,
-          vertical: 16,
+          vertical: Platform.isWindows ? 12 : 16,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -176,6 +207,27 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                   ),
                 ),
               ),
+            if (!_isFolderWritable)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(top: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .errorContainer
+                      .withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  'Download folder became unreachable, please pick it again.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
+                ),
+              ),
             if (widget.onPickDownloadFolder != null) ...[
               Container(
                 padding:
@@ -201,6 +253,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                     const SizedBox(width: 12),
                     ElevatedButton(
                       onPressed: () async {
+                        await HapticFeedback.selectionClick();
                         await widget.onPickDownloadFolder?.call();
                       },
                       child: Text(hasFolder ? 'Change' : 'Choose'),
@@ -262,6 +315,34 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
 
   Widget _buildLinksGrid(int crossAxisCount, List<QuickLink> visibleLinks) {
     final cs = Theme.of(context).colorScheme;
+
+    if (_links.isEmpty && _ytDlpChecking) {
+      return SliverPadding(
+        padding: const EdgeInsets.all(16),
+        sliver: SliverGrid(
+          delegate: SliverChildBuilderDelegate(
+            (ctx, i) => AnimatedOpacity(
+              duration: const Duration(milliseconds: 500),
+              opacity: 0.7,
+              curve: Curves.easeInOut,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            childCount: crossAxisCount * 2,
+          ),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 0.78,
+          ),
+        ),
+      );
+    }
 
     if (_links.isEmpty) {
       return SliverFillRemaining(

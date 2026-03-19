@@ -123,7 +123,9 @@ class DownloadService {
     required String format,
     required String outputDir,
     required String? ffmpegPath,
-    required void Function(int pct, DownloadStatus status, {String? speed, String? eta}) onProgress,
+    required void Function(int pct, DownloadStatus status,
+            {String? speed, String? eta})
+        onProgress,
     required DownloadToken token,
     String? ytDlpPath,
     String preferredVideoQuality = '720p',
@@ -275,7 +277,9 @@ class DownloadService {
     required String format,
     required String outputDir,
     required String? ffmpegPath,
-    required void Function(int pct, DownloadStatus status, {String? speed, String? eta}) onProgress,
+    required void Function(int pct, DownloadStatus status,
+            {String? speed, String? eta})
+        onProgress,
     required DownloadToken token,
     String? ytDlpPath,
     String preferredVideoQuality = '720p',
@@ -435,8 +439,8 @@ class DownloadService {
       final bool isHdMerge = separateAudioStream != null;
       if (isHdMerge) {
         // Download video (0-60%) then audio (60-80%)
-        await _downloadStream(sourceStream, tempFilePath, token,
-            (pct, status, {String? speed, String? eta}) {
+        await _downloadStream(sourceStream, tempFilePath, token, (pct, status,
+            {String? speed, String? eta}) {
           final adjustedPct = (pct * 0.6).toInt();
           onProgress(adjustedPct, status, speed: speed, eta: eta);
         }, videoId: video.id);
@@ -448,12 +452,11 @@ class DownloadService {
         }, videoId: video.id);
       } else {
         // Single stream download (0-90%)
-        await _downloadStream(sourceStream, tempFilePath, token,
-            (pct, status, {String? speed, String? eta}) {
+        await _downloadStream(sourceStream, tempFilePath, token, (pct, status,
+            {String? speed, String? eta}) {
           final adjustedPct = (pct * 0.9).toInt();
           onProgress(adjustedPct, status, speed: speed, eta: eta);
-        },
-            videoId: video.id);
+        }, videoId: video.id);
       }
 
       if (token.cancelled) {
@@ -555,7 +558,9 @@ class DownloadService {
     required String outputDir,
     required String? ffmpegPath,
     required String ytDlpPath,
-    required void Function(int pct, DownloadStatus status, {String? speed, String? eta}) onProgress,
+    required void Function(int pct, DownloadStatus status,
+            {String? speed, String? eta})
+        onProgress,
     required DownloadToken token,
     required String videoQuality,
     required int audioBitrate,
@@ -776,7 +781,8 @@ class DownloadService {
     StreamInfo stream,
     String outputPath,
     DownloadToken token,
-    void Function(int pct, DownloadStatus status, {String? speed, String? eta}) onProgress, {
+    void Function(int pct, DownloadStatus status, {String? speed, String? eta})
+        onProgress, {
     dynamic videoId,
   }) async {
     final total = stream.size.totalBytes;
@@ -925,7 +931,8 @@ class DownloadService {
     StreamInfo stream,
     String outputPath,
     DownloadToken token,
-    void Function(int pct, DownloadStatus status, {String? speed, String? eta}) onProgress,
+    void Function(int pct, DownloadStatus status, {String? speed, String? eta})
+        onProgress,
   ) async {
     final file = File(outputPath);
     final sink = file.openWrite();
@@ -976,7 +983,8 @@ class DownloadService {
     StreamInfo originalStream,
     String outputPath,
     DownloadToken token,
-    void Function(int pct, DownloadStatus status, {String? speed, String? eta}) onProgress, {
+    void Function(int pct, DownloadStatus status, {String? speed, String? eta})
+        onProgress, {
     dynamic videoId,
   }) async {
     final total = originalStream.size.totalBytes;
@@ -1321,6 +1329,50 @@ class DownloadService {
 
   bool _isSafOutput(String outputDir) {
     return !kIsWeb && Platform.isAndroid && outputDir.startsWith('content://');
+  }
+
+  /// Best-effort free-space check for the folder drive.
+  ///
+  /// Returns true when we can't determine space (to avoid blocking non-critical downloads).
+  Future<bool> hasEnoughDiskSpace(String outputDir,
+      {int requiredBytes = 200 * 1024 * 1024}) async {
+    if (kIsWeb) return true;
+    try {
+      if (Platform.isAndroid || Platform.isIOS) {
+        // Android/iOS does not support easy dart API for free space; assume true.
+        return true;
+      }
+      if (Platform.isWindows) {
+        final drive = outputDir.split(RegExp(r'[\\/]'))[0];
+        final result = await Process.run('wmic', [
+          'logicaldisk',
+          'where',
+          'Caption=${drive}',
+          'get',
+          'FreeSpace',
+          '/value'
+        ]);
+        final out = (result.stdout as String).trim();
+        final match = RegExp(r'FreeSpace=(\d+)').firstMatch(out);
+        if (match != null) {
+          final free = int.tryParse(match.group(1) ?? '0') ?? 0;
+          return free > requiredBytes;
+        }
+      } else {
+        final result = await Process.run('df', ['-k', outputDir]);
+        final lines = (result.stdout as String).split('\n');
+        if (lines.length > 1) {
+          final parts = lines[1].trim().split(RegExp('\s+'));
+          if (parts.length > 3) {
+            final freeKb = int.tryParse(parts[3]) ?? 0;
+            return (freeKb * 1024) > requiredBytes;
+          }
+        }
+      }
+    } catch (_) {
+      // If not able to determine, opt to continue and avoid blocking.
+    }
+    return true;
   }
 
   static String _mimeForFormat(String fmt) {

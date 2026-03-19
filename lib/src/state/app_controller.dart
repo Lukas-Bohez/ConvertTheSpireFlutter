@@ -143,6 +143,9 @@ class AppController extends ChangeNotifier {
       _ensureFfmpegOnBoot();
       _ensureYtDlpOnBoot();
     }
+
+    // Start periodic watched playlist checks while app is alive.
+    watchedPlaylistService.startAutoCheck(interval: const Duration(hours: 4));
   }
 
   /// Programmatic tab switch. Persists preference and notifies listeners.
@@ -236,6 +239,31 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  /// Refreshes core app state and triggers watched playlist checks.
+  Future<void> refreshAll() async {
+    if (_settings == null) return;
+
+    try {
+      final loaded = await settingsStore.load();
+      _settings = loaded;
+    } catch (e, st) {
+      logs.add('refreshAll: failed to reload settings: $e');
+      if (kDebugMode) debugPrint('refreshAll settings reload failed: $e\n$st');
+    }
+
+    try {
+      final newTracks = await watchedPlaylistService.checkAllPlaylists();
+      if (newTracks > 0) {
+        await notificationService.showActiveDownloadsBanner(newTracks);
+      }
+    } catch (e, st) {
+      logs.add('refreshAll: watched playlist check failed: $e');
+      if (kDebugMode) debugPrint('refreshAll playlist check failed: $e\n$st');
+    }
+
+    notifyListeners();
+  }
+
   /// Called by the app when the lifecycle state changes. Used to adjust
   /// Android notification behavior (allow dismissal when app is backgrounded).
   void handleAppLifecycleState(AppLifecycleState state) {
@@ -305,8 +333,7 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  void addToQueue(PreviewItem item, String format,
-      {String? videoQuality}) {
+  void addToQueue(PreviewItem item, String format, {String? videoQuality}) {
     if (queue.any((q) => q.url == item.url && q.format == format)) {
       return;
     }
@@ -365,6 +392,20 @@ class AppController extends ChangeNotifier {
     final token = DownloadToken();
     final key = '${item.url}|${item.format}';
     _tokens[key] = token;
+
+    // Preflight disk space check (200MB buffer)
+    final outputDir = settings.downloadDir.trim();
+    final hasSpace = await downloadService.hasEnoughDiskSpace(outputDir,
+        requiredBytes: 200 * 1024 * 1024);
+    if (!hasSpace) {
+      final updated = item.copyWith(
+          status: DownloadStatus.failed,
+          error: 'Insufficient disk space (at least 200MB required).');
+      _updateQueue(item, updated);
+      _tokens.remove(key);
+      return;
+    }
+
     _updateQueue(
         item,
         item.copyWith(
@@ -409,7 +450,8 @@ class AppController extends ChangeNotifier {
             ytDlpPath: settings.ytDlpPath,
             sponsorBlockEnabled: settings.sponsorBlockEnabled,
             onProgress: (pct, status, {String? speed, String? eta}) {
-              final updated = item.copyWith(progress: pct, status: status, speed: speed, eta: eta);
+              final updated = item.copyWith(
+                  progress: pct, status: status, speed: speed, eta: eta);
               _updateQueue(item, updated);
             },
             preferredVideoQuality:
@@ -427,7 +469,8 @@ class AppController extends ChangeNotifier {
             ytDlpPath: settings.ytDlpPath,
             sponsorBlockEnabled: settings.sponsorBlockEnabled,
             onProgress: (pct, status, {String? speed, String? eta}) {
-              final updated = item.copyWith(progress: pct, status: status, speed: speed, eta: eta);
+              final updated = item.copyWith(
+                  progress: pct, status: status, speed: speed, eta: eta);
               _updateQueue(item, updated);
             },
             preferredVideoQuality: settings.preferredVideoQuality,
@@ -455,6 +498,24 @@ class AppController extends ChangeNotifier {
         return; // success – exit retry loop
       } catch (e) {
         final msg = _cleanError(e);
+
+        // Handle transient network failures explicitly by keeping item queued
+        // in order to retry later (instead of immediate permanent failure).
+        final isNetworkError = e is SocketException ||
+            e is TimeoutException ||
+            msg.toLowerCase().contains('socket') ||
+            msg.toLowerCase().contains('timed out') ||
+            msg.toLowerCase().contains('network');
+
+        if (isNetworkError) {
+          logs.add('Network issue during download: $msg. Will retry later.');
+          final updated = item.copyWith(
+              status: DownloadStatus.queued, error: 'Network error: $msg');
+          _updateQueue(item, updated);
+          _tokens.remove(key);
+          return;
+        }
+
         // Don't retry YouTube permanent errors (bot detection, unavailable, etc.)
         final isRetryable = !_isYouTubePermanentError(msg) &&
             !token.cancelled &&
@@ -496,9 +557,8 @@ class AppController extends ChangeNotifier {
         // Show ongoing notification so OS keeps process alive
         await notificationService.showActiveDownloadsBanner(pending.length);
 
-        final workers = Platform.isAndroid
-            ? 1
-            : (_settings?.maxWorkers ?? 3).clamp(1, 10);
+        final workers =
+            Platform.isAndroid ? 1 : (_settings?.maxWorkers ?? 3).clamp(1, 10);
 
         Future<void> worker() async {
           while (true) {
