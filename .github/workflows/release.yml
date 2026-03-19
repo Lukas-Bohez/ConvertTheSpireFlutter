@@ -63,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
-      - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
@@ -95,7 +95,7 @@ jobs:
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
-      - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
@@ -144,7 +144,7 @@ jobs:
             libgtk-3-dev liblzma-dev libstdc++-12-dev \
             fuse libfuse2
 
-      - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
@@ -200,7 +200,7 @@ jobs:
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
-      - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
@@ -301,7 +301,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - uses: subosito/flutter-action@27812cb5b34351b2a2e411c0f9e2e923375f3c02 # v2
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
