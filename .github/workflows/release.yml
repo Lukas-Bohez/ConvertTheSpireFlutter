@@ -306,7 +306,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: ${{ env.OUTPUT_NAME }}.apk
+          path: ${{ env.OUTPUT_NAME }}-android.apk
           retention-days: 30
 
   build-macos:
@@ -366,8 +366,8 @@ jobs:
           name: ${{ inputs.release_name || inputs.release_tag || format('Build {0}', github.run_number) }}
           generate_release_notes: true
           files: |
-            artifacts/windows-x64/${{ env.OUTPUT_NAME }}.zip
-            artifacts/linux-x64/${{ env.OUTPUT_NAME }}.AppImage
-            artifacts/linux-x64/linux.zip
-            artifacts/android-apk/${{ env.OUTPUT_NAME }}.apk
+            artifacts/windows-x64/${{ env.OUTPUT_NAME }}-windows.zip
+            artifacts/linux-x64/${{ env.OUTPUT_NAME }}-linux.AppImage
+            artifacts/linux-x64/${{ env.OUTPUT_NAME }}-linux.zip
+            artifacts/android-apk/${{ env.OUTPUT_NAME }}-android.apk
             artifacts/macos-x64/${{ env.OUTPUT_NAME }}-macOS.zip
