@@ -210,11 +210,23 @@ class _MyAppState extends State<MyApp>
       // WatchedPlaylistService needs a controller reference for callbacks,
       // so we use a late variable with a forward reference.
       late final AppController controller;
-      final watchedPlaylistService = WatchedPlaylistService(
+      late final WatchedPlaylistService watchedPlaylistService;
+      watchedPlaylistService = WatchedPlaylistService(
         fetchPlaylistTracks: (url) =>
             playlistService.getYouTubePlaylistTracks(url),
-        onNewTrack: (track) async {
-          controller.addSearchResultToQueue(track);
+        onNewTrack: (playlistUrl, track) async {
+          final defaultFormat =
+              controller.settings?.defaultAudioFormat ?? 'mp3';
+          final folderForFormat = await watchedPlaylistService
+              .getFolderForPlaylist(playlistUrl, format: defaultFormat);
+          final folder = folderForFormat ??
+              await watchedPlaylistService.getFolderForPlaylist(playlistUrl);
+
+          controller.addSearchResultToQueue(
+            track,
+            format: defaultFormat,
+            outputFolder: folder?.trim().isNotEmpty == true ? folder : null,
+          );
         },
         logs: logs,
       );

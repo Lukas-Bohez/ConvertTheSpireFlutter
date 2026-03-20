@@ -1,5 +1,9 @@
 class AppSettings {
   final String downloadDir;
+  final String? downloadDirMp3;
+  final String? downloadDirM4a;
+  final String? downloadDirMp4;
+  final bool createFormatSubfolders;
   final int maxWorkers;
   final bool showNotifications;
   final int previewMaxEntries;
@@ -47,6 +51,10 @@ class AppSettings {
     required this.convertMaxAgeHours,
     this.themeMode = 'system',
     this.minimizeToTrayOnClose = false,
+    this.downloadDirMp3,
+    this.downloadDirM4a,
+    this.downloadDirMp4,
+    this.createFormatSubfolders = true,
     this.defaultAudioFormat = 'mp3',
     this.defaultBitrate = 0,
     this.minimumBitrate = 0,
@@ -75,6 +83,10 @@ class AppSettings {
       convertMaxAgeHours: 2,
       themeMode: 'system',
       defaultAudioFormat: 'mp3',
+      downloadDirMp3: null,
+      downloadDirM4a: null,
+      downloadDirMp4: null,
+      createFormatSubfolders: true,
       defaultBitrate: 0,
       minimumBitrate: 0,
       namingTemplate: '{artist}/{title}',
@@ -102,6 +114,10 @@ class AppSettings {
     int? convertCleanupMinutes,
     int? convertMaxAgeHours,
     String? themeMode,
+    String? downloadDirMp3,
+    String? downloadDirM4a,
+    String? downloadDirMp4,
+    bool? createFormatSubfolders,
     String? defaultAudioFormat,
     int? defaultBitrate,
     int? minimumBitrate,
@@ -130,6 +146,11 @@ class AppSettings {
           convertCleanupMinutes ?? this.convertCleanupMinutes,
       convertMaxAgeHours: convertMaxAgeHours ?? this.convertMaxAgeHours,
       themeMode: themeMode ?? this.themeMode,
+      downloadDirMp3: downloadDirMp3 ?? this.downloadDirMp3,
+      downloadDirM4a: downloadDirM4a ?? this.downloadDirM4a,
+      downloadDirMp4: downloadDirMp4 ?? this.downloadDirMp4,
+      createFormatSubfolders:
+          createFormatSubfolders ?? this.createFormatSubfolders,
       minimizeToTrayOnClose:
           minimizeToTrayOnClose ?? this.minimizeToTrayOnClose,
       defaultAudioFormat: defaultAudioFormat ?? this.defaultAudioFormat,
@@ -178,6 +199,11 @@ class AppSettings {
       ytDlpPath: (json['yt_dlp_path'] as String?)?.trim(),
       sponsorBlockEnabled: json['sponsor_block_enabled'] as bool? ?? false,
       minimizeToTrayOnClose: json['minimize_to_tray_on_close'] as bool? ?? false,
+      downloadDirMp3: (json['download_dir_mp3'] as String?)?.trim(),
+      downloadDirM4a: (json['download_dir_m4a'] as String?)?.trim(),
+      downloadDirMp4: (json['download_dir_mp4'] as String?)?.trim(),
+      createFormatSubfolders:
+          json['create_format_subfolders'] as bool? ?? true,
     );
   }
 
@@ -207,6 +233,10 @@ class AppSettings {
       'yt_dlp_path': ytDlpPath,
       'sponsor_block_enabled': sponsorBlockEnabled,
       'minimize_to_tray_on_close': minimizeToTrayOnClose,
+      'download_dir_mp3': downloadDirMp3,
+      'download_dir_m4a': downloadDirM4a,
+      'download_dir_mp4': downloadDirMp4,
+      'create_format_subfolders': createFormatSubfolders,
     };
   }
 }

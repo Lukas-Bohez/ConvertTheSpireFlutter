@@ -88,6 +88,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   static final Uri _websiteUri = Uri.parse('https://quizthespire.com/');
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _downloadDirController = TextEditingController();
+  final TextEditingController _downloadDirMp3Controller = TextEditingController();
+  final TextEditingController _downloadDirM4aController = TextEditingController();
+  final TextEditingController _downloadDirMp4Controller = TextEditingController();
   final TextEditingController _workersController = TextEditingController();
   final TextEditingController _retryCountController = TextEditingController();
   final TextEditingController _retryBackoffController = TextEditingController();
@@ -101,6 +104,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   String _downloadFormat = 'mp3';
   String _videoQuality = '1080p';
   int _audioBitrate = 320;
+  bool _useFormatSubfolders = true;
   bool _settingsInitialized = false;
   bool _minimizeToTrayOnClose = false;
   bool _sponsorBlockEnabled = false;
@@ -221,6 +225,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _playlistTabController.dispose();
     _urlController.dispose();
     _downloadDirController.dispose();
+    _downloadDirMp3Controller.dispose();
+    _downloadDirM4aController.dispose();
+    _downloadDirMp4Controller.dispose();
     _workersController.dispose();
     _retryCountController.dispose();
     _retryBackoffController.dispose();
@@ -613,6 +620,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _downloadFormat = settings.defaultAudioFormat;
       _videoQuality = settings.preferredVideoQuality;
       _audioBitrate = settings.preferredAudioBitrate;
+      _useFormatSubfolders = settings.createFormatSubfolders;
+      _downloadDirMp3Controller.text = settings.downloadDirMp3 ?? '';
+      _downloadDirM4aController.text = settings.downloadDirM4a ?? '';
+      _downloadDirMp4Controller.text = settings.downloadDirMp4 ?? '';
       _sponsorBlockEnabled = settings.sponsorBlockEnabled;
       _minimizeToTrayOnClose = settings.minimizeToTrayOnClose;
       TrayService.shouldMinimiseToTrayOnClose = _minimizeToTrayOnClose;
@@ -739,6 +750,41 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         .saveSettings(settings.copyWith(downloadDir: result));
     if (mounted) {
       Snack.show(context, 'Download folder updated', level: SnackLevel.info);
+    }
+  }
+
+  Future<void> _pickFormatDownloadFolder(
+      AppSettings settings, String format) async {
+    if (_isAndroid) {
+      // Not supported to pick per-format SAF folder in this version.
+      Snack.show(context,
+          'Android per-format folder selection is not supported in this mode.',
+          level: SnackLevel.warning);
+      return;
+    }
+
+    final result = await FilePicker.platform.getDirectoryPath();
+    if (result == null || !mounted) return;
+
+    setState(() {
+      if (format == 'mp3') {
+        _downloadDirMp3Controller.text = result;
+      } else if (format == 'm4a') {
+        _downloadDirM4aController.text = result;
+      } else if (format == 'mp4') {
+        _downloadDirMp4Controller.text = result;
+      }
+    });
+
+    await widget.controller.saveSettings(
+      settings.copyWith(
+        downloadDirMp3: _downloadDirMp3Controller.text.trim(),
+        downloadDirM4a: _downloadDirM4aController.text.trim(),
+        downloadDirMp4: _downloadDirMp4Controller.text.trim(),
+      ),
+    );
+    if (mounted) {
+      Snack.show(context, 'Format folder updated', level: SnackLevel.info);
     }
   }
 
@@ -2487,6 +2533,61 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 12),
+                      CheckboxListTile(
+                        title: const Text('Use per-format sub-folders'),
+                        subtitle: const Text(
+                            'When disabled, the selected output folder is used directly (mp3/m4a/mp4 subfolders are skipped).'),
+                        value: _useFormatSubfolders,
+                        onChanged: (value) async {
+                          if (value == null) return;
+                          setState(() => _useFormatSubfolders = value);
+                          await widget.controller.saveSettings(
+                              settings.copyWith(createFormatSubfolders: value));
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _downloadDirMp3Controller,
+                        decoration: InputDecoration(
+                          labelText: 'MP3 folder (optional)',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.folder),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.folder_open),
+                            onPressed: () => _pickFormatDownloadFolder(settings, 'mp3'),
+                          ),
+                        ),
+                        readOnly: true,
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _downloadDirM4aController,
+                        decoration: InputDecoration(
+                          labelText: 'M4A folder (optional)',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.folder),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.folder_open),
+                            onPressed: () => _pickFormatDownloadFolder(settings, 'm4a'),
+                          ),
+                        ),
+                        readOnly: true,
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _downloadDirMp4Controller,
+                        decoration: InputDecoration(
+                          labelText: 'MP4 folder (optional)',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.folder),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.folder_open),
+                            onPressed: () => _pickFormatDownloadFolder(settings, 'mp4'),
+                          ),
+                        ),
+                        readOnly: true,
+                      ),
                   ],
                   const SizedBox(height: 16),
                   TextField(
@@ -3214,6 +3315,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       defaultAudioFormat: _downloadFormat,
       previewExpandPlaylist: _expandPlaylist,
       minimizeToTrayOnClose: _minimizeToTrayOnClose,
+      downloadDirMp3: _downloadDirMp3Controller.text.trim().isEmpty
+          ? null
+          : _downloadDirMp3Controller.text.trim(),
+      downloadDirM4a: _downloadDirM4aController.text.trim().isEmpty
+          ? null
+          : _downloadDirM4aController.text.trim(),
+      downloadDirMp4: _downloadDirMp4Controller.text.trim().isEmpty
+          ? null
+          : _downloadDirMp4Controller.text.trim(),
+      createFormatSubfolders: _useFormatSubfolders,
       ffmpegPath: ffmpegText.isEmpty ? null : ffmpegText,
       ytDlpPath: ytDlpText.isEmpty ? null : ytDlpText,
     );

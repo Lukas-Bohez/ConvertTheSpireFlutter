@@ -20,6 +20,7 @@ class QueueItem {
   final int progress;
   final DownloadStatus status;
   final String? outputPath;
+  final String? outputFolder;
   final String? error;
   final String? speed;
   final String? eta;
@@ -36,6 +37,7 @@ class QueueItem {
     required this.progress,
     required this.status,
     required this.outputPath,
+    this.outputFolder,
     required this.error,
     this.videoQuality,
     this.speed,
@@ -49,6 +51,7 @@ class QueueItem {
     int? progress,
     DownloadStatus? status,
     Object? outputPath = _unset,
+    Object? outputFolder = _unset,
     Object? error = _unset,
     String? videoQuality,
     String? speed,
@@ -64,6 +67,7 @@ class QueueItem {
       status: status ?? this.status,
       outputPath:
           outputPath == _unset ? this.outputPath : outputPath as String?,
+      outputFolder: outputFolder == _unset ? this.outputFolder : outputFolder as String?,
       error: error == _unset ? this.error : error as String?,
       videoQuality: videoQuality ?? this.videoQuality,
       speed: speed ?? this.speed,
@@ -87,6 +91,7 @@ class QueueItem {
         'status': status.name,
         'progress': progress,
         'outputPath': outputPath,
+        'outputFolder': outputFolder,
         'error': error,
         'videoQuality': videoQuality,
         'speed': speed,
@@ -110,6 +115,7 @@ class QueueItem {
           );
         }(),
         outputPath: json['outputPath'] as String?,
+        outputFolder: json['outputFolder'] as String?,
         error: null,
         videoQuality: json['videoQuality'] as String?,
         speed: json['speed'] as String?,

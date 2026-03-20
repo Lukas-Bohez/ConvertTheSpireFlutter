@@ -131,6 +131,7 @@ class DownloadService {
     String preferredVideoQuality = '720p',
     int preferredAudioBitrate = 192,
     bool sponsorBlockEnabled = false,
+    bool createFormatSubfolders = true,
     String? cookiesFile,
     String? cookiesFromBrowser,
   }) async {
@@ -165,7 +166,9 @@ class DownloadService {
 
     final outputFolder = (isSafOutput || useMediaStoreOnly)
         ? await _resolveTempFolder()
-        : await _resolveOutputFolder(outputDir, formatLower);
+        : (createFormatSubfolders
+            ? await _resolveOutputFolder(outputDir, formatLower)
+            : Directory(outputDir));
     await outputFolder.create(recursive: true);
 
     final outputPath =
@@ -285,6 +288,7 @@ class DownloadService {
     String preferredVideoQuality = '720p',
     int preferredAudioBitrate = 192,
     bool sponsorBlockEnabled = false,
+    bool createFormatSubfolders = true,
   }) async {
     if (kIsWeb) {
       throw Exception(
@@ -369,7 +373,9 @@ class DownloadService {
 
     final outputFolder = (isSafOutput || useMediaStoreOnly)
         ? await _resolveTempFolder()
-        : await _resolveOutputFolder(outputDir, formatLower);
+        : (createFormatSubfolders
+            ? await _resolveOutputFolder(outputDir, formatLower)
+            : Directory(outputDir));
     await outputFolder.create(recursive: true);
 
     // Track all temp files so we can clean up on success OR failure

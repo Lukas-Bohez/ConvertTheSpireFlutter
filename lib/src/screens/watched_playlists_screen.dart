@@ -5,6 +5,26 @@ import '../widgets/empty_state.dart';
 
 import '../services/watched_playlist_service.dart';
 
+class PlaylistFolderConfig {
+  final String? defaultFolder;
+  final String? mp3Folder;
+  final String? m4aFolder;
+  final String? mp4Folder;
+
+  const PlaylistFolderConfig({
+    this.defaultFolder,
+    this.mp3Folder,
+    this.m4aFolder,
+    this.mp4Folder,
+  });
+
+  bool get hasAny =>
+      (defaultFolder?.trim().isNotEmpty == true) ||
+      (mp3Folder?.trim().isNotEmpty == true) ||
+      (m4aFolder?.trim().isNotEmpty == true) ||
+      (mp4Folder?.trim().isNotEmpty == true);
+}
+
 /// Screen for managing watched playlists that auto-download new tracks.
 class WatchedPlaylistsScreen extends StatefulWidget {
   final WatchedPlaylistService watchedService;
@@ -19,7 +39,7 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
     with AutomaticKeepAliveClientMixin {
   final _urlController = TextEditingController();
   List<String> _urls = [];
-  final Map<String, String?> _playlistFolders = {};
+  final Map<String, PlaylistFolderConfig> _playlistFolders = {};
   bool _checking = false;
 
   @override
@@ -39,9 +59,18 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
   }
 
   Future<void> _loadPlaylistFolders(List<String> urls) async {
-    final folders = <String, String?>{};
+    final folders = <String, PlaylistFolderConfig>{};
     for (final url in urls) {
-      folders[url] = await widget.watchedService.getFolderForPlaylist(url);
+      final defaultFolder = await widget.watchedService.getFolderForPlaylist(url);
+      final mp3Folder = await widget.watchedService.getFolderForPlaylist(url, format: 'mp3');
+      final m4aFolder = await widget.watchedService.getFolderForPlaylist(url, format: 'm4a');
+      final mp4Folder = await widget.watchedService.getFolderForPlaylist(url, format: 'mp4');
+      folders[url] = PlaylistFolderConfig(
+        defaultFolder: defaultFolder,
+        mp3Folder: mp3Folder,
+        m4aFolder: m4aFolder,
+        mp4Folder: mp4Folder,
+      );
     }
     if (mounted) {
       setState(() => _playlistFolders
@@ -89,13 +118,57 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
   }
 
   Future<void> _pickPlaylistFolder(String url) async {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Set playlist folder'),
+        children: [
+          SimpleDialogOption(
+            child: const Text('All formats (default)'),
+            onPressed: () => Navigator.pop(ctx, 'default'),
+          ),
+          SimpleDialogOption(
+            child: const Text('MP3 folder'),
+            onPressed: () => Navigator.pop(ctx, 'mp3'),
+          ),
+          SimpleDialogOption(
+            child: const Text('M4A folder'),
+            onPressed: () => Navigator.pop(ctx, 'm4a'),
+          ),
+          SimpleDialogOption(
+            child: const Text('MP4 folder'),
+            onPressed: () => Navigator.pop(ctx, 'mp4'),
+          ),
+          SimpleDialogOption(
+            child: const Text('Clear folders'),
+            onPressed: () => Navigator.pop(ctx, 'clear'),
+          ),
+        ],
+      ),
+    );
+
+    if (choice == null) return;
+    if (choice == 'clear') {
+      await widget.watchedService.removeFolderForPlaylist(url);
+      await _loadPlaylistFolders(_urls);
+      if (mounted) {
+        Snack.show(context, 'Playlist folders cleared', level: SnackLevel.info);
+      }
+      return;
+    }
+
     final directory = await FilePicker.platform.getDirectoryPath();
     if (directory == null || !mounted) return;
-    await widget.watchedService.setFolderForPlaylist(url, directory);
+
+    if (choice == 'default') {
+      await widget.watchedService.setFolderForPlaylist(url, directory);
+    } else {
+      await widget.watchedService.setFolderForPlaylist(url, directory,
+          format: choice);
+    }
+
+    await _loadPlaylistFolders(_urls);
     if (mounted) {
-      setState(() {
-        _playlistFolders[url] = directory;
-      });
       Snack.show(context, 'Folder set for playlist', level: SnackLevel.info);
     }
   }
@@ -182,6 +255,25 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
                   itemBuilder: (context, index) {
                     final url = _urls[index];
                     final folder = _playlistFolders[url];
+                    String folderLabel;
+                    if (folder == null || !folder.hasAny) {
+                      folderLabel = 'Download folder: (default)';
+                    } else if (folder.defaultFolder?.trim().isNotEmpty == true) {
+                      folderLabel =
+                          'Download folder: ${folder.defaultFolder!.split(RegExp(r'[/\\]')).last}';
+                    } else {
+                      final parts = <String>[];
+                      if (folder.mp3Folder?.trim().isNotEmpty == true) {
+                        parts.add('MP3: ${folder.mp3Folder!.split(RegExp(r'[/\\]')).last}');
+                      }
+                      if (folder.m4aFolder?.trim().isNotEmpty == true) {
+                        parts.add('M4A: ${folder.m4aFolder!.split(RegExp(r'[/\\]')).last}');
+                      }
+                      if (folder.mp4Folder?.trim().isNotEmpty == true) {
+                        parts.add('MP4: ${folder.mp4Folder!.split(RegExp(r'[/\\]')).last}');
+                      }
+                      folderLabel = parts.join(' • ');
+                    }
                     return Card(
                       child: ListTile(
                         leading: Icon(Icons.playlist_play, color: cs.primary),
@@ -193,9 +285,7 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
                             const Text('Checked periodically for new tracks'),
                             const SizedBox(height: 2),
                             Text(
-                              folder == null
-                                  ? 'Download folder: (default)'
-                                  : 'Download folder: ${folder.split(RegExp(r'[/\\]')).last}',
+                              folderLabel,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
