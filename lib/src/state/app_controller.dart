@@ -333,7 +333,8 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  void addToQueue(PreviewItem item, String format, {String? videoQuality}) {
+  void addToQueue(PreviewItem item, String format,
+      {String? videoQuality, String? outputFolder}) {
     if (queue.any((q) => q.url == item.url && q.format == format)) {
       return;
     }
@@ -348,6 +349,7 @@ class AppController extends ChangeNotifier {
           progress: 0,
           status: DownloadStatus.queued,
           outputPath: null,
+          outputFolder: outputFolder,
           error: null,
           videoQuality: videoQuality,
         ),
@@ -393,9 +395,27 @@ class AppController extends ChangeNotifier {
     final key = '${item.url}|${item.format}';
     _tokens[key] = token;
 
+    // Determine destination folder for this item:
+    final explicitOutputFolder = item.outputFolder?.trim();
+    final perFormatFolder = explicitOutputFolder?.isNotEmpty == true
+        ? explicitOutputFolder
+        : (item.format.toLowerCase() == 'mp3'
+            ? settings.downloadDirMp3?.trim()
+            : item.format.toLowerCase() == 'm4a'
+                ? settings.downloadDirM4a?.trim()
+                : item.format.toLowerCase() == 'mp4'
+                    ? settings.downloadDirMp4?.trim()
+                    : null);
+    final downloadFolder = perFormatFolder?.isNotEmpty == true
+        ? perFormatFolder!
+        : settings.downloadDir.trim();
+    final createFormatSubfolders =
+        (perFormatFolder?.isNotEmpty == true)
+            ? false
+            : settings.createFormatSubfolders;
+
     // Preflight disk space check (200MB buffer)
-    final outputDir = settings.downloadDir.trim();
-    final hasSpace = await downloadService.hasEnoughDiskSpace(outputDir,
+    final hasSpace = await downloadService.hasEnoughDiskSpace(downloadFolder,
         requiredBytes: 200 * 1024 * 1024);
     if (!hasSpace) {
       final updated = item.copyWith(
@@ -444,11 +464,12 @@ class AppController extends ChangeNotifier {
           result = await downloadService.download(
             previewItem,
             format: item.format,
-            outputDir: settings.downloadDir,
+            outputDir: downloadFolder,
             ffmpegPath: ffmpegPath,
             token: token,
             ytDlpPath: settings.ytDlpPath,
             sponsorBlockEnabled: settings.sponsorBlockEnabled,
+            createFormatSubfolders: createFormatSubfolders,
             onProgress: (pct, status, {String? speed, String? eta}) {
               final updated = item.copyWith(
                   progress: pct, status: status, speed: speed, eta: eta);
@@ -463,11 +484,12 @@ class AppController extends ChangeNotifier {
           result = await downloadService.downloadGeneric(
             previewItem,
             format: item.format,
-            outputDir: settings.downloadDir,
+            outputDir: downloadFolder,
             ffmpegPath: ffmpegPath,
             token: token,
             ytDlpPath: settings.ytDlpPath,
             sponsorBlockEnabled: settings.sponsorBlockEnabled,
+            createFormatSubfolders: createFormatSubfolders,
             onProgress: (pct, status, {String? speed, String? eta}) {
               final updated = item.copyWith(
                   progress: pct, status: status, speed: speed, eta: eta);
@@ -952,7 +974,7 @@ class AppController extends ChangeNotifier {
   /// YouTube results are queued with a `youtube.com/watch?v=` URL.
   /// Generic (non-YouTube) results are queued with the raw URL stored in [id].
   void addSearchResultToQueue(models.SearchResult result,
-      {String? format, String? videoQuality}) {
+      {String? format, String? videoQuality, String? outputFolder}) {
     final fmt = format ?? _settings?.defaultAudioFormat ?? 'mp3';
 
     // If source is 'generic', the ID *is* the URL (set by BrowserScreen)
@@ -971,6 +993,7 @@ class AppController extends ChangeNotifier {
       ),
       fmt,
       videoQuality: videoQuality,
+      outputFolder: outputFolder,
     );
   }
 

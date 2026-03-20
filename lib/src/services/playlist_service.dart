@@ -11,8 +11,6 @@ import '../models/search_result.dart';
 class PlaylistService {
   final YoutubeExplode _yt;
 
-  // Safety caps for playlist expansion
-  static const int _defaultMaxPlaylistVideos = 500;
   static const Duration _playlistStreamTimeout = Duration(seconds: 10);
 
   PlaylistService({required YoutubeExplode yt}) : _yt = yt;
@@ -22,7 +20,7 @@ class PlaylistService {
   Future<List<SearchResult>> getYouTubePlaylistTracks(String playlistUrl,
       {int? maxVideos}) async {
     final playlistId = PlaylistId(playlistUrl);
-    final cap = maxVideos ?? _defaultMaxPlaylistVideos;
+    final cap = maxVideos;
     final videos = <Video>[];
 
     try {
@@ -30,7 +28,7 @@ class PlaylistService {
           _yt.playlists.getVideos(playlistId).timeout(_playlistStreamTimeout);
       await for (final video in stream) {
         videos.add(video);
-        if (videos.length >= cap) break;
+        if (cap != null && videos.length >= cap) break;
       }
     } on TimeoutException catch (_) {
       // Stream stalled; return whatever we've collected so far

@@ -13,7 +13,7 @@ import 'log_service.dart';
 /// but for desktop / MVP this works via an in-process periodic timer.
 class WatchedPlaylistService {
   final Future<List<SearchResult>> Function(String url) fetchPlaylistTracks;
-  final Future<void> Function(SearchResult track) onNewTrack;
+  final Future<void> Function(String playlistUrl, SearchResult track) onNewTrack;
   final LogService? logs;
 
   WatchedPlaylistService({
@@ -75,19 +75,36 @@ class WatchedPlaylistService {
     await prefs.remove('pl_folder_$url');
   }
 
-  Future<String?> getFolderForPlaylist(String url) async {
+  Future<String?> getFolderForPlaylist(String url, {String? format}) async {
     final prefs = await SharedPreferences.getInstance();
+    if (format != null) {
+      final key = 'pl_folder_${format.toLowerCase()}_$url';
+      final folder = prefs.getString(key);
+      if (folder != null && folder.trim().isNotEmpty) return folder;
+    }
     return prefs.getString('pl_folder_$url');
   }
 
-  Future<void> setFolderForPlaylist(String url, String folder) async {
+  Future<void> setFolderForPlaylist(String url, String folder,
+      {String? format}) async {
     final prefs = await SharedPreferences.getInstance();
+    if (format != null) {
+      await prefs.setString('pl_folder_${format.toLowerCase()}_$url', folder);
+      return;
+    }
     await prefs.setString('pl_folder_$url', folder);
   }
 
-  Future<void> removeFolderForPlaylist(String url) async {
+  Future<void> removeFolderForPlaylist(String url, {String? format}) async {
     final prefs = await SharedPreferences.getInstance();
+    if (format != null) {
+      await prefs.remove('pl_folder_${format.toLowerCase()}_$url');
+      return;
+    }
     await prefs.remove('pl_folder_$url');
+    await prefs.remove('pl_folder_mp3_$url');
+    await prefs.remove('pl_folder_m4a_$url');
+    await prefs.remove('pl_folder_mp4_$url');
   }
 
   // ─── Checking for new tracks ─────────────────────────────────────────────
@@ -126,7 +143,7 @@ class WatchedPlaylistService {
           currentTracks.where((t) => !storedIds.contains(t.id)).toList();
 
       for (final track in newTracks) {
-        await onNewTrack(track);
+        await onNewTrack(url, track);
       }
 
       await _storeTracks(url, currentTracks, currentHash);
