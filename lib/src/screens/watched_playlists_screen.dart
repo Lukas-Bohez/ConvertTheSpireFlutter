@@ -224,7 +224,12 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
                   ),
                   const SizedBox(width: 8),
                   IconButton.filled(
-                    icon: const Icon(Icons.add),
+                    icon: Icon(Icons.add,
+                        color: Theme.of(context).colorScheme.onPrimary),
+                    style: IconButton.styleFrom(
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primary,
+                    ),
                     tooltip: 'Add playlist',
                     onPressed: _addPlaylist,
                   ),
