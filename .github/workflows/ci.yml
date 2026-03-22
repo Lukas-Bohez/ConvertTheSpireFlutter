@@ -10,6 +10,9 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # ── Code Quality ─────────────────────────────────────────────────────
   # Runs on every push/PR. Uses ubuntu-latest (no container) so the
@@ -19,7 +22,7 @@ jobs:
     name: Code Quality
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v4
@@ -49,7 +52,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v4
@@ -102,7 +105,7 @@ jobs:
           Write-Host ("Size: {0:N1} MB" -f $size)
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: windows-release
           path: ConvertTheSpireReborn.zip
@@ -123,7 +126,7 @@ jobs:
       CC: clang-10
       CXX: clang++-10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Trust all git directories (container UID mismatch fix)
         run: printf '[safe]\n\tdirectory = *\n' > "$HOME/.gitconfig"
@@ -278,7 +281,7 @@ jobs:
           echo "AppImage built successfully"
 
       - name: Upload Linux artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: linux-release
           path: |
@@ -293,10 +296,10 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -332,7 +335,7 @@ jobs:
           ls -lh ConvertTheSpireReborn.apk
 
       - name: Upload Android artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: android-release
           path: ConvertTheSpireReborn.apk
@@ -347,7 +350,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v4
@@ -373,7 +376,7 @@ jobs:
           ls -lh ConvertTheSpireReborn-macOS.zip
 
       - name: Upload macOS artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: macos-release
           path: ConvertTheSpireReborn-macOS.zip
@@ -389,7 +392,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: release-files/
 
