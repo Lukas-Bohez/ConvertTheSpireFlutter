@@ -102,7 +102,15 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final width = MediaQuery.of(context).size.width;
-    final crossAxisCount = width < 500 ? 2 : (width < 900 ? 3 : 4);
+    final crossAxisCount = width < 500
+        ? 2
+        : width < 900
+            ? 3
+            : width < 1200
+                ? 4
+                : width < 1600
+                    ? 5
+                    : 6;
 
     // Filter out only the queue tile (always in sidebar).
     // Browser remains available so users can tap it directly.
