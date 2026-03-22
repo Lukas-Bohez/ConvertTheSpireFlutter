@@ -755,32 +755,42 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _pickFormatDownloadFolder(
       AppSettings settings, String format) async {
+    String? selected;
     if (_isAndroid) {
-      // Not supported to pick per-format SAF folder in this version.
-      Snack.show(context,
-          'Android per-format folder selection is not supported in this mode.',
-          level: SnackLevel.warning);
-      return;
-    }
+      selected = await _androidSaf.pickTree();
+      if (selected == null || selected.isEmpty || !mounted) return;
 
-    final result = await FilePicker.platform.getDirectoryPath();
-    if (result == null || !mounted) return;
+      final canWrite = await _androidSaf.testWriteAccess(selected);
+      if (!canWrite) {
+        await FolderAccessService.ensureSafeFolderIsWritable(context, selected);
+        return;
+      }
+    } else {
+      selected = await FilePicker.platform.getDirectoryPath();
+      if (selected == null || !mounted) return;
+    }
 
     setState(() {
       if (format == 'mp3') {
-        _downloadDirMp3Controller.text = result;
+        _downloadDirMp3Controller.text = selected!;
       } else if (format == 'm4a') {
-        _downloadDirM4aController.text = result;
+        _downloadDirM4aController.text = selected!;
       } else if (format == 'mp4') {
-        _downloadDirMp4Controller.text = result;
+        _downloadDirMp4Controller.text = selected!;
       }
     });
 
     await widget.controller.saveSettings(
       settings.copyWith(
-        downloadDirMp3: _downloadDirMp3Controller.text.trim(),
-        downloadDirM4a: _downloadDirM4aController.text.trim(),
-        downloadDirMp4: _downloadDirMp4Controller.text.trim(),
+        downloadDirMp3: _downloadDirMp3Controller.text.trim().isEmpty
+            ? null
+            : _downloadDirMp3Controller.text.trim(),
+        downloadDirM4a: _downloadDirM4aController.text.trim().isEmpty
+            ? null
+            : _downloadDirM4aController.text.trim(),
+        downloadDirMp4: _downloadDirMp4Controller.text.trim().isEmpty
+            ? null
+            : _downloadDirMp4Controller.text.trim(),
       ),
     );
     if (mounted) {
@@ -2469,6 +2479,62 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ?.copyWith(color: context.warning),
                         ),
                       ),
+
+                    const SizedBox(height: 12),
+                    CheckboxListTile(
+                      title: const Text('Use per-format sub-folders'),
+                      subtitle: const Text(
+                          'When disabled, the selected output folder is used directly (mp3/m4a/mp4 subfolders are skipped).'),
+                      value: _useFormatSubfolders,
+                      onChanged: (value) async {
+                        if (value == null) return;
+                        setState(() => _useFormatSubfolders = value);
+                        await widget.controller.saveSettings(
+                            settings.copyWith(createFormatSubfolders: value));
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _downloadDirMp3Controller,
+                      decoration: InputDecoration(
+                        labelText: 'MP3 folder (optional)',
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.folder),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.folder_open),
+                          onPressed: () => _pickFormatDownloadFolder(settings, 'mp3'),
+                        ),
+                      ),
+                      readOnly: true,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _downloadDirM4aController,
+                      decoration: InputDecoration(
+                        labelText: 'M4A folder (optional)',
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.folder),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.folder_open),
+                          onPressed: () => _pickFormatDownloadFolder(settings, 'm4a'),
+                        ),
+                      ),
+                      readOnly: true,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _downloadDirMp4Controller,
+                      decoration: InputDecoration(
+                        labelText: 'MP4 folder (optional)',
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.folder),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.folder_open),
+                          onPressed: () => _pickFormatDownloadFolder(settings, 'mp4'),
+                        ),
+                      ),
+                      readOnly: true,
+                    ),
                   ] else ...[
                     if (isNarrow)
                       Column(
@@ -2532,61 +2598,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             },
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 12),
-                      CheckboxListTile(
-                        title: const Text('Use per-format sub-folders'),
-                        subtitle: const Text(
-                            'When disabled, the selected output folder is used directly (mp3/m4a/mp4 subfolders are skipped).'),
-                        value: _useFormatSubfolders,
-                        onChanged: (value) async {
-                          if (value == null) return;
-                          setState(() => _useFormatSubfolders = value);
-                          await widget.controller.saveSettings(
-                              settings.copyWith(createFormatSubfolders: value));
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _downloadDirMp3Controller,
-                        decoration: InputDecoration(
-                          labelText: 'MP3 folder (optional)',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.folder),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.folder_open),
-                            onPressed: () => _pickFormatDownloadFolder(settings, 'mp3'),
-                          ),
-                        ),
-                        readOnly: true,
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _downloadDirM4aController,
-                        decoration: InputDecoration(
-                          labelText: 'M4A folder (optional)',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.folder),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.folder_open),
-                            onPressed: () => _pickFormatDownloadFolder(settings, 'm4a'),
-                          ),
-                        ),
-                        readOnly: true,
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _downloadDirMp4Controller,
-                        decoration: InputDecoration(
-                          labelText: 'MP4 folder (optional)',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.folder),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.folder_open),
-                            onPressed: () => _pickFormatDownloadFolder(settings, 'mp4'),
-                          ),
-                        ),
-                        readOnly: true,
                       ),
                   ],
                   const SizedBox(height: 16),
