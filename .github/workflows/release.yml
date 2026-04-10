@@ -105,6 +105,32 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Patch flutter_inappwebview Windows symbol mismatch
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "$env:PUB_CACHE\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows\custom_platform_view\custom_platform_view.cc",
+            "$env:LOCALAPPDATA\Pub\Cache\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows\custom_platform_view\custom_platform_view.cc",
+            "windows\flutter\ephemeral\.plugin_symlinks\flutter_inappwebview_windows\windows\custom_platform_view\custom_platform_view.cc"
+          )
+
+          $patched = 0
+          foreach ($file in $candidates) {
+            if (Test-Path $file) {
+              $text = Get-Content -Raw $file
+              $newText = $text -replace '\bwebview_\b', 'view'
+              if ($newText -ne $text) {
+                Set-Content -Path $file -Value $newText -NoNewline
+                Write-Host "Patched $file"
+                $patched++
+              }
+            }
+          }
+
+          if ($patched -eq 0) {
+            Write-Host "No symbol patch was needed."
+          }
+
       - name: Build Windows release
         run: flutter build windows --release --no-tree-shake-icons
 

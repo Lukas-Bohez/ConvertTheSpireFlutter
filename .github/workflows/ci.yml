@@ -67,18 +67,24 @@ jobs:
       - name: Patch flutter_inappwebview_windows
         shell: pwsh
         run: |
-          $dirs = @(
-            "$env:PUB_CACHE\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows",
-            "windows\flutter\ephemeral\.plugin_symlinks\flutter_inappwebview_windows\windows"
+          $files = @(
+            "$env:PUB_CACHE\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows\custom_platform_view\custom_platform_view.cc",
+            "$env:LOCALAPPDATA\Pub\Cache\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows\custom_platform_view\custom_platform_view.cc",
+            "windows\flutter\ephemeral\.plugin_symlinks\flutter_inappwebview_windows\windows\custom_platform_view\custom_platform_view.cc"
           )
-          foreach ($dir in $dirs) {
-            if (Test-Path $dir) {
-              Get-ChildItem $dir -Recurse -Filter *.cc | ForEach-Object {
-                (Get-Content $_.FullName) -replace '\bwebview_\b','view' |
-                  Set-Content $_.FullName
+          $patched = 0
+          foreach ($file in $files) {
+            if (Test-Path $file) {
+              $text = Get-Content -Raw $file
+              $newText = $text -replace '\bwebview_\b', 'view'
+              if ($newText -ne $text) {
+                Set-Content -Path $file -Value $newText -NoNewline
+                Write-Host "Patched $file"
+                $patched++
               }
             }
           }
+          if ($patched -eq 0) { Write-Host "No symbol patch was needed." }
 
       - name: Build Windows release
         run: flutter build windows --release --no-tree-shake-icons
@@ -165,17 +171,6 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
-
-      - name: Patch flutter_inappwebview_windows
-        run: |
-          for dir in \
-            "${PUB_CACHE:-$HOME/.pub-cache}/hosted/pub.dev/flutter_inappwebview_windows-0.6.0/windows" \
-            "windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows"
-          do
-            if [ -d "$dir" ]; then
-              find "$dir" -type f -name '*.cc' -exec perl -pi -e 's/\bwebview_\b/view/g' {} +
-            fi
-          done
 
       - name: Build Linux release
         run: flutter build linux --release --no-tree-shake-icons
@@ -313,17 +308,6 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
-
-      - name: Patch flutter_inappwebview_windows
-        run: |
-          for dir in \
-            "${PUB_CACHE:-$HOME/.pub-cache}/hosted/pub.dev/flutter_inappwebview_windows-0.6.0/windows" \
-            "windows/flutter/ephemeral/.plugin_symlinks/flutter_inappwebview_windows/windows"
-          do
-            if [ -d "$dir" ]; then
-              find "$dir" -type f -name '*.cc' -exec perl -pi -e "s/\\bwebview_\\b/view/g" {} +
-            fi
-          done
 
       - name: Build Android APK (split per ABI)
         run: flutter build apk --release --split-per-abi --no-tree-shake-icons
