@@ -15,7 +15,7 @@ class PlaylistService {
 
   PlaylistService({required YoutubeExplode yt}) : _yt = yt;
 
-  // ─── YouTube playlists ───────────────────────────────────────────────────
+  // --─ YouTube playlists --------------------------------------------------─
 
   Future<List<SearchResult>> getYouTubePlaylistTracks(String playlistUrl,
       {int? maxVideos}) async {
@@ -33,7 +33,7 @@ class PlaylistService {
     } on TimeoutException catch (_) {
       // Stream stalled; return whatever we've collected so far
     } catch (_) {
-      // Other errors — return whatever we have (or empty list)
+      // Other errors - return whatever we have (or empty list)
       return videos.map((video) {
         return SearchResult(
           id: video.id.value,
@@ -80,7 +80,7 @@ class PlaylistService {
     return stream.url.toString();
   }
 
-  // ─── M3U generation ──────────────────────────────────────────────────────
+  // --─ M3U generation ------------------------------------------------------
 
   Future<void> generateM3U(List<SearchResult> tracks, String outputPath,
       {String format = 'mp3'}) async {
@@ -123,7 +123,7 @@ class PlaylistService {
     await File(outputPath).writeAsString(buf.toString());
   }
 
-  // ─── Smart playlist ↔ folder comparison ──────────────────────────────────
+  // --─ Smart playlist ↔ folder comparison ----------------------------------
 
   /// Scans [folderPath] recursively and cross-references every playlist track
   /// against the files found.  Uses multi-strategy fuzzy matching so renamed,
@@ -145,7 +145,7 @@ class PlaylistService {
       );
     }
 
-    // ── 1. Index all audio files in the folder ──────────────────────────
+    // -- 1. Index all audio files in the folder --------------------------
     final audioExtensions = {
       '.mp3',
       '.flac',
@@ -175,7 +175,7 @@ class PlaylistService {
       }
     }
 
-    // ── 2. Match each playlist track to the best local file ─────────────
+    // -- 2. Match each playlist track to the best local file ------------─
     final usedFileIndices = <int>{};
     final matched = <TrackMatch>[];
     final missing = <SearchResult>[];
@@ -191,7 +191,7 @@ class PlaylistService {
       }
     }
 
-    // ── 3. Detect extra files not in the playlist ───────────────────────
+    // -- 3. Detect extra files not in the playlist ----------------------─
     final extras = <ExtraFile>[];
     for (var i = 0; i < localFiles.length; i++) {
       if (!usedFileIndices.contains(i)) {
@@ -211,7 +211,7 @@ class PlaylistService {
     );
   }
 
-  // ─── Matching engine ─────────────────────────────────────────────────────
+  // --─ Matching engine ----------------------------------------------------─
 
   /// Tries multiple strategies (exact, normalised, token overlap, fuzzy) and
   /// returns the best match above [threshold], or null.
@@ -236,7 +236,7 @@ class PlaylistService {
       if (usedIndices.contains(i)) continue;
       final f = files[i];
 
-      // Strategy 1 – exact normalised match
+      // Strategy 1 - exact normalised match
       if (f.normalised == trackFull || f.normalised == trackTitle) {
         return TrackMatch(
           track: track,
@@ -248,7 +248,7 @@ class PlaylistService {
         );
       }
 
-      // Strategy 2 – normalised containment (either direction)
+      // Strategy 2 - normalised containment (either direction)
       if (f.normalised.contains(trackTitle) ||
           trackTitle.contains(f.normalised)) {
         final score = 0.90;
@@ -260,7 +260,7 @@ class PlaylistService {
         continue;
       }
 
-      // Strategy 3 – artist-title both found somewhere in filename
+      // Strategy 3 - artist-title both found somewhere in filename
       if (trackArtist.isNotEmpty &&
           f.normalised.contains(trackArtist) &&
           f.normalised.contains(trackTitle)) {
@@ -273,7 +273,7 @@ class PlaylistService {
         continue;
       }
 
-      // Strategy 4 – token overlap (Jaccard similarity)
+      // Strategy 4 - token overlap (Jaccard similarity)
       if (trackTokens.isNotEmpty && f.tokens.isNotEmpty) {
         final intersection = trackTokens.intersection(f.tokens).length;
         final union = trackTokens.union(f.tokens).length;
@@ -285,7 +285,7 @@ class PlaylistService {
         }
       }
 
-      // Strategy 5 – Levenshtein-based similarity
+      // Strategy 5 - Levenshtein-based similarity
       final levSim = _levenshteinSimilarity(trackFull, f.normalised);
       if (levSim > bestScore) {
         bestScore = levSim;
@@ -307,7 +307,7 @@ class PlaylistService {
     return null;
   }
 
-  // ─── String helpers ───────────────────────────────────────────────────────
+  // --─ String helpers ------------------------------------------------------─
 
   /// Normalise a string for comparison: lowercase, strip accents, remove
   /// common noise like "(Official Audio)", brackets, punctuation.

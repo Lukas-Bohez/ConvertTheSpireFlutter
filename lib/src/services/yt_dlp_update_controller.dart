@@ -18,7 +18,7 @@ class YtDlpUpdateController {
       try {
         await YtDlpUpdater.updateFromGithubLatest();
       } catch (e) {
-        // swallow — it's non-critical
+        // swallow - it's non-critical
         print('yt-dlp controller: periodic check failed: $e');
       }
     });

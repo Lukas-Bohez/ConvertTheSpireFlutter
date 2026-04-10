@@ -57,7 +57,7 @@ class FfmpegService {
   /// On Android/iOS, FFmpegKit is bundled so FFmpeg is always available.
   Future<String?> resolveAvailablePath(String? configuredPath) async {
     if (kIsWeb) return null;
-    // FFmpegKit is bundled into the app on mobile — always available.
+    // FFmpegKit is bundled into the app on mobile - always available.
     if (Platform.isAndroid || Platform.isIOS) return configuredPath ?? 'ffmpeg';
 
     // 1. Check configured path

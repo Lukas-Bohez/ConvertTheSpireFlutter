@@ -73,7 +73,7 @@ class _CastDialogState extends State<CastDialog> {
   @override
   void dispose() {
     _manualIpController.dispose();
-    // Don't stop the server on dispose — it needs to stay alive while casting
+    // Don't stop the server on dispose - it needs to stay alive while casting
     super.dispose();
   }
 

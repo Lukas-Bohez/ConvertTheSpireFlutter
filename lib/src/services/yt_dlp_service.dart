@@ -16,7 +16,7 @@ import 'platform_dirs.dart';
 ///   2. Auto-downloaded to the app support directory
 ///   3. Found on the system PATH
 ///
-/// On mobile/web, yt-dlp is not available — the app falls back to
+/// On mobile/web, yt-dlp is not available - the app falls back to
 /// youtube_explode_dart for stream downloads.
 class YtDlpService {
     /// Fetches video metadata using yt-dlp --dump-json and returns filesize_approx in bytes (if available).
@@ -117,7 +117,7 @@ class YtDlpService {
     String? configuredPath,
     void Function(int percent, String message)? onProgress,
   }) async {
-    // Already available — return immediately
+    // Already available - return immediately
     final existing = await resolveAvailablePath(configuredPath);
     if (existing != null) return existing;
 
@@ -308,15 +308,15 @@ class YtDlpService {
 
   /// Download media using yt-dlp.
   ///
-  /// [url]            – Video / media URL (YouTube, SoundCloud, etc.)
-  /// [outputPath]     – Full path for the output file *including* extension.
-  /// [format]         – Target format: `mp4`, `mp3`, or `m4a`.
-  /// [ffmpegPath]     – Path to FFmpeg (needed for merging / conversion).
-  /// [onProgress]     – Progress callback (0-100).
-  /// [ytDlpPath]      – Resolved path to the yt-dlp binary.
-  /// [videoQuality]   – Target video quality string (e.g. `'720p'`).
-  /// [audioBitrate]   – Target audio bitrate in kbps.
-  /// [isCancelled]    – Polled to support external cancellation.
+  /// [url]            - Video / media URL (YouTube, SoundCloud, etc.)
+  /// [outputPath]     - Full path for the output file *including* extension.
+  /// [format]         - Target format: `mp4`, `mp3`, or `m4a`.
+  /// [ffmpegPath]     - Path to FFmpeg (needed for merging / conversion).
+  /// [onProgress]     - Progress callback (0-100).
+  /// [ytDlpPath]      - Resolved path to the yt-dlp binary.
+  /// [videoQuality]   - Target video quality string (e.g. `'720p'`).
+  /// [audioBitrate]   - Target audio bitrate in kbps.
+  /// [isCancelled]    - Polled to support external cancellation.
   Future<void> download({
     required String url,
     required String outputPath,
@@ -373,7 +373,7 @@ class YtDlpService {
       args.addAll(['--sponsorblock-remove', 'all']);
     }
 
-    // FFmpeg location — only pass when we have an explicit path (not 'ffmpeg' on PATH)
+    // FFmpeg location - only pass when we have an explicit path (not 'ffmpeg' on PATH)
     if (ffmpegPath != null &&
         ffmpegPath.trim().isNotEmpty &&
         ffmpegPath.trim() != 'ffmpeg') {
@@ -499,7 +499,7 @@ class YtDlpService {
     }
   }
 
-  // ─── Helpers ───────────────────────────────────────────────────────────
+  // --─ Helpers ----------------------------------------------------------─
 
   /// Path where this app stores the yt-dlp binary.
   Future<String?> _getAppBinaryPath() async {

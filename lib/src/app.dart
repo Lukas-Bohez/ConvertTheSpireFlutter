@@ -14,7 +14,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart'
 // Use explicit show clauses to avoid ambiguous_import errors:
 // home_screen.dart imports PlayerState from player.dart internally.
 // Importing player.dart here with its own show clause would expose
-// PlayerState from two different source libraries — ambiguous_import.
+// PlayerState from two different source libraries - ambiguous_import.
 // The show clauses are kept non-overlapping: HomeScreen only from
 // home_screen.dart, PlayerState only from player.dart.
 import 'screens/home_screen.dart' show HomeScreen;
@@ -320,7 +320,7 @@ class _MyAppState extends State<MyApp>
     if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) return;
 
     if (kDebugMode) {
-      debugPrint('[App] Window close requested — disposing WebViews...');
+      debugPrint('[App] Window close requested - disposing WebViews...');
     }
 
     try {
@@ -548,7 +548,7 @@ class _MyAppState extends State<MyApp>
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Ready — build the actual app.
+    // Ready - build the actual app.
     return FutureBuilder<SharedPreferences>(
       future: _prefsFuture,
       builder: (context, snap) {

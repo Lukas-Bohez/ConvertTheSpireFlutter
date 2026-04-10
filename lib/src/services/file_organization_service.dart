@@ -7,7 +7,7 @@ import '../models/track_metadata.dart';
 /// Organises downloaded files according to naming templates,
 /// and detects duplicates by filename or content hash.
 class FileOrganizationService {
-  // ─── Naming templates ──────────────────────────────────────────────────
+  // --─ Naming templates --------------------------------------------------
 
   static const templateArtistAlbum = '{artist}/{album}/{track} - {title}';
   static const templateArtistOnly = '{artist}/{title}';
@@ -60,7 +60,7 @@ class FileOrganizationService {
     return targetPath;
   }
 
-  // ─── Duplicate detection ───────────────────────────────────────────────
+  // --─ Duplicate detection ----------------------------------------------─
 
   /// Check for a duplicate by filename in [directory].
   Future<bool> isDuplicateByName(String filePath, String directory) async {

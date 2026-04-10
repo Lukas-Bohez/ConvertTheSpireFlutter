@@ -419,7 +419,7 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
     });
     try {
       if (Platform.isAndroid) {
-        // yt-dlp/FFmpeg tooling is irrelevant on Android — skip size estimation.
+        // yt-dlp/FFmpeg tooling is irrelevant on Android - skip size estimation.
         setState(() {
           _estimatedSize = null;
           _loading = false;

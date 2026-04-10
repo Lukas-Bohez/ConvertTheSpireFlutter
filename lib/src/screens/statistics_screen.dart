@@ -62,11 +62,11 @@ class _StatisticsScreenState extends State<StatisticsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Overview cards ──────────────────────────────────────
+          // -- Overview cards --------------------------------------
           _buildOverviewCards(cs, narrow),
           const SizedBox(height: 24),
 
-          // ── Downloads over time ────────────────────────────────
+          // -- Downloads over time --------------------------------
           if (_stats.downloadsByDate.length > 1) ...[
             _sectionHeader(theme, Icons.show_chart, 'Downloads Over Time'),
             const SizedBox(height: 12),
@@ -74,7 +74,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
             const SizedBox(height: 24),
           ],
 
-          // ── Format & Source charts side by side on wide ────────
+          // -- Format & Source charts side by side on wide --------
           if (_stats.downloadsByFormat.isNotEmpty ||
               _stats.downloadsBySource.isNotEmpty) ...[
             if (narrow) ...[
@@ -126,7 +126,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
             ],
           ],
 
-          // ── Top artists ────────────────────────────────────────
+          // -- Top artists ----------------------------------------
           if (_stats.downloadsByArtist.isNotEmpty) ...[
             _sectionHeader(theme, Icons.person, 'Top Artists'),
             const SizedBox(height: 12),
@@ -134,7 +134,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
             const SizedBox(height: 24),
           ],
 
-          // ── Reset ──────────────────────────────────────────────
+          // -- Reset ----------------------------------------------
           Center(
             child: OutlinedButton.icon(
               icon: const Icon(Icons.delete_outline),
@@ -154,7 +154,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     );
   }
 
-  // ─── Section header helper ─────────────────────────────────────────────
+  // --─ Section header helper --------------------------------------------─
 
   Widget _sectionHeader(ThemeData theme, IconData icon, String title) {
     return Row(
@@ -168,7 +168,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     );
   }
 
-  // ─── Overview cards ────────────────────────────────────────────────────
+  // --─ Overview cards ----------------------------------------------------
 
   Widget _buildOverviewCards(ColorScheme cs, bool narrow) {
     final cards = [
@@ -236,7 +236,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     );
   }
 
-  // ─── Timeline chart ────────────────────────────────────────────────────
+  // --─ Timeline chart ----------------------------------------------------
 
   Widget _buildTimelineChart(ColorScheme cs) {
     final sorted = _stats.downloadsByDate.keys.toList()..sort();
@@ -352,7 +352,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     );
   }
 
-  // ─── Format bar chart ──────────────────────────────────────────────────
+  // --─ Format bar chart --------------------------------------------------
 
   Widget _buildFormatChart(ColorScheme cs) {
     final entries = DownloadStats.topEntries(_stats.downloadsByFormat);
@@ -406,7 +406,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     );
   }
 
-  // ─── Source pie chart ─────────────────────────────────────────────────
+  // --─ Source pie chart ------------------------------------------------─
 
   Widget _buildSourceChart(ColorScheme cs) {
     final total = _stats.downloadsBySource.values.fold(0, (s, v) => s + v);
@@ -474,7 +474,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     );
   }
 
-  // ─── Top artists table ─────────────────────────────────────────────────
+  // --─ Top artists table ------------------------------------------------─
 
   Widget _buildTopArtists(ColorScheme cs) {
     final top = DownloadStats.topEntries(_stats.downloadsByArtist, 10);
@@ -544,7 +544,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     );
   }
 
-  // ─── Reset confirmation ────────────────────────────────────────────────
+  // --─ Reset confirmation ------------------------------------------------
 
   Future<void> _confirmReset() async {
     final confirmed = await showDialog<bool>(
@@ -577,7 +577,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 }
 
-// ─── Overview card widget ────────────────────────────────────────────────────
+// --─ Overview card widget ----------------------------------------------------
 
 class _OverviewCard extends StatelessWidget {
   final IconData icon;

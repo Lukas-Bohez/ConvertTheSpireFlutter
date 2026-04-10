@@ -23,7 +23,7 @@ class ChromecastCastService extends CastService {
   @override
   Future<void> startDiscovery() async {
     if (kDebugMode) {
-      debugPrint('Chromecast discovery disabled — cast package incompatible');
+      debugPrint('Chromecast discovery disabled - cast package incompatible');
     }
   }
 

@@ -40,7 +40,7 @@ class LocalMediaServer {
     _servingPath = filePath;
     _servingMime = lookupMimeType(filePath) ?? 'application/octet-stream';
 
-    // If already running, just update the file path — keep the same port
+    // If already running, just update the file path - keep the same port
     final existing = _server;
     if (existing != null) {
       final url = 'http://$localIp:${existing.port}/media';

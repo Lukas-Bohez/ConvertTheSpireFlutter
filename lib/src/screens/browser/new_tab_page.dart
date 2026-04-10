@@ -126,7 +126,7 @@ class _NewTabPageState extends State<NewTabPage> {
           slivers: [
             const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
-            // ── Search bar ──
+            // -- Search bar --
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -156,7 +156,7 @@ class _NewTabPageState extends State<NewTabPage> {
 
             const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
-            // ── Quick access (most visited / suggested) ──
+            // -- Quick access (most visited / suggested) --
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -201,7 +201,7 @@ class _NewTabPageState extends State<NewTabPage> {
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-            // ── Favourites horizontal scroll ──
+            // -- Favourites horizontal scroll --
             if (_favourites.isNotEmpty) ...[
               SliverToBoxAdapter(
                 child: Padding(
@@ -292,7 +292,7 @@ class _NewTabPageState extends State<NewTabPage> {
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-            // ── Recent history ──
+            // -- Recent history --
             if (_recentHistory.isNotEmpty) ...[
               SliverToBoxAdapter(
                 child: Padding(
@@ -359,7 +359,7 @@ class _NewTabPageState extends State<NewTabPage> {
   }
 }
 
-// ── Quick-access tile ──
+// -- Quick-access tile --
 
 class _QuickAccessTile extends StatelessWidget {
   final String label;
@@ -417,7 +417,7 @@ class _QuickAccessTile extends StatelessWidget {
   }
 }
 
-// ── Favicon widget with fallback ──
+// -- Favicon widget with fallback --
 
 class _FaviconWidget extends StatelessWidget {
   final String? faviconUrl;

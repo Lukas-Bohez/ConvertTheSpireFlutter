@@ -3,10 +3,10 @@
 /// Centralising strings here makes future i18n (e.g. intl / ARB files)
 /// straightforward: grep for `Strings.` and replace with generated code.
 abstract final class Strings {
-  // ── App ─────────────────────────────────────────────────────────────────
+  // -- App ----------------------------------------------------------------─
   static const appName = 'Convert the Spire Reborn';
 
-  // ── Navigation / Tabs ───────────────────────────────────────────────────
+  // -- Navigation / Tabs --------------------------------------------------─
   static const tabSearch = 'Search';
   static const tabMultiSearch = 'Search+';
   static const tabBrowser = 'Browser';
@@ -22,7 +22,7 @@ abstract final class Strings {
   static const tabPlayer = 'Player';
   static const tabHome = 'Home';
 
-  // ── Downloads ───────────────────────────────────────────────────────────
+  // -- Downloads ----------------------------------------------------------─
   static const downloadComplete = 'Download Complete';
   static const downloadFailed = 'Download Failed';
   static const downloadCancelled = 'Cancelled';
@@ -30,7 +30,7 @@ abstract final class Strings {
   static const queued = 'Queued';
   static const converting = 'Converting';
 
-  // ── Cast ────────────────────────────────────────────────────────────────
+  // -- Cast ----------------------------------------------------------------
   static const castToDevice = 'Cast to Device';
   static const scanningForDevices = 'Scanning for devices…';
   static const noDevicesFound = 'No devices found';
@@ -39,14 +39,14 @@ abstract final class Strings {
   static const enterIpManually = 'Enter IP manually';
   static const disconnect = 'Disconnect';
 
-  // ── Player ──────────────────────────────────────────────────────────────
+  // -- Player --------------------------------------------------------------
   static const noFavouritesYet = 'No favourites yet';
   static const tapHeartHint = 'Tap the heart icon on any track';
   static const shuffle = 'Shuffle';
   static const repeat = 'Repeat';
   static const playbackMode = 'Playback Mode';
 
-  // ── Errors ──────────────────────────────────────────────────────────────
+  // -- Errors --------------------------------------------------------------
   static const errorGeneric = 'Something went wrong. Please try again.';
   static const errorNoInternet = 'No internet connection.';
   static const errorCookiesRequired =

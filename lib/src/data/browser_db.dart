@@ -83,7 +83,7 @@ class BrowserDb {
 
 /// Repository that exposes browser data operations backed by [BrowserDb].
 class BrowserRepository extends ChangeNotifier {
-  // ── History ──
+  // -- History --
 
   Future<void> addHistory(String url, String? title, String? favicon) async {
     final db = await BrowserDb.database;
@@ -154,7 +154,7 @@ class BrowserRepository extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Favourites ──
+  // -- Favourites --
 
   Future<void> addFavourite(
     String url,
@@ -232,7 +232,7 @@ class BrowserRepository extends ChangeNotifier {
     }
   }
 
-  // ── Recent Sites (Quick Access) ──
+  // -- Recent Sites (Quick Access) --
 
   Future<List<Map<String, dynamic>>> getRecentSites({int limit = 8}) async {
     final db = await BrowserDb.database;

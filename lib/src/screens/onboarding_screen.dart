@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// A multi-page onboarding flow that introduces the app's features.
 ///
 /// Used in two places:
-///  * Automatically on first launch – the caller marks "seenOnboarding" when
+///  * Automatically on first launch - the caller marks "seenOnboarding" when
 ///    [onFinish] fires.
 ///  * Manually from the Guide screen via a button.
 class OnboardingScreen extends StatefulWidget {
@@ -31,7 +31,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late ThemeMode _themeMode;
   int _page = 0;
 
-  // ─── Pages ───────────────────────────────────────────────────────────────
+  // --─ Pages --------------------------------------------------------------─
 
   static const _pages = <_OnboardingPage>[
     // Welcome
@@ -176,7 +176,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     ),
   ];
 
-  // ─── Lifecycle ───────────────────────────────────────────────────────────
+  // --─ Lifecycle ----------------------------------------------------------─
 
   @override
   void initState() {
@@ -270,7 +270,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ThemeMode.system => 'Auto',
       };
 
-  // ─── Sub-builders ───────────────────────────────────────────────────────
+  // --─ Sub-builders ------------------------------------------------------─
 
   Widget _buildProgressBar(ThemeData theme) {
     final progress = (_page + 1) / _pages.length;
@@ -465,7 +465,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // ─── Build ──────────────────────────────────────────────────────────────
+  // --─ Build --------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -600,7 +600,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 }
 
-// ─── Data model ─────────────────────────────────────────────────────────────
+// --─ Data model ------------------------------------------------------------─
 
 class _OnboardingPage {
   final IconData icon;
@@ -641,9 +641,9 @@ class _KeepAlivePageState extends State<_KeepAlivePage>
   }
 }
 
-// ─── Preview widgets ────────────────────────────────────────────────────────
+// --─ Preview widgets --------------------------------------------------------
 
-/// Welcome page — shows a brief feature overview.
+/// Welcome page - shows a brief feature overview.
 class _WelcomePreview extends StatelessWidget {
   const _WelcomePreview();
 
@@ -957,7 +957,7 @@ class _SupportPreview extends StatelessWidget {
                   size: 18, color: Colors.green.shade600),
               const SizedBox(width: 8),
               const Expanded(
-                child: Text('No analytics — everything runs locally',
+                child: Text('No analytics - everything runs locally',
                     style: TextStyle(fontSize: 12)),
               ),
             ],

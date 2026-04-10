@@ -47,7 +47,7 @@ class WatchedPlaylistService {
     _pollTimer = null;
   }
 
-  // ─── Persistence ─────────────────────────────────────────────────────────
+  // --─ Persistence --------------------------------------------------------─
 
   Future<List<String>> getWatchedUrls() async {
     final prefs = await SharedPreferences.getInstance();
@@ -107,7 +107,7 @@ class WatchedPlaylistService {
     await prefs.remove('pl_folder_mp4_$url');
   }
 
-  // ─── Checking for new tracks ─────────────────────────────────────────────
+  // --─ Checking for new tracks --------------------------------------------─
 
   Future<int> checkAllPlaylists() async {
     if (_disposed) return 0;
@@ -130,7 +130,7 @@ class WatchedPlaylistService {
       final storedHash = prefs.getString('pl_hash_$url');
 
       if (storedHash == null) {
-        // First run – just store
+        // First run - just store
         await _storeTracks(url, currentTracks, currentHash);
         return 0;
       }
@@ -155,7 +155,7 @@ class WatchedPlaylistService {
     }
   }
 
-  // ─── Internal helpers ────────────────────────────────────────────────────
+  // --─ Internal helpers ----------------------------------------------------
 
   Future<void> _snapshotPlaylist(String url) async {
     if (_disposed) return;

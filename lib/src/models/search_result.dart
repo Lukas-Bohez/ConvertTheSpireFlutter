@@ -30,5 +30,5 @@ class SearchResult {
   int get hashCode => id.hashCode ^ source.hashCode;
 
   @override
-  String toString() => 'SearchResult($source: $artist – $title)';
+  String toString() => 'SearchResult($source: $artist - $title)';
 }

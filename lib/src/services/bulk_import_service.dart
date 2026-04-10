@@ -4,7 +4,7 @@ import 'package:file_picker/file_picker.dart';
 
 /// Parses bulk track lists from text or CSV and returns search queries.
 class BulkImportService {
-  // ─── Text parsing ────────────────────────────────────────────────────────
+  // --─ Text parsing --------------------------------------------------------
 
   /// Parse a multi-line text blob into search queries.
   /// Supports formats:  "Artist - Song", "Artist -- Song", "Song by Artist".
@@ -19,7 +19,7 @@ class BulkImportService {
   }
 
   String _parseTrackLine(String line) {
-    const separators = [' - ', ' – ', ' -- ', ' by '];
+    const separators = [' - ', ' - ', ' -- ', ' by '];
     for (final sep in separators) {
       final idx = line.indexOf(sep);
       if (idx > 0) {
@@ -33,7 +33,7 @@ class BulkImportService {
     return line.trim();
   }
 
-  // ─── File import ─────────────────────────────────────────────────────────
+  // --─ File import --------------------------------------------------------─
 
   /// Open a file picker for .txt / .csv and return parsed search queries.
   Future<List<String>> importFromFile() async {

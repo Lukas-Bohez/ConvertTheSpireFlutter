@@ -79,7 +79,7 @@ class TrayService with TrayListener, WindowListener {
     trayManager.addListener(this);
   }
 
-  // ── TrayListener ────────────────────────────────────────────────────────
+  // -- TrayListener --------------------------------------------------------
 
   @override
   void onTrayIconMouseDown() {
@@ -103,7 +103,7 @@ class TrayService with TrayListener, WindowListener {
     }
   }
 
-  // ── WindowListener ──────────────────────────────────────────────────────
+  // -- WindowListener ------------------------------------------------------
 
   @override
   void onWindowClose() {
@@ -122,7 +122,7 @@ class TrayService with TrayListener, WindowListener {
   @override
   void onWindowMoved() => _scheduleGeometrySave();
 
-  // ── Window geometry persistence ─────────────────────────────────────────
+  // -- Window geometry persistence ----------------------------------------─
 
   static const _kWindowX = 'window_x';
   static const _kWindowY = 'window_y';
@@ -175,7 +175,7 @@ class TrayService with TrayListener, WindowListener {
     } catch (_) {}
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────────
+  // -- Helpers ------------------------------------------------------------─
 
   Future<void> _showWindow() async {
     onTrayShow?.call();

@@ -22,7 +22,7 @@ class ShortcutService {
     }
   }
 
-  // ── Windows (.lnk via PowerShell) ─────────────────────────────────────
+  // -- Windows (.lnk via PowerShell) ------------------------------------─
 
   static Future<void> _ensureWindowsShortcut() async {
     final exePath = Platform.resolvedExecutable;
@@ -60,7 +60,7 @@ if (Test-Path \$lnk) { exit 0 }
     }
   }
 
-  // ── Linux (.desktop file) ─────────────────────────────────────────────
+  // -- Linux (.desktop file) --------------------------------------------─
 
   static Future<void> _ensureLinuxDesktopEntry() async {
     final home = Platform.environment['HOME'];

@@ -30,7 +30,7 @@ class GuideScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ── Header ─────────────────────────────────────────────
+          // -- Header --------------------------------------------─
           Card(
             color: cs.primaryContainer,
             elevation: 0,
@@ -72,7 +72,7 @@ class GuideScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // ── Platform support ───────────────────────────────────
+          // -- Platform support ----------------------------------─
           _SectionCard(
             icon: Icons.devices,
             title: 'Supported Platforms',
@@ -126,7 +126,7 @@ class GuideScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ── Requirements ──────────────────────────────────────
+          // -- Requirements --------------------------------------
           _SectionCard(
             icon: Icons.checklist,
             title: 'Requirements',
@@ -155,7 +155,7 @@ class GuideScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ── Quick start ───────────────────────────────────────
+          // -- Quick start --------------------------------------─
           _SectionCard(
             icon: Icons.rocket_launch,
             title: 'Quick Start',
@@ -191,7 +191,7 @@ class GuideScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ── Tab guide ─────────────────────────────────────────
+          // -- Tab guide ----------------------------------------─
           _SectionCard(
             icon: Icons.tab,
             title: 'Tabs Explained',
@@ -275,7 +275,7 @@ class GuideScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ── Tips ──────────────────────────────────────────────
+          // -- Tips ----------------------------------------------
           _SectionCard(
             icon: Icons.lightbulb_outline,
             title: 'Tips & Troubleshooting',
@@ -329,7 +329,7 @@ class GuideScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ── Supported formats ─────────────────────────────────
+          // -- Supported formats --------------------------------─
           _SectionCard(
             icon: Icons.audio_file,
             title: 'Supported Formats',
@@ -356,7 +356,7 @@ class GuideScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ── Current platform info ─────────────────────────────
+          // -- Current platform info ----------------------------─
           _SectionCard(
             icon: Icons.info_outline,
             title: 'Your Environment',
@@ -389,7 +389,7 @@ class GuideScreen extends StatelessWidget {
   }
 }
 
-// ─── Reusable section card ───────────────────────────────────────────────────
+// --─ Reusable section card --------------------------------------------------─
 
 class _SectionCard extends StatelessWidget {
   final IconData icon;
@@ -430,7 +430,7 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-// ─── Platform row ────────────────────────────────────────────────────────────
+// --─ Platform row ------------------------------------------------------------
 
 class _PlatformRow extends StatelessWidget {
   final IconData icon;
@@ -498,7 +498,7 @@ class _PlatformRow extends StatelessWidget {
   }
 }
 
-// ─── Requirement row ─────────────────────────────────────────────────────────
+// --─ Requirement row --------------------------------------------------------─
 
 class _RequirementRow extends StatelessWidget {
   final String text;
@@ -531,7 +531,7 @@ class _RequirementRow extends StatelessWidget {
   }
 }
 
-// ─── Step row ────────────────────────────────────────────────────────────────
+// --─ Step row ----------------------------------------------------------------
 
 class _StepRow extends StatelessWidget {
   final String number;
@@ -573,7 +573,7 @@ class _StepRow extends StatelessWidget {
   }
 }
 
-// ─── Feature row ─────────────────────────────────────────────────────────────
+// --─ Feature row ------------------------------------------------------------─
 
 class _FeatureRow extends StatelessWidget {
   final IconData icon;
@@ -608,7 +608,7 @@ class _FeatureRow extends StatelessWidget {
   }
 }
 
-// ─── Tip row ─────────────────────────────────────────────────────────────────
+// --─ Tip row ----------------------------------------------------------------─
 
 class _TipRow extends StatelessWidget {
   final String title;
@@ -641,7 +641,7 @@ class _TipRow extends StatelessWidget {
   }
 }
 
-// ─── Format row ──────────────────────────────────────────────────────────────
+// --─ Format row --------------------------------------------------------------
 
 class _FormatRow extends StatelessWidget {
   final String format;
@@ -678,7 +678,7 @@ class _FormatRow extends StatelessWidget {
   }
 }
 
-// ─── Info row ────────────────────────────────────────────────────────────────
+// --─ Info row ----------------------------------------------------------------
 
 class _InfoRow extends StatelessWidget {
   final String label;

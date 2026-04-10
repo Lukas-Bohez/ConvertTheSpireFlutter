@@ -135,7 +135,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
       body: Column(
         children: [
-          // ── Search ──
+          // -- Search --
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: TextField(
@@ -169,7 +169,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
           ),
 
-          // ── List ──
+          // -- List --
           Expanded(
             child: _items.isEmpty && !_loading
                 ? EmptyState(
@@ -273,7 +273,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 }
 
-// ── Date header ──
+// -- Date header --
 
 class _DateHeader extends StatelessWidget {
   final String label;
@@ -294,7 +294,7 @@ class _DateHeader extends StatelessWidget {
   }
 }
 
-// ── History tile ──
+// -- History tile --
 
 class _HistoryTile extends StatelessWidget {
   final Map<String, dynamic> item;

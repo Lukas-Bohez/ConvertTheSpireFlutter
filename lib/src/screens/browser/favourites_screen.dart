@@ -77,7 +77,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
       ),
       body: Column(
         children: [
-          // ── Search bar ──
+          // -- Search bar --
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: TextField(
@@ -96,7 +96,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
             ),
           ),
 
-          // ── Folder chips ──
+          // -- Folder chips --
           if (_folders.length > 1)
             SizedBox(
               height: 42,
@@ -131,7 +131,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
               ),
             ),
 
-          // ── List / Grid ──
+          // -- List / Grid --
           Expanded(
             child: items.isEmpty
                 ? EmptyState(

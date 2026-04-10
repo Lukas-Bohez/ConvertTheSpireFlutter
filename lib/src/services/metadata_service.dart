@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/track_metadata.dart';
 
-// ─── MusicBrainz metadata fetcher ────────────────────────────────────────────
+// --─ MusicBrainz metadata fetcher --------------------------------------------
 
 class MusicBrainzService {
   static const _baseUrl = 'https://musicbrainz.org/ws/2';
@@ -120,7 +120,7 @@ class MusicBrainzService {
   }
 }
 
-// ─── Album art downloader ────────────────────────────────────────────────────
+// --─ Album art downloader ----------------------------------------------------
 
 class AlbumArtService {
   static const _artTtl = Duration(days: 14);
@@ -177,7 +177,7 @@ class AlbumArtService {
   }
 }
 
-// ─── LRClib lyrics fetcher ───────────────────────────────────────────────────
+// --─ LRClib lyrics fetcher --------------------------------------------------─
 
 class LyricsService {
   static const _baseUrl = 'https://lrclib.net/api';
