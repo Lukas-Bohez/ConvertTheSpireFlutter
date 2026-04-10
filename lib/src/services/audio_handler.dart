@@ -10,7 +10,7 @@ import 'package:just_audio/just_audio.dart';
 class AppAudioHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player;
 
-  /// Callbacks for skip actions — set by PlayerState.
+  /// Callbacks for skip actions - set by PlayerState.
   Future<void> Function()? onSkipToNext;
   Future<void> Function()? onSkipToPrevious;
 

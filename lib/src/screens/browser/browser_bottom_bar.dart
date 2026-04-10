@@ -70,7 +70,7 @@ class BrowserBottomBar extends StatelessWidget {
               icon: const Icon(Icons.home_outlined),
               onPressed: onHome,
             ),
-            // Favourite toggle — filled when page is bookmarked
+            // Favourite toggle - filled when page is bookmarked
             IconButton(
               icon: Icon(
                 isFavourited ? Icons.favorite : Icons.favorite_border,

@@ -51,7 +51,7 @@ class DownloadService {
 
   /// Known difficult sites that require browser-like headers and/or cookies.
   static const Map<String, String> knownDifficultSites = {
-    'hianime.to': 'Uses Cloudflare bot protection \u2014 cookies required.',
+    'hianime.to': 'Uses Cloudflare bot protection; cookies required.',
     'crunchyroll.com':
         'Requires authentication. Sign in via browser and export cookies.',
     'funimation.com': 'Requires authentication and may be geo-restricted.',
@@ -289,6 +289,8 @@ class DownloadService {
     int preferredAudioBitrate = 192,
     bool sponsorBlockEnabled = false,
     bool createFormatSubfolders = true,
+    String? cookiesFile,
+    String? cookiesFromBrowser,
   }) async {
     if (kIsWeb) {
       throw Exception(
@@ -312,9 +314,9 @@ class DownloadService {
 
     final safeTitle = _sanitizeFileName(video.title);
 
-    // ── yt-dlp fast-path (when available)
+    // -- yt-dlp fast-path (when available)
     // yt-dlp handles throttle-token decryption, chunked downloads, and
-    // adaptive stream merging natively — bypassing the youtube_explode_dart
+    // adaptive stream merging natively - bypassing the youtube_explode_dart
     // stream issues that cause 403 errors on HD adaptive streams.
     final resolvedYtDlp = await ytDlp.resolveAvailablePath(ytDlpPath);
     if (resolvedYtDlp != null) {
@@ -333,10 +335,12 @@ class DownloadService {
         sponsorBlockEnabled: sponsorBlockEnabled,
         isSafOutput: isSafOutput,
         useMediaStoreOnly: useMediaStoreOnly,
+        cookiesFile: cookiesFile,
+        cookiesFromBrowser: cookiesFromBrowser,
       );
     }
 
-    // ── Fallback: youtube_explode_dart ───────────────────────────────────
+    // -- Fallback: youtube_explode_dart -----------------------------------
     // Used on mobile (no yt-dlp binary) or when yt-dlp isn't installed.
     // Muxed streams (360p max) are reliable; HD adaptive streams may fail.
     // Fetch stream manifest with retry using different YouTube API clients
@@ -472,7 +476,7 @@ class DownloadService {
       String outputPath;
 
       if (needsConversion) {
-        // ── Convert to the requested audio format ─────────────────────
+        // -- Convert to the requested audio format ---------------------
         final coverPath =
             await _writeCoverFile(outputFolder.path, safeTitle, thumbBytes);
         if (coverPath != null) tempFiles.add(coverPath);
@@ -499,7 +503,7 @@ class DownloadService {
               'FFmpeg completed but output file was not created for format: $formatLower');
         }
       } else {
-        // ── MP4: keep as video ────────────────────────────────────────
+        // -- MP4: keep as video ----------------------------------------
         outputPath =
             '${outputFolder.path}${Platform.pathSeparator}$safeTitle.mp4';
         onProgress(isHdMerge ? 85 : 95, DownloadStatus.converting);
@@ -551,7 +555,7 @@ class DownloadService {
     }
   }
 
-  /// ── yt-dlp download path ────────────────────────────────────────────
+  /// -- yt-dlp download path --------------------------------------------
   /// Uses the yt-dlp binary for the actual stream download, merging, and
   /// audio extraction.  yt-dlp handles YouTube's throttle-token decryption
   /// internally, avoiding the 403 errors that plague adaptive streams via
@@ -573,6 +577,8 @@ class DownloadService {
     required bool sponsorBlockEnabled,
     required bool isSafOutput,
     required bool useMediaStoreOnly,
+    String? cookiesFile,
+    String? cookiesFromBrowser,
   }) async {
     debugPrint('DownloadService: using yt-dlp path for "$safeTitle"');
     onProgress(0, DownloadStatus.downloading);
@@ -602,6 +608,9 @@ class DownloadService {
         ytDlpPath: ytDlpPath,
         videoQuality: videoQuality,
         audioBitrate: audioBitrate,
+        sponsorBlockEnabled: sponsorBlockEnabled,
+        cookiesFile: cookiesFile,
+        cookiesFromBrowser: cookiesFromBrowser,
         isCancelled: () => token.cancelled,
         onProgress: (pct, speed, eta) {
           // Scale yt-dlp's 0-100 into 0-95 (leave room for finalization)
@@ -651,8 +660,8 @@ class DownloadService {
     int bitrate = 192,
   }) {
     // Cover embedding support:
-    //   MP3 – ID3v2 attached picture (mjpeg + attached_pic)
-    //   M4A – MP4 container (mjpeg + attached_pic)
+    //   MP3 - ID3v2 attached picture (mjpeg + attached_pic)
+    //   M4A - MP4 container (mjpeg + attached_pic)
     final supportsCoverEmbed = {'mp3', 'm4a'}.contains(format);
     final embedCover = coverPath != null && supportsCoverEmbed;
 
@@ -669,7 +678,7 @@ class DownloadService {
         'comment=Cover (front)'
       ]);
     } else {
-      // No cover – explicitly map only the audio stream (important when input
+      // No cover - explicitly map only the audio stream (important when input
       // is a muxed MP4 that also contains a video track).
       args.addAll(['-map', '0:a']);
     }
@@ -724,7 +733,7 @@ class DownloadService {
         formatLower: formatLower,
       );
 
-      // SAF copy failed – ask the user to re-grant / pick a new folder.
+      // SAF copy failed - ask the user to re-grant / pick a new folder.
       if (destUri == null && onSafAccessDenied != null) {
         final newUri = await onSafAccessDenied!();
         if (newUri != null && newUri.isNotEmpty) {
@@ -778,7 +787,7 @@ class DownloadService {
   ///
   /// On desktop, uses YouTube's own `&range=START-END` and `&rn=N` URL query
   /// parameters.  On Android, uses HTTP Range headers with smaller chunks and
-  /// automatic manifest refresh on 403/429 — the URL-param approach fails on
+  /// automatic manifest refresh on 403/429 - the URL-param approach fails on
   /// Android's HTTP stack after 2-3 chunks.
   ///
   /// [videoId] is used on Android to refresh the stream manifest when the CDN
@@ -793,7 +802,7 @@ class DownloadService {
   }) async {
     final total = stream.size.totalBytes;
     if (total <= 0) {
-      // Unknown size – fall back to the library's own streaming API
+      // Unknown size - fall back to the library's own streaming API
       await _downloadStreamLegacy(stream, outputPath, token, onProgress);
       return;
     }
@@ -948,7 +957,7 @@ class DownloadService {
         const Duration(seconds: 60),
         onTimeout: (sink) {
           sink.addError(TimeoutException(
-              'Download stalled – no data received for 60 seconds'));
+              'Download stalled - no data received for 60 seconds'));
           sink.close();
         },
       );
@@ -1001,7 +1010,7 @@ class DownloadService {
     }
 
     const chunkSize =
-        1 * 1024 * 1024; // 1 MB — smaller chunks reduce stall window
+        1 * 1024 * 1024; // 1 MB - smaller chunks reduce stall window
     const maxRetries = 20; // more retries for flaky mobile networks
     final file = File(outputPath);
     int received = 0;
@@ -1047,7 +1056,7 @@ class DownloadService {
                   );
 
               if (response.statusCode == 403 || response.statusCode == 429) {
-                // Signature expired or rate-limited – refresh stream URL
+                // Signature expired or rate-limited - refresh stream URL
                 if (videoId != null) {
                   debugPrint(
                       'Android download: HTTP ${response.statusCode} on chunk $start-$end, refreshing manifest...');
@@ -1450,7 +1459,7 @@ class DownloadService {
     }
   }
 
-  /// Pick the best video-only stream whose height is ≤ targetHeight.
+  /// Pick the best video-only stream whose height is <= targetHeight.
   /// Strongly prefers MP4 (H.264) container for direct copy into MP4 output.
   /// Falls back to WebM (VP9) only if no MP4 stream is available at target.
   VideoOnlyStreamInfo _pickBestVideoStream(
@@ -1483,7 +1492,7 @@ class DownloadService {
       if (s.videoResolution.height <= targetHeight) return s;
     }
 
-    // Nothing ≤ target; return the lowest available
+    // Nothing <= target; return the lowest available
     return allSorted.last;
   }
 

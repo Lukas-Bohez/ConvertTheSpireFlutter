@@ -59,7 +59,7 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
       appBar: AppBar(title: const Text('Browser Settings')),
       body: ListView(
         children: [
-          // ── General ──
+          // -- General --
           _SectionHeader(title: 'General'),
           ListTile(
             leading: const Icon(Icons.search),
@@ -68,7 +68,7 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
             onTap: _pickSearchEngine,
           ),
 
-          // ── Privacy ──
+          // -- Privacy --
           _SectionHeader(title: 'Privacy'),
           SwitchListTile(
             secondary: const Icon(Icons.block),
@@ -117,7 +117,7 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
             onTap: _showClearDataDialog,
           ),
 
-          // ── Display ──
+          // -- Display --
           _SectionHeader(title: 'Display'),
           SwitchListTile(
             secondary: const Icon(Icons.desktop_windows),

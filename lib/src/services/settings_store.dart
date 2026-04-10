@@ -37,7 +37,7 @@ class SettingsStore {
         return dlDir.path;
       }
 
-      // Native channel failed — return empty string;
+      // Native channel failed - return empty string;
       // the user will need to configure a download directory manually.
       _pathProviderBroken = true;
       return '';
@@ -110,7 +110,7 @@ class SettingsStore {
       if (file != null) {
         await file.writeAsString(json);
       } else {
-        // Can't persist — keep in memory
+        // Can't persist - keep in memory
         _webSettingsJson = json;
       }
     } catch (_) {

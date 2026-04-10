@@ -32,7 +32,7 @@ class QuickLink {
     );
   }
 
-  /// Constant icon lookup by route — avoids non-constant IconData construction.
+  /// Constant icon lookup by route - avoids non-constant IconData construction.
   static const Map<String, IconData> _routeIcons = {
     'search.tab': Icons.search,
     'multisearch.tab': Icons.travel_explore,

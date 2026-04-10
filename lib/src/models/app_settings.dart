@@ -20,20 +20,23 @@ class AppSettings {
   final String themeMode; // 'system', 'light', 'dark'
   final bool minimizeToTrayOnClose; // keep running when window is closed (desktop)
 
-  // ── New feature settings ─────────────────────────────────────────────
+  // -- New feature settings ---------------------------------------------
   final String defaultAudioFormat; // mp3, m4a
   final int defaultBitrate; // kbps (0 = format default)
   final int minimumBitrate; // quality gate; 0 = disabled
   final String namingTemplate; // file organisation template
   final String? soundcloudClientId; // optional SoundCloud API key
 
-  // ── Quality settings ──────────────────────────────────────────────────
+  // -- Quality settings --------------------------------------------------
   final String preferredVideoQuality; // '360p', '480p', '720p', '1080p', 'best'
   final int preferredAudioBitrate; // 128, 192, 256, 320 (kbps)
 
-  // ── yt-dlp settings ───────────────────────────────────────────────────
+  // -- yt-dlp settings ---------------------------------------------------
   final String? ytDlpPath; // custom binary path (null = auto-resolve)
   final bool sponsorBlockEnabled; // remove sponsored segments when using yt-dlp
+  final bool youtubeAuthEnabled;
+  final String? youtubeCookiesFromBrowser;
+  final String? youtubeCookiesFile;
 
   const AppSettings({
     required this.downloadDir,
@@ -64,6 +67,9 @@ class AppSettings {
     this.preferredAudioBitrate = 320,
     this.ytDlpPath,
     this.sponsorBlockEnabled = false,
+    this.youtubeAuthEnabled = false,
+    this.youtubeCookiesFromBrowser,
+    this.youtubeCookiesFile,
   });
 
   factory AppSettings.defaults({required String downloadDir}) {
@@ -95,6 +101,9 @@ class AppSettings {
       preferredAudioBitrate: 320,
       ytDlpPath: null,
       sponsorBlockEnabled: false,
+      youtubeAuthEnabled: false,
+      youtubeCookiesFromBrowser: null,
+      youtubeCookiesFile: null,
       minimizeToTrayOnClose: false,
     );
   }
@@ -127,6 +136,9 @@ class AppSettings {
     int? preferredAudioBitrate,
     String? ytDlpPath,
     bool? sponsorBlockEnabled,
+    bool? youtubeAuthEnabled,
+    String? youtubeCookiesFromBrowser,
+    String? youtubeCookiesFile,
     bool? minimizeToTrayOnClose,
   }) {
     return AppSettings(
@@ -164,6 +176,10 @@ class AppSettings {
           preferredAudioBitrate ?? this.preferredAudioBitrate,
       ytDlpPath: ytDlpPath ?? this.ytDlpPath,
       sponsorBlockEnabled: sponsorBlockEnabled ?? this.sponsorBlockEnabled,
+      youtubeAuthEnabled: youtubeAuthEnabled ?? this.youtubeAuthEnabled,
+      youtubeCookiesFromBrowser:
+          youtubeCookiesFromBrowser ?? this.youtubeCookiesFromBrowser,
+      youtubeCookiesFile: youtubeCookiesFile ?? this.youtubeCookiesFile,
     );
   }
 
@@ -198,6 +214,10 @@ class AppSettings {
           (json['preferred_audio_bitrate'] as num?)?.toInt() ?? 320,
       ytDlpPath: (json['yt_dlp_path'] as String?)?.trim(),
       sponsorBlockEnabled: json['sponsor_block_enabled'] as bool? ?? false,
+      youtubeAuthEnabled: json['youtube_auth_enabled'] as bool? ?? false,
+      youtubeCookiesFromBrowser:
+          (json['youtube_cookies_from_browser'] as String?)?.trim(),
+      youtubeCookiesFile: (json['youtube_cookies_file'] as String?)?.trim(),
       minimizeToTrayOnClose: json['minimize_to_tray_on_close'] as bool? ?? false,
       downloadDirMp3: (json['download_dir_mp3'] as String?)?.trim(),
       downloadDirM4a: (json['download_dir_m4a'] as String?)?.trim(),
@@ -232,6 +252,9 @@ class AppSettings {
       'preferred_audio_bitrate': preferredAudioBitrate,
       'yt_dlp_path': ytDlpPath,
       'sponsor_block_enabled': sponsorBlockEnabled,
+      'youtube_auth_enabled': youtubeAuthEnabled,
+      'youtube_cookies_from_browser': youtubeCookiesFromBrowser,
+      'youtube_cookies_file': youtubeCookiesFile,
       'minimize_to_tray_on_close': minimizeToTrayOnClose,
       'download_dir_mp3': downloadDirMp3,
       'download_dir_m4a': downloadDirM4a,

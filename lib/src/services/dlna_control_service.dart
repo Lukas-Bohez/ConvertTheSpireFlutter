@@ -14,10 +14,10 @@ class DlnaControlService {
 
   /// Set the media URI on the renderer and start playback.
   ///
-  /// [device]   – target DLNA device (from discovery).
-  /// [mediaUrl] – HTTP URL of the media file (served by our local server).
-  /// [title]    – display title shown on the TV's OSD.
-  /// [mimeType] – MIME type of the media (e.g. `audio/mpeg`, `video/mp4`).
+  /// [device]   - target DLNA device (from discovery).
+  /// [mediaUrl] - HTTP URL of the media file (served by our local server).
+  /// [title]    - display title shown on the TV's OSD.
+  /// [mimeType] - MIME type of the media (e.g. `audio/mpeg`, `video/mp4`).
   Future<void> playMedia({
     required DlnaDevice device,
     required String mediaUrl,

@@ -107,7 +107,7 @@ class AdBlockService extends ChangeNotifier {
     return false;
   }
 
-  // ── Private ──
+  // -- Private --
 
   Future<File> get _cacheFile async {
     final dir = await getApplicationSupportDirectory();
@@ -126,7 +126,7 @@ class AdBlockService extends ChangeNotifier {
     }
 
     if (needsFetch) {
-      // Fetch in background — don't block init
+      // Fetch in background - don't block init
       _fetchAndCache().catchError((e) {
         if (kDebugMode) debugPrint('AdBlock fetch failed: $e');
       });
@@ -170,7 +170,7 @@ class AdBlockService extends ChangeNotifier {
         // Match: ||domain^ or ||domain/
         if (!line.startsWith('||')) continue;
         final rest = line.substring(2);
-        // Find the terminator — ^ or /
+        // Find the terminator - ^ or /
         var end = rest.indexOf('^');
         final slashEnd = rest.indexOf('/');
         if (end < 0 || (slashEnd >= 0 && slashEnd < end)) end = slashEnd;

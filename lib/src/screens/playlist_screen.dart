@@ -49,7 +49,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     _tabController = TabController(length: 4, vsync: this);
   }
 
-  // ─── Actions ──────────────────────────────────────────────────────────────
+  // --─ Actions --------------------------------------------------------------
 
   Future<void> _loadPlaylist() async {
     final url = _urlController.text.trim();
@@ -189,7 +189,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   @override
   bool get wantKeepAlive => true;
 
-  // ─── Build ────────────────────────────────────────────────────────────────
+  // --─ Build ----------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -199,11 +199,11 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
     return Column(
       children: [
-        // ── Top bar: URL + folder inputs ────────────────────────────────
+        // -- Top bar: URL + folder inputs --------------------------------
         _buildInputSection(theme, cs),
         if (_loading) _buildLoadingBar(),
         if (_error != null) _buildErrorBar(),
-        // ── Main content ────────────────────────────────────────────────
+        // -- Main content ------------------------------------------------
         if (_tracks != null) ...[
           _buildTabBar(cs),
           Expanded(
@@ -222,7 +222,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     );
   }
 
-  // ─── Input Section ────────────────────────────────────────────────────────
+  // --─ Input Section --------------------------------------------------------
 
   Widget _buildInputSection(ThemeData theme, ColorScheme cs) {
     return Card(
@@ -348,7 +348,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     );
   }
 
-  // ─── Tab bar ──────────────────────────────────────────────────────────────
+  // --─ Tab bar --------------------------------------------------------------
 
   Widget _buildTabBar(ColorScheme cs) {
     final matched = _comparison?.downloadedCount ?? 0;
@@ -390,7 +390,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     );
   }
 
-  // ─── Overview Tab ─────────────────────────────────────────────────────────
+  // --─ Overview Tab --------------------------------------------------------─
 
   Widget _buildOverviewTab(ThemeData theme, ColorScheme cs) {
     return ListView(
@@ -446,7 +446,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                     Expanded(
                       child: Text(
                         '${_comparison!.uncertainMatches().length} tracks matched with '
-                        'low confidence — review them in the Matched tab.',
+                        'low confidence - review them in the Matched tab.',
                         style: theme.textTheme.bodyMedium,
                       ),
                     ),
@@ -469,7 +469,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                   'Download All ${_comparison!.missingCount} Missing Tracks'),
             ),
         ] else ...[
-          // No comparison yet — show track list
+          // No comparison yet - show track list
           const SizedBox(height: 8),
           Text(
               '${_tracks!.length} tracks loaded. Select a folder above to compare.',
@@ -571,7 +571,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     );
   }
 
-  // ─── Matched Tab ──────────────────────────────────────────────────────────
+  // --─ Matched Tab ----------------------------------------------------------
 
   Widget _buildMatchedTab(ThemeData theme) {
     if (_comparison == null) {
@@ -651,7 +651,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     );
   }
 
-  // ─── Missing Tab ──────────────────────────────────────────────────────────
+  // --─ Missing Tab ----------------------------------------------------------
 
   Widget _buildMissingTab(ThemeData theme) {
     if (_comparison == null) {
@@ -788,7 +788,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     );
   }
 
-  // ─── Extras Tab ───────────────────────────────────────────────────────────
+  // --─ Extras Tab ----------------------------------------------------------─
 
   Widget _buildExtrasTab(ThemeData theme) {
     if (_comparison == null) {
@@ -801,7 +801,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
           children: [
             Icon(Icons.folder_off, size: 56, color: Colors.grey.shade300),
             const SizedBox(height: 12),
-            Text('No extra files — folder matches the playlist perfectly',
+            Text('No extra files - folder matches the playlist perfectly',
                 style: theme.textTheme.titleMedium),
           ],
         ),
@@ -848,7 +848,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     );
   }
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────
+  // --─ Helpers --------------------------------------------------------------
 
   String _formatDuration(Duration d) {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');

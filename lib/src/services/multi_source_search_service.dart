@@ -6,7 +6,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart'
 
 import '../models/search_result.dart';
 
-// ─── YouTube searcher ────────────────────────────────────────────────────────
+// --─ YouTube searcher --------------------------------------------------------
 
 class YouTubeSearcher {
   final YoutubeExplode _yt;
@@ -37,7 +37,7 @@ class YouTubeSearcher {
   }
 }
 
-// ─── SoundCloud searcher ─────────────────────────────────────────────────────
+// --─ SoundCloud searcher ----------------------------------------------------─
 
 class SoundCloudSearcher {
   String? clientId; // Must be injected or extracted
@@ -76,7 +76,7 @@ class SoundCloudSearcher {
   }
 }
 
-// ─── Multi-source aggregator ─────────────────────────────────────────────────
+// --─ Multi-source aggregator ------------------------------------------------─
 
 class MultiSourceSearchService {
   final YouTubeSearcher youtubeSearcher;

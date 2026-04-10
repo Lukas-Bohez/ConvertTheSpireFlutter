@@ -256,7 +256,7 @@ class BrowserToolbar extends StatelessWidget {
                                 )),
                     ),
 
-                    // Overflow menu (More) — use explicit showMenu so we can
+                    // Overflow menu (More) - use explicit showMenu so we can
                     // release WebView focus on Windows before the native
                     // WebView2 consumes the click. Uses onMenuAction via
                     // onSelected to remain safe for navigation.

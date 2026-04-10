@@ -18,7 +18,7 @@ class VideoDetectorService extends ChangeNotifier {
     }
   }
 
-  /// Clear detected URLs — called on page navigation start.
+  /// Clear detected URLs - called on page navigation start.
   void clearForPage() {
     if (_detectedUrls.isNotEmpty) {
       _detectedUrls.clear();

@@ -34,7 +34,7 @@ class UpdateService {
   static const _prefLastSeenVersion = 'update_last_seen_version';
   static const _prefCheckOnLaunch = 'update_check_on_launch';
 
-  /// Returns null on network failure — never throws to caller.
+  /// Returns null on network failure - never throws to caller.
   static Future<UpdateInfo?> checkForUpdate() async {
     try {
       final response = await http.get(Uri.parse(_apiUrl), headers: {

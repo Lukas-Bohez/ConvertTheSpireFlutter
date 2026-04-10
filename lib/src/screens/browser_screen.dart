@@ -47,7 +47,7 @@ class BrowserScreen extends StatefulWidget {
 
 class _BrowserScreenState extends State<BrowserScreen>
     with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
-  // ── Services ──
+  // -- Services --
   final BrowserRepository _repo = BrowserRepository();
   final AdBlockService _adBlock = AdBlockService();
   final UnifiedCastService _castService = UnifiedCastService();
@@ -75,7 +75,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   int _findMatchCount = 0;
   int _findActiveIndex = 0;
 
-  // Pending URL — loaded once the WebView controller is ready.
+  // Pending URL - loaded once the WebView controller is ready.
   String? _pendingUrl;
 
   // Timer used to throttle periodic screenshots while video is playing.
@@ -185,7 +185,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   @override
   bool get wantKeepAlive => true;
 
-  // ── URL helpers ──
+  // -- URL helpers --
 
   String _normalizeInput(String raw) {
     final trimmed = raw.trim();
@@ -228,7 +228,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _onNewTabPageNavigate(String url) => _navigateTo(url);
 
-  // ── Favourite state helper ──
+  // -- Favourite state helper --
 
   Future<void> _checkFavouriteState() async {
     final url = _addressController.text.trim();
@@ -242,7 +242,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   }
 
-  // ── WebView callbacks ──
+  // -- WebView callbacks --
 
   InAppWebViewSettings _buildSettings() {
     return InAppWebViewSettings(
@@ -272,7 +272,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _onWebViewCreated(InAppWebViewController controller) {
-    debugPrint('[BROWSER] onWebViewCreated – controller ready');
+    debugPrint('[BROWSER] onWebViewCreated - controller ready');
     _webViewController = controller;
 
     controller.addJavaScriptHandler(
@@ -338,7 +338,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     // Stop any ongoing playback screenshot timer when navigating.
     _playbackScreenshotTimer?.cancel();
     _playbackScreenshotTimer = null;
-    debugPrint('[BROWSER] onLoadStart – $url');
+    debugPrint('[BROWSER] onLoadStart - $url');
     _videoDetector.clearForPage();
     final urlStr = url?.toString() ?? '';
     // Ignore about:blank navigations caused by WebView initialisation.
@@ -356,7 +356,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _onLoadStop(InAppWebViewController controller, WebUri? url) async {
-    debugPrint('[BROWSER] onLoadStop – $url');
+    debugPrint('[BROWSER] onLoadStop - $url');
     final urlStr = url?.toString() ?? '';
     // Ignore about:blank completions.
     if (urlStr == 'about:blank') return;
@@ -492,7 +492,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   void _onReceivedError(InAppWebViewController controller,
       WebResourceRequest request, WebResourceError error) {
     debugPrint(
-        '[BROWSER] onReceivedError – ${request.url} | ${error.type} | ${error.description}');
+        '[BROWSER] onReceivedError - ${request.url} | ${error.type} | ${error.description}');
     if (request.isForMainFrame ?? false) {
       setState(() => _isLoading = false);
     }
@@ -502,7 +502,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     controller.evaluateJavascript(source: VideoDetectorService.injectionJs);
   }
 
-  // ── Actions ──
+  // -- Actions --
 
   void _goBack() async {
     if (_webViewController != null && await _webViewController!.canGoBack()) {
@@ -673,7 +673,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     setState(() {});
   }
 
-  // ── Find-in-page ──
+  // -- Find-in-page --
 
   void _openFindInPage() {
     setState(() => _showFindBar = true);
@@ -761,7 +761,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   }
 
-  // ── Build ──
+  // -- Build --
 
   @override
   Widget build(BuildContext context) {
@@ -778,7 +778,7 @@ class _BrowserScreenState extends State<BrowserScreen>
           children: [
             Column(
               children: [
-                // ── Top toolbar ──
+                // -- Top toolbar --
                 BrowserToolbar(
                   addressController: _addressController,
                   isLoading: _isLoading,
@@ -810,19 +810,19 @@ class _BrowserScreenState extends State<BrowserScreen>
                   onFavouriteTap: _showNewTabPage ? null : _toggleFavourite,
                 ),
 
-                // ── Progress bar ──
+                // -- Progress bar --
                 if (_isLoading)
                   LinearProgressIndicator(
                     value: _progress > 0 ? _progress : null,
                     minHeight: 2,
                   ),
 
-                // ── WebView + NewTabPage (Stack: WebView persists) ──
+                // -- WebView + NewTabPage (Stack: WebView persists) --
                 Expanded(
                   child: Stack(
                     children: [
                       // WebView always in tree (texture-based on
-                      // Windows — no HWND overlay issues). NewTabPage
+                      // Windows - no HWND overlay issues). NewTabPage
                       // is placed on top when active.
                       if (_webViewSupported)
                         Positioned.fill(child: _buildWebView())
@@ -850,7 +850,7 @@ class _BrowserScreenState extends State<BrowserScreen>
                   ),
                 ),
 
-                // ── Bottom bar ──
+                // -- Bottom bar --
                 BrowserBottomBar(
                   tabCount: _tabManager.tabCount,
                   isFavourited: _isFavourited,
@@ -862,7 +862,7 @@ class _BrowserScreenState extends State<BrowserScreen>
               ],
             ),
 
-            // ── Cast mini bar ──
+            // -- Cast mini bar --
             if (_castService.activeDevice != null)
               Positioned(
                 bottom: viewPadding.bottom + 56,
@@ -884,7 +884,7 @@ class _BrowserScreenState extends State<BrowserScreen>
                 ),
               ),
 
-            // ── Extract & Download FAB for difficult sites ──
+            // -- Extract & Download FAB for difficult sites --
             if (!_showNewTabPage &&
                 DownloadService.isDifficultSite(_addressController.text))
               Positioned(
@@ -1218,14 +1218,14 @@ class _BrowserScreenState extends State<BrowserScreen>
         },
       ),
     );
-    // Sheet closed — stop tab-switcher periodic captures.
+    // Sheet closed - stop tab-switcher periodic captures.
     _tabSwitcherScreenshotTimer?.cancel();
     _tabSwitcherScreenshotTimer = null;
     setState(() => _isTabSwitcherVisible = false);
   }
 }
 
-// ── Tab Switcher Sheet ──
+// -- Tab Switcher Sheet --
 
 class _TabSwitcherSheet extends StatefulWidget {
   final TabManager tabManager;

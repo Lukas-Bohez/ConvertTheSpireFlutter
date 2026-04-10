@@ -79,7 +79,7 @@ class InstallerService {
         const Duration(seconds: 60),
         onTimeout: (sinkErr) {
           sinkErr.addError(TimeoutException(
-              'FFmpeg download stalled – no data for 60 seconds'));
+              'FFmpeg download stalled - no data for 60 seconds'));
           sinkErr.close();
         },
       );

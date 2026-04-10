@@ -78,7 +78,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                   controller: scrollController,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: [
-                    // ── Detected videos ──
+                    // -- Detected videos --
                     if (urls.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 24),
@@ -131,7 +131,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
 
                     const Divider(height: 24),
 
-                    // ── Devices ──
+                    // -- Devices --
                     Text('Cast Devices',
                         style: Theme.of(context).textTheme.labelLarge),
                     const SizedBox(height: 4),
@@ -187,7 +187,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                 ),
               ),
 
-              // ── Cast button ──
+              // -- Cast button --
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: SizedBox(

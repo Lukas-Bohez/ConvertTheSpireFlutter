@@ -42,9 +42,9 @@ class YouTubeService {
           }
         }
       } on TimeoutException catch (_) {
-        // Playlist stream stalled — fall through to single video fallback
+        // Playlist stream stalled - fall through to single video fallback
       } catch (_) {
-        // Any other failure — fall back
+        // Any other failure - fall back
       }
     }
 

@@ -26,7 +26,7 @@ import '../services/audio_handler.dart';
 import '../services/ffmpeg_service.dart';
 import '../utils/lock.dart';
 
-// ─── Public entry point ───────────────────────────────────────────────────────
+// --─ Public entry point ------------------------------------------------------─
 
 class PlayerPage extends StatelessWidget {
   const PlayerPage({super.key});
@@ -35,7 +35,7 @@ class PlayerPage extends StatelessWidget {
   Widget build(BuildContext context) => const PlayerScreen();
 }
 
-// ─── Enums & data types ───────────────────────────────────────────────────────
+// --─ Enums & data types ------------------------------------------------------─
 
 enum MediaType { audio, video }
 
@@ -78,7 +78,7 @@ class MediaItem {
       );
 }
 
-// ─── Thumbnail helpers (unchanged — they work fine) ──────────────────────────
+// --─ Thumbnail helpers (unchanged - they work fine) --------------------------
 
 Future<Uint8List?> _transcodeToSafePng(Uint8List raw, {String? mimeType}) async {
   if (raw.length < 4) return null;
@@ -116,11 +116,11 @@ img.Image? _decodeByMagic(Uint8List raw) {
   return null;
 }
 
-// ─── PlayerState ──────────────────────────────────────────────────────────────
+// --─ PlayerState --------------------------------------------------------------
 //
 // FIX SUMMARY:
 //
-// BUG 1 — Wrong track on tap:
+// BUG 1 - Wrong track on tap:
 //   Root cause: select(idx) set currentIndex then called _loadCurrent(). But
 //   _loadingTrack guard dropped subsequent calls while setting _pendingReload=true.
 //   When pending reload fired, currentIndex had been mutated by later taps.
@@ -128,21 +128,21 @@ img.Image? _decodeByMagic(Uint8List raw) {
 //   it immediately. The guard uses a serial "generation" counter; stale loads
 //   self-cancel without corrupting currentIndex.
 //
-// BUG 2 — Thumbnail storm / slow scrolling:
+// BUG 2 - Thumbnail storm / slow scrolling:
 //   Root cause: Both background loops + per-item VisibilityDetector all called
 //   notifyListeners() independently, causing O(n) full rebuilds simultaneously.
 //   FIX: Background thumbnail loading is serialised through a single
 //   throttled notify (at most once per 150 ms). VisibilityDetector requests are
 //   deduplicated with a pending-set so each index is only processed once.
 //
-// BUG 3 — Video crash (Lost connection to device):
+// BUG 3 - Video crash (Lost connection to device):
 //   Root cause: media_kit stream listeners (position, completed, etc.) fire on
-//   background threads and called notifyListeners() directly — illegal on Flutter.
+//   background threads and called notifyListeners() directly - illegal on Flutter.
 //   FIX: All stream callbacks are routed through a microtask-queued dispatcher
 //   (_scheduleNotify) that coalesces rapid updates and always executes on the
 //   platform thread via scheduleMicrotask / WidgetsBinding.instance.
 //
-// BUG 4 — just_audio_windows threading error:
+// BUG 4 - just_audio_windows threading error:
 //   Root cause: setVolume called on non-platform thread from stream listeners.
 //   FIX: All just_audio calls are wrapped in _runOnMainThread().
 
@@ -172,15 +172,15 @@ class PlayerState with ChangeNotifier {
   Map<String, MediaItem> _favouriteCache = {};
   int _folderItemCount = 0;
 
-  // BUG 1 FIX: generation counter — each _loadCurrent call captures generation
+  // BUG 1 FIX: generation counter - each _loadCurrent call captures generation
   // at start; if generation changes mid-load the load aborts.
   int _loadGeneration = 0;
 
-  // BUG 2 FIX: version counter for library loads — background loops abort when
+  // BUG 2 FIX: version counter for library loads - background loops abort when
   // this changes.
   int _loadVersion = 0;
 
-  // BUG 2 FIX: serialised notify — coalesce multiple rapid state changes.
+  // BUG 2 FIX: serialised notify - coalesce multiple rapid state changes.
   bool _notifyPending = false;
 
   // BUG 2 FIX: dedup set for in-flight thumbnail requests.
@@ -205,11 +205,11 @@ class PlayerState with ChangeNotifier {
     '.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v',
   };
 
-  // ── Audio ──
+  // -- Audio --
   AudioPlayer? _audio;
   AppAudioHandler? _audioHandler;
 
-  // ── Video ──
+  // -- Video --
   // Enable media_kit on desktop platforms except Windows because the
   // Windows build has proven unstable for bulk thumbnail/video operations.
   // Windows will use just_audio/VideoPlayer instead.
@@ -235,12 +235,12 @@ class PlayerState with ChangeNotifier {
   final _thumbLock = Lock();
   DateTime? _lastThumbOpenTime;
 
-  // video suspension for resize removed — avoid interfering with media_kit
+  // video suspension for resize removed - avoid interfering with media_kit
 
   final _random = Random();
   final _audioLock = Lock();
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ------------------------------------------------------------------------─
 
   PlayerState(this.prefs) {
     if (_useMediaKit) {
@@ -251,7 +251,7 @@ class PlayerState with ChangeNotifier {
 
     if (!_useMediaKit && !kIsWeb && Platform.isAndroid) _initAudioHandler();
 
-    // ── Audio streams ──
+    // -- Audio streams --
     // BUG 3/4 FIX: route all callbacks through _scheduleNotify so they always
     // execute on the platform thread. Only create the just_audio player on Android
     // where media_kit is not used.
@@ -423,19 +423,19 @@ class PlayerState with ChangeNotifier {
   // _scheduleNotify posts everything as a microtask which always executes on
   // the main Dart isolate thread, satisfying the platform channel requirement.
   void _scheduleNotify({VoidCallback? callback}) {
-    // CRITICAL: do NOT call callback synchronously here — the caller is on a
+    // CRITICAL: do NOT call callback synchronously here - the caller is on a
     // background thread. Queue it alongside the notify.
     if (_notifyPending && callback == null) return;
     if (!_notifyPending) _notifyPending = true;
     Future.microtask(() {
       if (_disposed) return;
       _notifyPending = false;
-      callback?.call();   // now on main isolate — safe to call plugin methods
+      callback?.call();   // now on main isolate - safe to call plugin methods
       notifyListeners();
     });
   }
 
-  // ─── Getters ──────────────────────────────────────────────────────────────
+  // --─ Getters --------------------------------------------------------------
 
   MediaItem? get currentItem {
     if (library.isEmpty) return null;
@@ -498,7 +498,7 @@ class PlayerState with ChangeNotifier {
 
   bool isFavourite(String path) => _favourites.contains(path);
 
-  // ─── Favourites ───────────────────────────────────────────────────────────
+  // --─ Favourites ----------------------------------------------------------─
 
   void toggleFavourite(String path) {
     if (_favourites.contains(path)) {
@@ -527,7 +527,7 @@ class PlayerState with ChangeNotifier {
     prefs.setStringList('player_favourites_cache', list);
   }
 
-  // ─── Thumb disk cache ─────────────────────────────────────────────────────
+  // --─ Thumb disk cache ----------------------------------------------------─
 
   Future<Directory> _getThumbCacheDir() async {
     if (_thumbCacheDir != null) return _thumbCacheDir!;
@@ -557,7 +557,7 @@ class PlayerState with ChangeNotifier {
     return null;
   }
 
-  // ─── Library loading ──────────────────────────────────────────────────────
+  // --─ Library loading ------------------------------------------------------
 
   Future<void> setLibrary(List<MediaItem> items) async {
     final version = ++_loadVersion;
@@ -681,7 +681,7 @@ class PlayerState with ChangeNotifier {
           );
           if (_favourites.contains(path)) _favouriteCache[path] = library[i];
           pendingNotify++;
-          // BUG 2 FIX: batch notifies — only fire every 5 items or end of list,
+          // BUG 2 FIX: batch notifies - only fire every 5 items or end of list,
           // reducing rebuilds from O(n) to O(n/5).
           if (pendingNotify >= 5 || i == library.length - 1) {
             pendingNotify = 0;
@@ -762,7 +762,7 @@ class PlayerState with ChangeNotifier {
     } catch (_) {}
   }
 
-  // ─── Playback selection ───────────────────────────────────────────────────
+  // --─ Playback selection --------------------------------------------------─
 
   /// BUG 1 FIX: select() captures the target index into a local variable and
   /// passes it directly to _loadCurrent(). The generation counter ensures that
@@ -788,7 +788,7 @@ class PlayerState with ChangeNotifier {
       return;
     }
 
-    // Snapshot the item at load time — don't rely on currentItem getter.
+    // Snapshot the item at load time - don't rely on currentItem getter.
     final item = library[targetIndex];
 
     _videoCompletionFired = false;
@@ -830,7 +830,7 @@ class PlayerState with ChangeNotifier {
                 final now = DateTime.now();
                 if (_lastMkOpenTime != null &&
                     now.difference(_lastMkOpenTime!).inMilliseconds < 350) {
-                  debugPrint('Skipping rapid audio open — too soon');
+                  debugPrint('Skipping rapid audio open - too soon');
                 } else {
                   _lastMkOpenTime = now;
                   await _openMediaWithFallback(player, item.path, play: true);
@@ -881,7 +881,7 @@ class PlayerState with ChangeNotifier {
             try {
             final now = DateTime.now();
             if (_lastMkOpenTime != null && now.difference(_lastMkOpenTime!).inMilliseconds < 350) {
-              debugPrint('Skipping rapid mk open — too soon');
+              debugPrint('Skipping rapid mk open - too soon');
             } else {
               _lastMkOpenTime = now;
               await _openMediaWithFallback(_mkPlayer!, item.path, play: true);
@@ -986,7 +986,7 @@ class PlayerState with ChangeNotifier {
   }
 }
 
-  // ─── Playback controls ────────────────────────────────────────────────────
+  // --─ Playback controls ----------------------------------------------------
 
   List<int> _getPlaybackCandidates({MediaType? only}) {
     final scope = _folderItemCount > 0 ? _folderItemCount : library.length;
@@ -1201,7 +1201,7 @@ class PlayerState with ChangeNotifier {
     Future.microtask(fn);
   }
 
-  // ─── Queue ────────────────────────────────────────────────────────────────
+  // --─ Queue ----------------------------------------------------------------
 
   void enqueue(int index) {
     debugPrint('enqueue requested: $index, library=${library.length}');
@@ -1280,7 +1280,7 @@ class PlayerState with ChangeNotifier {
     }
   }
 
-  // ─── Playback mode / prefs ────────────────────────────────────────────────
+  // --─ Playback mode / prefs ------------------------------------------------
 
   void setPlaybackMode(PlaybackMode mode) {
     playbackMode = mode;
@@ -1402,7 +1402,7 @@ class PlayerState with ChangeNotifier {
     }
   }
 
-  // ─── Audio handler (Android) ──────────────────────────────────────────────
+  // --─ Audio handler (Android) ----------------------------------------------
 
   Future<void> _initAudioHandler() async {
     // _audio is non-null when this is called (guarded by caller).
@@ -1423,7 +1423,7 @@ class PlayerState with ChangeNotifier {
     ));
   }
 
-  // ─── Directory watcher ────────────────────────────────────────────────────
+  // --─ Directory watcher ----------------------------------------------------
 
   void _startDirectoryWatcher(List<MediaItem> items) {
     _dirWatcher?.cancel();
@@ -1476,7 +1476,7 @@ class PlayerState with ChangeNotifier {
     await setLibrary(files);
   }
 
-  // ─── Video thumbnail generation ───────────────────────────────────────────
+  // --─ Video thumbnail generation ------------------------------------------─
 
   Future<Uint8List?> _generateVideoThumbnail(String filePath) async {
     final resolved = await _resolveLocalPath(filePath);
@@ -1499,7 +1499,7 @@ class PlayerState with ChangeNotifier {
             return await _transcodeToSafePng(snap, mimeType: 'image/jpeg');
           }
         } on MissingPluginException catch (_) {
-          // Plugin not available on this platform — ignore and continue.
+          // Plugin not available on this platform - ignore and continue.
           debugPrint('video_thumbnail plugin missing on this platform for $resolved');
         }
       }
@@ -1518,7 +1518,7 @@ class PlayerState with ChangeNotifier {
         final now = DateTime.now();
         if (_lastThumbOpenTime != null &&
             now.difference(_lastThumbOpenTime!).inMilliseconds < 800) {
-          debugPrint('Skipping rapid thumb open — too soon');
+          debugPrint('Skipping rapid thumb open - too soon');
         } else {
           _lastThumbOpenTime = now;
           await _openMediaWithFallback(_thumbPlayer!, filePath, play: false);
@@ -1603,7 +1603,7 @@ class PlayerState with ChangeNotifier {
     return null;
   }
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────
+  // --─ Helpers --------------------------------------------------------------
 
   Future<String> _resolveLocalPath(String path) async {
     if (path.startsWith('content://')) {
@@ -1745,7 +1745,7 @@ class PlayerState with ChangeNotifier {
             final now = DateTime.now();
             if (_lastMkOpenTime != null &&
                 now.difference(_lastMkOpenTime!).inMilliseconds < 350) {
-              debugPrint('Skipping rapid audioMk open — too soon');
+              debugPrint('Skipping rapid audioMk open - too soon');
               } else {
               _lastMkOpenTime = now;
               await _openMediaWithFallback(_audioMkPlayer!, path, play: true);
@@ -1790,7 +1790,7 @@ class PlayerState with ChangeNotifier {
         if (_useMediaKit && _mkPlayer != null) {
           final now = DateTime.now();
           if (_lastMkOpenTime != null && now.difference(_lastMkOpenTime!).inMilliseconds < 350) {
-            debugPrint('Skipping rapid mk open (playFileDirect) — too soon');
+            debugPrint('Skipping rapid mk open (playFileDirect) - too soon');
           } else {
             _lastMkOpenTime = now;
             await _openMediaWithFallback(_mkPlayer!, path, play: true);
@@ -1807,7 +1807,7 @@ class PlayerState with ChangeNotifier {
   }
 }
 
-// ─── Helper types for the All tab ────────────────────────────────────────────
+// --─ Helper types for the All tab --------------------------------------------
 
 enum _AllTabKind { header, song }
 
@@ -1826,7 +1826,7 @@ class _AllTabItem {
 }
 
 
-// ─── Persistent video widget ──────────────────────────────────────────────────
+// --─ Persistent video widget --------------------------------------------------
 
 class _VideoPane extends StatefulWidget {
   final VideoController? mkController;
@@ -1940,7 +1940,7 @@ class _VideoPaneState extends State<_VideoPane> {
   }
 }
 
-// ─── Theme constants ──────────────────────────────────────────────────────────
+// --─ Theme constants ----------------------------------------------------------
 
 abstract class _PlayerTheme {
   static const accent = Color(0xFF5B8DEF);
@@ -1958,7 +1958,7 @@ abstract class _PlayerTheme {
       Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 }
 
-// ─── Root screen ──────────────────────────────────────────────────────────────
+// --─ Root screen --------------------------------------------------------------
 
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
@@ -2046,7 +2046,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (mounted) await context.read<PlayerState>().setLibrary(items);
   }
 
-  // ─── Build ────────────────────────────────────────────────────────────────
+  // --─ Build ----------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -2182,7 +2182,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   // BUG 1 FIX: all taps go through this single method which immediately captures
-  // the index and calls select() — no intermediate setState() that could shift indices.
+  // the index and calls select() - no intermediate setState() that could shift indices.
   void _onTrackTap(PlayerState state, int index) {
     // Play by file path to avoid any index/id races in the UI layer or native
     // plugins. This ensures taps map directly to the file the user tapped.
@@ -2251,7 +2251,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
-  // ─── Now Playing bar ──────────────────────────────────────────────────────
+  // --─ Now Playing bar ------------------------------------------------------
 
   Widget _buildNowPlaying(PlayerState state) {
     final item = state.currentItem;
@@ -2281,7 +2281,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Track info ──
+          // -- Track info --
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 8, 4),
             child: Row(
@@ -2301,7 +2301,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                     children: [
                       Row(
                         children: [
-                          // Type badge — clear visual distinction between audio and video
+                          // Type badge - clear visual distinction between audio and video
                           _TypeBadge(type: item.type),
                           const SizedBox(width: 6),
                           Expanded(
@@ -2343,7 +2343,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             ),
           ),
 
-          // ── Seek bar ──
+          // -- Seek bar --
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Row(
@@ -2371,7 +2371,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             ),
           ),
 
-          // ── Playback controls ──
+          // -- Playback controls --
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
             child: Row(
@@ -2411,7 +2411,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             ),
           ),
 
-          // ── Volume ──
+          // -- Volume --
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
             child: Row(
@@ -2442,7 +2442,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 }
 
-// ─── Shared UI components ───────────────────────────────────────────────────
+// --─ Shared UI components --------------------------------------------------─
 
 class _TrackThumbnail extends StatelessWidget {
   final Uint8List? data;
@@ -2557,7 +2557,7 @@ class _PlayPauseButton extends StatelessWidget {
   }
 }
 
-// ─── Tab widgets (each is its own StatelessWidget to limit rebuild scope) ─────
+// --─ Tab widgets (each is its own StatelessWidget to limit rebuild scope) ----─
 
 /// BUG 2 FIX: each tab is its own widget so rebuilds from thumbnail loads only
 /// repaint the visible tab, not the entire screen.
@@ -2592,7 +2592,7 @@ class _AllTab extends StatelessWidget {
       controller: scrollCtl,
       slivers: [
         if (audio.isNotEmpty) ...[
-          SliverToBoxAdapter(child: _SectionHeader(text: 'Songs — ${audio.length}')),
+          SliverToBoxAdapter(child: _SectionHeader(text: 'Songs - ${audio.length}')),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             sliver: SliverGrid(
@@ -2613,7 +2613,7 @@ class _AllTab extends StatelessWidget {
           ),
         ],
         if (video.isNotEmpty) ...[
-          SliverToBoxAdapter(child: _SectionHeader(text: 'Videos — ${video.length}')),
+          SliverToBoxAdapter(child: _SectionHeader(text: 'Videos - ${video.length}')),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             sliver: SliverGrid(
@@ -2811,7 +2811,7 @@ class _MediaCard extends StatelessWidget {
   }
 }
 
-// ─── Reusable tile / card components ─────────────────────────────────────────
+// --─ Reusable tile / card components ----------------------------------------─
 
 class _EmptyHint extends StatelessWidget {
   final String message;

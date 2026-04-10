@@ -59,7 +59,7 @@ class NotificationService {
       } catch (_) {}
       _initialised = true;
     } catch (_) {
-      // Platform not supported – silently disable notifications.
+      // Platform not supported - silently disable notifications.
     }
   }
 

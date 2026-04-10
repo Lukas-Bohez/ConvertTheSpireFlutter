@@ -73,7 +73,7 @@ class _BrowserShellState extends State<BrowserShell> {
   IconData get _currentFavicon =>
       QuickLinksService.indexToIcon[widget.currentIndex] ?? Icons.search;
 
-  // ── URL bar editing ──
+  // -- URL bar editing --
 
   void _startEditing() {
     _urlEditController.text = '';
@@ -116,7 +116,7 @@ class _BrowserShellState extends State<BrowserShell> {
       }
     }
 
-    // Web URL detection — open in browser tab
+    // Web URL detection - open in browser tab
     if (_looksLikeUrl(trimmed)) {
       final url = trimmed.startsWith('http') ? trimmed : 'https://$trimmed';
       widget.onOpenUrl?.call(url);
@@ -149,7 +149,7 @@ class _BrowserShellState extends State<BrowserShell> {
 
   // Suggestions are handled by RawAutocomplete in the URL bar.
 
-  // ── Queue toggle ──
+  // -- Queue toggle --
 
   void _toggleQueue() {
     final scaffold = widget.scaffoldKey.currentState;
@@ -169,7 +169,7 @@ class _BrowserShellState extends State<BrowserShell> {
     }
   }
 
-  // ── Build ──
+  // -- Build --
 
   static const double _playerOverlayCollapsedHeight = 64.0;
   static const double _playerOverlayExpandedHeight = 220.0;

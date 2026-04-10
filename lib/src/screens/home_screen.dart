@@ -26,7 +26,6 @@ import 'statistics_screen.dart';
 import 'watched_playlists_screen.dart';
 import 'browser_screen.dart';
 import 'support_screen.dart';
-// Fix: use the correctly-cased class name exported from player.dart.
 import 'player.dart' show PlayerPage, PlayerState;
 import '../widgets/browser_shell.dart';
 import '../widgets/onboarding_tooltip_service.dart';
@@ -96,6 +95,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final TextEditingController _retryBackoffController = TextEditingController();
   final TextEditingController _ffmpegPathController = TextEditingController();
   final TextEditingController _ytDlpPathController = TextEditingController();
+  final TextEditingController _ytCookiesFileController = TextEditingController();
   final TextEditingController _rangeFromController = TextEditingController();
   final TextEditingController _rangeToController = TextEditingController();
   final AndroidSaf _androidSaf = AndroidSaf();
@@ -108,9 +108,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _settingsInitialized = false;
   bool _minimizeToTrayOnClose = false;
   bool _sponsorBlockEnabled = false;
+  bool _youtubeAuthEnabled = false;
+  String _youtubeCookiesFromBrowser = '';
   bool _isRefreshing = false;
 
-  // Fix: separate TabController for playlists tab; disposed exactly once.
   late final TabController _playlistTabController;
 
   File? _convertFile;
@@ -146,8 +147,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    // Fix: initialise _playlistTabController in initState to avoid
-    // "used before init" issues when the widget tree is first built.
     _playlistTabController = TabController(length: 2, vsync: this);
 
     _onboarding.init().then((_) {
@@ -221,7 +220,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _trayService?.destroy();
-    // Fix: each controller is disposed exactly once here.
     _playlistTabController.dispose();
     _urlController.dispose();
     _downloadDirController.dispose();
@@ -233,6 +231,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _retryBackoffController.dispose();
     _ffmpegPathController.dispose();
     _ytDlpPathController.dispose();
+    _ytCookiesFileController.dispose();
     _rangeFromController.dispose();
     _rangeToController.dispose();
     super.dispose();
@@ -288,7 +287,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           themeMode: tm,
           onThemeChanged: (mode) => widget.controller.setThemeMode(mode),
         );
-      // Fix: case 12 now uses PlayerPage (correctly-cased class name).
       case 12:
         return const PlayerPage(key: ValueKey('player-player'));
       case 13:
@@ -326,7 +324,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ── Navigation helpers ──────────────────────────────────────────────────
+  // -- Navigation helpers --------------------------------------------------
 
   bool get _canGoBack => _navHistoryIndex > 0;
   bool get _canGoForward => _navHistoryIndex < _navHistory.length - 1;
@@ -616,6 +614,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _retryBackoffController.text = settings.retryBackoffSeconds.toString();
       _ffmpegPathController.text = settings.ffmpegPath ?? '';
       _ytDlpPathController.text = settings.ytDlpPath ?? '';
+      _ytCookiesFileController.text = settings.youtubeCookiesFile ?? '';
       _expandPlaylist = settings.previewExpandPlaylist;
       _downloadFormat = settings.defaultAudioFormat;
       _videoQuality = settings.preferredVideoQuality;
@@ -625,6 +624,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _downloadDirM4aController.text = settings.downloadDirM4a ?? '';
       _downloadDirMp4Controller.text = settings.downloadDirMp4 ?? '';
       _sponsorBlockEnabled = settings.sponsorBlockEnabled;
+        _youtubeAuthEnabled = settings.youtubeAuthEnabled;
+        _youtubeCookiesFromBrowser = settings.youtubeCookiesFromBrowser?.trim() ??
+          _defaultCookiesFromBrowser();
       _minimizeToTrayOnClose = settings.minimizeToTrayOnClose;
       TrayService.shouldMinimiseToTrayOnClose = _minimizeToTrayOnClose;
       _settingsInitialized = true;
@@ -696,6 +698,50 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void openBrowserWith(String url) {
     _navigateToPage(2);
     BrowserScreen.navigate(url);
+  }
+
+  String _defaultCookiesFromBrowser() {
+    if (kIsWeb) return '';
+    if (Platform.isWindows) return 'edge';
+    if (Platform.isMacOS) return 'safari';
+    if (Platform.isLinux) return 'firefox';
+    return '';
+  }
+
+  List<String> _availableCookieBrowsers() {
+    if (kIsWeb) return const <String>[];
+    if (Platform.isWindows) {
+      return const <String>['edge', 'chrome', 'firefox', 'brave'];
+    }
+    if (Platform.isMacOS) {
+      return const <String>['safari', 'chrome', 'firefox', 'edge', 'brave'];
+    }
+    if (Platform.isLinux) {
+      return const <String>['firefox', 'chrome', 'chromium', 'brave', 'edge'];
+    }
+    return const <String>[];
+  }
+
+  Future<void> _openYouTubeSignInExternal() async {
+    final launched = await launchUrl(
+      Uri.parse(
+        'https://accounts.google.com/ServiceLogin?service=youtube&continue=https://www.youtube.com/',
+      ),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!launched && mounted) {
+      Snack.show(context, 'Could not open browser sign-in.',
+          level: SnackLevel.error);
+      return;
+    }
+    if (mounted) {
+      Snack.show(
+        context,
+        'Sign in in your selected browser, then save settings to enable age-restricted downloads.',
+        level: SnackLevel.info,
+        duration: const Duration(seconds: 5),
+      );
+    }
   }
 
   String _formatAndroidFolderLabel(String uriString) {
@@ -815,7 +861,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     await widget.controller.saveSettings(settings.copyWith(downloadDir: ''));
   }
 
-  // ── Search tab ─────────────────────────────────────────────────────────
+  // -- Search tab ---------------------------------------------------------
 
   Widget _buildSearchTab(AppSettings? settings) {
     final isNarrow = _isNarrowLayout(context);
@@ -1425,7 +1471,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Preview list ───────────────────────────────────────────────────────
+  // -- Preview list -------------------------------------------------------
 
   Widget _buildPreviewList() {
     final isNarrow = _isNarrowLayout(context);
@@ -1841,7 +1887,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ── Queue tab ──────────────────────────────────────────────────────────
+  // -- Queue tab ----------------------------------------------------------
 
   Widget _buildQueueTab() {
     final items = widget.controller.queue;
@@ -2267,7 +2313,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ── Playlists tab ──────────────────────────────────────────────────────
+  // -- Playlists tab ------------------------------------------------------
 
   Widget _buildPlaylistsTab() {
     return Column(
@@ -2301,7 +2347,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Settings tab ───────────────────────────────────────────────────────
+  // -- Settings tab -------------------------------------------------------
 
   Widget _buildSettingsTab(AppSettings? settings) {
     if (settings == null) {
@@ -2991,6 +3037,109 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           'Automatically remove sponsored/intro/outro segments when downloading videos.'),
                       secondary: const Icon(Icons.remove_red_eye),
                     ),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      value: _youtubeAuthEnabled,
+                      onChanged: (value) =>
+                          setState(() => _youtubeAuthEnabled = value),
+                      title: const Text('Use signed-in YouTube session'),
+                      subtitle: const Text(
+                        'Use browser cookies for age-restricted and private videos.',
+                      ),
+                      secondary: const Icon(Icons.verified_user_outlined),
+                    ),
+                    if (_youtubeAuthEnabled) ...[
+                      const SizedBox(height: 8),
+                      if (_availableCookieBrowsers().isNotEmpty)
+                        DropdownButtonFormField<String>(
+                          key: ValueKey(
+                              'settings-cookies-browser-$_youtubeCookiesFromBrowser'),
+                          initialValue: _availableCookieBrowsers()
+                                  .contains(_youtubeCookiesFromBrowser)
+                              ? _youtubeCookiesFromBrowser
+                              : _defaultCookiesFromBrowser(),
+                          decoration: const InputDecoration(
+                            labelText: 'Cookie source browser',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.web),
+                            helperText:
+                                'Select the browser where you are signed in to YouTube.',
+                          ),
+                          items: _availableCookieBrowsers()
+                              .map(
+                                (browser) => DropdownMenuItem<String>(
+                                  value: browser,
+                                  child: Text(browser),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() => _youtubeCookiesFromBrowser = value);
+                          },
+                        )
+                      else
+                        const Text(
+                          'Browser cookie extraction is not available on this platform. Use an exported cookies file instead.',
+                        ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _ytCookiesFileController,
+                              decoration: const InputDecoration(
+                                labelText: 'Cookies file (optional)',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.cookie_outlined),
+                                helperText:
+                                    'Optional exported cookies.txt. Used first when provided.',
+                              ),
+                              readOnly: true,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.folder_open),
+                            label: const Text('Browse'),
+                            onPressed: () async {
+                              final result = await FilePicker.platform.pickFiles(
+                                type: FileType.any,
+                                dialogTitle: 'Select cookies.txt',
+                              );
+                              if (result == null ||
+                                  result.files.single.path == null ||
+                                  !mounted) {
+                                return;
+                              }
+                              setState(() {
+                                _ytCookiesFileController.text =
+                                    result.files.single.path!;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.login),
+                            label: const Text('Sign in to YouTube'),
+                            onPressed: _openYouTubeSignInExternal,
+                          ),
+                          TextButton.icon(
+                            icon: const Icon(Icons.clear),
+                            label: const Text('Clear cookies file'),
+                            onPressed: () {
+                              setState(() => _ytCookiesFileController.clear());
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
                     if (_ytDlpPathController.text.isEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
@@ -3152,7 +3301,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 8),
                   const Text(
                     'Cross-platform media toolkit with multi-site downloads, '
-                    'format conversion, and DLNA casting — built with Flutter.',
+                    'format conversion, and DLNA casting - built with Flutter.',
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -3303,9 +3452,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  /// Toggle mining support.
-  /// Fix: removed the inverted Android check — mining is simply skipped on Android.
-
   Future<void> _saveAllSettings(AppSettings settings) async {
     final ffmpegText = _ffmpegPathController.text.trim();
     final ytDlpText = _ytDlpPathController.text.trim();
@@ -3338,6 +3484,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       createFormatSubfolders: _useFormatSubfolders,
       ffmpegPath: ffmpegText.isEmpty ? null : ffmpegText,
       ytDlpPath: ytDlpText.isEmpty ? null : ytDlpText,
+      youtubeAuthEnabled: _youtubeAuthEnabled,
+      youtubeCookiesFromBrowser: _youtubeCookiesFromBrowser.trim().isEmpty
+          ? null
+          : _youtubeCookiesFromBrowser.trim(),
+      youtubeCookiesFile: _ytCookiesFileController.text.trim().isEmpty
+          ? null
+          : _ytCookiesFileController.text.trim(),
     );
     await widget.controller.saveSettings(next);
     TrayService.shouldMinimiseToTrayOnClose = next.minimizeToTrayOnClose;
@@ -3424,7 +3577,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ── Convert tab ────────────────────────────────────────────────────────
+  // -- Convert tab --------------------------------------------------------
 
   Widget _buildConvertTab(AppSettings? settings) {
     return Padding(
@@ -3676,7 +3829,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Logs tab ───────────────────────────────────────────────────────────
+  // -- Logs tab -----------------------------------------------------------
 
   Widget _buildLogsTab() {
     return ValueListenableBuilder<List<String>>(

@@ -41,7 +41,7 @@ class AppController extends ChangeNotifier {
   final InstallerService installerService;
   final LogService logs;
 
-  // ── New feature services ──────────────────────────────────────────────
+  // -- New feature services ----------------------------------------------
   final MultiSourceSearchService searchService;
   final PreviewPlayerService previewPlayer;
   final PlaylistService playlistService;
@@ -170,13 +170,13 @@ class AppController extends ChangeNotifier {
       final resolved = await downloadService.ffmpeg
           .resolveAvailablePath(settings.ffmpegPath);
       if (resolved != null) {
-        // Already available – persist resolved path if it wasn't saved
+        // Already available - persist resolved path if it wasn't saved
         if (settings.ffmpegPath != resolved) {
           await saveSettings(settings.copyWith(ffmpegPath: resolved));
         }
         return;
       }
-      // Not found – attempt auto-install (Windows only; Linux/macOS log a hint)
+      // Not found - attempt auto-install (Windows only; Linux/macOS log a hint)
       try {
         _ffmpegInstall ??= _installFfmpeg(settings);
         await _ffmpegInstall;
@@ -202,7 +202,7 @@ class AppController extends ChangeNotifier {
         logs.add('yt-dlp found: $resolved');
         return;
       }
-      // Not found – auto-download (Windows/Linux/macOS)
+      // Not found - auto-download (Windows/Linux/macOS)
       try {
         final path = await downloadService.ytDlp.ensureAvailable(
           configuredPath: settings.ytDlpPath,
@@ -446,6 +446,12 @@ class AppController extends ChangeNotifier {
     }
 
     final maxAttempts = (_settings?.retryCount ?? 2).clamp(1, 5);
+    final cookiesFile = settings.youtubeAuthEnabled
+      ? settings.youtubeCookiesFile?.trim()
+      : null;
+    final cookiesFromBrowser = settings.youtubeAuthEnabled
+      ? settings.youtubeCookiesFromBrowser?.trim()
+      : null;
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
       if (token.cancelled) break;
       try {
@@ -470,6 +476,12 @@ class AppController extends ChangeNotifier {
             ytDlpPath: settings.ytDlpPath,
             sponsorBlockEnabled: settings.sponsorBlockEnabled,
             createFormatSubfolders: createFormatSubfolders,
+            cookiesFile:
+              (cookiesFile != null && cookiesFile.isNotEmpty) ? cookiesFile : null,
+            cookiesFromBrowser: (cookiesFromBrowser != null &&
+                cookiesFromBrowser.isNotEmpty)
+              ? cookiesFromBrowser
+              : null,
             onProgress: (pct, status, {String? speed, String? eta}) {
               final updated = item.copyWith(
                   progress: pct, status: status, speed: speed, eta: eta);
@@ -490,6 +502,12 @@ class AppController extends ChangeNotifier {
             ytDlpPath: settings.ytDlpPath,
             sponsorBlockEnabled: settings.sponsorBlockEnabled,
             createFormatSubfolders: createFormatSubfolders,
+            cookiesFile:
+              (cookiesFile != null && cookiesFile.isNotEmpty) ? cookiesFile : null,
+            cookiesFromBrowser: (cookiesFromBrowser != null &&
+                cookiesFromBrowser.isNotEmpty)
+              ? cookiesFromBrowser
+              : null,
             onProgress: (pct, status, {String? speed, String? eta}) {
               final updated = item.copyWith(
                   progress: pct, status: status, speed: speed, eta: eta);
@@ -517,7 +535,7 @@ class AppController extends ChangeNotifier {
           format: item.format,
           success: true,
         ).catchError((_) {}));
-        return; // success – exit retry loop
+        return; // success - exit retry loop
       } catch (e) {
         final msg = _cleanError(e);
 
@@ -543,7 +561,7 @@ class AppController extends ChangeNotifier {
             !token.cancelled &&
             !msg.contains('Cancelled');
         if (attempt < maxAttempts && isRetryable) {
-          logs.add('Download attempt $attempt failed: $msg – retrying...');
+          logs.add('Download attempt $attempt failed: $msg - retrying...');
           _updateQueue(item, item.copyWith(progress: 0, error: null));
           await Future.delayed(
               Duration(seconds: (_settings?.retryBackoffSeconds ?? 3)));
@@ -794,7 +812,7 @@ class AppController extends ChangeNotifier {
         notifyListeners();
       }
     } catch (_) {
-      // Corrupted data — remove to avoid repeated failures
+      // Corrupted data - remove to avoid repeated failures
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove(_queueKey);

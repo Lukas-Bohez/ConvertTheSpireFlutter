@@ -55,7 +55,7 @@ class ConvertService {
       final text = _extractTextContent(inputBytes, inputExt);
       if (text == null || text.trim().isEmpty) {
         return _report(inputName, 'txt',
-            'Text extraction failed – unsupported or binary file');
+            'Text extraction failed - unsupported or binary file');
       }
       return ConvertResult(
         name: '$baseName.txt',
