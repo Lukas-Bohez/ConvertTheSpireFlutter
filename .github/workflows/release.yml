@@ -45,6 +45,7 @@ env:
   FLUTTER_VERSION: '3.41.2'
   APP_NAME: convert_the_spire_reborn
   OUTPUT_NAME: ConvertTheSpireReborn
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 # ---------------------------------------------------------------------------
 # Shared permissions: contents:write only on the publish job; all others
@@ -52,9 +53,6 @@ env:
 # ---------------------------------------------------------------------------
 permissions:
   contents: read
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # =========================================================================
@@ -96,7 +94,7 @@ jobs:
     needs: test-and-analyze
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: subosito/flutter-action@v2
         with:
@@ -122,7 +120,7 @@ jobs:
             -DestinationPath "${{ env.OUTPUT_NAME }}-windows-x64.zip" `
             -Force
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: windows-x64
           path: ${{ env.OUTPUT_NAME }}-windows-x64.zip
@@ -136,7 +134,7 @@ jobs:
     needs: test-and-analyze
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Flutter Linux requires these system libraries
       - name: Install Linux build dependencies
@@ -187,7 +185,7 @@ jobs:
           fi
 
       # Upload zip unconditionally; AppImage only if it was actually built
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: linux-x64
           path: |
@@ -203,7 +201,7 @@ jobs:
     needs: test-and-analyze
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: subosito/flutter-action@v2
         with:
@@ -285,7 +283,7 @@ jobs:
           ditto -c -k --keepParent "$APP" \
             "${{ env.OUTPUT_NAME }}-macOS.zip"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: macos-x64
           path: ${{ env.OUTPUT_NAME }}-macOS.zip
@@ -299,7 +297,7 @@ jobs:
     needs: test-and-analyze
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-java@v5
         with:
@@ -356,7 +354,7 @@ jobs:
           cp build/app/outputs/bundle/release/app-release.aab \
              android-builds/${{ env.OUTPUT_NAME }}.aab
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: android-builds
           path: android-builds/
