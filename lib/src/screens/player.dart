@@ -26,7 +26,7 @@ import '../services/audio_handler.dart';
 import '../services/ffmpeg_service.dart';
 import '../utils/lock.dart';
 
-// --─ Public entry point ------------------------------------------------------─
+// --- Public entry point -------------------------------------------------------
 
 class PlayerPage extends StatelessWidget {
   const PlayerPage({super.key});
@@ -35,7 +35,7 @@ class PlayerPage extends StatelessWidget {
   Widget build(BuildContext context) => const PlayerScreen();
 }
 
-// --─ Enums & data types ------------------------------------------------------─
+// --- Enums & data types -------------------------------------------------------
 
 enum MediaType { audio, video }
 
@@ -78,7 +78,7 @@ class MediaItem {
       );
 }
 
-// --─ Thumbnail helpers (unchanged - they work fine) --------------------------
+// --- Thumbnail helpers (unchanged - they work fine) --------------------------
 
 Future<Uint8List?> _transcodeToSafePng(Uint8List raw, {String? mimeType}) async {
   if (raw.length < 4) return null;
@@ -116,7 +116,7 @@ img.Image? _decodeByMagic(Uint8List raw) {
   return null;
 }
 
-// --─ PlayerState --------------------------------------------------------------
+// --- PlayerState --------------------------------------------------------------
 //
 // FIX SUMMARY:
 //
@@ -240,7 +240,7 @@ class PlayerState with ChangeNotifier {
   final _random = Random();
   final _audioLock = Lock();
 
-  // ------------------------------------------------------------------------─
+  // -------------------------------------------------------------------------
 
   PlayerState(this.prefs) {
     if (_useMediaKit) {
@@ -435,7 +435,7 @@ class PlayerState with ChangeNotifier {
     });
   }
 
-  // --─ Getters --------------------------------------------------------------
+  // --- Getters --------------------------------------------------------------
 
   MediaItem? get currentItem {
     if (library.isEmpty) return null;
@@ -498,7 +498,7 @@ class PlayerState with ChangeNotifier {
 
   bool isFavourite(String path) => _favourites.contains(path);
 
-  // --─ Favourites ----------------------------------------------------------─
+  // --- Favourites -----------------------------------------------------------
 
   void toggleFavourite(String path) {
     if (_favourites.contains(path)) {
@@ -527,7 +527,7 @@ class PlayerState with ChangeNotifier {
     prefs.setStringList('player_favourites_cache', list);
   }
 
-  // --─ Thumb disk cache ----------------------------------------------------─
+  // --- Thumb disk cache -----------------------------------------------------
 
   Future<Directory> _getThumbCacheDir() async {
     if (_thumbCacheDir != null) return _thumbCacheDir!;
@@ -557,7 +557,7 @@ class PlayerState with ChangeNotifier {
     return null;
   }
 
-  // --─ Library loading ------------------------------------------------------
+  // --- Library loading ------------------------------------------------------
 
   Future<void> setLibrary(List<MediaItem> items) async {
     final version = ++_loadVersion;
@@ -762,7 +762,7 @@ class PlayerState with ChangeNotifier {
     } catch (_) {}
   }
 
-  // --─ Playback selection --------------------------------------------------─
+  // --- Playback selection ---------------------------------------------------
 
   /// BUG 1 FIX: select() captures the target index into a local variable and
   /// passes it directly to _loadCurrent(). The generation counter ensures that
@@ -986,7 +986,7 @@ class PlayerState with ChangeNotifier {
   }
 }
 
-  // --─ Playback controls ----------------------------------------------------
+  // --- Playback controls ----------------------------------------------------
 
   List<int> _getPlaybackCandidates({MediaType? only}) {
     final scope = _folderItemCount > 0 ? _folderItemCount : library.length;
@@ -1201,7 +1201,7 @@ class PlayerState with ChangeNotifier {
     Future.microtask(fn);
   }
 
-  // --─ Queue ----------------------------------------------------------------
+  // --- Queue ----------------------------------------------------------------
 
   void enqueue(int index) {
     debugPrint('enqueue requested: $index, library=${library.length}');
@@ -1280,7 +1280,7 @@ class PlayerState with ChangeNotifier {
     }
   }
 
-  // --─ Playback mode / prefs ------------------------------------------------
+  // --- Playback mode / prefs ------------------------------------------------
 
   void setPlaybackMode(PlaybackMode mode) {
     playbackMode = mode;
@@ -1402,7 +1402,7 @@ class PlayerState with ChangeNotifier {
     }
   }
 
-  // --─ Audio handler (Android) ----------------------------------------------
+  // --- Audio handler (Android) ----------------------------------------------
 
   Future<void> _initAudioHandler() async {
     // _audio is non-null when this is called (guarded by caller).
@@ -1423,7 +1423,7 @@ class PlayerState with ChangeNotifier {
     ));
   }
 
-  // --─ Directory watcher ----------------------------------------------------
+  // --- Directory watcher ----------------------------------------------------
 
   void _startDirectoryWatcher(List<MediaItem> items) {
     _dirWatcher?.cancel();
@@ -1476,7 +1476,7 @@ class PlayerState with ChangeNotifier {
     await setLibrary(files);
   }
 
-  // --─ Video thumbnail generation ------------------------------------------─
+  // --- Video thumbnail generation -------------------------------------------
 
   Future<Uint8List?> _generateVideoThumbnail(String filePath) async {
     final resolved = await _resolveLocalPath(filePath);
@@ -1603,7 +1603,7 @@ class PlayerState with ChangeNotifier {
     return null;
   }
 
-  // --─ Helpers --------------------------------------------------------------
+  // --- Helpers --------------------------------------------------------------
 
   Future<String> _resolveLocalPath(String path) async {
     if (path.startsWith('content://')) {
@@ -1807,7 +1807,7 @@ class PlayerState with ChangeNotifier {
   }
 }
 
-// --─ Helper types for the All tab --------------------------------------------
+// --- Helper types for the All tab --------------------------------------------
 
 enum _AllTabKind { header, song }
 
@@ -1826,7 +1826,7 @@ class _AllTabItem {
 }
 
 
-// --─ Persistent video widget --------------------------------------------------
+// --- Persistent video widget --------------------------------------------------
 
 class _VideoPane extends StatefulWidget {
   final VideoController? mkController;
@@ -1940,7 +1940,7 @@ class _VideoPaneState extends State<_VideoPane> {
   }
 }
 
-// --─ Theme constants ----------------------------------------------------------
+// --- Theme constants ----------------------------------------------------------
 
 abstract class _PlayerTheme {
   static const accent = Color(0xFF5B8DEF);
@@ -1958,7 +1958,7 @@ abstract class _PlayerTheme {
       Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 }
 
-// --─ Root screen --------------------------------------------------------------
+// --- Root screen --------------------------------------------------------------
 
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
@@ -2046,7 +2046,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (mounted) await context.read<PlayerState>().setLibrary(items);
   }
 
-  // --─ Build ----------------------------------------------------------------
+  // --- Build ----------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -2251,7 +2251,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
-  // --─ Now Playing bar ------------------------------------------------------
+  // --- Now Playing bar ------------------------------------------------------
 
   Widget _buildNowPlaying(PlayerState state) {
     final item = state.currentItem;
@@ -2442,7 +2442,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 }
 
-// --─ Shared UI components --------------------------------------------------─
+// --- Shared UI components ---------------------------------------------------
 
 class _TrackThumbnail extends StatelessWidget {
   final Uint8List? data;
@@ -2557,7 +2557,7 @@ class _PlayPauseButton extends StatelessWidget {
   }
 }
 
-// --─ Tab widgets (each is its own StatelessWidget to limit rebuild scope) ----─
+// --- Tab widgets (each is its own StatelessWidget to limit rebuild scope) -----
 
 /// BUG 2 FIX: each tab is its own widget so rebuilds from thumbnail loads only
 /// repaint the visible tab, not the entire screen.
@@ -2811,7 +2811,7 @@ class _MediaCard extends StatelessWidget {
   }
 }
 
-// --─ Reusable tile / card components ----------------------------------------─
+// --- Reusable tile / card components -----------------------------------------
 
 class _EmptyHint extends StatelessWidget {
   final String message;

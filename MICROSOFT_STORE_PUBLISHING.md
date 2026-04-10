@@ -46,7 +46,7 @@ Still in Partner Center:
 ### 5. Upload the MSIX
 1. Go to **Submission** → **Packages**
 2. Drag and drop your `.msix` file
-3. Microsoft validates it (~5–30 minutes)
+3. Microsoft validates it (~5-30 minutes)
 
 ### 6. Add Pricing & Availability
 - **Price:** Free (recommended for initial release)
@@ -54,7 +54,7 @@ Still in Partner Center:
 - **Age Rating:** Answer the Microsoft Content Rating System questions
 
 ### 7. Submit for Review
-Click **Submit for review** → Microsoft reviews for ~24–48 hours.
+Click **Submit for review** → Microsoft reviews for ~24-48 hours.
 
 **Automated checks:**
 - No malware (VirusTotal scan)
