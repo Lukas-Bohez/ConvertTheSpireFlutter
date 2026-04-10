@@ -136,6 +136,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   String _previewPreset = '25';
   bool get _isAndroid => !kIsWeb && Platform.isAndroid;
+  bool get _isDesktopPlatform =>
+      !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
   bool _isNarrowLayout(BuildContext context) =>
       MediaQuery.of(context).size.width < 600;
 
@@ -2371,16 +2373,17 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
 
-          // Close-to-tray behavior
-          SwitchListTile(
-            title: const Text('Minimize to tray on close'),
-            subtitle: const Text(
-              'Keep the app running in the background when you close the window.',
+          // Close-to-tray behavior (desktop only)
+          if (_isDesktopPlatform)
+            SwitchListTile(
+              title: const Text('Minimize to tray on close'),
+              subtitle: const Text(
+                'Keep the app running in the background when you close the window.',
+              ),
+              value: _minimizeToTrayOnClose,
+              onChanged: (v) => setState(() => _minimizeToTrayOnClose = v),
+              secondary: const Icon(Icons.minimize),
             ),
-            value: _minimizeToTrayOnClose,
-            onChanged: (v) => setState(() => _minimizeToTrayOnClose = v),
-            secondary: const Icon(Icons.minimize),
-          ),
 
           // Support the project (donations)
           Card(
@@ -3471,7 +3474,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       preferredAudioBitrate: _audioBitrate,
       defaultAudioFormat: _downloadFormat,
       previewExpandPlaylist: _expandPlaylist,
-      minimizeToTrayOnClose: _minimizeToTrayOnClose,
+      minimizeToTrayOnClose:
+          _isDesktopPlatform ? _minimizeToTrayOnClose : false,
       downloadDirMp3: _downloadDirMp3Controller.text.trim().isEmpty
           ? null
           : _downloadDirMp3Controller.text.trim(),

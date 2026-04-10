@@ -1,39 +1,39 @@
-# Volunteer Distributed Computing — Architecture & Usage
+# Volunteer Distributed Computing - Architecture & Usage
 
 ## Overview
 
-This module implements a **transparent, opt-in** volunteer computing client embedded in the Convert the Spire Reborn Flutter app. Users can donate spare CPU cycles to help process academic workloads. All computation runs locally in sandboxed Dart Isolates — nothing touches the network except WebSocket messages to the coordinator.
+This module implements a **transparent, opt-in** volunteer computing client embedded in the Convert the Spire Reborn Flutter app. Users can donate spare CPU cycles to help process academic workloads. All computation runs locally in sandboxed Dart Isolates - nothing touches the network except WebSocket messages to the coordinator.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────┐
+┌---------------------------------------------┐
 │  Flutter App (Windows / Android)            │
 │                                             │
-│  ┌───────────────┐   ┌──────────────────┐   │
+│  ┌---------------┐   ┌------------------┐   │
 │  │  ComputeScreen │   │ CoordinatorService│  │
-│  │  (UI / Toggle) │◄──│ (WebSocket client)│  │
-│  └───────┬───────┘   └────────┬─────────┘  │
+│  │  (UI / Toggle) │◄--│ (WebSocket client)│  │
+│  └-------┬-------┘   └--------┬---------┘  │
 │          │                    │              │
 │          ▼                    ▼              │
-│  ┌──────────────────────────────────────┐   │
+│  ┌--------------------------------------┐   │
 │  │  ComputationService                  │   │
-│  │  ┌────────┐  ┌────────┐  max 2-4    │   │
+│  │  ┌--------┐  ┌--------┐  max 2-4    │   │
 │  │  │Isolate │  │Isolate │  concurrent  │   │
 │  │  │(SHA256)│  │(Primes)│              │   │
-│  │  └────────┘  └────────┘              │   │
-│  └──────────────────────────────────────┘   │
-└─────────────────────────────────────────────┘
+│  │  └--------┘  └--------┘              │   │
+│  └--------------------------------------┘   │
+└---------------------------------------------┘
               ▲  WebSocket (JSON)
               │
               ▼
-┌─────────────────────────────────────────────┐
+┌---------------------------------------------┐
 │  Coordinator Server (mock_coordinator.py)    │
 │  - Registers devices                         │
 │  - Dispatches jobs                           │
 │  - Collects results                          │
 │  - Heartbeat monitoring                      │
-└─────────────────────────────────────────────┘
+└---------------------------------------------┘
 ```
 
 ## Job Types
@@ -70,11 +70,11 @@ python tools/mock_coordinator.py --port 9000 --interval 5
 ## Using in the App
 
 1. Open the app and navigate to the **Compute** tab in the sidebar.
-2. The feature is **OFF by default** — flip the toggle to opt in.
+2. The feature is **OFF by default** - flip the toggle to opt in.
 3. Enter the coordinator URL (default: `ws://localhost:8765`).
 4. The dashboard shows: running jobs, completed results, battery status, and power state.
 5. Computation automatically **pauses below 30% battery** on battery power.
-6. Adjust the concurrency slider (1–4 isolates).
+6. Adjust the concurrency slider (1-4 isolates).
 
 ## Protocol Specification
 
@@ -115,8 +115,8 @@ All messages are JSON over WebSocket.
 
 ## Design Principles
 
-- **Opt-in by default** — toggle is OFF, user must explicitly enable
-- **Fully transparent** — coordinator URL is visible and editable, all jobs shown in dashboard
-- **Auditable** — clean Dart code, no obfuscation, standard WebSocket protocol
-- **Sandboxed** — computation runs in Dart Isolates (separate memory, no shared state)
-- **Graceful** — exponential backoff reconnection (max 120s), offline message queue
+- **Opt-in by default** - toggle is OFF, user must explicitly enable
+- **Fully transparent** - coordinator URL is visible and editable, all jobs shown in dashboard
+- **Auditable** - clean Dart code, no obfuscation, standard WebSocket protocol
+- **Sandboxed** - computation runs in Dart Isolates (separate memory, no shared state)
+- **Graceful** - exponential backoff reconnection (max 120s), offline message queue

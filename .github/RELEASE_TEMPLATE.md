@@ -1,15 +1,15 @@
-## Convert the Spire Reborn v5.0.0 — "The Polish Release"
+## Convert the Spire Reborn v5.0.0 - "The Polish Release"
 
-> ⚠️ **Pre-release / Beta** — core features are stable but
+> ⚠️ **Pre-release / Beta** - core features are stable but
 > some edge cases remain. Feedback very welcome.
 
 ### What's new in v5.0.0
 - Full browser toolbar redesign: download button front and
   centre, cast/more actions moved to ⋮ menu
-- Live URL tracking via onUpdateVisitedHistory — download
+- Live URL tracking via onUpdateVisitedHistory - download
   button always reflects the actual current page
 - DropdownButtonFormField value binding fixed across all tabs
-- AppColors theme extension — zero hardcoded color values
+- AppColors theme extension - zero hardcoded color values
 - Queue sidebar adapts to panel width (compact/full modes)
 - Navigation history (back/forward) across all tabs
 - CI/CD pinned to Flutter 3.41.2 across all build jobs
@@ -42,17 +42,17 @@ Requires libmpv and development headers for builds:
 
 ### Privacy
 No telemetry or analytics. Mining is 100% opt-in and only
-shares CPU cycles via public QUBIC endpoints — no personal
+shares CPU cycles via public QUBIC endpoints - no personal
 data is sent. All downloads happen locally via yt-dlp.
 
 ---
 
-#### VERIFICATION — DO THESE BEFORE PUSHING THE RELEASE TAG
+#### VERIFICATION - DO THESE BEFORE PUSHING THE RELEASE TAG
 
-Run through this yourself manually — no prompt can do it:
+Run through this yourself manually - no prompt can do it:
 
-  □ Fresh flutter pub get — no version conflicts
-  □ flutter analyze — zero errors, zero warnings
+  □ Fresh flutter pub get - no version conflicts
+  □ flutter analyze - zero errors, zero warnings
   □ Windows release build completes:
       flutter build windows --release
   □ Android release build completes:
@@ -66,9 +66,9 @@ Run through this yourself manually — no prompt can do it:
     "my_flutter_app"
   □ Download one YouTube video end to end
   □ Download one non-YouTube URL (Vimeo or SoundCloud)
-  □ Open browser, navigate, tap download button — spinner
+  □ Open browser, navigate, tap download button - spinner
     appears, download queued, SnackBar confirms
-  □ Open settings — all dropdowns show correct selected values
-  □ Toggle dark mode — no white/grey boxes anywhere
-  □ Queue: add 3 items, filter by title — correct results shown
+  □ Open settings - all dropdowns show correct selected values
+  □ Toggle dark mode - no white/grey boxes anywhere
+  □ Queue: add 3 items, filter by title - correct results shown
   □ CI passes on main branch before tagging
