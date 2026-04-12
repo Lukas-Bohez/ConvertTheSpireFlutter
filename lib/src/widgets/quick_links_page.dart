@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../models/search_result.dart';
 import '../services/folder_access_service.dart';
+import '../config/build_flags.dart';
 import 'quick_download_card.dart';
 import 'quick_links_service.dart';
 
@@ -149,7 +150,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    'Convert the Spire',
+                    getAppTitle(),
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                           letterSpacing: -0.3,
@@ -158,7 +159,9 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Paste a video or playlist URL below to start downloading.',
+                    kPlayStoreBuild
+                        ? 'Add a magnet link or torrent to get started.'
+                        : 'Paste a video or playlist URL below to start downloading.',
                     style: TextStyle(
                       fontSize: 18,
                       color: cs.onSurfaceVariant.withValues(alpha: 0.7),

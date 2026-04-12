@@ -1,6 +1,8 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../config/build_flags.dart';
+
 /// A simple support page with donation links and privacy information.
 ///
 /// This replaces the previous mining-based support system.
@@ -29,15 +31,16 @@ class SupportScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Support Convert the Spire',
+                  'Support ${getAppTitle()},',
                   style: theme.textTheme.titleLarge
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'If you enjoy using Convert the Spire, the best way to support '
+                Text(
+                  'If you enjoy using ${getAppTitle()}, the best way to support '
                   'continued development is via donations. Your support keeps this '
                   'tool open-source, privacy-minded, and ad-free.',
+                  style: theme.textTheme.bodyMedium,
                 ),
               ],
             ),
