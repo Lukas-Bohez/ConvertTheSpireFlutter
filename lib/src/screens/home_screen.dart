@@ -37,7 +37,6 @@ import '../widgets/quick_links_page.dart';
 import '../widgets/quick_links_service.dart';
 import '../services/update_service.dart';
 import '../widgets/update_banner.dart';
-import '../config/build_flags.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppController controller;
@@ -173,15 +172,20 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           QuickLinksService.routeToIndex.keys.join(', '));
     }
 
-    UpdateService.isCheckOnLaunchEnabled().then((v) {
-      if (mounted) setState(() => _checkUpdatesOnLaunch = v);
-    });
+    if (!kPlayStoreBuild) {
+      UpdateService.isCheckOnLaunchEnabled().then((v) {
+        if (mounted) setState(() => _checkUpdatesOnLaunch = v);
+      });
 
-    _checkForUpdate();
+      _checkForUpdate();
+    } else {
+      _checkUpdatesOnLaunch = false;
+    }
   }
 
   Future<void> _checkForUpdate({bool force = false}) async {
     try {
+      if (kPlayStoreBuild) return;
       if (!_checkUpdatesOnLaunch && !force) return;
       final info = await UpdateService.checkForUpdate();
       if (info == null) return;
@@ -561,7 +565,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       }),
     );
 
-    if (_updateInfo != null && !_updateBannerDismissed) {
+    if (!kPlayStoreBuild && _updateInfo != null && !_updateBannerDismissed) {
       return Column(
         children: [
           UpdateBanner(
@@ -3834,22 +3838,24 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       }
                     },
                   ),
-                  // Update check toggle
-                  SwitchListTile(
-                    value: _checkUpdatesOnLaunch,
-                    onChanged: (value) async {
-                      await UpdateService.setCheckOnLaunch(value);
-                      if (mounted)
-                        setState(() => _checkUpdatesOnLaunch = value);
-                    },
-                    title: const Text('Check for updates on launch'),
-                    secondary: const Icon(Icons.system_update_alt),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.refresh),
-                    title: const Text('Check for updates now'),
-                    onTap: () => _checkForUpdate(force: true),
-                  ),
+                  if (!kPlayStoreBuild) ...[
+                    // Update check toggle
+                    SwitchListTile(
+                      value: _checkUpdatesOnLaunch,
+                      onChanged: (value) async {
+                        await UpdateService.setCheckOnLaunch(value);
+                        if (mounted)
+                          setState(() => _checkUpdatesOnLaunch = value);
+                      },
+                      title: const Text('Check for updates on launch'),
+                      secondary: const Icon(Icons.system_update_alt),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.refresh),
+                      title: const Text('Check for updates now'),
+                      onTap: () => _checkForUpdate(force: true),
+                    ),
+                  ],
                 ],
               ),
             ),
