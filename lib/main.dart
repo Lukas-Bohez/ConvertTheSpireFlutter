@@ -11,6 +11,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'src/config/build_flags.dart';
+
 import 'src/app.dart';
 import 'src/services/yt_dlp_update_controller.dart';
 
@@ -121,7 +123,7 @@ Future<void> main() async {
         size: ui.Size(1100, 750),
         minimumSize: ui.Size(480, 600),
         center: true,
-        title: 'Convert the Spire Reborn',
+        title: getAppTitle(),
       );
       await windowManager.waitUntilReadyToShow(windowOptions, () async {
         await windowManager.show();

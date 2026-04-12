@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/build_flags.dart';
 
 /// A single quick-link tile shown on the home/new-tab page.
 class QuickLink {
@@ -54,7 +55,21 @@ class QuickLink {
 class QuickLinksService {
   static const _key = 'quick_links_v1';
 
-  static const List<QuickLink> defaults = [
+  static List<QuickLink> get defaults {
+    final allDefaults = _allDefaults();
+    if (!kPlayStoreBuild) return allDefaults;
+    
+    // For Play Store build, only show these tabs: Stats, Settings, Support, Guide, Player, Home, Torrents
+    final playStoreIndices = {6, 7, 8, 11, 12, 13, 14};
+    return allDefaults
+        .asMap()
+        .entries
+        .where((entry) => playStoreIndices.contains(entry.key))
+        .map((entry) => entry.value)
+        .toList();
+  }
+
+  static List<QuickLink> _allDefaults() => [
     QuickLink(
       name: 'Search',
       icon: Icons.search,

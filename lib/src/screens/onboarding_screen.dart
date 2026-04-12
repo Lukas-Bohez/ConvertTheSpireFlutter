@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../config/build_flags.dart';
+
 /// A multi-page onboarding flow that introduces the app's features.
 ///
 /// Used in two places:
@@ -31,17 +33,37 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late ThemeMode _themeMode;
   int _page = 0;
 
-  // --─ Pages --------------------------------------------------------------─
+  // Get filtered pages based on build type
+  List<_OnboardingPage> get _pages {
+    final allPages = _OnboardingScreenState._allPages();
+    if (!kPlayStoreBuild) return allPages;
+    
+    // For Play Store build, only show essential pages:
+    // 0: Welcome, 9: Stats, 10: Settings, 11: Guide, 12: Player, 14: Support
+    return [
+      allPages[0], // Welcome (but with modified text)
+      allPages[9], // Stats
+      allPages[10], // Settings
+      allPages[11], // Guide
+      allPages[12], // Player
+      allPages[14], // Support
+    ];
+  }
 
-  static const _pages = <_OnboardingPage>[
+  // All onboarding pages
+  static List<_OnboardingPage> _allPages() => <_OnboardingPage>[
     // Welcome
     _OnboardingPage(
       icon: Icons.download_rounded,
       title: 'Welcome',
-        detail: 'Convert the Spire Reborn is a cross-platform torrent and '
-          'media toolkit. Add magnet links and .torrent files, manage '
-          'downloads, convert formats, cast to your TV, and more - all from '
-          'one app.',
+        detail: kPlayStoreBuild
+            ? 'Vault the Spire is a torrent vault and media hub. '
+              'Add magnet links and .torrent files, manage downloads, '
+              'cast to your TV, and more - all from one app.'
+            : 'Convert the Spire Reborn is a cross-platform torrent and '
+              'media toolkit. Add magnet links and .torrent files, manage '
+              'downloads, convert formats, cast to your TV, and more - all from '
+              'one app.',
       color: Color(0xFF00897B),
       preview: _WelcomePreview(),
     ),
