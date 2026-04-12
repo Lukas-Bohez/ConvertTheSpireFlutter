@@ -6,7 +6,7 @@ Hey everyone! If you remember the old web-based Convert the Spire downloader, yo
 
 It is a fully native Flutter app that handles all your media downloading, playlist converting, and playback right on your own device. It started out as a simple, ad-free tool to bulk-download massive YouTube playlists, but it has grown into a full media suite. You can now download from multiple sites, cast to your TV, and easily manage your local library.
 
-Because it runs natively on Windows, Linux, Android, and macOS, there is no heavy Electron bloat and no browser overhead.
+Because it runs natively on Windows, Linux, Android, and macOS, there is no heavy Electron bloat and no browser overhead. Android Play builds ship with YouTube conversion disabled to match Play policy, while APK builds keep the full downloader available.
 
 ---
 
@@ -14,7 +14,7 @@ Because it runs natively on Windows, Linux, Android, and macOS, there is no heav
 
 ### The Core Stuff
 
-* **YouTube Search & Download:** Browse and download straight via `yt-dlp`. Desktop downloads can go up to 4K (when available); Android builds are limited to 1080p. Audio downloads support up to 320 kbps.
+* **YouTube Search & Download:** Browse and download straight via `yt-dlp`. Desktop downloads can go up to 4K (when available); Android builds are limited to 1080p. Audio downloads support up to 320 kbps. Play Store builds disable YouTube conversion features; side-loaded APKs keep them enabled.
 * **Massive Playlist Support:** The main reason this project exists! Paste a playlist link and bulk-download the whole thing, completely ad-free.
 * **Multi-Site Engine:** It is not just YouTube anymore. Anything yt-dlp supports (over 1,800 sites) goes through the same seamless pipeline.
 * **Built-in Media Player:** Play your audio and video directly in the app. It comes with playlists, queue management, and library tracking powered by `media_kit`.
@@ -49,12 +49,13 @@ A concise overview of the main layers:
 
 ## How to Get It
 
-You can download the app directly from our site at [quizthespire.com](https://quizthespire.com/) or head over to the [GitHub Releases](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases) page for the pre-built binaries.
+You can download the app directly from our site at [quizthespire.com](https://quizthespire.com/) or head over to the [GitHub Releases](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases) page for the pre-built binaries and Play-ready AABs.
 
 * **Windows:** Download the `.zip`, extract it, and run the `.exe`.
-* **Android:** Grab the `.apk` and side-load it on your device.
+* **Android:** Grab the `.apk` for direct install, or upload the `.aab` to Google Play.
+* **Android TV:** Uses the same Android build; UI is adaptive, but it is not separately certified for every TV model.
 * **Linux:** Download the Linux package. Make sure you have `libmpv` installed on your system!
-* **macOS:** Untested currently, but you can easily build it from source.
+* **macOS:** Download the macOS release package or build from source.
 
 ---
 

@@ -31,6 +31,7 @@ import '../services/statistics_service.dart';
 import '../services/watched_playlist_service.dart';
 import '../services/youtube_service.dart';
 import '../services/vault_settings_bridge.dart';
+import '../config/build_flags.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppController extends ChangeNotifier {
@@ -157,8 +158,7 @@ class AppController extends ChangeNotifier {
     if (index < 0 || index > 14) return;
     if (index == _activeTabIndex) return;
     if (kDebugMode)
-      debugPrint(
-          '[AppController] switchToTab requested: $_activeTabIndex -> $index\n${StackTrace.current}');
+      debugPrint('[AppController] switchToTab requested: $_activeTabIndex -> $index');
     _activeTabIndex = index;
     // Persist asynchronously; don't await here.
     SharedPreferences.getInstance()
@@ -332,6 +332,14 @@ class AppController extends ChangeNotifier {
     if (_settings == null) {
       return;
     }
+    if (!kYouTubeConversionEnabled && _isYouTubeUrl(url)) {
+      logs.add('Preview blocked by build policy for YouTube URL.');
+      previewItems = <PreviewItem>[];
+      previewLoading = false;
+      notifyListeners();
+      return;
+    }
+
     previewLoading = true;
     notifyListeners();
     try {
@@ -395,6 +403,17 @@ class AppController extends ChangeNotifier {
     // Resolve title if it's still a raw URL (user downloaded without preview)
     // Only attempt YouTube metadata fetch for YouTube URLs
     final isYouTube = _isYouTubeUrl(item.url);
+    if (!kYouTubeConversionEnabled && isYouTube) {
+      _updateQueue(
+        item,
+        item.copyWith(
+          status: DownloadStatus.failed,
+          error:
+              'YouTube download/conversion is disabled in this Play Store build.',
+        ),
+      );
+      return;
+    }
     if (isYouTube &&
         (item.title.startsWith('http://') ||
             item.title.startsWith('https://'))) {
@@ -985,8 +1004,11 @@ class AppController extends ChangeNotifier {
   Future<List<models.SearchResult>> multiSearch(String query) async {
     try {
       final results = await searchService.searchAll(query);
-      logs.add('Search found ${results.length} results for "$query"');
-      return results;
+      final filtered = kYouTubeConversionEnabled
+          ? results
+          : results.where((r) => r.source.toLowerCase() != 'youtube').toList();
+      logs.add('Search found ${filtered.length} results for "$query"');
+      return filtered;
     } catch (e) {
       logs.add('Search failed: $e');
       return [];
@@ -1019,6 +1041,11 @@ class AppController extends ChangeNotifier {
     final url =
         isGeneric ? result.id : 'https://www.youtube.com/watch?v=${result.id}';
 
+    if (!kYouTubeConversionEnabled && _isYouTubeUrl(url)) {
+      logs.add('Skipping YouTube queue add due to Play Store build policy.');
+      return;
+    }
+
     addToQueue(
       PreviewItem(
         id: result.id,
@@ -1036,6 +1063,11 @@ class AppController extends ChangeNotifier {
 
   /// Bulk import: parses queries and adds each best match to the queue.
   Future<void> processBulkImport(List<String> queries, {String? format}) async {
+    if (!kYouTubeConversionEnabled) {
+      logs.add('Bulk import disabled: YouTube conversion is off in this build.');
+      return;
+    }
+
     int found = 0;
     int failed = 0;
     for (final query in queries) {
