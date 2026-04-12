@@ -38,6 +38,28 @@ When ready to publish the first release:
 - [ ] Wait for CI to build all 3 platforms (~10-15 minutes)
 - [ ] Verify the release appears at https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases
 
+## Play Store AAB Signing (Required)
+
+Google Play requires your upload key SHA1 to match exactly:
+
+- `31:31:FD:AE:97:6D:00:A0:14:13:48:75:DE:27:19:38:BF:20:3F:38`
+
+Use the scripted flow to guarantee this before upload:
+
+```powershell
+pwsh .\scripts\build_play_aab_signed.ps1 \
+  -KeystorePath "C:\path\to\your\upload-key.jks" \
+  -StorePassword "<store-pass>" \
+  -KeyAlias "<alias>" \
+  -KeyPassword "<key-pass>"
+```
+
+The script validates:
+
+- Keystore SHA1 matches the expected Play upload key.
+- Built AAB signature SHA1 matches the expected Play upload key.
+- Final artifact is copied to `aab/ConvertTheSpireReborn.aab`.
+
 ## Android Signing (Optional)
 
 For signed Android APKs in CI, set up these repository secrets:
