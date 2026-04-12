@@ -47,6 +47,10 @@ class _BrowserScreenState extends State<BrowserScreen>
   };
 
   static bool _windowsWebViewEnvironmentInitialized = false;
+  static const bool _enableWindowsEmbeddedWebView = bool.fromEnvironment(
+    'VTS_WINDOWS_EMBEDDED_WEBVIEW',
+    defaultValue: false,
+  );
 
   final TextEditingController _addressController = TextEditingController();
 
@@ -67,6 +71,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   bool _windowsCanGoBack = false;
   bool _windowsCanGoForward = false;
   bool _windowsIsLoading = false;
+  bool _windowsExternalOnlyMode = false;
   String? _lastLoadError;
   String? _webViewError;
 
@@ -98,7 +103,13 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
 
     if (Platform.isWindows) {
-      _initWindowsWebView(startUrl);
+      if (_enableWindowsEmbeddedWebView) {
+        _initWindowsWebView(startUrl);
+      } else {
+        _windowsExternalOnlyMode = true;
+        _webViewError =
+            'Embedded browser is disabled on Windows in this build. Links open in your default browser.';
+      }
     } else {
       _initWebView(startUrl);
     }
@@ -524,6 +535,16 @@ class _BrowserScreenState extends State<BrowserScreen>
   Future<void> _navigateTo(String value) async {
     final url = _normalizeUrl(value.trim());
     if (url.isEmpty) return;
+
+    if (Platform.isWindows && _windowsExternalOnlyMode) {
+      final uri = Uri.tryParse(url);
+      if (uri != null) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        _recordVisit(url);
+      }
+      return;
+    }
+
     _addressController.text = url;
 
     setState(() {
@@ -1083,6 +1104,12 @@ class _BrowserScreenState extends State<BrowserScreen>
               _webViewError!,
               style: TextStyle(fontSize: 12, color: cs.outline),
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _openExternally,
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Open in system browser'),
             ),
           ],
         ),

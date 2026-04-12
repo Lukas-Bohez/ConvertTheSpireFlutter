@@ -35,6 +35,7 @@ import '../widgets/quick_links_page.dart';
 import '../widgets/quick_links_service.dart';
 import '../services/update_service.dart';
 import '../widgets/update_banner.dart';
+import '../config/build_flags.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppController controller;
@@ -888,6 +889,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildSearchTab(AppSettings? settings) {
     final isNarrow = _isNarrowLayout(context);
+    final youtubeEnabled = kYouTubeConversionEnabled;
 
     // Keep the top search row pinned while the rest of the UI scrolls.
     final searchHeader = Padding(
@@ -905,26 +907,31 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 suffixIcon: _urlController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
-                        onPressed: () {
+                        onPressed: youtubeEnabled
+                            ? () {
                           setState(() => _urlController.clear());
-                        },
+                        }
+                            : null,
                         tooltip: 'Clear URL',
                       )
                     : null,
               ),
               onChanged: (value) => setState(() {}),
+              enabled: youtubeEnabled,
             ),
           ),
           const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.content_paste),
-            onPressed: () async {
+            onPressed: youtubeEnabled
+                ? () async {
               final clipboardData = await Clipboard.getData('text/plain');
               if (!mounted) return;
               if (clipboardData?.text != null) {
                 setState(() => _urlController.text = clipboardData!.text!);
               }
-            },
+            }
+                : null,
             tooltip: 'Paste from clipboard',
           ),
         ],
@@ -950,6 +957,31 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           sliver: SliverList(
             delegate: SliverChildListDelegate(
               [
+                if (!youtubeEnabled)
+                  Card(
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Icon(Icons.block,
+                              color:
+                                  Theme.of(context).colorScheme.onErrorContainer),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'YouTube conversion is disabled in this build.',
+                              style: TextStyle(
+                                color:
+                                    Theme.of(context).colorScheme.onErrorContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (!youtubeEnabled) const SizedBox(height: 12),
                 // Download options section
                 Card(
                   elevation: 2,
@@ -1320,7 +1352,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           icon: const Icon(Icons.search),
                           label: const Text('Search / Preview'),
                           onPressed: settings == null ||
-                                  _urlController.text.trim().isEmpty
+                              _urlController.text.trim().isEmpty ||
+                              !youtubeEnabled
                               ? null
                               : _onSearch,
                           style: ElevatedButton.styleFrom(
@@ -1335,7 +1368,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           icon: const Icon(Icons.download),
                           label: const Text('Download'),
                           onPressed: settings == null ||
-                                  _urlController.text.trim().isEmpty
+                              _urlController.text.trim().isEmpty ||
+                              !youtubeEnabled
                               ? null
                               : () => _downloadUrl(settings),
                           style: OutlinedButton.styleFrom(
@@ -1353,7 +1387,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           icon: const Icon(Icons.search),
                           label: const Text('Search / Preview'),
                           onPressed: settings == null ||
-                                  _urlController.text.trim().isEmpty
+                              _urlController.text.trim().isEmpty ||
+                              !youtubeEnabled
                               ? null
                               : _onSearch,
                           style: ElevatedButton.styleFrom(
@@ -1367,7 +1402,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           icon: const Icon(Icons.download),
                           label: const Text('Download'),
                           onPressed: settings == null ||
-                                  _urlController.text.trim().isEmpty
+                              _urlController.text.trim().isEmpty ||
+                              !youtubeEnabled
                               ? null
                               : () => _downloadUrl(settings),
                           style: OutlinedButton.styleFrom(
@@ -1430,6 +1466,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _downloadUrl(AppSettings settings) {
+    if (!kYouTubeConversionEnabled) {
+      Snack.show(
+        context,
+        'YouTube conversion is disabled in this build.',
+        level: SnackLevel.warning,
+      );
+      return;
+    }
     if (!_ensureDownloadFolder(settings)) return;
     final url = _urlController.text.trim();
     if (url.isEmpty) return;
@@ -1458,6 +1502,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _onSearch() {
+    if (!kYouTubeConversionEnabled) {
+      Snack.show(
+        context,
+        'YouTube conversion is disabled in this build.',
+        level: SnackLevel.warning,
+      );
+      return;
+    }
     int startIndex = 0;
     int? limit;
 
@@ -2685,6 +2737,89 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ],
                       ),
 
+                    const SizedBox(height: 12),
+                    CheckboxListTile(
+                      title: const Text('Use per-format sub-folders'),
+                      subtitle: const Text(
+                          'When disabled, the selected output folder is used directly (mp3/m4a/mp4 subfolders are skipped).'),
+                      value: _useFormatSubfolders,
+                      onChanged: (value) async {
+                        if (value == null) return;
+                        setState(() => _useFormatSubfolders = value);
+                        await widget.controller.saveSettings(
+                            settings.copyWith(createFormatSubfolders: value));
+                      },
+                    ),
+
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _downloadDirMp3Controller,
+                            decoration: const InputDecoration(
+                              labelText: 'MP3 folder (optional)',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.folder),
+                            ),
+                            readOnly: true,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.folder_open),
+                          label: const Text('Browse'),
+                          onPressed: () =>
+                              _pickFormatDownloadFolder(settings, 'mp3'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _downloadDirM4aController,
+                            decoration: const InputDecoration(
+                              labelText: 'M4A folder (optional)',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.folder),
+                            ),
+                            readOnly: true,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.folder_open),
+                          label: const Text('Browse'),
+                          onPressed: () =>
+                              _pickFormatDownloadFolder(settings, 'm4a'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _downloadDirMp4Controller,
+                            decoration: const InputDecoration(
+                              labelText: 'MP4 folder (optional)',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.folder),
+                            ),
+                            readOnly: true,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.folder_open),
+                          label: const Text('Browse'),
+                          onPressed: () =>
+                              _pickFormatDownloadFolder(settings, 'mp4'),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
