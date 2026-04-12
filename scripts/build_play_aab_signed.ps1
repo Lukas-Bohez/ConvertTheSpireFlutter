@@ -48,9 +48,27 @@ function Get-CertSha1FromKeystore {
     [string]$Alias
   )
 
-  $output = & $Keytool -list -v -keystore $StoreFile -storepass $StorePass -alias $Alias 2>&1
-  if ($LASTEXITCODE -ne 0) {
-    throw 'Could not read keystore. Check path/password/alias.'
+  $tmp = Join-Path $env:TEMP ('keystore_verify_' + [guid]::NewGuid().ToString())
+  New-Item -ItemType Directory -Path $tmp | Out-Null
+
+  try {
+    $stdout = Join-Path $tmp 'stdout.txt'
+    $stderr = Join-Path $tmp 'stderr.txt'
+    $process = Start-Process -FilePath $Keytool -ArgumentList @(
+      '-list', '-v', '-keystore', $StoreFile, '-storepass', $StorePass, '-alias', $Alias
+    ) -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+
+    $output = @()
+    if (Test-Path $stdout) { $output += Get-Content $stdout }
+    if (Test-Path $stderr) { $output += Get-Content $stderr }
+
+    if ($process.ExitCode -ne 0) {
+      throw 'Could not read keystore. Check path/password/alias.'
+    }
+  } finally {
+    if (Test-Path $tmp) {
+      Remove-Item -Recurse -Force $tmp
+    }
   }
 
   foreach ($line in $output) {
@@ -82,8 +100,17 @@ function Get-CertSha1FromAab {
       throw 'No signature block file found in AAB META-INF.'
     }
 
-    $certOut = & $Keytool -printcert -file $sig.FullName 2>&1
-    if ($LASTEXITCODE -ne 0) {
+    $stdout = Join-Path $tmp 'stdout.txt'
+    $stderr = Join-Path $tmp 'stderr.txt'
+    $process = Start-Process -FilePath $Keytool -ArgumentList @(
+      '-printcert', '-file', $sig.FullName
+    ) -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+
+    $certOut = @()
+    if (Test-Path $stdout) { $certOut += Get-Content $stdout }
+    if (Test-Path $stderr) { $certOut += Get-Content $stderr }
+
+    if ($process.ExitCode -ne 0) {
       throw 'Failed to read cert from AAB signature block.'
     }
 
@@ -118,7 +145,9 @@ if ($keystoreSha1 -ne $expectedSha1) {
 $keyPropertiesPath = Join-Path $PSScriptRoot '..\android\key.properties'
 $keyStoreTarget = Join-Path $PSScriptRoot '..\android\app\release.keystore'
 
-Copy-Item -Force $KeystorePath $keyStoreTarget
+if ((Resolve-Path $KeystorePath).Path -ne (Resolve-Path $keyStoreTarget).Path) {
+  Copy-Item -Force $KeystorePath $keyStoreTarget
+}
 @"
 storePassword=$StorePassword
 keyPassword=$KeyPassword
