@@ -54,7 +54,7 @@ android {
         }
         create("play") {
             dimension = "distribution"
-            manifestPlaceholders["appLabel"] = "Convert the Spire Reborn"
+            manifestPlaceholders["appLabel"] = "Vault the Spire"
         }
     }
 
