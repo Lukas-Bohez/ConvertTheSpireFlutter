@@ -1,10 +1,12 @@
+import '../config/build_flags.dart';
+
 /// User-facing string constants for the app.
 ///
 /// Centralising strings here makes future i18n (e.g. intl / ARB files)
 /// straightforward: grep for `Strings.` and replace with generated code.
 abstract final class Strings {
   // -- App ----------------------------------------------------------------─
-  static const appName = 'Convert the Spire Reborn';
+  static String get appName => getAppTitle();
 
   // -- Navigation / Tabs --------------------------------------------------─
   static const tabSearch = 'Search';

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 
 import 'dlna_discovery_service.dart';
+import '../config/build_flags.dart';
 
 /// Sends UPnP/DLNA control commands (SOAP actions) to a media renderer.
 ///
@@ -21,7 +22,7 @@ class DlnaControlService {
   Future<void> playMedia({
     required DlnaDevice device,
     required String mediaUrl,
-    String title = 'Convert the Spire',
+    String title = 'Vault the Spire / Convert the Spire',
     String mimeType = 'video/mp4',
   }) async {
     // Step 1: Stop any currently playing media (ignore errors)
@@ -48,7 +49,7 @@ class DlnaControlService {
   Future<void> setAVTransportURI({
     required DlnaDevice device,
     required String mediaUrl,
-    String title = 'Convert the Spire',
+    String title = 'Vault the Spire / Convert the Spire',
     String mimeType = 'video/mp4',
   }) async {
     final escapedUrl = _xmlEscape(mediaUrl);

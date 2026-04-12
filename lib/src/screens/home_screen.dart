@@ -3713,7 +3713,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const Divider(),
                   const SizedBox(height: 8),
                   Text(
-                    'Convert the Spire Reborn',
+                    getAppTitle(),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

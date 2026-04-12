@@ -498,9 +498,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Convert the Spire',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          getAppTitle(),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         automaticallyImplyLeading: false,
         centerTitle: true,

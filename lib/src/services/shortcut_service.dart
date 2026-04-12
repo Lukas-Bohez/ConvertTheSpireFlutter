@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 
+import '../config/build_flags.dart';
+
 /// Creates a desktop shortcut for the application if one does not already exist.
 class ShortcutService {
   static bool get _isDesktop =>
@@ -25,6 +27,7 @@ class ShortcutService {
   // -- Windows (.lnk via PowerShell) ------------------------------------─
 
   static Future<void> _ensureWindowsShortcut() async {
+    final appName = getAppTitle();
     final exePath = Platform.resolvedExecutable;
     final workingDir = File(exePath).parent.path;
 
@@ -33,17 +36,18 @@ class ShortcutService {
     // via single-quoted PowerShell strings with internal quotes escaped.
     final safeExe = exePath.replaceAll("'", "''");
     final safeWork = workingDir.replaceAll("'", "''");
+    final safeName = appName.replaceAll("'", "''");
 
     final script = '''
 \$desktop = [Environment]::GetFolderPath('Desktop')
 if (-not \$desktop) { exit 1 }
-\$lnk = Join-Path \$desktop 'Convert the Spire Reborn.lnk'
+\$lnk = Join-Path \$desktop '$safeName.lnk'
 if (Test-Path \$lnk) { exit 0 }
 \$ws = New-Object -ComObject WScript.Shell
 \$s  = \$ws.CreateShortcut(\$lnk)
 \$s.TargetPath       = '$safeExe'
 \$s.WorkingDirectory  = '$safeWork'
-\$s.Description       = 'Convert the Spire Reborn'
+\$s.Description       = '$safeName'
 \$s.Save()
 ''';
 
@@ -63,11 +67,12 @@ if (Test-Path \$lnk) { exit 0 }
   // -- Linux (.desktop file) --------------------------------------------─
 
   static Future<void> _ensureLinuxDesktopEntry() async {
+    final appName = getAppTitle();
     final home = Platform.environment['HOME'];
     if (home == null) return;
 
     final desktopDir = '$home/Desktop';
-    final shortcutPath = '$desktopDir/convert-the-spire-reborn.desktop';
+    final shortcutPath = '$desktopDir/vault-spire.desktop';
     if (await File(shortcutPath).exists()) {
       debugPrint('ShortcutService: desktop entry already exists');
       return;
@@ -84,7 +89,7 @@ if (Test-Path \$lnk) { exit 0 }
 
     final content = '''[Desktop Entry]
 Type=Application
-Name=Convert the Spire Reborn
+Name=$appName
 Exec=$exePath
 Icon=$iconPath
 Terminal=false

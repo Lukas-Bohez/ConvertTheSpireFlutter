@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../config/build_flags.dart';
+
 /// Manages the system-tray icon and close-to-tray behaviour on desktop.
 ///
 /// When [shouldMinimiseToTray] returns `true` the window is hidden instead
@@ -61,7 +63,7 @@ class TrayService with TrayListener, WindowListener {
       debugPrint('TrayService: setIcon failed ($iconPath): $e');
     }
     try {
-      await trayManager.setToolTip('Convert the Spire Reborn');
+      await trayManager.setToolTip(getAppTitle());
     } catch (e) {
       debugPrint('TrayService: setToolTip failed: $e');
     }

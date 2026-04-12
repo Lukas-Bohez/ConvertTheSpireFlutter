@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../screens/player.dart' show PlayerState;
 import '../state/app_controller.dart';
+import '../config/build_flags.dart';
 
 import 'quick_links_service.dart';
 
@@ -577,6 +578,10 @@ class _BrowserShellState extends State<BrowserShell> {
     // Build suggestion list from QuickLinksService
     final allPages = <_PageSuggestion>[];
     for (final entry in QuickLinksService.indexToTitle.entries) {
+      // Filter out hidden tabs in Play Store build
+      if (kPlayStoreBuild && !isTabVisibleInPlayStore(entry.key)) {
+        continue;
+      }
       final route = QuickLinksService.indexToRoute[entry.key];
       if (route == null) continue;
       final icon = QuickLinksService.indexToIcon[entry.key] ?? Icons.link;
