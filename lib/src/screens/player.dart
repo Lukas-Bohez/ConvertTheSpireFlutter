@@ -42,7 +42,7 @@ enum MediaType { audio, video }
 
 enum RepeatMode { off, one, all }
 
-enum PlaybackMode { all, songs, videos, favourites }
+enum PlaybackMode { all, songs, videos, favourites, favouriteSongs, favouriteVideos }
 
 enum QueueScope { all, songs, videos, favourites, favSongs, favVideos }
 
@@ -167,6 +167,11 @@ class PlayerState with ChangeNotifier {
   // exposes it.
   final List<int> manualQueue = [];
   final List<int> _manualQueueBase = [];
+  final List<int> _playHistory = [];
+  int _historyCursor = -1;
+  final List<int> _recentlyPlayed = [];
+  static const int _maxHistoryEntries = 200;
+  static const int _maxRecentShuffleEntries = 24;
 
   Directory? _thumbCacheDir;
   Set<String> _favourites = {};
@@ -597,6 +602,28 @@ class PlayerState with ChangeNotifier {
     } else {
       _folderItemCount = min(_folderItemCount, library.length);
     }
+
+    for (var i = _playHistory.length - 1; i >= 0; i--) {
+      final value = _playHistory[i];
+      if (value == removedIndex) {
+        _playHistory.removeAt(i);
+      } else if (value > removedIndex) {
+        _playHistory[i] = value - 1;
+      }
+    }
+    for (var i = _recentlyPlayed.length - 1; i >= 0; i--) {
+      final value = _recentlyPlayed[i];
+      if (value == removedIndex) {
+        _recentlyPlayed.removeAt(i);
+      } else if (value > removedIndex) {
+        _recentlyPlayed[i] = value - 1;
+      }
+    }
+    if (_playHistory.isEmpty) {
+      _historyCursor = -1;
+    } else {
+      _historyCursor = _historyCursor.clamp(0, _playHistory.length - 1);
+    }
   }
 
   Future<void> _stopPlaybackBestEffort() async {
@@ -659,6 +686,9 @@ class PlayerState with ChangeNotifier {
     isLoading = true;
     _folderItemCount = 0;
     _thumbInFlight.clear();
+    _playHistory.clear();
+    _recentlyPlayed.clear();
+    _historyCursor = -1;
 
     if (_audio != null) {
       try { await _audio!.stop(); } catch (_) {}
@@ -705,6 +735,9 @@ class PlayerState with ChangeNotifier {
 
     currentIndex = 0;
     isLoading = false;
+    if (library.isNotEmpty) {
+      _recordHistorySelection(currentIndex, fromHistory: false);
+    }
     notifyListeners();
 
     // BUG 2 FIX: Avoid bulk thumbnail generation on Windows (crashes). Instead,
@@ -864,13 +897,48 @@ class PlayerState with ChangeNotifier {
   /// if select() is called again before _loadCurrent() finishes, the earlier
   /// load aborts gracefully instead of landing on the wrong track.
   Future<void> select(int index) async {
+    await _selectInternal(index, fromHistory: false);
+  }
+
+  Future<void> _selectInternal(int index, {required bool fromHistory}) async {
     if (index < 0 || index >= library.length) return;
+    _recordHistorySelection(index, fromHistory: fromHistory);
     // Capture NOW before any async gap.
     final targetIndex = index;
     final generation = ++_loadGeneration;
     currentIndex = targetIndex;
     notifyListeners();
     await _loadCurrent(targetIndex, generation);
+  }
+
+  void _recordHistorySelection(int index, {required bool fromHistory}) {
+    if (!fromHistory) {
+      if (_historyCursor < _playHistory.length - 1) {
+        _playHistory.removeRange(_historyCursor + 1, _playHistory.length);
+      }
+      if (_playHistory.isEmpty || _playHistory.last != index) {
+        _playHistory.add(index);
+        if (_playHistory.length > _maxHistoryEntries) {
+          _playHistory.removeAt(0);
+        }
+      }
+      _historyCursor = _playHistory.length - 1;
+      _pushRecentPlay(index);
+      return;
+    }
+
+    final existing = _playHistory.lastIndexOf(index);
+    if (existing >= 0) {
+      _historyCursor = existing;
+    }
+  }
+
+  void _pushRecentPlay(int index) {
+    _recentlyPlayed.remove(index);
+    _recentlyPlayed.add(index);
+    while (_recentlyPlayed.length > _maxRecentShuffleEntries) {
+      _recentlyPlayed.removeAt(0);
+    }
   }
 
   Future<void> _loadCurrent(int targetIndex, int generation) async {
@@ -1231,19 +1299,33 @@ class PlayerState with ChangeNotifier {
     if (candidates.isEmpty) return;
     int nextIndex;
     if (shuffle) {
-      final others = _weightedShuffleCandidates(
-        candidates.where((i) => i != currentIndex).toList(),
-      );
-      nextIndex = others.isEmpty ? candidates.first : others[_random.nextInt(others.length)];
+      final fresh = candidates
+          .where((i) => i != currentIndex && !_recentlyPlayed.contains(i))
+          .toList();
+      final basePool = fresh.isNotEmpty
+          ? fresh
+          : candidates.where((i) => i != currentIndex).toList();
+      final weighted = _weightedShuffleCandidates(basePool);
+      nextIndex = weighted.isEmpty
+          ? candidates.first
+          : weighted[_random.nextInt(weighted.length)];
     } else {
       final pos = candidates.indexOf(currentIndex);
       nextIndex = pos >= 0 ? candidates[(pos + 1) % candidates.length] : candidates.first;
     }
-    await select(nextIndex);
+    await _selectInternal(nextIndex, fromHistory: false);
   }
 
   Future<void> previous({MediaType? only}) async {
     if (library.isEmpty) return;
+    if (_historyCursor > 0 && _historyCursor < _playHistory.length) {
+      _historyCursor--;
+      final previousIndex = _playHistory[_historyCursor];
+      if (previousIndex >= 0 && previousIndex < library.length) {
+        await _selectInternal(previousIndex, fromHistory: true);
+        return;
+      }
+    }
     var candidates = _getPlaybackCandidates(only: only);
     if (candidates.isEmpty && only != null) {
       // If the current filter yields nothing (e.g. songs-only while in a video
@@ -1253,17 +1335,19 @@ class PlayerState with ChangeNotifier {
     if (candidates.isEmpty) return;
     int prevIndex;
     if (shuffle) {
-      final others = _weightedShuffleCandidates(
+      final weighted = _weightedShuffleCandidates(
         candidates.where((i) => i != currentIndex).toList(),
       );
-      prevIndex = others.isEmpty ? candidates.first : others[_random.nextInt(others.length)];
+      prevIndex = weighted.isEmpty
+          ? candidates.first
+          : weighted[_random.nextInt(weighted.length)];
     } else {
       final pos = candidates.indexOf(currentIndex);
       prevIndex = pos >= 0
           ? candidates[(pos - 1 + candidates.length) % candidates.length]
           : candidates.last;
     }
-    await select(prevIndex);
+    await _selectInternal(prevIndex, fromHistory: false);
   }
 
   void setVolume(double v) {
@@ -1417,15 +1501,27 @@ class PlayerState with ChangeNotifier {
       case PlaybackMode.songs:
         activeTabFilter = MediaType.audio;
         favouritesOnly = false;
+        return;
       case PlaybackMode.videos:
         activeTabFilter = MediaType.video;
         favouritesOnly = false;
+        return;
       case PlaybackMode.favourites:
         activeTabFilter = null;
         favouritesOnly = true;
+        return;
+      case PlaybackMode.favouriteSongs:
+        activeTabFilter = MediaType.audio;
+        favouritesOnly = true;
+        return;
+      case PlaybackMode.favouriteVideos:
+        activeTabFilter = MediaType.video;
+        favouritesOnly = true;
+        return;
       case PlaybackMode.all:
         activeTabFilter = null;
         favouritesOnly = false;
+        return;
     }
   }
 
