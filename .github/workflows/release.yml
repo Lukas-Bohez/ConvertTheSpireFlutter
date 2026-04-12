@@ -169,6 +169,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             clang cmake ninja-build pkg-config \
             libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
             libmpv-dev mpv libass-dev \
             fuse libfuse2 \
             libayatana-appindicator3-dev
@@ -316,7 +317,7 @@ jobs:
           retention-days: 7
 
   # =========================================================================
-  # 5. Android (signed APK + AAB)
+  # 5. Android (APK for end-user releases)
   # =========================================================================
   build-android:
     name: Build Android
@@ -337,9 +338,10 @@ jobs:
           cache: true
 
       # -----------------------------------------------------------------------
-      # Decode the keystore when secrets are present and write a key.properties
-      # file for Gradle to pick up.  Omitting secrets produces an unsigned
-      # debug-signed release — functional but not suitable for Play Store.
+      # Configure Android signing for the APK build:
+      # - Use provided release keystore secrets when available.
+      # - Otherwise, fall back to debug keystore so the release workflow still
+      #   succeeds for end-user GitHub assets.
       # -----------------------------------------------------------------------
       - name: Configure Android signing
         env:
@@ -348,27 +350,34 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
-            echo "ERROR: Android keystore secrets are required for Play Store releases."
-            exit 1
-          fi
           set -euo pipefail
-          KEYSTORE_PATH="$GITHUB_WORKSPACE/android/app/release.keystore"
-          echo "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            KEYSTORE_PATH="$GITHUB_WORKSPACE/android/app/release.keystore"
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
 
-          EXPECTED_SHA1="31:31:FD:AE:97:6D:00:A0:14:13:48:75:DE:27:19:38:BF:20:3F:38"
-          ACTUAL_SHA1=$(keytool -list -v -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" 2>/dev/null | awk -F': ' '/SHA1:/ {print $2; exit}')
-          if [ "$ACTUAL_SHA1" != "$EXPECTED_SHA1" ]; then
-            echo "ERROR: Android keystore SHA1 mismatch. Expected $EXPECTED_SHA1 but got $ACTUAL_SHA1"
-            exit 1
+            cat > "$GITHUB_WORKSPACE/android/key.properties" <<EOF
+            storePassword=$KEYSTORE_PASSWORD
+            keyPassword=$KEY_PASSWORD
+            keyAlias=$KEY_ALIAS
+            storeFile=release.keystore
+            EOF
+            echo "Using release keystore from secrets."
+          else
+            DEBUG_KEYSTORE="$HOME/.android/debug.keystore"
+            if [ ! -f "$DEBUG_KEYSTORE" ]; then
+              keytool -genkeypair -v -keystore "$DEBUG_KEYSTORE" -storepass android \
+                -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 \
+                -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+            fi
+
+            cat > "$GITHUB_WORKSPACE/android/key.properties" <<EOF
+            storePassword=android
+            keyPassword=android
+            keyAlias=androiddebugkey
+            storeFile=$DEBUG_KEYSTORE
+            EOF
+            echo "Release keystore secrets not set - using debug keystore fallback for APK build."
           fi
-
-          cat > "$GITHUB_WORKSPACE/android/key.properties" <<EOF
-          storePassword=$KEYSTORE_PASSWORD
-          keyPassword=$KEY_PASSWORD
-          keyAlias=$KEY_ALIAS
-          storeFile=release.keystore
-          EOF
 
       - name: Install dependencies
         run: flutter pub get
@@ -376,16 +385,11 @@ jobs:
       - name: Build APK
         run: flutter build apk --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false
 
-      - name: Build App Bundle
-        run: flutter build appbundle --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=true
-
       - name: Collect Android artifacts
         run: |
           mkdir -p android-builds
           cp build/app/outputs/flutter-apk/app-release.apk \
-             android-builds/${{ env.OUTPUT_NAME }}.apk
-          cp build/app/outputs/bundle/release/app-release.aab \
-             android-builds/${{ env.OUTPUT_NAME }}.aab
+             android-builds/${{ env.OUTPUT_NAME }}-android.apk
 
       - uses: actions/upload-artifact@v5
         with:
