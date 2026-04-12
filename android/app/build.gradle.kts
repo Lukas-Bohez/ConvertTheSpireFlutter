@@ -1,8 +1,19 @@
+import java.io.FileInputStream
+import java.util.Properties
+import org.gradle.api.GradleException
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val keystoreProperties = Properties().apply {
+    val keystorePropertiesFile = rootProject.file("key.properties")
+    if (keystorePropertiesFile.exists()) {
+        load(FileInputStream(keystorePropertiesFile))
+    }
 }
 
 android {
@@ -40,6 +51,26 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFilePath = keystoreProperties["storeFile"]?.toString()?.trim().orEmpty()
+            val storePassword = keystoreProperties["storePassword"]?.toString().orEmpty()
+            val keyAlias = keystoreProperties["keyAlias"]?.toString().orEmpty()
+            val keyPassword = keystoreProperties["keyPassword"]?.toString().orEmpty()
+
+            if (storeFilePath.isBlank() || storePassword.isBlank() || keyAlias.isBlank() || keyPassword.isBlank()) {
+                throw GradleException(
+                    "Release signing is not configured. Provide android/key.properties with a valid upload keystore before building release artifacts."
+                )
+            }
+
+            storeFile = file(storeFilePath)
+            this.storePassword = storePassword
+            this.keyAlias = keyAlias
+            this.keyPassword = keyPassword
+        }
+    }
+
     // NOTE: Flutter tooling can set ndk abiFilters (e.g. when using
     // `flutter build apk --split-per-abi`). Having a `splits { abi { ... } }`
     // block here leads to a conflict (ndk abiFilters cannot be present when
@@ -49,9 +80,7 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
