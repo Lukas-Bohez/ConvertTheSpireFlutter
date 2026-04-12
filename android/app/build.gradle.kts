@@ -1,6 +1,5 @@
 import java.io.FileInputStream
 import java.util.Properties
-import org.gradle.api.GradleException
 
 plugins {
     id("com.android.application")
@@ -51,23 +50,24 @@ android {
         }
     }
 
+    val storeFilePath = keystoreProperties["storeFile"]?.toString()?.trim().orEmpty()
+    val storePassword = keystoreProperties["storePassword"]?.toString().orEmpty()
+    val keyAlias = keystoreProperties["keyAlias"]?.toString().orEmpty()
+    val keyPassword = keystoreProperties["keyPassword"]?.toString().orEmpty()
+    val hasReleaseSigning =
+        storeFilePath.isNotBlank() &&
+        storePassword.isNotBlank() &&
+        keyAlias.isNotBlank() &&
+        keyPassword.isNotBlank()
+
     signingConfigs {
         create("release") {
-            val storeFilePath = keystoreProperties["storeFile"]?.toString()?.trim().orEmpty()
-            val storePassword = keystoreProperties["storePassword"]?.toString().orEmpty()
-            val keyAlias = keystoreProperties["keyAlias"]?.toString().orEmpty()
-            val keyPassword = keystoreProperties["keyPassword"]?.toString().orEmpty()
-
-            if (storeFilePath.isBlank() || storePassword.isBlank() || keyAlias.isBlank() || keyPassword.isBlank()) {
-                throw GradleException(
-                    "Release signing is not configured. Provide android/key.properties with a valid upload keystore before building release artifacts."
-                )
+            if (hasReleaseSigning) {
+                storeFile = file(storeFilePath)
+                this.storePassword = storePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
             }
-
-            storeFile = file(storeFilePath)
-            this.storePassword = storePassword
-            this.keyAlias = keyAlias
-            this.keyPassword = keyPassword
         }
     }
 
@@ -80,7 +80,11 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
