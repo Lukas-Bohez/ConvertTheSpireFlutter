@@ -17,7 +17,7 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.orokaconner.convertthespirereborn"
+    namespace = "com.torrentspire.ai"
     // Use a fixed SDK to ensure proper native library loading on newer Android versions
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
@@ -34,7 +34,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.orokaconner.convertthespirereborn"
+        applicationId = "com.torrentspire.ai"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // media_kit requires minSdk 21; use 24 for wider device compatibility
