@@ -254,6 +254,10 @@ class PlayerState with ChangeNotifier {
       _initMkPlayers();
     }
 
+    if (!_useMediaKit && Platform.isAndroid) {
+      _audio ??= AudioPlayer();
+    }
+
     _loadPrefs().then((_) => _applyVolume());
 
     if (!_useMediaKit && !kIsWeb && Platform.isAndroid) _initAudioHandler();
@@ -263,7 +267,7 @@ class PlayerState with ChangeNotifier {
     // execute on the platform thread. Only create the just_audio player on Android
     // where media_kit is not used.
     if (!_useMediaKit && Platform.isAndroid) {
-      _audio = AudioPlayer();
+      _audio ??= AudioPlayer();
       _subs.add(_audio!.positionStream.listen((pos) {
         if (_disposed || currentItem?.type != MediaType.audio) return;
         position = pos;
@@ -1290,6 +1294,11 @@ class PlayerState with ChangeNotifier {
 
   Future<void> next({MediaType? only}) async {
     if (library.isEmpty) return;
+    final queuedIndex = _popNextQueuedIndex();
+    if (queuedIndex != null) {
+      await _selectInternal(queuedIndex, fromHistory: false);
+      return;
+    }
     var candidates = _getPlaybackCandidates(only: only);
     if (candidates.isEmpty && only != null) {
       // If the current filter yields nothing (e.g. songs-only while in a video
@@ -1314,6 +1323,17 @@ class PlayerState with ChangeNotifier {
       nextIndex = pos >= 0 ? candidates[(pos + 1) % candidates.length] : candidates.first;
     }
     await _selectInternal(nextIndex, fromHistory: false);
+  }
+
+  int? _popNextQueuedIndex() {
+    while (manualQueue.isNotEmpty) {
+      final nextIdx = manualQueue.removeAt(0);
+      _manualQueueBase.remove(nextIdx);
+      if (nextIdx >= 0 && nextIdx < library.length) {
+        return nextIdx;
+      }
+    }
+    return null;
   }
 
   Future<void> previous({MediaType? only}) async {
@@ -1465,9 +1485,9 @@ class PlayerState with ChangeNotifier {
   }
 
   void _handleCompletion() {
-    if (manualQueue.isNotEmpty) {
-      final nextIdx = manualQueue.removeAt(0);
-      select(nextIdx);
+    final queuedIndex = _popNextQueuedIndex();
+    if (queuedIndex != null) {
+      select(queuedIndex);
       return;
     }
     if (repeatMode == RepeatMode.one) {
