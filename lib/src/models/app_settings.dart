@@ -3,6 +3,7 @@ class AppSettings {
   final String? downloadDirMp3;
   final String? downloadDirM4a;
   final String? downloadDirMp4;
+  final String? downloadDirTorrents;
   final bool createFormatSubfolders;
   final int maxWorkers;
   final bool showNotifications;
@@ -57,6 +58,7 @@ class AppSettings {
     this.downloadDirMp3,
     this.downloadDirM4a,
     this.downloadDirMp4,
+    this.downloadDirTorrents,
     this.createFormatSubfolders = true,
     this.defaultAudioFormat = 'mp3',
     this.defaultBitrate = 0,
@@ -92,6 +94,7 @@ class AppSettings {
       downloadDirMp3: null,
       downloadDirM4a: null,
       downloadDirMp4: null,
+      downloadDirTorrents: null,
       createFormatSubfolders: true,
       defaultBitrate: 0,
       minimumBitrate: 0,
@@ -126,6 +129,7 @@ class AppSettings {
     String? downloadDirMp3,
     String? downloadDirM4a,
     String? downloadDirMp4,
+    String? downloadDirTorrents,
     bool? createFormatSubfolders,
     String? defaultAudioFormat,
     int? defaultBitrate,
@@ -161,6 +165,7 @@ class AppSettings {
       downloadDirMp3: downloadDirMp3 ?? this.downloadDirMp3,
       downloadDirM4a: downloadDirM4a ?? this.downloadDirM4a,
       downloadDirMp4: downloadDirMp4 ?? this.downloadDirMp4,
+        downloadDirTorrents: downloadDirTorrents ?? this.downloadDirTorrents,
       createFormatSubfolders:
           createFormatSubfolders ?? this.createFormatSubfolders,
       minimizeToTrayOnClose:
@@ -222,6 +227,7 @@ class AppSettings {
       downloadDirMp3: (json['download_dir_mp3'] as String?)?.trim(),
       downloadDirM4a: (json['download_dir_m4a'] as String?)?.trim(),
       downloadDirMp4: (json['download_dir_mp4'] as String?)?.trim(),
+        downloadDirTorrents: (json['download_dir_torrents'] as String?)?.trim(),
       createFormatSubfolders:
           json['create_format_subfolders'] as bool? ?? true,
     );
@@ -259,6 +265,7 @@ class AppSettings {
       'download_dir_mp3': downloadDirMp3,
       'download_dir_m4a': downloadDirM4a,
       'download_dir_mp4': downloadDirMp4,
+      'download_dir_torrents': downloadDirTorrents,
       'create_format_subfolders': createFormatSubfolders,
     };
   }
