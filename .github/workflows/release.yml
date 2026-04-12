@@ -1,23 +1,17 @@
-# Convert The Spire Reborn â€” Release Workflow
+# Convert The Spire Reborn - Release Workflow
 #
-# Triggered manually via workflow_dispatch. Runs tests, builds for all
-# platforms, signs artifacts where credentials are provided, and publishes
-# a GitHub Release with a SHA-256 checksum manifest.
+# Triggered manually via workflow_dispatch. Runs tests, builds release
+# artifacts for all platforms, and publishes a GitHub Release with a
+# SHA-256 checksum manifest.
 #
-# Required secrets (configure in Settings â†’ Secrets and variables â†’ Actions):
-#
-#   Android signing (optional but strongly recommended for production):
-#     ANDROID_KEYSTORE_BASE64   â€“ base64-encoded .jks / .keystore file
-#     ANDROID_KEYSTORE_PASSWORD â€“ keystore password
-#     ANDROID_KEY_ALIAS         â€“ key alias inside the keystore
-#     ANDROID_KEY_PASSWORD      â€“ key password
+# Required secrets (configure in Settings -> Secrets and variables -> Actions):
 #
 #   macOS signing & notarization (optional; omit to ship unsigned):
-#     MACOS_CERTIFICATE_BASE64  â€“ base64-encoded .p12 Developer ID certificate
-#     MACOS_CERTIFICATE_PASSWORD â€“ .p12 import password
-#     MACOS_NOTARIZE_APPLE_ID   â€“ Apple ID used for notarization
-#     MACOS_NOTARIZE_PASSWORD   â€“ App-specific password for that Apple ID
-#     MACOS_NOTARIZE_TEAM_ID    â€“ 10-character Apple Team ID
+#     MACOS_CERTIFICATE_BASE64  - base64-encoded .p12 Developer ID certificate
+#     MACOS_CERTIFICATE_PASSWORD - .p12 import password
+#     MACOS_NOTARIZE_APPLE_ID   - Apple ID used for notarization
+#     MACOS_NOTARIZE_PASSWORD   - App-specific password for that Apple ID
+#     MACOS_NOTARIZE_TEAM_ID    - 10-character Apple Team ID
 #
 name: Release Build
 
