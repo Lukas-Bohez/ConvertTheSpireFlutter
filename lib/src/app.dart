@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart'
     show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart'
@@ -41,6 +42,7 @@ import 'services/watched_playlist_service.dart';
 import 'services/youtube_service.dart';
 import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
+import 'vault/vault_bootstrap.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'data/browser_db.dart';
 
@@ -297,6 +299,7 @@ class _MyAppState extends State<MyApp>
 
       if (kDebugMode) debugPrint('MyApp: all services created, calling init()');
       await controller.init();
+      unawaited(VaultBootstrap.ensureInitialized());
       if (kDebugMode) debugPrint('MyApp: init() completed');
       if (mounted) {
         setState(() {

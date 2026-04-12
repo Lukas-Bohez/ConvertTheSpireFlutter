@@ -47,6 +47,7 @@ class QuickLink {
     'logs.tab': Icons.list_alt,
     'guide.tab': Icons.menu_book,
     'player.tab': Icons.music_note,
+    'torrents.tab': Icons.download,
   };
 }
 
@@ -126,6 +127,12 @@ class QuickLinksService {
       route: 'player.tab',
       description: 'Media player & library',
     ),
+    QuickLink(
+      name: 'Torrents',
+      icon: Icons.download,
+      route: 'torrents.tab',
+      description: 'Vault torrent manager',
+    ),
   ];
 
   /// Route string → tab index mapping.
@@ -144,6 +151,7 @@ class QuickLinksService {
     'guide.tab': 11,
     'player.tab': 12,
     'home': 13,
+    'torrents.tab': 14,
   };
 
   /// Tab index → route string mapping.
@@ -162,6 +170,7 @@ class QuickLinksService {
     11: 'guide.tab',
     12: 'player.tab',
     13: 'home',
+    14: 'torrents.tab',
   };
 
   /// Tab index → page title for the fake URL bar.
@@ -180,6 +189,7 @@ class QuickLinksService {
     11: 'Guide',
     12: 'Player',
     13: 'Home',
+    14: 'Torrents',
   };
 
   /// Tab index → favicon icon.
@@ -198,6 +208,7 @@ class QuickLinksService {
     11: Icons.menu_book,
     12: Icons.music_note,
     13: Icons.home,
+    14: Icons.download,
   };
 
   static const _hiddenRoutes = {'queue.tab'};

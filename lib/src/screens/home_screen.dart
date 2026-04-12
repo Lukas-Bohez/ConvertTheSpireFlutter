@@ -27,6 +27,7 @@ import 'watched_playlists_screen.dart';
 import 'browser_screen.dart';
 import 'support_screen.dart';
 import 'player.dart' show PlayerPage, PlayerState;
+import '../vault/screens/torrents_screen.dart' as vault;
 import '../widgets/browser_shell.dart';
 import '../widgets/onboarding_tooltip_service.dart';
 import '../widgets/quick_links_page.dart';
@@ -321,6 +322,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             }
           },
         );
+      case 14:
+        return const vault.TorrentsScreen(
+          key: ValueKey('vault-torrents'),
+        );
       default:
         return _buildSearchTab(settings);
     }
@@ -332,7 +337,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool get _canGoForward => _navHistoryIndex < _navHistory.length - 1;
 
   void _navigateToPage(int index) {
-    if (index < 0 || index > 13) return;
+    if (index < 0 || index > 14) return;
     if (index == _selectedPageIndex) return;
     if (kDebugMode) {
       debugPrint('[NAV] _navigateToPage: $_selectedPageIndex -> $index');
@@ -535,7 +540,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     final stack = IndexedStack(
       index: _selectedPageIndex,
-      children: List.generate(14, (i) {
+      children: List.generate(15, (i) {
         if (!_visitedPages.contains(i)) {
           return const SizedBox.shrink();
         }
