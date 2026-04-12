@@ -1,4 +1,4 @@
-package com.orokaconner.convertthespirereborn
+package com.torrentspire.ai
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -14,8 +14,8 @@ class ForegroundDownloadService : Service() {
     companion object {
         const val CHANNEL_ID = "cts_foreground_channel"
         const val NOTIF_ID = 0xF00D
-        const val ACTION_START = "com.orokaconner.convertthespirereborn.action.START_DOWNLOAD_SERVICE"
-        const val ACTION_STOP = "com.orokaconner.convertthespirereborn.action.STOP_DOWNLOAD_SERVICE"
+        const val ACTION_START = "com.torrentspire.ai.action.START_DOWNLOAD_SERVICE"
+        const val ACTION_STOP = "com.torrentspire.ai.action.STOP_DOWNLOAD_SERVICE"
 
         fun createStartIntent(context: Context): Intent =
             Intent(context, ForegroundDownloadService::class.java).apply { action = ACTION_START }
@@ -78,12 +78,13 @@ class ForegroundDownloadService : Service() {
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = "Convert the Spire background"
+            val descriptionText = "Background download notifications"
             val importance = NotificationManager.IMPORTANCE_LOW
             val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
-                description = "Notifications for background downloads and long-running tasks"
+                description = descriptionText
             }
-            val nm = getSystemService(NotificationManager::class.java)
-            nm.createNotificationChannel(channel)
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
         }
     }
 }

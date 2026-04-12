@@ -93,6 +93,7 @@ jobs:
     name: Build Windows
     needs: test-and-analyze
     runs-on: windows-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v5
 
@@ -170,6 +171,7 @@ jobs:
             clang cmake ninja-build pkg-config \
             libgtk-3-dev liblzma-dev libstdc++-12-dev \
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libsecret-1-dev \
             libmpv-dev mpv libass-dev \
             fuse libfuse2 \
             libayatana-appindicator3-dev
@@ -356,11 +358,11 @@ jobs:
             echo "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
 
             cat > "$GITHUB_WORKSPACE/android/key.properties" <<EOF
-            storePassword=$KEYSTORE_PASSWORD
-            keyPassword=$KEY_PASSWORD
-            keyAlias=$KEY_ALIAS
-            storeFile=release.keystore
-            EOF
+storePassword=$KEYSTORE_PASSWORD
+keyPassword=$KEY_PASSWORD
+keyAlias=$KEY_ALIAS
+storeFile=release.keystore
+EOF
             echo "Using release keystore from secrets."
           else
             DEBUG_KEYSTORE="$HOME/.android/debug.keystore"
@@ -371,11 +373,11 @@ jobs:
             fi
 
             cat > "$GITHUB_WORKSPACE/android/key.properties" <<EOF
-            storePassword=android
-            keyPassword=android
-            keyAlias=androiddebugkey
-            storeFile=$DEBUG_KEYSTORE
-            EOF
+storePassword=android
+keyPassword=android
+keyAlias=androiddebugkey
+storeFile=$DEBUG_KEYSTORE
+EOF
             echo "Release keystore secrets not set - using debug keystore fallback for APK build."
           fi
 
