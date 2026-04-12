@@ -24,6 +24,7 @@ import 'package:video_player/video_player.dart';
 import '../services/platform_dirs.dart';
 import '../services/audio_handler.dart';
 import '../services/ffmpeg_service.dart';
+import '../utils/snack.dart';
 import '../utils/lock.dart';
 
 // --- Public entry point -------------------------------------------------------
@@ -169,6 +170,7 @@ class PlayerState with ChangeNotifier {
 
   Directory? _thumbCacheDir;
   Set<String> _favourites = {};
+  Set<String> _disliked = {};
   Map<String, MediaItem> _favouriteCache = {};
   int _folderItemCount = 0;
 
@@ -463,9 +465,12 @@ class PlayerState with ChangeNotifier {
 
   bool isPlayingPath(String path) => currentItem?.path == path && isActuallyPlaying;
 
-  Widget? thumbnailForItem(MediaItem item, {required int size}) {
+  Widget? thumbnailForItem(MediaItem item, {required int size, bool expand = false}) {
     final data = item.thumbnailData;
     if (data == null) return null;
+    if (expand) {
+      return Image.memory(data, fit: BoxFit.cover);
+    }
     return Image.memory(
       data,
       width: size.toDouble(),
@@ -497,6 +502,7 @@ class PlayerState with ChangeNotifier {
       .toList();
 
   bool isFavourite(String path) => _favourites.contains(path);
+  bool isDisliked(String path) => _disliked.contains(path);
 
   // --- Favourites -----------------------------------------------------------
 
@@ -512,6 +518,95 @@ class PlayerState with ChangeNotifier {
     prefs.setStringList('player_favourites', _favourites.toList());
     _saveFavouriteCache();
     notifyListeners();
+  }
+
+  void toggleDislike(String path) {
+    if (_disliked.contains(path)) {
+      _disliked.remove(path);
+    } else {
+      _disliked.add(path);
+    }
+    prefs.setStringList('player_disliked', _disliked.toList());
+    notifyListeners();
+  }
+
+  Future<bool> deleteMediaItem(String path) async {
+    final index = library.indexWhere((item) => item.path == path);
+    if (index < 0) return false;
+    if (path.startsWith('content://')) {
+      debugPrint('deleteMediaItem: content URI deletion is not supported: $path');
+      return false;
+    }
+
+    final file = File(path);
+    try {
+      if (!await file.exists()) return false;
+      await file.delete();
+    } catch (e) {
+      debugPrint('deleteMediaItem failed for $path: $e');
+      return false;
+    }
+
+    final wasCurrent = index == currentIndex;
+    _favourites.remove(path);
+    _favouriteCache.remove(path);
+    _disliked.remove(path);
+    prefs.setStringList('player_favourites', _favourites.toList());
+    prefs.setStringList('player_disliked', _disliked.toList());
+    _saveFavouriteCache();
+
+    library.removeAt(index);
+    _rebaseStateAfterRemoval(index);
+
+    if (library.isEmpty) {
+      await _stopPlaybackBestEffort();
+      currentIndex = 0;
+      position = Duration.zero;
+      duration = null;
+      _folderItemCount = 0;
+      notifyListeners();
+      return true;
+    }
+
+    if (wasCurrent) {
+      currentIndex = index.clamp(0, library.length - 1);
+      await select(currentIndex);
+    } else {
+      notifyListeners();
+    }
+    return true;
+  }
+
+  void _rebaseStateAfterRemoval(int removedIndex) {
+    manualQueue.removeWhere((value) => value == removedIndex);
+    _manualQueueBase.removeWhere((value) => value == removedIndex);
+
+    for (var i = 0; i < manualQueue.length; i++) {
+      if (manualQueue[i] > removedIndex) manualQueue[i]--;
+    }
+    for (var i = 0; i < _manualQueueBase.length; i++) {
+      if (_manualQueueBase[i] > removedIndex) _manualQueueBase[i]--;
+    }
+
+    if (currentIndex > removedIndex) {
+      currentIndex--;
+    }
+
+    if (_folderItemCount > removedIndex) {
+      _folderItemCount--;
+    } else {
+      _folderItemCount = min(_folderItemCount, library.length);
+    }
+  }
+
+  Future<void> _stopPlaybackBestEffort() async {
+    _loadGeneration++;
+    _videoCompletionFired = false;
+    _videoReady = false;
+    try { await _audio?.stop(); } catch (_) {}
+    try { await _audioMkPlayer?.stop(); } catch (_) {}
+    try { await _mkPlayer?.stop(); } catch (_) {}
+    try { await _disposeAndroidController(); } catch (_) {}
   }
 
   void _saveFavouriteCache() {
@@ -990,7 +1085,7 @@ class PlayerState with ChangeNotifier {
 
   List<int> _getPlaybackCandidates({MediaType? only}) {
     final scope = _folderItemCount > 0 ? _folderItemCount : library.length;
-    return library
+    final candidates = library
         .asMap()
         .entries
         .where((e) {
@@ -1004,6 +1099,30 @@ class PlayerState with ChangeNotifier {
         })
         .map((e) => e.key)
         .toList();
+
+    candidates.sort((left, right) {
+      final leftDisliked = _disliked.contains(library[left].path);
+      final rightDisliked = _disliked.contains(library[right].path);
+      if (leftDisliked != rightDisliked) {
+        return leftDisliked ? 1 : -1;
+      }
+      return left.compareTo(right);
+    });
+    return candidates;
+  }
+
+  List<int> _weightedShuffleCandidates(List<int> candidates) {
+    if (candidates.isEmpty) return candidates;
+    final weighted = <int>[];
+    for (final index in candidates) {
+      weighted.add(index);
+      if (!_disliked.contains(library[index].path)) {
+        weighted.add(index);
+        weighted.add(index);
+      }
+    }
+    weighted.shuffle(_random);
+    return weighted;
   }
 
   Future<void> togglePlay() async {
@@ -1112,7 +1231,9 @@ class PlayerState with ChangeNotifier {
     if (candidates.isEmpty) return;
     int nextIndex;
     if (shuffle) {
-      final others = candidates.where((i) => i != currentIndex).toList();
+      final others = _weightedShuffleCandidates(
+        candidates.where((i) => i != currentIndex).toList(),
+      );
       nextIndex = others.isEmpty ? candidates.first : others[_random.nextInt(others.length)];
     } else {
       final pos = candidates.indexOf(currentIndex);
@@ -1132,7 +1253,9 @@ class PlayerState with ChangeNotifier {
     if (candidates.isEmpty) return;
     int prevIndex;
     if (shuffle) {
-      final others = candidates.where((i) => i != currentIndex).toList();
+      final others = _weightedShuffleCandidates(
+        candidates.where((i) => i != currentIndex).toList(),
+      );
       prevIndex = others.isEmpty ? candidates.first : others[_random.nextInt(others.length)];
     } else {
       final pos = candidates.indexOf(currentIndex);
@@ -1315,6 +1438,7 @@ class PlayerState with ChangeNotifier {
         (prefs.getInt('playbackMode') ?? 0).clamp(0, PlaybackMode.values.length - 1)];
     _applyPlaybackMode();
     _favourites = (prefs.getStringList('player_favourites') ?? []).toSet();
+    _disliked = (prefs.getStringList('player_disliked') ?? []).toSet();
 
     _favouriteCache.clear();
     for (final raw in prefs.getStringList('player_favourites_cache') ?? []) {
@@ -2193,6 +2317,19 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
+  QueueScope _queueScopeForTab(int tabIndex) {
+    switch (tabIndex) {
+      case 1:
+        return QueueScope.songs;
+      case 2:
+        return QueueScope.videos;
+      case 3:
+        return QueueScope.favourites;
+      default:
+        return QueueScope.all;
+    }
+  }
+
   Widget _buildHeader() {
     return SafeArea(
       bottom: false,
@@ -2217,6 +2354,54 @@ class _PlayerScreenState extends State<PlayerScreen>
                   color: Theme.of(context).colorScheme.onSurface),
               tooltip: 'Open folder',
               onPressed: _pickFolder,
+            ),
+            PopupMenuButton<String>(
+              tooltip: 'Queue actions',
+              icon: Icon(Icons.queue_music_rounded,
+                  color: Theme.of(context).colorScheme.onSurface),
+              onSelected: (value) {
+                final state = context.read<PlayerState>();
+                switch (value) {
+                  case 'current':
+                    state.enqueueScope(_queueScopeForTab(_tabController.index));
+                    break;
+                  case 'all':
+                    state.enqueueScope(QueueScope.all);
+                    break;
+                  case 'songs':
+                    state.enqueueScope(QueueScope.songs);
+                    break;
+                  case 'videos':
+                    state.enqueueScope(QueueScope.videos);
+                    break;
+                  case 'favourites':
+                    state.enqueueScope(QueueScope.favourites);
+                    break;
+                  case 'favSongs':
+                    state.enqueueScope(QueueScope.favSongs);
+                    break;
+                  case 'favVideos':
+                    state.enqueueScope(QueueScope.favVideos);
+                    break;
+                  case 'clear':
+                    state.clearQueue();
+                    break;
+                }
+                if (mounted) {
+                  Snack.show(context, 'Queue updated', level: SnackLevel.info);
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'current', child: Text('Queue current tab')),
+                PopupMenuItem(value: 'all', child: Text('Queue all')),
+                PopupMenuItem(value: 'songs', child: Text('Queue songs')),
+                PopupMenuItem(value: 'videos', child: Text('Queue videos')),
+                PopupMenuItem(value: 'favourites', child: Text('Queue favourites')),
+                PopupMenuItem(value: 'favSongs', child: Text('Queue favourite songs')),
+                PopupMenuItem(value: 'favVideos', child: Text('Queue favourite videos')),
+                PopupMenuDivider(),
+                PopupMenuItem(value: 'clear', child: Text('Clear queue')),
+              ],
             ),
           ],
         ),
@@ -2338,6 +2523,10 @@ class _PlayerScreenState extends State<PlayerScreen>
                     size: 24,
                   ),
                   onPressed: () => state.toggleFavourite(item.path),
+                ),
+                _TrackMenuButton(
+                  state: state,
+                  entry: MapEntry(state.currentIndex, item),
                 ),
               ],
             ),
@@ -2557,6 +2746,104 @@ class _PlayPauseButton extends StatelessWidget {
   }
 }
 
+enum _TrackMenuAction { queue, favourite, dislike, delete }
+
+class _TrackMenuButton extends StatelessWidget {
+  final PlayerState state;
+  final MapEntry<int, MediaItem> entry;
+
+  const _TrackMenuButton({required this.state, required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    final item = entry.value;
+    final index = entry.key;
+    final isFavourite = state.isFavourite(item.path);
+    final isDisliked = state.isDisliked(item.path);
+
+    return PopupMenuButton<_TrackMenuAction>(
+      tooltip: 'Track actions',
+      icon: Icon(Icons.more_vert_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
+      onSelected: (action) async {
+        switch (action) {
+          case _TrackMenuAction.queue:
+            state.enqueue(index);
+            break;
+          case _TrackMenuAction.favourite:
+            state.toggleFavourite(item.path);
+            break;
+          case _TrackMenuAction.dislike:
+            state.toggleDislike(item.path);
+            break;
+          case _TrackMenuAction.delete:
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (dialogContext) => AlertDialog(
+                title: const Text('Delete file?'),
+                content: Text('This permanently deletes "${item.title ?? p.basename(item.path)}" from disk.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    child: const Text('Delete'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed == true) {
+              final deleted = await state.deleteMediaItem(item.path);
+              if (context.mounted) {
+                Snack.show(
+                  context,
+                  deleted ? 'File deleted' : 'Could not delete file',
+                  level: deleted ? SnackLevel.info : SnackLevel.error,
+                );
+              }
+            }
+            break;
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: _TrackMenuAction.queue,
+          child: ListTile(
+            leading: Icon(Icons.queue_music_rounded),
+            title: Text('Add to queue'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: _TrackMenuAction.favourite,
+          child: ListTile(
+            leading: Icon(isFavourite ? Icons.star_rounded : Icons.star_border_rounded),
+            title: Text(isFavourite ? 'Remove favourite' : 'Add favourite'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: _TrackMenuAction.dislike,
+          child: ListTile(
+            leading: Icon(isDisliked ? Icons.thumb_down_alt_rounded : Icons.thumb_down_alt_outlined),
+            title: Text(isDisliked ? 'Undo dislike' : 'Dislike'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        const PopupMenuItem(
+          value: _TrackMenuAction.delete,
+          child: ListTile(
+            leading: Icon(Icons.delete_outline_rounded),
+            title: Text('Delete file'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // --- Tab widgets (each is its own StatelessWidget to limit rebuild scope) -----
 
 /// BUG 2 FIX: each tab is its own widget so rebuilds from thumbnail loads only
@@ -2697,7 +2984,15 @@ class _MediaGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    final crossAxisCount = width < 500 ? 2 : (width < 900 ? 3 : 5);
+    final crossAxisCount = width < 500
+        ? 2
+        : width < 900
+            ? 3
+            : width < 1200
+                ? 4
+                : width < 1600
+                    ? 5
+                    : 6;
     return GridView.builder(
       shrinkWrap: false,
       physics: null,
@@ -2705,7 +3000,7 @@ class _MediaGrid extends StatelessWidget {
         crossAxisCount: crossAxisCount,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.78,
+        childAspectRatio: width < 900 ? 0.82 : 0.9,
       ),
       itemCount: entries.length,
       itemBuilder: (ctx, i) {
@@ -2741,7 +3036,7 @@ class _MediaCard extends StatelessWidget {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: state.thumbnailForItem(item, size: 400) ?? Container(color: cs.surfaceContainerHighest),
+                    child: state.thumbnailForItem(item, size: 0, expand: true) ?? Container(color: cs.surfaceContainerHighest),
                   ),
                   Positioned(
                     left: 0,
@@ -2770,6 +3065,8 @@ class _MediaCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           if (item.type == MediaType.video) Icon(Icons.videocam, size: 18, color: cs.onSurface),
+                          const SizedBox(width: 4),
+                          _TrackMenuButton(state: state, entry: entry),
                         ],
                       ),
                     ),
@@ -2926,8 +3223,15 @@ class _SongTile extends StatelessWidget {
         style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
       trailing: state.isPlayingPath(item.path)
-          ? const Icon(Icons.equalizer, color: Colors.green)
-          : null,
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.equalizer, color: Colors.green),
+                const SizedBox(width: 8),
+                _TrackMenuButton(state: state, entry: entry),
+              ],
+            )
+          : _TrackMenuButton(state: state, entry: entry),
       onTap: () => onTap(state, index),
     );
   }

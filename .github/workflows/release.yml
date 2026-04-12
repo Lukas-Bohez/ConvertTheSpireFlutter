@@ -342,7 +342,7 @@ jobs:
       - name: Collect Android artifacts
         run: |
           mkdir -p android-builds
-          cp build/app/outputs/flutter-apk/app-full-release.apk android-builds/${{ env.OUTPUT_NAME }}-full.apk
+          cp build/app/outputs/flutter-apk/app-full-release.apk android-builds/VaultTheSpire-full.apk
 
       - uses: actions/upload-artifact@v5
         with:
