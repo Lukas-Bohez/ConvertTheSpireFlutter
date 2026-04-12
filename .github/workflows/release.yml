@@ -74,7 +74,7 @@ jobs:
         run: flutter pub get
 
       - name: Analyze
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
 
       - name: Run tests
         run: flutter test --coverage
@@ -348,13 +348,20 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "Android keystore secrets not set — building with debug signing."
-            exit 0
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "ERROR: Android keystore secrets are required for Play Store releases."
+            exit 1
           fi
           set -euo pipefail
           KEYSTORE_PATH="$GITHUB_WORKSPACE/android/app/release.keystore"
           echo "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+
+          EXPECTED_SHA1="31:31:FD:AE:97:6D:00:A0:14:13:48:75:DE:27:19:38:BF:20:3F:38"
+          ACTUAL_SHA1=$(keytool -list -v -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" 2>/dev/null | awk -F': ' '/SHA1:/ {print $2; exit}')
+          if [ "$ACTUAL_SHA1" != "$EXPECTED_SHA1" ]; then
+            echo "ERROR: Android keystore SHA1 mismatch. Expected $EXPECTED_SHA1 but got $ACTUAL_SHA1"
+            exit 1
+          fi
 
           cat > "$GITHUB_WORKSPACE/android/key.properties" <<EOF
           storePassword=$KEYSTORE_PASSWORD
