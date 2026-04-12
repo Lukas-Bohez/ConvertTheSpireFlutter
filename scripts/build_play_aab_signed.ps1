@@ -48,7 +48,7 @@ function Get-CertSha1FromKeystore {
     [string]$Alias
   )
 
-  $output = & $Keytool -list -v -keystore $StoreFile -storepass $StorePass -alias $Alias 2>$null
+  $output = & $Keytool -list -v -keystore $StoreFile -storepass $StorePass -alias $Alias 2>&1
   if ($LASTEXITCODE -ne 0) {
     throw 'Could not read keystore. Check path/password/alias.'
   }
@@ -82,7 +82,7 @@ function Get-CertSha1FromAab {
       throw 'No signature block file found in AAB META-INF.'
     }
 
-    $certOut = & $Keytool -printcert -file $sig.FullName 2>$null
+    $certOut = & $Keytool -printcert -file $sig.FullName 2>&1
     if ($LASTEXITCODE -ne 0) {
       throw 'Failed to read cert from AAB signature block.'
     }
