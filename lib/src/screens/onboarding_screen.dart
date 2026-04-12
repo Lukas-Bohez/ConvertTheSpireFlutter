@@ -38,9 +38,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.download_rounded,
       title: 'Welcome',
-      detail: 'Convert the Spire Reborn is a cross-platform media toolkit. '
-          'Download audio & video from dozens of sites, convert formats, '
-          'cast to your TV, and more \u2014 all from one app.',
+        detail: 'Convert the Spire Reborn is a cross-platform torrent and '
+          'media toolkit. Add magnet links and .torrent files, manage '
+          'downloads, convert formats, cast to your TV, and more - all from '
+          'one app.',
       color: Color(0xFF00897B),
       preview: _WelcomePreview(),
     ),
@@ -48,9 +49,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     // Supported Platforms
     _OnboardingPage(
       icon: Icons.language_rounded,
-      title: 'Supported Platforms',
-      detail: 'Not just YouTube! This app uses yt-dlp under the hood, '
-          'supporting 1\u202F000+ websites. Here are some popular ones:',
+        title: 'Supported Sources',
+        detail: 'Not just torrents. The app can work with magnet links, '
+          '.torrent files, browser links, local files, and other supported '
+          'sources in the host shell.',
       color: Color(0xFFFF6D00),
       preview: _PlatformsPreview(),
     ),
@@ -59,8 +61,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.search_rounded,
       title: 'Search',
-      detail: 'Look up a video by keyword or paste a link from any supported '
-          'site. Preview the result and pick a format before downloading.',
+        detail: 'Look up a title by keyword or paste a magnet / torrent link. '
+          'Preview the result and pick a destination before downloading.',
       color: Color(0xFF6C63FF),
       preview: _SearchPreview(),
     ),
@@ -69,8 +71,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.travel_explore_rounded,
       title: 'Multi-Search',
-      detail: 'Fetch results from YouTube and SoundCloud simultaneously. '
-          'Tap a row to hear a preview.',
+        detail: 'Search multiple sources at once and compare results side by '
+          'side. Tap a row to inspect details before adding it to the queue.',
       color: Color(0xFF43CFBB),
     ),
 
@@ -78,8 +80,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.open_in_browser_rounded,
       title: 'Browser',
-      detail: 'Browse the web in the built-in view and add videos directly '
-          'to the queue without leaving the app.',
+        detail: 'Browse the web in the built-in view and open magnet or '
+          'torrent links directly without leaving the app.',
       color: Color(0xFF4A90D9),
     ),
 
@@ -97,8 +99,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.playlist_play_rounded,
       title: 'Playlists',
-      detail: 'Load a playlist, compare against a local folder to spot '
-          'missing tracks, and batch-download.',
+        detail: 'Load a collection, compare against a local folder to spot '
+          'missing items, and batch-download.',
       color: Color(0xFFAB6BD9),
     ),
 
@@ -106,7 +108,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.upload_file_rounded,
       title: 'Bulk Import',
-      detail: 'Paste a list of names or import a text/CSV file to enqueue '
+        detail: 'Paste a list of links or import a text/CSV file to enqueue '
           'many items at once.',
       color: Color(0xFF5BA85A),
     ),
@@ -115,8 +117,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.bar_chart_rounded,
       title: 'Stats',
-      detail: 'See download totals, success rate, format breakdown, top '
-          'artists, and trends over time.',
+        detail: 'See download totals, success rate, format breakdown, top '
+          'sources, and trends over time.',
       color: Color(0xFFD4A017),
     ),
 
@@ -124,9 +126,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.settings_rounded,
       title: 'Settings',
-      detail: 'Choose download folder, quality defaults (1080p video, '
-          '320\u202Fkbps audio), FFmpeg options, retry behaviour, and '
-          'appearance.',
+        detail: 'Choose download folders, format defaults, FFmpeg options, '
+          'retry behaviour, and appearance.',
       color: Color(0xFF607D8B),
     ),
 
@@ -654,7 +655,7 @@ class _WelcomePreview extends StatelessWidget {
     final border = isDark ? const Color(0xFF3A3A3A) : const Color(0xFFDDDDDD);
 
     const features = [
-      (Icons.download_rounded, 'Multi-site downloads'),
+      (Icons.download_rounded, 'Torrent downloads'),
       (Icons.transform_rounded, 'Format conversion'),
       (Icons.cast_rounded, 'DLNA / Cast to TV'),
       (Icons.favorite_outline, 'Support via donations'),
@@ -694,22 +695,22 @@ class _PlatformsPreview extends StatelessWidget {
   const _PlatformsPreview();
 
   static const _platforms = [
-    'YouTube',
-    'SoundCloud',
-    'Vimeo',
-    'Dailymotion',
-    'Twitch',
-    'Bandcamp',
-    'Reddit',
-    'Twitter / X',
-    'Facebook',
-    'Instagram',
-    'TikTok',
-    'Bilibili',
-    'Rumble',
-    'Mixcloud',
-    'Odysee',
-    '1000+ more',
+    '.torrent files',
+    'Magnet links',
+    'Browser links',
+    'Local files',
+    'Queue actions',
+    'Format conversion',
+    'Cast to TV',
+    'Library tracking',
+    'Download folders',
+    'Clipboard import',
+    'Search results',
+    'Saved collections',
+    'Stats & logs',
+    'Settings sync',
+    'Vault tabs',
+    'and more',
   ];
 
   @override

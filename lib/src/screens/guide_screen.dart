@@ -46,7 +46,7 @@ class GuideScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           color: cs.onPrimaryContainer)),
                   const SizedBox(height: 4),
-                  Text('YouTube audio downloader & converter',
+                    Text('Torrent manager & media toolkit',
                       style: theme.textTheme.bodyMedium?.copyWith(
                           color: cs.onPrimaryContainer.withValues(alpha: 0.8))),
                 ],
@@ -142,7 +142,7 @@ class GuideScreen extends StatelessWidget {
                 SizedBox(height: 8),
                 _RequirementRow(
                   text: 'Internet connection',
-                  detail: 'Needed to search and download from YouTube.',
+                  detail: 'Needed to fetch torrent metadata and download sources.',
                 ),
                 SizedBox(height: 8),
                 _RequirementRow(
@@ -171,21 +171,21 @@ class GuideScreen extends StatelessWidget {
                 SizedBox(height: 12),
                 _StepRow(
                     number: '2',
-                    title: 'Search for music',
-                    detail:
-                        'Use the Search tab to find a YouTube video by name or URL.'),
+                  title: 'Search for content',
+                  detail:
+                    'Use the Search tab to find a torrent, magnet link, or supported source by name or URL.'),
                 SizedBox(height: 12),
                 _StepRow(
                     number: '3',
                     title: 'Add to queue',
-                    detail:
-                        'Choose a format (MP3, M4A, or MP4) and add tracks to the download queue.'),
+                  detail:
+                    'Choose your destination and add items to the download queue.'),
                 SizedBox(height: 12),
                 _StepRow(
                     number: '4',
                     title: 'Download',
-                    detail:
-                        'Go to the Queue tab and press "Download All". The app downloads the video and converts it with FFmpeg.'),
+                  detail:
+                    'Go to the Queue tab and press "Download All". The app fetches the selected content and processes it with FFmpeg when needed.'),
               ],
             ),
           ),
@@ -202,20 +202,20 @@ class GuideScreen extends StatelessWidget {
                 _FeatureRow(
                     icon: Icons.search,
                     name: 'Search',
-                    detail:
-                        'Search YouTube by keyword or paste a URL. Preview results, choose format, and add to queue.'),
+                  detail:
+                    'Search by keyword or paste a magnet / torrent link. Preview results and add them to the queue.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.travel_explore,
                     name: 'Multi-Search',
-                    detail:
-                        'Search across multiple sources at once. Hover a result to hear a preview.'),
+                  detail:
+                    'Search across multiple sources at once and compare results side by side.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.open_in_browser,
                     name: 'Browser',
-                    detail:
-                        'Use an integrated web view to browse YouTube (or other sites) and add videos directly to the queue.'),
+                  detail:
+                    'Use an integrated web view to browse supported sites and open magnet or torrent links directly.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.queue_music,
@@ -226,14 +226,14 @@ class GuideScreen extends StatelessWidget {
                 _FeatureRow(
                     icon: Icons.playlist_play,
                     name: 'Playlists',
-                    detail:
-                        'Load a YouTube playlist, compare against a local folder to find missing tracks, and batch-download them.'),
+                  detail:
+                    'Load a collection, compare against a local folder to find missing items, and batch-download them.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.upload_file,
                     name: 'Bulk Import',
-                    detail:
-                        'Paste a list of track names (one per line) or import from a text/CSV file to add many items to the queue at once.'),
+                  detail:
+                    'Paste a list of links or import from a text/CSV file to add many items to the queue at once.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.bar_chart,
@@ -244,14 +244,14 @@ class GuideScreen extends StatelessWidget {
                 _FeatureRow(
                     icon: Icons.settings,
                     name: 'Settings',
-                    detail:
-                        'Configure download folder, parallel workers, FFmpeg, retry behavior, and notifications.'),
+                  detail:
+                    'Configure download folders, parallel workers, FFmpeg, retry behavior, and notifications.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.transform,
                     name: 'Convert',
-                    detail:
-                        'Convert any local audio/video file between formats (MP3, M4A, MP4, WAV, FLAC, OGG, etc.) using FFmpeg.'),
+                  detail:
+                    'Convert any local audio/video file between formats using FFmpeg.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.list_alt,
@@ -290,9 +290,9 @@ class GuideScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 10),
                 _TipRow(
-                  title: 'YouTube blocks requests',
+                  title: 'Source sites block requests',
                   detail:
-                      'YouTube may temporarily block rapid downloads. The app will automatically retry with backoff. You can increase retry count in Settings.',
+                      'Some source sites may temporarily block rapid requests. The app will automatically retry with backoff. You can increase retry count in Settings.',
                 ),
                 SizedBox(height: 10),
                 _TipRow(
@@ -316,7 +316,7 @@ class GuideScreen extends StatelessWidget {
                 _TipRow(
                   title: 'Parallel workers',
                   detail:
-                      'More workers means faster batch downloads but uses more bandwidth and may trigger YouTube rate limits. 2-3 is recommended.',
+                      'More workers means faster batch downloads but uses more bandwidth and may trigger rate limits. 2-3 is recommended.',
                 ),
                 SizedBox(height: 10),
                 _TipRow(
@@ -350,7 +350,7 @@ class GuideScreen extends StatelessWidget {
                 _FormatRow(
                     format: 'MP4',
                     detail:
-                        'Video with audio. Downloads the original YouTube video without re-encoding.'),
+                    'Video with audio. Keeps the video track intact when that is the selected target format.'),
               ],
             ),
           ),

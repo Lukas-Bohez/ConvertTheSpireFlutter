@@ -47,16 +47,16 @@ class OnboardingTooltipService {
 
   /// Descriptions shown as a banner on first visit to each screen.
   static const Map<String, String> screenDescriptions = {
-    'search.tab': 'Download audio or video from any YouTube URL.',
+    'search.tab': 'Add a torrent, magnet link, or supported source to the queue.',
     'multisearch.tab':
-        'Search YouTube & SoundCloud simultaneously and add results to your queue.',
+      'Search multiple sources simultaneously and add results to your queue.',
     'browser.tab':
-        'Browse the web with built-in ad blocking and video detection.',
+      'Browse the web with built-in ad blocking and link detection.',
     'queue.tab': 'Track and manage your downloads here.',
     'playlists.tab':
-        'Load YouTube playlists, compare with local folders, and download missing tracks.',
+      'Load collections, compare with local folders, and download missing items.',
     'bulkimport.tab':
-        'Paste a list of tracks (Artist - Title) to bulk-download them.',
+      'Paste a list of links or items to bulk-download them.',
     'stats.tab': 'View your download statistics and trends.',
     'settings.tab': 'Configure download directory, format, quality, and tools.',
     'support.tab':
