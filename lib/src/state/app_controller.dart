@@ -55,7 +55,7 @@ class AppController extends ChangeNotifier {
 
   AppSettings? _settings;
   AppSettings? get settings => _settings;
-  // Active tab index for the shell (0-13). Restored once at startup.
+  // Active tab index for the shell (0-14). Restored once at startup.
   int _activeTabIndex = 13;
   int get activeTabIndex => _activeTabIndex;
 
@@ -150,7 +150,7 @@ class AppController extends ChangeNotifier {
 
   /// Programmatic tab switch. Persists preference and notifies listeners.
   void switchToTab(int index) {
-    if (index < 0 || index > 13) return;
+    if (index < 0 || index > 14) return;
     if (index == _activeTabIndex) return;
     if (kDebugMode)
       debugPrint(
