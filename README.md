@@ -4,7 +4,7 @@
 
 Hey everyone! If you remember the old web-based Convert the Spire downloader, you probably know that YouTube eventually blocked our server's IP. To keep the project alive and better than ever, I built **Convert the Spire Reborn**.
 
-It is a fully native Flutter app that handles all your media downloading, playlist converting, and playback right on your own device. It started out as a simple, ad-free tool to bulk-download massive YouTube playlists, but it has grown into a full media suite. You can now download from multiple sites, cast to your TV, and easily manage your local library.
+It is a fully native Flutter app that handles torrent management, media downloading, playlist importing, and playback right on your own device. It started out as a simple, ad-free tool to bulk-download massive playlists, but it has grown into a full media suite. You can now work with torrents and supported sources, cast to your TV, and easily manage your local library.
 
 Because it runs natively on Windows, Linux, Android, and macOS, there is no heavy Electron bloat and no browser overhead. Android Play builds ship with YouTube conversion disabled to match Play policy, while APK builds keep the full downloader available.
 
@@ -14,7 +14,7 @@ Because it runs natively on Windows, Linux, Android, and macOS, there is no heav
 
 ### The Core Stuff
 
-* **YouTube Search & Download:** Browse and download straight via `yt-dlp`. Desktop downloads can go up to 4K (when available); Android builds are limited to 1080p. Audio downloads support up to 320 kbps. Play Store builds disable YouTube conversion features; side-loaded APKs keep them enabled.
+* **Torrent Manager & Downloads:** Add torrents and supported sources, manage queues, and download directly in the app. Play Store builds disable the legacy YouTube conversion features; side-loaded APKs keep them enabled.
 * **Massive Playlist Support:** The main reason this project exists! Paste a playlist link and bulk-download the whole thing, completely ad-free.
 * **Multi-Site Engine:** It is not just YouTube anymore. Anything yt-dlp supports (over 1,800 sites) goes through the same seamless pipeline.
 * **Built-in Media Player:** Play your audio and video directly in the app. It comes with playlists, queue management, and library tracking powered by `media_kit`.
