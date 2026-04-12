@@ -303,7 +303,7 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
                           children: [
                             IconButton(
                               icon: const Icon(Icons.folder_open),
-                              tooltip: 'Set folder for this playlist',
+                              tooltip: 'Choose folder for this playlist',
                               onPressed: () => _pickPlaylistFolder(url),
                             ),
                             IconButton(
