@@ -1443,7 +1443,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (_hasAndroidFolder) return true;
       Snack.show(
         context,
-        'Android needs a download folder set to work properly. Tap "Set folder" below.',
+        'Android needs a download folder set to work properly. Tap "Choose folder" below.',
         level: SnackLevel.warning,
         actionLabel: 'Go to Settings',
         onAction: () => _navigateToPage(7),
@@ -2782,12 +2782,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   if (_isAndroid) ...[
                     TextField(
                       controller: _downloadDirController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Download folder',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.folder),
                         helperText:
-                            'Pick a folder using the system file picker. If not set, files go to Downloads/ConvertTheSpireReborn.',
+                          'Pick a folder using the system file picker. If not set, files go to Downloads/${getDefaultDownloadFolderName()}.',
                         helperMaxLines: 3,
                       ),
                       readOnly: true,
@@ -2823,7 +2823,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                          'No folder selected. Downloads will be saved to Downloads/ConvertTheSpireReborn.',
+                          'No folder selected. Downloads will be saved to Downloads/${getDefaultDownloadFolderName()}.',
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall

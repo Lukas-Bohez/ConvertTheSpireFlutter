@@ -1,0 +1,1 @@
+{"format-version":[1,0,0],"native-assets":{"android_arm":{"package:sqlite3/src/ffi/libsqlite3.g.dart":["absolute","libsqlite3.so"]},"android_arm64":{"package:sqlite3/src/ffi/libsqlite3.g.dart":["absolute","libsqlite3.so"]},"android_x64":{"package:sqlite3/src/ffi/libsqlite3.g.dart":["absolute","libsqlite3.so"]}}}

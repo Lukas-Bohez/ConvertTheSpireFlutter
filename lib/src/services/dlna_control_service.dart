@@ -22,7 +22,7 @@ class DlnaControlService {
   Future<void> playMedia({
     required DlnaDevice device,
     required String mediaUrl,
-    String title = 'Vault the Spire / Convert the Spire',
+    String title = 'Vault the Spire',
     String mimeType = 'video/mp4',
   }) async {
     // Step 1: Stop any currently playing media (ignore errors)
@@ -49,7 +49,7 @@ class DlnaControlService {
   Future<void> setAVTransportURI({
     required DlnaDevice device,
     required String mediaUrl,
-    String title = 'Vault the Spire / Convert the Spire',
+    String title = 'Vault the Spire',
     String mimeType = 'video/mp4',
   }) async {
     final escapedUrl = _xmlEscape(mediaUrl);

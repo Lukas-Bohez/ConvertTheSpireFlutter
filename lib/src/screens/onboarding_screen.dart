@@ -60,7 +60,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ? 'Vault the Spire is a torrent vault and media hub. '
               'Add magnet links and .torrent files, manage downloads, '
               'cast to your TV, and more - all from one app.'
-            : 'Convert the Spire Reborn is a cross-platform torrent and '
+            : 'Convert Spire Reborn is a cross-platform torrent and '
               'media toolkit. Add magnet links and .torrent files, manage '
               'downloads, convert formats, cast to your TV, and more - all from '
               'one app.',

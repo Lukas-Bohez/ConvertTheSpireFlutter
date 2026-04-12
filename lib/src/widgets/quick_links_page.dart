@@ -314,7 +314,8 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
       child: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(child: buildHeader()),
-          SliverToBoxAdapter(child: buildDownloadSection()),
+          if (!kPlayStoreBuild)
+            SliverToBoxAdapter(child: buildDownloadSection()),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             sliver: _buildLinksGrid(crossAxisCount, visibleLinks),

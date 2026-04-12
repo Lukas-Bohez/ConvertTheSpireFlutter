@@ -9,8 +9,10 @@ const bool kYouTubeConversionEnabled = bool.fromEnvironment(
 );
 
 // App branding
-String getAppTitle() => kPlayStoreBuild ? 'Vault the Spire' : 'Convert the Spire Reborn';
+String getAppTitle() => kPlayStoreBuild ? 'Vault the Spire' : 'Convert Spire Reborn';
 String getAppSubtitle() => kPlayStoreBuild ? 'Torrent vault & media hub' : 'Torrent manager & media toolkit';
+String getDefaultDownloadFolderName() =>
+  kPlayStoreBuild ? 'VaultTheSpire' : 'ConvertTheSpireReborn';
 
 // Tab visibility control for PLAY_STORE_BUILD
 // In Play Store, only these tabs are shown: 3 (deprecated), 6 (Stats), 7 (Settings), 
