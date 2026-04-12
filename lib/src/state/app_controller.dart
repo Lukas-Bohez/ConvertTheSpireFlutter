@@ -30,6 +30,7 @@ import '../services/settings_store.dart';
 import '../services/statistics_service.dart';
 import '../services/watched_playlist_service.dart';
 import '../services/youtube_service.dart';
+import '../services/vault_settings_bridge.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppController extends ChangeNotifier {
@@ -95,6 +96,9 @@ class AppController extends ChangeNotifier {
 
   Future<void> init() async {
     _settings = await settingsStore.load();
+    if (_settings != null) {
+      await VaultSettingsBridge.pushHostSettingsToVault(_settings!);
+    }
     // Load non-critical services individually so a single failure doesn't
     // prevent the app from starting. Errors are logged and initialization
     // continues.
@@ -221,6 +225,21 @@ class AppController extends ChangeNotifier {
   Future<void> saveSettings(AppSettings next) async {
     _settings = next;
     await settingsStore.save(next);
+    await VaultSettingsBridge.pushHostSettingsToVault(next);
+    notifyListeners();
+  }
+
+  Future<void> pushHostSettingsToVault() async {
+    if (_settings == null) return;
+    await VaultSettingsBridge.pushHostSettingsToVault(_settings!);
+  }
+
+  Future<void> pullVaultSettingsIntoHost() async {
+    if (_settings == null) return;
+    final merged = await VaultSettingsBridge.pullVaultSettingsIntoHost(_settings!);
+    if (merged.downloadDirTorrents == _settings!.downloadDirTorrents) return;
+    _settings = merged;
+    await settingsStore.save(merged);
     notifyListeners();
   }
 

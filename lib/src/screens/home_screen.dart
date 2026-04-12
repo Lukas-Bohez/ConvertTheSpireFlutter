@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
@@ -27,7 +28,7 @@ import 'watched_playlists_screen.dart';
 import 'browser_screen.dart';
 import 'support_screen.dart';
 import 'player.dart' show PlayerPage, PlayerState;
-import '../vault/screens/torrents_screen.dart' as vault;
+import '../vault/vault_hub_screen.dart';
 import '../widgets/browser_shell.dart';
 import '../widgets/onboarding_tooltip_service.dart';
 import '../widgets/quick_links_page.dart';
@@ -91,6 +92,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final TextEditingController _downloadDirMp3Controller = TextEditingController();
   final TextEditingController _downloadDirM4aController = TextEditingController();
   final TextEditingController _downloadDirMp4Controller = TextEditingController();
+  final TextEditingController _downloadDirTorrentsController =
+      TextEditingController();
   final TextEditingController _workersController = TextEditingController();
   final TextEditingController _retryCountController = TextEditingController();
   final TextEditingController _retryBackoffController = TextEditingController();
@@ -229,6 +232,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _downloadDirMp3Controller.dispose();
     _downloadDirM4aController.dispose();
     _downloadDirMp4Controller.dispose();
+    _downloadDirTorrentsController.dispose();
     _workersController.dispose();
     _retryCountController.dispose();
     _retryBackoffController.dispose();
@@ -323,8 +327,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           },
         );
       case 14:
-        return const vault.TorrentsScreen(
-          key: ValueKey('vault-torrents'),
+        return const VaultHubScreen(
+          key: ValueKey('vault-hub'),
         );
       default:
         return _buildSearchTab(settings);
@@ -339,6 +343,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _navigateToPage(int index) {
     if (index < 0 || index > 14) return;
     if (index == _selectedPageIndex) return;
+    if (_selectedPageIndex == 14 && index != 14) {
+      unawaited(widget.controller.pullVaultSettingsIntoHost());
+    }
+    if (index == 14) {
+      unawaited(widget.controller.pushHostSettingsToVault());
+    }
     if (kDebugMode) {
       debugPrint('[NAV] _navigateToPage: $_selectedPageIndex -> $index');
     }
@@ -630,6 +640,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _downloadDirMp3Controller.text = settings.downloadDirMp3 ?? '';
       _downloadDirM4aController.text = settings.downloadDirM4a ?? '';
       _downloadDirMp4Controller.text = settings.downloadDirMp4 ?? '';
+      _downloadDirTorrentsController.text = settings.downloadDirTorrents ?? '';
       _sponsorBlockEnabled = settings.sponsorBlockEnabled;
         _youtubeAuthEnabled = settings.youtubeAuthEnabled;
         _youtubeCookiesFromBrowser = settings.youtubeCookiesFromBrowser?.trim() ??
@@ -830,6 +841,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _downloadDirM4aController.text = selected!;
       } else if (format == 'mp4') {
         _downloadDirMp4Controller.text = selected!;
+      } else if (format == 'torrent') {
+        _downloadDirTorrentsController.text = selected!;
       }
     });
 
@@ -844,6 +857,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         downloadDirMp4: _downloadDirMp4Controller.text.trim().isEmpty
             ? null
             : _downloadDirMp4Controller.text.trim(),
+        downloadDirTorrents: _downloadDirTorrentsController.text.trim().isEmpty
+          ? null
+          : _downloadDirTorrentsController.text.trim(),
       ),
     );
     if (mounted) {
@@ -2589,6 +2605,21 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                       readOnly: true,
                     ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _downloadDirTorrentsController,
+                      decoration: InputDecoration(
+                        labelText: 'Torrent folder (optional)',
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.folder),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.folder_open),
+                          onPressed: () =>
+                              _pickFormatDownloadFolder(settings, 'torrent'),
+                        ),
+                      ),
+                      readOnly: true,
+                    ),
                   ] else ...[
                     if (isNarrow)
                       Column(
@@ -2653,6 +2684,32 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                         ],
                       ),
+
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _downloadDirTorrentsController,
+                            decoration: const InputDecoration(
+                              labelText: 'Torrent folder (optional)',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.folder_special_outlined),
+                              helperText:
+                                  'When set, Vault torrents use this folder instead of the general download folder.',
+                            ),
+                            readOnly: true,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.folder_open),
+                          label: const Text('Browse'),
+                          onPressed: () =>
+                              _pickFormatDownloadFolder(settings, 'torrent'),
+                        ),
+                      ],
+                    ),
                   ],
                   const SizedBox(height: 16),
                   TextField(
@@ -3490,6 +3547,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       downloadDirMp4: _downloadDirMp4Controller.text.trim().isEmpty
           ? null
           : _downloadDirMp4Controller.text.trim(),
+        downloadDirTorrents: _downloadDirTorrentsController.text.trim().isEmpty
+          ? null
+          : _downloadDirTorrentsController.text.trim(),
       createFormatSubfolders: _useFormatSubfolders,
       ffmpegPath: ffmpegText.isEmpty ? null : ffmpegText,
       ytDlpPath: ytDlpText.isEmpty ? null : ytDlpText,
