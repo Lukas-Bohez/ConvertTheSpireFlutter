@@ -336,13 +336,13 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --debug --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false
+      - name: Build APK (full feature)
+        run: flutter build apk --flavor full --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false
 
       - name: Collect Android artifacts
         run: |
           mkdir -p android-builds
-          cp build/app/outputs/flutter-apk/app-debug.apk android-builds/${{ env.OUTPUT_NAME }}.apk
+          cp build/app/outputs/flutter-apk/app-full-release.apk android-builds/${{ env.OUTPUT_NAME }}-full.apk
 
       - uses: actions/upload-artifact@v5
         with:

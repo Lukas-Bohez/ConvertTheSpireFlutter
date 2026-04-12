@@ -163,10 +163,10 @@ try {
   flutter pub get
   if ($LASTEXITCODE -ne 0) { throw 'flutter pub get failed' }
 
-  flutter build appbundle --release --dart-define=PLAY_STORE_BUILD=true
+  flutter build appbundle --flavor play --release --dart-define=PLAY_STORE_BUILD=true
   if ($LASTEXITCODE -ne 0) { throw 'flutter build appbundle failed' }
 
-  $builtAab = 'build\app\outputs\bundle\release\app-release.aab'
+  $builtAab = 'build\app\outputs\bundle\playRelease\app-play-release.aab'
   if (-not (Test-Path $builtAab)) {
     throw 'Built AAB not found at expected path.'
   }
