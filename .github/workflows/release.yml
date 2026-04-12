@@ -1,23 +1,23 @@
-# Convert The Spire Reborn — Release Workflow
+# Convert The Spire Reborn â€” Release Workflow
 #
 # Triggered manually via workflow_dispatch. Runs tests, builds for all
 # platforms, signs artifacts where credentials are provided, and publishes
 # a GitHub Release with a SHA-256 checksum manifest.
 #
-# Required secrets (configure in Settings → Secrets and variables → Actions):
+# Required secrets (configure in Settings â†’ Secrets and variables â†’ Actions):
 #
 #   Android signing (optional but strongly recommended for production):
-#     ANDROID_KEYSTORE_BASE64   – base64-encoded .jks / .keystore file
-#     ANDROID_KEYSTORE_PASSWORD – keystore password
-#     ANDROID_KEY_ALIAS         – key alias inside the keystore
-#     ANDROID_KEY_PASSWORD      – key password
+#     ANDROID_KEYSTORE_BASE64   â€“ base64-encoded .jks / .keystore file
+#     ANDROID_KEYSTORE_PASSWORD â€“ keystore password
+#     ANDROID_KEY_ALIAS         â€“ key alias inside the keystore
+#     ANDROID_KEY_PASSWORD      â€“ key password
 #
 #   macOS signing & notarization (optional; omit to ship unsigned):
-#     MACOS_CERTIFICATE_BASE64  – base64-encoded .p12 Developer ID certificate
-#     MACOS_CERTIFICATE_PASSWORD – .p12 import password
-#     MACOS_NOTARIZE_APPLE_ID   – Apple ID used for notarization
-#     MACOS_NOTARIZE_PASSWORD   – App-specific password for that Apple ID
-#     MACOS_NOTARIZE_TEAM_ID    – 10-character Apple Team ID
+#     MACOS_CERTIFICATE_BASE64  â€“ base64-encoded .p12 Developer ID certificate
+#     MACOS_CERTIFICATE_PASSWORD â€“ .p12 import password
+#     MACOS_NOTARIZE_APPLE_ID   â€“ Apple ID used for notarization
+#     MACOS_NOTARIZE_PASSWORD   â€“ App-specific password for that Apple ID
+#     MACOS_NOTARIZE_TEAM_ID    â€“ 10-character Apple Team ID
 #
 name: Release Build
 
@@ -29,7 +29,7 @@ on:
         required: true
         type: string
       release_name:
-        description: 'Release name (e.g. "Version 1.2.3 — My Awesome Release")'
+        description: 'Release name (e.g. "Version 1.2.3 â€” My Awesome Release")'
         required: true
         type: string
       release_notes:
@@ -56,7 +56,7 @@ permissions:
 
 jobs:
   # =========================================================================
-  # 1. Test & static analysis — gate for all build jobs
+  # 1. Test & static analysis â€” gate for all build jobs
   # =========================================================================
   test-and-analyze:
     name: Test and Analyze
@@ -209,7 +209,7 @@ jobs:
             bash scripts/build-appimage.sh
             echo "built=true" >> "$GITHUB_OUTPUT"
           else
-            echo "scripts/build-appimage.sh not found — skipping AppImage build."
+            echo "scripts/build-appimage.sh not found â€” skipping AppImage build."
             echo "built=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -259,7 +259,7 @@ jobs:
         run: |
           # Skip when signing secrets are not configured
           if [ -z "$CERTIFICATE_BASE64" ] || [ -z "$NOTARIZE_APPLE_ID" ]; then
-            echo "macOS signing secrets not set — shipping unsigned build."
+            echo "macOS signing secrets not set â€” shipping unsigned build."
             exit 0
           fi
           set -euo pipefail
@@ -339,49 +339,16 @@ jobs:
           channel: stable
           cache: true
 
-      # -----------------------------------------------------------------------
-      # Configure Android signing for the APK build:
-      # - Use provided release keystore secrets when available.
-      # - Otherwise, fall back to debug keystore so the release workflow still
-      #   succeeds for end-user GitHub assets.
-      # -----------------------------------------------------------------------
-      - name: Configure Android signing
-        env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
-            KEYSTORE_PATH="$GITHUB_WORKSPACE/android/app/release.keystore"
-            echo "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
-
-            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=release.keystore\n' "$KEYSTORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > "$GITHUB_WORKSPACE/android/key.properties"
-            echo "Using release keystore from secrets."
-          else
-            DEBUG_KEYSTORE="$HOME/.android/debug.keystore"
-            if [ ! -f "$DEBUG_KEYSTORE" ]; then
-              keytool -genkeypair -v -keystore "$DEBUG_KEYSTORE" -storepass android \
-                -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 \
-                -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-            fi
-
-            printf 'storePassword=android\nkeyPassword=android\nkeyAlias=androiddebugkey\nstoreFile=%s\n' "$DEBUG_KEYSTORE" > "$GITHUB_WORKSPACE/android/key.properties"
-            echo "Release keystore secrets not set - using debug keystore fallback for APK build."
-          fi
-
       - name: Install dependencies
         run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false
+        run: flutter build apk --debug --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false
 
       - name: Collect Android artifacts
         run: |
           mkdir -p android-builds
-          cp build/app/outputs/flutter-apk/app-release.apk \
-             android-builds/${{ env.OUTPUT_NAME }}-android.apk
+          cp build/app/outputs/flutter-apk/app-debug.apk android-builds/${{ env.OUTPUT_NAME }}.apk
 
       - uses: actions/upload-artifact@v5
         with:
