@@ -11,6 +11,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 
+import '../config/build_flags.dart';
+
 import '../models/app_settings.dart';
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
@@ -2424,10 +2426,237 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // -- Settings tab -------------------------------------------------------
 
+  Widget _buildSimplifiedSettingsTab(AppSettings settings) {
+    // Simplified settings for Play Store build: only torrent path and theme
+    final isNarrow = _isNarrowLayout(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: ListView(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: FilledButton.icon(
+              icon: const Icon(Icons.save),
+              label: const Text('Save Settings'),
+              onPressed: () => _saveAllSettings(settings),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+          ),
+
+          // Torrent Download Path (main setting)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.folder_outlined),
+                      const SizedBox(width: 8),
+                      Text('Torrent Storage',
+                          style: Theme.of(context).textTheme.titleLarge),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (_isAndroid)
+                    Column(
+                      children: [
+                        TextField(
+                          controller: _downloadDirTorrentsController,
+                          decoration: InputDecoration(
+                            labelText: 'Torrent folder',
+                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.folder),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.folder_open),
+                              onPressed: () =>
+                                  _pickFormatDownloadFolder(settings, 'torrent'),
+                            ),
+                          ),
+                          readOnly: true,
+                        ),
+                      ],
+                    )
+                  else
+                    Column(
+                      children: [
+                        if (isNarrow)
+                          Column(
+                            children: [
+                              TextField(
+                                controller: _downloadDirTorrentsController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Torrent folder',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.folder),
+                                ),
+                                readOnly: true,
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  icon: const Icon(Icons.folder_open),
+                                  label: const Text('Browse'),
+                                  onPressed: () async {
+                                    final result =
+                                        await FilePicker.platform.getDirectoryPath();
+                                    if (result != null && mounted) {
+                                      setState(() =>
+                                          _downloadDirTorrentsController.text =
+                                              result);
+                                      await widget.controller.saveSettings(
+                                          settings.copyWith(
+                                              downloadDirTorrents: result));
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _downloadDirTorrentsController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Torrent folder',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.folder),
+                                  ),
+                                  readOnly: true,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.folder_open),
+                                label: const Text('Browse'),
+                                onPressed: () async {
+                                  final result =
+                                      await FilePicker.platform.getDirectoryPath();
+                                  if (result != null && mounted) {
+                                    setState(() =>
+                                        _downloadDirTorrentsController.text =
+                                            result);
+                                    await widget.controller.saveSettings(
+                                        settings.copyWith(
+                                            downloadDirTorrents: result));
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Theme Settings
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.palette_outlined),
+                      const SizedBox(width: 8),
+                      Text('Appearance',
+                          style: Theme.of(context).textTheme.titleLarge),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    title: const Text('App Theme'),
+                    subtitle: Text(
+                      '${settings.themeMode[0].toUpperCase()}${settings.themeMode.substring(1)}',
+                    ),
+                    trailing: PopupMenuButton<String>(
+                      initialValue: settings.themeMode,
+                      onSelected: (String mode) async {
+                        await widget.controller.saveSettings(
+                          settings.copyWith(themeMode: mode),
+                        );
+                        widget.controller.setThemeMode(
+                          (_resolveThemeMode(mode)),
+                        );
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        const PopupMenuItem<String>(
+                          value: 'system',
+                          child: Text('System'),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'light',
+                          child: Text('Light'),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'dark',
+                          child: Text('Dark'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Info Card
+          Card(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Basic settings only',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'This version is optimized for torrent vault functionality and complies with app store policies.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSettingsTab(AppSettings? settings) {
     if (settings == null) {
       return const Center(child: CircularProgressIndicator());
     }
+
+    // For Play Store build, show only torrent path and theme settings
+    if (kPlayStoreBuild) {
+      return _buildSimplifiedSettingsTab(settings);
+    }
+
     final isNarrow = _isNarrowLayout(context);
 
     return Padding(

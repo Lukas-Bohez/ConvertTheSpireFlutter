@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'onboarding_screen.dart';
+import '../config/build_flags.dart';
 
 /// In-app guide covering usage instructions, supported platforms,
 /// and feature explanations.
@@ -38,15 +39,15 @@ class GuideScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Icon(Icons.music_note,
+                  Icon(kPlayStoreBuild ? Icons.lock_outline : Icons.music_note,
                       size: 48, color: cs.onPrimaryContainer),
                   const SizedBox(height: 12),
-                  Text('Convert the Spire Reborn',
+                  Text(getAppTitle(),
                       style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: cs.onPrimaryContainer)),
                   const SizedBox(height: 4),
-                    Text('Torrent manager & media toolkit',
+                    Text(getAppSubtitle(),
                       style: theme.textTheme.bodyMedium?.copyWith(
                           color: cs.onPrimaryContainer.withValues(alpha: 0.8))),
                 ],

@@ -45,6 +45,7 @@ import 'state/app_controller.dart';
 import 'vault/vault_bootstrap.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'data/browser_db.dart';
+import 'config/build_flags.dart';
 
 class MyApp extends StatefulWidget {
   final String? mediaKitInitError;
@@ -462,7 +463,7 @@ class _MyAppState extends State<MyApp>
 
         return MaterialApp(
           navigatorKey: _navigatorKey,
-          title: 'Convert the Spire',
+          title: getAppTitle(),
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: themeMode,
