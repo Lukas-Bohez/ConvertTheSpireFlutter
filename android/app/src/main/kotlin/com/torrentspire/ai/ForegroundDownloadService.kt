@@ -66,7 +66,7 @@ class ForegroundDownloadService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Convert the Spire — Downloads")
+            .setContentTitle("Vault the Spire - Downloads")
             .setContentText("Downloads in progress")
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentIntent(pendingOpen)
@@ -77,7 +77,7 @@ class ForegroundDownloadService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Convert the Spire background"
+            val name = "Vault the Spire background"
             val descriptionText = "Background download notifications"
             val importance = NotificationManager.IMPORTANCE_LOW
             val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
