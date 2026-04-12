@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'package:convert_the_spire_reborn/src/vault/screens/about_screen.dart';
@@ -21,36 +24,56 @@ class _VaultHubScreenState extends State<VaultHubScreen>
 
   int _index = 0;
 
-  static const _tabs = [
-    _VaultTab(label: 'Torrents', icon: Icons.download_outlined),
-    _VaultTab(label: 'Copilot', icon: Icons.auto_awesome),
-    _VaultTab(label: 'AI Chat', icon: Icons.chat_bubble_outline),
-    _VaultTab(label: 'Browser', icon: Icons.language),
-    _VaultTab(label: 'Guide', icon: Icons.menu_book_outlined),
-    _VaultTab(label: 'Settings', icon: Icons.settings_outlined),
-  ];
-
-  static const _pages = [
-    TorrentsScreen(key: ValueKey('vault-hub-torrents')),
-    TorrentSpireAiScreen(key: ValueKey('vault-hub-copilot')),
-    AiChatScreen(key: ValueKey('vault-hub-ai-chat')),
-    BrowserScreen(key: ValueKey('vault-hub-browser')),
-    GuideScreen(key: ValueKey('vault-hub-guide')),
-    AboutScreen(key: ValueKey('vault-hub-about')),
-  ];
+  List<_VaultEntry> _buildEntries() {
+    final hideAi = !kIsWeb && Platform.isAndroid;
+    return [
+      const _VaultEntry(
+        tab: _VaultTab(label: 'Torrents', icon: Icons.download_outlined),
+        page: TorrentsScreen(key: ValueKey('vault-hub-torrents')),
+      ),
+      if (!hideAi)
+        const _VaultEntry(
+          tab: _VaultTab(label: 'Copilot', icon: Icons.auto_awesome),
+          page: TorrentSpireAiScreen(key: ValueKey('vault-hub-copilot')),
+        ),
+      if (!hideAi)
+        const _VaultEntry(
+          tab: _VaultTab(label: 'AI Chat', icon: Icons.chat_bubble_outline),
+          page: AiChatScreen(key: ValueKey('vault-hub-ai-chat')),
+        ),
+      const _VaultEntry(
+        tab: _VaultTab(label: 'Browser', icon: Icons.language),
+        page: BrowserScreen(key: ValueKey('vault-hub-browser')),
+      ),
+      const _VaultEntry(
+        tab: _VaultTab(label: 'Guide', icon: Icons.menu_book_outlined),
+        page: GuideScreen(key: ValueKey('vault-hub-guide')),
+      ),
+      const _VaultEntry(
+        tab: _VaultTab(label: 'Settings', icon: Icons.settings_outlined),
+        page: AboutScreen(key: ValueKey('vault-hub-about')),
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final entries = _buildEntries();
+    final tabs = entries.map((e) => e.tab).toList();
+    final pages = entries.map((e) => e.page).toList();
+    if (_index >= pages.length) {
+      _index = 0;
+    }
     final isCompact = MediaQuery.of(context).size.width < 980;
 
     if (isCompact) {
       return Scaffold(
-        body: IndexedStack(index: _index, children: _pages),
+        body: IndexedStack(index: _index, children: pages),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _index,
           onDestinationSelected: (value) => setState(() => _index = value),
-          destinations: _tabs
+          destinations: tabs
               .map(
                 (t) => NavigationDestination(
                   icon: Icon(t.icon),
@@ -70,7 +93,7 @@ class _VaultHubScreenState extends State<VaultHubScreen>
             labelType: NavigationRailLabelType.all,
             selectedIndex: _index,
             onDestinationSelected: (value) => setState(() => _index = value),
-            destinations: _tabs
+            destinations: tabs
                 .map(
                   (t) => NavigationRailDestination(
                     icon: Icon(t.icon),
@@ -81,11 +104,18 @@ class _VaultHubScreenState extends State<VaultHubScreen>
                 .toList(),
           ),
           const VerticalDivider(width: 1),
-          Expanded(child: IndexedStack(index: _index, children: _pages)),
+          Expanded(child: IndexedStack(index: _index, children: pages)),
         ],
       ),
     );
   }
+}
+
+class _VaultEntry {
+  final _VaultTab tab;
+  final Widget page;
+
+  const _VaultEntry({required this.tab, required this.page});
 }
 
 class _VaultTab {

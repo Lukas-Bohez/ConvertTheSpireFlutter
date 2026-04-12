@@ -70,6 +70,7 @@ ios/.symlinks/
 # 
 # Build artifacts & binaries
 # 
+*.aab
 *.apk
 *.apk.zip
 *.exe

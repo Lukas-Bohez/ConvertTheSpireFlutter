@@ -20,6 +20,7 @@
 |----------|------|
 | Windows (x64) | `ConvertTheSpireReborn.zip` |
 | Android (arm64) | `ConvertTheSpireReborn.apk` |
+| Android / Play Store | `ConvertTheSpireReborn.aab` |
 | Linux (x64) | `linux.zip` |
 
 ### Installation
@@ -27,7 +28,9 @@
 No installer needed. VC++ Redistributable required if not
 already installed.
 
-**Android:** Enable "Install from unknown sources", install APK.
+**Android:** Enable "Install from unknown sources", install APK. For Play Store distribution, upload the `.aab`.
+
+**Android TV:** Uses the Android build and the same Play/AAB package.
 
 **Linux:** Extract ZIP, run `bundle/convert_the_spire_reborn`.
 Requires libmpv and development headers for builds:
@@ -57,9 +60,12 @@ Run through this yourself manually - no prompt can do it:
       flutter build windows --release
   □ Android release build completes:
       flutter build apk --release --split-per-abi
+    □ Play Store bundle build completes:
+      flutter build appbundle --release --dart-define=PLAY_STORE_BUILD=true
   □ Rename artifacts to exact release filenames:
       ConvertTheSpireReborn.zip
       ConvertTheSpireReborn.apk  (arm64 only)
+      ConvertTheSpireReborn.aab
       linux.zip
   □ Launch Windows build: title bar shows correct app name
   □ Task manager shows "Convert the Spire Reborn" not
