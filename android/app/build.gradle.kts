@@ -34,6 +34,7 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.torrentspire.ai"
+        manifestPlaceholders["appLabel"] = "Convert the Spire Reborn"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // media_kit requires minSdk 21; use 24 for wider device compatibility
@@ -42,6 +43,19 @@ android {
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("full") {
+            dimension = "distribution"
+            applicationIdSuffix = ".full"
+            manifestPlaceholders["appLabel"] = "Convert the Spire Reborn Full"
+        }
+        create("play") {
+            dimension = "distribution"
+            manifestPlaceholders["appLabel"] = "Convert the Spire Reborn"
+        }
     }
 
     packaging {
