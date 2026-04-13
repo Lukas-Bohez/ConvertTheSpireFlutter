@@ -39,9 +39,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     if (!kPlayStoreBuild) return allPages;
     
     // For Play Store build, only show essential pages:
-    // 0: Welcome, 8: Stats, 9: Settings, 12: Guide, 13: Player, 14: Support
+    // 0: Welcome, 4: Browser, 8: Stats, 9: Settings, 12: Guide, 13: Player, 14: Support
     return [
       allPages[0], // Welcome (but with modified text)
+      allPages[4], // Browser
       allPages[8], // Stats
       allPages[9], // Settings
       allPages[12], // Guide

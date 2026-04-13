@@ -134,19 +134,21 @@ class GuideScreen extends StatelessWidget {
             cs: cs,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                _RequirementRow(
-                  text: 'FFmpeg',
-                  detail:
-                      'Required for audio conversion. On Windows it is installed automatically on first launch. On Linux, install via your package manager (e.g. sudo apt install ffmpeg).',
-                ),
+              children: [
+                if (!kPlayStoreBuild)
+                  const _RequirementRow(
+                    text: 'FFmpeg',
+                    detail:
+                        'Required for audio conversion. On Windows it is installed automatically on first launch. On Linux, install via your package manager (e.g. sudo apt install ffmpeg).',
+                  ),
+                if (!kPlayStoreBuild) const SizedBox(height: 8),
                 SizedBox(height: 8),
-                _RequirementRow(
+                const _RequirementRow(
                   text: 'Internet connection',
                   detail: 'Needed to fetch torrent metadata and download sources.',
                 ),
                 SizedBox(height: 8),
-                _RequirementRow(
+                const _RequirementRow(
                   text: 'Storage space',
                   detail:
                       'Downloaded files are saved to your chosen download folder. Videos can be large before conversion.',
@@ -163,30 +165,31 @@ class GuideScreen extends StatelessWidget {
             cs: cs,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                _StepRow(
+              children: [
+                const _StepRow(
                     number: '1',
                     title: 'Set download folder',
                     detail:
                         'Go to Settings and pick where files should be saved.'),
-                SizedBox(height: 12),
-                _StepRow(
+                const SizedBox(height: 12),
+                const _StepRow(
                     number: '2',
-                  title: 'Search for content',
-                  detail:
-                    'Use the Search tab to find a torrent, magnet link, or supported source by name or URL.'),
-                SizedBox(height: 12),
-                _StepRow(
+                    title: 'Browse & open links',
+                    detail:
+                        'Use the Browser tab to open pages, magnet links, and .torrent links safely inside the app.'),
+                const SizedBox(height: 12),
+                const _StepRow(
                     number: '3',
                     title: 'Add to queue',
-                  detail:
-                    'Choose your destination and add items to the download queue.'),
-                SizedBox(height: 12),
+                    detail:
+                        'Choose your destination and add items to the download queue.'),
+                const SizedBox(height: 12),
                 _StepRow(
                     number: '4',
                     title: 'Download',
-                  detail:
-                    'Go to the Queue tab and press "Download All". The app fetches the selected content and processes it with FFmpeg when needed.'),
+                    detail: kPlayStoreBuild
+                        ? 'Go to the Torrents tab to monitor progress, pause/resume, and manage completed files.'
+                        : 'Go to the Queue tab and press "Download All". The app fetches the selected content and processes it with FFmpeg when needed.'),
               ],
             ),
           ),
@@ -199,8 +202,51 @@ class GuideScreen extends StatelessWidget {
             cs: cs,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                _FeatureRow(
+              children: kPlayStoreBuild
+                ? const [
+                  _FeatureRow(
+                    icon: Icons.open_in_browser,
+                    name: 'Browser',
+                    detail:
+                      'Use an integrated web view to browse pages and open magnet or torrent links directly.'),
+                  SizedBox(height: 8),
+                  _FeatureRow(
+                    icon: Icons.bar_chart,
+                    name: 'Stats',
+                    detail:
+                      'View download statistics and trends over time.'),
+                  SizedBox(height: 8),
+                  _FeatureRow(
+                    icon: Icons.settings,
+                    name: 'Settings',
+                    detail:
+                      'Configure download folder, appearance, and app behavior.'),
+                  SizedBox(height: 8),
+                  _FeatureRow(
+                    icon: Icons.volunteer_activism,
+                    name: 'Support',
+                    detail: 'Support links and project information.'),
+                  SizedBox(height: 8),
+                  _FeatureRow(
+                    icon: Icons.menu_book,
+                    name: 'Guide',
+                    detail:
+                      'This screen: instructions, supported platforms, and tips.'),
+                  SizedBox(height: 8),
+                  _FeatureRow(
+                    icon: Icons.music_note,
+                    name: 'Player',
+                    detail:
+                      'Built‑in media player for local files with shuffle and repeat.'),
+                  SizedBox(height: 8),
+                  _FeatureRow(
+                    icon: Icons.download,
+                    name: 'Vault',
+                    detail:
+                      'Torrent manager and download control center.'),
+                ]
+                : const [
+              _FeatureRow(
                     icon: Icons.search,
                     name: 'Search',
                   detail:
@@ -331,31 +377,33 @@ class GuideScreen extends StatelessWidget {
           const SizedBox(height: 12),
 
           // -- Supported formats --------------------------------─
-          _SectionCard(
-            icon: Icons.audio_file,
-            title: 'Supported Formats',
-            cs: cs,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                _FormatRow(
-                    format: 'MP3',
-                    detail:
-                        'Universal audio format. Best compatibility across all devices and players.'),
-                SizedBox(height: 6),
-                _FormatRow(
-                    format: 'M4A',
-                    detail:
-                        'AAC audio in MP4 container. Better quality than MP3 at same bitrate. Works on Apple devices and modern players.'),
-                SizedBox(height: 6),
-                _FormatRow(
-                    format: 'MP4',
-                    detail:
-                    'Video with audio. Keeps the video track intact when that is the selected target format.'),
-              ],
+          if (!kPlayStoreBuild) ...[
+            _SectionCard(
+              icon: Icons.audio_file,
+              title: 'Supported Formats',
+              cs: cs,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  _FormatRow(
+                      format: 'MP3',
+                      detail:
+                          'Universal audio format. Best compatibility across all devices and players.'),
+                  SizedBox(height: 6),
+                  _FormatRow(
+                      format: 'M4A',
+                      detail:
+                          'AAC audio in MP4 container. Better quality than MP3 at same bitrate. Works on Apple devices and modern players.'),
+                  SizedBox(height: 6),
+                  _FormatRow(
+                      format: 'MP4',
+                      detail:
+                      'Video with audio. Keeps the video track intact when that is the selected target format.'),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
+          ],
 
           // -- Current platform info ----------------------------─
           _SectionCard(

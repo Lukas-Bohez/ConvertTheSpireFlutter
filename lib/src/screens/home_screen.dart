@@ -31,7 +31,6 @@ import 'browser_screen.dart';
 import 'support_screen.dart';
 import 'player.dart' show PlayerPage, PlayerState;
 import '../vault/vault_hub_screen.dart';
-import '../vault/screens/guide_screen.dart' as vault_guide;
 import '../widgets/browser_shell.dart';
 import '../widgets/onboarding_tooltip_service.dart';
 import '../widgets/quick_links_page.dart';
@@ -297,13 +296,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return _buildLogsTab();
       case 11:
         final tm = _resolveThemeMode(widget.controller.settings?.themeMode);
-        return kPlayStoreBuild
-            ? const vault_guide.GuideScreen(key: ValueKey('guide'))
-            : GuideScreen(
-                key: const ValueKey('guide'),
-                themeMode: tm,
-                onThemeChanged: (mode) => widget.controller.setThemeMode(mode),
-              );
+        return GuideScreen(
+          key: const ValueKey('guide'),
+          themeMode: tm,
+          onThemeChanged: (mode) => widget.controller.setThemeMode(mode),
+        );
       case 12:
         return const PlayerPage(key: ValueKey('player-player'));
       case 13:
