@@ -352,6 +352,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _navigateToPage(int index) {
     if (index < 0 || index > 14) return;
+    if (kPlayStoreBuild && !isTabVisibleInPlayStore(index)) return;
     if (index == _selectedPageIndex) return;
     if (_selectedPageIndex == 14 && index != 14) {
       unawaited(widget.controller.pullVaultSettingsIntoHost());

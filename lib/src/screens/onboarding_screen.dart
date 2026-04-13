@@ -39,13 +39,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     if (!kPlayStoreBuild) return allPages;
     
     // For Play Store build, only show essential pages:
-    // 0: Welcome, 9: Stats, 10: Settings, 11: Guide, 12: Player, 14: Support
+    // 0: Welcome, 8: Stats, 9: Settings, 12: Guide, 13: Player, 14: Support
     return [
       allPages[0], // Welcome (but with modified text)
-      allPages[9], // Stats
-      allPages[10], // Settings
-      allPages[11], // Guide
-      allPages[12], // Player
+      allPages[8], // Stats
+      allPages[9], // Settings
+      allPages[12], // Guide
+      allPages[13], // Player
       allPages[14], // Support
     ];
   }
@@ -682,7 +682,7 @@ class _WelcomePreview extends StatelessWidget {
     final features = kPlayStoreBuild
         ? const [
             (Icons.download_rounded, 'Torrent downloads'),
-            (Icons.transform_rounded, 'Format conversion'),
+            (Icons.folder_copy_rounded, 'Queue & library'),
             (Icons.favorite_outline, 'Support via donations'),
           ]
         : const [
@@ -731,7 +731,6 @@ class _PlatformsPreview extends StatelessWidget {
     'Browser links',
     'Local files',
     'Queue actions',
-    'Format conversion',
     'Library tracking',
     'Download folders',
     'Clipboard import',
