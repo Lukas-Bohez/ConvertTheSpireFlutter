@@ -69,7 +69,7 @@ class _BrowserShellState extends State<BrowserShell> {
   }
 
   String get _currentTitle =>
-      QuickLinksService.indexToTitle[widget.currentIndex] ?? 'Search';
+      QuickLinksService.titleForIndex(widget.currentIndex);
 
   IconData get _currentFavicon =>
       QuickLinksService.indexToIcon[widget.currentIndex] ?? Icons.search;
@@ -108,7 +108,8 @@ class _BrowserShellState extends State<BrowserShell> {
 
     // Title exact match (case-insensitive)
     for (final entry in QuickLinksService.indexToTitle.entries) {
-      if (entry.value.toLowerCase() == lower) {
+      final displayTitle = QuickLinksService.titleForIndex(entry.key);
+      if (displayTitle.toLowerCase() == lower) {
         final route = QuickLinksService.indexToRoute[entry.key];
         if (route != null) {
           widget.onNavigate(route);
@@ -585,8 +586,13 @@ class _BrowserShellState extends State<BrowserShell> {
       final route = QuickLinksService.indexToRoute[entry.key];
       if (route == null) continue;
       final icon = QuickLinksService.indexToIcon[entry.key] ?? Icons.link;
-      allPages
-          .add(_PageSuggestion(title: entry.value, route: route, icon: icon));
+      allPages.add(
+        _PageSuggestion(
+          title: QuickLinksService.titleForIndex(entry.key),
+          route: route,
+          icon: icon,
+        ),
+      );
     }
 
     return RawAutocomplete<_PageSuggestion>(
