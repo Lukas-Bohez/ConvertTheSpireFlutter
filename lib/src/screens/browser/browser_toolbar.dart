@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../config/build_flags.dart';
+
 /// Top toolbar for the browser with URL bar, navigation, cast button, and menu.
 class BrowserToolbar extends StatelessWidget {
   final TextEditingController addressController;
@@ -295,22 +297,23 @@ class BrowserToolbar extends StatelessWidget {
                               Offset.zero & overlay.size,
                             ),
                             items: [
-                              PopupMenuItem(
+                                if (!kPlayStoreBuild)
+                                PopupMenuItem(
                                   value: 'cast',
                                   child: Row(children: [
                                     Icon(Icons.cast,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface),
+                                      color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface),
                                     const SizedBox(width: 12),
                                     const Text('Cast to device'),
                                     const Spacer(),
                                     if (isCastConnected)
-                                      Icon(Icons.circle,
-                                          size: 8,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary),
+                                    Icon(Icons.circle,
+                                      size: 8,
+                                      color: Theme.of(context)
+                                        .colorScheme
+                                        .primary),
                                   ])),
                               PopupMenuItem(
                                   value: 'openExternal',

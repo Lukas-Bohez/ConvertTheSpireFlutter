@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../platform/crash_dump_stub.dart'
     if (dart.library.io) '../platform/crash_dump_windows.dart';
+import '../../config/build_flags.dart';
 import '../services/settings_service.dart';
 import '../services/torrent_service.dart';
 import '../services/torrent_engine_service.dart';
@@ -1055,32 +1056,34 @@ class _BrowserScreenState extends State<BrowserScreen>
                       );
                     }).toList(),
                   ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Quick links',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: isMobile ? 6 : 10,
-                  runSpacing: isMobile ? 6 : 10,
-                  children: [
-                    'https://www.startpage.com/',
-                    'https://duckduckgo.com/',
-                    'https://news.ycombinator.com/',
-                    'https://www.wikipedia.org/',
-                  ]
-                      .map(
-                        (url) => OutlinedButton(
-                          onPressed: () => _navigateTo(url),
-                          child: Text(
-                            url.replaceAll('https://', '').replaceAll('/', ''),
-                            style: const TextStyle(fontSize: 12),
+                if (!kPlayStoreBuild) ...[
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Quick links',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: isMobile ? 6 : 10,
+                    runSpacing: isMobile ? 6 : 10,
+                    children: [
+                      'https://www.startpage.com/',
+                      'https://duckduckgo.com/',
+                      'https://news.ycombinator.com/',
+                      'https://www.wikipedia.org/',
+                    ]
+                        .map(
+                          (url) => OutlinedButton(
+                            onPressed: () => _navigateTo(url),
+                            child: Text(
+                              url.replaceAll('https://', '').replaceAll('/', ''),
+                              style: const TextStyle(fontSize: 12),
+                            ),
                           ),
-                        ),
-                      )
-                      .toList(),
-                ),
+                        )
+                        .toList(),
+                  ),
+                ],
               ],
             ],
           );
