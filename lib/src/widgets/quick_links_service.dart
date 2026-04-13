@@ -260,6 +260,12 @@ class QuickLinksService {
     }
     // Always strip retired Browser/Queue tiles (may still be in saved prefs).
     links.removeWhere((l) => _hiddenRoutes.contains(l.route));
+    if (kPlayStoreBuild) {
+      links.removeWhere((l) {
+        final idx = routeToIndex[l.route];
+        return idx == null || !isTabVisibleInPlayStore(idx);
+      });
+    }
     return links;
   }
 
