@@ -207,6 +207,20 @@ class QuickLinksService {
     14: 'Torrents',
   };
 
+  /// Play-aware title mapping for shell URL bar and page suggestions.
+  static String titleForIndex(int index) {
+    final base = indexToTitle[index] ?? 'Home';
+    if (!kPlayStoreBuild) return base;
+    switch (index) {
+      case 11:
+        return 'Vault Guide';
+      case 14:
+        return 'Vault';
+      default:
+        return base;
+    }
+  }
+
   /// Tab index → favicon icon.
   static const Map<int, IconData> indexToIcon = {
     0: Icons.search,
