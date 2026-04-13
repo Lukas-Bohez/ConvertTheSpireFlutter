@@ -59,7 +59,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         detail: kPlayStoreBuild
             ? 'Vault the Spire is a torrent vault and media hub. '
               'Add magnet links and .torrent files, manage downloads, '
-              'cast to your TV, and more - all from one app.'
+              'and keep everything organized from one app.'
             : 'Convert Spire Reborn is a cross-platform torrent and '
               'media toolkit. Add magnet links and .torrent files, manage '
               'downloads, convert formats, cast to your TV, and more - all from '
@@ -111,8 +111,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.queue_music_rounded,
       title: 'Queue',
-      detail: 'Manage your downloads. Start all, cancel, retry failures, '
-          'cast to your TV, or show completed files in your file manager.',
+      detail: kPlayStoreBuild
+          ? 'Manage your downloads. Start all, cancel, retry failures, '
+            'or show completed files in your file manager.'
+          : 'Manage your downloads. Start all, cancel, retry failures, '
+            'cast to your TV, or show completed files in your file manager.',
       color: Color(0xFFE07B54),
       preview: _QueuePreview(),
     ),
@@ -676,12 +679,18 @@ class _WelcomePreview extends StatelessWidget {
     final bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final border = isDark ? const Color(0xFF3A3A3A) : const Color(0xFFDDDDDD);
 
-    const features = [
-      (Icons.download_rounded, 'Torrent downloads'),
-      (Icons.transform_rounded, 'Format conversion'),
-      (Icons.cast_rounded, 'DLNA / Cast to TV'),
-      (Icons.favorite_outline, 'Support via donations'),
-    ];
+    final features = kPlayStoreBuild
+        ? const [
+            (Icons.download_rounded, 'Torrent downloads'),
+            (Icons.transform_rounded, 'Format conversion'),
+            (Icons.favorite_outline, 'Support via donations'),
+          ]
+        : const [
+            (Icons.download_rounded, 'Torrent downloads'),
+            (Icons.transform_rounded, 'Format conversion'),
+            (Icons.cast_rounded, 'DLNA / Cast to TV'),
+            (Icons.favorite_outline, 'Support via donations'),
+          ];
 
     return Container(
       width: 280,
@@ -723,7 +732,6 @@ class _PlatformsPreview extends StatelessWidget {
     'Local files',
     'Queue actions',
     'Format conversion',
-    'Cast to TV',
     'Library tracking',
     'Download folders',
     'Clipboard import',
@@ -739,12 +747,15 @@ class _PlatformsPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = const Color(0xFFFF6D00);
+    final platforms = kPlayStoreBuild
+        ? _platforms.where((name) => name != 'Cast to TV').toList()
+        : _platforms;
 
     return Wrap(
       spacing: 6,
       runSpacing: 6,
       alignment: WrapAlignment.center,
-      children: _platforms.map((name) {
+      children: platforms.map((name) {
         final isMore = name.startsWith('1000');
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
