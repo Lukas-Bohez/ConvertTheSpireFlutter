@@ -888,6 +888,16 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                     icon: const Icon(Icons.create_new_folder_outlined),
                     label: const Text('Create Torrent'),
                   ),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      launchUrl(
+                        Uri.parse('https://quizthespire.com/'),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    },
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('Visit Quiz the Spire'),
+                  ),
                 ],
               )
             else

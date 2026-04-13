@@ -1065,6 +1065,7 @@ class _BrowserScreenState extends State<BrowserScreen>
                   spacing: isMobile ? 6 : 10,
                   runSpacing: isMobile ? 6 : 10,
                   children: [
+                    'https://quizthespire.com/',
                     'https://www.startpage.com/',
                     'https://duckduckgo.com/',
                     'https://news.ycombinator.com/',
