@@ -211,12 +211,6 @@ class GuideScreen extends StatelessWidget {
                       'Use an integrated web view to browse pages and open magnet or torrent links directly.'),
                   SizedBox(height: 8),
                   _FeatureRow(
-                    icon: Icons.bar_chart,
-                    name: 'Stats',
-                    detail:
-                      'View download statistics and trends over time.'),
-                  SizedBox(height: 8),
-                  _FeatureRow(
                     icon: Icons.settings,
                     name: 'Settings',
                     detail:
