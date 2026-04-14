@@ -7,6 +7,7 @@ import 'package:convert_the_spire_reborn/src/vault/screens/browser_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/guide_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/torrents_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+import 'package:convert_the_spire_reborn/src/config/build_flags.dart';
 
 class AppShell extends StatefulWidget {
   final Widget child;
@@ -285,9 +286,9 @@ class _Sidebar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Text(
-                  'Vault The Spire',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                Text(
+                  getAppTitle(),
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                 ),
               ],
             ),
@@ -298,7 +299,7 @@ class _Sidebar extends StatelessWidget {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Vault The Spire',
+                getAppTitle(),
                 style: TextStyle(
                   fontSize: 11,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
