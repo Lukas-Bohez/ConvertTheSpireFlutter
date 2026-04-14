@@ -54,7 +54,7 @@ android {
         }
         create("play") {
             dimension = "distribution"
-            manifestPlaceholders["appLabel"] = "Vault the Spire"
+            manifestPlaceholders["appLabel"] = "Bitplayer"
         }
     }
 
