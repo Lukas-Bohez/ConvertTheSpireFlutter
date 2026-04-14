@@ -18,7 +18,7 @@ String getDefaultDownloadFolderName() =>
 // In Play Store, only these tabs are shown: 2 (Browser), 7 (Settings),
 // 8 (Support), 11 (Guide), 12 (Player), 13 (Home), 14 (Torrents/Vault)
 // Tabs hidden in PLAY_STORE_BUILD: 0 (Search), 1 (Multi-Search),
-// 3 (Queue), 4 (Playlists), 5 (Bulk Import), 9 (Convert), 10 (Logs)
+// 3 (Queue), 4 (hidden tools), 5 (Bulk Import), 9 (Convert), 10 (Logs)
 bool isTabVisibleInPlayStore(int tabIndex) {
   if (!kPlayStoreBuild) return true;
   

@@ -64,7 +64,9 @@ extension _SortLabel on _SortMode {
 }
 
 class TorrentsScreen extends StatefulWidget {
-  const TorrentsScreen({super.key});
+  final VoidCallback? onOpenSettingsTab;
+
+  const TorrentsScreen({super.key, this.onOpenSettingsTab});
 
   @override
   State<TorrentsScreen> createState() => _TorrentsScreenState();
@@ -218,7 +220,10 @@ class _TorrentsScreenState extends State<TorrentsScreen>
         ),
         actions: [
           FilledButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () {
+              Navigator.pop(ctx);
+              widget.onOpenSettingsTab?.call();
+            },
             child: const Text('Open Settings'),
           ),
         ],

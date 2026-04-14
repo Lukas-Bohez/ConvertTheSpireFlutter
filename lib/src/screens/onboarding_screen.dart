@@ -39,14 +39,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     if (!kPlayStoreBuild) return allPages;
     
     // For Play Store build, only show essential pages:
-    // 0: Welcome, 4: Browser, 9: Settings, 12: Guide, 13: Player, 14: Support
+    // 0: Welcome, 4: Browser, 8: Settings, 11: Guide, 12: Player, 13: Support
     return [
       allPages[0], // Welcome (but with modified text)
       allPages[4], // Browser
-      allPages[9], // Settings
-      allPages[12], // Guide
-      allPages[13], // Player
-      allPages[14], // Support
+      allPages[8], // Settings
+      allPages[11], // Guide
+      allPages[12], // Player
+      allPages[13], // Support
     ];
   }
 
@@ -120,15 +120,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       preview: _QueuePreview(),
     ),
 
-    // Playlists
-    _OnboardingPage(
-      icon: Icons.playlist_play_rounded,
-      title: 'Playlists',
-        detail: 'Load a collection, compare against a local folder to spot '
-          'missing items, and batch-download.',
-      color: Color(0xFFAB6BD9),
-    ),
-
     // Bulk Import
     _OnboardingPage(
       icon: Icons.upload_file_rounded,
@@ -178,7 +169,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.menu_book_rounded,
       title: 'Guide',
-      detail: 'A help screen you can revisit from the Guide tab.',
+      detail: kPlayStoreBuild
+          ? 'A help screen you can revisit from the Guide tab for Browser, Player, Torrents, and Settings.'
+          : 'A help screen you can revisit from the Guide tab.',
       color: Color(0xFF26A69A),
     ),
 
@@ -736,7 +729,6 @@ class _PlatformsPreview extends StatelessWidget {
     'Clipboard import',
     'Search results',
     'Saved collections',
-    'Stats & logs',
     'Settings sync',
     'Vault tabs',
     'and more',
@@ -747,7 +739,7 @@ class _PlatformsPreview extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = const Color(0xFFFF6D00);
     final platforms = kPlayStoreBuild
-        ? _platforms.where((name) => name != 'Cast to TV').toList()
+      ? _platforms
         : _platforms;
 
     return Wrap(
