@@ -237,6 +237,8 @@ class PlayerState with ChangeNotifier {
 
   bool _videoReady = false;
   bool _videoCompletionFired = false;
+  bool _videoBackgroundAudioMode = false;
+  Duration? _backgroundVideoResumePosition;
 
   // Protects concurrent thumbnail generation / screenshot operations.
   final _thumbLock = Lock();
@@ -459,6 +461,9 @@ class PlayerState with ChangeNotifier {
 
   bool get isPlaying {
     if (isVideo) {
+      if (_videoBackgroundAudioMode && _audio != null) {
+        return _audio!.playing;
+      }
       if (_useMediaKit && _mkPlayer != null) return _mkPlayer!.state.playing;
       return _androidController?.value.isPlaying ?? false;
     }
@@ -491,6 +496,10 @@ class PlayerState with ChangeNotifier {
   VideoController? get videoController => _mkController;
   VideoPlayerController? get androidVideoController => _androidController;
   int get folderItemCount => _folderItemCount;
+    List<int> get queueSnapshot => List<int>.unmodifiable(
+      manualQueue.where((index) => index >= 0 && index < library.length));
+    List<int> get playHistorySnapshot => List<int>.unmodifiable(
+      _playHistory.where((index) => index >= 0 && index < library.length));
 
   List<MapEntry<int, MediaItem>> get audioEntries => library
       .asMap()
@@ -1153,6 +1162,100 @@ class PlayerState with ChangeNotifier {
   }
 }
 
+  Future<void> onAppLifecycleChanged(AppLifecycleState state) async {
+    if (!Platform.isAndroid || _disposed) return;
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      await _enterBackgroundVideoAudioMode();
+      return;
+    }
+    if (state == AppLifecycleState.resumed) {
+      await _restoreForegroundVideoPlayback();
+    }
+  }
+
+  Future<void> _enterBackgroundVideoAudioMode() async {
+    if (_videoBackgroundAudioMode || _disposed) return;
+    if (_useMediaKit || _audio == null) return;
+
+    final item = currentItem;
+    if (item == null || item.type != MediaType.video) return;
+    final controller = _androidController;
+    if (controller == null) return;
+
+    final resumePosition = controller.value.position;
+    final wasPlaying = controller.value.isPlaying;
+    _backgroundVideoResumePosition = resumePosition;
+
+    try {
+      await controller.pause();
+      await controller.setVolume(0);
+    } catch (_) {}
+
+    try {
+      final localPath = await _resolveLocalPath(item.path);
+      if (localPath.startsWith('http') || localPath.startsWith('content://')) {
+        await _audio!.setUrl(localPath);
+      } else {
+        await _audio!.setFilePath(localPath);
+      }
+      if (resumePosition > Duration.zero) {
+        await _audio!.seek(resumePosition);
+      }
+      _runOnMainThread(() => _audio!.setVolume(volume));
+      if (wasPlaying) {
+        await _audio!.play();
+      } else {
+        await _audio!.pause();
+      }
+      duration = _audio!.duration ?? duration;
+      position = resumePosition;
+      _videoBackgroundAudioMode = true;
+      _updateMediaNotification(item);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Failed to enter background video audio mode: $e');
+      _videoBackgroundAudioMode = false;
+    }
+  }
+
+  Future<void> _restoreForegroundVideoPlayback() async {
+    if (!_videoBackgroundAudioMode || _disposed) return;
+    final item = currentItem;
+    final resumePosition = _backgroundVideoResumePosition ?? position;
+    final shouldKeepPlaying = _audio?.playing ?? false;
+
+    try {
+      await _audio?.pause();
+    } catch (_) {}
+
+    _videoBackgroundAudioMode = false;
+
+    if (item == null || item.type != MediaType.video) {
+      notifyListeners();
+      return;
+    }
+
+    final generation = ++_loadGeneration;
+    await _loadCurrent(currentIndex, generation);
+    if (_disposed || generation != _loadGeneration) return;
+
+    final controller = _androidController;
+    if (controller != null) {
+      try {
+        if (resumePosition > Duration.zero) {
+          await controller.seekTo(resumePosition);
+        }
+        if (!shouldKeepPlaying) {
+          await controller.pause();
+        }
+      } catch (_) {}
+    }
+
+    notifyListeners();
+  }
+
   // --- Playback controls ----------------------------------------------------
 
   List<int> _getPlaybackCandidates({MediaType? only}) {
@@ -1200,6 +1303,11 @@ class PlayerState with ChangeNotifier {
   Future<void> togglePlay() async {
     if (_disposed) return;
     if (isVideo) {
+      if (_videoBackgroundAudioMode && _audio != null) {
+        _audio!.playing ? await _audio!.pause() : await _audio!.play();
+        notifyListeners();
+        return;
+      }
       if (_useMediaKit && _mkPlayer != null) {
         await (_mkPlayer!.state.playing ? _mkPlayer!.pause() : _mkPlayer!.play());
       } else if (_androidController != null) {
@@ -1234,6 +1342,17 @@ class PlayerState with ChangeNotifier {
           'PlayerState.seek requested: $d, isVideo=$isVideo, _useMediaKit=$_useMediaKit');
     if (isVideo) {
       _videoCompletionFired = false;
+      if (_videoBackgroundAudioMode && _audio != null) {
+        try {
+          await _audio!.seek(d);
+          _backgroundVideoResumePosition = d;
+        } catch (e) {
+          debugPrint('background video seek error: $e');
+        }
+        position = d;
+        notifyListeners();
+        return;
+      }
       if (_useMediaKit && _mkPlayer != null) {
         debugPrint('Seeking media_kit video player to $d');
         try {
@@ -1418,6 +1537,9 @@ class PlayerState with ChangeNotifier {
     }
     if (_androidController != null) {
       _androidController!.setVolume((volume * _videoVolumeBoost).clamp(0.0, 1.0));
+    }
+    if (_videoBackgroundAudioMode && _audio != null) {
+      _runOnMainThread(() => _audio!.setVolume(volume));
     }
   }
 
@@ -1648,8 +1770,8 @@ class PlayerState with ChangeNotifier {
     // _audio is non-null when this is called (guarded by caller).
     _audioHandler = await initAudioService(_audio!);
     if (_audioHandler != null) {
-      _audioHandler!.onSkipToNext = () => next(only: MediaType.audio);
-      _audioHandler!.onSkipToPrevious = () => previous(only: MediaType.audio);
+      _audioHandler!.onSkipToNext = () => next(only: activeTabFilter);
+      _audioHandler!.onSkipToPrevious = () => previous(only: activeTabFilter);
     }
   }
 
@@ -2208,7 +2330,7 @@ class PlayerScreen extends StatefulWidget {
 }
 
 class _PlayerScreenState extends State<PlayerScreen>
-    with SingleTickerProviderStateMixin {
+  with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -2220,12 +2342,21 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() { if (!_tabController.indexIsChanging) setState(() {}); });
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (!mounted) return;
+    unawaited(context.read<PlayerState>().onAppLifecycleChanged(state));
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _exitFullScreen();
     _tabController.dispose();
     _searchController.dispose();

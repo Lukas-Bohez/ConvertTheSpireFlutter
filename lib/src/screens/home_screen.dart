@@ -29,7 +29,7 @@ import 'statistics_screen.dart';
 import 'watched_playlists_screen.dart';
 import 'browser_screen.dart';
 import 'support_screen.dart';
-import 'player.dart' show PlayerPage, PlayerState;
+import 'player.dart' show PlayerPage, PlayerState, MediaType;
 import '../vault/vault_hub_screen.dart';
 import '../widgets/browser_shell.dart';
 import '../widgets/onboarding_tooltip_service.dart';
@@ -130,6 +130,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final List<int> _navHistory = [13];
   int _navHistoryIndex = 0;
   bool _queueOnRight = true;
+  int _playQueueViewIndex = 0;
 
   final OnboardingTooltipService _onboarding = OnboardingTooltipService();
   String? _dismissedBannerRoute;
@@ -1972,6 +1973,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // -- Queue tab ----------------------------------------------------------
 
   Widget _buildQueueTab() {
+    if (kPlayStoreBuild) {
+      return _buildPlayQueueTab();
+    }
+
     final items = widget.controller.queue;
     if (items.isEmpty) {
       return Center(
@@ -1990,7 +1995,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 6),
             Text(
-              'Add items from the Search tab',
+              kPlayStoreBuild
+                  ? 'Add items from the Player tab'
+                  : 'Add items from the Search tab',
               style: TextStyle(
                   fontSize: 13,
                   color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -2025,6 +2032,134 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildPlayQueueTab() {
+    final playerState = context.watch<PlayerState>();
+    final upNext = playerState.queueSnapshot;
+    final previously = playerState.playHistorySnapshot.reversed
+        .where((index) => index != playerState.currentIndex)
+        .toList();
+
+    final showUpNext = _playQueueViewIndex == 0;
+    final selected = showUpNext ? upNext : previously;
+    final cs = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+          color: cs.primary.withValues(alpha: 0.06),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                showUpNext ? 'Up next' : 'Previously',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ChoiceChip(
+                      selected: showUpNext,
+                      label: const Text('Up next'),
+                      onSelected: (_) => setState(() => _playQueueViewIndex = 0),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ChoiceChip(
+                      selected: !showUpNext,
+                      label: const Text('Previously'),
+                      onSelected: (_) => setState(() => _playQueueViewIndex = 1),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: selected.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        showUpNext ? Icons.queue_music : Icons.history,
+                        size: 46,
+                        color: cs.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        showUpNext
+                            ? 'No songs in Up next'
+                            : 'No previously played songs yet',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      if (showUpNext) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Add items from the Player tab',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: selected.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) {
+                    final mediaIndex = selected[i];
+                    if (mediaIndex < 0 || mediaIndex >= playerState.library.length) {
+                      return const SizedBox.shrink();
+                    }
+                    final media = playerState.library[mediaIndex];
+                    final title = (media.title == null || media.title!.trim().isEmpty)
+                        ? media.path.split(RegExp(r'[\\/]')).last
+                        : media.title!;
+                    return Card(
+                      margin: EdgeInsets.zero,
+                      child: ListTile(
+                        leading: Icon(
+                          media.type == MediaType.video
+                              ? Icons.videocam_outlined
+                              : Icons.music_note,
+                        ),
+                        title: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          showUpNext ? 'Queued' : 'Previously played',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: const Icon(Icons.play_arrow),
+                        onTap: () {
+                          playerState.select(mediaIndex);
+                          _navigateToPage(12);
+                        },
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 

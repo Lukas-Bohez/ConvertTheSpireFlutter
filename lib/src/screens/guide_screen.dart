@@ -208,7 +208,7 @@ class GuideScreen extends StatelessWidget {
                     icon: Icons.open_in_browser,
                     name: 'Browser',
                     detail:
-                      'Use an integrated web view to browse pages and open magnet or torrent links directly.'),
+                      'Browse pages and open magnet or torrent links in-app.'),
                   SizedBox(height: 8),
                   _FeatureRow(
                     icon: Icons.settings,
@@ -225,13 +225,13 @@ class GuideScreen extends StatelessWidget {
                     icon: Icons.menu_book,
                     name: 'Guide',
                     detail:
-                      'This screen: instructions, supported platforms, and tips.'),
+                      'Instructions, supported platforms, and tips.'),
                   SizedBox(height: 8),
                   _FeatureRow(
                     icon: Icons.music_note,
                     name: 'Player',
                     detail:
-                      'Built‑in media player for local files with shuffle and repeat.'),
+                      'Built-in media player for local files with shuffle and repeat.'),
                   SizedBox(height: 8),
                   _FeatureRow(
                     icon: Icons.download,
@@ -277,10 +277,10 @@ class GuideScreen extends StatelessWidget {
                     'Paste a list of links or import from a text/CSV file to add many items to the queue at once.'),
                 SizedBox(height: 8),
                 _FeatureRow(
-                    icon: Icons.bar_chart,
-                    name: 'Stats',
-                    detail:
-                        'View download statistics: totals, success rate, format breakdown, top artists, and trends over time.'),
+                  icon: Icons.bar_chart,
+                  name: 'Stats',
+                  detail:
+                    'View download statistics: totals, success rate, format breakdown, top artists, and trends over time.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.settings,
@@ -316,59 +316,60 @@ class GuideScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // -- Tips ----------------------------------------------
-          _SectionCard(
-            icon: Icons.lightbulb_outline,
-            title: 'Tips & Troubleshooting',
-            cs: cs,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                _TipRow(
-                  title: 'Downloads fail at 0%',
-                  detail:
-                      'This usually means FFmpeg is missing. On Windows the app installs it automatically; on Linux run: sudo apt install ffmpeg (or dnf install ffmpeg on Fedora).',
-                ),
-                SizedBox(height: 10),
-                _TipRow(
-                  title: 'Source sites block requests',
-                  detail:
-                      'Some source sites may temporarily block rapid requests. The app will automatically retry with backoff. You can increase retry count in Settings.',
-                ),
-                SizedBox(height: 10),
-                _TipRow(
-                  title: 'Large playlists are slow',
-                  detail:
-                      'When loading large playlists, use the preview limit to load just 10-50 items first. You can always load more.',
-                ),
-                SizedBox(height: 10),
-                _TipRow(
-                  title: 'Android: choose a writable folder',
-                  detail:
-                      'On Android you must pick a download folder through the system file picker so the app gets write permission.',
-                ),
-                SizedBox(height: 10),
-                _TipRow(
-                  title: 'Linux: enable video playback',
-                  detail:
-                      'Install mpv/libmpv with your package manager (e.g. sudo apt install mpv libmpv-dev) to enable video playback. Without libmpv the app will fall back to audio-only mode.',
-                ),
-                SizedBox(height: 10),
-                _TipRow(
-                  title: 'Parallel workers',
-                  detail:
-                      'More workers means faster batch downloads but uses more bandwidth and may trigger rate limits. 2-3 is recommended.',
-                ),
-                SizedBox(height: 10),
-                _TipRow(
-                  title: 'Need a refresher?',
-                  detail:
-                      'Tap "Show onboarding" at the top of this screen to walk through every tab again.',
-                ),
-              ],
+          if (!kPlayStoreBuild) ...[
+            // -- Tips ----------------------------------------------
+            _SectionCard(
+              icon: Icons.lightbulb_outline,
+              title: 'Tips & Troubleshooting',
+              cs: cs,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  _TipRow(
+                    title: 'Downloads fail at 0%',
+                    detail:
+                        'This usually means FFmpeg is missing. On Windows the app installs it automatically; on Linux run: sudo apt install ffmpeg (or dnf install ffmpeg on Fedora).',
+                  ),
+                  SizedBox(height: 10),
+                  _TipRow(
+                    title: 'Source sites block requests',
+                    detail:
+                        'Some source sites may temporarily block rapid requests. The app will automatically retry with backoff. You can increase retry count in Settings.',
+                  ),
+                  SizedBox(height: 10),
+                  _TipRow(
+                    title: 'Large libraries are slow',
+                    detail:
+                        'When loading large collections, use the preview limit to load just 10-50 items first. You can always load more.'),
+                  SizedBox(height: 10),
+                  _TipRow(
+                    title: 'Android: choose a writable folder',
+                    detail:
+                        'On Android you must pick a download folder through the system file picker so the app gets write permission.',
+                  ),
+                  SizedBox(height: 10),
+                  _TipRow(
+                    title: 'Linux: enable video playback',
+                    detail:
+                        'Install mpv/libmpv with your package manager (e.g. sudo apt install mpv libmpv-dev) to enable video playback. Without libmpv the app will fall back to audio-only mode.',
+                  ),
+                  SizedBox(height: 10),
+                  _TipRow(
+                    title: 'Parallel workers',
+                    detail:
+                        'More workers means faster batch downloads but uses more bandwidth and may trigger rate limits. 2-3 is recommended.',
+                  ),
+                  SizedBox(height: 10),
+                  _TipRow(
+                    title: 'Need a refresher?',
+                    detail:
+                        'Tap "Show onboarding" at the top of this screen to walk through every tab again.',
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
+          ],
 
           // -- Supported formats --------------------------------─
           if (!kPlayStoreBuild) ...[

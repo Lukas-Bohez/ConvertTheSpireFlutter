@@ -9,7 +9,7 @@ import android.provider.MediaStore
 import android.os.Environment
 import android.media.MediaScannerConnection
 import androidx.documentfile.provider.DocumentFile
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodCall
@@ -20,7 +20,7 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 
-class MainActivity : FlutterActivity() {
+class MainActivity : AudioServiceActivity() {
     private val channelName = "convert_the_spire/saf"
     private val pickTreeRequestCode = 5011
     private var pendingResult: MethodChannel.Result? = null
