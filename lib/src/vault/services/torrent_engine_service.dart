@@ -15,6 +15,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart'
   as vault_bencode;
+import 'package:convert_the_spire_reborn/src/vault/bittorrent/torrent_file.dart';
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/magnet_link.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/notification_service.dart';
@@ -1043,6 +1044,11 @@ class TorrentEngineService {
 
   bool _isValidTorrentSourceBytes(Uint8List bytes) {
     try {
+      TorrentFileParser.parse(bytes);
+      return true;
+    } catch (_) {}
+
+    try {
       dt.TorrentParser.parseBytes(bytes);
       return true;
     } catch (_) {
@@ -1231,7 +1237,8 @@ class TorrentEngineService {
     final dht = task.dht;
     if (dht == null) return;
 
-    dht.createListener()?..on<NewPeerEvent>((event) {
+    final dhtListener = dht.createListener();
+    dhtListener.on<NewPeerEvent>((event) {
       _logDhtThrottled(task);
       try {
         task.addPeer(event.address, dt.PeerSource.dht, type: dt.PeerType.TCP);
@@ -1250,7 +1257,9 @@ class TorrentEngineService {
       }
     });
 
-    dht.krpc?.createListener()?..on<AnnouncePeerResponseEvent>((event) {
+    final krpc = dht.krpc;
+    if (krpc == null) return;
+    krpc.createListener().on<AnnouncePeerResponseEvent>((event) {
       _logDhtThrottled(task);
 
       // Try adding direct announce peer from event.address:event.port
@@ -1305,8 +1314,6 @@ class TorrentEngineService {
     TorrentModel torrent, {
     String? destinationPath,
   }) async {
-    final sourcePathIsTorrentFile = _isTorrentFilePath(torrent.filePath);
-
     if (_isTorrentFilePath(torrent.filePath)) {
       try {
         final sourcePath = torrent.filePath!.trim();
@@ -1320,7 +1327,19 @@ class TorrentEngineService {
       }
     }
 
-    var dtModel = await dt.TorrentModel.parse(torrent.filePath!);
+    dt.TorrentModel dtModel;
+    try {
+      dtModel = await dt.TorrentModel.parse(torrent.filePath!);
+    } catch (e) {
+      final sourceFile = File(torrent.filePath!);
+      final bytes = await sourceFile.readAsBytes();
+      final decoded = _decodeTorrentBencode(bytes);
+      dtModel = await _parseTorrentModelFromRawBencode(decoded);
+      _log(
+        torrent.id,
+        'Fell back to in-app torrent parser for source file: $e',
+      );
+    }
 
     final expectedInfoHash = _hexToBytes(torrent.id);
     if (expectedInfoHash != null && expectedInfoHash.length == 20) {
@@ -1357,12 +1376,10 @@ class TorrentEngineService {
     final totalBytes = dtModel.files.fold<int>(0, (s, f) => s + f.length);
     if (totalBytes > 0 && (torrent.totalSize ?? 0) != totalBytes) {
       await TorrentService.instance.updateTorrent(
-        torrent.copyWith(totalSize: totalBytes, filePath: saveDir),
+        torrent.copyWith(totalSize: totalBytes),
       );
     } else {
-      await TorrentService.instance.updateTorrent(
-        torrent.copyWith(filePath: saveDir),
-      );
+      await TorrentService.instance.updateTorrent(torrent);
     }
 
     // Aggressive peer connectivity: enable DHT, PEX, sequential video streaming,
@@ -1675,12 +1692,11 @@ class TorrentEngineService {
         torrent.copyWith(
           name: updatedName,
           totalSize: totalBytes,
-          filePath: saveDir,
         ),
       );
     } else {
       await TorrentService.instance.updateTorrent(
-        torrent.copyWith(name: updatedName, filePath: saveDir),
+        torrent.copyWith(name: updatedName),
       );
     }
 
@@ -2885,7 +2901,13 @@ class TorrentEngineService {
       if (torrent.type != 'torrent_file' || !_isTorrentFilePath(path)) {
         return null;
       }
-      return dt.TorrentModel.parse(path);
+      try {
+        return dt.TorrentModel.parse(path);
+      } catch (_) {
+        final bytes = await File(path).readAsBytes();
+        final decoded = _decodeTorrentBencode(bytes);
+        return _parseTorrentModelFromRawBencode(decoded);
+      }
     } catch (e) {
       debugPrint('forceRedownload: torrent file parse failed: $e');
       return null;
@@ -3069,7 +3091,6 @@ class TorrentEngineService {
           completedAt: null,
           seeders: 0,
           leechers: 0,
-          filePath: saveDir,
         ),
       );
       TorrentService.instance.resetProgressTracking(torrentId);

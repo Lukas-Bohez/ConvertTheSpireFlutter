@@ -14,8 +14,8 @@ void main() {
     });
 
     final sourceDir = Directory('${tempRoot.path}${Platform.pathSeparator}source')..createSync();
-    File('${sourceDir.path}${Platform.pathSeparator}a.txt').writeAsStringSync('hello');
-    File('${sourceDir.path}${Platform.pathSeparator}b.txt').writeAsStringSync('world!');
+    File('${sourceDir.path}${Platform.pathSeparator}くうに.txt').writeAsStringSync('hello');
+    File('${sourceDir.path}${Platform.pathSeparator}みく.txt').writeAsStringSync('world!');
 
     final outputDir = Directory('${tempRoot.path}${Platform.pathSeparator}output')..createSync();
 
@@ -26,7 +26,7 @@ void main() {
 
     final result = await TorrentCreatorService.instance.createTorrent(
       entries: entries,
-      torrentName: 'Tiny Sample',
+      torrentName: '『くうになる』 _ feat. 初音ミク & 可不',
       trackers: const ['udp://tracker.opentrackr.org:1337/announce'],
       isPrivate: false,
       outputDirectory: outputDir.path,
@@ -38,7 +38,7 @@ void main() {
     final metadata = TorrentFileParser.parse(torrentBytes);
 
     expect(await File(result.torrentPath).exists(), isTrue);
-    expect(metadata.name, 'Tiny Sample');
+    expect(metadata.name, '『くうになる』 _ feat. 初音ミク & 可不');
     expect(metadata.files.length, 2);
     expect(metadata.trackers, contains('udp://tracker.opentrackr.org:1337/announce'));
     expect(metadata.pieceLength, 16);
