@@ -1225,20 +1225,33 @@ class TorrentEngineService {
     final hasTorrentFileSource =
         torrent.type == 'torrent_file' && sourceTorrentPath != null;
     final managedSourceFile = await _tryGetManagedTorrentSource(torrent.id);
+    final hasMagnetSource = torrent.magnetLink?.trim().isNotEmpty == true;
 
     if (hasTorrentFileSource) {
-      await _startFromFile(
-        torrent,
-        sourceTorrentPath: sourceTorrentPath,
-        destinationPath: destinationPath,
-      );
-    } else if (managedSourceFile != null) {
+      try {
+        await _startFromFile(
+          torrent,
+          sourceTorrentPath: sourceTorrentPath,
+          destinationPath: destinationPath,
+        );
+        return;
+      } catch (e) {
+        final missingSource = _isMissingTorrentSourceError(e);
+        _log(
+          torrent.id,
+          'Primary torrent file source failed${missingSource ? ' (missing file)' : ''}: $e',
+        );
+      }
+    }
+
+    if (managedSourceFile != null) {
       try {
         await _startFromFile(
           torrent,
           sourceTorrentPath: managedSourceFile.path,
           destinationPath: destinationPath,
         );
+        return;
       } catch (e) {
         // Managed source can be stale/corrupt after app upgrades.
         // Delete it and fall back to magnet discovery instead of hard-failing resume.
@@ -1246,17 +1259,15 @@ class TorrentEngineService {
           'Managed torrent source failed for $torrentId, falling back to magnet: $e',
         );
         await removeCachedTorrentSource(torrent.id);
-        if (torrent.magnetLink != null && torrent.magnetLink!.trim().isNotEmpty) {
-          await _startFromMagnet(torrent, destinationPath: destinationPath);
-        } else {
-          rethrow;
-        }
       }
-    } else if (torrent.magnetLink != null) {
-      await _startFromMagnet(torrent, destinationPath: destinationPath);
-    } else {
-      throw StateError('Torrent has no source');
     }
+
+    if (hasMagnetSource) {
+      await _startFromMagnet(torrent, destinationPath: destinationPath);
+      return;
+    }
+
+    throw StateError('Torrent has no usable source');
   }
 
   /// Attach DHT event listeners to a task BEFORE task.start() is called
@@ -1343,14 +1354,16 @@ class TorrentEngineService {
     required String sourceTorrentPath,
     String? destinationPath,
   }) async {
-    if (_isTorrentFilePath(sourceTorrentPath)) {
+    final sourcePath = sourceTorrentPath.trim();
+    final sourceFile = File(sourcePath);
+    if (!await sourceFile.exists()) {
+      throw FileSystemException('Torrent source file does not exist', sourcePath);
+    }
+
+    if (_isTorrentFilePath(sourcePath)) {
       try {
-        final sourcePath = sourceTorrentPath.trim();
-        final sourceFile = File(sourcePath);
-        if (await sourceFile.exists()) {
-          final bytes = await sourceFile.readAsBytes();
-          await cacheTorrentSource(torrent.id, bytes);
-        }
+        final bytes = await sourceFile.readAsBytes();
+        await cacheTorrentSource(torrent.id, bytes);
       } catch (e) {
         debugPrint('Managed torrent source cache write failed for ${torrent.id}: $e');
       }
@@ -1358,9 +1371,8 @@ class TorrentEngineService {
 
     dt.TorrentModel dtModel;
     try {
-      dtModel = await dt.TorrentModel.parse(sourceTorrentPath);
+      dtModel = await dt.TorrentModel.parse(sourcePath);
     } catch (e) {
-      final sourceFile = File(sourceTorrentPath);
       final bytes = await sourceFile.readAsBytes();
       final decoded = _decodeTorrentBencode(bytes);
       dtModel = await _parseTorrentModelFromRawBencode(decoded);
@@ -3260,6 +3272,22 @@ class TorrentEngineService {
     return normalized.isNotEmpty && normalized.endsWith('.torrent');
   }
 
+  bool _isMissingTorrentSourceError(Object error) {
+    if (error is FileSystemException) {
+      final message = error.message.toLowerCase();
+      if (message.contains('does not exist') ||
+          message.contains('cannot open file')) {
+        return true;
+      }
+    }
+    if (error is PathNotFoundException) {
+      return true;
+    }
+    final text = error.toString().toLowerCase();
+    return text.contains('pathnotfoundexception') ||
+        text.contains('cannot open file');
+  }
+
   String? _sourceTorrentPath(TorrentModel torrent) {
     final explicit = torrent.vaultLink?.trim();
     if (_isTorrentFilePath(explicit)) {
@@ -3289,6 +3317,10 @@ class TorrentEngineService {
     final path = torrent.filePath?.trim();
     if (path == null || path.isEmpty) return null;
     if (_isTorrentFilePath(path)) {
+      final configured = SettingsService.instance.downloadDestination.trim();
+      if (configured.isNotEmpty) {
+        return configured;
+      }
       try {
         return File(path).parent.path;
       } catch (_) {
