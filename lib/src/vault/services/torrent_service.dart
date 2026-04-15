@@ -1774,9 +1774,13 @@ class TorrentService {
     final torrentFile = File(torrentFilePath);
     await torrentFile.writeAsBytes(torrentBytes, flush: true);
 
+    final seedDestination = type == FileSystemEntityType.directory
+        ? baseDir.parent.path
+        : baseDir.path;
+
     await addTorrentFromTorrentFile(
       torrentFilePath,
-      destinationPath: baseDir.path,
+      destinationPath: seedDestination,
     );
   }
 }

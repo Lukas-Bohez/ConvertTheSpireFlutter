@@ -130,6 +130,7 @@ class TorrentEngineService {
   final Map<String, Map<String, DateTime>> _trackerBackoffUntilByTorrent = {};
   final Set<String> _refreshInFlight = <String>{};
   final Set<String> _forceRedownloadInFlight = <String>{};
+  bool _runtimePubspecEnsured = false;
   DateTime _lastPollingRestartAt = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastPeerLogTime = DateTime.fromMillisecondsSinceEpoch(0);
   int _peerEventsSinceLastLog = 0;
@@ -258,11 +259,33 @@ class TorrentEngineService {
   }
 
   Future<void> _configureTask(dt.TorrentTask task) async {
+    await _ensureRuntimePubspecForDtorrent();
     // dtorrent_task_v2 enables DHT/tracker/PEX through internal defaults.
     // CLI-level calls are not available in this API surface.
     await _mapPorts(task);
     if (SettingsService.instance.useDht) {
       _addDhtBootstrapNodes(task);
+    }
+  }
+
+  Future<void> _ensureRuntimePubspecForDtorrent() async {
+    if (_runtimePubspecEnsured) return;
+    _runtimePubspecEnsured = true;
+
+    try {
+      final cwd = Directory.current;
+      final pubspecFile = File(p.join(cwd.path, 'pubspec.yaml'));
+      if (await pubspecFile.exists()) {
+        return;
+      }
+
+      const fallback = 'name: convert_the_spire_reborn\nversion: 0.0.0\n';
+      await pubspecFile.writeAsString(fallback, flush: true);
+      debugPrint(
+        'Created runtime pubspec.yaml for dtorrent_task_v2 at ${pubspecFile.path}',
+      );
+    } catch (e) {
+      debugPrint('Failed to create runtime pubspec.yaml for dtorrent_task_v2: $e');
     }
   }
 
