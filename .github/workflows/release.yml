@@ -313,7 +313,7 @@ jobs:
           retention-days: 7
 
   # =========================================================================
-  # 5. Android (APK for end-user releases)
+  # 5. Android (full APK + Play AAB)
   # =========================================================================
   build-android:
     name: Build Android
@@ -339,10 +339,14 @@ jobs:
       - name: Build APK (full feature)
         run: flutter build apk --flavor full --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false
 
+      - name: Build Play AAB (store flavor)
+        run: flutter build appbundle --flavor play --release --dart-define=PLAY_STORE_BUILD=true
+
       - name: Collect Android artifacts
         run: |
           mkdir -p android-builds
           cp build/app/outputs/flutter-apk/app-full-release.apk android-builds/VaultTheSpire-full.apk
+          cp build/app/outputs/bundle/playRelease/app-play-release.aab android-builds/Bitplayer-play.aab
 
       - uses: actions/upload-artifact@v5
         with:
