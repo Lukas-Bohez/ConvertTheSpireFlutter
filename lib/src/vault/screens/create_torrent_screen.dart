@@ -210,9 +210,20 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
           false;
 
       if (addToDownloads) {
-        await TorrentService.instance.addTorrentFromTorrentFile(
-          result.torrentPath,
-        );
+        try {
+          await TorrentService.instance.addTorrentFromTorrentFile(
+            result.torrentPath,
+          );
+        } catch (e) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Torrent file created, but failed to add to downloads: $e',
+              ),
+            ),
+          );
+        }
       }
 
       if (!mounted) return;
