@@ -332,7 +332,7 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<int?>(
-                value: _pieceSize,
+                initialValue: _pieceSize,
                 decoration: const InputDecoration(
                   labelText: 'Piece Size',
                   border: OutlineInputBorder(),
