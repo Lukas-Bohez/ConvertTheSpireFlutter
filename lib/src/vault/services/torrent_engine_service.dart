@@ -13,6 +13,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart'
+  as vault_bencode;
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/magnet_link.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/notification_service.dart';
@@ -999,20 +1001,27 @@ class TorrentEngineService {
     }
 
     try {
-      final decoded = decode(raw);
+      final decoded = _decodeTorrentBencode(raw);
       if (decoded is! Map) return null;
 
-      final hasInfoKey = decoded.containsKey('info');
+      final hasInfoKey = decoded.keys.any((key) {
+        if (key == 'info') return true;
+        if (key is Uint8List) {
+          try {
+            return utf8.decode(key, allowMalformed: true) == 'info';
+          } catch (_) {
+            return false;
+          }
+        }
+        return false;
+      });
       final normalizedMap = hasInfoKey
           ? decoded
           : <String, dynamic>{
               'announce': _fallbackTrackers.first,
               'info': decoded,
             };
-      final encoded = encode(normalizedMap);
-      final normalizedBytes = encoded is Uint8List
-          ? encoded
-          : Uint8List.fromList(List<int>.from(encoded as List));
+      final normalizedBytes = vault_bencode.bencode(normalizedMap);
 
       if (_isValidTorrentSourceBytes(normalizedBytes)) {
         return normalizedBytes;
@@ -1022,6 +1031,14 @@ class TorrentEngineService {
     }
 
     return null;
+  }
+
+  dynamic _decodeTorrentBencode(Uint8List bytes) {
+    try {
+      return vault_bencode.bdecode(bytes);
+    } catch (_) {
+      return decode(bytes);
+    }
   }
 
   bool _isValidTorrentSourceBytes(Uint8List bytes) {
@@ -1540,7 +1557,7 @@ class TorrentEngineService {
       if (cachedMetadata != null) {
         _log(torrent.id, 'Using cached metadata from previous download');
         downloadedMetadataBytes = Uint8List.fromList(cachedMetadata);
-        final msg = decode(cachedMetadata);
+        final msg = _decodeTorrentBencode(downloadedMetadataBytes);
         dtModel = await _parseTorrentModelFromRawBencode(msg);
       }
     } catch (e) {
@@ -1560,7 +1577,7 @@ class TorrentEngineService {
               try {
                 final Uint8List rawData = Uint8List.fromList(event.data);
                 downloadedMetadataBytes = rawData;
-                final msg = decode(rawData);
+                final msg = _decodeTorrentBencode(rawData);
 
                 final model = await _parseTorrentModelFromRawBencode(msg);
                 completer.complete(model);
@@ -2850,7 +2867,9 @@ class TorrentEngineService {
         cacheKey,
       );
       if (cachedMetadata == null) return null;
-      final decoded = decode(cachedMetadata);
+      final decoded = _decodeTorrentBencode(
+        Uint8List.fromList(cachedMetadata),
+      );
       return _parseTorrentModelFromRawBencode(decoded);
     } catch (e) {
       debugPrint('forceRedownload: metadata cache unavailable: $e');
