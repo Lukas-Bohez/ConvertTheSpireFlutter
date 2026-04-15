@@ -129,6 +129,16 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
     return entries.fold<int>(0, (sum, e) => sum + (e['length']! as int));
   }
 
+  String _seedDestinationPath() {
+    if (_folders.isNotEmpty) {
+      return _folders.first;
+    }
+    if (_files.isNotEmpty) {
+      return File(_files.first).parent.path;
+    }
+    return _outputPath;
+  }
+
   Future<void> _createTorrent() async {
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -213,6 +223,7 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
         try {
           await TorrentService.instance.addTorrentFromTorrentFile(
             result.torrentPath,
+            destinationPath: _seedDestinationPath(),
           );
         } catch (e) {
           if (!mounted) return;

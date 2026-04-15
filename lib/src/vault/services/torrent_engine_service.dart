@@ -1198,19 +1198,24 @@ class TorrentEngineService {
     final torrent = await TorrentService.instance.getTorrentById(torrentId);
     if (torrent == null) throw StateError('Torrent not found: $torrentId');
 
+    final sourceTorrentPath = _sourceTorrentPath(torrent);
     final hasTorrentFileSource =
-        torrent.type == 'torrent_file' && _isTorrentFilePath(torrent.filePath);
+        torrent.type == 'torrent_file' && sourceTorrentPath != null;
     final managedSourceFile = await _tryGetManagedTorrentSource(torrent.id);
 
     if (hasTorrentFileSource) {
-      await _startFromFile(torrent, destinationPath: destinationPath);
+      await _startFromFile(
+        torrent,
+        sourceTorrentPath: sourceTorrentPath,
+        destinationPath: destinationPath,
+      );
     } else if (managedSourceFile != null) {
       try {
-        final synthetic = torrent.copyWith(
-          type: 'torrent_file',
-          filePath: managedSourceFile.path,
+        await _startFromFile(
+          torrent,
+          sourceTorrentPath: managedSourceFile.path,
+          destinationPath: destinationPath,
         );
-        await _startFromFile(synthetic, destinationPath: destinationPath);
       } catch (e) {
         // Managed source can be stale/corrupt after app upgrades.
         // Delete it and fall back to magnet discovery instead of hard-failing resume.
@@ -1312,11 +1317,12 @@ class TorrentEngineService {
 
   Future<void> _startFromFile(
     TorrentModel torrent, {
+    required String sourceTorrentPath,
     String? destinationPath,
   }) async {
-    if (_isTorrentFilePath(torrent.filePath)) {
+    if (_isTorrentFilePath(sourceTorrentPath)) {
       try {
-        final sourcePath = torrent.filePath!.trim();
+        final sourcePath = sourceTorrentPath.trim();
         final sourceFile = File(sourcePath);
         if (await sourceFile.exists()) {
           final bytes = await sourceFile.readAsBytes();
@@ -1329,9 +1335,9 @@ class TorrentEngineService {
 
     dt.TorrentModel dtModel;
     try {
-      dtModel = await dt.TorrentModel.parse(torrent.filePath!);
+      dtModel = await dt.TorrentModel.parse(sourceTorrentPath);
     } catch (e) {
-      final sourceFile = File(torrent.filePath!);
+      final sourceFile = File(sourceTorrentPath);
       final bytes = await sourceFile.readAsBytes();
       final decoded = _decodeTorrentBencode(bytes);
       dtModel = await _parseTorrentModelFromRawBencode(decoded);
@@ -1864,24 +1870,36 @@ class TorrentEngineService {
   }
 
   Future<dt.TorrentModel> _parseTorrentModelFromRawBencode(
-    dynamic infoDict,
+    dynamic rawMetadata,
   ) async {
-    if (infoDict is! Map) {
-      throw FormatException('Invalid metadata: expected info dictionary');
+    if (rawMetadata is! Map) {
+      throw FormatException('Invalid metadata: expected bencoded dictionary');
     }
 
-    // Normalize all map and list values; keep binary buffers in place.
-    final normalizedInfo = _normalizeBencodeMap(infoDict);
-    if (normalizedInfo is! Map<String, dynamic>) {
+    final normalizedRoot = _normalizeBencodeMap(rawMetadata);
+    if (normalizedRoot is! Map<String, dynamic>) {
       throw FormatException('Invalid metadata after normalization');
     }
 
-    _ensureInfoNameIsString(normalizedInfo);
-    _ensureAnnounceFieldsAreString(normalizedInfo);
-    _ensureFilePathsAreString(normalizedInfo);
+    final dynamic nestedInfo = normalizedRoot['info'];
+    final infoMap = nestedInfo is Map
+        ? Map<String, dynamic>.from(_normalizeBencodeMap(nestedInfo) as Map)
+        : Map<String, dynamic>.from(normalizedRoot);
 
-    _normalizePiecesField(normalizedInfo);
-    final torrentMap = <String, dynamic>{'info': normalizedInfo};
+    if (infoMap.isEmpty) {
+      throw FormatException('Invalid torrent metadata: info dictionary is empty');
+    }
+
+    _ensureInfoNameIsString(infoMap);
+    _ensureFilePathsAreString(infoMap);
+    _normalizePiecesField(infoMap);
+
+    final torrentMap = <String, dynamic>{};
+    if (nestedInfo is Map) {
+      torrentMap.addAll(normalizedRoot);
+    }
+    torrentMap['info'] = infoMap;
+    _ensureAnnounceFieldsAreString(torrentMap);
 
     return dt.TorrentParser.parseFromMap(torrentMap);
   }
@@ -3219,6 +3237,18 @@ class TorrentEngineService {
     return normalized.isNotEmpty && normalized.endsWith('.torrent');
   }
 
+  String? _sourceTorrentPath(TorrentModel torrent) {
+    final explicit = torrent.vaultLink?.trim();
+    if (_isTorrentFilePath(explicit)) {
+      return explicit;
+    }
+    final legacy = torrent.filePath?.trim();
+    if (_isTorrentFilePath(legacy)) {
+      return legacy;
+    }
+    return null;
+  }
+
   void _forceAllFilesNormalPriority(dt.TorrentTask task) {
     try {
       final files = task.metaInfo.files;
@@ -3235,7 +3265,13 @@ class TorrentEngineService {
   String? _storedDownloadDirForResume(TorrentModel torrent) {
     final path = torrent.filePath?.trim();
     if (path == null || path.isEmpty) return null;
-    if (_isTorrentFilePath(path)) return null;
+    if (_isTorrentFilePath(path)) {
+      try {
+        return File(path).parent.path;
+      } catch (_) {
+        return null;
+      }
+    }
     return path;
   }
 

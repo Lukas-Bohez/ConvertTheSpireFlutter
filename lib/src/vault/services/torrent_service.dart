@@ -1360,7 +1360,10 @@ class TorrentService {
     await downloadTorrent(id, destinationPath);
   }
 
-  Future<void> addTorrentFromTorrentFile(String path) async {
+  Future<void> addTorrentFromTorrentFile(
+    String path, {
+    String? destinationPath,
+  }) async {
     final file = File(path);
     if (!await file.exists()) {
       throw FileSystemException('Torrent file does not exist', path);
@@ -1390,6 +1393,11 @@ class TorrentService {
       0,
       (sum, entry) => sum + entry.length,
     );
+    final configuredDestination = destinationPath?.trim() ?? '';
+    final fallbackDestination = SettingsService.instance.downloadDestination.trim();
+    final effectiveDestination = configuredDestination.isNotEmpty
+        ? configuredDestination
+        : (fallbackDestination.isNotEmpty ? fallbackDestination : file.parent.path);
     final magnetLink = createMagnetLink(
       infoHash,
       torrentName,
@@ -1405,7 +1413,8 @@ class TorrentService {
       pieceLength: metadata.pieceLength,
       piecesHave: null,
       status: 'added',
-      filePath: p.normalize(path),
+      filePath: p.normalize(effectiveDestination),
+      vaultLink: p.normalize(path),
       magnetLink: magnetLink,
       bytesDown: 0,
       bytesUp: 0,
@@ -1765,7 +1774,10 @@ class TorrentService {
     final torrentFile = File(torrentFilePath);
     await torrentFile.writeAsBytes(torrentBytes, flush: true);
 
-    await addTorrentFromTorrentFile(torrentFilePath);
+    await addTorrentFromTorrentFile(
+      torrentFilePath,
+      destinationPath: baseDir.path,
+    );
   }
 }
 
