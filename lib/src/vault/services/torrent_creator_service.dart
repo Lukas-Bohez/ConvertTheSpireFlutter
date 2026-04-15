@@ -3,9 +3,11 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import 'package:b_encode_decode/b_encode_decode.dart';
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
+
+import '../bittorrent/bencode.dart';
+import '../../config/build_flags.dart';
 
 class TorrentCreationResult {
   final String torrentPath;
@@ -154,7 +156,10 @@ class TorrentCreatorService {
     final bytes = (result['bytes'] as TransferableTypedData).materialize().asUint8List();
     final pieceCount = result['pieceCount'] as int;
 
-    final outputPath = p.join(outputDirectory, '${torrentName.trim()}.torrent');
+    final outputPath = p.join(
+      outputDirectory,
+      '${_safeTorrentFileName(torrentName.trim())}.torrent',
+    );
     final outputFile = File(outputPath);
     await outputFile.writeAsBytes(bytes, flush: true);
 
@@ -167,6 +172,11 @@ class TorrentCreatorService {
       totalSize: totalSize,
     );
   }
+}
+
+String _safeTorrentFileName(String value) {
+  final sanitized = value.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_').trim();
+  return sanitized.isEmpty ? 'torrent' : sanitized;
 }
 
 Future<void> _createTorrentIsolateEntry(Map<String, Object> args) async {
@@ -257,7 +267,9 @@ Future<void> _createTorrentIsolateEntry(Map<String, Object> args) async {
 
     final metadict = <String, Object>{
       'info': info,
-      'created by': 'Vault The Spire 1.0',
+      'created by': kPlayStoreBuild
+          ? 'Bitplayer 1.0'
+          : 'Convert the Spire Reborn 1.0',
       'creation date': DateTime.now().millisecondsSinceEpoch ~/ 1000,
     };
 
@@ -269,7 +281,7 @@ Future<void> _createTorrentIsolateEntry(Map<String, Object> args) async {
       metadict['comment'] = comment.trim();
     }
 
-    final bytes = encode(metadict);
+    final bytes = bencode(metadict);
     final pieceCount = pieceHashes.toBytes().length ~/ 20;
 
     sendPort.send({

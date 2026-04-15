@@ -1974,9 +1974,35 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildQueueTab() {
     if (kPlayStoreBuild) {
-      return _buildPlayQueueTab();
+      return _buildMediaPlayerQueueTab();
     }
 
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          const Material(
+            child: TabBar(
+              tabs: [
+                Tab(text: 'Search Queue'),
+                Tab(text: 'Media Player'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildDownloadQueueTab(),
+                _buildMediaPlayerQueueTab(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDownloadQueueTab() {
     final items = widget.controller.queue;
     if (items.isEmpty) {
       return Center(
@@ -2035,7 +2061,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildPlayQueueTab() {
+  Widget _buildMediaPlayerQueueTab() {
     final playerState = context.watch<PlayerState>();
     final upNext = playerState.queueSnapshot;
     final previously = playerState.playHistorySnapshot.reversed
