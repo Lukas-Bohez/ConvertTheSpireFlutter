@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:convert_the_spire_reborn/src/state/app_controller.dart';
 import 'package:convert_the_spire_reborn/src/vault/constants.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/desktop_window.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
@@ -117,6 +119,35 @@ class _AboutScreenState extends State<AboutScreen>
     if (!_androidTorrentOnly) {
       _aiService = AiCopilotService(baseUrl: _settings.aiOllamaUrl);
       _fetchAvailableModels();
+    }
+  }
+
+  ThemeMode _themeModeFromString(String? mode) {
+    switch (mode) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
+    }
+  }
+
+  AppController? _maybeAppController() {
+    try {
+      return context.read<AppController>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final appController = _maybeAppController();
+    final mode = _themeModeFromString(appController?.settings?.themeMode);
+    if (mode != _themeMode) {
+      _themeMode = mode;
     }
   }
 
@@ -339,7 +370,12 @@ class _AboutScreenState extends State<AboutScreen>
   }
 
   Future<void> _setThemeMode(ThemeMode mode) async {
-    await ThemeService.instance.setThemeMode(mode);
+    final appController = _maybeAppController();
+    if (appController != null) {
+      await appController.setThemeMode(mode);
+    } else {
+      await ThemeService.instance.setThemeMode(mode);
+    }
     if (!mounted) return;
     setState(() {
       _themeMode = mode;
