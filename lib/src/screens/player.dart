@@ -307,7 +307,9 @@ class PlayerState with ChangeNotifier {
         _mkPlayer ??= Player();
         _mkController ??= VideoController(_mkPlayer!);
         _audioMkPlayer ??= Player();
-        _thumbPlayer ??= Player();
+        if (!Platform.isWindows) {
+          _thumbPlayer ??= Player();
+        }
       } catch (e) {
         debugPrint('media_kit init failed: $e');
       }
@@ -324,7 +326,9 @@ class PlayerState with ChangeNotifier {
   /// Fully dispose and recreate the media_kit video player and controller.
   /// Preserves play position and attempts to restore playing state.
   Future<void> safeRecreateMkPlayer() async {
-    if (!_useMediaKit) return;
+    if (!_useMediaKit || Platform.isWindows) {
+      return;
+    }
     try {
       final wasPlaying = _mkPlayer?.state.playing ?? false;
       // Use the serialized `position` tracked by PlayerState rather than
@@ -2220,6 +2224,10 @@ class _VideoPaneState extends State<_VideoPane> {
 
   void _maybeScheduleRecreate(BuildContext context, Size size) {
     if (_prevSize == null) {
+      _prevSize = size;
+      return;
+    }
+    if (Platform.isWindows) {
       _prevSize = size;
       return;
     }
