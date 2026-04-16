@@ -579,8 +579,8 @@ class _BrowserShellState extends State<BrowserShell> {
     // Build suggestion list from QuickLinksService
     final allPages = <_PageSuggestion>[];
     for (final entry in QuickLinksService.indexToTitle.entries) {
-      // Filter out hidden tabs in Play Store build
-      if (kPlayStoreBuild && !isTabVisibleInPlayStore(entry.key)) {
+      // Filter out tabs hidden by the active build policy.
+      if (!isTabVisibleInCurrentBuild(entry.key)) {
         continue;
       }
       final route = QuickLinksService.indexToRoute[entry.key];

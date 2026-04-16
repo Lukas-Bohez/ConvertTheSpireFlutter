@@ -57,12 +57,10 @@ class QuickLinksService {
 
   static List<QuickLink> get defaults {
     final allDefaults = _allDefaults();
-    if (!kPlayStoreBuild) return allDefaults;
-
-    // For Play Store build, only include links whose mapped tab is visible.
+    // Filter defaults by current build visibility policy.
     return allDefaults.where((link) {
       final idx = routeToIndex[link.route];
-      return idx != null && isTabVisibleInPlayStore(idx);
+      return idx != null && isTabVisibleInCurrentBuild(idx);
     }).toList();
   }
 
@@ -257,12 +255,10 @@ class QuickLinksService {
     }
     // Always strip retired Browser/Queue tiles (may still be in saved prefs).
     links.removeWhere((l) => _hiddenRoutes.contains(l.route));
-    if (kPlayStoreBuild) {
-      links.removeWhere((l) {
-        final idx = routeToIndex[l.route];
-        return idx == null || !isTabVisibleInPlayStore(idx);
-      });
-    }
+    links.removeWhere((l) {
+      final idx = routeToIndex[l.route];
+      return idx == null || !isTabVisibleInCurrentBuild(idx);
+    });
     return links;
   }
 

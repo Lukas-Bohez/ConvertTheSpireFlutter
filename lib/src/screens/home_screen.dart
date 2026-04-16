@@ -350,7 +350,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _navigateToPage(int index) {
     if (index < 0 || index > 14) return;
-    if (kPlayStoreBuild && !isTabVisibleInPlayStore(index)) return;
+    if (!isTabVisibleInCurrentBuild(index)) return;
     if (index == _selectedPageIndex) return;
     if (_selectedPageIndex == 14 && index != 14) {
       unawaited(widget.controller.pullVaultSettingsIntoHost());
@@ -1973,33 +1973,33 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // -- Queue tab ----------------------------------------------------------
 
   Widget _buildQueueTab() {
-    if (kPlayStoreBuild) {
-      return _buildMediaPlayerQueueTab();
-    }
-
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          const Material(
-            child: TabBar(
-              tabs: [
-                Tab(text: 'Search Queue'),
-                Tab(text: 'Media Player'),
-              ],
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
+    final queueContent = kPlayStoreBuild
+        ? _buildMediaPlayerQueueTab()
+        : DefaultTabController(
+            length: 2,
+            child: Column(
               children: [
-                _buildDownloadQueueTab(),
-                _buildMediaPlayerQueueTab(),
+                const Material(
+                  child: TabBar(
+                    tabs: [
+                      Tab(text: 'Search Queue'),
+                      Tab(text: 'Media Player'),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildDownloadQueueTab(),
+                      _buildMediaPlayerQueueTab(),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
+          );
+
+    return SafeArea(top: true, bottom: true, child: queueContent);
   }
 
   Widget _buildDownloadQueueTab() {
@@ -2041,13 +2041,19 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isCompact = constraints.maxWidth < 400;
+        final safeBottom = MediaQuery.of(context).padding.bottom;
         return Column(
           children: [
             _buildQueueHeader(
                 items, inProgressCount, completedCount, isCompact),
             Expanded(
               child: ListView.builder(
-                padding: EdgeInsets.all(isCompact ? 8 : 16),
+                padding: EdgeInsets.fromLTRB(
+                  isCompact ? 8 : 16,
+                  isCompact ? 8 : 16,
+                  isCompact ? 8 : 16,
+                  (isCompact ? 12 : 20) + safeBottom,
+                ),
                 itemCount: items.length,
                 itemBuilder: (context, index) {
                   final item = items[index];
@@ -2145,7 +2151,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.fromLTRB(
+                    12,
+                    12,
+                    12,
+                    12 + MediaQuery.of(context).padding.bottom,
+                  ),
                   itemCount: selected.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, i) {

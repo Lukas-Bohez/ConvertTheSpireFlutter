@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 const bool kPlayStoreBuild = bool.fromEnvironment(
   'PLAY_STORE_BUILD',
   defaultValue: false,
@@ -24,4 +26,18 @@ bool isTabVisibleInPlayStore(int tabIndex) {
   
   const playStoreVisibleTabs = {2, 7, 8, 11, 12, 13, 14};
   return playStoreVisibleTabs.contains(tabIndex);
+}
+
+bool isTabVisibleInCurrentBuild(int tabIndex) {
+  if (kPlayStoreBuild) {
+    return isTabVisibleInPlayStore(tabIndex);
+  }
+
+  // Convert is currently unreliable on Android and should stay hidden there
+  // to avoid dead-end UX in non-Play APK builds.
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    if (tabIndex == 9) return false;
+  }
+
+  return true;
 }
