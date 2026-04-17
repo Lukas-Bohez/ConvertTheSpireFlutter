@@ -75,4 +75,11 @@ class FullModeAccess extends ChangeNotifier {
     await prefs.setBool(_prefKey, false);
     notifyListeners();
   }
+
+  @visibleForTesting
+  void resetForTesting() {
+    _loaded = false;
+    _isUnlocked = false;
+    _unlockAttempts = 0;
+  }
 }
