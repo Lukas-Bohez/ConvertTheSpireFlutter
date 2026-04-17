@@ -2168,29 +2168,31 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     final title = (media.title == null || media.title!.trim().isEmpty)
                         ? media.path.split(RegExp(r'[\\/]')).last
                         : media.title!;
-                    return Card(
-                      margin: EdgeInsets.zero,
-                      child: ListTile(
-                        leading: Icon(
-                          media.type == MediaType.video
-                              ? Icons.videocam_outlined
-                              : Icons.music_note,
+                    return RepaintBoundary(
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        child: ListTile(
+                          leading: Icon(
+                            media.type == MediaType.video
+                                ? Icons.videocam_outlined
+                                : Icons.music_note,
+                          ),
+                          title: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            showUpNext ? 'Queued' : 'Previously played',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: const Icon(Icons.play_arrow),
+                          onTap: () {
+                            playerState.select(mediaIndex);
+                            _navigateToPage(12);
+                          },
                         ),
-                        title: Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          showUpNext ? 'Queued' : 'Previously played',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: const Icon(Icons.play_arrow),
-                        onTap: () {
-                          playerState.select(mediaIndex);
-                          _navigateToPage(12);
-                        },
                       ),
                     );
                   },
@@ -2327,18 +2329,19 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final statusColor = _getStatusColor(item.status);
     final statusIcon = _getStatusIcon(item.status);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 6),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(isCompact ? 8 : 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return RepaintBoundary(
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 6),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(isCompact ? 8 : 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Row(
               children: [
                 Icon(statusIcon, color: statusColor, size: 18),
@@ -2511,7 +2514,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
             ],
-          ],
+            ],
+          ),
         ),
       ),
     );

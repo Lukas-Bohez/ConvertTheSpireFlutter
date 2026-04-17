@@ -119,7 +119,9 @@ class _DMScreenState extends State<DMScreen> {
                       return ListTile(
                         tileColor: isMe
                             ? Theme.of(context).colorScheme.primaryContainer
-                            : Theme.of(context).colorScheme.surfaceVariant,
+                            : Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                         title: Text(
                           '${m.author} • ${m.timestamp.hour}:${m.timestamp.minute.toString().padLeft(2, '0')}',
                         ),

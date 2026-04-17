@@ -75,6 +75,9 @@ ios/.symlinks/
 *.apk.zip
 *.exe
 media_kit_test_*.apk.zip
+media_kit_test_android-*.apk.zip
+aab/*.apk
+aab/*.aab
 
 # 
 # Logs & analysis output

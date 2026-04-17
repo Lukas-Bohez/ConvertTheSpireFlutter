@@ -124,10 +124,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     itemBuilder: (context, index) {
                       final m = _messages[index];
                       final isMe = m.author.toLowerCase() == 'you';
-                      final ts = m.timestamp is DateTime
-                          ? m.timestamp as DateTime
-                          : DateTime.tryParse(m.timestamp.toString()) ??
-                                DateTime.now();
+                      final ts = m.timestamp;
                       return Align(
                         alignment: isMe
                             ? Alignment.centerRight
@@ -139,7 +136,9 @@ class _ChatScreenState extends State<ChatScreen> {
                           decoration: BoxDecoration(
                             color: isMe
                                 ? Theme.of(context).colorScheme.primaryContainer
-                                : Theme.of(context).colorScheme.surfaceVariant,
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.only(
                               topLeft: const Radius.circular(12),
                               topRight: const Radius.circular(12),

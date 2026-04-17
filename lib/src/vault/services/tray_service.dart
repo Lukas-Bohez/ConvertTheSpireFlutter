@@ -144,10 +144,6 @@ class TrayService with TrayListener, WindowListener {
     _restartPollingDebounced();
   }
 
-  static const _kWindowX = 'window_x';
-  static const _kWindowY = 'window_y';
-  static const _kWindowW = 'window_w';
-  static const _kWindowH = 'window_h';
   Timer? _geometryDebounce;
   DateTime _lastPollingRestart = DateTime.fromMillisecondsSinceEpoch(0);
 

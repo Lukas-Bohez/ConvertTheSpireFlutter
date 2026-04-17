@@ -74,6 +74,18 @@ class AppController extends ChangeNotifier {
   final List<ConvertResult> convertResults = <ConvertResult>[];
   Future<String?>? _ffmpegInstall;
   bool _downloadAllRunning = false;
+  bool _notifyPending = false;
+
+  void scheduleNotify() {
+    if (_notifyPending) return;
+    _notifyPending = true;
+    Future.microtask(() {
+      _notifyPending = false;
+      if (hasListeners) {
+        notifyListeners();
+      }
+    });
+  }
 
   AppController({
     this.webViewEnvironment,
@@ -116,7 +128,7 @@ class AppController extends ChangeNotifier {
       if (kDebugMode)
         debugPrint('NotificationService.initialize error: $e\n$st');
     }
-    notifyListeners();
+    scheduleNotify();
 
     // Restore last selected tab (if present). Only restore once during
     // controller initialization to avoid racing with manual navigation.
@@ -163,7 +175,7 @@ class AppController extends ChangeNotifier {
     // Persist asynchronously; don't await here.
     SharedPreferences.getInstance()
         .then((prefs) => prefs.setInt('last_tab', index));
-    notifyListeners();
+    scheduleNotify();
   }
 
   /// Fire-and-forget FFmpeg check at startup so it's ready before downloads.
@@ -226,7 +238,7 @@ class AppController extends ChangeNotifier {
     _settings = next;
     await settingsStore.save(next);
     await VaultSettingsBridge.pushHostSettingsToVault(next);
-    notifyListeners();
+    scheduleNotify();
   }
 
   Future<void> pushHostSettingsToVault() async {
@@ -240,7 +252,7 @@ class AppController extends ChangeNotifier {
     if (merged.downloadDirTorrents == _settings!.downloadDirTorrents) return;
     _settings = merged;
     await settingsStore.save(merged);
-    notifyListeners();
+    scheduleNotify();
   }
 
   Future<void> checkOnboardingStatus() async {
@@ -254,7 +266,7 @@ class AppController extends ChangeNotifier {
       needsOnboarding = false;
     } finally {
       onboardingChecked = true;
-      notifyListeners();
+      scheduleNotify();
     }
   }
 
@@ -280,7 +292,7 @@ class AppController extends ChangeNotifier {
       if (kDebugMode) debugPrint('refreshAll playlist check failed: $e\n$st');
     }
 
-    notifyListeners();
+    scheduleNotify();
   }
 
   /// Called by the app when the lifecycle state changes. Used to adjust
@@ -313,7 +325,7 @@ class AppController extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('onboardingSeenVersion', v);
     needsOnboarding = false;
-    notifyListeners();
+    scheduleNotify();
   }
 
   /// Update the application's theme preference and persist it.
@@ -336,12 +348,12 @@ class AppController extends ChangeNotifier {
       logs.add('Preview blocked by build policy for YouTube URL.');
       previewItems = <PreviewItem>[];
       previewLoading = false;
-      notifyListeners();
+      scheduleNotify();
       return;
     }
 
     previewLoading = true;
-    notifyListeners();
+    scheduleNotify();
     try {
       final items = await youtube.preview(
         url,
@@ -356,7 +368,7 @@ class AppController extends ChangeNotifier {
       previewItems = <PreviewItem>[];
     } finally {
       previewLoading = false;
-      notifyListeners();
+      scheduleNotify();
     }
   }
 
@@ -381,7 +393,7 @@ class AppController extends ChangeNotifier {
           videoQuality: videoQuality,
         ),
       );
-    notifyListeners();
+    scheduleNotify();
     unawaited(_saveQueue());
   }
 
@@ -390,7 +402,7 @@ class AppController extends ChangeNotifier {
     _tokens[key]?.cancel();
     queue = List<QueueItem>.from(queue)
       ..removeWhere((q) => q.url == item.url && q.format == item.format);
-    notifyListeners();
+    scheduleNotify();
     unawaited(_saveQueue());
   }
 
@@ -712,10 +724,10 @@ class AppController extends ChangeNotifier {
           ffmpegPath: ffmpegPath);
       convertResults.add(result);
       logs.add('Conversion complete: ${result.name}');
-      notifyListeners();
+      scheduleNotify();
     } catch (e) {
       logs.add('Conversion failed: $e');
-      notifyListeners();
+      scheduleNotify();
     }
   }
 
@@ -817,7 +829,7 @@ class AppController extends ChangeNotifier {
     final next = List<QueueItem>.from(queue);
     next[index] = updated;
     queue = next;
-    notifyListeners();
+    scheduleNotify();
     unawaited(_saveQueue());
   }
 
@@ -847,7 +859,7 @@ class AppController extends ChangeNotifier {
           .toList();
       if (restored.isNotEmpty) {
         queue = List<QueueItem>.from(queue)..addAll(restored);
-        notifyListeners();
+        scheduleNotify();
       }
     } catch (_) {
       // Corrupted data - remove to avoid repeated failures
@@ -1086,7 +1098,7 @@ class AppController extends ChangeNotifier {
     }
     logs.add(
         'Bulk import: $found queued, $failed failed out of ${queries.length}');
-    notifyListeners();
+    scheduleNotify();
   }
 
   /// Record a completed download in statistics and show notification.

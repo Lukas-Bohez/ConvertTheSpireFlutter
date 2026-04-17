@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:convert_the_spire_reborn/src/state/app_controller.dart';
@@ -45,6 +46,7 @@ class _AboutScreenState extends State<AboutScreen>
   bool _savingNetwork = false;
   bool _pickerBusy = false;
   ThemeMode _themeMode = ThemeMode.system;
+  String _appVersionLabel = 'Loading...';
 
   String? _androidDocumentsUriForPath(String directoryPath) {
     final normalized = directoryPath.replaceAll('\\', '/');
@@ -119,6 +121,22 @@ class _AboutScreenState extends State<AboutScreen>
     if (!_androidTorrentOnly) {
       _aiService = AiCopilotService(baseUrl: _settings.aiOllamaUrl);
       _fetchAvailableModels();
+    }
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() {
+        _appVersionLabel = '${info.version} (${info.buildNumber})';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _appVersionLabel = 'Unknown';
+      });
     }
   }
 
@@ -647,7 +665,8 @@ class _AboutScreenState extends State<AboutScreen>
                             ),
                             const SizedBox(height: 8),
                             DropdownButtonFormField<String>(
-                              value: _availableModels.contains(_selectedModel)
+                              initialValue:
+                                  _availableModels.contains(_selectedModel)
                                   ? _selectedModel
                                   : null,
                               decoration: const InputDecoration(
@@ -725,7 +744,7 @@ class _AboutScreenState extends State<AboutScreen>
               title: 'Interface',
               children: [
                 DropdownButtonFormField<ThemeMode>(
-                  value: _themeMode,
+                  initialValue: _themeMode,
                   decoration: const InputDecoration(
                     labelText: 'Theme',
                     border: OutlineInputBorder(),
@@ -850,11 +869,11 @@ class _AboutScreenState extends State<AboutScreen>
                         : 'Torrent manager with built-in AI copilot',
                   ),
                 ),
-                const ListTile(
+                ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(Icons.calendar_month),
-                  title: Text('App version'),
-                  subtitle: const Text('4.3.5'),
+                  title: const Text('App version'),
+                  subtitle: Text(_appVersionLabel),
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
