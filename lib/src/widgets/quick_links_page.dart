@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../models/search_result.dart';
 import '../services/folder_access_service.dart';
 import '../config/build_flags.dart';
+import '../config/full_mode_access.dart';
 import 'quick_download_card.dart';
 import 'quick_links_service.dart';
 
@@ -159,7 +160,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    kPlayStoreBuild
+                    FullModeAccess.instance.isLimitedPlayMode
                         ? 'Add a magnet link or torrent to get started.'
                         : 'Paste a video or playlist URL below to start downloading.',
                     style: TextStyle(

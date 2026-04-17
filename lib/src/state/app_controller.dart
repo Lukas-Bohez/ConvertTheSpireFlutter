@@ -32,10 +32,12 @@ import '../services/watched_playlist_service.dart';
 import '../services/youtube_service.dart';
 import '../services/vault_settings_bridge.dart';
 import '../config/build_flags.dart';
+import '../config/full_mode_access.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/safe_json.dart';
 
 class AppController extends ChangeNotifier {
+  static const int _limitedPlayQueueCap = 50;
   final WebViewEnvironment? webViewEnvironment;
   final SettingsStore settingsStore;
   final YouTubeService youtube;
@@ -375,6 +377,13 @@ class AppController extends ChangeNotifier {
   void addToQueue(PreviewItem item, String format,
       {String? videoQuality, String? outputFolder}) {
     if (queue.any((q) => q.url == item.url && q.format == format)) {
+      return;
+    }
+    if (FullModeAccess.instance.isLimitedPlayMode &&
+        queue.length >= _limitedPlayQueueCap) {
+      logs.add(
+        'Queue limit reached ($_limitedPlayQueueCap) in Play mode. Unlock full mode to add more.',
+      );
       return;
     }
     queue = List<QueueItem>.from(queue)
@@ -862,7 +871,13 @@ class AppController extends ChangeNotifier {
           .map((e) => QueueItem.fromJson(e as Map<String, dynamic>))
           .toList();
       if (restored.isNotEmpty) {
-        queue = List<QueueItem>.from(queue)..addAll(restored);
+        final restoredQueue = List<QueueItem>.from(queue)..addAll(restored);
+        if (FullModeAccess.instance.isLimitedPlayMode &&
+            restoredQueue.length > _limitedPlayQueueCap) {
+          queue = restoredQueue.take(_limitedPlayQueueCap).toList();
+        } else {
+          queue = restoredQueue;
+        }
         scheduleNotify();
       }
     } catch (_) {
