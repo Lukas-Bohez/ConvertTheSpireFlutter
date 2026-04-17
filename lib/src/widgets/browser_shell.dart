@@ -90,15 +90,21 @@ class _BrowserShellState extends State<BrowserShell> {
     final trimmed = value.trim();
     if (trimmed.isEmpty) return;
 
-    final unlocked = await FullModeAccess.instance.submitUnlockAttempt(trimmed);
+    final toggleState = await FullModeAccess.instance.submitUnlockAttempt(trimmed);
     if (!mounted) return;
-    if (unlocked) {
+    if (toggleState != FullModeToggleState.none) {
       try {
         final app = Provider.of<AppController>(context, listen: false);
         app.scheduleNotify();
       } catch (_) {}
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Full mode unlocked.')),
+        SnackBar(
+          content: Text(
+            toggleState == FullModeToggleState.enabled
+                ? 'Full mode unlocked.'
+                : 'Play mode restored.',
+          ),
+        ),
       );
       return;
     }
