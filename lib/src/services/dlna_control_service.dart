@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 
 import 'dlna_discovery_service.dart';
-import '../config/build_flags.dart';
 
 /// Sends UPnP/DLNA control commands (SOAP actions) to a media renderer.
 ///

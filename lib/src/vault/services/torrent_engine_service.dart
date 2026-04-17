@@ -136,7 +136,6 @@ class TorrentEngineService {
   int _peerEventsSinceLastLog = 0;
   DateTime _lastDhtLogTime = DateTime.fromMillisecondsSinceEpoch(0);
   int _dhtNodesSinceLastLog = 0;
-  bool _defaultPortsBlocked = false;
 
   int get currentDhtNodeCount {
     int nodes = 0;
@@ -175,7 +174,7 @@ class TorrentEngineService {
   Future<void> _detectRestrictedNetwork() async {
     // Port probe was producing false positives on some networks.
     // Peers are found via DHT/tracker, so do not force restrictions.
-    _defaultPortsBlocked = false;
+    return;
   }
 
   void _log(String torrentId, String message) {
@@ -186,10 +185,19 @@ class TorrentEngineService {
     }
   }
 
+  void _debugLog(String message) {
+    if (kDebugMode) {
+      debugPrint(message);
+    }
+  }
+
   void _logPeerEventThrottled(String label, dt.TorrentTask task) {
     _peerEventsSinceLastLog++;
     final now = DateTime.now();
     if (now.difference(_lastPeerLogTime).inSeconds >= 10) {
+      _debugLog(
+        '[TorrentPeer] $label: $_peerEventsSinceLastLog event(s) in last 10s',
+      );
       _peerEventsSinceLastLog = 0;
       _lastPeerLogTime = now;
     }
@@ -199,6 +207,7 @@ class TorrentEngineService {
     _dhtNodesSinceLastLog++;
     final now = DateTime.now();
     if (now.difference(_lastDhtLogTime).inSeconds >= 10) {
+      _debugLog('[TorrentDht] $_dhtNodesSinceLastLog node event(s) in last 10s');
       _dhtNodesSinceLastLog = 0;
       _lastDhtLogTime = now;
     }
@@ -292,7 +301,7 @@ class TorrentEngineService {
   Future<void> _mapPorts(dt.TorrentTask task) async {
     // This package version does not expose setPort/UPnP/NAT-PMP mutators.
     // Allow the task to bind ports internally instead of spamming NoSuchMethod.
-    _defaultPortsBlocked = true;
+    return;
   }
 
   void _addDhtBootstrapNodes(dt.TorrentTask task) {
@@ -393,7 +402,7 @@ class TorrentEngineService {
             force: force,
           );
           if (trackers.isEmpty) {
-            debugPrint('[Trackers] No eligible trackers found for $torrentId');
+            _debugLog('[Trackers] No eligible trackers found for $torrentId');
             return;
           }
 
@@ -410,7 +419,7 @@ class TorrentEngineService {
               torrentId,
               'WARNING: Could not extract announce info-hash for $torrentId. Info-hash mismatch may prevent tracker peers from being returned. Try redownloading to fix the stored torrent ID.',
             );
-            debugPrint(
+            _debugLog(
               '[Trackers] Could not extract infoHash for $torrentId (runtimeType=$runtimeType)',
             );
             return;
@@ -435,7 +444,7 @@ class TorrentEngineService {
             ),
           );
         } catch (e) {
-          debugPrint('[Trackers] _announceTrackers error: $e');
+          _debugLog('[Trackers] _announceTrackers error: $e');
         }
       }),
     );
@@ -460,7 +469,7 @@ class TorrentEngineService {
       } catch (e) {
         final msg = 'Announce URL attempt $attempt failed: $url $e';
         if (effectiveTorrentId.isNotEmpty) _log(effectiveTorrentId, msg);
-        debugPrint('[Trackers] $msg');
+        _debugLog('[Trackers] $msg');
         if (attempt < retries) {
           await Future.delayed(delay);
         }
@@ -469,7 +478,7 @@ class TorrentEngineService {
     _markTrackerAnnounceFailure(effectiveTorrentId, url);
     final finalMsg = 'All announce attempts failed for $url';
     if (effectiveTorrentId.isNotEmpty) _log(effectiveTorrentId, finalMsg);
-    debugPrint('[Trackers] $finalMsg');
+    _debugLog('[Trackers] $finalMsg');
     throw StateError(finalMsg);
   }
 
@@ -532,10 +541,10 @@ class TorrentEngineService {
     if (task != null) {
       try {
         await (task as dynamic).startAnnounceUrl(uri, infoHash);
-        debugPrint('Announced tracker via dtorrent_task_v2 for $uri');
+        _debugLog('Announced tracker via dtorrent_task_v2 for $uri');
       } catch (e, st) {
-        debugPrint('dtorrent_task_v2 announceTrackerUri failed for $uri: $e');
-        debugPrint(st.toString());
+        _debugLog('dtorrent_task_v2 announceTrackerUri failed for $uri: $e');
+        _debugLog(st.toString());
         rethrow;
       }
     } else {
@@ -607,23 +616,8 @@ class TorrentEngineService {
     return buf.toString();
   }
 
-  bool _looksLikeIPv4(String address) {
-    final parts = address.split('.');
-    if (parts.length != 4) return false;
-    for (final p in parts) {
-      final value = int.tryParse(p);
-      if (value == null || value < 0 || value > 255) return false;
-    }
-    return true;
-  }
-
-  List<int>? _ipv4ToBytes(String address) {
-    if (!_looksLikeIPv4(address)) return null;
-    return address.split('.').map((e) => int.parse(e)).toList();
-  }
-
   Future<void> _refreshConnection(String torrentId, dt.TorrentTask task) async {
-    debugPrint(
+    _debugLog(
       'Refreshing connection for $torrentId: reannounce trackers and DHT bootstrap',
     );
     _log(torrentId, 'Triggered force refresh.');
@@ -639,7 +633,7 @@ class TorrentEngineService {
       } catch (_) {
         runtimeType = 'unknown';
       }
-      debugPrint(
+      _debugLog(
         '[HealthCheck] Unsupported infoHash type for $torrentId: $runtimeType',
       );
     }
@@ -688,8 +682,8 @@ class TorrentEngineService {
         }
       }
     } catch (e, st) {
-      debugPrint('Re-bootstrap DHT nodes failed: $e');
-      debugPrint(st.toString());
+      _debugLog('Re-bootstrap DHT nodes failed: $e');
+      _debugLog(st.toString());
     }
   }
 
@@ -2099,7 +2093,6 @@ class TorrentEngineService {
   bool _hasAllPiecesComplete(dt.TorrentTask task) {
     try {
       final dynamic t = task;
-      final fileComplete = (t.fileManager?.isAllComplete as bool?) ?? false;
       final piecesMap = t.pieceManager?.pieces as Map?;
       if (piecesMap == null || piecesMap.isEmpty) {
         // Never trust an empty piece map as complete; this can happen with
@@ -2145,24 +2138,6 @@ class TorrentEngineService {
     }
   }
 
-  Future<bool> _verifyCompletionIntegrity(
-    String torrentId,
-    dt.TorrentTask task,
-  ) async {
-    await _forceStateRecovery(torrentId, task);
-    final complete = _hasAllPiecesComplete(task);
-    if (!complete) {
-      _log(
-        torrentId,
-        'Completion check failed after recovery: missing/corrupt pieces detected. Resuming download.',
-      );
-      _requestMissingPieces(task);
-      _ensureTaskRunningMode(torrentId, task);
-      return false;
-    }
-    return true;
-  }
-
   void _wireEvents(String torrentId, dt.TorrentTask task) {
     task.createListener()
       ..on<dt.StateFileUpdated>((_) {
@@ -2172,7 +2147,7 @@ class TorrentEngineService {
       ..on<dt.TaskCompleted>((_) async {
         _emitStats(torrentId, task);
         try {
-          final dynamic fm = (task as dynamic).fileManager;
+          final dynamic fm = task.fileManager;
           if (fm != null) {
             final files = fm.files as List? ?? [];
             for (final file in files) {
@@ -2230,8 +2205,7 @@ class TorrentEngineService {
 
       // Run full disk validation. If pieces are missing/corrupt, the recovery path
       // will push the torrent back to downloading and request missing pieces.
-      final fileManagerComplete =
-          (task.fileManager?.isAllComplete as bool?) ?? false;
+      final fileManagerComplete = task.fileManager?.isAllComplete ?? false;
       _log(
         torrentId,
         'Deferred completion check: fileManager.isAllComplete=$fileManagerComplete; running disk validation',
@@ -2548,20 +2522,6 @@ class TorrentEngineService {
     ]).catchError((_) => ProcessResult(0, 1, '', ''));
   }
 
-  /// Scan a directory and hide any .bt.state files found there.
-  Future<void> _hideStateFilesInDir(String dirPath) async {
-    if (!Platform.isWindows) return;
-    try {
-      final dir = Directory(dirPath);
-      if (!await dir.exists()) return;
-      await for (final entity in dir.list(recursive: false)) {
-        if (entity is File && entity.path.toLowerCase().endsWith('.bt.state')) {
-          markFileHiddenOnWindows(entity.path);
-        }
-      }
-    } catch (_) {}
-  }
-
   Future<void> _forceStateRecovery(
     String torrentId,
     dt.TorrentTask task,
@@ -2777,37 +2737,6 @@ class TorrentEngineService {
     }
   }
 
-  Future<void> _deleteBtStateFiles(
-    String directoryPath,
-    String torrentId,
-  ) async {
-    final dir = Directory(directoryPath);
-    if (!await dir.exists()) return;
-    final hash = torrentId.trim().toLowerCase();
-    if (hash.isEmpty) return;
-
-    final candidates = <FileSystemEntity>[];
-    await for (final entity in dir.list(recursive: false, followLinks: false)) {
-      if (entity is! File) continue;
-      final name = p.basename(entity.path).toLowerCase();
-      final isState = name == '$hash.bt.state';
-      final isBackup =
-          name.startsWith('$hash.bt.state.backup.') ||
-          name.startsWith('$hash.bt.state.bak');
-      if (isState || isBackup) {
-        candidates.add(entity);
-      }
-    }
-
-    for (final entity in candidates) {
-      try {
-        await entity.delete();
-      } catch (_) {
-        // Best-effort cleanup only.
-      }
-    }
-  }
-
   Future<void> _hideBtStateFilesOnWindows(
     String directoryPath, {
     String? torrentId,
@@ -2848,43 +2777,11 @@ class TorrentEngineService {
         .trim();
   }
 
-  Future<String> _createIsolatedRedownloadDir(
-    String baseDir,
-    String torrentName,
-  ) async {
-    final safeName = _sanitizePathSegment(torrentName);
-    final suffix = DateTime.now().millisecondsSinceEpoch;
-    final folderName = safeName.isEmpty
-        ? 'redownload_$suffix'
-        : '${safeName}_redownload_$suffix';
-    final dir = Directory(p.join(baseDir, folderName));
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dir.path;
-  }
-
   bool _isPathInside(String candidatePath, String baseDir) {
     final base = p.normalize(p.absolute(baseDir));
     final candidate = p.normalize(p.absolute(candidatePath));
     return candidate == base ||
         candidate.startsWith('$base${Platform.pathSeparator}');
-  }
-
-  Future<bool> _deletePathIfExists(String targetPath) async {
-    final type = await FileSystemEntity.type(targetPath, followLinks: false);
-    if (type == FileSystemEntityType.notFound) return false;
-    try {
-      if (type == FileSystemEntityType.directory) {
-        await Directory(targetPath).delete(recursive: true);
-      } else {
-        await File(targetPath).delete();
-      }
-      return true;
-    } catch (e) {
-      debugPrint('forceRedownload: delete failed for $targetPath: $e');
-      return false;
-    }
   }
 
   bool _isFileInUseError(Object error) {
@@ -3483,23 +3380,6 @@ class TorrentEngineService {
     for (final id in ids) {
       await stopTorrent(id);
     }
-  }
-
-  Future<String> _defaultDownloadDir() async {
-    final configured = SettingsService.instance.downloadDestination.trim();
-    if (configured.isNotEmpty) {
-      final configuredDir = Directory(configured);
-      if (!await configuredDir.exists()) {
-        await configuredDir.create(recursive: true);
-      }
-      return configuredDir.path;
-    }
-    final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory(
-      '${docs.path}${Platform.pathSeparator}TorrentSpireAI',
-    );
-    if (!await dir.exists()) await dir.create(recursive: true);
-    return dir.path;
   }
 
   Future<File> _managedTorrentSourceFile(String torrentId) async {
