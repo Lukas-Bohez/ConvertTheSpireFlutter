@@ -4,6 +4,7 @@ import 'package:convert_the_spire_reborn/src/vault/services/search_service.dart'
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 
 class TorrentContextService extends ChangeNotifier {
+  bool _notifyPending = false;
   String currentQuery = '';
   String category = 'All';
   SearchResult? selectedResult;
@@ -14,17 +15,17 @@ class TorrentContextService extends ChangeNotifier {
 
   void updateQuery(String value) {
     currentQuery = value;
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void updateCategory(String value) {
     category = value;
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void updateSelected(SearchResult? result) {
     selectedResult = result;
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void updateTorrents(List<TorrentModel> all) {
@@ -39,13 +40,24 @@ class TorrentContextService extends ChangeNotifier {
       final status = (t.status ?? '').toLowerCase();
       return status.contains('complete');
     }).toList();
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void updateRuntimeStatus(TorrentEngineStatus status) {
     if (status.torrentId.isEmpty) return;
     _runtimeStatusById[status.torrentId] = status;
-    notifyListeners();
+    _scheduleNotify();
+  }
+
+  void _scheduleNotify() {
+    if (_notifyPending) return;
+    _notifyPending = true;
+    Future.microtask(() {
+      _notifyPending = false;
+      if (hasListeners) {
+        notifyListeners();
+      }
+    });
   }
 
   String getContext() {

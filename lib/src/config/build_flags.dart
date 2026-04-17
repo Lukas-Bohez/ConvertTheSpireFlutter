@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'full_mode_access.dart';
+
 const bool kPlayStoreBuild = bool.fromEnvironment(
   'PLAY_STORE_BUILD',
   defaultValue: false,
@@ -23,13 +25,13 @@ String getDefaultDownloadFolderName() =>
 // 3 (Queue), 4 (hidden tools), 5 (Bulk Import), 9 (Convert), 10 (Logs)
 bool isTabVisibleInPlayStore(int tabIndex) {
   if (!kPlayStoreBuild) return true;
-  
+
   const playStoreVisibleTabs = {2, 7, 8, 11, 12, 13, 14};
   return playStoreVisibleTabs.contains(tabIndex);
 }
 
 bool isTabVisibleInCurrentBuild(int tabIndex) {
-  if (kPlayStoreBuild) {
+  if (FullModeAccess.instance.isLimitedPlayMode) {
     return isTabVisibleInPlayStore(tabIndex);
   }
 

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../screens/player.dart' show PlayerState;
 import '../state/app_controller.dart';
 import '../config/build_flags.dart';
+import '../config/full_mode_access.dart';
 
 import 'quick_links_service.dart';
 
@@ -84,10 +85,23 @@ class _BrowserShellState extends State<BrowserShell> {
     });
   }
 
-  void _submitUrl(String value) {
+  Future<void> _submitUrl(String value) async {
     setState(() => _isEditing = false);
     final trimmed = value.trim();
     if (trimmed.isEmpty) return;
+
+    final unlocked = await FullModeAccess.instance.submitUnlockAttempt(trimmed);
+    if (!mounted) return;
+    if (unlocked) {
+      try {
+        final app = Provider.of<AppController>(context, listen: false);
+        app.scheduleNotify();
+      } catch (_) {}
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Full mode unlocked.')),
+      );
+      return;
+    }
 
     final lower = trimmed.toLowerCase();
 

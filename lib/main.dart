@@ -12,6 +12,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'src/config/build_flags.dart';
+import 'src/config/full_mode_access.dart';
 
 import 'src/app.dart';
 import 'src/services/yt_dlp_update_controller.dart';
@@ -133,6 +134,8 @@ Future<void> main() async {
         await windowManager.setPreventClose(true);
       } catch (_) {}
     }
+
+    await FullModeAccess.instance.load();
 
     runApp(MyApp(
       mediaKitInitError: mediaKitError,

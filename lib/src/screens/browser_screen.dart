@@ -16,7 +16,7 @@ import '../browser/cast/cast_service.dart';
 import '../browser/cast/unified_cast_service.dart';
 import '../browser/tabs/tab_manager.dart';
 import '../browser/video/video_detector_service.dart';
-import '../config/build_flags.dart';
+import '../config/full_mode_access.dart';
 import '../data/browser_db.dart';
 import '../services/download_service.dart';
 import '../models/search_result.dart';
@@ -767,6 +767,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final isLimitedPlayMode = FullModeAccess.instance.isLimitedPlayMode;
     final isIncognito = _tabManager.activeTab?.isIncognito ?? false;
     final viewPadding = MediaQuery.of(context).viewPadding;
 
@@ -802,8 +803,8 @@ class _BrowserScreenState extends State<BrowserScreen>
                   onReleaseWebViewFocus: () => FocusScope.of(context).unfocus(),
                   onTabs: _showTabSwitcher,
                   tabCount: _tabManager.tabCount,
-                    onDownload: kPlayStoreBuild ? null : _addCurrentToQueue,
-                    downloadEnabled: !kPlayStoreBuild && !_showNewTabPage &&
+                    onDownload: isLimitedPlayMode ? null : _addCurrentToQueue,
+                    downloadEnabled: !isLimitedPlayMode && !_showNewTabPage &&
                       _addressController.text.trim().isNotEmpty,
                   isKnownDifficultSite: DownloadService.isDifficultSite(
                       _addressController.text.trim()),
@@ -886,7 +887,7 @@ class _BrowserScreenState extends State<BrowserScreen>
               ),
 
             // -- Extract & Download FAB for difficult sites --
-            if (!kPlayStoreBuild && !_showNewTabPage &&
+            if (!isLimitedPlayMode && !_showNewTabPage &&
                 DownloadService.isDifficultSite(_addressController.text))
               Positioned(
                 bottom: viewPadding.bottom + 72,
@@ -1086,7 +1087,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       return;
     }
     if (action == 'download') {
-      if (kPlayStoreBuild) return;
+      if (FullModeAccess.instance.isLimitedPlayMode) return;
       _addCurrentToQueue();
       return;
     }
