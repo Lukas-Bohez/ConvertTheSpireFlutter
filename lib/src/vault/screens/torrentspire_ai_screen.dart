@@ -260,15 +260,6 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
     final value = query.trim();
     if (value.isEmpty) return;
 
-    final unlocked = await FullModeAccess.instance.submitUnlockAttempt(value);
-    if (unlocked && mounted) {
-      setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Full mode unlocked.')),
-      );
-      return;
-    }
-
     if (value.toLowerCase().startsWith('magnet:?xt=')) {
       if (_reachedPlayModeTorrentCap()) {
         _showPlayModeCapMessage();

@@ -3,8 +3,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const bool _kPlayStoreBuild = bool.fromEnvironment(
   'PLAY_STORE_BUILD',
-  defaultValue: false,
+  defaultValue: true,
 );
+
+enum FullModeToggleState {
+  none,
+  enabled,
+  disabled,
+}
 
 class FullModeAccess extends ChangeNotifier {
   FullModeAccess._();
@@ -14,7 +20,7 @@ class FullModeAccess extends ChangeNotifier {
   static const String _prefKey = 'full_mode_unlocked';
   static final String _unlockCode = String.fromCharCodes(
     <int>[70, 117, 108, 108],
-  );
+  ).toLowerCase();
 
   bool _loaded = false;
   bool _isUnlocked = false;
@@ -32,27 +38,41 @@ class FullModeAccess extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> submitUnlockAttempt(String input) async {
-    if (!_kPlayStoreBuild || _isUnlocked) return false;
+  Future<FullModeToggleState> submitUnlockAttempt(String input) async {
+    if (!_kPlayStoreBuild) return FullModeToggleState.none;
 
-    if (input == _unlockCode) {
+    if (input.trim().toLowerCase() == _unlockCode) {
       _unlockAttempts += 1;
       if (_unlockAttempts >= 3) {
-        await _activateFullMode();
+        final wasUnlocked = _isUnlocked;
+        if (wasUnlocked) {
+          await _deactivateFullMode();
+        } else {
+          await _activateFullMode();
+        }
         _unlockAttempts = 0;
-        return true;
+        return wasUnlocked
+            ? FullModeToggleState.disabled
+            : FullModeToggleState.enabled;
       }
-      return false;
+      return FullModeToggleState.none;
     }
 
     _unlockAttempts = 0;
-    return false;
+    return FullModeToggleState.none;
   }
 
   Future<void> _activateFullMode() async {
     _isUnlocked = true;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_prefKey, true);
+    notifyListeners();
+  }
+
+  Future<void> _deactivateFullMode() async {
+    _isUnlocked = false;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefKey, false);
     notifyListeners();
   }
 }

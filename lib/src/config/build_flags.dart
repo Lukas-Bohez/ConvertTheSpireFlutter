@@ -4,7 +4,7 @@ import 'full_mode_access.dart';
 
 const bool kPlayStoreBuild = bool.fromEnvironment(
   'PLAY_STORE_BUILD',
-  defaultValue: false,
+  defaultValue: true,
 );
 
 const bool kYouTubeConversionEnabled = bool.fromEnvironment(
