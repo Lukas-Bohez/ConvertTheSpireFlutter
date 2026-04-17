@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
+import '../../utils/safe_json.dart';
+
 class AiChatChunk {
   final String content;
   final bool done;
@@ -73,7 +75,7 @@ class AiCopilotService {
     await for (final line in stream) {
       if (line.trim().isEmpty) continue;
       try {
-        final parsed = jsonDecode(line);
+        final parsed = safeJsonDecode<Map<String, dynamic>>(line);
         if (parsed is Map<String, dynamic>) {
           yield parsed;
         }
@@ -98,7 +100,7 @@ class AiCopilotService {
         .transform(const LineSplitter())
         .where((line) => line.trim().isNotEmpty)
         .map((line) {
-          final map = jsonDecode(line);
+          final map = safeJsonDecode<Map<String, dynamic>>(line);
           if (map is Map<String, dynamic>) {
             final done = map['done'] == true;
             final message = map['message'] as Map<String, dynamic>?;
@@ -124,7 +126,7 @@ class AiCopilotService {
         .transform(const LineSplitter())
         .where((line) => line.trim().isNotEmpty)
         .map((line) {
-          final map = jsonDecode(line);
+          final map = safeJsonDecode<Map<String, dynamic>>(line);
           if (map is Map<String, dynamic>) {
             final message = map['message'] as Map<String, dynamic>?;
             return (message?['content'] as String?) ?? '';

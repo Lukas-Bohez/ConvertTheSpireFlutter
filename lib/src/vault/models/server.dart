@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:convert_the_spire_reborn/src/utils/safe_json.dart';
+
 class ServerModel {
   final String id;
   final String name;
@@ -27,7 +29,7 @@ class ServerModel {
 
   factory ServerModel.fromMap(Map<String, dynamic> map) {
     final channelJson = map['channels'] as String? ?? '[]';
-    final channelList = (jsonDecode(channelJson) as List<dynamic>)
+    final channelList = (safeJsonDecode<List<dynamic>>(channelJson) ?? const [])
         .map((e) => ChannelModel.fromMap(Map<String, dynamic>.from(e)))
         .toList();
 

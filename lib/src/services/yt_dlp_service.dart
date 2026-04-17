@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:http/http.dart' as http;
 
 import 'platform_dirs.dart';
+import '../utils/safe_json.dart';
 
 /// Service for downloading media using yt-dlp, the industry-standard
 /// YouTube/media downloader that handles throttling, rate-limiting, and
@@ -71,12 +72,10 @@ class YtDlpService {
       await process.stderr.drain();
       final exitCode = await process.exitCode;
       if (exitCode != 0) return null;
-      try {
-        final json = jsonDecode(output);
-        if (json is Map<String, dynamic> && json.containsKey('filesize_approx')) {
-          return json['filesize_approx'] as int?;
-        }
-      } catch (_) {}
+      final json = safeJsonDecode<Map<String, dynamic>>(output);
+      if (json != null && json.containsKey('filesize_approx')) {
+        return json['filesize_approx'] as int?;
+      }
       return null;
     }
   static final _progressRegex = RegExp(r'\[download\]\s+(\d+\.?\d*)%.*?of.*?(\d+\.?\d*\s*\w+B).*?at\s*([\d\.]+\s*\w+/s).*?ETA\s*(\d+:\d+)');

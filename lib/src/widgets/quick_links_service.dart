@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/build_flags.dart';
+import '../utils/safe_json.dart';
 
 /// A single quick-link tile shown on the home/new-tab page.
 class QuickLink {
@@ -238,28 +239,29 @@ class QuickLinksService {
   static const _hiddenRoutes = {'queue.tab'};
 
   static Future<List<QuickLink>> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_key);
-    List<QuickLink> links;
-    if (json == null) {
-      links = List.of(defaults);
-    } else {
-      try {
-        final list = jsonDecode(json) as List;
-        links = list
-            .map((e) => QuickLink.fromJson(e as Map<String, dynamic>))
-            .toList();
-      } catch (_) {
-        links = List.of(defaults);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final json = prefs.getString(_key);
+      if (json == null || json.trim().isEmpty) {
+        return List.of(defaults);
       }
+      final list = safeJsonDecode<List<dynamic>>(json);
+      if (list == null) {
+        await prefs.remove(_key);
+        return List.of(defaults);
+      }
+      final links = list
+          .map((e) => QuickLink.fromJson(e as Map<String, dynamic>))
+          .toList();
+      links.removeWhere((l) => _hiddenRoutes.contains(l.route));
+      links.removeWhere((l) {
+        final idx = routeToIndex[l.route];
+        return idx == null || !isTabVisibleInCurrentBuild(idx);
+      });
+      return links;
+    } catch (_) {
+      return List.of(defaults);
     }
-    // Always strip retired Browser/Queue tiles (may still be in saved prefs).
-    links.removeWhere((l) => _hiddenRoutes.contains(l.route));
-    links.removeWhere((l) {
-      final idx = routeToIndex[l.route];
-      return idx == null || !isTabVisibleInCurrentBuild(idx);
-    });
-    return links;
   }
 
   static Future<void> save(List<QuickLink> links) async {

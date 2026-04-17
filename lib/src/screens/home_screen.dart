@@ -4448,6 +4448,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // -- Logs tab -----------------------------------------------------------
 
   Widget _buildLogsTab() {
+    if (_selectedPageIndex != 10) {
+      return const SizedBox.shrink();
+    }
     return ValueListenableBuilder<List<String>>(
       valueListenable: widget.controller.logs.logs,
       builder: (context, logs, _) {

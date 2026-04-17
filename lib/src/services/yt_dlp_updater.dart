@@ -1,10 +1,11 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+import '../utils/safe_json.dart';
 
 /// Simple updater for the `yt-dlp` binary.
 ///
@@ -22,7 +23,7 @@ class YtDlpUpdater {
     try {
       final r = await http.get(Uri.parse(_githubLatest));
       if (r.statusCode != 200) return null;
-      return jsonDecode(r.body) as Map<String, dynamic>;
+      return safeJsonDecode<Map<String, dynamic>>(r.body);
     } catch (e) {
       print('yt-dlp: fetchLatestRelease failed: $e');
       return null;
