@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:uuid/uuid.dart';
 import 'package:convert_the_spire_reborn/src/vault/db/server_dao.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/server.dart';
+import '../../utils/safe_json.dart';
 
 class ServerService {
   ServerService._();
@@ -85,7 +86,8 @@ class ServerService {
       if (!invite.startsWith('{')) {
         jsonString = utf8.decode(base64Url.decode(invite));
       }
-      final data = jsonDecode(jsonString) as Map<String, dynamic>;
+      final data = safeJsonDecode<Map<String, dynamic>>(jsonString);
+      if (data == null) return null;
       final id = data['id'] as String?;
       if (id == null || id.isEmpty) return null;
       return ServerModel(

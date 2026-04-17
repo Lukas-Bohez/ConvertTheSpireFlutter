@@ -1,10 +1,9 @@
-import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
 
 import '../models/search_result.dart';
+import '../utils/safe_json.dart';
 
 // --─ YouTube searcher --------------------------------------------------------
 
@@ -56,7 +55,8 @@ class SoundCloudSearcher {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode != 200) return [];
 
-      final data = jsonDecode(response.body);
+      final data = safeJsonDecode<Map<String, dynamic>>(response.body);
+      if (data == null) return [];
       final collection = data['collection'] as List? ?? [];
 
       return collection.map<SearchResult>((track) {

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../models/app_settings.dart';
 import 'platform_dirs.dart';
+import '../utils/safe_json.dart';
 
 class SettingsStore {
   static const String _fileName = 'config.json';
@@ -79,7 +80,10 @@ class SettingsStore {
     if (kIsWeb) {
       if (_webSettingsJson != null) {
         try {
-          final json = jsonDecode(_webSettingsJson!) as Map<String, dynamic>;
+          final json = safeJsonDecode<Map<String, dynamic>>(_webSettingsJson!);
+          if (json == null) {
+            return AppSettings.defaults(downloadDir: fallbackDir);
+          }
           return AppSettings.fromJson(json, fallbackDownloadDir: fallbackDir);
         } catch (_) {}
       }
@@ -92,7 +96,13 @@ class SettingsStore {
     }
     try {
       final raw = await file.readAsString();
-      final json = jsonDecode(raw) as Map<String, dynamic>;
+      if (raw.trim().isEmpty) {
+        return AppSettings.defaults(downloadDir: fallbackDir);
+      }
+      final json = safeJsonDecode<Map<String, dynamic>>(raw);
+      if (json == null) {
+        return AppSettings.defaults(downloadDir: fallbackDir);
+      }
       return AppSettings.fromJson(json, fallbackDownloadDir: fallbackDir);
     } catch (_) {
       return AppSettings.defaults(downloadDir: fallbackDir);

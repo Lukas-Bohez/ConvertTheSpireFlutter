@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:convert_the_spire_reborn/src/utils/safe_json.dart';
+
 class ChatMessage {
   final String id;
   final String serverId;
@@ -50,8 +52,9 @@ class ChatMessage {
           : null,
       replyToMessageId: map['reply_to'] as String?,
       reactions: map['reactions'] != null
-          ? (jsonDecode(map['reactions'] as String) as Map<String, dynamic>)
-                .map((k, v) => MapEntry(k, v as int))
+          ? (safeJsonDecode<Map<String, dynamic>>(map['reactions'] as String) ??
+          const <String, dynamic>{})
+          .map((k, v) => MapEntry(k, v as int))
           : {},
     );
   }

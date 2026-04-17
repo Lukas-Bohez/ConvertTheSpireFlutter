@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/track_metadata.dart';
+import '../utils/safe_json.dart';
 
 // --─ MusicBrainz metadata fetcher --------------------------------------------
 
@@ -43,7 +44,8 @@ class MusicBrainzService {
       });
       if (response.statusCode != 200) return null;
 
-      final data = jsonDecode(response.body);
+      final data = safeJsonDecode<Map<String, dynamic>>(response.body);
+      if (data == null) return null;
       final recordings = data['recordings'] as List? ?? [];
       if (recordings.isEmpty) return null;
 
@@ -108,7 +110,8 @@ class MusicBrainzService {
         }).timeout(const Duration(seconds: 10));
       });
       if (response.statusCode != 200) return null;
-      final data = jsonDecode(response.body);
+      final data = safeJsonDecode<Map<String, dynamic>>(response.body);
+      if (data == null) return null;
       final genres = data['genres'] as List?;
       if (genres == null || genres.isEmpty) return null;
       final g = genres.first['name'];
@@ -212,7 +215,8 @@ class LyricsService {
       });
       if (response.statusCode != 200) return null;
 
-      final data = jsonDecode(response.body);
+      final data = safeJsonDecode<Map<String, dynamic>>(response.body);
+      if (data == null) return null;
       final synced = data['syncedLyrics'] as String?;
       final result = (synced != null && synced.isNotEmpty)
           ? synced

@@ -54,11 +54,13 @@ class BulkImportService {
     }
 
     final text = await file.readAsString();
+    if (text.trim().isEmpty) return [];
     return parseText(text);
   }
 
   Future<List<String>> _importCSV(File file) async {
     final text = await file.readAsString();
+    if (text.trim().isEmpty) return [];
     final rows = _parseCsv(text);
     final queries = <String>[];
     for (final row in rows) {

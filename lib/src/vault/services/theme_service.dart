@@ -12,16 +12,21 @@ class ThemeService extends ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
 
   Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getString(_kThemeMode);
-    if (stored == 'dark') {
-      _themeMode = ThemeMode.dark;
-    } else if (stored == 'system') {
-      _themeMode = ThemeMode.system;
-    } else {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString(_kThemeMode);
+      if (stored == 'dark') {
+        _themeMode = ThemeMode.dark;
+      } else if (stored == 'system') {
+        _themeMode = ThemeMode.system;
+      } else {
+        _themeMode = ThemeMode.light;
+      }
+      notifyListeners();
+    } catch (_) {
       _themeMode = ThemeMode.light;
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {

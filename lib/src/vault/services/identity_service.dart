@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:convert_the_spire_reborn/src/vault/crypto/identity.dart';
+import '../../utils/safe_json.dart';
 
 class IdentityService {
   IdentityService._();
@@ -19,7 +20,11 @@ class IdentityService {
     final raw = await _secureStorage.read(key: _kIdentityKey);
     if (raw != null && raw.isNotEmpty) {
       try {
-        final data = jsonDecode(raw) as Map<String, dynamic>;
+        final data = safeJsonDecode<Map<String, dynamic>>(raw);
+        if (data == null) {
+          await _generateAndSaveIdentity();
+          return;
+        }
         _identity = Identity.fromJson(data);
         return;
       } catch (_) {
@@ -61,7 +66,10 @@ class IdentityService {
   }
 
   Future<void> importIdentity(String jsonString) async {
-    final data = jsonDecode(jsonString) as Map<String, dynamic>;
+    final data = safeJsonDecode<Map<String, dynamic>>(jsonString);
+    if (data == null) {
+      throw const FormatException('Invalid identity JSON');
+    }
     final identity = Identity.fromJson(data);
     _identity = identity;
     await _secureStorage.write(

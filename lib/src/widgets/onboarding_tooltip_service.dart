@@ -20,9 +20,16 @@ class OnboardingTooltipService {
   int get step => _step;
 
   Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
-    _step = _prefs!.getInt(_stepKey) ?? 0;
-    _visitedScreens = (_prefs!.getStringList(_visitedScreensKey) ?? []).toSet();
+    try {
+      _prefs = await SharedPreferences.getInstance();
+      _step = _prefs!.getInt(_stepKey) ?? 0;
+      _visitedScreens =
+          (_prefs!.getStringList(_visitedScreensKey) ?? []).toSet();
+    } catch (_) {
+      _prefs = null;
+      _step = 0;
+      _visitedScreens = {};
+    }
   }
 
   Future<void> advanceTo(int newStep) async {

@@ -33,6 +33,7 @@ import '../services/youtube_service.dart';
 import '../services/vault_settings_bridge.dart';
 import '../config/build_flags.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/safe_json.dart';
 
 class AppController extends ChangeNotifier {
   final WebViewEnvironment? webViewEnvironment;
@@ -165,7 +166,7 @@ class AppController extends ChangeNotifier {
     watchedPlaylistService.startAutoCheck(interval: const Duration(hours: 4));
   }
 
-  /// Programmatic tab switch. Persists preference and notifies listeners.
+  /// Programmatic tab switch. Persists preference and updates the active index.
   void switchToTab(int index) {
     if (index < 0 || index > 14) return;
     if (index == _activeTabIndex) return;
@@ -175,7 +176,6 @@ class AppController extends ChangeNotifier {
     // Persist asynchronously; don't await here.
     SharedPreferences.getInstance()
         .then((prefs) => prefs.setInt('last_tab', index));
-    scheduleNotify();
   }
 
   /// Fire-and-forget FFmpeg check at startup so it's ready before downloads.
@@ -852,8 +852,12 @@ class AppController extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_queueKey);
-      if (raw == null) return;
-      final list = jsonDecode(raw) as List<dynamic>;
+      if (raw == null || raw.trim().isEmpty) return;
+      final list = safeJsonDecode<List<dynamic>>(raw);
+      if (list == null) {
+        await prefs.remove(_queueKey);
+        return;
+      }
       final restored = list
           .map((e) => QueueItem.fromJson(e as Map<String, dynamic>))
           .toList();
