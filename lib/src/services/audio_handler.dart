@@ -51,6 +51,7 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> updateMediaItem(MediaItem item) async {
     mediaItem.add(item);
+    playbackState.add(_transformEvent(_player.playbackEvent));
   }
 
   @override
