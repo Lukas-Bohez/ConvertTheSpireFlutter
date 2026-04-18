@@ -244,7 +244,7 @@ class PlayerState with ChangeNotifier {
   // Enable media_kit on desktop platforms (including Windows) because it
   // provides stable playback support; we avoid using its thumbnail screenshot
   // feature on Windows to prevent crashes.
-  final bool _useMediaKit = kIsWeb || !Platform.isAndroid;
+  final bool _useMediaKit = kIsWeb || (!Platform.isAndroid && !Platform.isWindows);
   Player? _mkPlayer;
   VideoController? _mkController;
   // Dedicated media_kit player for audio-only playback on desktop so that
@@ -277,7 +277,7 @@ class PlayerState with ChangeNotifier {
       _initMkPlayers();
     }
 
-    if (!_useMediaKit && Platform.isAndroid) {
+    if (!_useMediaKit && !kIsWeb && (Platform.isAndroid || Platform.isWindows)) {
       _audio ??= AudioPlayer();
     }
 
@@ -289,7 +289,7 @@ class PlayerState with ChangeNotifier {
     // BUG 3/4 FIX: route all callbacks through _scheduleNotify so they always
     // execute on the platform thread. Only create the just_audio player on Android
     // where media_kit is not used.
-    if (!_useMediaKit && Platform.isAndroid) {
+    if (!_useMediaKit && !kIsWeb && (Platform.isAndroid || Platform.isWindows)) {
       _audio ??= AudioPlayer();
       _subs.add(_audio!.positionStream.listen((pos) {
         if (_disposed || currentItem?.type != MediaType.audio) return;

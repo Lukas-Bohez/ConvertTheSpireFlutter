@@ -39,6 +39,8 @@ env:
   FLUTTER_VERSION: '3.41.2'
   APP_NAME: convert_the_spire_reborn
   OUTPUT_NAME: ConvertTheSpireReborn
+  ANDROID_APK_NAME: ConvertTheSpireReborn.apk
+  ANDROID_AAB_NAME: zaab.aab
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 # ---------------------------------------------------------------------------
@@ -345,8 +347,8 @@ jobs:
       - name: Collect Android artifacts
         run: |
           mkdir -p android-builds
-          cp build/app/outputs/flutter-apk/app-full-release.apk android-builds/VaultTheSpire-full.apk
-          cp build/app/outputs/bundle/playRelease/app-play-release.aab android-builds/Bitplayer-play.aab
+          cp build/app/outputs/flutter-apk/app-full-release.apk android-builds/${{ env.ANDROID_APK_NAME }}
+          cp build/app/outputs/bundle/playRelease/app-play-release.aab android-builds/${{ env.ANDROID_AAB_NAME }}
 
       - uses: actions/upload-artifact@v5
         with:
@@ -413,5 +415,6 @@ jobs:
             artifacts/windows-x64/*.zip
             artifacts/linux-x64/*
             artifacts/macos-x64/*.zip
-            artifacts/android-builds/*
+            artifacts/android-builds/${{ env.ANDROID_APK_NAME }}
+            artifacts/android-builds/${{ env.ANDROID_AAB_NAME }}
             SHA256SUMS.txt
