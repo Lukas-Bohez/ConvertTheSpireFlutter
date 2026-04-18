@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 
 import '../models/search_result.dart';
+import '../config/full_mode_access.dart';
 import '../services/multi_source_search_service.dart';
 import '../services/preview_player_service.dart';
 import '../state/app_controller.dart';
@@ -193,6 +194,7 @@ class _SearchScreenState extends State<SearchScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    context.watch<FullModeAccess>();
     return Column(
       children: [
         Padding(
