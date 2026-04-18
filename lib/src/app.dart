@@ -46,6 +46,7 @@ import 'vault/vault_bootstrap.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'data/browser_db.dart';
 import 'config/build_flags.dart';
+import 'config/full_mode_access.dart';
 
 class MyApp extends StatefulWidget {
   final String? mediaKitInitError;
@@ -407,8 +408,14 @@ class _MyAppState extends State<MyApp>
 
   @override
   Widget build(BuildContext context) {
+    final listenables = <Listenable>[FullModeAccess.instance];
+    final controller = _controller;
+    if (controller != null) {
+      listenables.add(controller);
+    }
+
     return AnimatedBuilder(
-      animation: _controller ?? Listenable.merge([]),
+      animation: Listenable.merge(listenables),
       builder: (context, _) {
         final themeMode = _resolveThemeMode(_controller?.settings?.themeMode);
         final lightScheme = ColorScheme.fromSeed(seedColor: Colors.deepPurple);
