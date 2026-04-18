@@ -84,5 +84,23 @@ void main() {
       expect(isYouTubeConversionEnabledInCurrentBuild, isFalse);
       expect(isTabVisibleInCurrentBuild(9), isFalse);
     });
+
+    test('branding switches to full title when play build is unlocked', () async {
+      SharedPreferences.setMockInitialValues({});
+      final access = FullModeAccess.instance;
+      access.resetForTesting();
+      await access.load();
+
+      expect(getAppTitle(), isNot(contains('Convert the Spire Reborn')));
+
+      await access.submitUnlockAttempt('full');
+      await access.submitUnlockAttempt('full');
+      await access.submitUnlockAttempt('full');
+
+      expect(access.isLimitedPlayMode, isFalse);
+      expect(getAppTitle(), 'Convert the Spire Reborn');
+      expect(getAppSubtitle(), 'Torrent manager & media toolkit');
+      expect(getDefaultDownloadFolderName(), 'ConvertTheSpireReborn');
+    });
   });
 }

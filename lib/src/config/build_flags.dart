@@ -12,11 +12,16 @@ bool get isYouTubeConversionEnabledInCurrentBuild {
   return !FullModeAccess.instance.isLimitedPlayMode;
 }
 
+bool get _isLimitedBrandingMode =>
+  kPlayStoreBuild && FullModeAccess.instance.isLimitedPlayMode;
+
 // App branding
-String getAppTitle() => kPlayStoreBuild ? 'Bitplayer' : 'Convert Spire Reborn';
-String getAppSubtitle() => kPlayStoreBuild ? 'Torrent vault & media hub' : 'Torrent manager & media toolkit';
+String getAppTitle() =>
+  _isLimitedBrandingMode ? 'Bitplayer' : 'Convert the Spire Reborn';
+String getAppSubtitle() =>
+  _isLimitedBrandingMode ? 'Torrent vault & media hub' : 'Torrent manager & media toolkit';
 String getDefaultDownloadFolderName() =>
-  kPlayStoreBuild ? 'Bitplayer' : 'ConvertTheSpireReborn';
+  _isLimitedBrandingMode ? 'Bitplayer' : 'ConvertTheSpireReborn';
 
 // Tab visibility control for PLAY_STORE_BUILD
 // In Play Store, only these tabs are shown: 2 (Browser), 7 (Settings),
