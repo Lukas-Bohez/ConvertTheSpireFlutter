@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../models/search_result.dart';
 import '../services/folder_access_service.dart';
@@ -102,6 +103,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<FullModeAccess>();
     final cs = Theme.of(context).colorScheme;
     final width = MediaQuery.of(context).size.width;
     final crossAxisCount = width < 500

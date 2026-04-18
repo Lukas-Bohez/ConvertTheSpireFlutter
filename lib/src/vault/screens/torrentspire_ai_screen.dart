@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:convert_the_spire_reborn/src/config/full_mode_access.dart';
 import 'package:convert_the_spire_reborn/src/vault/constants.dart';
@@ -820,6 +821,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
 
   @override
   Widget build(BuildContext context) {
+    context.watch<FullModeAccess>();
     final isNarrow = MediaQuery.of(context).size.width < 900;
 
     final torrentPane = _buildTorrentPane(context);
