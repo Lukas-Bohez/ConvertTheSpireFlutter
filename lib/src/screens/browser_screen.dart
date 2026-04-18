@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:provider/provider.dart';
 import '../utils/screenshot_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
@@ -767,7 +768,8 @@ class _BrowserScreenState extends State<BrowserScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final isLimitedPlayMode = FullModeAccess.instance.isLimitedPlayMode;
+    final fullMode = context.watch<FullModeAccess>();
+    final isLimitedPlayMode = fullMode.isLimitedPlayMode;
     final isIncognito = _tabManager.activeTab?.isIncognito ?? false;
     final viewPadding = MediaQuery.of(context).viewPadding;
 

@@ -586,6 +586,7 @@ class _MyAppState extends State<MyApp>
         } else {
           contentChild = MultiProvider(
             providers: [
+              ChangeNotifierProvider.value(value: FullModeAccess.instance),
               ChangeNotifierProvider(create: (_) => PlayerState(prefs)),
               ChangeNotifierProvider.value(value: controller),
             ],

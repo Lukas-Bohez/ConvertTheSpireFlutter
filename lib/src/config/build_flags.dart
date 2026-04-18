@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'full_mode_access.dart';
 
 const bool kPlayStoreBuild = bool.fromEnvironment(
@@ -29,6 +31,10 @@ bool isTabVisibleInPlayStore(int tabIndex) {
 }
 
 bool isTabVisibleInCurrentBuild(int tabIndex) {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android && tabIndex == 9) {
+    return false;
+  }
+
   if (FullModeAccess.instance.isLimitedPlayMode) {
     return isTabVisibleInPlayStore(tabIndex);
   }

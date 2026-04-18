@@ -78,6 +78,7 @@ class AppController extends ChangeNotifier {
   Future<String?>? _ffmpegInstall;
   bool _downloadAllRunning = false;
   bool _notifyPending = false;
+  late final VoidCallback _fullModeListener;
 
   void scheduleNotify() {
     if (_notifyPending) return;
@@ -108,7 +109,14 @@ class AppController extends ChangeNotifier {
     required this.fileOrganizationService,
     required this.statisticsService,
     required this.notificationService,
-  });
+  }) {
+    _fullModeListener = _handleFullModeChanged;
+    FullModeAccess.instance.addListener(_fullModeListener);
+  }
+
+  void _handleFullModeChanged() {
+    scheduleNotify();
+  }
 
   Future<void> init() async {
     _settings = await settingsStore.load();
@@ -1141,6 +1149,7 @@ class AppController extends ChangeNotifier {
 
   @override
   void dispose() {
+    FullModeAccess.instance.removeListener(_fullModeListener);
     watchedPlaylistService.dispose();
     previewPlayer.dispose();
     try {

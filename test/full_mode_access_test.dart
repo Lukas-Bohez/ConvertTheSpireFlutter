@@ -73,7 +73,7 @@ void main() {
 
       expect(access.isLimitedPlayMode, isFalse);
       expect(isYouTubeConversionEnabledInCurrentBuild, isTrue);
-      expect(isTabVisibleInCurrentBuild(9), isTrue);
+      expect(isTabVisibleInCurrentBuild(9), isFalse);
 
       await access.submitUnlockAttempt('full');
       await access.submitUnlockAttempt('full');

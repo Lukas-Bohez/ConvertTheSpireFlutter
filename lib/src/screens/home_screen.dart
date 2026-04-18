@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 
 import '../config/build_flags.dart';
+import '../config/full_mode_access.dart';
 
 import '../models/app_settings.dart';
 import '../models/preview_item.dart';
@@ -425,6 +426,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, _) {
+        context.watch<FullModeAccess>();
         final settings = widget.controller.settings;
         if (settings != null && !_settingsInitialized) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
