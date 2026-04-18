@@ -1,6 +1,7 @@
 // ignore_for_file: unused_element, deprecated_member_use
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
@@ -23,6 +24,7 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:video_player/video_player.dart';
 import '../services/platform_dirs.dart';
 import '../services/audio_handler.dart';
+import '../services/background_media_update_guard.dart';
 import '../services/ffmpeg_service.dart';
 import '../utils/snack.dart';
 import '../utils/lock.dart';
@@ -236,15 +238,19 @@ class PlayerState with ChangeNotifier {
   AudioPlayer? _audio;
   AppAudioHandler? _audioHandler;
   MediaItem? _pendingNotificationItem;
+  final BackgroundMediaUpdateGuard _notificationGuard =
+      BackgroundMediaUpdateGuard();
+
+  // 1x1 transparent PNG to force Android media notifications to replace
+  // stale artwork when the current item has no thumbnail yet.
+  static final Uint8List _transparentArtPng = base64Decode(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8QXWQAAAAASUVORK5CYII=',
+  );
 
   // -- Video --
-  // Enable media_kit on desktop platforms except Windows because the
-  // Windows build has proven unstable for bulk thumbnail/video operations.
-  // Windows will use just_audio/VideoPlayer instead.
-  // Enable media_kit on desktop platforms (including Windows) because it
-  // provides stable playback support; we avoid using its thumbnail screenshot
-  // feature on Windows to prevent crashes.
-  final bool _useMediaKit = kIsWeb || (!Platform.isAndroid && !Platform.isWindows);
+  // Keep Windows on media_kit for playback. Windows remains excluded from
+  // thumbnail screenshot generation elsewhere to avoid native instability.
+  final bool _useMediaKit = kIsWeb || !Platform.isAndroid;
   Player? _mkPlayer;
   VideoController? _mkController;
   // Dedicated media_kit player for audio-only playback on desktop so that
@@ -277,7 +283,7 @@ class PlayerState with ChangeNotifier {
       _initMkPlayers();
     }
 
-    if (!_useMediaKit && !kIsWeb && (Platform.isAndroid || Platform.isWindows)) {
+    if (!_useMediaKit && !kIsWeb && Platform.isAndroid) {
       _audio ??= AudioPlayer();
     }
 
@@ -289,7 +295,7 @@ class PlayerState with ChangeNotifier {
     // BUG 3/4 FIX: route all callbacks through _scheduleNotify so they always
     // execute on the platform thread. Only create the just_audio player on Android
     // where media_kit is not used.
-    if (!_useMediaKit && !kIsWeb && (Platform.isAndroid || Platform.isWindows)) {
+    if (!_useMediaKit && !kIsWeb && Platform.isAndroid) {
       _audio ??= AudioPlayer();
       _subs.add(_audio!.positionStream.listen((pos) {
         if (_disposed || currentItem?.type != MediaType.audio) return;
@@ -1864,20 +1870,21 @@ class PlayerState with ChangeNotifier {
       _audioHandler!.onSkipToPrevious = () => previous(only: activeTabFilter);
       final pending = _pendingNotificationItem;
       if (pending != null) {
-        _pendingNotificationItem = null;
-        unawaited(_pushMediaNotification(pending));
+        _updateMediaNotification(pending);
       }
     }
   }
 
   void _updateMediaNotification(MediaItem item) {
     _pendingNotificationItem = item;
+    final sequence = _notificationGuard.nextToken();
     if (_audioHandler == null) return;
-    unawaited(_pushMediaNotification(item));
+    unawaited(_pushMediaNotification(item, sequence));
   }
 
-  Future<void> _pushMediaNotification(MediaItem item) async {
+  Future<void> _pushMediaNotification(MediaItem item, int sequence) async {
     if (_audioHandler == null) return;
+    if (!_notificationGuard.isCurrent(sequence)) return;
 
     Uint8List? thumb = item.thumbnailData;
     if ((thumb == null || thumb.isEmpty) && item.path.isNotEmpty) {
@@ -1885,17 +1892,25 @@ class PlayerState with ChangeNotifier {
         thumb = await _loadThumbFromCache(item.path);
       } catch (_) {}
     }
+    if (!_notificationGuard.isCurrent(sequence)) return;
 
     Uri? artUri;
-    if (thumb != null && thumb.isNotEmpty) {
-      try {
-        final cacheDir = await getTemporaryDirectory();
-        final artFile = File(
-          '${cacheDir.path}${Platform.pathSeparator}now_playing_art.png',
-        );
-        await artFile.writeAsBytes(thumb, flush: true);
-        artUri = artFile.uri;
-      } catch (_) {}
+    try {
+      final cacheDir = await getTemporaryDirectory();
+      final artFile = File(
+        '${cacheDir.path}${Platform.pathSeparator}now_playing_art_$sequence.png',
+      );
+      await artFile.writeAsBytes(
+        (thumb != null && thumb.isNotEmpty) ? thumb : _transparentArtPng,
+        flush: true,
+      );
+      artUri = artFile.uri;
+    } catch (_) {}
+    if (!_notificationGuard.isCurrent(sequence)) return;
+
+    final current = currentItem;
+    if (current == null || current.path != item.path) {
+      return;
     }
 
     await _audioHandler!.updateMediaItem(
