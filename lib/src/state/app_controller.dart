@@ -346,7 +346,7 @@ class AppController extends ChangeNotifier {
     if (_settings == null) {
       return;
     }
-    if (!kYouTubeConversionEnabled && _isYouTubeUrl(url)) {
+    if (!isYouTubeConversionEnabledInCurrentBuild && _isYouTubeUrl(url)) {
       logs.add('Preview blocked by build policy for YouTube URL.');
       previewItems = <PreviewItem>[];
       previewLoading = false;
@@ -424,7 +424,7 @@ class AppController extends ChangeNotifier {
     // Resolve title if it's still a raw URL (user downloaded without preview)
     // Only attempt YouTube metadata fetch for YouTube URLs
     final isYouTube = _isYouTubeUrl(item.url);
-    if (!kYouTubeConversionEnabled && isYouTube) {
+    if (!isYouTubeConversionEnabledInCurrentBuild && isYouTube) {
       _updateQueue(
         item,
         item.copyWith(
@@ -1035,7 +1035,7 @@ class AppController extends ChangeNotifier {
   Future<List<models.SearchResult>> multiSearch(String query) async {
     try {
       final results = await searchService.searchAll(query);
-      final filtered = kYouTubeConversionEnabled
+        final filtered = isYouTubeConversionEnabledInCurrentBuild
           ? results
           : results.where((r) => r.source.toLowerCase() != 'youtube').toList();
       logs.add('Search found ${filtered.length} results for "$query"');
@@ -1072,7 +1072,7 @@ class AppController extends ChangeNotifier {
     final url =
         isGeneric ? result.id : 'https://www.youtube.com/watch?v=${result.id}';
 
-    if (!kYouTubeConversionEnabled && _isYouTubeUrl(url)) {
+    if (!isYouTubeConversionEnabledInCurrentBuild && _isYouTubeUrl(url)) {
       logs.add('Skipping YouTube queue add due to Play Store build policy.');
       return;
     }
@@ -1094,7 +1094,7 @@ class AppController extends ChangeNotifier {
 
   /// Bulk import: parses queries and adds each best match to the queue.
   Future<void> processBulkImport(List<String> queries, {String? format}) async {
-    if (!kYouTubeConversionEnabled) {
+    if (!isYouTubeConversionEnabledInCurrentBuild) {
       logs.add('Bulk import disabled: YouTube conversion is off in this build.');
       return;
     }

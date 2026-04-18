@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 import 'full_mode_access.dart';
 
 const bool kPlayStoreBuild = bool.fromEnvironment(
@@ -7,10 +5,10 @@ const bool kPlayStoreBuild = bool.fromEnvironment(
   defaultValue: true,
 );
 
-const bool kYouTubeConversionEnabled = bool.fromEnvironment(
-  'ENABLE_YOUTUBE_CONVERSION',
-  defaultValue: !kPlayStoreBuild,
-);
+bool get isYouTubeConversionEnabledInCurrentBuild {
+  if (!kPlayStoreBuild) return true;
+  return !FullModeAccess.instance.isLimitedPlayMode;
+}
 
 // App branding
 String getAppTitle() => kPlayStoreBuild ? 'Bitplayer' : 'Convert Spire Reborn';
@@ -33,12 +31,6 @@ bool isTabVisibleInPlayStore(int tabIndex) {
 bool isTabVisibleInCurrentBuild(int tabIndex) {
   if (FullModeAccess.instance.isLimitedPlayMode) {
     return isTabVisibleInPlayStore(tabIndex);
-  }
-
-  // Convert is currently unreliable on Android and should stay hidden there
-  // to avoid dead-end UX in non-Play APK builds.
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-    if (tabIndex == 9) return false;
   }
 
   return true;
