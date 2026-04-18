@@ -897,7 +897,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildSearchTab(AppSettings? settings) {
     final isNarrow = _isNarrowLayout(context);
-    final youtubeEnabled = kYouTubeConversionEnabled;
+    final youtubeEnabled = isYouTubeConversionEnabledInCurrentBuild;
 
     // Keep the top search row pinned while the rest of the UI scrolls.
     final searchHeader = Padding(
@@ -1474,7 +1474,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _downloadUrl(AppSettings settings) {
-    if (!kYouTubeConversionEnabled) {
+    if (!isYouTubeConversionEnabledInCurrentBuild) {
       Snack.show(
         context,
         'YouTube conversion is disabled in this build.',
@@ -1510,7 +1510,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _onSearch() {
-    if (!kYouTubeConversionEnabled) {
+    if (!isYouTubeConversionEnabledInCurrentBuild) {
       Snack.show(
         context,
         'YouTube conversion is disabled in this build.',

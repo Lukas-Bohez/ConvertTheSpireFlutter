@@ -235,6 +235,7 @@ class PlayerState with ChangeNotifier {
   // -- Audio --
   AudioPlayer? _audio;
   AppAudioHandler? _audioHandler;
+  MediaItem? _pendingNotificationItem;
 
   // -- Video --
   // Enable media_kit on desktop platforms except Windows because the
@@ -928,6 +929,9 @@ class PlayerState with ChangeNotifier {
             duration: dur,
           );
           if (_favourites.contains(path)) _favouriteCache[path] = library[index];
+          if (index == currentIndex) {
+            _updateMediaNotification(library[index]);
+          }
           notifyListeners();
         }
       }
@@ -1858,17 +1862,51 @@ class PlayerState with ChangeNotifier {
     if (_audioHandler != null) {
       _audioHandler!.onSkipToNext = () => next(only: activeTabFilter);
       _audioHandler!.onSkipToPrevious = () => previous(only: activeTabFilter);
+      final pending = _pendingNotificationItem;
+      if (pending != null) {
+        _pendingNotificationItem = null;
+        unawaited(_pushMediaNotification(pending));
+      }
     }
   }
 
   void _updateMediaNotification(MediaItem item) {
+    _pendingNotificationItem = item;
     if (_audioHandler == null) return;
-    _audioHandler!.updateMediaItem(audio_svc.MediaItem(
-      id: item.path,
-      title: item.title ?? p.basenameWithoutExtension(item.path),
-      artist: item.artist ?? '',
-      duration: duration,
-    ));
+    unawaited(_pushMediaNotification(item));
+  }
+
+  Future<void> _pushMediaNotification(MediaItem item) async {
+    if (_audioHandler == null) return;
+
+    Uint8List? thumb = item.thumbnailData;
+    if ((thumb == null || thumb.isEmpty) && item.path.isNotEmpty) {
+      try {
+        thumb = await _loadThumbFromCache(item.path);
+      } catch (_) {}
+    }
+
+    Uri? artUri;
+    if (thumb != null && thumb.isNotEmpty) {
+      try {
+        final cacheDir = await getTemporaryDirectory();
+        final artFile = File(
+          '${cacheDir.path}${Platform.pathSeparator}now_playing_art.png',
+        );
+        await artFile.writeAsBytes(thumb, flush: true);
+        artUri = artFile.uri;
+      } catch (_) {}
+    }
+
+    await _audioHandler!.updateMediaItem(
+      audio_svc.MediaItem(
+        id: item.path,
+        title: item.title ?? p.basenameWithoutExtension(item.path),
+        artist: item.artist ?? '',
+        duration: item.duration ?? duration,
+        artUri: artUri,
+      ),
+    );
   }
 
   // --- Directory watcher ----------------------------------------------------
