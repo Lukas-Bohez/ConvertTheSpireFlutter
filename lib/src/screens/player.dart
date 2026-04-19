@@ -283,7 +283,7 @@ class PlayerState with ChangeNotifier {
       _initMkPlayers();
     }
 
-    if (!kIsWeb && (Platform.isAndroid || Platform.isWindows)) {
+    if (!kIsWeb && Platform.isAndroid) {
       _audio ??= AudioPlayer();
     }
 
@@ -295,7 +295,7 @@ class PlayerState with ChangeNotifier {
     // BUG 3/4 FIX: route all callbacks through _scheduleNotify so they always
     // execute on the platform thread. Only create the just_audio player on Android
     // where media_kit is not used.
-    if (!kIsWeb && (Platform.isAndroid || Platform.isWindows)) {
+    if (!kIsWeb && Platform.isAndroid) {
       _audio ??= AudioPlayer();
       _subs.add(_audio!.positionStream.listen((pos) {
         if (_disposed || currentItem?.type != MediaType.audio) return;
@@ -1028,6 +1028,10 @@ class PlayerState with ChangeNotifier {
     if (_disposed) return;
     if (targetIndex < 0 || targetIndex >= library.length) return;
 
+    // Reset any in-flight slider interaction when switching tracks to avoid
+    // stale debounce seeks leaking into the newly selected item.
+    _resetSeekInteractionState();
+
     // BUG 1 FIX: abort if a newer select() has been called.
     if (generation != _loadGeneration) {
       debugPrint('_loadCurrent: stale generation $generation (current: $_loadGeneration), aborting');
@@ -1503,6 +1507,15 @@ class PlayerState with ChangeNotifier {
     });
   }
 
+  void _resetSeekInteractionState() {
+    _seekDebounceTimer?.cancel();
+    _seekDebounceTimer = null;
+    _isSeeking = false;
+    _seekPreviewPosition = null;
+    _pendingSeekTarget = null;
+    _emitPositionUiState();
+  }
+
   void beginSeekInteraction() {
     if (_disposed) return;
     _isSeeking = true;
@@ -1535,6 +1548,12 @@ class PlayerState with ChangeNotifier {
     if (target != null) {
       await seek(target);
     }
+    // Always clear seek UI state explicitly. When paused, some backends may
+    // not emit a position stream event after seek, leaving the slider "stuck".
+    _isSeeking = false;
+    _seekPreviewPosition = null;
+    _pendingSeekTarget = null;
+    _emitPositionUiState();
   }
 
   Future<void> next({MediaType? only}) async {
@@ -2278,6 +2297,10 @@ class PlayerState with ChangeNotifier {
   /// id/index-based indirection so taps reliably play the exact file.
   Future<void> playFileDirect(String path) async {
     if (_disposed) return;
+
+    // Prevent pending debounce seeks from a previously selected track from
+    // being applied after direct file selection.
+    _resetSeekInteractionState();
 
     // Try to find a library index for UI bookkeeping; not required to play.
     final idx = library.indexWhere((m) => m.path == path);
@@ -3401,64 +3424,21 @@ class _AllTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final audio = state.audioEntries.where((e) => matchFn(e.value)).toList();
-    final video = state.videoEntries.where((e) => matchFn(e.value)).toList();
+    final scope = state.folderItemCount > 0 ? state.folderItemCount : state.library.length;
+    final filtered = state.library
+        .asMap()
+        .entries
+        .where((e) => e.key < scope && matchFn(e.value))
+        .toList();
 
-    if (audio.isEmpty && video.isEmpty) {
+    if (filtered.isEmpty) {
       return _EmptyHint(message: state.library.isEmpty
           ? 'Your library is empty.\nTap the folder icon to open a folder or download media.'
           : 'No results for this search.');
     }
 
-    // Use a CustomScrollView with Slivers so grids are the primary scrollable
-    // and only visible items are built.
-    return CustomScrollView(
-      controller: scrollCtl,
-      slivers: [
-        if (audio.isNotEmpty) ...[
-          SliverToBoxAdapter(child: _SectionHeader(text: 'Songs - ${audio.length}')),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            sliver: SliverGrid(
-              delegate: SliverChildBuilderDelegate(
-                (ctx, i) {
-                  final entry = audio[i];
-                  return _MediaCard(entry: entry, state: state, onTap: onTap);
-                },
-                childCount: audio.length,
-              ),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: MediaQuery.of(context).size.width < 500 ? 2 : (MediaQuery.of(context).size.width < 900 ? 3 : 5),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.78,
-              ),
-            ),
-          ),
-        ],
-        if (video.isNotEmpty) ...[
-          SliverToBoxAdapter(child: _SectionHeader(text: 'Videos - ${video.length}')),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            sliver: SliverGrid(
-              delegate: SliverChildBuilderDelegate(
-                (ctx, i) {
-                  final entry = video[i];
-                  return _MediaCard(entry: entry, state: state, onTap: onTap);
-                },
-                childCount: video.length,
-              ),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: MediaQuery.of(context).size.width < 500 ? 2 : (MediaQuery.of(context).size.width < 900 ? 3 : 5),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.78,
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
+    // Keep visual parity with Songs/Videos/Fav by reusing the same grid widget.
+    return _MediaGrid(entries: filtered, state: state, onTap: onTap);
   }
 }
 
