@@ -5,7 +5,7 @@ from PIL import Image
 
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
-    src = root / "assets" / "icons" / "bitplayer-source-1024.png"
+    src = root / "assets" / "icons" / "app_icon.ico"
     img = Image.open(src).convert("RGBA")
 
     legacy_sizes = {

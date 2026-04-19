@@ -152,13 +152,17 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                         size: 56, color: cs.primary),
                   ),
                   const SizedBox(height: 18),
-                  Text(
-                    getAppTitle(),
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.3,
-                          color: cs.onSurface,
-                        ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      getAppTitle(),
+                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.3,
+                            color: cs.onSurface,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
