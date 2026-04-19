@@ -6,101 +6,57 @@ import 'package:convert_the_spire_reborn/src/config/full_mode_access.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('FullModeAccess secret toggle', () {
-    test('starts in play mode, toggles on after 3x full, then toggles off after 3x full', () async {
+  group('FullModeAccess fixed mode', () {
+    test('play build remains limited and unlock attempts are ignored', () async {
       SharedPreferences.setMockInitialValues({});
       final access = FullModeAccess.instance;
       access.resetForTesting();
 
       await access.load();
-      expect(access.isLimitedPlayMode, isTrue);
-      expect(access.isUnlocked, isFalse);
+      expect(access.isLimitedPlayMode, equals(kPlayStoreBuild));
+      expect(access.isUnlocked, equals(!kPlayStoreBuild));
 
       expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
       expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
-      expect(await access.submitUnlockAttempt('full'), FullModeToggleState.enabled);
-
-      expect(access.isUnlocked, isTrue);
-      expect(access.isLimitedPlayMode, isFalse);
-
-      // Simulate app restart and verify persisted unlocked state.
-      access.resetForTesting();
-      await access.load();
-      expect(access.isUnlocked, isTrue);
-      expect(access.isLimitedPlayMode, isFalse);
-
       expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
-      expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
-      expect(await access.submitUnlockAttempt('full'), FullModeToggleState.disabled);
-
-      expect(access.isUnlocked, isFalse);
-      expect(access.isLimitedPlayMode, isTrue);
-
-      // Simulate another restart and verify persisted locked state.
-      access.resetForTesting();
-      await access.load();
-      expect(access.isUnlocked, isFalse);
-      expect(access.isLimitedPlayMode, isTrue);
+      expect(access.isUnlocked, equals(!kPlayStoreBuild));
+      expect(access.isLimitedPlayMode, equals(kPlayStoreBuild));
     });
 
-    test('resets streak when input is not full', () async {
+    test('unlock attempts never affect build feature gates', () async {
       SharedPreferences.setMockInitialValues({});
       final access = FullModeAccess.instance;
       access.resetForTesting();
       await access.load();
+
+      expect(isYouTubeConversionEnabledInCurrentBuild, equals(!kPlayStoreBuild));
+      expect(isTabVisibleInCurrentBuild(9), isFalse);
 
       expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
       expect(await access.submitUnlockAttempt('notfull'), FullModeToggleState.none);
       expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
       expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
-      expect(await access.submitUnlockAttempt('full'), FullModeToggleState.enabled);
+      expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
+      expect(access.isLimitedPlayMode, equals(kPlayStoreBuild));
+      expect(isYouTubeConversionEnabledInCurrentBuild, equals(!kPlayStoreBuild));
+      expect(isTabVisibleInCurrentBuild(9), isFalse);
     });
 
-    test('full toggle enables and disables conversion features', () async {
+    test('branding follows fixed build mode', () async {
       SharedPreferences.setMockInitialValues({});
       final access = FullModeAccess.instance;
       access.resetForTesting();
       await access.load();
 
-      expect(access.isLimitedPlayMode, isTrue);
-      expect(isYouTubeConversionEnabledInCurrentBuild, isFalse);
-      expect(isTabVisibleInCurrentBuild(9), isFalse);
-
-      await access.submitUnlockAttempt('full');
-      await access.submitUnlockAttempt('full');
-      final enableState = await access.submitUnlockAttempt('full');
-      expect(enableState, FullModeToggleState.enabled);
-
-      expect(access.isLimitedPlayMode, isFalse);
-      expect(isYouTubeConversionEnabledInCurrentBuild, isTrue);
-      expect(isTabVisibleInCurrentBuild(9), isFalse);
-
-      await access.submitUnlockAttempt('full');
-      await access.submitUnlockAttempt('full');
-      final disableState = await access.submitUnlockAttempt('full');
-      expect(disableState, FullModeToggleState.disabled);
-
-      expect(access.isLimitedPlayMode, isTrue);
-      expect(isYouTubeConversionEnabledInCurrentBuild, isFalse);
-      expect(isTabVisibleInCurrentBuild(9), isFalse);
-    });
-
-    test('branding switches to full title when play build is unlocked', () async {
-      SharedPreferences.setMockInitialValues({});
-      final access = FullModeAccess.instance;
-      access.resetForTesting();
-      await access.load();
-
-      expect(getAppTitle(), isNot(contains('Convert the Spire Reborn')));
-
-      await access.submitUnlockAttempt('full');
-      await access.submitUnlockAttempt('full');
-      await access.submitUnlockAttempt('full');
-
-      expect(access.isLimitedPlayMode, isFalse);
-      expect(getAppTitle(), 'Convert the Spire Reborn');
-      expect(getAppSubtitle(), 'Torrent manager & media toolkit');
-      expect(getDefaultDownloadFolderName(), 'ConvertTheSpireReborn');
+      if (kPlayStoreBuild) {
+        expect(getAppTitle(), 'Bitplayer');
+        expect(getAppSubtitle(), 'Torrent vault & media hub');
+        expect(getDefaultDownloadFolderName(), 'Bitplayer');
+      } else {
+        expect(getAppTitle(), 'Convert the Spire Reborn');
+        expect(getAppSubtitle(), 'Torrent manager & media toolkit');
+        expect(getDefaultDownloadFolderName(), 'ConvertTheSpireReborn');
+      }
     });
   });
 }

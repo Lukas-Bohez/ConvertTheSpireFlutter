@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../screens/player.dart' show PlayerState;
 import '../state/app_controller.dart';
 import '../config/build_flags.dart';
-import '../config/full_mode_access.dart';
 
 import 'quick_links_service.dart';
 
@@ -89,25 +88,6 @@ class _BrowserShellState extends State<BrowserShell> {
     setState(() => _isEditing = false);
     final trimmed = value.trim();
     if (trimmed.isEmpty) return;
-
-    final toggleState = await FullModeAccess.instance.submitUnlockAttempt(trimmed);
-    if (!mounted) return;
-    if (toggleState != FullModeToggleState.none) {
-      try {
-        final app = Provider.of<AppController>(context, listen: false);
-        app.scheduleNotify();
-      } catch (_) {}
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            toggleState == FullModeToggleState.enabled
-                ? 'Full mode unlocked.'
-                : 'Play mode restored.',
-          ),
-        ),
-      );
-      return;
-    }
 
     final lower = trimmed.toLowerCase();
 

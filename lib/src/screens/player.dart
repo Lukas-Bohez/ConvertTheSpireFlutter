@@ -283,7 +283,7 @@ class PlayerState with ChangeNotifier {
       _initMkPlayers();
     }
 
-    if (!_useMediaKit && !kIsWeb && Platform.isAndroid) {
+    if (!kIsWeb && (Platform.isAndroid || Platform.isWindows)) {
       _audio ??= AudioPlayer();
     }
 
@@ -295,7 +295,7 @@ class PlayerState with ChangeNotifier {
     // BUG 3/4 FIX: route all callbacks through _scheduleNotify so they always
     // execute on the platform thread. Only create the just_audio player on Android
     // where media_kit is not used.
-    if (!_useMediaKit && !kIsWeb && Platform.isAndroid) {
+    if (!kIsWeb && (Platform.isAndroid || Platform.isWindows)) {
       _audio ??= AudioPlayer();
       _subs.add(_audio!.positionStream.listen((pos) {
         if (_disposed || currentItem?.type != MediaType.audio) return;
@@ -497,6 +497,9 @@ class PlayerState with ChangeNotifier {
       if (_useMediaKit && _mkPlayer != null) return _mkPlayer!.state.playing;
       return _androidController?.value.isPlaying ?? false;
     }
+    if (_audio != null) {
+      return _audio!.playing;
+    }
     if (_useMediaKit) {
       return _audioMkPlayer?.state.playing ?? false;
     }
@@ -697,10 +700,20 @@ class PlayerState with ChangeNotifier {
     _loadGeneration++;
     _videoCompletionFired = false;
     _videoReady = false;
-    try { await _audio?.stop(); } catch (_) {}
+    try { await _safeStopAudio(); } catch (_) {}
     try { await _audioMkPlayer?.stop(); } catch (_) {}
     try { await _mkPlayer?.stop(); } catch (_) {}
     try { await _disposeAndroidController(); } catch (_) {}
+  }
+
+  Future<void> _safeStopAudio() async {
+    if (_audio == null) return;
+    if (!kIsWeb && Platform.isWindows) {
+      try { await _audio!.pause(); } catch (_) {}
+      try { await _audio!.seek(Duration.zero); } catch (_) {}
+      return;
+    }
+    try { await _audio!.stop(); } catch (_) {}
   }
 
   void _saveFavouriteCache() {
@@ -758,7 +771,7 @@ class PlayerState with ChangeNotifier {
     _historyCursor = -1;
 
     if (_audio != null) {
-      try { await _audio!.stop(); } catch (_) {}
+      try { await _safeStopAudio(); } catch (_) {}
     }
     if (_audioMkPlayer != null) {
       try { await _audioMkPlayer!.stop(); } catch (_) {}
@@ -1377,7 +1390,26 @@ class PlayerState with ChangeNotifier {
             : await _androidController!.play();
       }
     } else {
-      if (_useMediaKit) {
+      if (_audio != null) {
+        try {
+          _audio!.playing ? await _audio!.pause() : await _audio!.play();
+        } catch (e) {
+          debugPrint('just_audio togglePlay error: $e');
+          try {
+            final item = currentItem;
+            if (item != null && item.type == MediaType.audio) {
+              final localPath = await _resolveLocalPath(item.path);
+              if (localPath.startsWith('http') || localPath.startsWith('content://')) {
+                await _audio!.setUrl(localPath);
+              } else {
+                await _audio!.setFilePath(localPath);
+              }
+              await _audio!.setVolume(volume);
+              await _audio!.play();
+            }
+          } catch (_) {}
+        }
+      } else if (_useMediaKit) {
         final player = _audioMkPlayer ?? _mkPlayer;
         if (player != null) {
           await _audioLock.acquire();
@@ -1387,8 +1419,6 @@ class PlayerState with ChangeNotifier {
             _audioLock.release();
           }
         }
-      } else if (_audio != null) {
-        _audio!.playing ? await _audio!.pause() : await _audio!.play();
       }
     }
     notifyListeners();
@@ -1431,7 +1461,14 @@ class PlayerState with ChangeNotifier {
         }
       }
     } else {
-      if (_useMediaKit) {
+      if (_audio != null) {
+        debugPrint('Seeking just_audio to $d');
+        try {
+          await _audio!.seek(d);
+        } catch (e) {
+          debugPrint('just_audio seek error: $e');
+        }
+      } else if (_useMediaKit) {
         final player = _audioMkPlayer ?? _mkPlayer;
         if (player != null) {
           debugPrint('Seeking media_kit audio player to $d');
@@ -1445,13 +1482,6 @@ class PlayerState with ChangeNotifier {
           }
         } else {
           debugPrint('No media_kit audio player available to seek');
-        }
-      } else if (_audio != null) {
-        debugPrint('Seeking just_audio to $d');
-        try {
-          await _audio!.seek(d);
-        } catch (e) {
-          debugPrint('just_audio seek error: $e');
         }
       } else {
         debugPrint('No audio player available to seek');
@@ -2261,7 +2291,7 @@ class PlayerState with ChangeNotifier {
 
     // Stop existing playback first (best-effort).
     if (_audio != null) {
-      try { await _audio!.stop(); } catch (_) {}
+      try { await _safeStopAudio(); } catch (_) {}
     }
     if (_audioMkPlayer != null) {
       try { await _audioMkPlayer!.stop(); } catch (_) {}
