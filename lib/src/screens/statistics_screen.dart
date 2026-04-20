@@ -185,8 +185,8 @@ class _StatisticsScreenState extends State<StatisticsScreen>
         label: 'Successful',
         value: _stats.successfulDownloads.toString(),
         color: Colors.green,
-        bgColor: Colors.green.withValues(alpha: 0.15),
-        fgColor: Colors.green,
+        bgColor: Colors.green.withValues(alpha: 0.22),
+        fgColor: cs.onSurface,
       ),
       _OverviewCard(
         icon: Icons.error,
@@ -286,7 +286,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(short,
                             style: TextStyle(
-                                fontSize: 10, color: cs.onSurfaceVariant)),
+                                fontSize: 10, color: cs.onSurface)),
                       );
                     },
                   ),
@@ -301,7 +301,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                       }
                       return Text('${value.toInt()}',
                           style: TextStyle(
-                              fontSize: 10, color: cs.onSurfaceVariant));
+                              fontSize: 10, color: cs.onSurface));
                     },
                   ),
                 ),
@@ -316,7 +316,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                     return LineTooltipItem(
                       '$date\n${s.y.toInt()} downloads',
                       TextStyle(
-                          color: cs.onPrimaryContainer,
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 12),
                     );
@@ -463,7 +463,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                             color: color, shape: BoxShape.circle)),
                     const SizedBox(width: 4),
                     Text('${e.key} (${e.value})',
-                        style: const TextStyle(fontSize: 12)),
+                        style: TextStyle(fontSize: 12, color: cs.onSurface)),
                   ],
                 );
               }).toList(),
@@ -617,7 +617,7 @@ class _OverviewCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(label,
                 style: TextStyle(
-                    fontSize: 12, color: fgColor.withValues(alpha: 0.7))),
+                    fontSize: 12, color: fgColor.withValues(alpha: 0.9))),
           ],
         ),
       ),

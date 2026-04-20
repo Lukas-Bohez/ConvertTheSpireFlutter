@@ -81,12 +81,12 @@ class MediaItem {
       );
 }
 
-class _PositionUiState {
+class PositionUiState {
   final Duration position;
   final Duration duration;
   final bool isSeeking;
 
-  const _PositionUiState({
+  const PositionUiState({
     required this.position,
     required this.duration,
     required this.isSeeking,
@@ -221,8 +221,8 @@ class PlayerState with ChangeNotifier {
   Duration position = Duration.zero;
   Duration? duration;
   DateTime? _lastMkOpenTime;
-  final StreamController<_PositionUiState> _positionUiController =
-      StreamController<_PositionUiState>.broadcast();
+  final StreamController<PositionUiState> _positionUiController =
+      StreamController<PositionUiState>.broadcast();
   bool _isSeeking = false;
   Duration? _seekPreviewPosition;
   Duration? _pendingSeekTarget;
@@ -487,7 +487,7 @@ class PlayerState with ChangeNotifier {
 
   bool get isVideo => currentItem?.type == MediaType.video;
   bool get videoReady => _videoReady;
-  Stream<_PositionUiState> get positionUiStream => _positionUiController.stream;
+  Stream<PositionUiState> get positionUiStream => _positionUiController.stream;
 
   bool get isPlaying {
     if (isVideo) {
@@ -511,7 +511,7 @@ class PlayerState with ChangeNotifier {
   void _emitPositionUiState() {
     if (_positionUiController.isClosed) return;
     _positionUiController.add(
-      _PositionUiState(
+      PositionUiState(
         position: _isSeeking ? (_seekPreviewPosition ?? position) : position,
         duration: duration ?? Duration.zero,
         isSeeking: _isSeeking,
@@ -1315,6 +1315,31 @@ class PlayerState with ChangeNotifier {
       return;
     }
 
+    // Reuse current Android controller when available to avoid a full reload
+    // that can leave timeline/progress in a stale visual state.
+    final existingController = _androidController;
+    if (!_useMediaKit && existingController != null) {
+      try {
+        await existingController.setVolume(
+          (volume * _videoVolumeBoost).clamp(0.0, 1.0),
+        );
+        if (resumePosition > Duration.zero) {
+          await existingController.seekTo(resumePosition);
+        }
+        if (shouldKeepPlaying) {
+          await existingController.play();
+        } else {
+          await existingController.pause();
+        }
+        position = resumePosition;
+        _emitPositionUiState();
+        notifyListeners();
+        return;
+      } catch (_) {
+        // Fall back to reload path below.
+      }
+    }
+
     final generation = ++_loadGeneration;
     await _loadCurrent(currentIndex, generation);
     if (_disposed || generation != _loadGeneration) return;
@@ -1530,6 +1555,14 @@ class PlayerState with ChangeNotifier {
     _seekPreviewPosition = d;
     _pendingSeekTarget = d;
     _emitPositionUiState();
+
+    // For video we only preview while dragging and commit on release.
+    // Repeated live seeks can make timeline updates appear stuck/out of sync.
+    if (currentItem?.type == MediaType.video) {
+      _seekDebounceTimer?.cancel();
+      _seekDebounceTimer = null;
+      return;
+    }
 
     _seekDebounceTimer?.cancel();
     _seekDebounceTimer = Timer(const Duration(milliseconds: 200), () {
@@ -2563,7 +2596,7 @@ abstract class _PlayerTheme {
       Theme.of(context).colorScheme.onSurface;
 
   static Color sub(BuildContext context) =>
-      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72);
 }
 
 // --- Root screen --------------------------------------------------------------
@@ -2937,17 +2970,25 @@ class _PlayerScreenState extends State<PlayerScreen>
 
     final title = item.title ?? p.basenameWithoutExtension(item.path);
     final artist = item.artist ?? '';
+    final cs = Theme.of(context).colorScheme;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       decoration: BoxDecoration(
-        color: _PlayerTheme.tileBg(context),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? cs.surfaceContainerHigh
+            : cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: state.isPlaying
+              ? cs.primary.withValues(alpha: 0.42)
+              : cs.outlineVariant.withValues(alpha: 0.45),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -3124,7 +3165,7 @@ class _TrackThumbnail extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
-        color: Theme.of(context).colorScheme.onSurface.withAlpha(15),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
       ),
       child: Icon(icon, size: size * 0.55, color: Theme.of(context).colorScheme.onSurface.withAlpha(153)),
     );
@@ -3139,16 +3180,16 @@ class _PositionWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<_PositionUiState>(
+    return StreamBuilder<PositionUiState>(
       stream: state.positionUiStream,
-      initialData: _PositionUiState(
+      initialData: PositionUiState(
         position: state.position,
         duration: state.duration ?? Duration.zero,
         isSeeking: false,
       ),
       builder: (context, snapshot) {
         final ui = snapshot.data ??
-            _PositionUiState(
+            PositionUiState(
               position: state.position,
               duration: state.duration ?? Duration.zero,
               isSeeking: false,
@@ -3240,7 +3281,7 @@ class _TypeBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withAlpha(31),
+        color: theme.colorScheme.primary.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -3271,12 +3312,30 @@ class _ControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? Theme.of(context).colorScheme.primary : Theme.of(context).iconTheme.color;
-    return IconButton(
-      iconSize: size,
-      tooltip: tooltip,
-      icon: Icon(icon, color: color),
-      onPressed: onPressed,
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final iconColor = active ? cs.onPrimaryContainer : theme.iconTheme.color;
+
+    return Tooltip(
+      message: tooltip ?? '',
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          color: active ? cs.primaryContainer : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: active
+                ? cs.primary.withValues(alpha: 0.58)
+                : Colors.transparent,
+          ),
+        ),
+        child: IconButton(
+          iconSize: size,
+          icon: Icon(icon, color: iconColor),
+          onPressed: onPressed,
+        ),
+      ),
     );
   }
 }
@@ -3727,7 +3786,7 @@ class _SongTile extends StatelessWidget {
             Container(
               width: 56,
               height: 56,
-              color: Theme.of(context).colorScheme.onSurface.withAlpha(13),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.11),
               child: Icon(Icons.music_note, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
       ),
