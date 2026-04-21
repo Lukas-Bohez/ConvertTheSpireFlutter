@@ -112,7 +112,14 @@ class TrayService with TrayListener, WindowListener {
     _saveWindowGeometry();
     if (shouldMinimiseToTray()) {
       debugPrint('TrayService: minimising to tray instead of closing');
-      windowManager.hide();
+      unawaited(() async {
+        try {
+          await windowManager.hide();
+        } catch (e) {
+          debugPrint('TrayService: hide failed on close: $e');
+          onTrayQuit?.call();
+        }
+      }());
     } else {
       onTrayQuit?.call();
     }
@@ -181,8 +188,12 @@ class TrayService with TrayListener, WindowListener {
 
   Future<void> _showWindow() async {
     onTrayShow?.call();
-    await windowManager.show();
-    await windowManager.focus();
+    try {
+      await windowManager.show();
+      await windowManager.focus();
+    } catch (e) {
+      debugPrint('TrayService: show/focus failed: $e');
+    }
   }
 
   Future<void> destroy() async {
@@ -195,6 +206,5 @@ class TrayService with TrayListener, WindowListener {
     _geometryDebounce?.cancel();
     await trayManager.destroy();
     await windowManager.setPreventClose(false);
-    await windowManager.destroy();
   }
 }

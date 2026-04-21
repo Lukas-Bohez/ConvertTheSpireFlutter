@@ -4,14 +4,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:convert_the_spire_reborn/src/state/app_controller.dart';
 import 'package:convert_the_spire_reborn/src/vault/constants.dart';
-import 'package:convert_the_spire_reborn/src/vault/platform/desktop_window.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/theme_service.dart';
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
@@ -45,7 +41,6 @@ class _AboutScreenState extends State<AboutScreen>
   String _modelStatus = '';
   bool _savingNetwork = false;
   bool _pickerBusy = false;
-  ThemeMode _themeMode = ThemeMode.system;
   String _appVersionLabel = 'Loading...';
 
   String? _androidDocumentsUriForPath(String directoryPath) {
@@ -117,7 +112,6 @@ class _AboutScreenState extends State<AboutScreen>
       text: '${_settings.uploadRateLimitKib}',
     );
     _selectedModel = _settings.aiDefaultModel;
-    _themeMode = ThemeService.instance.themeMode;
     if (!_androidTorrentOnly) {
       _aiService = AiCopilotService(baseUrl: _settings.aiOllamaUrl);
       _fetchAvailableModels();
@@ -137,35 +131,6 @@ class _AboutScreenState extends State<AboutScreen>
       setState(() {
         _appVersionLabel = 'Unknown';
       });
-    }
-  }
-
-  ThemeMode _themeModeFromString(String? mode) {
-    switch (mode) {
-      case 'light':
-        return ThemeMode.light;
-      case 'dark':
-        return ThemeMode.dark;
-      default:
-        return ThemeMode.system;
-    }
-  }
-
-  AppController? _maybeAppController() {
-    try {
-      return context.read<AppController>();
-    } catch (_) {
-      return null;
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final appController = _maybeAppController();
-    final mode = _themeModeFromString(appController?.settings?.themeMode);
-    if (mode != _themeMode) {
-      _themeMode = mode;
     }
   }
 
@@ -385,19 +350,6 @@ class _AboutScreenState extends State<AboutScreen>
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Download folder saved')));
-  }
-
-  Future<void> _setThemeMode(ThemeMode mode) async {
-    final appController = _maybeAppController();
-    if (appController != null) {
-      await appController.setThemeMode(mode);
-    } else {
-      await ThemeService.instance.setThemeMode(mode);
-    }
-    if (!mounted) return;
-    setState(() {
-      _themeMode = mode;
-    });
   }
 
   Widget _sectionCard({required String title, required List<Widget> children}) {
@@ -741,118 +693,12 @@ class _AboutScreenState extends State<AboutScreen>
               ),
             if (!_androidTorrentOnly) const SizedBox(height: 10),
             _sectionCard(
-              title: 'Interface',
+              title: 'General Settings',
               children: [
-                DropdownButtonFormField<ThemeMode>(
-                  initialValue: _themeMode,
-                  decoration: const InputDecoration(
-                    labelText: 'Theme',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: ThemeMode.system,
-                      child: Text('System'),
-                    ),
-                    DropdownMenuItem(
-                      value: ThemeMode.light,
-                      child: Text('Light'),
-                    ),
-                    DropdownMenuItem(
-                      value: ThemeMode.dark,
-                      child: Text('Dark'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value == null) return;
-                    _setThemeMode(value);
-                  },
+                const Text(
+                  'General app settings are centralized in the main app Settings tab. '
+                  'This screen now contains torrent-specific configuration only.',
                 ),
-                SwitchListTile(
-                  title: const Text('Enable sound effects'),
-                  contentPadding: EdgeInsets.zero,
-                  value: _settings.soundEffectsEnabled,
-                  onChanged: (v) async {
-                    await _settings.setSoundEffectsEnabled(v);
-                    if (!mounted) return;
-                    setState(() {});
-                  },
-                ),
-                if (!_androidTorrentOnly)
-                  SwitchListTile(
-                    title: const Text('Use persistent sidebar'),
-                    contentPadding: EdgeInsets.zero,
-                    value: _settings.usePersistentSidebar,
-                    onChanged: (v) async {
-                      await _settings.setUsePersistentSidebar(v);
-                      if (!mounted) return;
-                      setState(() {});
-                    },
-                  ),
-                if (!_androidTorrentOnly)
-                  SwitchListTile(
-                    title: const Text('Use compact torrent rows'),
-                    contentPadding: EdgeInsets.zero,
-                    value: _settings.compactTorrentRows,
-                    onChanged: (v) async {
-                      await _settings.setCompactTorrentRows(v);
-                      if (!mounted) return;
-                      setState(() {});
-                    },
-                  ),
-                if (!_androidTorrentOnly)
-                  SwitchListTile(
-                    title: const Text('Confirm before exiting app'),
-                    contentPadding: EdgeInsets.zero,
-                    value: _settings.confirmOnExit,
-                    onChanged: (v) async {
-                      await _settings.setConfirmOnExit(v);
-                      if (!mounted) return;
-                      setState(() {});
-                    },
-                  ),
-                if (Platform.isWindows || Platform.isLinux || Platform.isMacOS)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        await toggleDesktopFullScreen();
-                      },
-                      icon: const Icon(Icons.fullscreen),
-                      label: const Text('Toggle Fullscreen'),
-                    ),
-                  ),
-                if (Platform.isWindows || Platform.isLinux || Platform.isMacOS)
-                  SwitchListTile(
-                    title: const Text('Use system tray'),
-                    contentPadding: EdgeInsets.zero,
-                    value: _settings.useSystemTray,
-                    onChanged: (v) async {
-                      await _settings.setUseSystemTray(v);
-                      if (!mounted) return;
-                      setState(() {});
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            v
-                                ? 'System tray will be enabled when you restart the app'
-                                : 'System tray will be disabled when you restart the app',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                if (Platform.isWindows || Platform.isLinux || Platform.isMacOS)
-                  SwitchListTile(
-                    title: const Text('Minimize to tray on close'),
-                    contentPadding: EdgeInsets.zero,
-                    value: _settings.minimizeToTrayOnClose,
-                    onChanged: (v) async {
-                      await _settings.setMinimizeToTrayOnClose(v);
-                      if (!mounted) return;
-                      setState(() {});
-                    },
-                  ),
               ],
             ),
             const SizedBox(height: 10),
