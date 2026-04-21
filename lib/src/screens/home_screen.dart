@@ -113,7 +113,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _audioBitrate = 320;
   bool _useFormatSubfolders = true;
   bool _settingsInitialized = false;
-  bool _minimizeToTrayOnClose = false;
+  bool _minimizeToTrayOnClose = true;
   bool _sponsorBlockEnabled = false;
   bool _youtubeAuthEnabled = false;
   String _youtubeCookiesFromBrowser = '';

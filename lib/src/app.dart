@@ -324,6 +324,23 @@ class _MyAppState extends State<MyApp>
     if (kIsWeb) return;
     if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) return;
 
+    // Close-to-tray must be a pure hide path. Do not dispose WebViews,
+    // kill WebView2 processes, or destroy the window in this branch.
+    final shouldMinimiseToTray =
+        _controller?.settings?.minimizeToTrayOnClose ??
+            TrayService.shouldMinimiseToTrayOnClose;
+    if (TrayService.enabled && shouldMinimiseToTray) {
+      if (kDebugMode) {
+        debugPrint('[App] Tray mode active; hiding window (skip teardown)');
+      }
+      try {
+        await windowManager.hide();
+      } catch (e) {
+        if (kDebugMode) debugPrint('[App] windowManager.hide failed: $e');
+      }
+      return;
+    }
+
     if (kDebugMode) {
       debugPrint('[App] Window close requested - disposing WebViews...');
     }
@@ -379,14 +396,6 @@ class _MyAppState extends State<MyApp>
           if (kDebugMode) debugPrint('[App] taskkill msedgewebview2 failed: $e');
         }
       }
-    }
-
-    // If tray mode is enabled then hiding the window is the expected behaviour
-    // (so playback and background tasks can continue) instead of tearing down.
-    if (TrayService.enabled && TrayService.shouldMinimiseToTrayOnClose) {
-      if (kDebugMode) debugPrint('[App] Tray mode active; hiding window instead of destroying');
-      await windowManager.hide();
-      return;
     }
 
     try {
