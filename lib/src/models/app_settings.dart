@@ -54,7 +54,7 @@ class AppSettings {
     required this.convertCleanupMinutes,
     required this.convertMaxAgeHours,
     this.themeMode = 'system',
-    this.minimizeToTrayOnClose = false,
+    this.minimizeToTrayOnClose = true,
     this.downloadDirMp3,
     this.downloadDirM4a,
     this.downloadDirMp4,
@@ -107,7 +107,7 @@ class AppSettings {
       youtubeAuthEnabled: false,
       youtubeCookiesFromBrowser: null,
       youtubeCookiesFile: null,
-      minimizeToTrayOnClose: false,
+      minimizeToTrayOnClose: true,
     );
   }
 
@@ -223,7 +223,7 @@ class AppSettings {
       youtubeCookiesFromBrowser:
           (json['youtube_cookies_from_browser'] as String?)?.trim(),
       youtubeCookiesFile: (json['youtube_cookies_file'] as String?)?.trim(),
-      minimizeToTrayOnClose: json['minimize_to_tray_on_close'] as bool? ?? false,
+      minimizeToTrayOnClose: json['minimize_to_tray_on_close'] as bool? ?? true,
       downloadDirMp3: (json['download_dir_mp3'] as String?)?.trim(),
       downloadDirM4a: (json['download_dir_m4a'] as String?)?.trim(),
       downloadDirMp4: (json['download_dir_mp4'] as String?)?.trim(),
