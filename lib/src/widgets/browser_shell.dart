@@ -1,6 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../screens/player.dart' show PlayerState, PositionUiState;
+import '../screens/player.dart' show PlayerState, PositionUiState, MediaItem, MediaType;
 import '../state/app_controller.dart';
 import '../config/build_flags.dart';
 
@@ -183,7 +185,7 @@ class _BrowserShellState extends State<BrowserShell> {
     final cs = Theme.of(context).colorScheme;
 
     // Only listen to the fields that actually affect the shell layout.
-    final currentItem = context.select<PlayerState, dynamic>((state) => state.currentItem);
+    final currentItem = context.select<PlayerState, MediaItem?>((state) => state.currentItem);
     final isPlaying = context.select<PlayerState, bool>((state) => state.isPlaying);
     final playerState = context.read<PlayerState>();
     final showPlayerOverlay = currentItem != null;
@@ -226,7 +228,7 @@ class _BrowserShellState extends State<BrowserShell> {
           ],
         ),
       ),
-      bottomNavigationBar: showPlayerOverlay
+        bottomNavigationBar: showPlayerOverlay
           ? _buildPlayerOverlay(playerState, currentItem, isPlaying, cs, overlayHeight)
           : null,
     );
@@ -378,13 +380,15 @@ class _BrowserShellState extends State<BrowserShell> {
   }
 
   Widget _buildPlayerOverlay(
-      PlayerState state, dynamic currentItem, bool isPlaying, ColorScheme cs, double overlayHeight) {
+      PlayerState state, MediaItem? currentItem, bool isPlaying, ColorScheme cs, double overlayHeight) {
     final item = currentItem;
     if (item == null) return const SizedBox.shrink();
 
     final collapsed = _playerCollapsed;
     final title = item.title ?? item.path.split('/').last;
     final artist = item.artist ?? '';
+    final Uint8List? artwork = item.thumbnailData;
+    final bool isVideo = item.type == MediaType.video;
 
     return SizedBox(
       height: overlayHeight,
@@ -392,7 +396,7 @@ class _BrowserShellState extends State<BrowserShell> {
         bottom: true,
         top: false,
         child: Material(
-          color: cs.surfaceContainerHighest,
+          color: Colors.transparent,
           elevation: 8,
           child: StreamBuilder<PositionUiState>(
             stream: state.positionUiStream,
@@ -417,6 +421,14 @@ class _BrowserShellState extends State<BrowserShell> {
 
               return Container(
                 decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      cs.surfaceContainerHighest,
+                      cs.surfaceContainer,
+                    ],
+                  ),
                   border: Border(
                     top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.22)),
                   ),
@@ -438,6 +450,8 @@ class _BrowserShellState extends State<BrowserShell> {
                         },
                         child: Row(
                           children: [
+                            _buildArtwork(artwork, cs, isVideo),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: InkWell(
                                 onTap: () => widget.onNavigate('player.tab'),
@@ -468,16 +482,14 @@ class _BrowserShellState extends State<BrowserShell> {
                                 ),
                               ),
                             ),
-                            IconButton(
-                              onPressed: () => state.togglePlay(),
-                              icon: Icon(
-                                isPlaying
-                                    ? Icons.pause_rounded
-                                    : Icons.play_arrow_rounded,
-                                size: 24,
-                              ),
+                            _buildTransportButton(
+                              icon: isPlaying
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                              onPressed: state.togglePlay,
                               tooltip: isPlaying ? 'Pause' : 'Play',
-                              splashRadius: 20,
+                              cs: cs,
+                              emphasize: true,
                             ),
                             IconButton(
                               onPressed: () => setState(
@@ -527,6 +539,15 @@ class _BrowserShellState extends State<BrowserShell> {
                                   fontSize: 10, color: cs.onSurfaceVariant),
                             ),
                             Text(
+                              isVideo ? 'VIDEO' : 'AUDIO',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: cs.primary,
+                                letterSpacing: 0.6,
+                              ),
+                            ),
+                            Text(
                               _formatDuration(duration),
                               style: TextStyle(
                                   fontSize: 10, color: cs.onSurfaceVariant),
@@ -537,27 +558,51 @@ class _BrowserShellState extends State<BrowserShell> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            IconButton(
-                              icon: const Icon(Icons.skip_previous_rounded),
+                            _buildTransportButton(
+                              icon: Icons.skip_previous_rounded,
                               onPressed: () =>
                                   state.previous(only: state.activeTabFilter),
                               tooltip: 'Previous',
-                              splashRadius: 20,
+                              cs: cs,
                             ),
-                            IconButton(
-                              icon: Icon(isPlaying
+                            _buildTransportButton(
+                              icon: Icons.replay_10_rounded,
+                              onPressed: duration.inMilliseconds > 0
+                                  ? () {
+                                      final nextMs = position.inMilliseconds - 10000;
+                                      state.seek(Duration(milliseconds: nextMs < 0 ? 0 : nextMs));
+                                    }
+                                  : null,
+                              tooltip: 'Back 10s',
+                              cs: cs,
+                            ),
+                            _buildTransportButton(
+                              icon: isPlaying
                                   ? Icons.pause_rounded
-                                  : Icons.play_arrow_rounded),
+                                  : Icons.play_arrow_rounded,
                               onPressed: state.togglePlay,
                               tooltip: isPlaying ? 'Pause' : 'Play',
-                              splashRadius: 20,
+                              cs: cs,
+                              emphasize: true,
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.skip_next_rounded),
+                            _buildTransportButton(
+                              icon: Icons.forward_10_rounded,
+                              onPressed: duration.inMilliseconds > 0
+                                  ? () {
+                                      final maxMs = duration.inMilliseconds;
+                                      final nextMs = position.inMilliseconds + 10000;
+                                      state.seek(Duration(milliseconds: nextMs > maxMs ? maxMs : nextMs));
+                                    }
+                                  : null,
+                              tooltip: 'Forward 10s',
+                              cs: cs,
+                            ),
+                            _buildTransportButton(
+                              icon: Icons.skip_next_rounded,
                               onPressed: () =>
                                   state.next(only: state.activeTabFilter),
                               tooltip: 'Next',
-                              splashRadius: 20,
+                              cs: cs,
                             ),
                           ],
                         ),
@@ -569,6 +614,57 @@ class _BrowserShellState extends State<BrowserShell> {
             },
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildArtwork(Uint8List? artwork, ColorScheme cs, bool isVideo) {
+    final fallbackIcon = isVideo ? Icons.movie_rounded : Icons.music_note_rounded;
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: artwork != null && artwork.isNotEmpty
+          ? Image.memory(
+              artwork,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Icon(
+                fallbackIcon,
+                color: cs.primary,
+                size: 20,
+              ),
+            )
+          : Icon(
+              fallbackIcon,
+              color: cs.primary,
+              size: 20,
+            ),
+    );
+  }
+
+  Widget _buildTransportButton({
+    required IconData icon,
+    required VoidCallback? onPressed,
+    required String tooltip,
+    required ColorScheme cs,
+    bool emphasize = false,
+  }) {
+    return IconButton(
+      icon: Icon(icon, size: emphasize ? 24 : 22),
+      onPressed: onPressed,
+      tooltip: tooltip,
+      splashRadius: 20,
+      style: IconButton.styleFrom(
+        backgroundColor: emphasize
+            ? cs.primary.withValues(alpha: 0.12)
+            : cs.surfaceContainerHigh,
+        foregroundColor: onPressed == null
+            ? cs.outline
+            : (emphasize ? cs.primary : cs.onSurface),
       ),
     );
   }
@@ -592,6 +688,9 @@ class _BrowserShellState extends State<BrowserShell> {
           padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+            border: Border.all(
+              color: cs.outlineVariant.withValues(alpha: 0.35),
+            ),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
