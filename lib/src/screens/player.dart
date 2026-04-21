@@ -265,7 +265,9 @@ class PlayerState with ChangeNotifier {
   bool _videoReady = false;
   bool _videoCompletionFired = false;
   bool _videoBackgroundAudioMode = false;
+  bool _desktopVideoBackgroundAudioMode = false;
   Duration? _backgroundVideoResumePosition;
+  final Set<String> _ignoredBrokenMediaPaths = <String>{};
 
   // Protects concurrent thumbnail generation / screenshot operations.
   final _thumbLock = Lock();
@@ -493,6 +495,9 @@ class PlayerState with ChangeNotifier {
     if (isVideo) {
       if (_videoBackgroundAudioMode && _audio != null) {
         return _audio!.playing;
+      }
+      if (_desktopVideoBackgroundAudioMode && _audioMkPlayer != null) {
+        return _audioMkPlayer!.state.playing;
       }
       if (_useMediaKit && _mkPlayer != null) return _mkPlayer!.state.playing;
       return _androidController?.value.isPlaying ?? false;
@@ -970,6 +975,9 @@ class PlayerState with ChangeNotifier {
         title: tag.title?.trim().isNotEmpty == true ? tag.title!.trim() : item.title,
         artist: tag.artist?.trim().isNotEmpty == true ? tag.artist!.trim() : item.artist,
       );
+      if (i == currentIndex) {
+        _updateMediaNotification(lib[i]);
+      }
     } catch (_) {}
   }
 
@@ -1096,6 +1104,7 @@ class PlayerState with ChangeNotifier {
                 position = Duration.zero;
               } catch (e) {
                 debugPrint('media_kit audio load error for ${item.path}: $e');
+                await _handleMalformedMedia(item.path, e, context: 'media_kit audio load');
               } finally {
                 _audioLock.release();
               }
@@ -1109,6 +1118,7 @@ class PlayerState with ChangeNotifier {
           }
         } catch (e) {
           debugPrint('audio load error for ${item.path}: $e');
+          await _handleMalformedMedia(item.path, e, context: 'audio load');
         }
       } else {
         // Switching to video.
@@ -1143,6 +1153,7 @@ class PlayerState with ChangeNotifier {
             await _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
           } catch (e) {
             debugPrint('media_kit video load error: $e');
+            await _handleMalformedMedia(item.path, e, context: 'media_kit video load');
           }
         } else {
           await _loadAndroidVideo(item.path, generation);
@@ -1237,20 +1248,118 @@ class PlayerState with ChangeNotifier {
     ctrl.addListener(listener);
   } catch (e, st) {
     debugPrint('Android video player failed: $e\n$st');
+    await _handleMalformedMedia(path, e, context: 'android video load');
   }
 }
 
   Future<void> onAppLifecycleChanged(AppLifecycleState state) async {
-    if (!Platform.isAndroid || _disposed) return;
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.hidden ||
-        state == AppLifecycleState.paused) {
-      await _enterBackgroundVideoAudioMode();
+    if (_disposed) return;
+
+    if (Platform.isAndroid) {
+      if (state == AppLifecycleState.inactive ||
+          state == AppLifecycleState.hidden ||
+          state == AppLifecycleState.paused) {
+        await _enterBackgroundVideoAudioMode();
+        return;
+      }
+      if (state == AppLifecycleState.resumed) {
+        await _restoreForegroundVideoPlayback();
+      }
       return;
     }
-    if (state == AppLifecycleState.resumed) {
-      await _restoreForegroundVideoPlayback();
+
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      if (state == AppLifecycleState.inactive ||
+          state == AppLifecycleState.hidden ||
+          state == AppLifecycleState.paused) {
+        await _enterDesktopBackgroundVideoAudioMode();
+        return;
+      }
+      if (state == AppLifecycleState.resumed) {
+        await _restoreDesktopForegroundVideoPlayback();
+      }
     }
+  }
+
+  Future<void> _enterDesktopBackgroundVideoAudioMode() async {
+    if (_desktopVideoBackgroundAudioMode || _disposed) return;
+    if (!_useMediaKit || _mkPlayer == null || _audioMkPlayer == null) return;
+
+    final item = currentItem;
+    if (item == null || item.type != MediaType.video) return;
+
+    final resumePosition = position;
+    final wasPlaying = _mkPlayer!.state.playing;
+    _backgroundVideoResumePosition = resumePosition;
+
+    try {
+      await _mkPlayer!.pause();
+    } catch (_) {}
+
+    await _audioLock.acquire();
+    try {
+      await _openMediaWithFallback(_audioMkPlayer!, item.path, play: false);
+      if (resumePosition > Duration.zero) {
+        try {
+          await _audioMkPlayer!.seek(resumePosition);
+        } catch (_) {}
+      }
+      await _audioMkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+      if (wasPlaying) {
+        await _audioMkPlayer!.play();
+      } else {
+        await _audioMkPlayer!.pause();
+      }
+      _desktopVideoBackgroundAudioMode = true;
+      _updateMediaNotification(item);
+      _emitPositionUiState();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Failed to enter desktop background video audio mode: $e');
+      _desktopVideoBackgroundAudioMode = false;
+    } finally {
+      _audioLock.release();
+    }
+  }
+
+  Future<void> _restoreDesktopForegroundVideoPlayback() async {
+    if (!_desktopVideoBackgroundAudioMode || _disposed) return;
+    final item = currentItem;
+    if (item == null || item.type != MediaType.video || _mkPlayer == null) {
+      _desktopVideoBackgroundAudioMode = false;
+      notifyListeners();
+      return;
+    }
+
+    final resumePosition = _backgroundVideoResumePosition ?? position;
+    final shouldKeepPlaying = _audioMkPlayer?.state.playing ?? false;
+
+    try {
+      await _audioMkPlayer?.pause();
+    } catch (_) {}
+
+    try {
+      await _openMediaWithFallback(_mkPlayer!, item.path, play: false);
+      if (resumePosition > Duration.zero) {
+        try {
+          await _mkPlayer!.seek(resumePosition);
+        } catch (_) {}
+      }
+      await _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+      if (shouldKeepPlaying) {
+        await _mkPlayer!.play();
+      } else {
+        await _mkPlayer!.pause();
+      }
+      position = resumePosition;
+      _videoReady = true;
+      _emitPositionUiState();
+    } catch (e) {
+      debugPrint('Failed to restore desktop foreground video playback: $e');
+    }
+
+    _desktopVideoBackgroundAudioMode = false;
+    notifyListeners();
   }
 
   Future<void> _enterBackgroundVideoAudioMode() async {
@@ -1411,6 +1520,13 @@ class PlayerState with ChangeNotifier {
         notifyListeners();
         return;
       }
+      if (_desktopVideoBackgroundAudioMode && _audioMkPlayer != null) {
+        await (_audioMkPlayer!.state.playing
+            ? _audioMkPlayer!.pause()
+            : _audioMkPlayer!.play());
+        notifyListeners();
+        return;
+      }
       if (_useMediaKit && _mkPlayer != null) {
         await (_mkPlayer!.state.playing ? _mkPlayer!.pause() : _mkPlayer!.play());
       } else if (_androidController != null) {
@@ -1468,6 +1584,18 @@ class PlayerState with ChangeNotifier {
           _backgroundVideoResumePosition = d;
         } catch (e) {
           debugPrint('background video seek error: $e');
+        }
+        position = d;
+        _emitPositionUiState();
+        _scheduleNotify();
+        return;
+      }
+      if (_desktopVideoBackgroundAudioMode && _audioMkPlayer != null) {
+        try {
+          await _audioMkPlayer!.seek(d);
+          _backgroundVideoResumePosition = d;
+        } catch (e) {
+          debugPrint('desktop background video seek error: $e');
         }
         position = d;
         _emitPositionUiState();
@@ -2290,6 +2418,60 @@ class PlayerState with ChangeNotifier {
     }
   }
 
+  Future<void> _handleMalformedMedia(
+    String path,
+    Object error, {
+    String context = 'playback',
+  }) async {
+    if (_disposed) return;
+    if (_ignoredBrokenMediaPaths.contains(path)) return;
+    _ignoredBrokenMediaPaths.add(path);
+
+    debugPrint('Malformed media detected in $context for $path: $error');
+
+    if (!path.startsWith('content://') &&
+        !path.startsWith('http://') &&
+        !path.startsWith('https://')) {
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+          debugPrint('Deleted malformed media file: $path');
+        }
+      } catch (e) {
+        debugPrint('Unable to delete malformed media file $path: $e');
+      }
+    }
+
+    final index = library.indexWhere((item) => item.path == path);
+    if (index < 0) {
+      _scheduleNotify();
+      return;
+    }
+
+    final wasCurrent = index == currentIndex;
+    library.removeAt(index);
+    _rebaseStateAfterRemoval(index);
+
+    if (library.isEmpty) {
+      await _stopPlaybackBestEffort();
+      currentIndex = 0;
+      position = Duration.zero;
+      duration = null;
+      _folderItemCount = 0;
+      _emitPositionUiState();
+      _scheduleNotify();
+      return;
+    }
+
+    if (wasCurrent) {
+      currentIndex = index.clamp(0, library.length - 1);
+      final generation = ++_loadGeneration;
+      unawaited(_loadCurrent(currentIndex, generation));
+    }
+    _scheduleNotify();
+  }
+
   Future<void> _disposeAndroidController() async {
     if (_androidController == null) return;
     if (_androidListener != null) {
@@ -2396,6 +2578,7 @@ class PlayerState with ChangeNotifier {
           } catch (e) {
             debugPrint(
                 'playFileDirect media_kit audio load error for $path: $e');
+            await _handleMalformedMedia(path, e, context: 'direct media_kit audio load');
           } finally {
             _audioLock.release();
           }
@@ -2418,6 +2601,7 @@ class PlayerState with ChangeNotifier {
                 if (idx >= 0) _updateMediaNotification(library[idx]);
               } catch (e) {
                 debugPrint('playFileDirect audio load error for $path: $e');
+                await _handleMalformedMedia(path, e, context: 'direct audio load');
               }
             });
           }
@@ -2440,6 +2624,7 @@ class PlayerState with ChangeNotifier {
       }
     } catch (e) {
       debugPrint('playFileDirect failed for $path: $e');
+      await _handleMalformedMedia(path, e, context: 'direct playback');
     }
   }
 }

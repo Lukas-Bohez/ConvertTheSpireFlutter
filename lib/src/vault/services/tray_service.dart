@@ -127,7 +127,14 @@ class TrayService with TrayListener, WindowListener {
     _saveWindowGeometry();
     if (shouldMinimiseToTray()) {
       debugPrint('TrayService: minimizing to tray on close');
-      windowManager.hide();
+      unawaited(() async {
+        try {
+          await windowManager.hide();
+        } catch (e) {
+          debugPrint('TrayService: hide failed on close: $e');
+          await (onTrayQuit?.call() ?? Future<void>.value());
+        }
+      }());
     } else {
       unawaited(onTrayQuit?.call() ?? Future<void>.value());
     }
@@ -204,8 +211,12 @@ class TrayService with TrayListener, WindowListener {
     if (show is Future) {
       await show;
     }
-    await windowManager.show();
-    await windowManager.focus();
+    try {
+      await windowManager.show();
+      await windowManager.focus();
+    } catch (e) {
+      debugPrint('TrayService: show/focus failed: $e');
+    }
     _restartPollingDebounced();
   }
 
@@ -219,6 +230,5 @@ class TrayService with TrayListener, WindowListener {
     _geometryDebounce?.cancel();
     await trayManager.destroy();
     await windowManager.setPreventClose(false);
-    await windowManager.destroy();
   }
 }

@@ -208,7 +208,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (kIsWeb) return;
     if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return;
 
-    _trayService = TrayService(shouldMinimiseToTray: () => true);
+    _trayService = TrayService(
+      shouldMinimiseToTray: () => _minimizeToTrayOnClose,
+    );
 
     _trayService!.onTrayQuit = () async {
       try {
