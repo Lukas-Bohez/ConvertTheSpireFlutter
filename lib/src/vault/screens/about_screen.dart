@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -350,6 +351,77 @@ class _AboutScreenState extends State<AboutScreen>
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Download folder saved')));
+  }
+
+  Future<void> _openPrivacyPolicy() async {
+    final uri = Uri.parse(kPrivacyPolicyUrl);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open privacy policy link.')),
+      );
+    }
+  }
+
+  Future<void> _exportDiagnostics() async {
+    final now = DateTime.now();
+    final safeTs = now.toIso8601String().replaceAll(':', '-');
+    final fileName = 'vault_diagnostics_$safeTs.txt';
+    String? path;
+
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      path = await FilePicker.platform.saveFile(fileName: fileName);
+    }
+
+    if ((path == null || path.isEmpty) && _settings.downloadDestination.isNotEmpty) {
+      path = '${_settings.downloadDestination}${Platform.pathSeparator}$fileName';
+    }
+
+    if (path == null || path.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Diagnostics export cancelled.')),
+      );
+      return;
+    }
+
+    final package = await PackageInfo.fromPlatform();
+    final payload = <String, dynamic>{
+      'appName': package.appName,
+      'version': package.version,
+      'buildNumber': package.buildNumber,
+      'platform': defaultTargetPlatform.name,
+      'generatedAt': now.toIso8601String(),
+      'settings': <String, dynamic>{
+        'downloadDestination': _settings.downloadDestination,
+        'autoStartOnAdd': _settings.autoStartOnAdd,
+        'useDht': _settings.useDht,
+        'usePex': _settings.usePex,
+        'useLpd': _settings.useLpd,
+        'listenPort': _settings.listenPort,
+        'maxConnectionsGlobal': _settings.maxConnectionsGlobal,
+        'maxConnectionsPerTorrent': _settings.maxConnectionsPerTorrent,
+        'maxActiveDownloads': _settings.maxActiveDownloads,
+        'downloadRateLimitKib': _settings.downloadRateLimitKib,
+        'uploadRateLimitKib': _settings.uploadRateLimitKib,
+        'enableAiCopilot': _settings.enableAiCopilot,
+        'aiDefaultModel': _settings.aiDefaultModel,
+      },
+    };
+
+    final file = File(path);
+    await file.parent.create(recursive: true);
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(payload),
+      flush: true,
+    );
+
+    await _settings.setLastDiagnosticsExport(now.toIso8601String());
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Diagnostics exported: $path')),
+    );
   }
 
   Widget _sectionCard({required String title, required List<Widget> children}) {
@@ -726,25 +798,16 @@ class _AboutScreenState extends State<AboutScreen>
                   leading: const Icon(Icons.security),
                   title: const Text('Privacy policy'),
                   subtitle: Text(kPrivacyPolicyUrl),
+                  onTap: _openPrivacyPolicy,
                 ),
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final narrow = constraints.maxWidth < 640;
                     final actions = <Widget>[
                       OutlinedButton.icon(
-                        onPressed: () async {
-                          final now = DateTime.now().toIso8601String();
-                          await _settings.setLastDiagnosticsExport(now);
-                          if (!mounted) return;
-                          setState(() {});
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Diagnostics metadata updated'),
-                            ),
-                          );
-                        },
+                        onPressed: _exportDiagnostics,
                         icon: const Icon(Icons.bug_report_outlined),
-                        label: const Text('Mark Diagnostics Export'),
+                        label: const Text('Export Diagnostics'),
                       ),
                       OutlinedButton(
                         onPressed: () async {

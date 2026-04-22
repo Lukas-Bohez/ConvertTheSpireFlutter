@@ -687,9 +687,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(16),
             ),
             title: const Text('Folder access lost'),
-            content: const Text(
-              'The app can no longer access your selected download folder. '
-              'Would you like to pick it again? Choosing "No" will use Downloads instead.',
+            // overflow-fix: long dialog prompt can clip on small-screen devices.
+            content: const SingleChildScrollView(
+              child: Text(
+                'The app can no longer access your selected download folder. '
+                'Would you like to pick it again? Choosing "No" will use Downloads instead.',
+              ),
             ),
             actions: [
               TextButton(
@@ -2293,8 +2296,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               context: context,
                               builder: (context) => AlertDialog(
                                 title: const Text('Clear Queue'),
-                                content: const Text(
-                                    'Remove all items from the queue?'),
+                                // overflow-fix: keep confirmation text scroll-safe.
+                                content: const SingleChildScrollView(
+                                  child: Text('Remove all items from the queue?'),
+                                ),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),

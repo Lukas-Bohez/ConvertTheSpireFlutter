@@ -100,8 +100,10 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Remove Playlist'),
-        content:
-            const Text('Stop watching this playlist? You can re-add it later.'),
+        // overflow-fix: keep confirmation text scroll-safe on compact devices.
+        content: const SingleChildScrollView(
+          child: Text('Stop watching this playlist? You can re-add it later.'),
+        ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),

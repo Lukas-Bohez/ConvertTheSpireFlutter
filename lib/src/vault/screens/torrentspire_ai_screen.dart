@@ -176,10 +176,13 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: const Text('Set Download Folder'),
-        content: const Text(
-          'You must set a download folder before downloading torrents. '
-          'This prevents downloads from being stored in inaccessible app storage and causing file corruption. '
-          'Please navigate to Settings and select a folder on external storage.',
+        // overflow-fix: keep long guidance text scroll-safe on compact devices.
+        content: const SingleChildScrollView(
+          child: Text(
+            'You must set a download folder before downloading torrents. '
+            'This prevents downloads from being stored in inaccessible app storage and causing file corruption. '
+            'Please navigate to Settings and select a folder on external storage.',
+          ),
         ),
         actions: [
           FilledButton(

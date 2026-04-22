@@ -162,6 +162,8 @@ img.Image? _decodeByMagic(Uint8List raw) {
 //   FIX: All just_audio calls are wrapped in _runOnMainThread().
 
 class PlayerState with ChangeNotifier {
+  // TECH-DEBT: add first-class sleep timer state/countdown exposure for all
+  // player surfaces (main player + mini overlay) in a dedicated follow-up.
   final SharedPreferences prefs;
 
   List<MediaItem> library = [];
@@ -490,6 +492,19 @@ class PlayerState with ChangeNotifier {
   bool get isVideo => currentItem?.type == MediaType.video;
   bool get videoReady => _videoReady;
   Stream<PositionUiState> get positionUiStream => _positionUiController.stream;
+  Duration get bufferedPosition {
+    if (_audio != null) {
+      return _audio!.bufferedPosition;
+    }
+    final android = _androidController;
+    if (android != null && android.value.isInitialized) {
+      final ranges = android.value.buffered;
+      if (ranges.isNotEmpty) {
+        return ranges.last.end;
+      }
+    }
+    return position;
+  }
 
   bool get isPlaying {
     if (isVideo) {
@@ -2742,8 +2757,9 @@ class _VideoPaneState extends State<_VideoPane> {
                   children: [
                     Center(child: child),
                     Positioned(
-                      top: 10,
-                      right: 10,
+                      // overflow-fix: keep top-right overlay control inside safe insets.
+                      top: mq.padding.top + 10,
+                      right: mq.padding.right + 10,
                       child: IconButton(
                         icon: Icon(
                           widget.isFullScreen
@@ -3584,7 +3600,12 @@ class _TrackMenuButton extends StatelessWidget {
               context: context,
               builder: (dialogContext) => AlertDialog(
                 title: const Text('Delete file?'),
-                content: Text('This permanently deletes "${item.title ?? p.basename(item.path)}" from disk.'),
+                // overflow-fix: long file names can overflow dialog content width.
+                content: SingleChildScrollView(
+                  child: Text(
+                    'This permanently deletes "${item.title ?? p.basename(item.path)}" from disk.',
+                  ),
+                ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(dialogContext).pop(false),

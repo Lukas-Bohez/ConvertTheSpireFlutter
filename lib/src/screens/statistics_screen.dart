@@ -552,8 +552,12 @@ class _StatisticsScreenState extends State<StatisticsScreen>
       builder: (ctx) => AlertDialog(
         icon: Icon(Icons.warning_amber, color: Theme.of(ctx).colorScheme.error),
         title: const Text('Reset Statistics?'),
-        content: const Text(
-            'This will permanently delete all download statistics. This action cannot be undone.'),
+        // overflow-fix: keep long warning text scroll-safe in constrained dialog heights.
+        content: const SingleChildScrollView(
+          child: Text(
+            'This will permanently delete all download statistics. This action cannot be undone.',
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),

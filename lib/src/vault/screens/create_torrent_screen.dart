@@ -201,8 +201,11 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
             builder: (context) {
               return AlertDialog(
                 title: const Text('Torrent Created'),
-                content: Text(
-                  'Saved to:\n${result.torrentPath}\n\nAdd to downloads now?',
+                // overflow-fix: saved path can be long and overflow dialog body.
+                content: SingleChildScrollView(
+                  child: Text(
+                    'Saved to:\n${result.torrentPath}\n\nAdd to downloads now?',
+                  ),
                 ),
                 actions: [
                   TextButton(

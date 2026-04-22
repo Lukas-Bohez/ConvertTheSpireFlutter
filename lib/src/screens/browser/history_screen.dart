@@ -103,8 +103,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       context: context,
                       builder: (_) => AlertDialog(
                         title: const Text('Clear history?'),
-                        content:
-                            const Text('All browsing history will be deleted.'),
+                        // overflow-fix: make dialog content scroll-safe on very small screens.
+                        content: const SingleChildScrollView(
+                          child: Text('All browsing history will be deleted.'),
+                        ),
                         actions: [
                           TextButton(
                               onPressed: () => Navigator.pop(_, false),
@@ -255,7 +257,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Clear history?'),
-        content: Text('Clear browsing history for $range?'),
+        // overflow-fix: keep dynamic range text scroll-safe inside dialog.
+        content: SingleChildScrollView(
+          child: Text('Clear browsing history for $range?'),
+        ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),

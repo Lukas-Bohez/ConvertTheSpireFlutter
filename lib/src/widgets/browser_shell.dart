@@ -414,10 +414,18 @@ class _BrowserShellState extends State<BrowserShell> {
                   );
               final position = ui.position;
               final duration = ui.duration;
+                final buffered = state.bufferedPosition;
               final progress = duration.inMilliseconds > 0
                   ? (position.inMilliseconds / duration.inMilliseconds)
                       .clamp(0.0, 1.0)
                   : 0.0;
+                final bufferedProgress = duration.inMilliseconds > 0
+                  ? (buffered.inMilliseconds / duration.inMilliseconds)
+                    .clamp(0.0, 1.0)
+                  : 0.0;
+                final width = MediaQuery.of(context).size.width;
+                final compactOverlay = width < 360;
+                final wideOverlay = width >= 1200;
 
               return Container(
                 decoration: BoxDecoration(
@@ -464,7 +472,7 @@ class _BrowserShellState extends State<BrowserShell> {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontWeight: FontWeight.w700,
-                                        fontSize: 14,
+                                        fontSize: wideOverlay ? 16 : 14,
                                         color: cs.onSurface,
                                       ),
                                     ),
@@ -474,7 +482,7 @@ class _BrowserShellState extends State<BrowserShell> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
-                                          fontSize: 12,
+                                          fontSize: wideOverlay ? 13 : 12,
                                           color: cs.onSurfaceVariant,
                                         ),
                                       ),
@@ -521,6 +529,9 @@ class _BrowserShellState extends State<BrowserShell> {
                           ),
                           child: Slider(
                             value: progress,
+                            secondaryTrackValue: bufferedProgress > progress
+                                ? bufferedProgress
+                                : progress,
                             activeColor: cs.primary,
                             inactiveColor: cs.onSurface.withValues(alpha: 0.18),
                             onChanged: duration.inMilliseconds > 0
@@ -555,57 +566,113 @@ class _BrowserShellState extends State<BrowserShell> {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildTransportButton(
-                              icon: Icons.skip_previous_rounded,
-                              onPressed: () =>
-                                  state.previous(only: state.activeTabFilter),
-                              tooltip: 'Previous',
-                              cs: cs,
-                            ),
-                            _buildTransportButton(
-                              icon: Icons.replay_10_rounded,
-                              onPressed: duration.inMilliseconds > 0
-                                  ? () {
-                                      final nextMs = position.inMilliseconds - 10000;
-                                      state.seek(Duration(milliseconds: nextMs < 0 ? 0 : nextMs));
-                                    }
-                                  : null,
-                              tooltip: 'Back 10s',
-                              cs: cs,
-                            ),
-                            _buildTransportButton(
-                              icon: isPlaying
-                                  ? Icons.pause_rounded
-                                  : Icons.play_arrow_rounded,
-                              onPressed: state.togglePlay,
-                              tooltip: isPlaying ? 'Pause' : 'Play',
-                              cs: cs,
-                              emphasize: true,
-                            ),
-                            _buildTransportButton(
-                              icon: Icons.forward_10_rounded,
-                              onPressed: duration.inMilliseconds > 0
-                                  ? () {
-                                      final maxMs = duration.inMilliseconds;
-                                      final nextMs = position.inMilliseconds + 10000;
-                                      state.seek(Duration(milliseconds: nextMs > maxMs ? maxMs : nextMs));
-                                    }
-                                  : null,
-                              tooltip: 'Forward 10s',
-                              cs: cs,
-                            ),
-                            _buildTransportButton(
-                              icon: Icons.skip_next_rounded,
-                              onPressed: () =>
-                                  state.next(only: state.activeTabFilter),
-                              tooltip: 'Next',
-                              cs: cs,
-                            ),
-                          ],
-                        ),
+                        // TECH-DEBT: mini player still lacks explicit sleep timer and
+                        // playback-speed controls; those remain full-player features.
+                        compactOverlay
+                            ? Wrap(
+                                alignment: WrapAlignment.center,
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  _buildTransportButton(
+                                    icon: Icons.skip_previous_rounded,
+                                    onPressed: () =>
+                                        state.previous(only: state.activeTabFilter),
+                                    tooltip: 'Previous',
+                                    cs: cs,
+                                  ),
+                                  _buildTransportButton(
+                                    icon: Icons.replay_10_rounded,
+                                    onPressed: duration.inMilliseconds > 0
+                                        ? () {
+                                            final nextMs = position.inMilliseconds - 10000;
+                                            state.seek(Duration(milliseconds: nextMs < 0 ? 0 : nextMs));
+                                          }
+                                        : null,
+                                    tooltip: 'Back 10s',
+                                    cs: cs,
+                                  ),
+                                  _buildTransportButton(
+                                    icon: isPlaying
+                                        ? Icons.pause_rounded
+                                        : Icons.play_arrow_rounded,
+                                    onPressed: state.togglePlay,
+                                    tooltip: isPlaying ? 'Pause' : 'Play',
+                                    cs: cs,
+                                    emphasize: true,
+                                  ),
+                                  _buildTransportButton(
+                                    icon: Icons.forward_10_rounded,
+                                    onPressed: duration.inMilliseconds > 0
+                                        ? () {
+                                            final maxMs = duration.inMilliseconds;
+                                            final nextMs = position.inMilliseconds + 10000;
+                                            state.seek(Duration(milliseconds: nextMs > maxMs ? maxMs : nextMs));
+                                          }
+                                        : null,
+                                    tooltip: 'Forward 10s',
+                                    cs: cs,
+                                  ),
+                                  _buildTransportButton(
+                                    icon: Icons.skip_next_rounded,
+                                    onPressed: () =>
+                                        state.next(only: state.activeTabFilter),
+                                    tooltip: 'Next',
+                                    cs: cs,
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  _buildTransportButton(
+                                    icon: Icons.skip_previous_rounded,
+                                    onPressed: () =>
+                                        state.previous(only: state.activeTabFilter),
+                                    tooltip: 'Previous',
+                                    cs: cs,
+                                  ),
+                                  _buildTransportButton(
+                                    icon: Icons.replay_10_rounded,
+                                    onPressed: duration.inMilliseconds > 0
+                                        ? () {
+                                            final nextMs = position.inMilliseconds - 10000;
+                                            state.seek(Duration(milliseconds: nextMs < 0 ? 0 : nextMs));
+                                          }
+                                        : null,
+                                    tooltip: 'Back 10s',
+                                    cs: cs,
+                                  ),
+                                  _buildTransportButton(
+                                    icon: isPlaying
+                                        ? Icons.pause_rounded
+                                        : Icons.play_arrow_rounded,
+                                    onPressed: state.togglePlay,
+                                    tooltip: isPlaying ? 'Pause' : 'Play',
+                                    cs: cs,
+                                    emphasize: true,
+                                  ),
+                                  _buildTransportButton(
+                                    icon: Icons.forward_10_rounded,
+                                    onPressed: duration.inMilliseconds > 0
+                                        ? () {
+                                            final maxMs = duration.inMilliseconds;
+                                            final nextMs = position.inMilliseconds + 10000;
+                                            state.seek(Duration(milliseconds: nextMs > maxMs ? maxMs : nextMs));
+                                          }
+                                        : null,
+                                    tooltip: 'Forward 10s',
+                                    cs: cs,
+                                  ),
+                                  _buildTransportButton(
+                                    icon: Icons.skip_next_rounded,
+                                    onPressed: () =>
+                                        state.next(only: state.activeTabFilter),
+                                    tooltip: 'Next',
+                                    cs: cs,
+                                  ),
+                                ],
+                              ),
                       ],
                     ],
                   ),
