@@ -776,7 +776,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: SafeArea(
-        top: true,
+        top: false,
         bottom: false,
         child: Stack(
           children: [

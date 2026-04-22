@@ -727,33 +727,52 @@ class _AboutScreenState extends State<AboutScreen>
                   title: const Text('Privacy policy'),
                   subtitle: Text(kPrivacyPolicyUrl),
                 ),
-                Row(
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final now = DateTime.now().toIso8601String();
-                        await _settings.setLastDiagnosticsExport(now);
-                        if (!mounted) return;
-                        setState(() {});
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Diagnostics metadata updated'),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.bug_report_outlined),
-                      label: const Text('Mark Diagnostics Export'),
-                    ),
-                    const SizedBox(width: 8),
-                    OutlinedButton(
-                      onPressed: () async {
-                        await _settings.clearBrowserHistory();
-                        if (!mounted) return;
-                        setState(() {});
-                      },
-                      child: const Text('Clear Browser History'),
-                    ),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final narrow = constraints.maxWidth < 640;
+                    final actions = <Widget>[
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final now = DateTime.now().toIso8601String();
+                          await _settings.setLastDiagnosticsExport(now);
+                          if (!mounted) return;
+                          setState(() {});
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Diagnostics metadata updated'),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.bug_report_outlined),
+                        label: const Text('Mark Diagnostics Export'),
+                      ),
+                      OutlinedButton(
+                        onPressed: () async {
+                          await _settings.clearBrowserHistory();
+                          if (!mounted) return;
+                          setState(() {});
+                        },
+                        child: const Text('Clear Browser History'),
+                      ),
+                    ];
+
+                    if (narrow) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          actions[0],
+                          const SizedBox(height: 8),
+                          actions[1],
+                        ],
+                      );
+                    }
+
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: actions,
+                    );
+                  },
                 ),
                 const SizedBox(height: 8),
                 Text(
