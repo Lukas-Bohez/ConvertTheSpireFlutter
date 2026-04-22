@@ -792,7 +792,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                     ),
                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                       maxCrossAxisExtent: 430,
-                      mainAxisExtent: 188,
+                      mainAxisExtent: 182,
                       mainAxisSpacing: 10,
                       crossAxisSpacing: 10,
                     ),
@@ -1154,7 +1154,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                 denseDesktop ? 12 : 14,
                 denseDesktop ? 10 : 12,
                 8,
-                denseDesktop ? 10 : 12,
+                denseDesktop ? 8 : 12,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1299,10 +1299,10 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                       valueColor: AlwaysStoppedAnimation<Color>(stateColor),
                     ),
                   ),
-                  SizedBox(height: denseDesktop ? 8 : 12),
+                  SizedBox(height: denseDesktop ? 5 : 12),
                   Wrap(
                     spacing: denseDesktop ? 8 : 10,
-                    runSpacing: denseDesktop ? 4 : 6,
+                    runSpacing: denseDesktop ? 3 : 6,
                     children: [
                       if (ts.downloadSpeed > 512)
                         Row(

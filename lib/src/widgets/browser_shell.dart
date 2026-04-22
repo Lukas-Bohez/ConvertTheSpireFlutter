@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -426,6 +427,7 @@ class _BrowserShellState extends State<BrowserShell> {
                 final width = MediaQuery.of(context).size.width;
                 final compactOverlay = width < 360;
                 final wideOverlay = width >= 1200;
+                final suppressLiveSemantics = Platform.isWindows;
 
               return Container(
                 decoration: BoxDecoration(
@@ -442,7 +444,9 @@ class _BrowserShellState extends State<BrowserShell> {
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                  padding: collapsed
+                      ? const EdgeInsets.fromLTRB(10, 6, 10, 6)
+                      : const EdgeInsets.fromLTRB(12, 8, 12, 10),
                   child: Column(
                     mainAxisSize: MainAxisSize.max,
                     children: [
@@ -458,8 +462,13 @@ class _BrowserShellState extends State<BrowserShell> {
                         },
                         child: Row(
                           children: [
-                            _buildArtwork(artwork, cs, isVideo),
-                            const SizedBox(width: 10),
+                            _buildArtwork(
+                              artwork,
+                              cs,
+                              isVideo,
+                              size: collapsed ? 34 : 44,
+                            ),
+                            SizedBox(width: collapsed ? 8 : 10),
                             Expanded(
                               child: InkWell(
                                 onTap: () => widget.onNavigate('player.tab'),
@@ -472,7 +481,9 @@ class _BrowserShellState extends State<BrowserShell> {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontWeight: FontWeight.w700,
-                                        fontSize: wideOverlay ? 16 : 14,
+                                        fontSize: collapsed
+                                            ? 13
+                                            : (wideOverlay ? 16 : 14),
                                         color: cs.onSurface,
                                       ),
                                     ),
@@ -482,7 +493,9 @@ class _BrowserShellState extends State<BrowserShell> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
-                                          fontSize: wideOverlay ? 13 : 12,
+                                          fontSize: collapsed
+                                              ? 11
+                                              : (wideOverlay ? 13 : 12),
                                           color: cs.onSurfaceVariant,
                                         ),
                                       ),
@@ -490,28 +503,80 @@ class _BrowserShellState extends State<BrowserShell> {
                                 ),
                               ),
                             ),
-                            _buildTransportButton(
-                              icon: isPlaying
-                                  ? Icons.pause_rounded
-                                  : Icons.play_arrow_rounded,
-                              onPressed: state.togglePlay,
-                              tooltip: isPlaying ? 'Pause' : 'Play',
-                              cs: cs,
-                              emphasize: true,
-                            ),
-                            IconButton(
-                              onPressed: () => setState(
-                                  () => _playerCollapsed = !_playerCollapsed),
-                              icon: Icon(
-                                collapsed
-                                    ? Icons.keyboard_arrow_up_rounded
-                                    : Icons.keyboard_arrow_down_rounded,
-                                size: 24,
+                            if (collapsed) ...[
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 34,
+                                  minHeight: 34,
+                                ),
+                                visualDensity: VisualDensity.compact,
+                                style: IconButton.styleFrom(
+                                  backgroundColor: cs.primary.withValues(alpha: 0.12),
+                                  foregroundColor: cs.primary,
+                                ),
+                                onPressed: state.togglePlay,
+                                icon: Icon(
+                                  isPlaying
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                  size: 20,
+                                ),
+                                tooltip: isPlaying ? 'Pause' : 'Play',
+                                splashRadius: 18,
                               ),
-                              tooltip:
-                                  collapsed ? 'Expand player' : 'Collapse player',
-                              splashRadius: 20,
-                            ),
+                              const SizedBox(width: 4),
+                              SizedBox(
+                                width: 34,
+                                height: 34,
+                                child: IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 34,
+                                    minHeight: 34,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () => setState(
+                                    () => _playerCollapsed = !_playerCollapsed,
+                                  ),
+                                  icon: Icon(
+                                    collapsed
+                                        ? Icons.keyboard_arrow_up_rounded
+                                        : Icons.keyboard_arrow_down_rounded,
+                                    size: 20,
+                                  ),
+                                  tooltip: collapsed
+                                      ? 'Expand player'
+                                      : 'Collapse player',
+                                  splashRadius: 18,
+                                ),
+                              ),
+                            ] else ...[
+                              _buildTransportButton(
+                                icon: isPlaying
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                                onPressed: state.togglePlay,
+                                tooltip: isPlaying ? 'Pause' : 'Play',
+                                cs: cs,
+                                emphasize: true,
+                              ),
+                              IconButton(
+                                onPressed: () => setState(
+                                  () => _playerCollapsed = !_playerCollapsed,
+                                ),
+                                icon: Icon(
+                                  collapsed
+                                      ? Icons.keyboard_arrow_up_rounded
+                                      : Icons.keyboard_arrow_down_rounded,
+                                  size: 24,
+                                ),
+                                tooltip: collapsed
+                                    ? 'Expand player'
+                                    : 'Collapse player',
+                                splashRadius: 20,
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -544,10 +609,13 @@ class _BrowserShellState extends State<BrowserShell> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              _formatDuration(position),
-                              style: TextStyle(
-                                  fontSize: 10, color: cs.onSurfaceVariant),
+                            ExcludeSemantics(
+                              excluding: suppressLiveSemantics,
+                              child: Text(
+                                _formatDuration(position),
+                                style: TextStyle(
+                                    fontSize: 10, color: cs.onSurfaceVariant),
+                              ),
                             ),
                             Text(
                               isVideo ? 'VIDEO' : 'AUDIO',
@@ -558,10 +626,13 @@ class _BrowserShellState extends State<BrowserShell> {
                                 letterSpacing: 0.6,
                               ),
                             ),
-                            Text(
-                              _formatDuration(duration),
-                              style: TextStyle(
-                                  fontSize: 10, color: cs.onSurfaceVariant),
+                            ExcludeSemantics(
+                              excluding: suppressLiveSemantics,
+                              child: Text(
+                                _formatDuration(duration),
+                                style: TextStyle(
+                                    fontSize: 10, color: cs.onSurfaceVariant),
+                              ),
                             ),
                           ],
                         ),
@@ -685,11 +756,16 @@ class _BrowserShellState extends State<BrowserShell> {
     );
   }
 
-  Widget _buildArtwork(Uint8List? artwork, ColorScheme cs, bool isVideo) {
+  Widget _buildArtwork(
+    Uint8List? artwork,
+    ColorScheme cs,
+    bool isVideo, {
+    double size = 44,
+  }) {
     final fallbackIcon = isVideo ? Icons.movie_rounded : Icons.music_note_rounded;
     return Container(
-      width: 44,
-      height: 44,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: cs.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(10),
