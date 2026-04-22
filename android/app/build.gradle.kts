@@ -41,7 +41,7 @@ android {
         minSdk = 24
         // Target API 36 to satisfy dependent plugins and ensure proper .so loading
         targetSdk = 36
-        versionCode = 1006
+        versionCode = 1007
         versionName = flutter.versionName
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")

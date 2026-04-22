@@ -68,6 +68,10 @@ class BrowserToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 720;
+    final wide = width >= 1200;
+    final buttonSize = wide ? 42.0 : (compact ? 34.0 : 36.0);
     // always ensure a light toolbar on mobile unless in incognito mode; dark
     // themes make the toolbar blend with the rest of the app, which looks bad
     // inside the browser.  Desktop respects the global surface color.
@@ -78,29 +82,34 @@ class BrowserToolbar extends StatelessWidget {
 
     return Container(
       color: bgColor,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      padding: EdgeInsets.fromLTRB(4, compact ? 1 : 3, 4, compact ? 2 : 4),
       child: IconTheme(
         data: IconThemeData(color: iconColor),
-        child: Row(
-          children: [
+        child: IconButtonTheme(
+          data: IconButtonThemeData(
+            style: IconButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              minimumSize: Size(buttonSize, buttonSize),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          child: Row(
+            children: [
             // Back
             IconButton(
-              padding: const EdgeInsets.all(4),
-              visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.arrow_back, size: 20),
               onPressed: canGoBack ? onBack : null,
             ),
             // Forward
             IconButton(
-              padding: const EdgeInsets.all(4),
-              visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.arrow_forward, size: 20),
               onPressed: canGoForward ? onForward : null,
             ),
             // URL bar
             Expanded(
               child: Container(
-                height: 36,
+                height: wide ? 40 : (compact ? 34 : 36),
                 decoration: BoxDecoration(
                   color: isIncognito
                       ? Colors.white.withValues(alpha: 0.1)
@@ -158,8 +167,6 @@ class BrowserToolbar extends StatelessWidget {
                     const SizedBox(width: 6),
                     // Tabs button
                     IconButton(
-                      padding: const EdgeInsets.all(4),
-                      visualDensity: VisualDensity.compact,
                       icon: Stack(
                         alignment: Alignment.center,
                         children: [
@@ -197,15 +204,11 @@ class BrowserToolbar extends StatelessWidget {
 
                     // Reload
                     IconButton(
-                      padding: const EdgeInsets.all(4),
-                      visualDensity: VisualDensity.compact,
                       icon: const Icon(Icons.refresh, size: 20),
                       onPressed: onReload,
                     ),
                     // Favourite
                     IconButton(
-                      padding: const EdgeInsets.all(4),
-                      visualDensity: VisualDensity.compact,
                       icon: Icon(
                         isFavourited
                             ? Icons.star_rounded
@@ -236,9 +239,7 @@ class BrowserToolbar extends StatelessWidget {
                                     ),
                                   ),
                                 )
-                              : IconButton(
-                                  padding: const EdgeInsets.all(4),
-                                  visualDensity: VisualDensity.compact,
+                                : IconButton(
                                   icon: const Icon(Icons.download_rounded,
                                       size: 20),
                                   onPressed: downloadEnabled
@@ -367,6 +368,7 @@ class BrowserToolbar extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
