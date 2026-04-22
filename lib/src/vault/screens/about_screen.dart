@@ -425,13 +425,26 @@ class _AboutScreenState extends State<AboutScreen>
   }
 
   Widget _sectionCard({required String title, required List<Widget> children}) {
+    final cs = Theme.of(context).colorScheme;
     return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.22)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+                color: cs.onSurface,
+              ),
+            ),
             const SizedBox(height: 10),
             ...children,
           ],

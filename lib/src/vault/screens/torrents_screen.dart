@@ -792,9 +792,9 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                     ),
                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                       maxCrossAxisExtent: 430,
-                      mainAxisExtent: 210,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
+                      mainAxisExtent: 188,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
                     ),
                     itemCount: torrents.length,
                     itemBuilder: (context, index) =>
@@ -1048,6 +1048,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     final etaText = ts.downloadSpeed > 512 && remainingBytes > 0
         ? _fmtEta(remainingBytes / ts.downloadSpeed)
         : null;
+    final denseDesktop = isGridCard;
 
     void copyMagnetLink() {
       final magnet = torrent.magnetLink;
@@ -1132,7 +1133,8 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       },
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
-        child: Card(
+        child: _HoverLift(
+          child: Card(
           key: ValueKey(ts.id),
           margin: EdgeInsets.symmetric(
             horizontal: isGridCard ? 0 : 12,
@@ -1148,7 +1150,12 @@ class _TorrentsScreenState extends State<TorrentsScreen>
             onTap: openDetails,
             onLongPress: showLongPressActions,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+              padding: EdgeInsets.fromLTRB(
+                denseDesktop ? 12 : 14,
+                denseDesktop ? 10 : 12,
+                8,
+                denseDesktop ? 10 : 12,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1160,7 +1167,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                           torrent.name,
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            fontSize: isGridCard ? 16 : 14,
+                            fontSize: isGridCard ? 15.5 : 14.5,
                             height: 1.18,
                           ),
                           overflow: TextOverflow.ellipsis,
@@ -1240,16 +1247,16 @@ class _TorrentsScreenState extends State<TorrentsScreen>
               ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: denseDesktop ? 7 : 10),
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
+                    spacing: denseDesktop ? 7 : 8,
+                    runSpacing: denseDesktop ? 4 : 6,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
-                          vertical: 3,
+                          vertical: 2,
                         ),
                         decoration: BoxDecoration(
                           color: stateColor.withValues(alpha: 0.14),
@@ -1258,7 +1265,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                         child: Text(
                           ts.statusLabel,
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: denseDesktop ? 10.5 : 11,
                             fontWeight: FontWeight.w700,
                             color: stateColor,
                           ),
@@ -1268,44 +1275,44 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                         Text(
                           _fmtSize(totalSize),
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: denseDesktop ? 10.5 : 11,
                             color: cs.onSurfaceVariant,
                           ),
                         ),
                       Text(
                         '$progressPercent%',
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: denseDesktop ? 11 : 11.5,
                           color: cs.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: denseDesktop ? 7 : 10),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(999),
                     child: LinearProgressIndicator(
                       value: progress,
-                      minHeight: 6,
+                      minHeight: denseDesktop ? 5 : 6,
                       backgroundColor: cs.surfaceContainerHighest,
                       valueColor: AlwaysStoppedAnimation<Color>(stateColor),
                     ),
                   ),
-                  const Spacer(),
+                  SizedBox(height: denseDesktop ? 8 : 12),
                   Wrap(
-                    spacing: 10,
-                    runSpacing: 6,
+                    spacing: denseDesktop ? 8 : 10,
+                    runSpacing: denseDesktop ? 4 : 6,
                     children: [
                       if (ts.downloadSpeed > 512)
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.arrow_downward, size: 12, color: cs.primary),
+                            Icon(Icons.arrow_downward, size: denseDesktop ? 11 : 12, color: cs.primary),
                             const SizedBox(width: 2),
                             Text(
                               _fmtSpeed(ts.downloadSpeed),
-                              style: TextStyle(fontSize: 11, color: cs.primary),
+                              style: TextStyle(fontSize: denseDesktop ? 10.5 : 11, color: cs.primary),
                             ),
                           ],
                         ),
@@ -1313,11 +1320,11 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.arrow_upward, size: 12, color: cs.tertiary),
+                            Icon(Icons.arrow_upward, size: denseDesktop ? 11 : 12, color: cs.tertiary),
                             const SizedBox(width: 2),
                             Text(
                               _fmtSpeed(ts.uploadSpeed),
-                              style: TextStyle(fontSize: 11, color: cs.tertiary),
+                              style: TextStyle(fontSize: denseDesktop ? 10.5 : 11, color: cs.tertiary),
                             ),
                           ],
                         ),
@@ -1325,7 +1332,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                         Text(
                           'ETA $etaText',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: denseDesktop ? 11 : 11.5,
                             color: cs.onSurfaceVariant,
                           ),
                         ),
@@ -1333,12 +1340,12 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.people_outline, size: 12, color: cs.onSurfaceVariant),
+                            Icon(Icons.people_outline, size: denseDesktop ? 11 : 12, color: cs.onSurfaceVariant),
                             const SizedBox(width: 2),
                             Text(
                               '${ts.peers}',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: denseDesktop ? 11 : 11.5,
                                 color: cs.onSurfaceVariant,
                               ),
                             ),
@@ -1350,6 +1357,39 @@ class _TorrentsScreenState extends State<TorrentsScreen>
               ),
             ),
           ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HoverLift extends StatefulWidget {
+  final Widget child;
+
+  const _HoverLift({required this.child});
+
+  @override
+  State<_HoverLift> createState() => _HoverLiftState();
+}
+
+class _HoverLiftState extends State<_HoverLift> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedScale(
+        scale: _hovered ? 1.01 : 1.0,
+        duration: const Duration(milliseconds: 140),
+        curve: Curves.easeOut,
+        child: AnimatedSlide(
+          offset: _hovered ? const Offset(0, -0.01) : Offset.zero,
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeOut,
+          child: widget.child,
         ),
       ),
     );

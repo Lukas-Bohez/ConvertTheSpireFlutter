@@ -32,12 +32,12 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 8),
             const Text(
               'Vault The Spire',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 2),
             const Text(
               'What goes into the Vault, stays in the Vault.',
-              style: TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 18),
             LayoutBuilder(
@@ -89,8 +89,9 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Card(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
               ),
+              elevation: 0,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -129,7 +130,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _QuickActionCard extends StatelessWidget {
+class _QuickActionCard extends StatefulWidget {
   final IconData icon;
   final String title;
   final String subtitle;
@@ -142,43 +143,61 @@ class _QuickActionCard extends StatelessWidget {
   });
 
   @override
+  State<_QuickActionCard> createState() => _QuickActionCardState();
+}
+
+class _QuickActionCardState extends State<_QuickActionCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return InkWell(
-      onTap: onTap,
+      onTap: widget.onTap,
+      onHover: (value) => setState(() => _hovered = value),
       borderRadius: BorderRadius.circular(12),
       child: Ink(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          color: _hovered ? cs.surfaceContainerHigh : cs.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                icon,
-                size: 28,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: const TextStyle(fontSize: 12),
-              ),
-            ],
+          border: Border.all(
+            color: _hovered ? cs.primary.withValues(alpha: 0.35) : cs.outlineVariant.withValues(alpha: 0.2),
           ),
         ),
-      ),
+        child: AnimatedScale(
+          scale: _hovered ? 1.015 : 1.0,
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeOut,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  widget.icon,
+                  size: 28,
+                  color: cs.primary,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.subtitle,
+                  style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+        ),
+              ),
     );
   }
 }
