@@ -186,7 +186,7 @@ class PlayerState with ChangeNotifier {
   final List<int> _playHistory = [];
   int _historyCursor = -1;
   final List<int> _recentlyPlayed = [];
-  static const int _maxHistoryEntries = 200;
+  static const int _maxHistoryEntries = 50;
   static const int _maxRecentShuffleEntries = 24;
 
   Directory? _thumbCacheDir;

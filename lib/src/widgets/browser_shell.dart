@@ -399,14 +399,16 @@ class _BrowserShellState extends State<BrowserShell> {
         child: Material(
           color: Colors.transparent,
           elevation: 8,
-          child: StreamBuilder<PositionUiState>(
-            stream: state.positionUiStream,
-            initialData: PositionUiState(
-              position: state.position,
-              duration: state.duration ?? Duration.zero,
-              isSeeking: false,
-            ),
-            builder: (context, snapshot) {
+          child: Semantics(
+            enabled: !Platform.isWindows,
+            child: StreamBuilder<PositionUiState>(
+              stream: state.positionUiStream,
+              initialData: PositionUiState(
+                position: state.position,
+                duration: state.duration ?? Duration.zero,
+                isSeeking: false,
+              ),
+              builder: (context, snapshot) {
               final ui = snapshot.data ??
                   PositionUiState(
                     position: state.position,
@@ -750,6 +752,7 @@ class _BrowserShellState extends State<BrowserShell> {
                 ),
               );
             },
+            ),
           ),
         ),
       ),
