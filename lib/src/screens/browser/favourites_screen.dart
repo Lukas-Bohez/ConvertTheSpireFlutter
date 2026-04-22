@@ -272,19 +272,22 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Add Favourite'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: urlC,
-              decoration: const InputDecoration(labelText: 'URL'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: titleC,
-              decoration: const InputDecoration(labelText: 'Title (optional)'),
-            ),
-          ],
+        // overflow-fix: keep form usable when keyboard reduces available dialog height.
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: urlC,
+                decoration: const InputDecoration(labelText: 'URL'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: titleC,
+                decoration: const InputDecoration(labelText: 'Title (optional)'),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -314,24 +317,27 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Edit Favourite'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: urlC,
-              decoration: const InputDecoration(labelText: 'URL'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: titleC,
-              decoration: const InputDecoration(labelText: 'Title'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: folderC,
-              decoration: const InputDecoration(labelText: 'Folder'),
-            ),
-          ],
+        // overflow-fix: keep multi-field edit form scrollable on compact screens.
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: urlC,
+                decoration: const InputDecoration(labelText: 'URL'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: titleC,
+                decoration: const InputDecoration(labelText: 'Title'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: folderC,
+                decoration: const InputDecoration(labelText: 'Folder'),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -339,7 +345,10 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
               widget.repo.removeFavourite(item['url'] as String);
               Navigator.pop(ctx);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+            ),
           ),
           FilledButton(
             onPressed: () {

@@ -165,8 +165,12 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Clear Browsing Data'),
-        content: const Text(
-            'This will clear your browsing history and recent sites. Favourites will not be affected.'),
+        // overflow-fix: ensure clear-data prompt remains readable on short screens.
+        content: const SingleChildScrollView(
+          child: Text(
+            'This will clear your browsing history and recent sites. Favourites will not be affected.',
+          ),
+        ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),

@@ -42,6 +42,7 @@ import 'services/watched_playlist_service.dart';
 import 'services/youtube_service.dart';
 import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
+import 'widgets/adaptive_ui_frame.dart';
 import 'vault/vault_bootstrap.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'data/browser_db.dart';
@@ -97,32 +98,35 @@ class _MyAppState extends State<MyApp>
           barrierDismissible: false,
           builder: (_) => AlertDialog(
             title: const Text('Missing dependency'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'libmpv is required for media playback on Linux. '
-                  'Install it with your package manager:',
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
+            // overflow-fix: dialog body can exceed small screen height.
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'libmpv is required for media playback on Linux. '
+                    'Install it with your package manager:',
                   ),
-                  child: const SelectableText(
-                    'Ubuntu/Debian:  sudo apt install libmpv1\n'
-                    'Fedora:         sudo dnf install mpv-libs\n'
-                    'Arch:           sudo pacman -S mpv',
-                    style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const SelectableText(
+                      'Ubuntu/Debian:  sudo apt install libmpv1\n'
+                      'Fedora:         sudo dnf install mpv-libs\n'
+                      'Arch:           sudo pacman -S mpv',
+                      style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                const Text('Restart the app after installing.'),
-              ],
+                  const SizedBox(height: 8),
+                  const Text('Restart the app after installing.'),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -267,9 +271,12 @@ class _MyAppState extends State<MyApp>
           context: ctx,
           builder: (dctx) => AlertDialog(
             title: const Text('Folder access lost'),
-            content: const Text(
-              'The app can no longer access your selected download folder. '
-              'Would you like to pick it again? Choosing "No" will use Downloads instead.',
+            // overflow-fix: keep long prompt scroll-safe inside dialog.
+            content: const SingleChildScrollView(
+              child: Text(
+                'The app can no longer access your selected download folder. '
+                'Would you like to pick it again? Choosing "No" will use Downloads instead.',
+              ),
             ),
             actions: [
               TextButton(
@@ -483,6 +490,10 @@ class _MyAppState extends State<MyApp>
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: themeMode,
+          builder: (context, child) {
+            // TECH-DEBT: add per-route adaptive exclusions for full-bleed media pages.
+            return AdaptiveUiFrame(child: child ?? const SizedBox.shrink());
+          },
           home: _buildHome(),
         );
       },

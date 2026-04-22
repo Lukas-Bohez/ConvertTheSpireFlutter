@@ -702,9 +702,9 @@ class _BrowserScreenState extends State<BrowserScreen>
     final canFwd = Platform.isWindows ? _windowsCanGoForward : _canGoForward;
     final isActivelyLoading = Platform.isWindows ? _windowsIsLoading : _isLoading;
     final width = MediaQuery.sizeOf(context).width;
-    final compact = width < 720;
-    final wide = width >= 1200;
-    final buttonSize = wide ? 42.0 : (compact ? 34.0 : 36.0);
+    final compact = width < 400;
+    final wide = width > 840;
+    final buttonSize = wide ? 56.0 : (compact ? 34.0 : 48.0);
     final iconButtonTheme = IconButtonThemeData(
       style: IconButton.styleFrom(
         visualDensity: VisualDensity.compact,

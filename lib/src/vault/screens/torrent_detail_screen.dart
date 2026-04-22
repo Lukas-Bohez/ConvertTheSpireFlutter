@@ -423,9 +423,12 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Redownload from scratch?'),
-        content: Text(
-          '"${torrent.name}" will be deleted from disk and downloaded '
-          'again from 0%. The .torrent source file is kept.',
+        // overflow-fix: dynamic torrent names can overflow dialog text layout.
+        content: SingleChildScrollView(
+          child: Text(
+            '"${torrent.name}" will be deleted from disk and downloaded '
+            'again from 0%. The .torrent source file is kept.',
+          ),
         ),
         actions: [
           TextButton(

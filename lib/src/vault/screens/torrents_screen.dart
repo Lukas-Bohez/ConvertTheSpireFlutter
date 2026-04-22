@@ -83,6 +83,15 @@ class _TorrentsScreenState extends State<TorrentsScreen>
   _SortMode _sortMode = _SortMode.dateAdded;
   bool _fabExpanded = false;
   bool _pickerBusy = false;
+  Timer? _searchDebounce;
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 180), () {
+      if (!mounted) return;
+      setState(() => _searchQuery = value.trim());
+    });
+  }
 
   String? _androidDocumentsUriForPath(String directoryPath) {
     final normalized = directoryPath.replaceAll('\\', '/');
@@ -213,10 +222,13 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: const Text('Set Download Folder'),
-        content: const Text(
-          'You must set a download folder before adding torrents. '
-          'This prevents downloads from being stored in inaccessible app storage. '
-          'Please go to Settings > Download Location and select a folder on external storage.',
+        // overflow-fix: keep long settings guidance readable in constrained dialogs.
+        content: const SingleChildScrollView(
+          child: Text(
+            'You must set a download folder before adding torrents. '
+            'This prevents downloads from being stored in inaccessible app storage. '
+            'Please go to Settings > Download Location and select a folder on external storage.',
+          ),
         ),
         actions: [
           FilledButton(
@@ -233,6 +245,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -330,9 +343,12 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Redownload from scratch?'),
-        content: Text(
-          '"${ts.model.name}" will be deleted from disk and downloaded again '
-          'from 0%. The .torrent source file is preserved.',
+        // overflow-fix: torrent names can be long; keep dialog content scroll-safe.
+        content: SingleChildScrollView(
+          child: Text(
+            '"${ts.model.name}" will be deleted from disk and downloaded again '
+            'from 0%. The .torrent source file is preserved.',
+          ),
         ),
         actions: [
           TextButton(
@@ -363,38 +379,69 @@ class _TorrentsScreenState extends State<TorrentsScreen>
   }
 
   Future<void> _deleteTorrent(TorrentViewState ts) async {
+    var deleteFiles = false;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Remove torrent?'),
-        content: Text(
-          '"${ts.name}" will be removed from the list. '
-          'Downloaded files are NOT deleted.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-              foregroundColor: Theme.of(ctx).colorScheme.onError,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Remove torrent?'),
+          // overflow-fix: keep dynamic torrent name prompts scroll-safe.
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '"${ts.name}" will be removed from the list.',
+                ),
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  value: deleteFiles,
+                  onChanged: (value) =>
+                      setDialogState(() => deleteFiles = value ?? false),
+                  title: const Text('Also delete downloaded files'),
+                ),
+              ],
             ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Remove'),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error,
+                foregroundColor: Theme.of(ctx).colorScheme.onError,
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(deleteFiles ? 'Remove + Delete files' : 'Remove'),
+            ),
+          ],
+        ),
       ),
     );
     if (confirmed != true) return;
     try {
       await TorrentEngineService.instance.stopTorrent(ts.model.id);
+      if (deleteFiles) {
+        await TorrentService.instance.purgeTorrentArtifacts(ts.model.id);
+      }
       await TorrentService.instance.removeTorrent(ts.model.id);
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Torrent removed.')));
+      ).showSnackBar(
+        SnackBar(
+          content: Text(
+            deleteFiles
+                ? 'Torrent removed and files deleted.'
+                : 'Torrent removed.',
+          ),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -696,38 +743,62 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     return Scaffold(
       appBar: _buildAppBar(),
       floatingActionButton: _buildFab(),
-      body: TorrentDragDrop(
-        onTorrentFile: _handleDropPath,
-        onPath: _handleDropPath,
-        child: RefreshIndicator(
-          onRefresh: _refresh,
-          child: StreamBuilder<List<TorrentViewState>>(
-            stream: TorrentService.instance.torrentStatesStream,
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final all = snapshot.data!;
-              final torrents = _sorted(all);
+      body: FocusTraversalGroup(
+        policy: ReadingOrderTraversalPolicy(),
+        child: TorrentDragDrop(
+          onTorrentFile: _handleDropPath,
+          onPath: _handleDropPath,
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: StreamBuilder<List<TorrentViewState>>(
+              stream: TorrentService.instance.torrentStatesStream,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final all = snapshot.data!;
+                final torrents = _sorted(all);
 
-              // Empty: no torrents at all
-              if (all.isEmpty) {
-                return _buildEmptyState();
-              }
+                // Empty: no torrents at all
+                if (all.isEmpty) {
+                  return _buildEmptyState();
+                }
 
-              // Empty: search returned nothing
-              if (torrents.isEmpty) {
-                return _buildNoSearchResults();
-              }
+                // Empty: search returned nothing
+                if (torrents.isEmpty) {
+                  return _buildNoSearchResults();
+                }
 
-              return ListView.builder(
-                cacheExtent: 200,
-                padding: EdgeInsets.only(bottom: Platform.isAndroid ? 96 : 12),
-                itemCount: torrents.length,
-                itemBuilder: (context, index) =>
-                    _buildTorrentCard(context, torrents[index]),
-              );
-            },
+                final width = MediaQuery.of(context).size.width;
+                final useGrid = width > 840;
+                final columns = width > 1200 ? 4 : 3;
+                final bottomPad = Platform.isAndroid ? 96.0 : 12.0;
+
+                if (useGrid) {
+                  return GridView.builder(
+                    cacheExtent: 200,
+                    padding: EdgeInsets.fromLTRB(10, 10, 10, bottomPad),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      childAspectRatio: 1.45,
+                    ),
+                    itemCount: torrents.length,
+                    itemBuilder: (context, index) =>
+                        _buildTorrentCard(context, torrents[index]),
+                  );
+                }
+
+                return ListView.builder(
+                  cacheExtent: 200,
+                  padding: EdgeInsets.only(bottom: bottomPad),
+                  itemCount: torrents.length,
+                  itemBuilder: (context, index) =>
+                      _buildTorrentCard(context, torrents[index]),
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -748,7 +819,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                 ),
               ),
               style: Theme.of(context).textTheme.titleMedium,
-              onChanged: (v) => setState(() => _searchQuery = v.trim()),
+              onChanged: _onSearchChanged,
             )
           : const Text('Torrents'),
       actions: [
@@ -1016,16 +1087,32 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       );
     }
 
-    return Card(
+    void openDetails() {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => TorrentDetailScreen(torrent: torrent),
+        ),
+      );
+    }
+
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            (event.logicalKey == LogicalKeyboardKey.enter ||
+                event.logicalKey == LogicalKeyboardKey.select)) {
+          openDetails();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Card(
       key: ValueKey(ts.id),
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => TorrentDetailScreen(torrent: torrent),
-          ),
-        ),
+        onTap: openDetails,
         onLongPress: showLongPressActions,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 4, 10),
@@ -1245,6 +1332,8 @@ class _TorrentsScreenState extends State<TorrentsScreen>
               ),
             ],
           ),
+        ),
+      ),
         ),
       ),
     );

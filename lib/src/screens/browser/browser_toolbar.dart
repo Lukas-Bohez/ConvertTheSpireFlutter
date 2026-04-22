@@ -69,9 +69,9 @@ class BrowserToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final width = MediaQuery.sizeOf(context).width;
-    final compact = width < 720;
-    final wide = width >= 1200;
-    final buttonSize = wide ? 42.0 : (compact ? 34.0 : 36.0);
+    final compact = width < 400;
+    final wide = width > 840;
+    final buttonSize = wide ? 56.0 : (compact ? 34.0 : 48.0);
     // always ensure a light toolbar on mobile unless in incognito mode; dark
     // themes make the toolbar blend with the rest of the app, which looks bad
     // inside the browser.  Desktop respects the global surface color.
@@ -109,7 +109,7 @@ class BrowserToolbar extends StatelessWidget {
             // URL bar
             Expanded(
               child: Container(
-                height: wide ? 40 : (compact ? 34 : 36),
+                height: wide ? 44 : (compact ? 34 : 38),
                 decoration: BoxDecoration(
                   color: isIncognito
                       ? Colors.white.withValues(alpha: 0.1)

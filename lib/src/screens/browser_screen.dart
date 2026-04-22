@@ -870,8 +870,9 @@ class _BrowserScreenState extends State<BrowserScreen>
             if (_castService.activeDevice != null)
               Positioned(
                 bottom: viewPadding.bottom + 56,
-                left: 0,
-                right: 0,
+                // overflow-fix: respect horizontal safe insets for notched/curved displays.
+                left: viewPadding.left,
+                right: viewPadding.right,
                 child: CastMiniBar(
                   deviceName: _castService.activeDevice!.name,
                   isPlaying:
@@ -893,7 +894,8 @@ class _BrowserScreenState extends State<BrowserScreen>
                 DownloadService.isDifficultSite(_addressController.text))
               Positioned(
                 bottom: viewPadding.bottom + 72,
-                right: 16,
+                // overflow-fix: keep floating action safely inside right display inset.
+                right: viewPadding.right + 16,
                 child: FloatingActionButton.extended(
                   heroTag: 'extract_download',
                   onPressed: _addCurrentToQueue,

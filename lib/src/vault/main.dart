@@ -27,6 +27,7 @@ import 'package:convert_the_spire_reborn/src/vault/services/tray_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/background_service.dart';
+import 'package:convert_the_spire_reborn/src/widgets/adaptive_ui_frame.dart';
 import 'package:window_manager/window_manager.dart';
 
 Future<bool> _requestAndroidPermissions() async {
@@ -344,6 +345,10 @@ class _MainAppState extends State<MainApp> {
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: themeService.themeMode,
+      builder: (context, child) {
+        // TECH-DEBT: evaluate route-level overscan overrides for immersive pages.
+        return AdaptiveUiFrame(child: child ?? const SizedBox.shrink());
+      },
       routerConfig: appRouter,
     );
   }

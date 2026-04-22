@@ -109,7 +109,14 @@ class _ChatScreenState extends State<ChatScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.server.name} / ${channel.name}')),
+      appBar: AppBar(
+        // overflow-fix: long server/channel names can overflow AppBar width.
+        title: Text(
+          '${widget.server.name} / ${channel.name}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -157,11 +164,18 @@ class _ChatScreenState extends State<ChatScreen> {
                             children: [
                               Text(
                                 m.author,
+                                // overflow-fix: constrain dynamic author names in narrow chat bubbles.
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 4),
-                              SelectableText(m.text),
+                              // overflow-fix: keep message text bounded in very narrow layouts.
+                              SelectableText(
+                                m.text,
+                                maxLines: 12,
+                              ),
                               const SizedBox(height: 6),
                               Text(
                                 '${ts.hour.toString().padLeft(2, '0')}:${ts.minute.toString().padLeft(2, '0')}',
