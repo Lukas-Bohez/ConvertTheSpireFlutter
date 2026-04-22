@@ -10,20 +10,25 @@ class HomeScreen extends StatelessWidget {
     final identity = IdentityService.instance.identity;
     final fingerprint = identity?.publicKeyBase64 ?? 'N/A';
     final cs = Theme.of(context).colorScheme;
+    final width = MediaQuery.of(context).size.width;
+    final maxContentWidth = width > 1600 ? 1280.0 : 1120.0;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vault The Spire'),
         centerTitle: true,
         elevation: 0,
       ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: MediaQuery.of(context).size.width > 1200 ? 40 : 20,
-          vertical: 20,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxContentWidth),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: width > 1200 ? 28 : 16,
+              vertical: 20,
+            ),
+            child: ListView(
+              children: [
             const SizedBox(height: 8),
             const Text(
               'Vault The Spire',
@@ -43,8 +48,8 @@ class HomeScreen extends StatelessWidget {
                     ? 3
                     : 2;
                 final childAspectRatio = constraints.maxWidth > 1200
-                    ? 2.2
-                    : 1.8;
+                    ? 1.55
+                    : 1.35;
                 return GridView.count(
                   crossAxisCount: crossAxisCount,
                   mainAxisSpacing: 12,
@@ -115,7 +120,9 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -145,9 +152,9 @@ class _QuickActionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(
@@ -155,12 +162,12 @@ class _QuickActionCard extends StatelessWidget {
                 size: 28,
                 color: Theme.of(context).colorScheme.primary,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 4),

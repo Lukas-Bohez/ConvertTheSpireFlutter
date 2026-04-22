@@ -443,12 +443,18 @@ class _AboutScreenState extends State<AboutScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final width = MediaQuery.of(context).size.width;
+    final maxContentWidth = width > 1700 ? 1280.0 : 1120.0;
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          children: [
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxContentWidth),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(width > 1200 ? 24 : 16, 16, width > 1200 ? 24 : 16, 16),
+            child: ListView(
+              children: [
             _sectionCard(
               title: 'Downloads',
               children: [
@@ -853,7 +859,9 @@ class _AboutScreenState extends State<AboutScreen>
                 ),
               ],
             ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );

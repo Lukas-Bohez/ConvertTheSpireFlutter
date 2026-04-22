@@ -267,6 +267,13 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     return '${(bps / (1024 * 1024)).toStringAsFixed(1)} MB/s';
   }
 
+  String _fmtEta(double seconds) {
+    final etaSec = seconds.round();
+    if (etaSec < 60) return '${etaSec}s';
+    if (etaSec < 3600) return '${(etaSec / 60).round()}m';
+    return '${(etaSec / 3600).toStringAsFixed(1)}h';
+  }
+
   Color _stateColor(BuildContext ctx, String state, String statusLabel) {
     final cs = Theme.of(ctx).colorScheme;
     final label = statusLabel.toLowerCase();
@@ -770,23 +777,28 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                 }
 
                 final width = MediaQuery.of(context).size.width;
-                final useGrid = width > 840;
-                final columns = width > 1200 ? 4 : 3;
+                final useGrid = width > 900;
                 final bottomPad = Platform.isAndroid ? 96.0 : 12.0;
+                final horizontalPad = width > 1600 ? 24.0 : 12.0;
 
                 if (useGrid) {
                   return GridView.builder(
                     cacheExtent: 200,
-                    padding: EdgeInsets.fromLTRB(10, 10, 10, bottomPad),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: columns,
-                      mainAxisSpacing: 8,
-                      crossAxisSpacing: 8,
-                      childAspectRatio: 1.45,
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPad,
+                      12,
+                      horizontalPad,
+                      bottomPad,
+                    ),
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 430,
+                      mainAxisExtent: 210,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
                     ),
                     itemCount: torrents.length,
                     itemBuilder: (context, index) =>
-                        _buildTorrentCard(context, torrents[index]),
+                        _buildTorrentCard(context, torrents[index], isGridCard: true),
                   );
                 }
 
@@ -1019,10 +1031,23 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     );
   }
 
-  Widget _buildTorrentCard(BuildContext context, TorrentViewState ts) {
+  Widget _buildTorrentCard(
+    BuildContext context,
+    TorrentViewState ts, {
+    bool isGridCard = false,
+  }) {
     final torrent = ts.model;
     final stateColor = _stateColor(context, ts.state, ts.statusLabel);
     final cs = Theme.of(context).colorScheme;
+    final totalSize = torrent.totalSize ?? 0;
+    final progress = ts.progress.clamp(0.0, 1.0);
+    final progressPercent = (progress * 100).toStringAsFixed(1);
+    final remainingBytes = totalSize > 0
+        ? (totalSize - ts.downloaded).clamp(0, totalSize)
+        : 0;
+    final etaText = ts.downloadSpeed > 512 && remainingBytes > 0
+        ? _fmtEta(remainingBytes / ts.downloadSpeed)
+        : null;
 
     void copyMagnetLink() {
       final magnet = torrent.magnetLink;
@@ -1108,160 +1133,43 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: Card(
-      key: ValueKey(ts.id),
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: openDetails,
-        onLongPress: showLongPressActions,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 4, 10),
-          child: Row(
-            children: [
-              // Main content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Name
-                    Text(
-                      torrent.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 7),
-                    const SizedBox(height: 5),
-                    // Status row
-                    Row(
-                      children: [
-                        // Status badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+          key: ValueKey(ts.id),
+          margin: EdgeInsets.symmetric(
+            horizontal: isGridCard ? 0 : 12,
+            vertical: isGridCard ? 0 : 5,
+          ),
+          clipBehavior: Clip.antiAlias,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.20)),
+          ),
+          child: InkWell(
+            onTap: openDetails,
+            onLongPress: showLongPressActions,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          torrent.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: isGridCard ? 16 : 14,
+                            height: 1.18,
                           ),
-                          decoration: BoxDecoration(
-                            color: stateColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            ts.statusLabel,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: stateColor,
-                            ),
-                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: isGridCard ? 2 : 1,
                         ),
-                        // Size
-                        if (torrent.totalSize != null &&
-                            torrent.totalSize! > 0) ...[
-                          Text(
-                            ' / ${_fmtSize(torrent.totalSize!)}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                        const Spacer(),
-                        // Download speed
-                        if (ts.downloadSpeed > 512) ...[
-                          Icon(
-                            Icons.arrow_downward,
-                            size: 10,
-                            color: cs.primary,
-                          ),
-                          Text(
-                            _fmtSpeed(ts.downloadSpeed),
-                            style: TextStyle(fontSize: 10, color: cs.primary),
-                          ),
-                        ],
-                        // Upload speed
-                        if (ts.uploadSpeed > 512) ...[
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_upward,
-                            size: 10,
-                            color: cs.tertiary,
-                          ),
-                          Text(
-                            _fmtSpeed(ts.uploadSpeed),
-                            style: TextStyle(fontSize: 10, color: cs.tertiary),
-                          ),
-                        ],
-                        // ETA while downloading
-                        if (ts.downloadSpeed > 512 &&
-                            ts.model.totalSize != null &&
-                            ts.model.totalSize! > 0 &&
-                            ts.downloaded < ts.model.totalSize!)
-                          ...() {
-                            final remaining =
-                                (ts.model.totalSize! - ts.downloaded).clamp(
-                                  0,
-                                  ts.model.totalSize!,
-                                );
-                            final etaSec = (remaining / ts.downloadSpeed)
-                                .round();
-                            String eta;
-                            if (etaSec < 60) {
-                              eta = '${etaSec}s';
-                            } else if (etaSec < 3600) {
-                              eta = '${(etaSec / 60).round()}m';
-                            } else {
-                              eta = '${(etaSec / 3600).toStringAsFixed(1)}h';
-                            }
-                            return [
-                              const SizedBox(width: 4),
-                              Text(
-                                'ETA $eta',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: cs.onSurfaceVariant,
-                                ),
-                              ),
-                              if (ts.model.totalSize != null &&
-                                  ts.model.totalSize! > 0 &&
-                                  ts.progress < 0.999) ...[
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${_fmtSize((ts.model.totalSize! * (1 - ts.progress)).round())} left',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: cs.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ];
-                          }(),
-                        // Peers
-                        if (ts.peers > 0) ...[
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.people_outline,
-                            size: 10,
-                            color: cs.onSurfaceVariant,
-                          ),
-                          Text(
-                            '${ts.peers}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              // Action menu
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, size: 20),
+                      ),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert, size: 20),
+                        splashRadius: 18,
                 tooltip: 'More',
                 onSelected: (v) {
                   switch (v) {
@@ -1330,10 +1238,118 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                   ),
                 ],
               ),
-            ],
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: stateColor.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          ts.statusLabel,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: stateColor,
+                          ),
+                        ),
+                      ),
+                      if (totalSize > 0)
+                        Text(
+                          _fmtSize(totalSize),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      Text(
+                        '$progressPercent%',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 6,
+                      backgroundColor: cs.surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation<Color>(stateColor),
+                    ),
+                  ),
+                  const Spacer(),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 6,
+                    children: [
+                      if (ts.downloadSpeed > 512)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.arrow_downward, size: 12, color: cs.primary),
+                            const SizedBox(width: 2),
+                            Text(
+                              _fmtSpeed(ts.downloadSpeed),
+                              style: TextStyle(fontSize: 11, color: cs.primary),
+                            ),
+                          ],
+                        ),
+                      if (ts.uploadSpeed > 512)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.arrow_upward, size: 12, color: cs.tertiary),
+                            const SizedBox(width: 2),
+                            Text(
+                              _fmtSpeed(ts.uploadSpeed),
+                              style: TextStyle(fontSize: 11, color: cs.tertiary),
+                            ),
+                          ],
+                        ),
+                      if (etaText != null)
+                        Text(
+                          'ETA $etaText',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      if (ts.peers > 0)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.people_outline, size: 12, color: cs.onSurfaceVariant),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${ts.peers}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
         ),
       ),
     );
