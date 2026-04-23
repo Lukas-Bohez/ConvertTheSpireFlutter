@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/build_flags.dart';
@@ -12,8 +13,7 @@ class SupportScreen extends StatelessWidget {
   Future<void> _openUrl(String url) async {
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      // ignore: avoid_print
-      print('Could not launch $url');
+      debugPrint('Could not launch $url');
     }
   }
 
