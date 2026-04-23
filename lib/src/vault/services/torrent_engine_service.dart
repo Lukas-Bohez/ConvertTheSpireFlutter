@@ -992,6 +992,36 @@ class TorrentEngineService {
   final _statusController = StreamController<TorrentEngineStatus>.broadcast();
   Stream<TorrentEngineStatus> get statusStream => _statusController.stream;
 
+  void dispose() {
+    for (final timer in _pollTimers.values) {
+      timer.cancel();
+    }
+    for (final timer in _scrapeTimers.values) {
+      timer.cancel();
+    }
+    for (final timer in _healthCheckTimers.values) {
+      timer.cancel();
+    }
+    for (final timer in _fastHealthCheckTimers.values) {
+      timer.cancel();
+    }
+    for (final timer in _discoveryTimers.values) {
+      timer.cancel();
+    }
+    for (final timer in _progressTimers.values) {
+      timer.cancel();
+    }
+    _pollTimers.clear();
+    _scrapeTimers.clear();
+    _healthCheckTimers.clear();
+    _fastHealthCheckTimers.clear();
+    _discoveryTimers.clear();
+    _progressTimers.clear();
+    if (!_statusController.isClosed) {
+      unawaited(_statusController.close());
+    }
+  }
+
   bool isRunning(String torrentId) => _tasks.containsKey(torrentId);
 
   Future<void> cacheTorrentSource(String torrentId, List<int> torrentBytes) async {

@@ -79,8 +79,8 @@ class YtDlpUpdater {
   /// inside the application's support directory. If [expectedSha256] is provided
   /// the downloaded bytes will be verified.
   static Future<bool> downloadAndReplace(String url, String filename, {String? expectedSha256}) async {
+    final client = http.Client();
     try {
-      final client = http.Client();
       final resp = await client.send(http.Request('GET', Uri.parse(url)));
       if (resp.statusCode != 200) {
         print('yt-dlp: download failed status=${resp.statusCode}');
@@ -140,6 +140,8 @@ class YtDlpUpdater {
     } catch (e) {
       print('yt-dlp: downloadAndReplace failed: $e');
       return false;
+    } finally {
+      client.close();
     }
   }
 
