@@ -97,6 +97,8 @@ Final state:
 
 ## Phase 10 — Final Report
 
+- Search and quick-download flows now show explicit empty/input feedback instead of failing silently.
+- The support screen now logs launch failures via `debugPrint` rather than a raw console `print`.
 - Desktop fullscreen behavior was corrected so F11 now uses the shared fullscreen helper and hides/restores the native title bar appropriately.
 - The release path is now versioned, validated, and packaged for Play Store submission.
 - Remaining non-blocking noise in the live run is from device-side media/OEM logs and invalid test media, not from the fixed startup crash path.
