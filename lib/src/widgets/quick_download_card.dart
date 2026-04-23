@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:youtube_explode_dart/youtube_explode_dart.dart' hide SearchResult;
+import 'package:youtube_explode_dart/youtube_explode_dart.dart'
+    hide SearchResult;
 
 import '../models/search_result.dart';
 import '../services/playlist_service.dart';
@@ -11,8 +12,8 @@ import '../services/yt_dlp_service.dart';
 ///
 /// It fetches basic metadata for YouTube URLs and shows a preview before enqueueing.
 class QuickDownloadCard extends StatefulWidget {
-  final Future<void> Function(SearchResult result, String format, String quality)
-      onDownload;
+  final Future<void> Function(
+      SearchResult result, String format, String quality) onDownload;
 
   const QuickDownloadCard({super.key, required this.onDownload});
 
@@ -28,7 +29,12 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
 
   Future<void> _doDownload() async {
     final url = _controller.text.trim();
-    if (url.isEmpty) return;
+    if (url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Paste a URL first.')),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
@@ -38,7 +44,8 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
         // Playlist detected
         final yt = YoutubeExplode();
         final playlistService = PlaylistService(yt: yt);
-        List<SearchResult> tracks = await playlistService.getYouTubePlaylistTracks(url);
+        List<SearchResult> tracks =
+            await playlistService.getYouTubePlaylistTracks(url);
         yt.close();
         if (!mounted) return;
         final selected = await showModalBottomSheet<List<SearchResult>>(
@@ -61,7 +68,9 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
           }
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Queued ${selected.length} tracks for download')),
+              SnackBar(
+                  content:
+                      Text('Queued ${selected.length} tracks for download')),
             );
             _controller.clear();
           }
@@ -131,7 +140,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not fetch video info.')), 
+          const SnackBar(content: Text('Could not fetch video info.')),
         );
       }
     } finally {
@@ -195,12 +204,16 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                                 border: OutlineInputBorder(),
                               ),
                               items: const [
-                                DropdownMenuItem(value: 'mp3', child: Text('MP3')),
-                                DropdownMenuItem(value: 'm4a', child: Text('M4A')),
-                                DropdownMenuItem(value: 'mp4', child: Text('MP4')),
+                                DropdownMenuItem(
+                                    value: 'mp3', child: Text('MP3')),
+                                DropdownMenuItem(
+                                    value: 'm4a', child: Text('M4A')),
+                                DropdownMenuItem(
+                                    value: 'mp4', child: Text('MP4')),
                               ],
                               onChanged: (value) {
-                                if (value != null) setState(() => _format = value);
+                                if (value != null)
+                                  setState(() => _format = value);
                               },
                             ),
                           ),
@@ -213,17 +226,26 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                                 border: OutlineInputBorder(),
                               ),
                               items: const [
-                                DropdownMenuItem(value: '360p', child: Text('360p')),
-                                DropdownMenuItem(value: '480p', child: Text('480p')),
-                                DropdownMenuItem(value: '720p', child: Text('720p')),
-                                DropdownMenuItem(value: '1080p', child: Text('1080p')),
-                                DropdownMenuItem(value: '1440p', child: Text('1440p')),
-                                DropdownMenuItem(value: '2160p', child: Text('2160p')),
-                                DropdownMenuItem(value: '4320p', child: Text('4320p')),
-                                DropdownMenuItem(value: 'best', child: Text('Best')),
+                                DropdownMenuItem(
+                                    value: '360p', child: Text('360p')),
+                                DropdownMenuItem(
+                                    value: '480p', child: Text('480p')),
+                                DropdownMenuItem(
+                                    value: '720p', child: Text('720p')),
+                                DropdownMenuItem(
+                                    value: '1080p', child: Text('1080p')),
+                                DropdownMenuItem(
+                                    value: '1440p', child: Text('1440p')),
+                                DropdownMenuItem(
+                                    value: '2160p', child: Text('2160p')),
+                                DropdownMenuItem(
+                                    value: '4320p', child: Text('4320p')),
+                                DropdownMenuItem(
+                                    value: 'best', child: Text('Best')),
                               ],
                               onChanged: (value) {
-                                if (value != null) setState(() => _quality = value);
+                                if (value != null)
+                                  setState(() => _quality = value);
                               },
                             ),
                           ),
@@ -237,7 +259,8 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                               ? const SizedBox(
                                   width: 16,
                                   height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : const Icon(Icons.download),
                           label: const Text('Download'),
@@ -276,14 +299,22 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                             border: OutlineInputBorder(),
                           ),
                           items: const [
-                            DropdownMenuItem(value: '360p', child: Text('360p')),
-                            DropdownMenuItem(value: '480p', child: Text('480p')),
-                            DropdownMenuItem(value: '720p', child: Text('720p')),
-                            DropdownMenuItem(value: '1080p', child: Text('1080p')),
-                            DropdownMenuItem(value: '1440p', child: Text('1440p')),
-                            DropdownMenuItem(value: '2160p', child: Text('2160p')),
-                            DropdownMenuItem(value: '4320p', child: Text('4320p')),
-                            DropdownMenuItem(value: 'best', child: Text('Best')),
+                            DropdownMenuItem(
+                                value: '360p', child: Text('360p')),
+                            DropdownMenuItem(
+                                value: '480p', child: Text('480p')),
+                            DropdownMenuItem(
+                                value: '720p', child: Text('720p')),
+                            DropdownMenuItem(
+                                value: '1080p', child: Text('1080p')),
+                            DropdownMenuItem(
+                                value: '1440p', child: Text('1440p')),
+                            DropdownMenuItem(
+                                value: '2160p', child: Text('2160p')),
+                            DropdownMenuItem(
+                                value: '4320p', child: Text('4320p')),
+                            DropdownMenuItem(
+                                value: 'best', child: Text('Best')),
                           ],
                           onChanged: (value) {
                             if (value != null) setState(() => _quality = value);
@@ -298,7 +329,8 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                               ? const SizedBox(
                                   width: 16,
                                   height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : const Icon(Icons.download),
                           label: const Text('Download'),
@@ -328,7 +360,8 @@ class _PlaylistChecklistSheet extends StatefulWidget {
   const _PlaylistChecklistSheet({required this.tracks});
 
   @override
-  State<_PlaylistChecklistSheet> createState() => _PlaylistChecklistSheetState();
+  State<_PlaylistChecklistSheet> createState() =>
+      _PlaylistChecklistSheetState();
 }
 
 class _PlaylistChecklistSheetState extends State<_PlaylistChecklistSheet> {
@@ -347,7 +380,8 @@ class _PlaylistChecklistSheetState extends State<_PlaylistChecklistSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Select tracks to download', style: Theme.of(context).textTheme.titleMedium),
+          Text('Select tracks to download',
+              style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           SizedBox(
             height: 300,
@@ -363,7 +397,8 @@ class _PlaylistChecklistSheetState extends State<_PlaylistChecklistSheet> {
                   title: Text(track.title),
                   subtitle: Text(track.artist),
                   secondary: track.thumbnailUrl.isNotEmpty
-                      ? CircleAvatar(backgroundImage: NetworkImage(track.thumbnailUrl))
+                      ? CircleAvatar(
+                          backgroundImage: NetworkImage(track.thumbnailUrl))
                       : null,
                 );
               },
@@ -498,7 +533,10 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
                             .titleMedium
                             ?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text(widget.result.artist.isNotEmpty ? widget.result.artist : widget.result.source,
+                    Text(
+                        widget.result.artist.isNotEmpty
+                            ? widget.result.artist
+                            : widget.result.source,
                         style: Theme.of(context).textTheme.bodyMedium),
                   ],
                 ),
@@ -510,9 +548,11 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
             ],
           ),
           const SizedBox(height: 12),
-          Text('Format: ${widget.format}', style: Theme.of(context).textTheme.bodyMedium),
+          Text('Format: ${widget.format}',
+              style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 4),
-          Text('Quality: ${widget.quality}', style: Theme.of(context).textTheme.bodyMedium),
+          Text('Quality: ${widget.quality}',
+              style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 4),
           _loading
               ? const Row(
@@ -528,7 +568,8 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
                 )
               : _error != null
                   ? Text(_error!, style: TextStyle(color: cs.error))
-                  : Text('Estimated size: ${_formatSize(_estimatedSize)}', style: Theme.of(context).textTheme.bodyMedium),
+                  : Text('Estimated size: ${_formatSize(_estimatedSize)}',
+                      style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,

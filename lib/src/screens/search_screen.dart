@@ -43,6 +43,7 @@ class _SearchScreenState extends State<SearchScreen>
   bool _loading = false;
   String? _error;
   String _selectedFormat = 'mp3';
+  bool _hasSearched = false;
 
   // Tracks what files already exist in the user-selected download directory.
   Set<String> _downloadedFileKeys = {};
@@ -59,7 +60,8 @@ class _SearchScreenState extends State<SearchScreen>
   String _normalizeKey(String input) {
     var s = input.toLowerCase();
     // Remove common featuring markers
-    s = s.replaceAll(RegExp(r'\b(feat|ft|featuring)\b\.?', caseSensitive: false), '');
+    s = s.replaceAll(
+        RegExp(r'\b(feat|ft|featuring)\b\.?', caseSensitive: false), '');
     // Replace ampersands
     s = s.replaceAll('&', ' and ');
     // Remove bracketed info (e.g. (remix), [live], {explicit})
@@ -82,12 +84,16 @@ class _SearchScreenState extends State<SearchScreen>
     final full = _normalizeKey('${r.artist} ${r.title}');
     final tokens = _tokenize('${r.artist} ${r.title}');
 
-    if (_downloadedFileKeys.contains(full) || _downloadedFileKeys.contains(title)) {
+    if (_downloadedFileKeys.contains(full) ||
+        _downloadedFileKeys.contains(title)) {
       return true;
     }
 
     for (final key in _downloadedFileKeys) {
-      if (key.contains(title) || title.contains(key) || key.contains(full) || full.contains(key)) {
+      if (key.contains(title) ||
+          title.contains(key) ||
+          key.contains(full) ||
+          full.contains(key)) {
         return true;
       }
     }
@@ -124,7 +130,8 @@ class _SearchScreenState extends State<SearchScreen>
     try {
       final dir = Directory(folder);
       if (!await dir.exists()) return;
-      await for (final entity in dir.list(recursive: true, followLinks: false)) {
+      await for (final entity
+          in dir.list(recursive: true, followLinks: false)) {
         if (entity is! File) continue;
         final ext = p.extension(entity.path).toLowerCase();
         if (!extWhitelist.contains(ext)) continue;
@@ -157,11 +164,17 @@ class _SearchScreenState extends State<SearchScreen>
 
   Future<void> _search() async {
     final query = _controller.text.trim();
-    if (query.isEmpty) return;
+    if (query.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a search term first.')),
+      );
+      return;
+    }
 
     setState(() {
       _loading = true;
       _error = null;
+      _hasSearched = true;
     });
 
     try {
@@ -240,7 +253,9 @@ class _SearchScreenState extends State<SearchScreen>
                 tooltip: _scanningDownloadFolder
                     ? 'Scanning download folder…'
                     : 'Refresh downloaded file status',
-                onPressed: _scanningDownloadFolder ? null : () => _refreshDownloadedFiles(),
+                onPressed: _scanningDownloadFolder
+                    ? null
+                    : () => _refreshDownloadedFiles(),
               );
 
               if (narrow) {
@@ -300,102 +315,140 @@ class _SearchScreenState extends State<SearchScreen>
             ),
           ),
         Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            separatorBuilder: (_, __) => const SizedBox(height: 6),
-            itemCount: _results.length,
-            itemBuilder: (context, index) {
-              final r = _results[index];
-              final cs = Theme.of(context).colorScheme;
-              final alreadyDownloaded = _isAlreadyDownloaded(r);
-              final leadingWidget = r.thumbnailUrl.isNotEmpty
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Image.network(r.thumbnailUrl,
-                          width: 56, height: 56, fit: BoxFit.cover),
-                    )
-                  : Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: cs.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Icon(Icons.music_note,
-                          size: 28, color: cs.onSurfaceVariant),
-                    );
-
-              return Card(
-                margin: EdgeInsets.zero,
-                color: alreadyDownloaded
-                    ? cs.surfaceContainerHighest.withValues(alpha: 0.65)
-                    : null,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () => widget.onDownload(r, _selectedFormat),
+          child: _results.isEmpty && !_loading && _error == null
+              ? Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Row(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        leadingWidget,
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(r.title,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500)),
-                              const SizedBox(height: 3),
-                              Text(
-                                '${r.artist}  \u2022  ${_formatDuration(r.duration)}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontSize: 12, color: cs.onSurfaceVariant),
-                              ),
-                              const SizedBox(height: 2),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: cs.primaryContainer
-                                      .withValues(alpha: 0.5),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(r.source,
-                                    style: TextStyle(
-                                        fontSize: 10,
-                                        color: cs.onPrimaryContainer)),
-                              ),
-                            ],
+                        Icon(
+                          _hasSearched ? Icons.search_off : Icons.search,
+                          size: 64,
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          _hasSearched
+                              ? 'No results found'
+                              : 'Search for music across sources',
+                          style: Theme.of(context).textTheme.titleMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _hasSearched
+                              ? 'Try a different artist, title, or source.'
+                              : 'Enter a query above to start searching.',
+                          style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
-                        ),
-                        if (alreadyDownloaded) ...[
-                          Icon(Icons.check_circle, size: 18, color: cs.primary),
-                          const SizedBox(width: 8),
-                        ],
-                        IconButton(
-                          icon: const Icon(Icons.play_arrow),
-                          tooltip: 'Preview in browser',
-                          onPressed: () => _launchPreview(r.id),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.download),
-                          tooltip: 'Download',
-                          onPressed: () =>
-                              widget.onDownload(r, _selectedFormat),
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
                   ),
+                )
+              : ListView.separated(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  itemCount: _results.length,
+                  itemBuilder: (context, index) {
+                    final r = _results[index];
+                    final cs = Theme.of(context).colorScheme;
+                    final alreadyDownloaded = _isAlreadyDownloaded(r);
+                    final leadingWidget = r.thumbnailUrl.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: Image.network(r.thumbnailUrl,
+                                width: 56, height: 56, fit: BoxFit.cover),
+                          )
+                        : Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: cs.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Icon(Icons.music_note,
+                                size: 28, color: cs.onSurfaceVariant),
+                          );
+
+                    return Card(
+                      margin: EdgeInsets.zero,
+                      color: alreadyDownloaded
+                          ? cs.surfaceContainerHighest.withValues(alpha: 0.65)
+                          : null,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => widget.onDownload(r, _selectedFormat),
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Row(
+                            children: [
+                              leadingWidget,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(r.title,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500)),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      '${r.artist}  \u2022  ${_formatDuration(r.duration)}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: cs.onSurfaceVariant),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: cs.primaryContainer
+                                            .withValues(alpha: 0.5),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(r.source,
+                                          style: TextStyle(
+                                              fontSize: 10,
+                                              color: cs.onPrimaryContainer)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (alreadyDownloaded) ...[
+                                Icon(Icons.check_circle,
+                                    size: 18, color: cs.primary),
+                                const SizedBox(width: 8),
+                              ],
+                              IconButton(
+                                icon: const Icon(Icons.play_arrow),
+                                tooltip: 'Preview in browser',
+                                onPressed: () => _launchPreview(r.id),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.download),
+                                tooltip: 'Download',
+                                onPressed: () =>
+                                    widget.onDownload(r, _selectedFormat),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ),
       ],
     );
