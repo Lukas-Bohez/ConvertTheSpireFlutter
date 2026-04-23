@@ -33,6 +33,8 @@ import '../services/youtube_service.dart';
 import '../services/vault_settings_bridge.dart';
 import '../config/build_flags.dart';
 import '../config/full_mode_access.dart';
+import '../vault/services/torrent_engine_service.dart';
+import '../vault/services/torrent_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/safe_json.dart';
 
@@ -1152,6 +1154,8 @@ class AppController extends ChangeNotifier {
     FullModeAccess.instance.removeListener(_fullModeListener);
     watchedPlaylistService.dispose();
     previewPlayer.dispose();
+    TorrentService.instance.dispose();
+    TorrentEngineService.instance.dispose();
     try {
       youtube.close();
     } catch (_) {}

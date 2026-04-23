@@ -325,6 +325,12 @@ class TorrentService {
     return _torrentStatesController.stream;
   }
 
+  void dispose() {
+    if (!_torrentStatesController.isClosed) {
+      unawaited(_torrentStatesController.close());
+    }
+  }
+
   Stream<TorrentViewState?> torrentStateStream(String torrentId) {
     _ensureStateSyncStarted();
     return torrentStatesStream.map((states) {
