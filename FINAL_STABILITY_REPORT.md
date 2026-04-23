@@ -87,13 +87,13 @@ Final state:
 
 ## Phase 8 — Version Bump
 
-- Version updated to `10.2.1+1021` in `pubspec.yaml`.
-- Android `versionName` and `versionCode` were aligned to `10.2.1` / `1021`.
+- Version updated to `10.2.2+1022` in `pubspec.yaml`.
+- Android `versionName` and `versionCode` were aligned to `10.2.2` / `1022`.
 
 ## Phase 9 — Clean AAB Build
 
 - Clean Play Store bundle build completed successfully.
-- Final artifact: `aab/bitplayer-v10.2.1+1021-play-release.aab`.
+- Final artifact: `aab/bitplayer-v10.2.2+1022-play-release.aab`.
 
 ## Phase 10 — Final Report
 
