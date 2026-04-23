@@ -44,6 +44,7 @@ import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
 import 'widgets/adaptive_ui_frame.dart';
 import 'vault/vault_bootstrap.dart';
+import 'vault/platform/desktop_window.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'data/browser_db.dart';
 import 'config/build_flags.dart';
@@ -88,9 +89,7 @@ class _MyAppState extends State<MyApp>
       } catch (_) {}
     }
 
-    if (widget.mediaKitInitError != null &&
-        !kIsWeb &&
-        Platform.isLinux) {
+    if (widget.mediaKitInitError != null && !kIsWeb && Platform.isLinux) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _dismissedMediaKitError) return;
         showDialog(
@@ -174,11 +173,11 @@ class _MyAppState extends State<MyApp>
           (defaultTargetPlatform == TargetPlatform.windows ||
               defaultTargetPlatform == TargetPlatform.linux ||
               defaultTargetPlatform == TargetPlatform.macOS)) {
-        windowManager.isFullScreen().then((isFull) {
-          windowManager.setFullScreen(!isFull);
-        }).catchError((e) {
-          if (kDebugMode) debugPrint('Failed to toggle fullscreen: $e');
-        });
+        unawaited(
+          toggleDesktopFullScreen().catchError((e) {
+            if (kDebugMode) debugPrint('Failed to toggle fullscreen: $e');
+          }),
+        );
       }
     }
   }
@@ -333,9 +332,8 @@ class _MyAppState extends State<MyApp>
 
     // Close-to-tray must be a pure hide path. Do not dispose WebViews,
     // kill WebView2 processes, or destroy the window in this branch.
-    final shouldMinimiseToTray =
-        _controller?.settings?.minimizeToTrayOnClose ??
-            TrayService.shouldMinimiseToTrayOnClose;
+    final shouldMinimiseToTray = _controller?.settings?.minimizeToTrayOnClose ??
+        TrayService.shouldMinimiseToTrayOnClose;
     if (TrayService.enabled && shouldMinimiseToTray) {
       if (kDebugMode) {
         debugPrint('[App] Tray mode active; hiding window (skip teardown)');
@@ -353,8 +351,8 @@ class _MyAppState extends State<MyApp>
     }
 
     try {
-      final future = BrowserScreen.browserKey.currentState
-          ?.disposeAllWebViewControllers();
+      final future =
+          BrowserScreen.browserKey.currentState?.disposeAllWebViewControllers();
       if (future != null) {
         await future.timeout(const Duration(seconds: 3), onTimeout: () {
           if (kDebugMode) {
@@ -400,7 +398,8 @@ class _MyAppState extends State<MyApp>
                 '[App] taskkill msedgewebview2 exit=${r.exitCode} stderr=${r.stderr}');
           }
         } catch (e) {
-          if (kDebugMode) debugPrint('[App] taskkill msedgewebview2 failed: $e');
+          if (kDebugMode)
+            debugPrint('[App] taskkill msedgewebview2 failed: $e');
         }
       }
     }
@@ -555,8 +554,9 @@ class _MyAppState extends State<MyApp>
               children: [
                 const Icon(Icons.error_outline, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
-                Builder(builder: (ctx) => Text('Failed to start',
-                    style: Theme.of(ctx).textTheme.headlineSmall)),
+                Builder(
+                    builder: (ctx) => Text('Failed to start',
+                        style: Theme.of(ctx).textTheme.headlineSmall)),
                 const SizedBox(height: 8),
                 Text(_initError!, textAlign: TextAlign.center),
                 const SizedBox(height: 16),
@@ -600,8 +600,7 @@ class _MyAppState extends State<MyApp>
           contentChild = OnboardingScreen(
             onFinish: controller.completeOnboarding,
             onThemeChanged: (mode) => controller.setThemeMode(mode),
-            themeMode:
-                _resolveThemeMode(controller.settings?.themeMode),
+            themeMode: _resolveThemeMode(controller.settings?.themeMode),
           );
         } else {
           contentChild = MultiProvider(
