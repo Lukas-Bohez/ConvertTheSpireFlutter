@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show Directory, Platform;
+import 'dart:io' show Directory, File, FileMode, Platform;
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart'
     show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
@@ -17,12 +17,46 @@ import 'src/config/full_mode_access.dart';
 import 'src/app.dart';
 import 'src/services/yt_dlp_update_controller.dart';
 
+Future<File?> _prepareStartupErrorLogFile() async {
+  try {
+    final documentsDirectory = await getApplicationDocumentsDirectory();
+    return File(
+      '${documentsDirectory.path}${Platform.pathSeparator}startup_errors.log',
+    );
+  } catch (e) {
+    debugPrint('Failed to prepare startup error log file: $e');
+    return null;
+  }
+}
+
+void _logStartupError(
+  File? logFile,
+  String label,
+  Object error,
+  StackTrace stack,
+) {
+  final timestamp = DateTime.now().toIso8601String();
+  final entry = '[$timestamp] $label:\n$error\n$stack\n\n';
+  debugPrint(entry);
+  if (logFile == null) return;
+  unawaited(
+    () async {
+      try {
+        await logFile.writeAsString(entry, mode: FileMode.append, flush: true);
+      } catch (writeError) {
+        debugPrint('Failed to write startup error log entry: $writeError');
+      }
+    }(),
+  );
+}
+
 Future<void> main() async {
   // Ensure bindings are initialized in the same zone that runs runApp.
   // This avoids `Zone mismatch` errors from Flutter.
-  await runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
+  final startupErrorLogFile = await _prepareStartupErrorLogFile();
 
+  await runZonedGuarded(() async {
     // Request storage permission on Android (if needed).
     Future<void> _requestAndroidPermissions() async {
       if (kIsWeb) return;
@@ -48,20 +82,21 @@ Future<void> main() async {
     }
 
     // Global error handlers.
-  FlutterError.onError = (details) {
-    FlutterError.presentError(details);
-    if (kDebugMode) {
-      debugPrint('UNCAUGHT FLUTTER ERROR: ${details.exception}');
-      debugPrint(details.stack?.toString() ?? 'no stack');
-    }
-  };
-  ui.PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('UNCAUGHT PLATFORM ERROR: $error');
-    debugPrint(stack.toString());
-    return true;
-  };
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      _logStartupError(
+        startupErrorLogFile,
+        'FLUTTER ERROR',
+        details.exceptionAsString(),
+        details.stack ?? StackTrace.current,
+      );
+    };
+    ui.PlatformDispatcher.instance.onError = (error, stack) {
+      _logStartupError(startupErrorLogFile, 'PLATFORM ERROR', error, stack);
+      return true;
+    };
 
-  await _requestAndroidPermissions();
+    await _requestAndroidPermissions();
 
     // Ensure WebView2 user data folder is short (avoids long-path crashes).
     // Note: setting the environment variable via Win32 APIs was removed for
@@ -80,11 +115,14 @@ Future<void> main() async {
           final appSupport = await getApplicationSupportDirectory();
           final webViewDataDir = '${appSupport.path}\\WebView2UserData';
           webViewEnvironment = await WebViewEnvironment.create(
-            settings: WebViewEnvironmentSettings(userDataFolder: webViewDataDir),
+            settings:
+                WebViewEnvironmentSettings(userDataFolder: webViewDataDir),
           );
-          if (kDebugMode) debugPrint('[WebView] created environment at $webViewDataDir');
+          if (kDebugMode)
+            debugPrint('[WebView] created environment at $webViewDataDir');
         } else {
-          if (kDebugMode) debugPrint('[WebView] WebView2 runtime not available');
+          if (kDebugMode)
+            debugPrint('[WebView] WebView2 runtime not available');
         }
       } catch (e) {
         if (kDebugMode) debugPrint('[WebView] environment init failed: $e');
@@ -98,27 +136,25 @@ Future<void> main() async {
 
     String? mediaKitError;
     if (!kIsWeb) {
-      if (Platform.isAndroid) {
-        if (kDebugMode) debugPrint('Skipping MediaKit initialization on Android (unsupported)');
-      } else {
-        try {
-          MediaKit.ensureInitialized();
-        } catch (e, st) {
-          final msg = '$e';
-          if (msg.contains('Unsupported platform')) {
-            if (kDebugMode) debugPrint('MediaKit not supported: $msg');
-          } else {
-            mediaKitError = msg;
-            if (kDebugMode) {
-              debugPrint('MediaKit initialization failed: $e');
-              debugPrint('$st');
-            }
+      try {
+        MediaKit.ensureInitialized();
+      } catch (e, st) {
+        final msg = '$e';
+        if (msg.contains('Unsupported platform')) {
+          if (kDebugMode) debugPrint('MediaKit not supported: $msg');
+        } else {
+          mediaKitError = msg;
+          _logStartupError(startupErrorLogFile, 'MEDIA KIT ERROR', e, st);
+          if (kDebugMode) {
+            debugPrint('MediaKit initialization failed: $e');
+            debugPrint('$st');
           }
         }
       }
     }
 
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    if (!kIsWeb &&
+        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       await windowManager.ensureInitialized();
       final windowOptions = WindowOptions(
         size: ui.Size(1100, 750),
@@ -137,19 +173,29 @@ Future<void> main() async {
 
     await FullModeAccess.instance.load();
 
-    runApp(MyApp(
-      mediaKitInitError: mediaKitError,
-      webViewEnvironment: webViewEnvironment,
-    ));
+    runZonedGuarded(
+      () {
+        runApp(MyApp(
+          mediaKitInitError: mediaKitError,
+          webViewEnvironment: webViewEnvironment,
+        ));
+      },
+      (error, stack) {
+        _logStartupError(startupErrorLogFile, 'ZONE ERROR', error, stack);
+      },
+    );
 
     try {
       YtDlpUpdateController.start();
     } catch (e) {
-      debugPrint('yt-dlp updater controller failed to start: $e');
+      _logStartupError(
+        startupErrorLogFile,
+        'YT-DLP STARTUP ERROR',
+        e,
+        StackTrace.current,
+      );
     }
   }, (error, stack) {
-    debugPrint('UNCAUGHT ZONED ERROR: $error');
-    debugPrint(stack.toString());
+    _logStartupError(startupErrorLogFile, 'ZONE ERROR', error, stack);
   });
 }
-

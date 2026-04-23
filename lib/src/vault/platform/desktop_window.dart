@@ -46,6 +46,49 @@ Future<void> setupDesktopWindow({required bool installShutdownListener}) async {
 }
 
 Future<void> toggleDesktopFullScreen() async {
+  if (await windowManager.isFullScreen()) {
+    try {
+      await windowManager.setFullScreen(false);
+    } finally {
+      try {
+        await windowManager.setTitleBarStyle(
+          TitleBarStyle.normal,
+          windowButtonVisibility: true,
+        );
+      } catch (_) {}
+      try {
+        await windowManager.show();
+      } catch (_) {}
+      try {
+        await windowManager.focus();
+      } catch (_) {}
+    }
+    return;
+  }
+
+  try {
+    await windowManager.setTitleBarStyle(
+      TitleBarStyle.hidden,
+      windowButtonVisibility: false,
+    );
+  } catch (_) {}
   final isFull = await windowManager.isFullScreen();
-  await windowManager.setFullScreen(!isFull);
+  if (isFull) return;
+  try {
+    await windowManager.setFullScreen(true);
+  } catch (_) {
+    try {
+      await windowManager.setTitleBarStyle(
+        TitleBarStyle.normal,
+        windowButtonVisibility: true,
+      );
+    } catch (_) {}
+    rethrow;
+  }
+  try {
+    await windowManager.show();
+  } catch (_) {}
+  try {
+    await windowManager.focus();
+  } catch (_) {}
 }
