@@ -1,14 +1,20 @@
 package com.torrentspire.ai
 
 import android.app.Activity
+import android.app.PictureInPictureParams
 import android.content.Intent
 import android.content.ContentValues
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.provider.MediaStore
 import android.os.Environment
 import android.media.MediaScannerConnection
+import android.util.Rational
 import androidx.documentfile.provider.DocumentFile
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -24,6 +30,15 @@ class MainActivity : AudioServiceActivity() {
     private val channelName = "convert_the_spire/saf"
     private val pickTreeRequestCode = 5011
     private var pendingResult: MethodChannel.Result? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Enable edge-to-edge display for modern Android (requires androidx.core:core >= 1.6)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -245,5 +260,23 @@ class MainActivity : AudioServiceActivity() {
             FileOutputStream(tempFile).use { output -> input.copyTo(output) }
         } ?: return null
         return tempFile.absolutePath
+    }
+
+    // Picture-in-Picture support: called when user navigates away while video is playing
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                // Request PiP mode with 16:9 aspect ratio for video content
+                val pipParams = PictureInPictureParams.Builder()
+                    .setAspectRatio(Rational(16, 9))
+                    .build()
+                enterPictureInPictureMode(pipParams)
+            } catch (e: Exception) {
+                // If PiP fails, continue with normal behavior
+                e.printStackTrace()
+            }
+        }
     }
 }

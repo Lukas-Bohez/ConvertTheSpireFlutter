@@ -41,8 +41,8 @@ android {
         minSdk = 24
         // Target API 36 to satisfy dependent plugins and ensure proper .so loading
         targetSdk = 36
-        versionCode = 1030
-        versionName = "10.3.0"
+        versionCode = 1031
+        versionName = "10.3.1"
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
         }
@@ -124,6 +124,10 @@ flutter {
 dependencies {
     implementation("androidx.documentfile:documentfile:1.0.1")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Modern window insets and edge-to-edge support
+    implementation("androidx.core:core:1.14.0")
+    // Activity API for lifecycle and PiP support
+    implementation("androidx.activity:activity-ktx:1.9.0")
 }
 
 // After APKs are produced by Gradle/Flutter, copy them to the workspace releases/android folder
