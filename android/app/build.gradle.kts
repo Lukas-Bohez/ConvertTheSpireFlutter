@@ -37,12 +37,12 @@ android {
         manifestPlaceholders["appLabel"] = "Convert the Spire Reborn"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        // Use minSdk 21 to maximize supported Android devices.
-        minSdk = flutter.minSdkVersion
+        // Minimum supported SDK required by bundled Android plugins.
+        minSdk = 24
         // Target API 36 to satisfy dependent plugins and ensure proper .so loading
         targetSdk = 36
-        versionCode = 1033
-        versionName = "10.3.3"
+        versionCode = 1042
+        versionName = "10.4.2"
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
         }
