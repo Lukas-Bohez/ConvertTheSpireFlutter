@@ -19,6 +19,10 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-feature android:name="android.software.leanback" android:required="false"/>
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
+    <uses-feature android:name="android.hardware.faketouch" android:required="false"/>
+    <uses-feature android:name="android.hardware.telephony" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
     <application
         android:label="${appLabel}"
         android:name="${applicationName}"
@@ -26,6 +30,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:banner="@drawable/tv_banner"
         android:largeHeap="true"
+        android:extractNativeLibs="false"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
