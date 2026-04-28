@@ -63,7 +63,6 @@ android {
         }
         create("play") {
             dimension = "distribution"
-            applicationIdSuffix = ".bitplayer"
             manifestPlaceholders["appLabel"] = "Bitplayer"
         }
     }
