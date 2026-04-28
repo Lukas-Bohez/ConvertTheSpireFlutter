@@ -5,7 +5,7 @@ description: >
   optionally support the project via donations.
   Windows · Linux · Android. Built with Flutter.
 publish_to: 'none'
-version: 10.5.3+1053
+version: 10.5.5+1055
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -48,7 +48,6 @@ dependencies:
   visibility_detector: ^0.4.0+2
   fl_chart: ^1.2.0
   audio_metadata_reader: 1.4.2
-  google_mobile_ads: ^6.0.0
   csv: 7.2.0
   pdf: ^3.12.0
   multicast_dns: 0.3.3

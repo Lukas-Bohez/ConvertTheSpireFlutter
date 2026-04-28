@@ -41,8 +41,8 @@ android {
         minSdk = 24
         // Target API 35 to satisfy Play Console requirements
         targetSdk = 35
-        versionCode = 1053
-        versionName = "10.5.3"
+        versionCode = 1055
+        versionName = "10.5.5"
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
         }
@@ -63,6 +63,7 @@ android {
         }
         create("play") {
             dimension = "distribution"
+            applicationIdSuffix = ".bitplayer"
             manifestPlaceholders["appLabel"] = "Bitplayer"
         }
     }
@@ -125,7 +126,7 @@ dependencies {
     implementation("androidx.documentfile:documentfile:1.0.1")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     // Modern window insets and edge-to-edge support
-    implementation("androidx.core:core:1.14.0")
+    implementation("androidx.core:core:1.13.1")
     implementation("androidx.core:core-ktx:1.13.1")
     // Activity API for lifecycle and PiP support
     implementation("androidx.activity:activity-ktx:1.9.0")
