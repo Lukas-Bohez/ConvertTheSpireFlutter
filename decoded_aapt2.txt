@@ -1,0 +1,9 @@
+﻿aapt2.exe : C:\development\ConversionFlutter\my_flutter_app\aab\bitplayer-v10.5
+.1+1051-play-release.aab: error: could not identify format of APK.
+At line:1 char:527
++ ... xml"; $decoded = & $aapt2 dump xmltree --file $mf "$aab" 2>&1; $decod ...
++                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\development\... format of APK. 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

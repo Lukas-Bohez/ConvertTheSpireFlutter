@@ -32,12 +32,11 @@ class MainActivity : AudioServiceActivity() {
     private var pendingResult: MethodChannel.Result? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        
-        // Enable edge-to-edge display for modern Android (requires androidx.core:core >= 1.6)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        // Enable edge-to-edge display for modern Android (requires androidx.core)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             WindowCompat.setDecorFitsSystemWindows(window, false)
         }
+        super.onCreate(savedInstanceState)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
