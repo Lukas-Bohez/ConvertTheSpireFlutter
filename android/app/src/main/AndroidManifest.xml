@@ -38,6 +38,9 @@
         android:largeHeap="true"
         android:extractNativeLibs="false"
         android:usesCleartextTraffic="true">
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-8418485814964449~3826434673" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
