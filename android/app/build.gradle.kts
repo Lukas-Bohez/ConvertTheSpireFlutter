@@ -41,8 +41,8 @@ android {
         minSdk = 24
         // Target API 36 to satisfy dependent plugins and ensure proper .so loading
         targetSdk = 36
-        versionCode = 1043
-        versionName = "10.4.3"
+        versionCode = 1050
+        versionName = "10.5.0"
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
         }
