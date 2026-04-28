@@ -3,11 +3,15 @@ $sdk  = "$env:LOCALAPPDATA\Android\Sdk\build-tools"
 $aapt2 = Get-ChildItem $sdk -Recurse -Filter aapt2.exe | Sort-Object FullName -Desc | Select-Object -First 1 -Exp FullName
 Write-Host "Using aapt2: $aapt2"
 
-$aab = Resolve-Path "aab\bitplayer-v10.5.1+1051-play-release.aab"
+$aab = Resolve-Path "c:\\development\\ConversionFlutter\\my_flutter_app\\aab\\bitplayer-v10.5.4+1054-play-release.aab"
+Write-Host "Resolved AAB: $aab"
 $tmp = Join-Path $env:TEMP ("aab_" + [guid]::NewGuid())
 New-Item -ItemType Directory $tmp | Out-Null
+Write-Host "Temp extraction dir: $tmp"
+Write-Host "Listing first 20 entries after extraction..."
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 [System.IO.Compression.ZipFile]::ExtractToDirectory($aab, $tmp)
+Get-ChildItem $tmp -Recurse | Select-Object -First 20 | ForEach-Object { Write-Host $_.FullName }
 $mf = Join-Path $tmp "base\manifest\AndroidManifest.xml"
 
 $decoded = $null

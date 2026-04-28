@@ -1,0 +1,9 @@
+﻿apkanalyzer.bat : 
+At line:1 char:261
++ ... 54-play-release.aab'; $xml = & $ap manifest print "$aab" 2>&1 | Out-S ...
++                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ERROR: java.nio.file.NoSuchFileException: /AndroidManifest.xml
+

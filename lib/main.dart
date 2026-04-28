@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart'
     show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -173,21 +172,6 @@ Future<void> main() async {
     }
 
     await FullModeAccess.instance.load();
-
-    // Initialize AdMob
-    if (!kIsWeb && Platform.isAndroid) {
-      try {
-        await MobileAds.instance.initialize();
-        if (kDebugMode) debugPrint('MobileAds initialized');
-      } catch (e) {
-        _logStartupError(
-          startupErrorLogFile,
-          'ADMOB INIT ERROR',
-          e,
-          StackTrace.current,
-        );
-      }
-    }
 
     runZonedGuarded(
       () {
