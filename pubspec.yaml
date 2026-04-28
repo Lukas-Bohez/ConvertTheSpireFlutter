@@ -48,6 +48,7 @@ dependencies:
   visibility_detector: ^0.4.0+2
   fl_chart: ^1.2.0
   audio_metadata_reader: 1.4.2
+  google_mobile_ads: ^6.0.0
   csv: 7.2.0
   pdf: ^3.12.0
   multicast_dns: 0.3.3
