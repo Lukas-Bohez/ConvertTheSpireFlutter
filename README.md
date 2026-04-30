@@ -1,5 +1,13 @@
 # Convert the Spire Reborn
 
+## 📥 Quick Downloads
+
+* **[Latest GitHub Release (v10.2.3)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v10.2.3)**: Get the full-featured app for Windows, Linux, macOS, and Android (APK).
+* **[Official Website (quizthespire.com)](https://quizthespire.com/)**: An additional place to download the app and learn more.
+* **[Google Play Store (BitPlayer: Torrent and Media)](https://play.google.com/store/apps/details?id=com.torrentspire.ai)**: The limited, App Store-compatible version featuring only the torrenting and media player functionality to comply with Play policies.
+
+---
+
 ## What is this?
 
 Hey everyone! If you remember the old web-based Convert the Spire downloader, you probably know that YouTube eventually blocked our server's IP. To keep the project alive and better than ever, I built **Convert the Spire Reborn**.
@@ -35,21 +43,18 @@ If you are curious about the tech stack, the app is built to be fast, lightweigh
 
 ### Architecture Highlights
 
-
 A concise overview of the main layers:
 
-- **Flutter UI:** `HomeScreen` with ~13 named screens (Search, Player, Browser, etc.)
-- **State Management:** `AppController` (ChangeNotifier) wired via `Provider`.
-- **Core Services:** `YtDlpService`, `DownloadService`, `ConvertService`, `PlaylistService`, `DlnaDiscovery`, `CoordinatorService`, `ComputationService`.
-- **Platform / Native:** `dart:io`, `media_kit`, `battery_plus`, native WebView bindings, raw sockets and isolates for background work.
-
-```
+* **Flutter UI:** `HomeScreen` with ~13 named screens (Search, Player, Browser, etc.)
+* **State Management:** `AppController` (ChangeNotifier) wired via `Provider`.
+* **Core Services:** `YtDlpService`, `DownloadService`, `ConvertService`, `PlaylistService`, `DlnaDiscovery`, `CoordinatorService`, `ComputationService`.
+* **Platform / Native:** `dart:io`, `media_kit`, `battery_plus`, native WebView bindings, raw sockets and isolates for background work.
 
 ---
 
 ## How to Get It
 
-You can download the app directly from our site at [quizthespire.com](https://quizthespire.com/) or head over to the [GitHub Releases](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases) page for the pre-built binaries and Play-ready AABs.
+You can download the app directly from our site at [quizthespire.com](https://quizthespire.com/) or head over to the [GitHub Releases](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases) page for the pre-built binaries and Play-ready AABs. *(See the Quick Downloads section at the top of this page for direct links!)*
 
 * **Windows:** Download the `.zip`, extract it, and run the `.exe`.
 * **Android:** Grab the `.apk` for direct install, or upload the `.aab` to Google Play.
