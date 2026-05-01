@@ -11,10 +11,12 @@ import android.provider.MediaStore
 import android.os.Environment
 import android.media.MediaScannerConnection
 import android.util.Rational
+import android.graphics.Color
 import androidx.documentfile.provider.DocumentFile
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.activity.enableEdgeToEdge
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -32,11 +34,17 @@ class MainActivity : AudioServiceActivity() {
     private var pendingResult: MethodChannel.Result? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Enable edge-to-edge display for modern Android (requires androidx.core)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        // Android 15+ mandatory edge-to-edge support (must be called before super.onCreate)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            enableEdgeToEdge()
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Fallback for Android 10-14
             WindowCompat.setDecorFitsSystemWindows(window, false)
         }
         super.onCreate(savedInstanceState)
+        
+        // Set window background to transparent for edge-to-edge rendering
+        window.decorView.setBackgroundColor(Color.TRANSPARENT)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
