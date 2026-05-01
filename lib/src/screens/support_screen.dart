@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 
 import '../config/build_flags.dart';
 import '../services/ad_service.dart';

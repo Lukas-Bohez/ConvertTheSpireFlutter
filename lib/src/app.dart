@@ -46,7 +46,6 @@ import 'widgets/adaptive_ui_frame.dart';
 import 'vault/vault_bootstrap.dart';
 import 'vault/platform/desktop_window.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:provider/provider.dart';
 import 'data/browser_db.dart';
 import 'config/build_flags.dart';
 import 'config/full_mode_access.dart';
