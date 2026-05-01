@@ -16,6 +16,7 @@ import '../models/queue_item.dart';
 import '../models/search_result.dart' as models;
 import '../services/bulk_import_service.dart';
 import '../services/convert_service.dart';
+import '../services/ad_service.dart';
 import '../services/download_service.dart';
 import '../services/file_organization_service.dart';
 import '../services/installer_service.dart';
@@ -81,6 +82,9 @@ class AppController extends ChangeNotifier {
   bool _downloadAllRunning = false;
   bool _notifyPending = false;
   late final VoidCallback _fullModeListener;
+
+  int get _effectivePlayQueueCap =>
+      AdService.instance.hasQueueBoost ? AdService.boostedQueueCap : _limitedPlayQueueCap;
 
   void scheduleNotify() {
     if (_notifyPending) return;
@@ -389,10 +393,11 @@ class AppController extends ChangeNotifier {
     if (queue.any((q) => q.url == item.url && q.format == format)) {
       return;
     }
+    final queueCap = _effectivePlayQueueCap;
     if (FullModeAccess.instance.isLimitedPlayMode &&
-        queue.length >= _limitedPlayQueueCap) {
+        queue.length >= queueCap) {
       logs.add(
-        'Queue limit reached ($_limitedPlayQueueCap) in Play mode. Unlock full mode to add more.',
+        'Queue limit reached ($queueCap) in Play mode. Unlock full mode or use a queue boost to add more.',
       );
       return;
     }
@@ -883,8 +888,8 @@ class AppController extends ChangeNotifier {
       if (restored.isNotEmpty) {
         final restoredQueue = List<QueueItem>.from(queue)..addAll(restored);
         if (FullModeAccess.instance.isLimitedPlayMode &&
-            restoredQueue.length > _limitedPlayQueueCap) {
-          queue = restoredQueue.take(_limitedPlayQueueCap).toList();
+            restoredQueue.length > _effectivePlayQueueCap) {
+          queue = restoredQueue.take(_effectivePlayQueueCap).toList();
         } else {
           queue = restoredQueue;
         }
@@ -1146,6 +1151,9 @@ class AppController extends ChangeNotifier {
     );
     if (success && (_settings?.showNotifications ?? false)) {
       await notificationService.showDownloadComplete(title, artist);
+    }
+    if (success) {
+      unawaited(AdService.instance.maybeShowInterstitialAfterSuccess());
     }
   }
 
