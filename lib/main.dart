@@ -4,15 +4,19 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart'
     show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'src/config/build_flags.dart';
 import 'src/config/full_mode_access.dart';
+import 'src/services/ad_service.dart';
+import 'src/services/purchase_service.dart';
 
 import 'src/app.dart';
 import 'src/services/yt_dlp_update_controller.dart';
@@ -98,6 +102,20 @@ Future<void> main() async {
 
     await _requestAndroidPermissions();
 
+    await PurchaseService.instance.initialize();
+
+    if (!kIsWeb && Platform.isAndroid) {
+      await MobileAds.instance.initialize();
+    }
+
+    await AdService.instance.initialize();
+
+    PurchaseService.instance.addListener(() {
+      if (PurchaseService.instance.isAdFree) {
+        AdService.instance.disposeAllAds();
+      }
+    });
+
     // Ensure WebView2 user data folder is short (avoids long-path crashes).
     // Note: setting the environment variable via Win32 APIs was removed for
     // compilation stability in this environment.
@@ -175,10 +193,19 @@ Future<void> main() async {
 
     runZonedGuarded(
       () {
-        runApp(MyApp(
-          mediaKitInitError: mediaKitError,
-          webViewEnvironment: webViewEnvironment,
-        ));
+        runApp(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider.value(
+                value: PurchaseService.instance,
+              ),
+            ],
+            child: MyApp(
+              mediaKitInitError: mediaKitError,
+              webViewEnvironment: webViewEnvironment,
+            ),
+          ),
+        );
       },
       (error, stack) {
         _logStartupError(startupErrorLogFile, 'ZONE ERROR', error, stack);

@@ -46,9 +46,12 @@ import 'widgets/adaptive_ui_frame.dart';
 import 'vault/vault_bootstrap.dart';
 import 'vault/platform/desktop_window.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:provider/provider.dart';
 import 'data/browser_db.dart';
 import 'config/build_flags.dart';
 import 'config/full_mode_access.dart';
+import 'services/ad_service.dart';
+import 'services/purchase_service.dart';
 
 class MyApp extends StatefulWidget {
   final String? mediaKitInitError;
@@ -81,6 +84,9 @@ class _MyAppState extends State<MyApp>
     _keyboardFocusNode = FocusNode();
     WidgetsBinding.instance.addObserver(this);
     _initController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AdService.instance.showAppOpenAdIfAvailable();
+    });
 
     // Only add the window-manager listener on supported desktop platforms.
     if (!kIsWeb && Platform.isWindows) {
@@ -164,6 +170,9 @@ class _MyAppState extends State<MyApp>
     super.didChangeAppLifecycleState(state);
     try {
       _controller?.handleAppLifecycleState(state);
+    } catch (_) {}
+    try {
+      AdService.instance.handleAppLifecycleState(state);
     } catch (_) {}
   }
 
@@ -605,6 +614,7 @@ class _MyAppState extends State<MyApp>
         } else {
           contentChild = MultiProvider(
             providers: [
+              ChangeNotifierProvider.value(value: PurchaseService.instance),
               ChangeNotifierProvider.value(value: FullModeAccess.instance),
               ChangeNotifierProvider(create: (_) => PlayerState(prefs)),
               ChangeNotifierProvider.value(value: controller),

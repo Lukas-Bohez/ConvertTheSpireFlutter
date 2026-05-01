@@ -10,6 +10,7 @@ import '../config/full_mode_access.dart';
 import '../services/multi_source_search_service.dart';
 import '../services/preview_player_service.dart';
 import '../state/app_controller.dart';
+import '../widgets/monetization_widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 // Fix: use an explicit show clause so the analyzer knows exactly which
@@ -350,13 +351,17 @@ class _SearchScreenState extends State<SearchScreen>
                     ),
                   ),
                 )
-              : ListView.separated(
+              : ListView.builder(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  separatorBuilder: (_, __) => const SizedBox(height: 6),
-                  itemCount: _results.length,
+                  itemCount: _results.length + (_results.length ~/ 5),
                   itemBuilder: (context, index) {
-                    final r = _results[index];
+                    if (index > 0 && (index + 1) % 6 == 0) {
+                      return const AdNativeSlot();
+                    }
+
+                    final resultIndex = index - ((index + 1) ~/ 6);
+                    final r = _results[resultIndex];
                     final cs = Theme.of(context).colorScheme;
                     final alreadyDownloaded = _isAlreadyDownloaded(r);
                     final leadingWidget = r.thumbnailUrl.isNotEmpty
@@ -376,73 +381,78 @@ class _SearchScreenState extends State<SearchScreen>
                                 size: 28, color: cs.onSurfaceVariant),
                           );
 
-                    return Card(
-                      margin: EdgeInsets.zero,
-                      color: alreadyDownloaded
-                          ? cs.surfaceContainerHighest.withValues(alpha: 0.65)
-                          : null,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => widget.onDownload(r, _selectedFormat),
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Row(
-                            children: [
-                              leadingWidget,
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(r.title,
-                                        maxLines: 2,
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        color: alreadyDownloaded
+                            ? cs.surfaceContainerHighest.withValues(alpha: 0.65)
+                            : null,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => widget.onDownload(r, _selectedFormat),
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Row(
+                              children: [
+                                leadingWidget,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(r.title,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500)),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        '${r.artist}  \u2022  ${_formatDuration(r.duration)}',
+                                        maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500)),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      '${r.artist}  \u2022  ${_formatDuration(r.duration)}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          color: cs.onSurfaceVariant),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 1),
-                                      decoration: BoxDecoration(
-                                        color: cs.primaryContainer
-                                            .withValues(alpha: 0.5),
-                                        borderRadius: BorderRadius.circular(4),
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: cs.onSurfaceVariant),
                                       ),
-                                      child: Text(r.source,
-                                          style: TextStyle(
-                                              fontSize: 10,
-                                              color: cs.onPrimaryContainer)),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 2),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: cs.primaryContainer
+                                              .withValues(alpha: 0.5),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                        ),
+                                        child: Text(r.source,
+                                            style: TextStyle(
+                                                fontSize: 10,
+                                                color: cs.onPrimaryContainer)),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              if (alreadyDownloaded) ...[
-                                Icon(Icons.check_circle,
-                                    size: 18, color: cs.primary),
-                                const SizedBox(width: 8),
+                                if (alreadyDownloaded) ...[
+                                  Icon(Icons.check_circle,
+                                      size: 18, color: cs.primary),
+                                  const SizedBox(width: 8),
+                                ],
+                                IconButton(
+                                  icon: const Icon(Icons.play_arrow),
+                                  tooltip: 'Preview in browser',
+                                  onPressed: () => _launchPreview(r.id),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.download),
+                                  tooltip: 'Download',
+                                  onPressed: () =>
+                                      widget.onDownload(r, _selectedFormat),
+                                ),
                               ],
-                              IconButton(
-                                icon: const Icon(Icons.play_arrow),
-                                tooltip: 'Preview in browser',
-                                onPressed: () => _launchPreview(r.id),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.download),
-                                tooltip: 'Download',
-                                onPressed: () =>
-                                    widget.onDownload(r, _selectedFormat),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
@@ -450,6 +460,8 @@ class _SearchScreenState extends State<SearchScreen>
                   },
                 ),
         ),
+        const SizedBox(height: 8),
+        const AdBannerSlot(),
       ],
     );
   }
