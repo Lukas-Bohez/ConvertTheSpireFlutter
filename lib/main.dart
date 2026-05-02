@@ -102,7 +102,13 @@ Future<void> main() async {
 
     await _requestAndroidPermissions();
 
-    await PurchaseService.instance.initialize();
+    // Initialize purchase service only on Play Store Android builds.
+    // The `in_app_purchase` plugin is not available on desktop builds and
+    // calling it there can throw a LateInitializationError. Guard it so
+    // desktop builds (Windows/Linux/macOS) skip billing initialization.
+    if (!kIsWeb && Platform.isAndroid && kPlayStoreBuild) {
+      await PurchaseService.instance.initialize();
+    }
 
     if (!kIsWeb && Platform.isAndroid && kPlayStoreBuild) {
       await MobileAds.instance.initialize();
