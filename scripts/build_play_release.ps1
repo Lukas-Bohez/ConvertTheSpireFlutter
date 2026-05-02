@@ -13,7 +13,7 @@ try {
 	Write-Host "flutter --version failed but continuing"
 }
 try {
-	flutter build appbundle --flavor play --release -v 2>&1 | Tee-Object -FilePath build_play_verbose.log
+	flutter build appbundle --flavor play --release --dart-define=PLAY_STORE_BUILD=true -v 2>&1 | Tee-Object -FilePath build_play_verbose.log
 } catch {
 	Write-Host "flutter build failed (see build_play_verbose.log)"
 	exit 1

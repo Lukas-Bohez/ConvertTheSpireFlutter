@@ -83,8 +83,7 @@ class AppController extends ChangeNotifier {
   bool _notifyPending = false;
   late final VoidCallback _fullModeListener;
 
-  int get _effectivePlayQueueCap =>
-      AdService.instance.hasQueueBoost ? AdService.boostedQueueCap : _limitedPlayQueueCap;
+  int get _effectivePlayQueueCap => _limitedPlayQueueCap;
 
   void scheduleNotify() {
     if (_notifyPending) return;
@@ -397,7 +396,7 @@ class AppController extends ChangeNotifier {
     if (FullModeAccess.instance.isLimitedPlayMode &&
         queue.length >= queueCap) {
       logs.add(
-        'Queue limit reached ($queueCap) in Play mode. Unlock full mode or use a queue boost to add more.',
+        'Queue limit reached ($queueCap) in Play mode. Unlock full mode to add more.',
       );
       return;
     }

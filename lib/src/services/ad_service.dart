@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/build_flags.dart';
 import 'purchase_service.dart';
 
 /// Coordinates Google Mobile Ads loading, display throttling, and reward logic.
@@ -40,24 +41,35 @@ class AdService {
   static const String _releaseNativeAdUnitId =
       'ca-app-pub-8418485814964449/7181339255';
 
-  static const int boostedQueueCap = 200;
   static const Duration _fullScreenAdCooldown = Duration(minutes: 3);
-  static const String _queueBoostPrefsKey = 'monetization_queue_boost_until_ms';
+  static const String _temporaryAdBreakPrefsKey =
+      'monetization_temporary_ad_break_until_ms';
+  static const String _adsWatchedCountPrefsKey =
+      'monetization_ads_watched_count';
 
   bool _initialized = false;
   bool _isSupportedPlatform = false;
   DateTime? _lastInterstitialShownAt;
   DateTime? _lastAppOpenShownAt;
-  DateTime? _queueBoostUntil;
+  DateTime? _temporaryAdBreakUntil;
+  int _adsWatchedCount = 0;
 
   InterstitialAd? _interstitialAd;
   RewardedAd? _rewardedAd;
   RewardedInterstitialAd? _rewardedInterstitialAd;
   AppOpenAd? _appOpenAd;
 
-  bool get hasQueueBoost =>
-      _queueBoostUntil != null && DateTime.now().isBefore(_queueBoostUntil!);
-  bool get adsAvailable => _isSupportedPlatform && !_adsDisabled;
+  bool get hasTemporaryAdBreak =>
+      _temporaryAdBreakUntil != null &&
+      DateTime.now().isBefore(_temporaryAdBreakUntil!);
+  int get adsWatchedCount => _adsWatchedCount;
+  Duration get temporaryAdBreakRemaining {
+    final until = _temporaryAdBreakUntil;
+    if (until == null) return Duration.zero;
+    final remaining = until.difference(DateTime.now());
+    return remaining.isNegative ? Duration.zero : remaining;
+  }
+  bool get adsAvailable => _isSupportedPlatform && !_adsSuppressed;
 
   String get bannerAdUnitId =>
       kDebugMode ? _debugBannerAdUnitId : _releaseBannerAdUnitId;
@@ -73,35 +85,38 @@ class AdService {
   String get nativeAdUnitId =>
       kDebugMode ? _debugNativeAdUnitId : _releaseNativeAdUnitId;
 
-  bool get _adsDisabled => PurchaseService.instance.isAdFree;
+    bool get _adsDisabled => PurchaseService.instance.isAdFree;
+    bool get _adsSuppressed => _adsDisabled || hasTemporaryAdBreak;
   bool get _supportsPlatform =>
-      !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+      kPlayStoreBuild && !kIsWeb && Platform.isAndroid;
 
   /// Loads cached monetization state and preloads the full-screen ads.
   Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;
     _isSupportedPlatform = _supportsPlatform;
-    await _loadPersistedQueueBoost();
-    if (!_isSupportedPlatform || _adsDisabled) return;
+    await _loadPersistedAdState();
+    if (!_isSupportedPlatform || _adsSuppressed) return;
     unawaited(loadAppOpen());
     unawaited(loadInterstitial());
     unawaited(loadRewarded());
     unawaited(loadRewardedInterstitial());
   }
 
-  Future<void> _loadPersistedQueueBoost() async {
+  Future<void> _loadPersistedAdState() async {
     final prefs = await SharedPreferences.getInstance();
-    final untilMs = prefs.getInt(_queueBoostPrefsKey);
-    if (untilMs == null) return;
-    final until = DateTime.fromMillisecondsSinceEpoch(untilMs);
-    if (DateTime.now().isBefore(until)) {
-      _queueBoostUntil = until;
+    final adBreakUntilMs = prefs.getInt(_temporaryAdBreakPrefsKey);
+    if (adBreakUntilMs != null) {
+      final until = DateTime.fromMillisecondsSinceEpoch(adBreakUntilMs);
+      if (DateTime.now().isBefore(until)) {
+        _temporaryAdBreakUntil = until;
+      }
     }
+    _adsWatchedCount = prefs.getInt(_adsWatchedCountPrefsKey) ?? 0;
   }
 
   Future<BannerAd?> loadBanner() async {
-    if (!_isSupportedPlatform || _adsDisabled) return null;
+    if (!_isSupportedPlatform || _adsSuppressed) return null;
     final completer = Completer<BannerAd?>();
     late final BannerAd banner;
     banner = BannerAd(
@@ -130,7 +145,7 @@ class AdService {
   }
 
   Future<InterstitialAd?> loadInterstitial() async {
-    if (!_isSupportedPlatform || _adsDisabled) return null;
+    if (!_isSupportedPlatform || _adsSuppressed) return null;
     if (_interstitialAd != null) return _interstitialAd;
     final completer = Completer<InterstitialAd?>();
     await InterstitialAd.load(
@@ -164,7 +179,7 @@ class AdService {
   }
 
   Future<RewardedAd?> loadRewarded() async {
-    if (!_isSupportedPlatform || _adsDisabled) return null;
+    if (!_isSupportedPlatform || _adsSuppressed) return null;
     if (_rewardedAd != null) return _rewardedAd;
     final completer = Completer<RewardedAd?>();
     await RewardedAd.load(
@@ -198,7 +213,7 @@ class AdService {
   }
 
   Future<RewardedInterstitialAd?> loadRewardedInterstitial() async {
-    if (!_isSupportedPlatform || _adsDisabled) return null;
+    if (!_isSupportedPlatform || _adsSuppressed) return null;
     if (_rewardedInterstitialAd != null) return _rewardedInterstitialAd;
     final completer = Completer<RewardedInterstitialAd?>();
     await RewardedInterstitialAd.load(
@@ -235,7 +250,7 @@ class AdService {
   }
 
   Future<AppOpenAd?> loadAppOpen() async {
-    if (!_isSupportedPlatform || _adsDisabled) return null;
+    if (!_isSupportedPlatform || _adsSuppressed) return null;
     if (_appOpenAd != null) return _appOpenAd;
     final completer = Completer<AppOpenAd?>();
     await AppOpenAd.load(
@@ -269,7 +284,7 @@ class AdService {
   }
 
   Future<NativeAd?> loadNativeAd() async {
-    if (!_isSupportedPlatform || _adsDisabled) return null;
+    if (!_isSupportedPlatform || _adsSuppressed) return null;
     final completer = Completer<NativeAd?>();
     late final NativeAd nativeAd;
     nativeAd = NativeAd(
@@ -322,7 +337,7 @@ class AdService {
 
   /// Shows an interstitial after a successful download, respecting cooldowns.
   Future<void> maybeShowInterstitialAfterSuccess() async {
-    if (!_isSupportedPlatform || _adsDisabled) return;
+    if (!_isSupportedPlatform || _adsSuppressed) return;
     final last = _lastInterstitialShownAt;
     if (last != null && DateTime.now().difference(last) < _fullScreenAdCooldown) {
       return;
@@ -337,7 +352,7 @@ class AdService {
 
   /// Shows the app-open ad when the app is launched or foregrounded.
   Future<void> showAppOpenAdIfAvailable() async {
-    if (!_isSupportedPlatform || _adsDisabled) return;
+    if (!_isSupportedPlatform || _adsSuppressed) return;
     final last = _lastAppOpenShownAt;
     if (last != null && DateTime.now().difference(last) < _fullScreenAdCooldown) {
       return;
@@ -357,47 +372,57 @@ class AdService {
     }
   }
 
-  /// Shows a rewarded ad and grants a temporary queue boost on success.
-  Future<bool> showRewardedAdForQueueBoost({required Duration boostDuration}) async {
-    if (!_isSupportedPlatform || _adsDisabled) return false;
+  Future<bool> _showRewardedAdWithRewardAction(
+    Future<void> Function() onRewardEarned,
+  ) async {
+    if (!_isSupportedPlatform || _adsSuppressed) return false;
     await loadRewarded();
     final ad = _rewardedAd;
     if (ad == null) return false;
+
     _rewardedAd = null;
+    var rewardEarned = false;
     await ad.show(
       onUserEarnedReward: (ad, reward) {
-        unawaited(grantQueueBoost(boostDuration));
+        rewardEarned = true;
+        unawaited(onRewardEarned());
       },
     );
-    return true;
+    return rewardEarned;
   }
 
-  /// Shows a rewarded interstitial and grants a temporary queue boost on success.
-  Future<bool> showRewardedInterstitialForQueueBoost({
-    required Duration boostDuration,
-  }) async {
-    if (!_isSupportedPlatform || _adsDisabled) return false;
-    await loadRewardedInterstitial();
-    final ad = _rewardedInterstitialAd;
-    if (ad == null) return false;
-    _rewardedInterstitialAd = null;
-    await ad.show(
-      onUserEarnedReward: (ad, reward) {
-        unawaited(grantQueueBoost(boostDuration));
-      },
-    );
-    return true;
+  Future<void> _incrementAdsWatchedCount() async {
+    _adsWatchedCount += 1;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_adsWatchedCountPrefsKey, _adsWatchedCount);
   }
 
-  /// Grants a temporary queue-cap boost that is persisted locally.
-  Future<void> grantQueueBoost(Duration duration) async {
+  Future<void> _grantTemporaryAdBreak(Duration duration) async {
     final until = DateTime.now().add(duration);
-    if (_queueBoostUntil != null && _queueBoostUntil!.isAfter(until)) {
+    if (_temporaryAdBreakUntil != null && _temporaryAdBreakUntil!.isAfter(until)) {
       return;
     }
-    _queueBoostUntil = until;
+    _temporaryAdBreakUntil = until;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_queueBoostPrefsKey, until.millisecondsSinceEpoch);
+    await prefs.setInt(_temporaryAdBreakPrefsKey, until.millisecondsSinceEpoch);
+    disposeAllAds();
+  }
+
+  /// Shows a rewarded ad and pauses ad delivery for 30 minutes as goodwill.
+  Future<bool> showRewardedAdForTemporaryAdBreak({
+    Duration duration = const Duration(minutes: 30),
+  }) async {
+    return _showRewardedAdWithRewardAction(() async {
+      await _incrementAdsWatchedCount();
+      await _grantTemporaryAdBreak(duration);
+    });
+  }
+
+  /// Shows a rewarded ad as a goodwill support action without pausing ads.
+  Future<bool> showRewardedAdToSupportProject() async {
+    return _showRewardedAdWithRewardAction(() async {
+      await _incrementAdsWatchedCount();
+    });
   }
 
   /// Disposes any preloaded ad instances to free SDK resources.

@@ -1,4 +1,6 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 
@@ -18,16 +20,27 @@ class SupportScreen extends StatefulWidget {
 
 class _SupportScreenState extends State<SupportScreen> {
   bool _lastAdFree = PurchaseService.instance.isAdFree;
+  bool _isRunningAdAction = false;
+  int _adsWatchedCount = 0;
+  Timer? _adBreakRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     PurchaseService.instance.addListener(_handlePurchaseChanged);
+    _adsWatchedCount = AdService.instance.adsWatchedCount;
+    _adBreakRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted) return;
+      if (AdService.instance.hasTemporaryAdBreak) {
+        setState(() {});
+      }
+    });
   }
 
   @override
   void dispose() {
     PurchaseService.instance.removeListener(_handlePurchaseChanged);
+    _adBreakRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -41,6 +54,14 @@ class _SupportScreenState extends State<SupportScreen> {
     }
     _lastAdFree = purchaseService.isAdFree;
     setState(() {});
+  }
+
+  String _formatDuration(Duration duration) {
+    final totalMinutes = duration.inMinutes;
+    final hours = totalMinutes ~/ 60;
+    final minutes = totalMinutes % 60;
+    if (hours <= 0) return '$minutes min';
+    return '${hours}u ${minutes}m';
   }
 
   Future<void> _openUrl(String url) async {
@@ -80,31 +101,54 @@ class _SupportScreenState extends State<SupportScreen> {
     }
   }
 
-  Future<void> _watchRewardedAd() async {
-    final shown = await AdService.instance.showRewardedAdForQueueBoost(
-      boostDuration: const Duration(minutes: 30),
-    );
+  Future<void> _watchAdForTemporaryAdPause() async {
+    if (_isRunningAdAction) return;
+    setState(() => _isRunningAdAction = true);
+    final rewardEarned =
+        await AdService.instance.showRewardedAdForTemporaryAdBreak();
     if (!mounted) return;
-    if (shown) {
-      Snack.show(context, '30-minute queue boost activated.',
-          level: SnackLevel.success);
+    setState(() {
+      _isRunningAdAction = false;
+      _adsWatchedCount = AdService.instance.adsWatchedCount;
+    });
+
+    if (rewardEarned) {
+      Snack.show(
+        context,
+        'Dankjewel! Advertenties staan 30 minuten uit.',
+        level: SnackLevel.success,
+      );
     } else {
-      Snack.show(context, 'No rewarded ad was available right now.',
-          level: SnackLevel.error);
+      Snack.show(
+        context,
+        'Geen reward geregistreerd. Advertenties blijven aan.',
+        level: SnackLevel.info,
+      );
     }
   }
 
-  Future<void> _watchRewardedInterstitialAd() async {
-    final shown = await AdService.instance.showRewardedInterstitialForQueueBoost(
-      boostDuration: const Duration(hours: 24),
-    );
+  Future<void> _watchAdToSupportWithoutAdPause() async {
+    if (_isRunningAdAction) return;
+    setState(() => _isRunningAdAction = true);
+    final rewardEarned = await AdService.instance.showRewardedAdToSupportProject();
     if (!mounted) return;
-    if (shown) {
-      Snack.show(context, '24-hour queue boost activated.',
-          level: SnackLevel.success);
+    setState(() {
+      _isRunningAdAction = false;
+      _adsWatchedCount = AdService.instance.adsWatchedCount;
+    });
+
+    if (rewardEarned) {
+      Snack.show(
+        context,
+        'Top! Bedankt voor je support. Advertenties blijven aan.',
+        level: SnackLevel.success,
+      );
     } else {
-      Snack.show(context, 'No rewarded interstitial was available right now.',
-          level: SnackLevel.error);
+      Snack.show(
+        context,
+        'Geen reward geregistreerd. Probeer opnieuw als je wil supporten.',
+        level: SnackLevel.info,
+      );
     }
   }
 
@@ -112,6 +156,12 @@ class _SupportScreenState extends State<SupportScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final purchase = context.watch<PurchaseService>();
+    final adService = AdService.instance;
+    final hasAdBreak = adService.hasTemporaryAdBreak;
+    final adBreakRemaining = adService.temporaryAdBreakRemaining;
+    final playAdMode = kPlayStoreBuild;
+    final adActionsEnabled =
+        !purchase.isAdFree && playAdMode && adService.adsAvailable;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -132,6 +182,52 @@ class _SupportScreenState extends State<SupportScreen> {
                   'If you enjoy using ${getAppTitle()}, the best way to support continued development is via donations or the one-time Remove Ads unlock.',
                   style: theme.textTheme.bodyMedium,
                 ),
+                const SizedBox(height: 12),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.play_circle, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Ads watched by supporters: $_adsWatchedCount',
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (hasAdBreak) ...[
+                  const SizedBox(height: 8),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: Container(
+                      key: ValueKey(_formatDuration(adBreakRemaining)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.tertiaryContainer,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        'Ads paused: ${_formatDuration(adBreakRemaining)} remaining',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -196,27 +292,80 @@ class _SupportScreenState extends State<SupportScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        if (!purchase.isAdFree) ...[
+        if (!playAdMode) ...[
           Card(
             child: ListTile(
-              leading: const Icon(Icons.flash_on, color: Colors.orange),
-              title: const Text('Watch Ad for Queue Boost'),
-              subtitle: const Text('Earn 30 minutes of extra queue capacity'),
-              trailing: const Icon(Icons.play_circle_outline),
-              onTap: _watchRewardedAd,
+              leading: const Icon(Icons.info_outline),
+              title: const Text('Ads are disabled in this build'),
+              subtitle: const Text(
+                'This is not a Play Store build, so rewarded ads are unavailable here.',
+              ),
             ),
           ),
           const SizedBox(height: 12),
+        ],
+        if (!purchase.isAdFree && playAdMode) ...[
           Card(
-            child: ListTile(
-              leading: const Icon(Icons.workspace_premium, color: Colors.amber),
-              title: const Text('Watch Premium Ad for 24h Boost'),
-              subtitle: const Text('Best for large batch download sessions'),
-              trailing: const Icon(Icons.play_circle_outline),
-              onTap: _watchRewardedInterstitialAd,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Goodwill Support Ads',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No fake promises: these actions are exactly what they claim.',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: adActionsEnabled && !_isRunningAdAction
+                            ? _watchAdForTemporaryAdPause
+                            : null,
+                        icon: _isRunningAdAction
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.pause_circle_filled),
+                        label: const Text('Turn ads off for 30 min'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: adActionsEnabled && !_isRunningAdAction
+                            ? _watchAdToSupportWithoutAdPause
+                            : null,
+                        icon: const Icon(Icons.favorite),
+                        label: const Text('Support me (ads stay on)'),
+                      ),
+                    ],
+                  ),
+                  if (!adActionsEnabled) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      hasAdBreak
+                          ? 'Ad pause active. Rewarded ads are temporarily hidden.'
+                          : 'Rewarded ads are currently unavailable.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           const AdBannerSlot(),
           const SizedBox(height: 16),
         ],
