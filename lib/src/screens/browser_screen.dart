@@ -5,7 +5,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:provider/provider.dart';
 import '../utils/screenshot_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
@@ -17,7 +16,6 @@ import '../browser/cast/cast_service.dart';
 import '../browser/cast/unified_cast_service.dart';
 import '../browser/tabs/tab_manager.dart';
 import '../browser/video/video_detector_service.dart';
-import '../config/full_mode_access.dart';
 import '../data/browser_db.dart';
 import '../services/download_service.dart';
 import '../models/search_result.dart';
@@ -768,8 +766,6 @@ class _BrowserScreenState extends State<BrowserScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final fullMode = context.watch<FullModeAccess>();
-    final isLimitedPlayMode = fullMode.isLimitedPlayMode;
     final isIncognito = _tabManager.activeTab?.isIncognito ?? false;
     final viewPadding = MediaQuery.of(context).viewPadding;
 
@@ -805,8 +801,8 @@ class _BrowserScreenState extends State<BrowserScreen>
                   onReleaseWebViewFocus: () => FocusScope.of(context).unfocus(),
                   onTabs: _showTabSwitcher,
                   tabCount: _tabManager.tabCount,
-                    onDownload: isLimitedPlayMode ? null : _addCurrentToQueue,
-                    downloadEnabled: !isLimitedPlayMode && !_showNewTabPage &&
+                    onDownload: _addCurrentToQueue,
+                    downloadEnabled: !_showNewTabPage &&
                       _addressController.text.trim().isNotEmpty,
                   isKnownDifficultSite: DownloadService.isDifficultSite(
                       _addressController.text.trim()),
@@ -890,7 +886,7 @@ class _BrowserScreenState extends State<BrowserScreen>
               ),
 
             // -- Extract & Download FAB for difficult sites --
-            if (!isLimitedPlayMode && !_showNewTabPage &&
+            if (!_showNewTabPage &&
                 DownloadService.isDifficultSite(_addressController.text))
               Positioned(
                 bottom: viewPadding.bottom + 72,
@@ -1091,7 +1087,6 @@ class _BrowserScreenState extends State<BrowserScreen>
       return;
     }
     if (action == 'download') {
-      if (FullModeAccess.instance.isLimitedPlayMode) return;
       _addCurrentToQueue();
       return;
     }

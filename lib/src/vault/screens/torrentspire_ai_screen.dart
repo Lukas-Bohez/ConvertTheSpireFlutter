@@ -63,22 +63,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
   Timer? _streamPaintTimer;
   DateTime _lastStreamPaint = DateTime.fromMillisecondsSinceEpoch(0);
   static const Duration _streamPaintInterval = Duration(milliseconds: 80);
-  static const int _playModeTorrentCap = 50;
   String _pendingStreamText = '';
-
-  bool get _isLimitedPlayMode => FullModeAccess.instance.isLimitedPlayMode;
-
-  bool _reachedPlayModeTorrentCap() {
-    return _isLimitedPlayMode && _torrentStates.length >= _playModeTorrentCap;
-  }
-
-  void _showPlayModeCapMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Play mode is limited to 50 torrents. Unlock full mode to continue.'),
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -265,10 +250,6 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
     if (value.isEmpty) return;
 
     if (value.toLowerCase().startsWith('magnet:?xt=')) {
-      if (_reachedPlayModeTorrentCap()) {
-        _showPlayModeCapMessage();
-        return;
-      }
       setState(() {
         _resolvingMagnet = true;
       });
@@ -320,10 +301,6 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
     if (!await _validateDownloadFolder()) return;
     final text = _magnetController.text.trim();
     if (text.isEmpty) return;
-    if (_reachedPlayModeTorrentCap()) {
-      _showPlayModeCapMessage();
-      return;
-    }
     final outcome = await TorrentService.instance.addTorrentFromMagnetLink(text);
     if (outcome == MagnetAddOutcome.pendingMetadata && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -341,10 +318,6 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
   Future<void> _startDownload(SearchResult result) async {
     if (!await _validateDownloadFolder()) return;
     if (result.magnetLink.isEmpty) return;
-    if (_reachedPlayModeTorrentCap()) {
-      _showPlayModeCapMessage();
-      return;
-    }
     final outcome = await TorrentService.instance.addTorrentFromMagnetLink(
       result.magnetLink,
     );
