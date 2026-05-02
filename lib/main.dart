@@ -104,7 +104,7 @@ Future<void> main() async {
 
     await PurchaseService.instance.initialize();
 
-    if (!kIsWeb && Platform.isAndroid) {
+    if (!kIsWeb && Platform.isAndroid && kPlayStoreBuild) {
       await MobileAds.instance.initialize();
     }
 

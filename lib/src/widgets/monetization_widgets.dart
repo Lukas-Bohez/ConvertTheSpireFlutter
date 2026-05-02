@@ -22,7 +22,7 @@ class _AdBannerSlotState extends State<AdBannerSlot> {
   @override
   void initState() {
     super.initState();
-    if (!PurchaseService.instance.isAdFree) {
+    if (AdService.instance.adsAvailable) {
       _bannerFuture = AdService.instance.loadBanner();
     }
   }
@@ -36,7 +36,7 @@ class _AdBannerSlotState extends State<AdBannerSlot> {
   @override
   Widget build(BuildContext context) {
     final isAdFree = context.watch<PurchaseService>().isAdFree;
-    if (isAdFree) {
+    if (isAdFree || !AdService.instance.adsAvailable) {
       if (_bannerAd != null) {
         final banner = _bannerAd;
         _bannerAd = null;
@@ -87,7 +87,7 @@ class _AdNativeSlotState extends State<AdNativeSlot> {
   @override
   void initState() {
     super.initState();
-    if (!PurchaseService.instance.isAdFree) {
+    if (AdService.instance.adsAvailable) {
       _nativeFuture = AdService.instance.loadNativeAd();
     }
   }
@@ -101,7 +101,7 @@ class _AdNativeSlotState extends State<AdNativeSlot> {
   @override
   Widget build(BuildContext context) {
     final isAdFree = context.watch<PurchaseService>().isAdFree;
-    if (isAdFree) {
+    if (isAdFree || !AdService.instance.adsAvailable) {
       if (_nativeAd != null) {
         final nativeAd = _nativeAd;
         _nativeAd = null;
