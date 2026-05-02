@@ -40,7 +40,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/safe_json.dart';
 
 class AppController extends ChangeNotifier {
-  static const int _limitedPlayQueueCap = 50;
+  static const int _maxQueueCap = 1000;
   final WebViewEnvironment? webViewEnvironment;
   final SettingsStore settingsStore;
   final YouTubeService youtube;
@@ -82,8 +82,6 @@ class AppController extends ChangeNotifier {
   bool _downloadAllRunning = false;
   bool _notifyPending = false;
   late final VoidCallback _fullModeListener;
-
-  int get _effectivePlayQueueCap => _limitedPlayQueueCap;
 
   void scheduleNotify() {
     if (_notifyPending) return;
@@ -392,11 +390,9 @@ class AppController extends ChangeNotifier {
     if (queue.any((q) => q.url == item.url && q.format == format)) {
       return;
     }
-    final queueCap = _effectivePlayQueueCap;
-    if (FullModeAccess.instance.isLimitedPlayMode &&
-        queue.length >= queueCap) {
+    if (queue.length >= _maxQueueCap) {
       logs.add(
-        'Queue limit reached ($queueCap) in Play mode. Unlock full mode to add more.',
+        'Queue limit reached ($_maxQueueCap items). Remove completed items to add more.',
       );
       return;
     }
@@ -886,12 +882,7 @@ class AppController extends ChangeNotifier {
           .toList();
       if (restored.isNotEmpty) {
         final restoredQueue = List<QueueItem>.from(queue)..addAll(restored);
-        if (FullModeAccess.instance.isLimitedPlayMode &&
-            restoredQueue.length > _effectivePlayQueueCap) {
-          queue = restoredQueue.take(_effectivePlayQueueCap).toList();
-        } else {
-          queue = restoredQueue;
-        }
+        queue = restoredQueue;
         scheduleNotify();
       }
     } catch (_) {

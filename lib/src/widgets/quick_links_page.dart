@@ -166,9 +166,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    FullModeAccess.instance.isLimitedPlayMode
-                        ? 'Add a magnet link or torrent to get started.'
-                        : 'Paste a video or playlist URL below to start downloading.',
+                    'Paste a video or playlist URL below to start downloading.',
                     style: TextStyle(
                       fontSize: 18,
                       color: cs.onSurfaceVariant.withValues(alpha: 0.7),

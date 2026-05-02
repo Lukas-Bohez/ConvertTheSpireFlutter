@@ -1,10 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-const bool _kPlayStoreBuild = bool.fromEnvironment(
-  'PLAY_STORE_BUILD',
-  defaultValue: false,
-);
-
 enum FullModeToggleState {
   none,
   enabled,
@@ -17,15 +12,11 @@ class FullModeAccess extends ChangeNotifier {
   static final FullModeAccess instance = FullModeAccess._();
 
   bool _loaded = false;
-  bool _isUnlocked = false;
 
-  bool get isUnlocked => _isUnlocked;
-
-  bool get isLimitedPlayMode => _kPlayStoreBuild;
+  bool get isUnlocked => true;
 
   Future<void> load() async {
     if (_loaded) return;
-    _isUnlocked = !_kPlayStoreBuild;
     _loaded = true;
     notifyListeners();
   }
@@ -37,6 +28,5 @@ class FullModeAccess extends ChangeNotifier {
   @visibleForTesting
   void resetForTesting() {
     _loaded = false;
-    _isUnlocked = !_kPlayStoreBuild;
   }
 }
