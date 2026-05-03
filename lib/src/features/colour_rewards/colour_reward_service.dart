@@ -12,6 +12,7 @@ class ColourRewardService extends ChangeNotifier {
 
   static const String _ownedKey = 'colour_rewards_owned';
   static const String _equippedKey = 'colour_rewards_equipped';
+  static const String _allPurchasedKey = 'colour_all_purchased';
 
   final Set<String> _owned = {};
   String _equipped = 'slate';
@@ -36,6 +37,10 @@ class ColourRewardService extends ChangeNotifier {
       await prefs.setString(_ownedKey, jsonEncode(_owned.toList()));
     }
 
+    if (prefs.getBool(_allPurchasedKey) ?? false) {
+      await unlockAllColours();
+    }
+
     _initialized = true;
     notifyListeners();
   }
@@ -54,6 +59,16 @@ class ColourRewardService extends ChangeNotifier {
       await prefs.setString(_ownedKey, jsonEncode(_owned.toList()));
       notifyListeners();
     }
+  }
+
+  Future<void> unlockAllColours() async {
+    for (final colour in kAllColours) {
+      _owned.add(colour.id);
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_ownedKey, jsonEncode(_owned.toList()));
+    await prefs.setBool(_allPurchasedKey, true);
+    notifyListeners();
   }
 
   Future<void> equipColour(String id) async {

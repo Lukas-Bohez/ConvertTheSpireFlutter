@@ -84,9 +84,6 @@ class _MyAppState extends State<MyApp>
     _keyboardFocusNode = FocusNode();
     WidgetsBinding.instance.addObserver(this);
     _initController();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      AdService.instance.showAppOpenAdIfAvailable();
-    });
 
     // Only add the window-manager listener on supported desktop platforms.
     if (!kIsWeb && Platform.isWindows) {

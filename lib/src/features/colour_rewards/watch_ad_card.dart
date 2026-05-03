@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../services/ad_service.dart';
+import '../../services/purchase_service.dart';
 import 'colour_reward_service.dart';
 import 'colour_reveal_dialog.dart';
 import 'colour_collection_grid.dart';
@@ -13,6 +15,7 @@ class WatchAdCard extends StatefulWidget {
 
 class _WatchAdCardState extends State<WatchAdCard> {
   bool _loading = false;
+  bool _buyingThemes = false;
 
   @override
   void initState() {
@@ -34,38 +37,184 @@ class _WatchAdCardState extends State<WatchAdCard> {
     setState(() => _loading = false);
   }
 
+  Future<void> _buyAllThemes() async {
+    final purchase = PurchaseService.instance;
+    if (!purchase.storeAvailable || purchase.hasAllThemes) return;
+    setState(() => _buyingThemes = true);
+    await purchase.purchaseAllThemes();
+    if (!mounted) return;
+    setState(() => _buyingThemes = false);
+  }
+
+  Future<void> _openCollection() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.68,
+          minChildSize: 0.45,
+          maxChildSize: 0.94,
+          expand: false,
+          builder: (sheetContext, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Theme.of(sheetContext).colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade600,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Expanded(
+                    child: ColourCollectionGrid(scrollController: scrollController),
+                  ),
+                  SizedBox(height: MediaQuery.of(sheetContext).padding.bottom + 8),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final purchase = context.watch<PurchaseService>();
+    final hasAllThemes = purchase.hasAllThemes;
+    final hasPrice = purchase.canPurchaseAllThemes;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             const Expanded(child: Text('Watch an ad → unlock a colour', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
-            TextButton(onPressed: () => showModalBottomSheet(context: context, builder: (_) => const SizedBox(height: 420, child: ColourCollectionGrid())), child: const Text('My collection'))
+            TextButton(onPressed: _openCollection, child: const Text('My collection'))
           ]),
           const SizedBox(height: 8),
           Wrap(spacing: 8, children: [
-            _oddsPill('Mythic', '1', Colors.redAccent),
-            _oddsPill('Legendary', '3', Colors.amber),
+            _oddsPill('Mythic', '0.1', Colors.redAccent),
+            _oddsPill('Legendary', '1.9', Colors.amber),
             _oddsPill('Epic', '6', Colors.purple),
-            _oddsPill('Rare', '10', Colors.red),
-            _oddsPill('Uncommon', '20', Colors.blue),
-            _oddsPill('Common', '60', Colors.grey),
+            _oddsPill('Rare', '12', Colors.red),
+            _oddsPill('Uncommon', '25', Colors.blue),
+            _oddsPill('Common', '55', Colors.grey),
           ]),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: _loading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.ondemand_video),
-              label: const Text('Watch Ad'),
-              onPressed: _loading ? null : _showAdAndReward,
+          if (hasAllThemes)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.withValues(alpha: 0.45)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green),
+                  SizedBox(width: 10),
+                  Text('All colours unlocked!'),
+                ],
+              ),
+            )
+          else ...[
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: _buyingThemes ? null : _buyAllThemes,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(1.5),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFB8860B), Color(0xFFCC1100)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.80),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.auto_awesome, size: 22, color: Color(0xFFB8860B)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'Unlock All 28 Colours',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'One-time purchase · No ads needed',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              purchase.storeAvailable
+                                  ? (hasPrice
+                                      ? purchase.getAllThemesPriceLabel
+                                      : 'Loading price…')
+                                  : 'See price in store',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_buyingThemes)
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      else
+                        const Icon(Icons.chevron_right),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: _loading
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.ondemand_video),
+                label: const Text('Watch Ad'),
+                onPressed: _loading ? null : _showAdAndReward,
+              ),
+            ),
+          ],
         ]),
       ),
     );
   }
 
-  Widget _oddsPill(String label, String pct, Color c) => Chip(backgroundColor: c.withOpacity(0.12), label: Text('$label • $pct%'));
+  Widget _oddsPill(String label, String pct, Color c) =>
+      Chip(backgroundColor: c.withValues(alpha: 0.12), label: Text('$label • $pct%'));
 }

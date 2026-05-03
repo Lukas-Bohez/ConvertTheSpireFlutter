@@ -9,6 +9,36 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/build_flags.dart';
 import 'purchase_service.dart';
 
+class AdFrequencyGate {
+  static const int minTabSwitchesBetweenAds = 8;
+  static const Duration minTimeBetweenAds = Duration(minutes: 4);
+  static const int sessionAdCap = 3;
+
+  int _tabSwitchesSinceLast = 0;
+  DateTime _lastAdShown = DateTime.fromMillisecondsSinceEpoch(0);
+  int _adsShownThisSession = 0;
+
+  bool shouldShowAd() {
+    if (AdService.instance.adsRemoved) return false;
+    if (_adsShownThisSession >= sessionAdCap) return false;
+    if (_tabSwitchesSinceLast < minTabSwitchesBetweenAds) return false;
+    if (DateTime.now().difference(_lastAdShown) < minTimeBetweenAds) {
+      return false;
+    }
+    return true;
+  }
+
+  void recordTabSwitch() {
+    _tabSwitchesSinceLast++;
+  }
+
+  void recordAdShown() {
+    _tabSwitchesSinceLast = 0;
+    _lastAdShown = DateTime.now();
+    _adsShownThisSession++;
+  }
+}
+
 /// Coordinates Google Mobile Ads loading, display throttling, and reward logic.
 class AdService {
   AdService._();
@@ -50,9 +80,9 @@ class AdService {
   bool _initialized = false;
   bool _isSupportedPlatform = false;
   DateTime? _lastInterstitialShownAt;
-  DateTime? _lastAppOpenShownAt;
   DateTime? _temporaryAdBreakUntil;
   int _adsWatchedCount = 0;
+  final AdFrequencyGate _adFrequencyGate = AdFrequencyGate();
 
   InterstitialAd? _interstitialAd;
   RewardedAd? _rewardedAd;
@@ -70,6 +100,7 @@ class AdService {
     return remaining.isNegative ? Duration.zero : remaining;
   }
   bool get adsAvailable => _isSupportedPlatform && !_adsSuppressed;
+  bool get adsRemoved => PurchaseService.instance.isAdFree;
 
   String get bannerAdUnitId =>
       kDebugMode ? _debugBannerAdUnitId : _releaseBannerAdUnitId;
@@ -97,7 +128,6 @@ class AdService {
     _isSupportedPlatform = _supportsPlatform;
     await _loadPersistedAdState();
     if (!_isSupportedPlatform || _adsSuppressed) return;
-    unawaited(loadAppOpen());
     unawaited(loadInterstitial());
     unawaited(loadRewarded());
     unawaited(loadRewardedInterstitial());
@@ -342,34 +372,28 @@ class AdService {
     if (last != null && DateTime.now().difference(last) < _fullScreenAdCooldown) {
       return;
     }
+    if (!_adFrequencyGate.shouldShowAd()) return;
     await loadInterstitial();
     final ad = _interstitialAd;
     if (ad == null) return;
     _interstitialAd = null;
     _lastInterstitialShownAt = DateTime.now();
+    _adFrequencyGate.recordAdShown();
     await ad.show();
   }
 
   /// Shows the app-open ad when the app is launched or foregrounded.
   Future<void> showAppOpenAdIfAvailable() async {
-    if (!_isSupportedPlatform || _adsSuppressed) return;
-    final last = _lastAppOpenShownAt;
-    if (last != null && DateTime.now().difference(last) < _fullScreenAdCooldown) {
-      return;
-    }
-    await loadAppOpen();
-    final ad = _appOpenAd;
-    if (ad == null) return;
-    _appOpenAd = null;
-    _lastAppOpenShownAt = DateTime.now();
-    await ad.show();
+    return;
   }
 
   /// Handles lifecycle events from the app shell.
   void handleAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      unawaited(showAppOpenAdIfAvailable());
-    }
+    if (state == AppLifecycleState.resumed) return;
+  }
+
+  void recordTabSwitch() {
+    _adFrequencyGate.recordTabSwitch();
   }
 
   Future<bool> _showRewardedAdWithRewardAction(
