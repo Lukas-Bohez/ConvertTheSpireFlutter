@@ -18,7 +18,7 @@ extension RarityTierX on RarityTier {
   BoxDecoration get cardDecoration => BoxDecoration(
     border: Border.all(color: glowColor, width: rarityBorderWidth),
     borderRadius: BorderRadius.circular(16),
-    color: glowColor.withOpacity(0.08),
+    color: glowColor.withValues(alpha: 0.08),
   );
 
   double get rarityBorderWidth => switch (this) {

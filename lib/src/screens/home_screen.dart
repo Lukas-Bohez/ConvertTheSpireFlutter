@@ -13,6 +13,7 @@ import '../theme/app_colors.dart';
 
 import '../config/build_flags.dart';
 import '../config/full_mode_access.dart';
+import '../services/ad_service.dart';
 
 import '../models/app_settings.dart';
 import '../models/preview_item.dart';
@@ -373,6 +374,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _selectedPageIndex = index;
       _visitedPages.add(index);
     });
+    AdService.instance.recordTabSwitch();
     try {
       widget.controller.switchToTab(index);
     } catch (_) {}

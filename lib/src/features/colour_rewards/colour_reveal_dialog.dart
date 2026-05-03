@@ -31,6 +31,8 @@ class _ColourRevealDialogState extends State<ColourRevealDialog> with SingleTick
   @override
   Widget build(BuildContext context) {
     final reward = widget.reward;
+    final owned = ColourRewardService.instance.isOwned(reward.id);
+    final equipped = ColourRewardService.instance.equippedId == reward.id;
     return Dialog(
       backgroundColor: Colors.transparent,
       child: FadeTransition(
@@ -41,7 +43,8 @@ class _ColourRevealDialogState extends State<ColourRevealDialog> with SingleTick
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              color: Theme.of(context).dialogBackgroundColor,
+              color: Theme.of(context).dialogTheme.backgroundColor ??
+                  Theme.of(context).colorScheme.surface,
             ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Container(
@@ -57,18 +60,30 @@ class _ColourRevealDialogState extends State<ColourRevealDialog> with SingleTick
               ),
               const SizedBox(height: 12),
               Row(children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      await ColourRewardService.instance.unlockColour(reward.id);
-                      await ColourRewardService.instance.equipColour(reward.id);
-                      if (!mounted) return;
-                      Navigator.of(context).pop(true);
-                    },
-                    child: const Text('Equip'),
+                if (!owned)
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await ColourRewardService.instance.unlockColour(reward.id);
+                        await ColourRewardService.instance.equipColour(reward.id);
+                        if (!mounted) return;
+                        Navigator.of(context).pop(true);
+                      },
+                      child: const Text('Equip'),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Text(
+                        equipped ? 'Already equipped' : 'Already in your collection',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
+                if (!owned) const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(false),
