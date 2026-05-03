@@ -1,0 +1,19 @@
+﻿
+android\app\src\main\kotlin\com\torrentspire\ai\ForegroundDownloadService.kt:1:
+package com.torrentspire.ai
+android\app\src\main\kotlin\com\torrentspire\ai\ForegroundDownloadService.kt:17
+:        const val ACTION_START = 
+"com.torrentspire.ai.action.START_DOWNLOAD_SERVICE"
+android\app\src\main\kotlin\com\torrentspire\ai\ForegroundDownloadService.kt:18
+:        const val ACTION_STOP = 
+"com.torrentspire.ai.action.STOP_DOWNLOAD_SERVICE"
+android\app\src\main\kotlin\com\torrentspire\ai\ForegroundDownloadService.kt:69
+:            .setContentTitle("Vault the Spire - Downloads")
+android\app\src\main\kotlin\com\torrentspire\ai\ForegroundDownloadService.kt:80
+:            val name = "Vault the Spire background"
+android\app\src\main\kotlin\com\torrentspire\ai\MainActivity.kt:1:package 
+com.torrentspire.ai
+android\app\src\main\kotlin\com\torrentspire\ai\MainActivity.kt:31:    private 
+val channelName = "convert_the_spire/saf"
+
+

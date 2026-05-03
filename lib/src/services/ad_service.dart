@@ -425,6 +425,12 @@ class AdService {
     });
   }
 
+  /// Shows a rewarded ad and runs a custom reward action when the user
+  /// earns the reward. Returns true when reward was granted.
+  Future<bool> showRewardedWithCustomReward(Future<void> Function() onRewardEarned) async {
+    return _showRewardedAdWithRewardAction(onRewardEarned);
+  }
+
   /// Disposes any preloaded ad instances to free SDK resources.
   void disposeAllAds() {
     _interstitialAd?.dispose();
