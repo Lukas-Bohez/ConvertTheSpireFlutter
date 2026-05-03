@@ -9,6 +9,7 @@ import '../services/ad_service.dart';
 import '../services/purchase_service.dart';
 import '../utils/snack.dart';
 import '../widgets/monetization_widgets.dart';
+import '../features/colour_rewards/watch_ad_card.dart';
 
 /// Support and monetization page for donations, ads, and the Remove Ads unlock.
 class SupportScreen extends StatefulWidget {
@@ -366,6 +367,8 @@ class _SupportScreenState extends State<SupportScreen> {
             ),
           ),
           const SizedBox(height: 12),
+          const WatchAdCard(),
+          const SizedBox(height: 8),
           const AdBannerSlot(),
           const SizedBox(height: 16),
         ],

@@ -49,6 +49,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'data/browser_db.dart';
 import 'config/build_flags.dart';
 import 'config/full_mode_access.dart';
+import 'features/colour_rewards/colour_reward_service.dart';
 import 'services/ad_service.dart';
 import 'services/purchase_service.dart';
 
@@ -431,7 +432,7 @@ class _MyAppState extends State<MyApp>
 
   @override
   Widget build(BuildContext context) {
-    final listenables = <Listenable>[FullModeAccess.instance];
+    final listenables = <Listenable>[FullModeAccess.instance, ColourRewardService.instance];
     final controller = _controller;
     if (controller != null) {
       listenables.add(controller);
@@ -441,9 +442,10 @@ class _MyAppState extends State<MyApp>
       animation: Listenable.merge(listenables),
       builder: (context, _) {
         final themeMode = _resolveThemeMode(_controller?.settings?.themeMode);
-        final lightScheme = ColorScheme.fromSeed(seedColor: Colors.deepPurple);
+        final seed = ColourRewardService.instance.equipped.color;
+        final lightScheme = ColorScheme.fromSeed(seedColor: seed);
         final darkScheme = ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
+          seedColor: seed,
           brightness: Brightness.dark,
         );
 

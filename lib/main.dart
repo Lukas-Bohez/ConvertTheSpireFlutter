@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'src/config/build_flags.dart';
+import 'src/config/flavor.dart';
 import 'src/config/full_mode_access.dart';
 import 'src/services/ad_service.dart';
 import 'src/services/purchase_service.dart';
@@ -55,12 +56,20 @@ void _logStartupError(
 }
 
 Future<void> main() async {
-  // Ensure bindings are initialized in the same zone that runs runApp.
-  // This avoids `Zone mismatch` errors from Flutter.
-  WidgetsFlutterBinding.ensureInitialized();
-  final startupErrorLogFile = await _prepareStartupErrorLogFile();
+  File? startupErrorLogFile;
 
   await runZonedGuarded(() async {
+    // Ensure bindings are initialized in the same zone that runs runApp.
+    // This avoids `Zone mismatch` errors from Flutter.
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // Initialize the runtime flavor detection so kPlayStoreBuild is valid.
+    await initAppFlavor();
+    // Propagate into build_flags runtime flag.
+    setPlayStoreBuildFlag(isPlayFlavor);
+
+    startupErrorLogFile = await _prepareStartupErrorLogFile();
+
     // Request storage permission on Android (if needed).
     Future<void> _requestAndroidPermissions() async {
       if (kIsWeb) return;
@@ -197,25 +206,18 @@ Future<void> main() async {
 
     await FullModeAccess.instance.load();
 
-    runZonedGuarded(
-      () {
-        runApp(
-          MultiProvider(
-            providers: [
-              ChangeNotifierProvider.value(
-                value: PurchaseService.instance,
-              ),
-            ],
-            child: MyApp(
-              mediaKitInitError: mediaKitError,
-              webViewEnvironment: webViewEnvironment,
-            ),
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(
+            value: PurchaseService.instance,
           ),
-        );
-      },
-      (error, stack) {
-        _logStartupError(startupErrorLogFile, 'ZONE ERROR', error, stack);
-      },
+        ],
+        child: MyApp(
+          mediaKitInitError: mediaKitError,
+          webViewEnvironment: webViewEnvironment,
+        ),
+      ),
     );
 
     try {
