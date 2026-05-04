@@ -4,7 +4,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart'
     show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
@@ -119,12 +118,15 @@ Future<void> main() async {
       await PurchaseService.instance.initialize();
     }
 
-    if (!kIsWeb && Platform.isAndroid && kPlayStoreBuild) {
-      // TODO: UMP — EU revenue impact.
-      await MobileAds.instance.initialize();
-    }
-
+    // Initialize AdService to load cached monetization state
     await AdService.instance.initialize();
+
+    // Handle UMP consent for EU/EEA users and initialize the Google Mobile Ads SDK.
+    // This must be called after AdService.instance.initialize() but should replace
+    // any raw MobileAds.instance.initialize() calls.
+    if (!kIsWeb && Platform.isAndroid && kPlayStoreBuild) {
+      await AdService.instance.initAdsWithConsent();
+    }
 
     PurchaseService.instance.addListener(() {
       if (PurchaseService.instance.isAdFree) {

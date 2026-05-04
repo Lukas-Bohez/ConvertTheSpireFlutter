@@ -77,6 +77,7 @@ class AdService with WidgetsBindingObserver {
   bool _initialized = false;
   bool _isSupportedPlatform = false;
   bool _isInForeground = true;
+  bool _adsInitialised = false;
   DateTime? _lastInterstitialShownAt;
   DateTime? _temporaryAdBreakUntil;
   int _adsWatchedCount = 0;
@@ -125,11 +126,9 @@ class AdService with WidgetsBindingObserver {
     _isSupportedPlatform = _supportsPlatform;
     WidgetsBinding.instance.addObserver(this);
     await _loadPersistedAdState();
-    if (!_isSupportedPlatform || _adsSuppressed) return;
-    // TODO: UMP — EU revenue impact.
-    _preloadNextInterstitial();
-    unawaited(loadRewarded());
-    unawaited(loadRewardedInterstitial());
+    if (!_isSupportedPlatform) return;
+    // Ads will be preloaded after UMP consent check completes in main.dart
+    // via initAdsWithConsent(). Do NOT preload ads here — wait for consent.
   }
 
   @override
@@ -151,6 +150,7 @@ class AdService with WidgetsBindingObserver {
   }
 
   Future<BannerAd?> loadBanner() async {
+    if (!_adsInitialised) return null;
     if (!_isSupportedPlatform || _adsSuppressed) return null;
     final completer = Completer<BannerAd?>();
     late final BannerAd banner;
@@ -180,6 +180,7 @@ class AdService with WidgetsBindingObserver {
   }
 
   Future<InterstitialAd?> loadInterstitial() async {
+    if (!_adsInitialised) return null;
     if (!_isSupportedPlatform || _adsSuppressed) return null;
     if (_interstitialAd != null) return _interstitialAd;
     final completer = Completer<InterstitialAd?>();
@@ -214,6 +215,7 @@ class AdService with WidgetsBindingObserver {
   }
 
   void _preloadNextInterstitial() {
+    if (!_adsInitialised) return;
     if (!_isSupportedPlatform || _adsSuppressed) return;
     if (_preloadedInterstitial != null) return;
 
@@ -247,6 +249,7 @@ class AdService with WidgetsBindingObserver {
   }
 
   Future<RewardedAd?> loadRewarded() async {
+    if (!_adsInitialised) return null;
     if (!_isSupportedPlatform || _adsSuppressed) return null;
     if (_rewardedAd != null) return _rewardedAd;
     final completer = Completer<RewardedAd?>();
@@ -281,6 +284,7 @@ class AdService with WidgetsBindingObserver {
   }
 
   Future<RewardedInterstitialAd?> loadRewardedInterstitial() async {
+    if (!_adsInitialised) return null;
     if (!_isSupportedPlatform || _adsSuppressed) return null;
     if (_rewardedInterstitialAd != null) return _rewardedInterstitialAd;
     final completer = Completer<RewardedInterstitialAd?>();
@@ -425,6 +429,79 @@ class AdService with WidgetsBindingObserver {
     await prefs.setInt(_temporaryAdBreakPrefsKey, until.millisecondsSinceEpoch);
     disposeAllAds();
   }
+
+  /// Call this once at app startup, before any ad is loaded.
+  /// Handles UMP consent for EU/EEA users and initialises the SDK for everyone.
+  /// Must be called in main.dart AFTER AdService.instance.initialize().
+  ///
+  /// IMPORTANT: Before UMP will display a consent form, you must create a GDPR
+  /// message in your AdMob account:
+  ///   AdMob dashboard → Privacy & messaging → GDPR → Create message
+  ///   Set targeting to: "Countries subject to GDPR (EEA and UK)"
+  ///   Enable "Consent" and "Manage options" (do NOT enable "Close (do not consent)")
+  ///   Publish the message.
+  /// Without this step, requestConsentInfoUpdate() will always return NOT_REQUIRED
+  /// and no form will ever show, even for EU users.
+  Future<void> initAdsWithConsent() async {
+    if (!_isSupportedPlatform) return;
+
+    final params = ConsentRequestParameters();
+
+    // Step 1: Update consent info. This is fast for returning users (cached).
+    // For EU users on first launch, it downloads the consent form in background.
+    await _requestConsentInfoUpdate(params);
+
+    // Step 2: Show the consent form if required (EU/EEA users, or if consent expired).
+    // This is a no-op for non-EU users — safe to call everywhere.
+    await ConsentForm.loadAndShowConsentFormIfRequired((formError) {
+      if (formError != null) {
+        debugPrint('UMP form error: ${formError.message}');
+      }
+    });
+
+    // Step 3: Only initialise the SDK if we are allowed to request ads.
+    // For EU users who declined: canRequestAds() is false → no ads served.
+    // For everyone else: canRequestAds() is true → proceed.
+    if (await ConsentInformation.instance.canRequestAds()) {
+      await MobileAds.instance.initialize();
+      _adsInitialised = true;
+      // Pre-load the first interstitial immediately after init.
+      _preloadNextInterstitial();
+      unawaited(loadRewarded());
+      unawaited(loadRewardedInterstitial());
+    } else {
+      debugPrint('UMP: user declined or consent not yet obtained — skipping ad init');
+    }
+  }
+
+  /// Request consent info update from UMP SDK.
+  /// Handles errors gracefully by completing the future so the flow continues.
+  Future<void> _requestConsentInfoUpdate(ConsentRequestParameters params) async {
+    final completer = Completer<void>();
+    ConsentInformation.instance.requestConsentInfoUpdate(
+      params,
+      () => completer.complete(),
+      (error) {
+        debugPrint('UMP requestConsentInfoUpdate failed: ${error.message}');
+        completer.complete(); // still proceed — will serve non-personalised ads
+      },
+    );
+    return completer.future;
+  }
+
+  // TO TEST UMP LOCALLY (debug builds only — never in release):
+  // 1. Run the app once and find your test device hash in logcat:
+  //    Search for: "Use ConsentDebugSettings.testIdentifiers"
+  // 2. Force EEA geography to simulate an EU user:
+  //
+  // final debugSettings = ConsentDebugSettings(
+  //   debugGeography: DebugGeography.debugGeographyEea,
+  //   testIdentifiers: ["YOUR-HASHED-TEST-DEVICE-ID"],
+  // );
+  // final params = ConsentRequestParameters(consentDebugSettings: debugSettings);
+  //
+  // 3. To reset consent state and simulate a first-time user:
+  //    ConsentInformation.instance.reset(); // debug only — never ship this
 
   /// Shows a rewarded ad and pauses ad delivery for 30 minutes as goodwill.
   Future<bool> showRewardedAdForTemporaryAdBreak({

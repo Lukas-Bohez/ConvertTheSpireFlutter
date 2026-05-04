@@ -1,8 +1,20 @@
 import 'package:flutter/foundation.dart';
 
+/// Compile-time flag: true when building for Play Store with ads enabled.
+/// Set via: --dart-define=PLAY_STORE_BUILD=true during Play build.
+/// Falls back to runtime-detected flavor if not provided.
+const bool kIsPlayStoreBuildDefine =
+    bool.fromEnvironment('PLAY_STORE_BUILD', defaultValue: false);
+
+/// Compile-time flag: true when building for GitHub Releases (ad-free, all colours unlocked).
+/// Set via: --dart-define=GITHUB_RELEASE=true during GitHub APK build.
+const bool kIsGithubRelease =
+    bool.fromEnvironment('GITHUB_RELEASE', defaultValue: false);
+
 /// Runtime-play detection. This is initialized early in `main()` by
 /// calling `initAppFlavor()` so that synchronous calls to `kPlayStoreBuild`
 /// reflect the actual app branding at runtime.
+/// If PLAY_STORE_BUILD dart-define is provided, it overrides runtime detection.
 bool get kPlayStoreBuild => _kPlayStoreBuild;
 bool _kPlayStoreBuild = false;
 

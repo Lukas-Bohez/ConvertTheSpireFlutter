@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/ad_service.dart';
 import '../../services/purchase_service.dart';
+import '../../config/build_flags.dart';
 import 'colour_reward_service.dart';
 import 'colour_reveal_dialog.dart';
 import 'colour_collection_grid.dart';
@@ -35,6 +36,21 @@ class _WatchAdCardState extends State<WatchAdCard> {
     if (!granted) {
       // noop: no reward granted
     }
+    setState(() => _loading = false);
+  }
+
+  /// GitHub release builds allow free spins without ads.
+  /// This method spins directly without requiring an ad watch.
+  Future<void> _spinDirectly() async {
+    AdService.instance.registerInteraction();
+    setState(() => _loading = true);
+    final reward = ColourRewardService.instance.rollReward();
+    await ColourRewardService.instance.unlockColour(reward.id);
+    if (!mounted) {
+      setState(() => _loading = false);
+      return;
+    }
+    await showDialog(context: context, builder: (_) => ColourRevealDialog(reward: reward));
     setState(() => _loading = false);
   }
 
@@ -207,9 +223,11 @@ class _WatchAdCardState extends State<WatchAdCard> {
               child: ElevatedButton.icon(
                 icon: _loading
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.ondemand_video),
-                label: const Text('Watch Ad'),
-                onPressed: _loading ? null : _showAdAndReward,
+                    : Icon(kIsGithubRelease ? Icons.auto_awesome : Icons.ondemand_video),
+                label: Text(kIsGithubRelease ? 'Spin for Colour' : 'Watch Ad'),
+                onPressed: _loading
+                    ? null
+                    : (kIsGithubRelease ? _spinDirectly : _showAdAndReward),
               ),
             ),
           ],

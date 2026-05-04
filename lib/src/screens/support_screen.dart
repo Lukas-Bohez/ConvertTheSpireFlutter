@@ -1,6 +1,7 @@
 ﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 
@@ -102,6 +103,54 @@ class _SupportScreenState extends State<SupportScreen> {
     if (mounted) {
       Snack.show(context, 'Restore request sent.', level: SnackLevel.info);
     }
+  }
+
+  Widget _buildPrivacyOptionsCard(
+    BuildContext context,
+    ThemeData theme,
+    bool playAdMode,
+  ) {
+    return FutureBuilder<PrivacyOptionsRequirementStatus>(
+      future: ConsentInformation.instance.getPrivacyOptionsRequirementStatus(),
+      builder: (context, snapshot) {
+        // Only show privacy options if required by UMP (EU/EEA users)
+        if (snapshot.data != PrivacyOptionsRequirementStatus.required) {
+          return const SizedBox.shrink();
+        }
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ad Preferences',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Manage your ad personalisation consent.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  icon: const Icon(Icons.settings),
+                  label: const Text('Manage Ad Preferences'),
+                  onPressed: () {
+                    ConsentForm.showPrivacyOptionsForm((formError) {
+                      if (formError != null) {
+                        debugPrint('Privacy options error: ${formError.message}');
+                      }
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _watchAdForTemporaryAdPause() async {
@@ -296,6 +345,8 @@ class _SupportScreenState extends State<SupportScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 12),
+        _buildPrivacyOptionsCard(context, theme, playAdMode),
         const SizedBox(height: 12),
         if (!playAdMode) ...[
           Card(

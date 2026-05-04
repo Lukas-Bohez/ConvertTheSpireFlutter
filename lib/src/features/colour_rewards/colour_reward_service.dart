@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../config/build_flags.dart';
 import 'colour_rarity.dart';
 
 class ColourRewardService extends ChangeNotifier {
@@ -31,14 +32,19 @@ class ColourRewardService extends ChangeNotifier {
     final eq = prefs.getString(_equippedKey);
     if (eq != null && eq.isNotEmpty) _equipped = eq;
 
-    // Ensure slate owned on first run
-    if (_owned.isEmpty) {
-      _owned.add('slate');
-      await prefs.setString(_ownedKey, jsonEncode(_owned.toList()));
-    }
-
-    if (prefs.getBool(_allPurchasedKey) ?? false) {
+    // GitHub release builds unlock all colours from install
+    if (kIsGithubRelease) {
       await unlockAllColours();
+    } else {
+      // Ensure slate owned on first run (normal builds)
+      if (_owned.isEmpty) {
+        _owned.add('slate');
+        await prefs.setString(_ownedKey, jsonEncode(_owned.toList()));
+      }
+
+      if (prefs.getBool(_allPurchasedKey) ?? false) {
+        await unlockAllColours();
+      }
     }
 
     _initialized = true;
