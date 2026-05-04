@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../models/download_stats.dart';
+import '../services/ad_service.dart';
 import '../services/statistics_service.dart';
 
 /// Dashboard screen showing download statistics with charts.
@@ -145,7 +146,10 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
-              onPressed: _confirmReset,
+              onPressed: () {
+                AdService.instance.registerInteraction();
+                _confirmReset();
+              },
             ),
           ),
           const SizedBox(height: 16),

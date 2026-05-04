@@ -4008,6 +4008,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     title: const Text('Reset quick links'),
                     subtitle: const Text('Restore default quick links'),
                     onTap: () async {
+                      AdService.instance.registerInteraction();
                       await QuickLinksService.resetToDefaults();
                       if (mounted) {
                         Snack.show(context, 'Quick links reset to defaults',
@@ -4020,6 +4021,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     title: const Text('Replay tutorial tips'),
                     subtitle: const Text('Show screen descriptions again'),
                     onTap: () async {
+                      AdService.instance.registerInteraction();
                       await _onboarding.reset();
                       setState(() => _dismissedBannerRoute = null);
                       if (mounted) {
@@ -4236,6 +4238,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     onPressed: kIsWeb
                         ? null
                         : () async {
+                        AdService.instance.registerInteraction();
                             final result =
                                 await FilePicker.platform.pickFiles();
                             if (result == null || result.files.isEmpty) return;
@@ -4399,8 +4402,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       label: const Text('Convert File'),
                       onPressed: (_convertFile == null || settings == null)
                           ? null
-                          : () => widget.controller
-                              .convert(_convertFile!, _convertTarget),
+                          : () {
+                              AdService.instance.registerInteraction();
+                              widget.controller
+                                  .convert(_convertFile!, _convertTarget);
+                            },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -4500,6 +4506,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           onPressed: logs.isEmpty
                               ? null
                               : () {
+                                  AdService.instance.registerInteraction();
                                   widget.controller.logs.logs.value = [];
                                 },
                         ),

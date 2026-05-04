@@ -65,6 +65,7 @@ class _SupportScreenState extends State<SupportScreen> {
   }
 
   Future<void> _openUrl(String url) async {
+    AdService.instance.registerInteraction();
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (mounted) {
@@ -74,6 +75,7 @@ class _SupportScreenState extends State<SupportScreen> {
   }
 
   Future<void> _buyRemoveAds() async {
+    AdService.instance.registerInteraction();
     final purchase = PurchaseService.instance;
     if (!purchase.storeAvailable) {
       Snack.show(
@@ -95,6 +97,7 @@ class _SupportScreenState extends State<SupportScreen> {
   }
 
   Future<void> _restorePurchases() async {
+    AdService.instance.registerInteraction();
     await PurchaseService.instance.restorePurchases();
     if (mounted) {
       Snack.show(context, 'Restore request sent.', level: SnackLevel.info);
@@ -103,6 +106,7 @@ class _SupportScreenState extends State<SupportScreen> {
 
   Future<void> _watchAdForTemporaryAdPause() async {
     if (_isRunningAdAction) return;
+    AdService.instance.registerInteraction();
     setState(() => _isRunningAdAction = true);
     final rewardEarned =
         await AdService.instance.showRewardedAdForTemporaryAdBreak();
@@ -129,6 +133,7 @@ class _SupportScreenState extends State<SupportScreen> {
 
   Future<void> _watchAdToSupportWithoutAdPause() async {
     if (_isRunningAdAction) return;
+    AdService.instance.registerInteraction();
     setState(() => _isRunningAdAction = true);
     final rewardEarned = await AdService.instance.showRewardedAdToSupportProject();
     if (!mounted) return;
