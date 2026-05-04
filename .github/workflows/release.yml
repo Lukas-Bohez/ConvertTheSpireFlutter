@@ -129,7 +129,7 @@ jobs:
           }
 
       - name: Build Windows release
-        run: flutter build windows --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false
+        run: flutter build windows --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
 
       - name: Package Windows build
         shell: pwsh
@@ -182,7 +182,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Linux release
-        run: flutter build linux --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false
+        run: flutter build linux --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
 
       - name: Package Linux zip
         run: |
@@ -238,7 +238,7 @@ jobs:
         run: flutter pub get
 
       - name: Build macOS release
-        run: flutter build macos --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false
+        run: flutter build macos --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
 
       # -----------------------------------------------------------------------
       # Code-sign and notarize when Developer ID certificate secrets are set.
