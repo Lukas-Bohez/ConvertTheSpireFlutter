@@ -339,7 +339,7 @@ jobs:
         run: flutter pub get
 
       - name: Build APK (full feature)
-        run: flutter build apk --flavor full --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false
+        run: flutter build apk --flavor full --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
 
       - name: Build Play AAB (store flavor)
         run: flutter build appbundle --flavor play --release --dart-define=PLAY_STORE_BUILD=true
