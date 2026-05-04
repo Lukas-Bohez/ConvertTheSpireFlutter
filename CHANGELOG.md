@@ -1,5 +1,16 @@
 # Changelog
 
+## 10.8.0 — Play Release Cleanup
+
+### Highlights
+- Rebalanced ads around deliberate interactions with foreground gating.
+- Fixed the colour bootstrap so the equipped colour drives the active theme on real devices.
+- Verified the packaged Play bundle keeps TV support entries after manifest merging.
+- Rebuilt the current Play AAB as `10.8.0+1080`.
+
+### Notes
+- See [docs/releases/latest.md](docs/releases/latest.md) for the condensed release summary.
+
 ## 5.2.0 — Bug Fix & Stability Release
 
 ### Fixed
@@ -9,7 +20,7 @@
 - Linux AppImage for better compatibility on older distros
 
 ### Notes
-- Bumped version to 5.2.0; see RELEASE_NOTES.md for highlights.
+- Bumped version to 5.2.0; see [docs/releases/latest.md](docs/releases/latest.md) for the current release notes.
 
 ## 5.0.0 — Production Polish Release
 
