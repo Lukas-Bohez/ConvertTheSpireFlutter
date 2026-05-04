@@ -50,7 +50,6 @@ import 'data/browser_db.dart';
 import 'config/build_flags.dart';
 import 'config/full_mode_access.dart';
 import 'features/colour_rewards/colour_reward_service.dart';
-import 'services/ad_service.dart';
 import 'services/purchase_service.dart';
 
 class MyApp extends StatefulWidget {
@@ -168,9 +167,6 @@ class _MyAppState extends State<MyApp>
     try {
       _controller?.handleAppLifecycleState(state);
     } catch (_) {}
-    try {
-      AdService.instance.handleAppLifecycleState(state);
-    } catch (_) {}
   }
 
   void _handleKey(KeyEvent event) {
@@ -234,7 +230,6 @@ class _MyAppState extends State<MyApp>
               .getFolderForPlaylist(playlistUrl, format: defaultFormat);
           final folder = folderForFormat ??
               await watchedPlaylistService.getFolderForPlaylist(playlistUrl);
-
           controller.addSearchResultToQueue(
             track,
             format: defaultFormat,
@@ -262,6 +257,8 @@ class _MyAppState extends State<MyApp>
         statisticsService: statisticsService,
         notificationService: notificationService,
       );
+
+      await ColourRewardService.instance.init();
 
       // Prune old album art cache in background.
       albumArtService.pruneOldAlbumArt();

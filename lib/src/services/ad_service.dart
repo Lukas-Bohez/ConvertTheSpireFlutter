@@ -10,32 +10,33 @@ import '../config/build_flags.dart';
 import 'purchase_service.dart';
 
 class AdFrequencyGate {
-  static const int minTabSwitchesBetweenAds = 8;
-  static const Duration minTimeBetweenAds = Duration(minutes: 4);
-  static const int sessionAdCap = 3;
+  static const int minInteractionsBetweenAds = 2;
+  static const Duration sessionGracePeriod = Duration(minutes: 1);
+  static const Duration minTimeBetweenAds = Duration(minutes: 1);
 
-  int _tabSwitchesSinceLast = 0;
+  final DateTime _sessionStartedAt = DateTime.now();
+  int _interactionsSinceLast = 0;
   DateTime _lastAdShown = DateTime.fromMillisecondsSinceEpoch(0);
-  int _adsShownThisSession = 0;
 
   bool shouldShowAd() {
     if (AdService.instance.adsRemoved) return false;
-    if (_adsShownThisSession >= sessionAdCap) return false;
-    if (_tabSwitchesSinceLast < minTabSwitchesBetweenAds) return false;
+    if (DateTime.now().difference(_sessionStartedAt) < sessionGracePeriod) {
+      return false;
+    }
+    if (_interactionsSinceLast < minInteractionsBetweenAds) return false;
     if (DateTime.now().difference(_lastAdShown) < minTimeBetweenAds) {
       return false;
     }
     return true;
   }
 
-  void recordTabSwitch() {
-    _tabSwitchesSinceLast++;
+  void registerInteraction() {
+    _interactionsSinceLast++;
   }
 
   void recordAdShown() {
-    _tabSwitchesSinceLast = 0;
+    _interactionsSinceLast = 0;
     _lastAdShown = DateTime.now();
-    _adsShownThisSession++;
   }
 }
 
@@ -53,8 +54,6 @@ class AdService {
       'ca-app-pub-3940256099942544/5224354917';
   static const String _debugRewardedInterstitialAdUnitId =
       'ca-app-pub-3940256099942544/5354046379';
-  static const String _debugAppOpenAdUnitId =
-      'ca-app-pub-3940256099942544/3419835294';
   static const String _debugNativeAdUnitId =
       'ca-app-pub-3940256099942544/2247696110';
 
@@ -66,12 +65,10 @@ class AdService {
       'ca-app-pub-8418485814964449/6938316192';
   static const String _releaseRewardedInterstitialAdUnitId =
       'ca-app-pub-8418485814964449/7832075944';
-  static const String _releaseAppOpenAdUnitId =
-      'ca-app-pub-8418485814964449/1961547024';
   static const String _releaseNativeAdUnitId =
       'ca-app-pub-8418485814964449/7181339255';
 
-  static const Duration _fullScreenAdCooldown = Duration(minutes: 3);
+  static const Duration _fullScreenAdCooldown = Duration(minutes: 1);
   static const String _temporaryAdBreakPrefsKey =
       'monetization_temporary_ad_break_until_ms';
   static const String _adsWatchedCountPrefsKey =
@@ -87,7 +84,6 @@ class AdService {
   InterstitialAd? _interstitialAd;
   RewardedAd? _rewardedAd;
   RewardedInterstitialAd? _rewardedInterstitialAd;
-  AppOpenAd? _appOpenAd;
 
   bool get hasTemporaryAdBreak =>
       _temporaryAdBreakUntil != null &&
@@ -111,8 +107,6 @@ class AdService {
   String get rewardedInterstitialAdUnitId => kDebugMode
       ? _debugRewardedInterstitialAdUnitId
       : _releaseRewardedInterstitialAdUnitId;
-  String get appOpenAdUnitId =>
-      kDebugMode ? _debugAppOpenAdUnitId : _releaseAppOpenAdUnitId;
   String get nativeAdUnitId =>
       kDebugMode ? _debugNativeAdUnitId : _releaseNativeAdUnitId;
 
@@ -279,40 +273,6 @@ class AdService {
     return completer.future;
   }
 
-  Future<AppOpenAd?> loadAppOpen() async {
-    if (!_isSupportedPlatform || _adsSuppressed) return null;
-    if (_appOpenAd != null) return _appOpenAd;
-    final completer = Completer<AppOpenAd?>();
-    await AppOpenAd.load(
-      adUnitId: appOpenAdUnitId,
-      request: const AdRequest(),
-      adLoadCallback: AppOpenAdLoadCallback(
-        onAdLoaded: (ad) {
-          ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) {
-              ad.dispose();
-              _appOpenAd = null;
-              unawaited(loadAppOpen());
-            },
-            onAdFailedToShowFullScreenContent: (ad, error) {
-              ad.dispose();
-              _appOpenAd = null;
-              unawaited(loadAppOpen());
-            },
-          );
-          _appOpenAd = ad;
-          if (!completer.isCompleted) completer.complete(ad);
-        },
-        onAdFailedToLoad: (error) {
-          if (kDebugMode) debugPrint('App open failed to load: $error');
-          _appOpenAd = null;
-          if (!completer.isCompleted) completer.complete(null);
-        },
-      ),
-    );
-    return completer.future;
-  }
-
   Future<NativeAd?> loadNativeAd() async {
     if (!_isSupportedPlatform || _adsSuppressed) return null;
     final completer = Completer<NativeAd?>();
@@ -382,18 +342,8 @@ class AdService {
     await ad.show();
   }
 
-  /// Shows the app-open ad when the app is launched or foregrounded.
-  Future<void> showAppOpenAdIfAvailable() async {
-    return;
-  }
-
-  /// Handles lifecycle events from the app shell.
-  void handleAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) return;
-  }
-
-  void recordTabSwitch() {
-    _adFrequencyGate.recordTabSwitch();
+  void registerInteraction() {
+    _adFrequencyGate.registerInteraction();
   }
 
   Future<bool> _showRewardedAdWithRewardAction(
@@ -463,7 +413,5 @@ class AdService {
     _rewardedAd = null;
     _rewardedInterstitialAd?.dispose();
     _rewardedInterstitialAd = null;
-    _appOpenAd?.dispose();
-    _appOpenAd = null;
   }
 }
