@@ -437,18 +437,6 @@ class _SupportScreenState extends State<SupportScreen> {
         const SizedBox(height: 12),
         _buildPrivacyOptionsCard(context, theme, playAdMode),
         const SizedBox(height: 12),
-        if (!playAdMode) ...[
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('Ads are disabled in this build'),
-              subtitle: const Text(
-                'This is not a Play Store build, so rewarded ads are unavailable here.',
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
         if (!purchase.isAdFree && playAdMode) ...[
           Card(
             child: Padding(
@@ -511,6 +499,8 @@ class _SupportScreenState extends State<SupportScreen> {
             ),
           ),
           const SizedBox(height: 12),
+        ],
+        if (!purchase.isAdFree) ...[
           const WatchAdCard(),
           const SizedBox(height: 16),
         ],

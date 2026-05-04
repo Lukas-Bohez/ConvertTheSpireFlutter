@@ -4169,11 +4169,29 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final file = File(filePath);
       final dir = file.parent.path;
       if (Platform.isWindows) {
-        await Process.run('explorer.exe', ['/select,', filePath]);
+        unawaited(
+          Process.start(
+            'explorer.exe',
+            ['/select,', filePath],
+            mode: ProcessStartMode.detached,
+          ),
+        );
       } else if (Platform.isMacOS) {
-        await Process.run('open', ['-R', filePath]);
+        unawaited(
+          Process.start(
+            'open',
+            ['-R', filePath],
+            mode: ProcessStartMode.detached,
+          ),
+        );
       } else if (Platform.isLinux) {
-        await Process.run('xdg-open', [dir]);
+        unawaited(
+          Process.start(
+            'xdg-open',
+            [dir],
+            mode: ProcessStartMode.detached,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
