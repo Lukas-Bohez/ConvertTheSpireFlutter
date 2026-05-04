@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 
 import '../config/build_flags.dart';
+import '../state/app_controller.dart';
 import '../services/ad_service.dart';
 import '../services/purchase_service.dart';
 import '../utils/snack.dart';
@@ -103,6 +104,91 @@ class _SupportScreenState extends State<SupportScreen> {
     if (mounted) {
       Snack.show(context, 'Restore request sent.', level: SnackLevel.info);
     }
+  }
+
+  ThemeMode _resolveThemeMode(String? mode) {
+    switch (mode) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
+    }
+  }
+
+  String _themeLabel(String? mode) {
+    switch (mode) {
+      case 'light':
+        return 'Light';
+      case 'dark':
+        return 'Dark';
+      default:
+        return 'System';
+    }
+  }
+
+  Widget _buildAppearanceCard(ThemeData theme, AppController controller) {
+    final settings = controller.settings;
+    final currentMode = settings?.themeMode ?? 'system';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.palette_outlined),
+                const SizedBox(width: 8),
+                Text(
+                  'Appearance',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Choose the app theme used across the desktop and mobile UI.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(
+                  value: 'system',
+                  label: Text('System'),
+                  icon: Icon(Icons.brightness_auto),
+                ),
+                ButtonSegment(
+                  value: 'light',
+                  label: Text('Light'),
+                  icon: Icon(Icons.light_mode),
+                ),
+                ButtonSegment(
+                  value: 'dark',
+                  label: Text('Dark'),
+                  icon: Icon(Icons.dark_mode),
+                ),
+              ],
+              selected: {currentMode},
+              onSelectionChanged: (value) async {
+                final nextMode = value.first;
+                await controller.setThemeMode(_resolveThemeMode(nextMode));
+                if (!mounted) return;
+                Snack.show(
+                  context,
+                  'Theme set to ${_themeLabel(nextMode)}',
+                  level: SnackLevel.success,
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildPrivacyOptionsCard(
@@ -210,6 +296,7 @@ class _SupportScreenState extends State<SupportScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final purchase = context.watch<PurchaseService>();
+    final controller = context.watch<AppController>();
     final adService = AdService.instance;
     final hasAdBreak = adService.hasTemporaryAdBreak;
     final adBreakRemaining = adService.temporaryAdBreakRemaining;
@@ -345,6 +432,8 @@ class _SupportScreenState extends State<SupportScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 12),
+        _buildAppearanceCard(theme, controller),
         const SizedBox(height: 12),
         _buildPrivacyOptionsCard(context, theme, playAdMode),
         const SizedBox(height: 12),

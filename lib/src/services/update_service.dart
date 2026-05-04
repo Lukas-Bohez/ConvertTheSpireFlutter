@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -58,15 +60,24 @@ class UpdateService {
       for (final asset in assets) {
         final name = (asset['name'] as String? ?? '').toLowerCase();
         final url = asset['browser_download_url'] as String? ?? '';
-        if (name.contains('rebor') &&
-            name.endsWith('.zip') &&
-            windowsUrl.isEmpty) windowsUrl = url;
-        if (name.endsWith('.apk') && androidUrl.isEmpty) androidUrl = url;
-        // Prefer AppImage on Linux if present; fall back to linux.zip
-        if (name.endsWith('.appimage')) {
-          linuxUrl = url; // prefer AppImage
-        } else if (name.endsWith('.zip') && linuxUrl.isEmpty) {
-          linuxUrl = url;
+        if (Platform.isWindows) {
+          final isWindowsAsset = name.contains('windows') ||
+              name.contains('win64') ||
+              name.contains('win-x64') ||
+              name.contains('win32') ||
+              name.contains('win-x86');
+          if (isWindowsAsset && windowsUrl.isEmpty) windowsUrl = url;
+        } else if (Platform.isAndroid) {
+          if (name.endsWith('.apk') && androidUrl.isEmpty) androidUrl = url;
+        } else if (Platform.isLinux) {
+          // Prefer AppImage on Linux if present; fall back to linux.zip.
+          if (name.endsWith('.appimage')) {
+            linuxUrl = url;
+          } else if ((name.contains('linux') || name.contains('appimage')) &&
+              name.endsWith('.zip') &&
+              linuxUrl.isEmpty) {
+            linuxUrl = url;
+          }
         }
       }
 
