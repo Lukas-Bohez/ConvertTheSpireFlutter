@@ -5,6 +5,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/colour_rewards/colour_reward_service.dart';
+import '../config/build_flags.dart';
 
 /// Centralizes the one-time Remove Ads unlock and its cached state.
 class PurchaseService extends ChangeNotifier {
@@ -43,6 +44,14 @@ class PurchaseService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _isAdFree = prefs.getBool(_adFreePrefsKey) ?? false;
     _hasAllThemes = prefs.getBool(_allThemesPrefsKey) ?? false;
+
+    // On GitHub release / non-Play builds we consider all colours unlocked
+    // by default so users don't need to purchase or watch ads to collect them.
+    if (kIsGithubRelease) {
+      _hasAllThemes = true;
+      await prefs.setBool(_allThemesPrefsKey, true);
+      await ColourRewardService.instance.unlockAllColours();
+    }
 
     _storeAvailable = await InAppPurchase.instance.isAvailable();
     if (_storeAvailable) {
