@@ -374,7 +374,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _selectedPageIndex = index;
       _visitedPages.add(index);
     });
-    AdService.instance.recordTabSwitch();
+    AdService.instance.registerInteraction();
     try {
       widget.controller.switchToTab(index);
     } catch (_) {}
@@ -383,6 +383,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _goBack() {
     if (!_canGoBack) return;
+    AdService.instance.registerInteraction();
     setState(() {
       _navHistoryIndex--;
       _selectedPageIndex = _navHistory[_navHistoryIndex];
@@ -395,6 +396,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _goForward() {
     if (!_canGoForward) return;
+    AdService.instance.registerInteraction();
     setState(() {
       _navHistoryIndex++;
       _selectedPageIndex = _navHistory[_navHistoryIndex];
@@ -509,6 +511,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           canPop: _selectedPageIndex == 13,
           onPopInvokedWithResult: (didPop, result) {
             if (!didPop && _selectedPageIndex != 13) {
+              AdService.instance.registerInteraction();
               setState(() => _selectedPageIndex = 13);
             }
           },
