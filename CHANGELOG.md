@@ -1,15 +1,12 @@
 # Changelog
 
-## 10.8.0 — Play Release Cleanup
+## 10.7.1 — Fixed Windows Crash
 
 ### Highlights
-- Rebalanced ads around deliberate interactions with foreground gating.
-- Fixed the colour bootstrap so the equipped colour drives the active theme on real devices.
-- Verified the packaged Play bundle keeps TV support entries after manifest merging.
-- Rebuilt the current Play AAB as `10.8.0+1080`.
+- Fixed a crash where the Windows exe would not launch properly.
 
 ### Notes
-- See [docs/releases/latest.md](docs/releases/latest.md) for the condensed release summary.
+- See [docs/releases/latest.md](docs/releases/latest.md) for the current release summary.
 
 ## 5.2.0 — Bug Fix & Stability Release
 
