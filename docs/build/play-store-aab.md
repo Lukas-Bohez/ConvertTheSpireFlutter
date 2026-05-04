@@ -12,9 +12,9 @@ flutter build appbundle --flavor play --release --dart-define=PLAY_STORE_BUILD=t
 
 ## Current Release
 
-* Version: `10.8.0+1080`
-* Output: `build/app/outputs/bundle/playRelease/app-play-release.aab`
-* Published artifact: `aab/bitplayer-10.8.0-1080-release.aab`
+* Latest GitHub release tag: `v10.7.1`
+* Release AAB asset: `zaab.aab`
+* Play build output remains `build/app/outputs/bundle/playRelease/app-play-release.aab`
 
 ## TV Verification
 

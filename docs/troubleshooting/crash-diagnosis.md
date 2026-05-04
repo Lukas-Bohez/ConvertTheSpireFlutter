@@ -1,13 +1,11 @@
 # Crash Diagnosis
 
-Use the logs in the project root to diagnose build or runtime issues.
+Use the archived logs in `results/root-archive/` to diagnose build or runtime issues.
 
 ## What to Check
 
-* `flutter_verbose_log.txt`
-* `build_windows_log.txt`
-* `manifest_merge_log.txt`
-* `build_play_verbose.log`
+* The files archived under `results/root-archive/`
+* Any fresh logs written during a local build
 
 ## Rule of Thumb
 
