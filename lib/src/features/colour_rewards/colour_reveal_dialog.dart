@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/ad_service.dart';
 import 'colour_rarity.dart';
 import 'colour_reward_service.dart';
 
@@ -64,6 +65,7 @@ class _ColourRevealDialogState extends State<ColourRevealDialog> with SingleTick
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () async {
+                        AdService.instance.registerInteraction();
                         await ColourRewardService.instance.unlockColour(reward.id);
                         await ColourRewardService.instance.equipColour(reward.id);
                         if (!mounted) return;
@@ -86,7 +88,10 @@ class _ColourRevealDialogState extends State<ColourRevealDialog> with SingleTick
                 if (!owned) const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
+                    onPressed: () {
+                      AdService.instance.registerInteraction();
+                      Navigator.of(context).pop(false);
+                    },
                     child: const Text('Close'),
                   ),
                 ),

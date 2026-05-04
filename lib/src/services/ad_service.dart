@@ -41,7 +41,7 @@ class AdFrequencyGate {
 }
 
 /// Coordinates Google Mobile Ads loading, display throttling, and reward logic.
-class AdService {
+class AdService with WidgetsBindingObserver {
   AdService._();
 
   static final AdService instance = AdService._();
@@ -76,12 +76,14 @@ class AdService {
 
   bool _initialized = false;
   bool _isSupportedPlatform = false;
+  bool _isInForeground = true;
   DateTime? _lastInterstitialShownAt;
   DateTime? _temporaryAdBreakUntil;
   int _adsWatchedCount = 0;
   final AdFrequencyGate _adFrequencyGate = AdFrequencyGate();
 
   InterstitialAd? _interstitialAd;
+  InterstitialAd? _preloadedInterstitial;
   RewardedAd? _rewardedAd;
   RewardedInterstitialAd? _rewardedInterstitialAd;
 
@@ -95,6 +97,7 @@ class AdService {
     final remaining = until.difference(DateTime.now());
     return remaining.isNegative ? Duration.zero : remaining;
   }
+  bool get isInForeground => _isInForeground;
   bool get adsAvailable => _isSupportedPlatform && !_adsSuppressed;
   bool get adsRemoved => PurchaseService.instance.isAdFree;
 
@@ -120,11 +123,19 @@ class AdService {
     if (_initialized) return;
     _initialized = true;
     _isSupportedPlatform = _supportsPlatform;
+    WidgetsBinding.instance.addObserver(this);
     await _loadPersistedAdState();
     if (!_isSupportedPlatform || _adsSuppressed) return;
-    unawaited(loadInterstitial());
+    // TODO: UMP — EU revenue impact.
+    _preloadNextInterstitial();
     unawaited(loadRewarded());
     unawaited(loadRewardedInterstitial());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _isInForeground = state == AppLifecycleState.resumed;
+    if (!_isInForeground) _preloadNextInterstitial();
   }
 
   Future<void> _loadPersistedAdState() async {
@@ -200,6 +211,39 @@ class AdService {
       ),
     );
     return completer.future;
+  }
+
+  void _preloadNextInterstitial() {
+    if (!_isSupportedPlatform || _adsSuppressed) return;
+    if (_preloadedInterstitial != null) return;
+
+    InterstitialAd.load(
+      adUnitId: interstitialAdUnitId,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          ad.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              _preloadedInterstitial = null;
+              _preloadNextInterstitial();
+            },
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              ad.dispose();
+              _preloadedInterstitial = null;
+              _preloadNextInterstitial();
+            },
+          );
+          ad.setImmersiveMode(true);
+          _preloadedInterstitial = ad;
+        },
+        onAdFailedToLoad: (error) {
+          if (kDebugMode) debugPrint('Interstitial preload failed: $error');
+          _preloadedInterstitial = null;
+          Future.delayed(const Duration(minutes: 2), _preloadNextInterstitial);
+        },
+      ),
+    );
   }
 
   Future<RewardedAd?> loadRewarded() async {
@@ -328,15 +372,15 @@ class AdService {
   /// Shows an interstitial after a successful download, respecting cooldowns.
   Future<void> maybeShowInterstitialAfterSuccess() async {
     if (!_isSupportedPlatform || _adsSuppressed) return;
+    if (!isInForeground) return;
     final last = _lastInterstitialShownAt;
     if (last != null && DateTime.now().difference(last) < _fullScreenAdCooldown) {
       return;
     }
     if (!_adFrequencyGate.shouldShowAd()) return;
-    await loadInterstitial();
-    final ad = _interstitialAd;
+    final ad = _preloadedInterstitial;
     if (ad == null) return;
-    _interstitialAd = null;
+    _preloadedInterstitial = null;
     _lastInterstitialShownAt = DateTime.now();
     _adFrequencyGate.recordAdShown();
     await ad.show();
@@ -409,6 +453,8 @@ class AdService {
   void disposeAllAds() {
     _interstitialAd?.dispose();
     _interstitialAd = null;
+    _preloadedInterstitial?.dispose();
+    _preloadedInterstitial = null;
     _rewardedAd?.dispose();
     _rewardedAd = null;
     _rewardedInterstitialAd?.dispose();

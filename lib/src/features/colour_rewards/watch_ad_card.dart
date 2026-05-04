@@ -24,6 +24,7 @@ class _WatchAdCardState extends State<WatchAdCard> {
   }
 
   Future<void> _showAdAndReward() async {
+    AdService.instance.registerInteraction();
     setState(() => _loading = true);
     final granted = await AdService.instance.showRewardedWithCustomReward(() async {
       final reward = ColourRewardService.instance.rollReward();
@@ -40,6 +41,7 @@ class _WatchAdCardState extends State<WatchAdCard> {
   Future<void> _buyAllThemes() async {
     final purchase = PurchaseService.instance;
     if (!purchase.storeAvailable || purchase.hasAllThemes) return;
+    AdService.instance.registerInteraction();
     setState(() => _buyingThemes = true);
     await purchase.purchaseAllThemes();
     if (!mounted) return;
@@ -47,6 +49,7 @@ class _WatchAdCardState extends State<WatchAdCard> {
   }
 
   Future<void> _openCollection() async {
+    AdService.instance.registerInteraction();
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

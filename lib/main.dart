@@ -120,6 +120,7 @@ Future<void> main() async {
     }
 
     if (!kIsWeb && Platform.isAndroid && kPlayStoreBuild) {
+      // TODO: UMP — EU revenue impact.
       await MobileAds.instance.initialize();
     }
 

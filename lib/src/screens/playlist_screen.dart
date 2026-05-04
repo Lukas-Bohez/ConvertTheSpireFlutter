@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../utils/snack.dart';
 
 import '../models/search_result.dart';
+import '../services/ad_service.dart';
 import '../services/playlist_service.dart';
 
 /// Screen for loading a playlist, cross-referencing it against a local folder,
@@ -52,6 +53,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   // --─ Actions --------------------------------------------------------------
 
   Future<void> _loadPlaylist() async {
+    AdService.instance.registerInteraction();
     final url = _urlController.text.trim();
     if (url.isEmpty) return;
 
@@ -91,6 +93,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   }
 
   Future<void> _pickFolder() async {
+    AdService.instance.registerInteraction();
     final result = await FilePicker.platform.getDirectoryPath(
       dialogTitle: 'Select music folder to compare',
     );
@@ -100,6 +103,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   }
 
   Future<void> _compareToFolder() async {
+    AdService.instance.registerInteraction();
     if (_tracks == null || _tracks!.isEmpty) return;
     final folder = _folderController.text.trim();
     if (folder.isEmpty) return;
@@ -138,6 +142,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   }
 
   Future<void> _exportMissing() async {
+    AdService.instance.registerInteraction();
     if (_comparison == null || _comparison!.missing.isEmpty) return;
     final result = await FilePicker.platform.saveFile(
       dialogTitle: 'Export missing tracks',
@@ -157,6 +162,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   }
 
   Future<void> _exportM3U() async {
+    AdService.instance.registerInteraction();
     if (_tracks == null || _tracks!.isEmpty) return;
     final result = await FilePicker.platform.saveFile(
       dialogTitle: 'Save M3U playlist',
@@ -393,7 +399,12 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   // --─ Overview Tab --------------------------------------------------------─
 
   Widget _buildOverviewTab(ThemeData theme, ColorScheme cs) {
-    return ListView(
+    return NotificationListener<ScrollEndNotification>(
+      onNotification: (_) {
+        AdService.instance.registerInteraction();
+        return false;
+      },
+      child: ListView(
       padding: const EdgeInsets.all(16),
       children: [
         // Playlist info card
@@ -492,6 +503,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
           ),
         ],
       ],
+    ),
     );
   }
 
@@ -639,12 +651,18 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         Expanded(
           child: matches.isEmpty
               ? const Center(child: Text('No matches at this confidence level'))
-              : ListView.builder(
+              : NotificationListener<ScrollEndNotification>(
+                  onNotification: (_) {
+                    AdService.instance.registerInteraction();
+                    return false;
+                  },
+                  child: ListView.builder(
                   itemCount: matches.length,
                   itemBuilder: (context, i) {
                     final m = matches[i];
                     return _MatchedTile(match: m);
                   },
+                ),
                 ),
         ),
       ],
@@ -717,7 +735,12 @@ class _PlaylistScreenState extends State<PlaylistScreen>
           ),
         ),
         Expanded(
-          child: ListView.builder(
+          child: NotificationListener<ScrollEndNotification>(
+            onNotification: (_) {
+              AdService.instance.registerInteraction();
+              return false;
+            },
+            child: ListView.builder(
             itemCount: _comparison!.missing.length,
             itemBuilder: (context, i) {
               final t = _comparison!.missing[i];
@@ -782,6 +805,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                 ),
               );
             },
+          ),
           ),
         ),
       ],
