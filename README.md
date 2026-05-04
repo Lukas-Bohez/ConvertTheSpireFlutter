@@ -1,12 +1,30 @@
 # Convert the Spire Reborn
 
+## 📥 Quick Downloads
+
+* **[Latest GitHub Release (v10.8.1)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v10.8.1)**: Get the full-featured app for Windows, Linux, macOS, and Android (APK). The GitHub APK builds are ad-free and unlock all colours by default.
+* **[Official Website (quizthespire.com)](https://quizthespire.com/)**: An additional place to download the app and learn more.
+* **[Google Play Store (BitPlayer: Torrent and Media)](https://play.google.com/store/apps/details?id=com.torrentspire.ai)**: The limited, App Store-compatible version featuring only the torrenting and media player functionality to comply with Play policies.
+
+---
+
 ## What is this?
 
 Hey everyone! If you remember the old web-based Convert the Spire downloader, you probably know that YouTube eventually blocked our server's IP. To keep the project alive and better than ever, I built **Convert the Spire Reborn**.
 
-It is a fully native Flutter app that handles all your media downloading, playlist converting, and playback right on your own device. It started out as a simple, ad-free tool to bulk-download massive YouTube playlists, but it has grown into a full media suite. You can now download from multiple sites, cast to your TV, and easily manage your local library.
+It is a fully native Flutter app that handles torrent management, media downloading, playlist importing, and playback right on your own device. It started out as a simple, ad-free tool to bulk-download massive playlists, but it has grown into a full media suite. You can now work with torrents and supported sources, cast to your TV, and easily manage your local library.
 
 Because it runs natively on Windows, Linux, Android, and macOS, there is no heavy Electron bloat and no browser overhead. Android Play builds ship with YouTube conversion disabled to match Play policy, while APK builds keep the full downloader available.
+
+## Repository Layout
+
+The main code lives in `lib/`, platform configuration is under `android/`, `windows/`, `linux/`, `macos/`, `ios/`, and `web/`, and the reorganized documentation hub now lives in `docs/`.
+
+Start here for docs:
+
+* [Documentation index](docs/README.md)
+* [Play AAB build guide](docs/build/play-store-aab.md)
+* [Latest release notes](docs/releases/latest.md)
 
 ---
 
@@ -14,7 +32,7 @@ Because it runs natively on Windows, Linux, Android, and macOS, there is no heav
 
 ### The Core Stuff
 
-* **YouTube Search & Download:** Browse and download straight via `yt-dlp`. Desktop downloads can go up to 4K (when available); Android builds are limited to 1080p. Audio downloads support up to 320 kbps. Play Store builds disable YouTube conversion features; side-loaded APKs keep them enabled.
+* **Torrent Manager & Downloads:** Add torrents and supported sources, manage queues, and download directly in the app. Play Store builds disable the legacy YouTube conversion features; side-loaded APKs keep them enabled.
 * **Massive Playlist Support:** The main reason this project exists! Paste a playlist link and bulk-download the whole thing, completely ad-free.
 * **Multi-Site Engine:** It is not just YouTube anymore. Anything yt-dlp supports (over 1,800 sites) goes through the same seamless pipeline.
 * **Built-in Media Player:** Play your audio and video directly in the app. It comes with playlists, queue management, and library tracking powered by `media_kit`.
@@ -35,21 +53,18 @@ If you are curious about the tech stack, the app is built to be fast, lightweigh
 
 ### Architecture Highlights
 
-
 A concise overview of the main layers:
 
-- **Flutter UI:** `HomeScreen` with ~13 named screens (Search, Player, Browser, etc.)
-- **State Management:** `AppController` (ChangeNotifier) wired via `Provider`.
-- **Core Services:** `YtDlpService`, `DownloadService`, `ConvertService`, `PlaylistService`, `DlnaDiscovery`, `CoordinatorService`, `ComputationService`.
-- **Platform / Native:** `dart:io`, `media_kit`, `battery_plus`, native WebView bindings, raw sockets and isolates for background work.
-
-```
+* **Flutter UI:** `HomeScreen` with ~13 named screens (Search, Player, Browser, etc.)
+* **State Management:** `AppController` (ChangeNotifier) wired via `Provider`.
+* **Core Services:** `YtDlpService`, `DownloadService`, `ConvertService`, `PlaylistService`, `DlnaDiscovery`, `CoordinatorService`, `ComputationService`.
+* **Platform / Native:** `dart:io`, `media_kit`, `battery_plus`, native WebView bindings, raw sockets and isolates for background work.
 
 ---
 
 ## How to Get It
 
-You can download the app directly from our site at [quizthespire.com](https://quizthespire.com/) or head over to the [GitHub Releases](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases) page for the pre-built binaries and Play-ready AABs.
+You can download the app directly from our site at [quizthespire.com](https://quizthespire.com/) or head over to the [GitHub Releases](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases) page for the pre-built binaries and Play-ready AABs. *(See the Quick Downloads section at the top of this page for direct links!)*
 
 * **Windows:** Download the `.zip`, extract it, and run the `.exe`.
 * **Android:** Grab the `.apk` for direct install, or upload the `.aab` to Google Play.

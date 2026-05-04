@@ -129,6 +129,16 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
     return entries.fold<int>(0, (sum, e) => sum + (e['length']! as int));
   }
 
+  String _seedDestinationPath() {
+    if (_folders.isNotEmpty) {
+      return _folders.first;
+    }
+    if (_files.isNotEmpty) {
+      return File(_files.first).parent.path;
+    }
+    return _outputPath;
+  }
+
   Future<void> _createTorrent() async {
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -191,8 +201,11 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
             builder: (context) {
               return AlertDialog(
                 title: const Text('Torrent Created'),
-                content: Text(
-                  'Saved to:\n${result.torrentPath}\n\nAdd to downloads now?',
+                // overflow-fix: saved path can be long and overflow dialog body.
+                content: SingleChildScrollView(
+                  child: Text(
+                    'Saved to:\n${result.torrentPath}\n\nAdd to downloads now?',
+                  ),
                 ),
                 actions: [
                   TextButton(
@@ -210,9 +223,21 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
           false;
 
       if (addToDownloads) {
-        await TorrentService.instance.addTorrentFromTorrentFile(
-          result.torrentPath,
-        );
+        try {
+          await TorrentService.instance.addTorrentFromTorrentFile(
+            result.torrentPath,
+            destinationPath: _seedDestinationPath(),
+          );
+        } catch (e) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Torrent file created, but failed to add to downloads: $e',
+              ),
+            ),
+          );
+        }
       }
 
       if (!mounted) return;
@@ -321,7 +346,7 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<int?>(
-                value: _pieceSize,
+                initialValue: _pieceSize,
                 decoration: const InputDecoration(
                   labelText: 'Piece Size',
                   border: OutlineInputBorder(),

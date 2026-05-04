@@ -23,17 +23,20 @@ class ShimmerGrid extends StatelessWidget {
       ),
       itemCount: itemCount,
       itemBuilder: (ctx, i) {
-        return Shimmer.fromColors(
-          baseColor: theme.colorScheme.surfaceContainerHighest,
-          highlightColor: theme.colorScheme.surface,
-          child: Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: Container(color: theme.colorScheme.surfaceContainerHighest)),
-                Container(height: 16, margin: const EdgeInsets.all(8), color: theme.colorScheme.surfaceContainerHighest),
-              ],
+        return Semantics(
+          excludeSemantics: true,
+          child: Shimmer.fromColors(
+            baseColor: theme.colorScheme.surfaceContainerHighest,
+            highlightColor: theme.colorScheme.surface,
+            child: Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: Container(color: theme.colorScheme.surfaceContainerHighest)),
+                  Container(height: 16, margin: const EdgeInsets.all(8), color: theme.colorScheme.surfaceContainerHighest),
+                ],
+              ),
             ),
           ),
         );

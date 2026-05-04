@@ -1,7 +1,8 @@
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/build_flags.dart';
+import '../utils/safe_json.dart';
 
 class UpdateInfo {
   final String latestVersion;
@@ -36,6 +37,7 @@ class UpdateService {
 
   /// Returns null on network failure - never throws to caller.
   static Future<UpdateInfo?> checkForUpdate() async {
+    if (kPlayStoreBuild) return null;
     try {
       final response = await http.get(Uri.parse(_apiUrl), headers: {
         'Accept': 'application/vnd.github.v3+json'
@@ -43,7 +45,8 @@ class UpdateService {
 
       if (response.statusCode != 200) return null;
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final json = safeJsonDecode<Map<String, dynamic>>(response.body);
+      if (json == null) return null;
       final tagName = (json['tag_name'] as String? ?? '').replaceAll('v', '');
       final body = (json['body'] as String? ?? '');
       final htmlUrl = json['html_url'] as String? ?? '';
@@ -98,11 +101,13 @@ class UpdateService {
   }
 
   static Future<bool> isCheckOnLaunchEnabled() async {
+    if (kPlayStoreBuild) return false;
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_prefCheckOnLaunch) ?? true;
   }
 
   static Future<void> setCheckOnLaunch(bool value) async {
+    if (kPlayStoreBuild) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_prefCheckOnLaunch, value);
   }

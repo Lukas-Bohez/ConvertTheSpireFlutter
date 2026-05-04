@@ -1,6 +1,7 @@
 // ignore_for_file: unused_element, deprecated_member_use
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
@@ -23,7 +24,9 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:video_player/video_player.dart';
 import '../services/platform_dirs.dart';
 import '../services/audio_handler.dart';
+import '../services/background_media_update_guard.dart';
 import '../services/ffmpeg_service.dart';
+import '../utils/snack.dart';
 import '../utils/lock.dart';
 
 // --- Public entry point -------------------------------------------------------
@@ -41,7 +44,7 @@ enum MediaType { audio, video }
 
 enum RepeatMode { off, one, all }
 
-enum PlaybackMode { all, songs, videos, favourites }
+enum PlaybackMode { all, songs, videos, favourites, favouriteSongs, favouriteVideos }
 
 enum QueueScope { all, songs, videos, favourites, favSongs, favVideos }
 
@@ -76,6 +79,18 @@ class MediaItem {
         thumbnailData: thumbnailData ?? this.thumbnailData,
         duration: duration ?? this.duration,
       );
+}
+
+class PositionUiState {
+  final Duration position;
+  final Duration duration;
+  final bool isSeeking;
+
+  const PositionUiState({
+    required this.position,
+    required this.duration,
+    required this.isSeeking,
+  });
 }
 
 // --- Thumbnail helpers (unchanged - they work fine) --------------------------
@@ -147,6 +162,8 @@ img.Image? _decodeByMagic(Uint8List raw) {
 //   FIX: All just_audio calls are wrapped in _runOnMainThread().
 
 class PlayerState with ChangeNotifier {
+  // TECH-DEBT: add first-class sleep timer state/countdown exposure for all
+  // player surfaces (main player + mini overlay) in a dedicated follow-up.
   final SharedPreferences prefs;
 
   List<MediaItem> library = [];
@@ -166,9 +183,15 @@ class PlayerState with ChangeNotifier {
   // exposes it.
   final List<int> manualQueue = [];
   final List<int> _manualQueueBase = [];
+  final List<int> _playHistory = [];
+  int _historyCursor = -1;
+  final List<int> _recentlyPlayed = [];
+  static const int _maxHistoryEntries = 50;
+  static const int _maxRecentShuffleEntries = 24;
 
   Directory? _thumbCacheDir;
   Set<String> _favourites = {};
+  Set<String> _disliked = {};
   Map<String, MediaItem> _favouriteCache = {};
   int _folderItemCount = 0;
 
@@ -194,10 +217,18 @@ class PlayerState with ChangeNotifier {
   final List<StreamSubscription> _mkSubs = [];
   StreamSubscription? _dirWatcher;
   String? _watchedDirPath;
+  bool _libraryRefreshInProgress = false;
+  bool _libraryRefreshQueued = false;
 
   Duration position = Duration.zero;
   Duration? duration;
   DateTime? _lastMkOpenTime;
+  final StreamController<PositionUiState> _positionUiController =
+      StreamController<PositionUiState>.broadcast();
+  bool _isSeeking = false;
+  Duration? _seekPreviewPosition;
+  Duration? _pendingSeekTarget;
+  Timer? _seekDebounceTimer;
 
   static const double _videoVolumeBoost = 1.8;
   static const Set<String> _mediaExtensions = {
@@ -208,14 +239,19 @@ class PlayerState with ChangeNotifier {
   // -- Audio --
   AudioPlayer? _audio;
   AppAudioHandler? _audioHandler;
+  MediaItem? _pendingNotificationItem;
+  final BackgroundMediaUpdateGuard _notificationGuard =
+      BackgroundMediaUpdateGuard();
+
+  // 1x1 transparent PNG to force Android media notifications to replace
+  // stale artwork when the current item has no thumbnail yet.
+  static final Uint8List _transparentArtPng = base64Decode(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8QXWQAAAAASUVORK5CYII=',
+  );
 
   // -- Video --
-  // Enable media_kit on desktop platforms except Windows because the
-  // Windows build has proven unstable for bulk thumbnail/video operations.
-  // Windows will use just_audio/VideoPlayer instead.
-  // Enable media_kit on desktop platforms (including Windows) because it
-  // provides stable playback support; we avoid using its thumbnail screenshot
-  // feature on Windows to prevent crashes.
+  // Keep Windows on media_kit for playback. Windows remains excluded from
+  // thumbnail screenshot generation elsewhere to avoid native instability.
   final bool _useMediaKit = kIsWeb || !Platform.isAndroid;
   Player? _mkPlayer;
   VideoController? _mkController;
@@ -230,6 +266,10 @@ class PlayerState with ChangeNotifier {
 
   bool _videoReady = false;
   bool _videoCompletionFired = false;
+  bool _videoBackgroundAudioMode = false;
+  bool _desktopVideoBackgroundAudioMode = false;
+  Duration? _backgroundVideoResumePosition;
+  final Set<String> _ignoredBrokenMediaPaths = <String>{};
 
   // Protects concurrent thumbnail generation / screenshot operations.
   final _thumbLock = Lock();
@@ -247,6 +287,10 @@ class PlayerState with ChangeNotifier {
       _initMkPlayers();
     }
 
+    if (!kIsWeb && Platform.isAndroid) {
+      _audio ??= AudioPlayer();
+    }
+
     _loadPrefs().then((_) => _applyVolume());
 
     if (!_useMediaKit && !kIsWeb && Platform.isAndroid) _initAudioHandler();
@@ -255,17 +299,16 @@ class PlayerState with ChangeNotifier {
     // BUG 3/4 FIX: route all callbacks through _scheduleNotify so they always
     // execute on the platform thread. Only create the just_audio player on Android
     // where media_kit is not used.
-    if (!_useMediaKit && Platform.isAndroid) {
-      _audio = AudioPlayer();
+    if (!kIsWeb && Platform.isAndroid) {
+      _audio ??= AudioPlayer();
       _subs.add(_audio!.positionStream.listen((pos) {
         if (_disposed || currentItem?.type != MediaType.audio) return;
-        position = pos;
-        _scheduleNotify();
+        _onPlaybackPositionUpdated(pos);
       }));
       _subs.add(_audio!.durationStream.listen((dur) {
         if (_disposed || currentItem?.type != MediaType.audio) return;
         duration = dur;
-        _scheduleNotify();
+        _emitPositionUiState();
       }));
       _subs.add(_audio!.playerStateStream.listen((ps) {
         if (_disposed) return;
@@ -294,7 +337,9 @@ class PlayerState with ChangeNotifier {
         _mkPlayer ??= Player();
         _mkController ??= VideoController(_mkPlayer!);
         _audioMkPlayer ??= Player();
-        _thumbPlayer ??= Player();
+        if (!Platform.isWindows) {
+          _thumbPlayer ??= Player();
+        }
       } catch (e) {
         debugPrint('media_kit init failed: $e');
       }
@@ -311,7 +356,9 @@ class PlayerState with ChangeNotifier {
   /// Fully dispose and recreate the media_kit video player and controller.
   /// Preserves play position and attempts to restore playing state.
   Future<void> safeRecreateMkPlayer() async {
-    if (!_useMediaKit) return;
+    if (!_useMediaKit || Platform.isWindows) {
+      return;
+    }
     try {
       final wasPlaying = _mkPlayer?.state.playing ?? false;
       // Use the serialized `position` tracked by PlayerState rather than
@@ -380,8 +427,7 @@ class PlayerState with ChangeNotifier {
       } else {
         if (currentItem?.type != MediaType.video) return;
       }
-      position = pos;
-      _scheduleNotify();
+      _onPlaybackPositionUpdated(pos);
     }));
     _mkSubs.add(player.stream.duration.listen((dur) {
       if (_disposed) return;
@@ -391,7 +437,7 @@ class PlayerState with ChangeNotifier {
         if (currentItem?.type != MediaType.video) return;
       }
       duration = dur;
-      _scheduleNotify();
+      _emitPositionUiState();
     }));
     if (!isAudio) {
       _mkSubs.add(player.stream.width.listen((w) {
@@ -445,11 +491,34 @@ class PlayerState with ChangeNotifier {
 
   bool get isVideo => currentItem?.type == MediaType.video;
   bool get videoReady => _videoReady;
+  Stream<PositionUiState> get positionUiStream => _positionUiController.stream;
+  Duration get bufferedPosition {
+    if (_audio != null) {
+      return _audio!.bufferedPosition;
+    }
+    final android = _androidController;
+    if (android != null && android.value.isInitialized) {
+      final ranges = android.value.buffered;
+      if (ranges.isNotEmpty) {
+        return ranges.last.end;
+      }
+    }
+    return position;
+  }
 
   bool get isPlaying {
     if (isVideo) {
+      if (_videoBackgroundAudioMode && _audio != null) {
+        return _audio!.playing;
+      }
+      if (_desktopVideoBackgroundAudioMode && _audioMkPlayer != null) {
+        return _audioMkPlayer!.state.playing;
+      }
       if (_useMediaKit && _mkPlayer != null) return _mkPlayer!.state.playing;
       return _androidController?.value.isPlaying ?? false;
+    }
+    if (_audio != null) {
+      return _audio!.playing;
     }
     if (_useMediaKit) {
       return _audioMkPlayer?.state.playing ?? false;
@@ -459,13 +528,40 @@ class PlayerState with ChangeNotifier {
 
   bool get isActuallyPlaying => isPlaying;
 
+  void _emitPositionUiState() {
+    if (_positionUiController.isClosed) return;
+    _positionUiController.add(
+      PositionUiState(
+        position: _isSeeking ? (_seekPreviewPosition ?? position) : position,
+        duration: duration ?? Duration.zero,
+        isSeeking: _isSeeking,
+      ),
+    );
+  }
+
+  void _onPlaybackPositionUpdated(Duration pos) {
+    position = pos;
+    if (_isSeeking) {
+      final pending = _pendingSeekTarget ?? _seekPreviewPosition;
+      if (pending == null || (pos - pending).inMilliseconds.abs() <= 350) {
+        _isSeeking = false;
+        _seekPreviewPosition = null;
+        _pendingSeekTarget = null;
+      }
+    }
+    _emitPositionUiState();
+  }
+
   int mediaIndexForPath(String path) => library.indexWhere((item) => item.path == path);
 
   bool isPlayingPath(String path) => currentItem?.path == path && isActuallyPlaying;
 
-  Widget? thumbnailForItem(MediaItem item, {required int size}) {
+  Widget? thumbnailForItem(MediaItem item, {required int size, bool expand = false}) {
     final data = item.thumbnailData;
     if (data == null) return null;
+    if (expand) {
+      return Image.memory(data, fit: BoxFit.cover);
+    }
     return Image.memory(
       data,
       width: size.toDouble(),
@@ -477,6 +573,10 @@ class PlayerState with ChangeNotifier {
   VideoController? get videoController => _mkController;
   VideoPlayerController? get androidVideoController => _androidController;
   int get folderItemCount => _folderItemCount;
+    List<int> get queueSnapshot => List<int>.unmodifiable(
+      manualQueue.where((index) => index >= 0 && index < library.length));
+    List<int> get playHistorySnapshot => List<int>.unmodifiable(
+      _playHistory.where((index) => index >= 0 && index < library.length));
 
   List<MapEntry<int, MediaItem>> get audioEntries => library
       .asMap()
@@ -497,6 +597,7 @@ class PlayerState with ChangeNotifier {
       .toList();
 
   bool isFavourite(String path) => _favourites.contains(path);
+  bool isDisliked(String path) => _disliked.contains(path);
 
   // --- Favourites -----------------------------------------------------------
 
@@ -512,6 +613,127 @@ class PlayerState with ChangeNotifier {
     prefs.setStringList('player_favourites', _favourites.toList());
     _saveFavouriteCache();
     notifyListeners();
+  }
+
+  void toggleDislike(String path) {
+    if (_disliked.contains(path)) {
+      _disliked.remove(path);
+    } else {
+      _disliked.add(path);
+    }
+    prefs.setStringList('player_disliked', _disliked.toList());
+    notifyListeners();
+  }
+
+  Future<bool> deleteMediaItem(String path) async {
+    final index = library.indexWhere((item) => item.path == path);
+    if (index < 0) return false;
+    if (path.startsWith('content://')) {
+      debugPrint('deleteMediaItem: content URI deletion is not supported: $path');
+      return false;
+    }
+
+    final file = File(path);
+    try {
+      if (!await file.exists()) return false;
+      await file.delete();
+    } catch (e) {
+      debugPrint('deleteMediaItem failed for $path: $e');
+      return false;
+    }
+
+    final wasCurrent = index == currentIndex;
+    _favourites.remove(path);
+    _favouriteCache.remove(path);
+    _disliked.remove(path);
+    prefs.setStringList('player_favourites', _favourites.toList());
+    prefs.setStringList('player_disliked', _disliked.toList());
+    _saveFavouriteCache();
+
+    library.removeAt(index);
+    _rebaseStateAfterRemoval(index);
+
+    if (library.isEmpty) {
+      await _stopPlaybackBestEffort();
+      currentIndex = 0;
+      position = Duration.zero;
+      duration = null;
+      _folderItemCount = 0;
+      notifyListeners();
+      return true;
+    }
+
+    if (wasCurrent) {
+      currentIndex = index.clamp(0, library.length - 1);
+      await select(currentIndex);
+    } else {
+      notifyListeners();
+    }
+    return true;
+  }
+
+  void _rebaseStateAfterRemoval(int removedIndex) {
+    manualQueue.removeWhere((value) => value == removedIndex);
+    _manualQueueBase.removeWhere((value) => value == removedIndex);
+
+    for (var i = 0; i < manualQueue.length; i++) {
+      if (manualQueue[i] > removedIndex) manualQueue[i]--;
+    }
+    for (var i = 0; i < _manualQueueBase.length; i++) {
+      if (_manualQueueBase[i] > removedIndex) _manualQueueBase[i]--;
+    }
+
+    if (currentIndex > removedIndex) {
+      currentIndex--;
+    }
+
+    if (_folderItemCount > removedIndex) {
+      _folderItemCount--;
+    } else {
+      _folderItemCount = min(_folderItemCount, library.length);
+    }
+
+    for (var i = _playHistory.length - 1; i >= 0; i--) {
+      final value = _playHistory[i];
+      if (value == removedIndex) {
+        _playHistory.removeAt(i);
+      } else if (value > removedIndex) {
+        _playHistory[i] = value - 1;
+      }
+    }
+    for (var i = _recentlyPlayed.length - 1; i >= 0; i--) {
+      final value = _recentlyPlayed[i];
+      if (value == removedIndex) {
+        _recentlyPlayed.removeAt(i);
+      } else if (value > removedIndex) {
+        _recentlyPlayed[i] = value - 1;
+      }
+    }
+    if (_playHistory.isEmpty) {
+      _historyCursor = -1;
+    } else {
+      _historyCursor = _historyCursor.clamp(0, _playHistory.length - 1);
+    }
+  }
+
+  Future<void> _stopPlaybackBestEffort() async {
+    _loadGeneration++;
+    _videoCompletionFired = false;
+    _videoReady = false;
+    try { await _safeStopAudio(); } catch (_) {}
+    try { await _audioMkPlayer?.stop(); } catch (_) {}
+    try { await _mkPlayer?.stop(); } catch (_) {}
+    try { await _disposeAndroidController(); } catch (_) {}
+  }
+
+  Future<void> _safeStopAudio() async {
+    if (_audio == null) return;
+    if (!kIsWeb && Platform.isWindows) {
+      try { await _audio!.pause(); } catch (_) {}
+      try { await _audio!.seek(Duration.zero); } catch (_) {}
+      return;
+    }
+    try { await _audio!.stop(); } catch (_) {}
   }
 
   void _saveFavouriteCache() {
@@ -564,9 +786,12 @@ class PlayerState with ChangeNotifier {
     isLoading = true;
     _folderItemCount = 0;
     _thumbInFlight.clear();
+    _playHistory.clear();
+    _recentlyPlayed.clear();
+    _historyCursor = -1;
 
     if (_audio != null) {
-      try { await _audio!.stop(); } catch (_) {}
+      try { await _safeStopAudio(); } catch (_) {}
     }
     if (_audioMkPlayer != null) {
       try { await _audioMkPlayer!.stop(); } catch (_) {}
@@ -610,6 +835,9 @@ class PlayerState with ChangeNotifier {
 
     currentIndex = 0;
     isLoading = false;
+    if (library.isNotEmpty) {
+      _recordHistorySelection(currentIndex, fromHistory: false);
+    }
     notifyListeners();
 
     // BUG 2 FIX: Avoid bulk thumbnail generation on Windows (crashes). Instead,
@@ -740,6 +968,9 @@ class PlayerState with ChangeNotifier {
             duration: dur,
           );
           if (_favourites.contains(path)) _favouriteCache[path] = library[index];
+          if (index == currentIndex) {
+            _updateMediaNotification(library[index]);
+          }
           notifyListeners();
         }
       }
@@ -759,6 +990,9 @@ class PlayerState with ChangeNotifier {
         title: tag.title?.trim().isNotEmpty == true ? tag.title!.trim() : item.title,
         artist: tag.artist?.trim().isNotEmpty == true ? tag.artist!.trim() : item.artist,
       );
+      if (i == currentIndex) {
+        _updateMediaNotification(lib[i]);
+      }
     } catch (_) {}
   }
 
@@ -769,7 +1003,12 @@ class PlayerState with ChangeNotifier {
   /// if select() is called again before _loadCurrent() finishes, the earlier
   /// load aborts gracefully instead of landing on the wrong track.
   Future<void> select(int index) async {
+    await _selectInternal(index, fromHistory: false);
+  }
+
+  Future<void> _selectInternal(int index, {required bool fromHistory}) async {
     if (index < 0 || index >= library.length) return;
+    _recordHistorySelection(index, fromHistory: fromHistory);
     // Capture NOW before any async gap.
     final targetIndex = index;
     final generation = ++_loadGeneration;
@@ -778,9 +1017,43 @@ class PlayerState with ChangeNotifier {
     await _loadCurrent(targetIndex, generation);
   }
 
+  void _recordHistorySelection(int index, {required bool fromHistory}) {
+    if (!fromHistory) {
+      if (_historyCursor < _playHistory.length - 1) {
+        _playHistory.removeRange(_historyCursor + 1, _playHistory.length);
+      }
+      if (_playHistory.isEmpty || _playHistory.last != index) {
+        _playHistory.add(index);
+        if (_playHistory.length > _maxHistoryEntries) {
+          _playHistory.removeAt(0);
+        }
+      }
+      _historyCursor = _playHistory.length - 1;
+      _pushRecentPlay(index);
+      return;
+    }
+
+    final existing = _playHistory.lastIndexOf(index);
+    if (existing >= 0) {
+      _historyCursor = existing;
+    }
+  }
+
+  void _pushRecentPlay(int index) {
+    _recentlyPlayed.remove(index);
+    _recentlyPlayed.add(index);
+    while (_recentlyPlayed.length > _maxRecentShuffleEntries) {
+      _recentlyPlayed.removeAt(0);
+    }
+  }
+
   Future<void> _loadCurrent(int targetIndex, int generation) async {
     if (_disposed) return;
     if (targetIndex < 0 || targetIndex >= library.length) return;
+
+    // Reset any in-flight slider interaction when switching tracks to avoid
+    // stale debounce seeks leaking into the newly selected item.
+    _resetSeekInteractionState();
 
     // BUG 1 FIX: abort if a newer select() has been called.
     if (generation != _loadGeneration) {
@@ -846,6 +1119,7 @@ class PlayerState with ChangeNotifier {
                 position = Duration.zero;
               } catch (e) {
                 debugPrint('media_kit audio load error for ${item.path}: $e');
+                await _handleMalformedMedia(item.path, e, context: 'media_kit audio load');
               } finally {
                 _audioLock.release();
               }
@@ -859,6 +1133,7 @@ class PlayerState with ChangeNotifier {
           }
         } catch (e) {
           debugPrint('audio load error for ${item.path}: $e');
+          await _handleMalformedMedia(item.path, e, context: 'audio load');
         }
       } else {
         // Switching to video.
@@ -893,6 +1168,7 @@ class PlayerState with ChangeNotifier {
             await _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
           } catch (e) {
             debugPrint('media_kit video load error: $e');
+            await _handleMalformedMedia(item.path, e, context: 'media_kit video load');
           }
         } else {
           await _loadAndroidVideo(item.path, generation);
@@ -958,6 +1234,7 @@ class PlayerState with ChangeNotifier {
     _androidController = ctrl;
     duration = ctrl.value.duration;
     position = Duration.zero;
+    _emitPositionUiState();
     await ctrl.setVolume((volume * _videoVolumeBoost).clamp(0.0, 1.0));
     await ctrl.play();
     _videoReady = true;
@@ -966,8 +1243,11 @@ class PlayerState with ChangeNotifier {
       if (_androidController == null) return;
       final val = _androidController!.value;
       if (currentItem?.type == MediaType.video) {
-        position = val.position;
-        if (val.duration != Duration.zero) duration = val.duration;
+        _onPlaybackPositionUpdated(val.position);
+        if (val.duration != Duration.zero) {
+          duration = val.duration;
+          _emitPositionUiState();
+        }
       }
       if (!_videoCompletionFired &&
           val.duration != Duration.zero &&
@@ -975,22 +1255,239 @@ class PlayerState with ChangeNotifier {
           !val.isPlaying) {
         _videoCompletionFired = true;
         _handleCompletion();
+        _scheduleNotify();
       }
-      _scheduleNotify();
     }
 
     _androidListener = listener;
     ctrl.addListener(listener);
   } catch (e, st) {
     debugPrint('Android video player failed: $e\n$st');
+    await _handleMalformedMedia(path, e, context: 'android video load');
   }
 }
+
+  Future<void> onAppLifecycleChanged(AppLifecycleState state) async {
+    if (_disposed) return;
+
+    if (Platform.isAndroid) {
+      if (state == AppLifecycleState.inactive ||
+          state == AppLifecycleState.hidden ||
+          state == AppLifecycleState.paused) {
+        await _enterBackgroundVideoAudioMode();
+        return;
+      }
+      if (state == AppLifecycleState.resumed) {
+        await _restoreForegroundVideoPlayback();
+      }
+      return;
+    }
+
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      if (state == AppLifecycleState.inactive ||
+          state == AppLifecycleState.hidden ||
+          state == AppLifecycleState.paused) {
+        await _enterDesktopBackgroundVideoAudioMode();
+        return;
+      }
+      if (state == AppLifecycleState.resumed) {
+        await _restoreDesktopForegroundVideoPlayback();
+      }
+    }
+  }
+
+  Future<void> _enterDesktopBackgroundVideoAudioMode() async {
+    if (_desktopVideoBackgroundAudioMode || _disposed) return;
+    if (!_useMediaKit || _mkPlayer == null || _audioMkPlayer == null) return;
+
+    final item = currentItem;
+    if (item == null || item.type != MediaType.video) return;
+
+    final resumePosition = position;
+    final wasPlaying = _mkPlayer!.state.playing;
+    _backgroundVideoResumePosition = resumePosition;
+
+    try {
+      await _mkPlayer!.pause();
+    } catch (_) {}
+
+    await _audioLock.acquire();
+    try {
+      await _openMediaWithFallback(_audioMkPlayer!, item.path, play: false);
+      if (resumePosition > Duration.zero) {
+        try {
+          await _audioMkPlayer!.seek(resumePosition);
+        } catch (_) {}
+      }
+      await _audioMkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+      if (wasPlaying) {
+        await _audioMkPlayer!.play();
+      } else {
+        await _audioMkPlayer!.pause();
+      }
+      _desktopVideoBackgroundAudioMode = true;
+      _updateMediaNotification(item);
+      _emitPositionUiState();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Failed to enter desktop background video audio mode: $e');
+      _desktopVideoBackgroundAudioMode = false;
+    } finally {
+      _audioLock.release();
+    }
+  }
+
+  Future<void> _restoreDesktopForegroundVideoPlayback() async {
+    if (!_desktopVideoBackgroundAudioMode || _disposed) return;
+    final item = currentItem;
+    if (item == null || item.type != MediaType.video || _mkPlayer == null) {
+      _desktopVideoBackgroundAudioMode = false;
+      notifyListeners();
+      return;
+    }
+
+    final resumePosition = _backgroundVideoResumePosition ?? position;
+    final shouldKeepPlaying = _audioMkPlayer?.state.playing ?? false;
+
+    try {
+      await _audioMkPlayer?.pause();
+    } catch (_) {}
+
+    try {
+      await _openMediaWithFallback(_mkPlayer!, item.path, play: false);
+      if (resumePosition > Duration.zero) {
+        try {
+          await _mkPlayer!.seek(resumePosition);
+        } catch (_) {}
+      }
+      await _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+      if (shouldKeepPlaying) {
+        await _mkPlayer!.play();
+      } else {
+        await _mkPlayer!.pause();
+      }
+      position = resumePosition;
+      _videoReady = true;
+      _emitPositionUiState();
+    } catch (e) {
+      debugPrint('Failed to restore desktop foreground video playback: $e');
+    }
+
+    _desktopVideoBackgroundAudioMode = false;
+    notifyListeners();
+  }
+
+  Future<void> _enterBackgroundVideoAudioMode() async {
+    if (_videoBackgroundAudioMode || _disposed) return;
+    if (_useMediaKit || _audio == null) return;
+
+    final item = currentItem;
+    if (item == null || item.type != MediaType.video) return;
+    final controller = _androidController;
+    if (controller == null) return;
+
+    final resumePosition = controller.value.position;
+    final wasPlaying = controller.value.isPlaying;
+    _backgroundVideoResumePosition = resumePosition;
+
+    try {
+      await controller.pause();
+      await controller.setVolume(0);
+    } catch (_) {}
+
+    try {
+      final localPath = await _resolveLocalPath(item.path);
+      if (localPath.startsWith('http') || localPath.startsWith('content://')) {
+        await _audio!.setUrl(localPath);
+      } else {
+        await _audio!.setFilePath(localPath);
+      }
+      if (resumePosition > Duration.zero) {
+        await _audio!.seek(resumePosition);
+      }
+      _runOnMainThread(() => _audio!.setVolume(volume));
+      if (wasPlaying) {
+        await _audio!.play();
+      } else {
+        await _audio!.pause();
+      }
+      duration = _audio!.duration ?? duration;
+      position = resumePosition;
+      _videoBackgroundAudioMode = true;
+      _updateMediaNotification(item);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Failed to enter background video audio mode: $e');
+      _videoBackgroundAudioMode = false;
+    }
+  }
+
+  Future<void> _restoreForegroundVideoPlayback() async {
+    if (!_videoBackgroundAudioMode || _disposed) return;
+    final item = currentItem;
+    final resumePosition = _backgroundVideoResumePosition ?? position;
+    final shouldKeepPlaying = _audio?.playing ?? false;
+
+    try {
+      await _audio?.pause();
+    } catch (_) {}
+
+    _videoBackgroundAudioMode = false;
+
+    if (item == null || item.type != MediaType.video) {
+      notifyListeners();
+      return;
+    }
+
+    // Reuse current Android controller when available to avoid a full reload
+    // that can leave timeline/progress in a stale visual state.
+    final existingController = _androidController;
+    if (!_useMediaKit && existingController != null) {
+      try {
+        await existingController.setVolume(
+          (volume * _videoVolumeBoost).clamp(0.0, 1.0),
+        );
+        if (resumePosition > Duration.zero) {
+          await existingController.seekTo(resumePosition);
+        }
+        if (shouldKeepPlaying) {
+          await existingController.play();
+        } else {
+          await existingController.pause();
+        }
+        position = resumePosition;
+        _emitPositionUiState();
+        notifyListeners();
+        return;
+      } catch (_) {
+        // Fall back to reload path below.
+      }
+    }
+
+    final generation = ++_loadGeneration;
+    await _loadCurrent(currentIndex, generation);
+    if (_disposed || generation != _loadGeneration) return;
+
+    final controller = _androidController;
+    if (controller != null) {
+      try {
+        if (resumePosition > Duration.zero) {
+          await controller.seekTo(resumePosition);
+        }
+        if (!shouldKeepPlaying) {
+          await controller.pause();
+        }
+      } catch (_) {}
+    }
+
+    notifyListeners();
+  }
 
   // --- Playback controls ----------------------------------------------------
 
   List<int> _getPlaybackCandidates({MediaType? only}) {
     final scope = _folderItemCount > 0 ? _folderItemCount : library.length;
-    return library
+    final candidates = library
         .asMap()
         .entries
         .where((e) {
@@ -1004,11 +1501,47 @@ class PlayerState with ChangeNotifier {
         })
         .map((e) => e.key)
         .toList();
+
+    candidates.sort((left, right) {
+      final leftDisliked = _disliked.contains(library[left].path);
+      final rightDisliked = _disliked.contains(library[right].path);
+      if (leftDisliked != rightDisliked) {
+        return leftDisliked ? 1 : -1;
+      }
+      return left.compareTo(right);
+    });
+    return candidates;
+  }
+
+  List<int> _weightedShuffleCandidates(List<int> candidates) {
+    if (candidates.isEmpty) return candidates;
+    final weighted = <int>[];
+    for (final index in candidates) {
+      weighted.add(index);
+      if (!_disliked.contains(library[index].path)) {
+        weighted.add(index);
+        weighted.add(index);
+      }
+    }
+    weighted.shuffle(_random);
+    return weighted;
   }
 
   Future<void> togglePlay() async {
     if (_disposed) return;
     if (isVideo) {
+      if (_videoBackgroundAudioMode && _audio != null) {
+        _audio!.playing ? await _audio!.pause() : await _audio!.play();
+        notifyListeners();
+        return;
+      }
+      if (_desktopVideoBackgroundAudioMode && _audioMkPlayer != null) {
+        await (_audioMkPlayer!.state.playing
+            ? _audioMkPlayer!.pause()
+            : _audioMkPlayer!.play());
+        notifyListeners();
+        return;
+      }
       if (_useMediaKit && _mkPlayer != null) {
         await (_mkPlayer!.state.playing ? _mkPlayer!.pause() : _mkPlayer!.play());
       } else if (_androidController != null) {
@@ -1017,7 +1550,26 @@ class PlayerState with ChangeNotifier {
             : await _androidController!.play();
       }
     } else {
-      if (_useMediaKit) {
+      if (_audio != null) {
+        try {
+          _audio!.playing ? await _audio!.pause() : await _audio!.play();
+        } catch (e) {
+          debugPrint('just_audio togglePlay error: $e');
+          try {
+            final item = currentItem;
+            if (item != null && item.type == MediaType.audio) {
+              final localPath = await _resolveLocalPath(item.path);
+              if (localPath.startsWith('http') || localPath.startsWith('content://')) {
+                await _audio!.setUrl(localPath);
+              } else {
+                await _audio!.setFilePath(localPath);
+              }
+              await _audio!.setVolume(volume);
+              await _audio!.play();
+            }
+          } catch (_) {}
+        }
+      } else if (_useMediaKit) {
         final player = _audioMkPlayer ?? _mkPlayer;
         if (player != null) {
           await _audioLock.acquire();
@@ -1027,8 +1579,6 @@ class PlayerState with ChangeNotifier {
             _audioLock.release();
           }
         }
-      } else if (_audio != null) {
-        _audio!.playing ? await _audio!.pause() : await _audio!.play();
       }
     }
     notifyListeners();
@@ -1043,6 +1593,30 @@ class PlayerState with ChangeNotifier {
           'PlayerState.seek requested: $d, isVideo=$isVideo, _useMediaKit=$_useMediaKit');
     if (isVideo) {
       _videoCompletionFired = false;
+      if (_videoBackgroundAudioMode && _audio != null) {
+        try {
+          await _audio!.seek(d);
+          _backgroundVideoResumePosition = d;
+        } catch (e) {
+          debugPrint('background video seek error: $e');
+        }
+        position = d;
+        _emitPositionUiState();
+        _scheduleNotify();
+        return;
+      }
+      if (_desktopVideoBackgroundAudioMode && _audioMkPlayer != null) {
+        try {
+          await _audioMkPlayer!.seek(d);
+          _backgroundVideoResumePosition = d;
+        } catch (e) {
+          debugPrint('desktop background video seek error: $e');
+        }
+        position = d;
+        _emitPositionUiState();
+        _scheduleNotify();
+        return;
+      }
       if (_useMediaKit && _mkPlayer != null) {
         debugPrint('Seeking media_kit video player to $d');
         try {
@@ -1059,7 +1633,14 @@ class PlayerState with ChangeNotifier {
         }
       }
     } else {
-      if (_useMediaKit) {
+      if (_audio != null) {
+        debugPrint('Seeking just_audio to $d');
+        try {
+          await _audio!.seek(d);
+        } catch (e) {
+          debugPrint('just_audio seek error: $e');
+        }
+      } else if (_useMediaKit) {
         final player = _audioMkPlayer ?? _mkPlayer;
         if (player != null) {
           debugPrint('Seeking media_kit audio player to $d');
@@ -1074,20 +1655,13 @@ class PlayerState with ChangeNotifier {
         } else {
           debugPrint('No media_kit audio player available to seek');
         }
-      } else if (_audio != null) {
-        debugPrint('Seeking just_audio to $d');
-        try {
-          await _audio!.seek(d);
-        } catch (e) {
-          debugPrint('just_audio seek error: $e');
-        }
       } else {
         debugPrint('No audio player available to seek');
       }
     }
 
     position = d;
-    notifyListeners();
+    _emitPositionUiState();
 
     // After a short delay log the effective position/duration and player states
     // to help diagnose seek-not-applying issues on desktop.
@@ -1101,8 +1675,70 @@ class PlayerState with ChangeNotifier {
     });
   }
 
+  void _resetSeekInteractionState() {
+    _seekDebounceTimer?.cancel();
+    _seekDebounceTimer = null;
+    _isSeeking = false;
+    _seekPreviewPosition = null;
+    _pendingSeekTarget = null;
+    _emitPositionUiState();
+  }
+
+  void beginSeekInteraction() {
+    if (_disposed) return;
+    _isSeeking = true;
+    _seekPreviewPosition = position;
+    _pendingSeekTarget = position;
+    _emitPositionUiState();
+  }
+
+  void previewSeekInteraction(Duration d) {
+    if (_disposed) return;
+    _isSeeking = true;
+    _seekPreviewPosition = d;
+    _pendingSeekTarget = d;
+    _emitPositionUiState();
+
+    // For video we only preview while dragging and commit on release.
+    // Repeated live seeks can make timeline updates appear stuck/out of sync.
+    if (currentItem?.type == MediaType.video) {
+      _seekDebounceTimer?.cancel();
+      _seekDebounceTimer = null;
+      return;
+    }
+
+    _seekDebounceTimer?.cancel();
+    _seekDebounceTimer = Timer(const Duration(milliseconds: 200), () {
+      final target = _pendingSeekTarget;
+      if (target != null && !_disposed) {
+        unawaited(seek(target));
+      }
+    });
+  }
+
+  Future<void> endSeekInteraction() async {
+    if (_disposed) return;
+    final target = _pendingSeekTarget ?? _seekPreviewPosition;
+    _seekDebounceTimer?.cancel();
+    _seekDebounceTimer = null;
+    if (target != null) {
+      await seek(target);
+    }
+    // Always clear seek UI state explicitly. When paused, some backends may
+    // not emit a position stream event after seek, leaving the slider "stuck".
+    _isSeeking = false;
+    _seekPreviewPosition = null;
+    _pendingSeekTarget = null;
+    _emitPositionUiState();
+  }
+
   Future<void> next({MediaType? only}) async {
     if (library.isEmpty) return;
+    final queuedIndex = _popNextQueuedIndex();
+    if (queuedIndex != null) {
+      await _selectInternal(queuedIndex, fromHistory: false);
+      return;
+    }
     var candidates = _getPlaybackCandidates(only: only);
     if (candidates.isEmpty && only != null) {
       // If the current filter yields nothing (e.g. songs-only while in a video
@@ -1112,17 +1748,44 @@ class PlayerState with ChangeNotifier {
     if (candidates.isEmpty) return;
     int nextIndex;
     if (shuffle) {
-      final others = candidates.where((i) => i != currentIndex).toList();
-      nextIndex = others.isEmpty ? candidates.first : others[_random.nextInt(others.length)];
+      final fresh = candidates
+          .where((i) => i != currentIndex && !_recentlyPlayed.contains(i))
+          .toList();
+      final basePool = fresh.isNotEmpty
+          ? fresh
+          : candidates.where((i) => i != currentIndex).toList();
+      final weighted = _weightedShuffleCandidates(basePool);
+      nextIndex = weighted.isEmpty
+          ? candidates.first
+          : weighted[_random.nextInt(weighted.length)];
     } else {
       final pos = candidates.indexOf(currentIndex);
       nextIndex = pos >= 0 ? candidates[(pos + 1) % candidates.length] : candidates.first;
     }
-    await select(nextIndex);
+    await _selectInternal(nextIndex, fromHistory: false);
+  }
+
+  int? _popNextQueuedIndex() {
+    while (manualQueue.isNotEmpty) {
+      final nextIdx = manualQueue.removeAt(0);
+      _manualQueueBase.remove(nextIdx);
+      if (nextIdx >= 0 && nextIdx < library.length) {
+        return nextIdx;
+      }
+    }
+    return null;
   }
 
   Future<void> previous({MediaType? only}) async {
     if (library.isEmpty) return;
+    if (_historyCursor > 0 && _historyCursor < _playHistory.length) {
+      _historyCursor--;
+      final previousIndex = _playHistory[_historyCursor];
+      if (previousIndex >= 0 && previousIndex < library.length) {
+        await _selectInternal(previousIndex, fromHistory: true);
+        return;
+      }
+    }
     var candidates = _getPlaybackCandidates(only: only);
     if (candidates.isEmpty && only != null) {
       // If the current filter yields nothing (e.g. songs-only while in a video
@@ -1132,15 +1795,19 @@ class PlayerState with ChangeNotifier {
     if (candidates.isEmpty) return;
     int prevIndex;
     if (shuffle) {
-      final others = candidates.where((i) => i != currentIndex).toList();
-      prevIndex = others.isEmpty ? candidates.first : others[_random.nextInt(others.length)];
+      final weighted = _weightedShuffleCandidates(
+        candidates.where((i) => i != currentIndex).toList(),
+      );
+      prevIndex = weighted.isEmpty
+          ? candidates.first
+          : weighted[_random.nextInt(weighted.length)];
     } else {
       final pos = candidates.indexOf(currentIndex);
       prevIndex = pos >= 0
           ? candidates[(pos - 1 + candidates.length) % candidates.length]
           : candidates.last;
     }
-    await select(prevIndex);
+    await _selectInternal(prevIndex, fromHistory: false);
   }
 
   void setVolume(double v) {
@@ -1191,6 +1858,9 @@ class PlayerState with ChangeNotifier {
     }
     if (_androidController != null) {
       _androidController!.setVolume((volume * _videoVolumeBoost).clamp(0.0, 1.0));
+    }
+    if (_videoBackgroundAudioMode && _audio != null) {
+      _runOnMainThread(() => _audio!.setVolume(volume));
     }
   }
 
@@ -1258,9 +1928,9 @@ class PlayerState with ChangeNotifier {
   }
 
   void _handleCompletion() {
-    if (manualQueue.isNotEmpty) {
-      final nextIdx = manualQueue.removeAt(0);
-      select(nextIdx);
+    final queuedIndex = _popNextQueuedIndex();
+    if (queuedIndex != null) {
+      select(queuedIndex);
       return;
     }
     if (repeatMode == RepeatMode.one) {
@@ -1294,15 +1964,27 @@ class PlayerState with ChangeNotifier {
       case PlaybackMode.songs:
         activeTabFilter = MediaType.audio;
         favouritesOnly = false;
+        return;
       case PlaybackMode.videos:
         activeTabFilter = MediaType.video;
         favouritesOnly = false;
+        return;
       case PlaybackMode.favourites:
         activeTabFilter = null;
         favouritesOnly = true;
+        return;
+      case PlaybackMode.favouriteSongs:
+        activeTabFilter = MediaType.audio;
+        favouritesOnly = true;
+        return;
+      case PlaybackMode.favouriteVideos:
+        activeTabFilter = MediaType.video;
+        favouritesOnly = true;
+        return;
       case PlaybackMode.all:
         activeTabFilter = null;
         favouritesOnly = false;
+        return;
     }
   }
 
@@ -1315,6 +1997,7 @@ class PlayerState with ChangeNotifier {
         (prefs.getInt('playbackMode') ?? 0).clamp(0, PlaybackMode.values.length - 1)];
     _applyPlaybackMode();
     _favourites = (prefs.getStringList('player_favourites') ?? []).toSet();
+    _disliked = (prefs.getStringList('player_disliked') ?? []).toSet();
 
     _favouriteCache.clear();
     for (final raw in prefs.getStringList('player_favourites_cache') ?? []) {
@@ -1408,19 +2091,62 @@ class PlayerState with ChangeNotifier {
     // _audio is non-null when this is called (guarded by caller).
     _audioHandler = await initAudioService(_audio!);
     if (_audioHandler != null) {
-      _audioHandler!.onSkipToNext = () => next(only: MediaType.audio);
-      _audioHandler!.onSkipToPrevious = () => previous(only: MediaType.audio);
+      _audioHandler!.onSkipToNext = () => next(only: activeTabFilter);
+      _audioHandler!.onSkipToPrevious = () => previous(only: activeTabFilter);
+      final pending = _pendingNotificationItem;
+      if (pending != null) {
+        _updateMediaNotification(pending);
+      }
     }
   }
 
   void _updateMediaNotification(MediaItem item) {
+    _pendingNotificationItem = item;
+    final sequence = _notificationGuard.nextToken();
     if (_audioHandler == null) return;
-    _audioHandler!.updateMediaItem(audio_svc.MediaItem(
-      id: item.path,
-      title: item.title ?? p.basenameWithoutExtension(item.path),
-      artist: item.artist ?? '',
-      duration: duration,
-    ));
+    unawaited(_pushMediaNotification(item, sequence));
+  }
+
+  Future<void> _pushMediaNotification(MediaItem item, int sequence) async {
+    if (_audioHandler == null) return;
+    if (!_notificationGuard.isCurrent(sequence)) return;
+
+    Uint8List? thumb = item.thumbnailData;
+    if ((thumb == null || thumb.isEmpty) && item.path.isNotEmpty) {
+      try {
+        thumb = await _loadThumbFromCache(item.path);
+      } catch (_) {}
+    }
+    if (!_notificationGuard.isCurrent(sequence)) return;
+
+    Uri? artUri;
+    try {
+      final cacheDir = await getTemporaryDirectory();
+      final artFile = File(
+        '${cacheDir.path}${Platform.pathSeparator}now_playing_art_$sequence.png',
+      );
+      await artFile.writeAsBytes(
+        (thumb != null && thumb.isNotEmpty) ? thumb : _transparentArtPng,
+        flush: true,
+      );
+      artUri = artFile.uri;
+    } catch (_) {}
+    if (!_notificationGuard.isCurrent(sequence)) return;
+
+    final current = currentItem;
+    if (current == null || current.path != item.path) {
+      return;
+    }
+
+    await _audioHandler!.updateMediaItem(
+      audio_svc.MediaItem(
+        id: item.path,
+        title: item.title ?? p.basenameWithoutExtension(item.path),
+        artist: item.artist ?? '',
+        duration: item.duration ?? duration,
+        artUri: artUri,
+      ),
+    );
   }
 
   // --- Directory watcher ----------------------------------------------------
@@ -1430,7 +2156,9 @@ class PlayerState with ChangeNotifier {
     _dirWatcher = null;
     _watchedDirPath = null;
 
-    if (kIsWeb || Platform.isAndroid || Platform.isIOS) return;
+    if (kIsWeb || Platform.isAndroid || Platform.isIOS || Platform.isWindows) {
+      return;
+    }
     if (items.isEmpty) return;
     final firstPath = items.first.path;
     if (firstPath.startsWith('content://')) return;
@@ -1443,11 +2171,20 @@ class PlayerState with ChangeNotifier {
       Timer? debounce;
       _dirWatcher = dir.watch().listen((event) {
         if (_disposed) return;
+        // Ignore noisy content writes (common during torrent seeding) to avoid
+        // expensive full-library rescans while files are being updated.
+        final shouldRescan =
+            (event.type & FileSystemEvent.create) != 0 ||
+            (event.type & FileSystemEvent.delete) != 0 ||
+            (event.type & FileSystemEvent.move) != 0;
+        if (!shouldRescan) return;
         final ext = p.extension(event.path).toLowerCase();
         if (!_mediaExtensions.contains(ext)) return;
         debounce?.cancel();
         debounce = Timer(const Duration(seconds: 2), () {
-          if (!_disposed) _refreshLibraryFromDisk();
+          if (!_disposed) {
+            unawaited(_refreshLibraryFromDisk());
+          }
         });
       });
     } catch (e) {
@@ -1456,24 +2193,60 @@ class PlayerState with ChangeNotifier {
   }
 
   Future<void> _refreshLibraryFromDisk() async {
+    if (_libraryRefreshInProgress) {
+      _libraryRefreshQueued = true;
+      return;
+    }
+    _libraryRefreshInProgress = true;
     final dirPath = _watchedDirPath;
-    if (dirPath == null) return;
-    final dir = Directory(dirPath);
-    if (!await dir.exists()) return;
-    final files = dir.listSync(recursive: true).whereType<File>().where((f) {
-      return _mediaExtensions.contains(p.extension(f.path).toLowerCase());
-    }).map((f) {
-      final ext = p.extension(f.path).toLowerCase();
-      final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
-      return MediaItem(f.path, isVideo ? MediaType.video : MediaType.audio,
-          title: p.basenameWithoutExtension(f.path));
-    }).toList();
+    try {
+      if (dirPath == null) return;
+      final dir = Directory(dirPath);
+      if (!await dir.exists()) return;
 
-    final currentPaths = library.take(_folderItemCount).map((e) => e.path).toSet();
-    final newPaths = files.map((e) => e.path).toSet();
-    if (currentPaths.length == newPaths.length && currentPaths.containsAll(newPaths)) return;
+      final files = <MediaItem>[];
+      await for (final entity in dir.list(recursive: true, followLinks: false)) {
+        if (_disposed) return;
+        if (entity is! File) continue;
+        final ext = p.extension(entity.path).toLowerCase();
+        if (!_mediaExtensions.contains(ext)) continue;
+        final isVideo = {
+          '.mp4',
+          '.mkv',
+          '.avi',
+          '.webm',
+          '.mov',
+          '.wmv',
+          '.flv',
+          '.m4v',
+        }.contains(ext);
+        files.add(
+          MediaItem(
+            entity.path,
+            isVideo ? MediaType.video : MediaType.audio,
+            title: p.basenameWithoutExtension(entity.path),
+          ),
+        );
+      }
 
-    await setLibrary(files);
+      final currentPaths = library
+          .take(_folderItemCount)
+          .map((e) => e.path)
+          .toSet();
+      final newPaths = files.map((e) => e.path).toSet();
+      if (currentPaths.length == newPaths.length &&
+          currentPaths.containsAll(newPaths)) {
+        return;
+      }
+
+      await setLibrary(files);
+    } finally {
+      _libraryRefreshInProgress = false;
+      if (_libraryRefreshQueued && !_disposed) {
+        _libraryRefreshQueued = false;
+        unawaited(_refreshLibraryFromDisk());
+      }
+    }
   }
 
   // --- Video thumbnail generation -------------------------------------------
@@ -1660,6 +2433,60 @@ class PlayerState with ChangeNotifier {
     }
   }
 
+  Future<void> _handleMalformedMedia(
+    String path,
+    Object error, {
+    String context = 'playback',
+  }) async {
+    if (_disposed) return;
+    if (_ignoredBrokenMediaPaths.contains(path)) return;
+    _ignoredBrokenMediaPaths.add(path);
+
+    debugPrint('Malformed media detected in $context for $path: $error');
+
+    if (!path.startsWith('content://') &&
+        !path.startsWith('http://') &&
+        !path.startsWith('https://')) {
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+          debugPrint('Deleted malformed media file: $path');
+        }
+      } catch (e) {
+        debugPrint('Unable to delete malformed media file $path: $e');
+      }
+    }
+
+    final index = library.indexWhere((item) => item.path == path);
+    if (index < 0) {
+      _scheduleNotify();
+      return;
+    }
+
+    final wasCurrent = index == currentIndex;
+    library.removeAt(index);
+    _rebaseStateAfterRemoval(index);
+
+    if (library.isEmpty) {
+      await _stopPlaybackBestEffort();
+      currentIndex = 0;
+      position = Duration.zero;
+      duration = null;
+      _folderItemCount = 0;
+      _emitPositionUiState();
+      _scheduleNotify();
+      return;
+    }
+
+    if (wasCurrent) {
+      currentIndex = index.clamp(0, library.length - 1);
+      final generation = ++_loadGeneration;
+      unawaited(_loadCurrent(currentIndex, generation));
+    }
+    _scheduleNotify();
+  }
+
   Future<void> _disposeAndroidController() async {
     if (_androidController == null) return;
     if (_androidListener != null) {
@@ -1673,6 +2500,9 @@ class PlayerState with ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _seekDebounceTimer?.cancel();
+    _seekDebounceTimer = null;
+    _positionUiController.close();
     _dirWatcher?.cancel();
     for (final sub in _subs) { try { sub.cancel(); } catch (_) {} }
     _subs.clear();
@@ -1698,6 +2528,10 @@ class PlayerState with ChangeNotifier {
   Future<void> playFileDirect(String path) async {
     if (_disposed) return;
 
+    // Prevent pending debounce seeks from a previously selected track from
+    // being applied after direct file selection.
+    _resetSeekInteractionState();
+
     // Try to find a library index for UI bookkeeping; not required to play.
     final idx = library.indexWhere((m) => m.path == path);
     if (idx >= 0) {
@@ -1710,7 +2544,7 @@ class PlayerState with ChangeNotifier {
 
     // Stop existing playback first (best-effort).
     if (_audio != null) {
-      try { await _audio!.stop(); } catch (_) {}
+      try { await _safeStopAudio(); } catch (_) {}
     }
     if (_audioMkPlayer != null) {
       try { await _audioMkPlayer!.stop(); } catch (_) {}
@@ -1759,6 +2593,7 @@ class PlayerState with ChangeNotifier {
           } catch (e) {
             debugPrint(
                 'playFileDirect media_kit audio load error for $path: $e');
+            await _handleMalformedMedia(path, e, context: 'direct media_kit audio load');
           } finally {
             _audioLock.release();
           }
@@ -1781,6 +2616,7 @@ class PlayerState with ChangeNotifier {
                 if (idx >= 0) _updateMediaNotification(library[idx]);
               } catch (e) {
                 debugPrint('playFileDirect audio load error for $path: $e');
+                await _handleMalformedMedia(path, e, context: 'direct audio load');
               }
             });
           }
@@ -1803,6 +2639,7 @@ class PlayerState with ChangeNotifier {
       }
     } catch (e) {
       debugPrint('playFileDirect failed for $path: $e');
+      await _handleMalformedMedia(path, e, context: 'direct playback');
     }
   }
 }
@@ -1861,6 +2698,10 @@ class _VideoPaneState extends State<_VideoPane> {
       _prevSize = size;
       return;
     }
+    if (Platform.isWindows) {
+      _prevSize = size;
+      return;
+    }
     // If area increases dramatically (e.g., maximize), schedule a single recreate.
     final oldArea = _prevSize!.width * _prevSize!.height;
     final newArea = size.width * size.height;
@@ -1916,8 +2757,9 @@ class _VideoPaneState extends State<_VideoPane> {
                   children: [
                     Center(child: child),
                     Positioned(
-                      top: 10,
-                      right: 10,
+                      // overflow-fix: keep top-right overlay control inside safe insets.
+                      top: mq.padding.top + 10,
+                      right: mq.padding.right + 10,
                       child: IconButton(
                         icon: Icon(
                           widget.isFullScreen
@@ -1955,7 +2797,7 @@ abstract class _PlayerTheme {
       Theme.of(context).colorScheme.onSurface;
 
   static Color sub(BuildContext context) =>
-      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72);
 }
 
 // --- Root screen --------------------------------------------------------------
@@ -1968,7 +2810,7 @@ class PlayerScreen extends StatefulWidget {
 }
 
 class _PlayerScreenState extends State<PlayerScreen>
-    with SingleTickerProviderStateMixin {
+  with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -1980,12 +2822,21 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() { if (!_tabController.indexIsChanging) setState(() {}); });
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (!mounted) return;
+    unawaited(context.read<PlayerState>().onAppLifecycleChanged(state));
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _exitFullScreen();
     _tabController.dispose();
     _searchController.dispose();
@@ -2193,6 +3044,19 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
+  QueueScope _queueScopeForTab(int tabIndex) {
+    switch (tabIndex) {
+      case 1:
+        return QueueScope.songs;
+      case 2:
+        return QueueScope.videos;
+      case 3:
+        return QueueScope.favourites;
+      default:
+        return QueueScope.all;
+    }
+  }
+
   Widget _buildHeader() {
     return SafeArea(
       bottom: false,
@@ -2217,6 +3081,54 @@ class _PlayerScreenState extends State<PlayerScreen>
                   color: Theme.of(context).colorScheme.onSurface),
               tooltip: 'Open folder',
               onPressed: _pickFolder,
+            ),
+            PopupMenuButton<String>(
+              tooltip: 'Queue actions',
+              icon: Icon(Icons.queue_music_rounded,
+                  color: Theme.of(context).colorScheme.onSurface),
+              onSelected: (value) {
+                final state = context.read<PlayerState>();
+                switch (value) {
+                  case 'current':
+                    state.enqueueScope(_queueScopeForTab(_tabController.index));
+                    break;
+                  case 'all':
+                    state.enqueueScope(QueueScope.all);
+                    break;
+                  case 'songs':
+                    state.enqueueScope(QueueScope.songs);
+                    break;
+                  case 'videos':
+                    state.enqueueScope(QueueScope.videos);
+                    break;
+                  case 'favourites':
+                    state.enqueueScope(QueueScope.favourites);
+                    break;
+                  case 'favSongs':
+                    state.enqueueScope(QueueScope.favSongs);
+                    break;
+                  case 'favVideos':
+                    state.enqueueScope(QueueScope.favVideos);
+                    break;
+                  case 'clear':
+                    state.clearQueue();
+                    break;
+                }
+                if (mounted) {
+                  Snack.show(context, 'Queue updated', level: SnackLevel.info);
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'current', child: Text('Queue current tab')),
+                PopupMenuItem(value: 'all', child: Text('Queue all')),
+                PopupMenuItem(value: 'songs', child: Text('Queue songs')),
+                PopupMenuItem(value: 'videos', child: Text('Queue videos')),
+                PopupMenuItem(value: 'favourites', child: Text('Queue favourites')),
+                PopupMenuItem(value: 'favSongs', child: Text('Queue favourite songs')),
+                PopupMenuItem(value: 'favVideos', child: Text('Queue favourite videos')),
+                PopupMenuDivider(),
+                PopupMenuItem(value: 'clear', child: Text('Clear queue')),
+              ],
             ),
           ],
         ),
@@ -2259,22 +3171,25 @@ class _PlayerScreenState extends State<PlayerScreen>
 
     final title = item.title ?? p.basenameWithoutExtension(item.path);
     final artist = item.artist ?? '';
-    final dur = state.duration ?? Duration.zero;
-    final pos = state.position;
-    final progress = dur.inMilliseconds > 0
-        ? (pos.inMilliseconds / dur.inMilliseconds).clamp(0.0, 1.0)
-        : 0.0;
+    final cs = Theme.of(context).colorScheme;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       decoration: BoxDecoration(
-        color: _PlayerTheme.tileBg(context),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? cs.surfaceContainerHigh
+            : cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: state.isPlaying
+              ? cs.primary.withValues(alpha: 0.42)
+              : cs.outlineVariant.withValues(alpha: 0.45),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -2339,37 +3254,16 @@ class _PlayerScreenState extends State<PlayerScreen>
                   ),
                   onPressed: () => state.toggleFavourite(item.path),
                 ),
+                _TrackMenuButton(
+                  state: state,
+                  entry: MapEntry(state.currentIndex, item),
+                ),
               ],
             ),
           ),
 
           // -- Seek bar --
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(
-              children: [
-                Text(_fmtDur(pos), style: TextStyle(fontSize: 11, color: _PlayerTheme.sub(context))),
-                Expanded(
-                  child: SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-                      trackHeight: 3,
-                    ),
-                    child: Slider(
-                      value: progress,
-                      activeColor: _PlayerTheme.accent,
-                      inactiveColor: _PlayerTheme.accentDim,
-                      onChanged: dur.inMilliseconds > 0
-                          ? (v) => state.seek(Duration(milliseconds: (v * dur.inMilliseconds).round()))
-                          : null,
-                    ),
-                  ),
-                ),
-                Text(_fmtDur(dur), style: TextStyle(fontSize: 11, color: _PlayerTheme.sub(context))),
-              ],
-            ),
-          ),
+          _PositionWidget(state: state, formatDur: _fmtDur),
 
           // -- Playback controls --
           Padding(
@@ -2472,9 +3366,106 @@ class _TrackThumbnail extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
-        color: Theme.of(context).colorScheme.onSurface.withAlpha(15),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
       ),
       child: Icon(icon, size: size * 0.55, color: Theme.of(context).colorScheme.onSurface.withAlpha(153)),
+    );
+  }
+}
+
+class _PositionWidget extends StatelessWidget {
+  final PlayerState state;
+  final String Function(Duration) formatDur;
+
+  const _PositionWidget({required this.state, required this.formatDur});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<PositionUiState>(
+      stream: state.positionUiStream,
+      initialData: PositionUiState(
+        position: state.position,
+        duration: state.duration ?? Duration.zero,
+        isSeeking: false,
+      ),
+      builder: (context, snapshot) {
+        final ui = snapshot.data ??
+            PositionUiState(
+              position: state.position,
+              duration: state.duration ?? Duration.zero,
+              isSeeking: false,
+            );
+        final dur = ui.duration;
+        final pos = ui.position;
+        final progress = dur.inMilliseconds > 0
+            ? (pos.inMilliseconds / dur.inMilliseconds).clamp(0.0, 1.0)
+            : 0.0;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(
+            children: [
+              Text(
+                formatDur(pos),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: _PlayerTheme.sub(context),
+                ),
+              ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 6,
+                    ),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 14,
+                    ),
+                    trackHeight: 3,
+                  ),
+                  child: Slider(
+                    value: progress,
+                    activeColor: _PlayerTheme.accent,
+                    inactiveColor: _PlayerTheme.accentDim,
+                    onChangeStart: dur.inMilliseconds > 0
+                        ? (_) => state.beginSeekInteraction()
+                        : null,
+                    onChanged: dur.inMilliseconds > 0
+                        ? (v) => state.previewSeekInteraction(
+                              Duration(
+                                milliseconds: (v * dur.inMilliseconds).round(),
+                              ),
+                            )
+                        : null,
+                    onChangeEnd: dur.inMilliseconds > 0
+                        ? (_) => unawaited(state.endSeekInteraction())
+                        : null,
+                  ),
+                ),
+              ),
+              if (ui.isSeeking)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: _PlayerTheme.accent,
+                    ),
+                  ),
+                ),
+              Text(
+                formatDur(dur),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: _PlayerTheme.sub(context),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -2491,7 +3482,7 @@ class _TypeBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withAlpha(31),
+        color: theme.colorScheme.primary.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -2522,12 +3513,30 @@ class _ControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? Theme.of(context).colorScheme.primary : Theme.of(context).iconTheme.color;
-    return IconButton(
-      iconSize: size,
-      tooltip: tooltip,
-      icon: Icon(icon, color: color),
-      onPressed: onPressed,
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final iconColor = active ? cs.onPrimaryContainer : theme.iconTheme.color;
+
+    return Tooltip(
+      message: tooltip ?? '',
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          color: active ? cs.primaryContainer : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: active
+                ? cs.primary.withValues(alpha: 0.58)
+                : Colors.transparent,
+          ),
+        ),
+        child: IconButton(
+          iconSize: size,
+          icon: Icon(icon, color: iconColor),
+          onPressed: onPressed,
+        ),
+      ),
     );
   }
 }
@@ -2557,6 +3566,109 @@ class _PlayPauseButton extends StatelessWidget {
   }
 }
 
+enum _TrackMenuAction { queue, favourite, dislike, delete }
+
+class _TrackMenuButton extends StatelessWidget {
+  final PlayerState state;
+  final MapEntry<int, MediaItem> entry;
+
+  const _TrackMenuButton({required this.state, required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    final item = entry.value;
+    final index = entry.key;
+    final isFavourite = state.isFavourite(item.path);
+    final isDisliked = state.isDisliked(item.path);
+
+    return PopupMenuButton<_TrackMenuAction>(
+      tooltip: 'Track actions',
+      icon: Icon(Icons.more_vert_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
+      onSelected: (action) async {
+        switch (action) {
+          case _TrackMenuAction.queue:
+            state.enqueue(index);
+            break;
+          case _TrackMenuAction.favourite:
+            state.toggleFavourite(item.path);
+            break;
+          case _TrackMenuAction.dislike:
+            state.toggleDislike(item.path);
+            break;
+          case _TrackMenuAction.delete:
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (dialogContext) => AlertDialog(
+                title: const Text('Delete file?'),
+                // overflow-fix: long file names can overflow dialog content width.
+                content: SingleChildScrollView(
+                  child: Text(
+                    'This permanently deletes "${item.title ?? p.basename(item.path)}" from disk.',
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    child: const Text('Delete'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed == true) {
+              final deleted = await state.deleteMediaItem(item.path);
+              if (context.mounted) {
+                Snack.show(
+                  context,
+                  deleted ? 'File deleted' : 'Could not delete file',
+                  level: deleted ? SnackLevel.info : SnackLevel.error,
+                );
+              }
+            }
+            break;
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: _TrackMenuAction.queue,
+          child: ListTile(
+            leading: Icon(Icons.queue_music_rounded),
+            title: Text('Add to queue'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: _TrackMenuAction.favourite,
+          child: ListTile(
+            leading: Icon(isFavourite ? Icons.star_rounded : Icons.star_border_rounded),
+            title: Text(isFavourite ? 'Remove favourite' : 'Add favourite'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: _TrackMenuAction.dislike,
+          child: ListTile(
+            leading: Icon(isDisliked ? Icons.thumb_down_alt_rounded : Icons.thumb_down_alt_outlined),
+            title: Text(isDisliked ? 'Undo dislike' : 'Dislike'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        const PopupMenuItem(
+          value: _TrackMenuAction.delete,
+          child: ListTile(
+            leading: Icon(Icons.delete_outline_rounded),
+            title: Text('Delete file'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // --- Tab widgets (each is its own StatelessWidget to limit rebuild scope) -----
 
 /// BUG 2 FIX: each tab is its own widget so rebuilds from thumbnail loads only
@@ -2577,64 +3689,21 @@ class _AllTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final audio = state.audioEntries.where((e) => matchFn(e.value)).toList();
-    final video = state.videoEntries.where((e) => matchFn(e.value)).toList();
+    final scope = state.folderItemCount > 0 ? state.folderItemCount : state.library.length;
+    final filtered = state.library
+        .asMap()
+        .entries
+        .where((e) => e.key < scope && matchFn(e.value))
+        .toList();
 
-    if (audio.isEmpty && video.isEmpty) {
+    if (filtered.isEmpty) {
       return _EmptyHint(message: state.library.isEmpty
           ? 'Your library is empty.\nTap the folder icon to open a folder or download media.'
           : 'No results for this search.');
     }
 
-    // Use a CustomScrollView with Slivers so grids are the primary scrollable
-    // and only visible items are built.
-    return CustomScrollView(
-      controller: scrollCtl,
-      slivers: [
-        if (audio.isNotEmpty) ...[
-          SliverToBoxAdapter(child: _SectionHeader(text: 'Songs - ${audio.length}')),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            sliver: SliverGrid(
-              delegate: SliverChildBuilderDelegate(
-                (ctx, i) {
-                  final entry = audio[i];
-                  return _MediaCard(entry: entry, state: state, onTap: onTap);
-                },
-                childCount: audio.length,
-              ),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: MediaQuery.of(context).size.width < 500 ? 2 : (MediaQuery.of(context).size.width < 900 ? 3 : 5),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.78,
-              ),
-            ),
-          ),
-        ],
-        if (video.isNotEmpty) ...[
-          SliverToBoxAdapter(child: _SectionHeader(text: 'Videos - ${video.length}')),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            sliver: SliverGrid(
-              delegate: SliverChildBuilderDelegate(
-                (ctx, i) {
-                  final entry = video[i];
-                  return _MediaCard(entry: entry, state: state, onTap: onTap);
-                },
-                childCount: video.length,
-              ),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: MediaQuery.of(context).size.width < 500 ? 2 : (MediaQuery.of(context).size.width < 900 ? 3 : 5),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.78,
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
+    // Keep visual parity with Songs/Videos/Fav by reusing the same grid widget.
+    return _MediaGrid(entries: filtered, state: state, onTap: onTap);
   }
 }
 
@@ -2697,7 +3766,15 @@ class _MediaGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    final crossAxisCount = width < 500 ? 2 : (width < 900 ? 3 : 5);
+    final crossAxisCount = width < 500
+        ? 2
+        : width < 900
+            ? 3
+            : width < 1200
+                ? 4
+                : width < 1600
+                    ? 5
+                    : 6;
     return GridView.builder(
       shrinkWrap: false,
       physics: null,
@@ -2705,7 +3782,7 @@ class _MediaGrid extends StatelessWidget {
         crossAxisCount: crossAxisCount,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.78,
+        childAspectRatio: width < 900 ? 0.82 : 0.9,
       ),
       itemCount: entries.length,
       itemBuilder: (ctx, i) {
@@ -2741,7 +3818,7 @@ class _MediaCard extends StatelessWidget {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: state.thumbnailForItem(item, size: 400) ?? Container(color: cs.surfaceContainerHighest),
+                    child: state.thumbnailForItem(item, size: 0, expand: true) ?? Container(color: cs.surfaceContainerHighest),
                   ),
                   Positioned(
                     left: 0,
@@ -2770,6 +3847,8 @@ class _MediaCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           if (item.type == MediaType.video) Icon(Icons.videocam, size: 18, color: cs.onSurface),
+                          const SizedBox(width: 4),
+                          _TrackMenuButton(state: state, entry: entry),
                         ],
                       ),
                     ),
@@ -2913,7 +3992,7 @@ class _SongTile extends StatelessWidget {
             Container(
               width: 56,
               height: 56,
-              color: Theme.of(context).colorScheme.onSurface.withAlpha(13),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.11),
               child: Icon(Icons.music_note, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
       ),
@@ -2926,8 +4005,15 @@ class _SongTile extends StatelessWidget {
         style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
       trailing: state.isPlayingPath(item.path)
-          ? const Icon(Icons.equalizer, color: Colors.green)
-          : null,
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.equalizer, color: Colors.green),
+                const SizedBox(width: 8),
+                _TrackMenuButton(state: state, entry: entry),
+              ],
+            )
+          : _TrackMenuButton(state: state, entry: entry),
       onTap: () => onTap(state, index),
     );
   }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 10.7.1 — Fixed Windows Crash
+
+### Highlights
+- Fixed a crash where the Windows exe would not launch properly.
+
+### Notes
+- See [docs/releases/latest.md](docs/releases/latest.md) for the current release summary.
+
 ## 5.2.0 — Bug Fix & Stability Release
 
 ### Fixed
@@ -9,7 +17,7 @@
 - Linux AppImage for better compatibility on older distros
 
 ### Notes
-- Bumped version to 5.2.0; see RELEASE_NOTES.md for highlights.
+- Bumped version to 5.2.0; see [docs/releases/latest.md](docs/releases/latest.md) for the current release notes.
 
 ## 5.0.0 — Production Polish Release
 

@@ -1,10 +1,11 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+import '../utils/safe_json.dart';
 
 /// Simple updater for the `yt-dlp` binary.
 ///
@@ -22,7 +23,7 @@ class YtDlpUpdater {
     try {
       final r = await http.get(Uri.parse(_githubLatest));
       if (r.statusCode != 200) return null;
-      return jsonDecode(r.body) as Map<String, dynamic>;
+      return safeJsonDecode<Map<String, dynamic>>(r.body);
     } catch (e) {
       print('yt-dlp: fetchLatestRelease failed: $e');
       return null;
@@ -78,8 +79,8 @@ class YtDlpUpdater {
   /// inside the application's support directory. If [expectedSha256] is provided
   /// the downloaded bytes will be verified.
   static Future<bool> downloadAndReplace(String url, String filename, {String? expectedSha256}) async {
+    final client = http.Client();
     try {
-      final client = http.Client();
       final resp = await client.send(http.Request('GET', Uri.parse(url)));
       if (resp.statusCode != 200) {
         print('yt-dlp: download failed status=${resp.statusCode}');
@@ -139,6 +140,8 @@ class YtDlpUpdater {
     } catch (e) {
       print('yt-dlp: downloadAndReplace failed: $e');
       return false;
+    } finally {
+      client.close();
     }
   }
 

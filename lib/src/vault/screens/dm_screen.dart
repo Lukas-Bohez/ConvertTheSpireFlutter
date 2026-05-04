@@ -97,7 +97,14 @@ class _DMScreenState extends State<DMScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('DM: ${widget.user} ↔ ${widget.peer}')),
+      appBar: AppBar(
+        // overflow-fix: long usernames can overflow AppBar title on narrow devices.
+        title: Text(
+          'DM: ${widget.user} ↔ ${widget.peer}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -119,9 +126,14 @@ class _DMScreenState extends State<DMScreen> {
                       return ListTile(
                         tileColor: isMe
                             ? Theme.of(context).colorScheme.primaryContainer
-                            : Theme.of(context).colorScheme.surfaceVariant,
+                            : Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                         title: Text(
                           '${m.author} • ${m.timestamp.hour}:${m.timestamp.minute.toString().padLeft(2, '0')}',
+                          // overflow-fix: bound metadata title in list tiles.
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,9 +235,12 @@ class _DMScreenState extends State<DMScreen> {
                               builder: (ctx) {
                                 return AlertDialog(
                                   title: const Text('Edit message'),
-                                  content: TextField(
-                                    controller: editController,
-                                    autofocus: true,
+                                  // overflow-fix: allow dialog content to scroll when keyboard reduces height.
+                                  content: SingleChildScrollView(
+                                    child: TextField(
+                                      controller: editController,
+                                      autofocus: true,
+                                    ),
                                   ),
                                   actions: [
                                     TextButton(
@@ -257,7 +272,10 @@ class _DMScreenState extends State<DMScreen> {
                               context: parentContext,
                               builder: (ctx) => AlertDialog(
                                 title: const Text('Delete message?'),
-                                content: const Text('This cannot be undone.'),
+                                // overflow-fix: keep dialog body scroll-safe on small screens.
+                                content: const SingleChildScrollView(
+                                  child: Text('This cannot be undone.'),
+                                ),
                                 actions: [
                                   TextButton(
                                     onPressed: () =>
@@ -267,7 +285,12 @@ class _DMScreenState extends State<DMScreen> {
                                   TextButton(
                                     onPressed: () =>
                                         Navigator.of(ctx).pop(true),
-                                    child: const Text('Delete'),
+                                    child: Text(
+                                      'Delete',
+                                      style: TextStyle(
+                                        color: Theme.of(ctx).colorScheme.error,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),

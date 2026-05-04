@@ -1,7 +1,8 @@
 import 'dart:collection';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+
+import '../../utils/safe_json.dart';
 
 /// Detects video streams on web pages via JS injection and network sniffing.
 class VideoDetectorService extends ChangeNotifier {
@@ -29,7 +30,7 @@ class VideoDetectorService extends ChangeNotifier {
   /// Process the JSON payload from the JS handler.
   void handleJsCallback(String jsonPayload) {
     try {
-      final data = jsonDecode(jsonPayload);
+      final data = safeJsonDecode<dynamic>(jsonPayload);
       if (data is Map) {
         final url = data['url'] as String?;
         if (url != null && url.length > 4) notifyVideoFound(url);

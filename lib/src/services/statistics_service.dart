@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/download_stats.dart';
+import '../utils/safe_json.dart';
 
 /// Persists and exposes download statistics.
 class StatisticsService {
@@ -12,14 +13,21 @@ class StatisticsService {
   DownloadStats get stats => _stats;
 
   Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_key);
-    if (raw != null) {
-      try {
-        _stats = DownloadStats.fromJson(jsonDecode(raw));
-      } catch (_) {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_key);
+      if (raw == null || raw.trim().isEmpty) {
         _stats = DownloadStats();
+        return;
       }
+      final data = safeJsonDecode<Map<String, dynamic>>(raw);
+      if (data == null) {
+        _stats = DownloadStats();
+        return;
+      }
+      _stats = DownloadStats.fromJson(data);
+    } catch (_) {
+      _stats = DownloadStats();
     }
   }
 

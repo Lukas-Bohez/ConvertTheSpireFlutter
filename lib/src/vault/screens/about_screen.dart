@@ -1,14 +1,14 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:convert_the_spire_reborn/src/vault/constants.dart';
-import 'package:convert_the_spire_reborn/src/vault/platform/desktop_window.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/theme_service.dart';
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
@@ -42,7 +42,7 @@ class _AboutScreenState extends State<AboutScreen>
   String _modelStatus = '';
   bool _savingNetwork = false;
   bool _pickerBusy = false;
-  ThemeMode _themeMode = ThemeMode.system;
+  String _appVersionLabel = 'Loading...';
 
   String? _androidDocumentsUriForPath(String directoryPath) {
     final normalized = directoryPath.replaceAll('\\', '/');
@@ -113,10 +113,25 @@ class _AboutScreenState extends State<AboutScreen>
       text: '${_settings.uploadRateLimitKib}',
     );
     _selectedModel = _settings.aiDefaultModel;
-    _themeMode = ThemeService.instance.themeMode;
     if (!_androidTorrentOnly) {
       _aiService = AiCopilotService(baseUrl: _settings.aiOllamaUrl);
       _fetchAvailableModels();
+    }
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() {
+        _appVersionLabel = '${info.version} (${info.buildNumber})';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _appVersionLabel = 'Unknown';
+      });
     }
   }
 
@@ -338,22 +353,98 @@ class _AboutScreenState extends State<AboutScreen>
     ).showSnackBar(const SnackBar(content: Text('Download folder saved')));
   }
 
-  Future<void> _setThemeMode(ThemeMode mode) async {
-    await ThemeService.instance.setThemeMode(mode);
+  Future<void> _openPrivacyPolicy() async {
+    final uri = Uri.parse(kPrivacyPolicyUrl);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open privacy policy link.')),
+      );
+    }
+  }
+
+  Future<void> _exportDiagnostics() async {
+    final now = DateTime.now();
+    final safeTs = now.toIso8601String().replaceAll(':', '-');
+    final fileName = 'vault_diagnostics_$safeTs.txt';
+    String? path;
+
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      path = await FilePicker.platform.saveFile(fileName: fileName);
+    }
+
+    if ((path == null || path.isEmpty) && _settings.downloadDestination.isNotEmpty) {
+      path = '${_settings.downloadDestination}${Platform.pathSeparator}$fileName';
+    }
+
+    if (path == null || path.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Diagnostics export cancelled.')),
+      );
+      return;
+    }
+
+    final package = await PackageInfo.fromPlatform();
+    final payload = <String, dynamic>{
+      'appName': package.appName,
+      'version': package.version,
+      'buildNumber': package.buildNumber,
+      'platform': defaultTargetPlatform.name,
+      'generatedAt': now.toIso8601String(),
+      'settings': <String, dynamic>{
+        'downloadDestination': _settings.downloadDestination,
+        'autoStartOnAdd': _settings.autoStartOnAdd,
+        'useDht': _settings.useDht,
+        'usePex': _settings.usePex,
+        'useLpd': _settings.useLpd,
+        'listenPort': _settings.listenPort,
+        'maxConnectionsGlobal': _settings.maxConnectionsGlobal,
+        'maxConnectionsPerTorrent': _settings.maxConnectionsPerTorrent,
+        'maxActiveDownloads': _settings.maxActiveDownloads,
+        'downloadRateLimitKib': _settings.downloadRateLimitKib,
+        'uploadRateLimitKib': _settings.uploadRateLimitKib,
+        'enableAiCopilot': _settings.enableAiCopilot,
+        'aiDefaultModel': _settings.aiDefaultModel,
+      },
+    };
+
+    final file = File(path);
+    await file.parent.create(recursive: true);
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(payload),
+      flush: true,
+    );
+
+    await _settings.setLastDiagnosticsExport(now.toIso8601String());
     if (!mounted) return;
-    setState(() {
-      _themeMode = mode;
-    });
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Diagnostics exported: $path')),
+    );
   }
 
   Widget _sectionCard({required String title, required List<Widget> children}) {
+    final cs = Theme.of(context).colorScheme;
     return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.22)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+                color: cs.onSurface,
+              ),
+            ),
             const SizedBox(height: 10),
             ...children,
           ],
@@ -365,12 +456,18 @@ class _AboutScreenState extends State<AboutScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final width = MediaQuery.of(context).size.width;
+    final maxContentWidth = width > 1700 ? 1280.0 : 1120.0;
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          children: [
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxContentWidth),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(width > 1200 ? 24 : 16, 16, width > 1200 ? 24 : 16, 16),
+            child: ListView(
+              children: [
             _sectionCard(
               title: 'Downloads',
               children: [
@@ -611,7 +708,8 @@ class _AboutScreenState extends State<AboutScreen>
                             ),
                             const SizedBox(height: 8),
                             DropdownButtonFormField<String>(
-                              value: _availableModels.contains(_selectedModel)
+                              initialValue:
+                                  _availableModels.contains(_selectedModel)
                                   ? _selectedModel
                                   : null,
                               decoration: const InputDecoration(
@@ -686,118 +784,12 @@ class _AboutScreenState extends State<AboutScreen>
               ),
             if (!_androidTorrentOnly) const SizedBox(height: 10),
             _sectionCard(
-              title: 'Interface',
+              title: 'General Settings',
               children: [
-                DropdownButtonFormField<ThemeMode>(
-                  value: _themeMode,
-                  decoration: const InputDecoration(
-                    labelText: 'Theme',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: ThemeMode.system,
-                      child: Text('System'),
-                    ),
-                    DropdownMenuItem(
-                      value: ThemeMode.light,
-                      child: Text('Light'),
-                    ),
-                    DropdownMenuItem(
-                      value: ThemeMode.dark,
-                      child: Text('Dark'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value == null) return;
-                    _setThemeMode(value);
-                  },
+                const Text(
+                  'General app settings are centralized in the main app Settings tab. '
+                  'This screen now contains torrent-specific configuration only.',
                 ),
-                SwitchListTile(
-                  title: const Text('Enable sound effects'),
-                  contentPadding: EdgeInsets.zero,
-                  value: _settings.soundEffectsEnabled,
-                  onChanged: (v) async {
-                    await _settings.setSoundEffectsEnabled(v);
-                    if (!mounted) return;
-                    setState(() {});
-                  },
-                ),
-                if (!_androidTorrentOnly)
-                  SwitchListTile(
-                    title: const Text('Use persistent sidebar'),
-                    contentPadding: EdgeInsets.zero,
-                    value: _settings.usePersistentSidebar,
-                    onChanged: (v) async {
-                      await _settings.setUsePersistentSidebar(v);
-                      if (!mounted) return;
-                      setState(() {});
-                    },
-                  ),
-                if (!_androidTorrentOnly)
-                  SwitchListTile(
-                    title: const Text('Use compact torrent rows'),
-                    contentPadding: EdgeInsets.zero,
-                    value: _settings.compactTorrentRows,
-                    onChanged: (v) async {
-                      await _settings.setCompactTorrentRows(v);
-                      if (!mounted) return;
-                      setState(() {});
-                    },
-                  ),
-                if (!_androidTorrentOnly)
-                  SwitchListTile(
-                    title: const Text('Confirm before exiting app'),
-                    contentPadding: EdgeInsets.zero,
-                    value: _settings.confirmOnExit,
-                    onChanged: (v) async {
-                      await _settings.setConfirmOnExit(v);
-                      if (!mounted) return;
-                      setState(() {});
-                    },
-                  ),
-                if (Platform.isWindows || Platform.isLinux || Platform.isMacOS)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        await toggleDesktopFullScreen();
-                      },
-                      icon: const Icon(Icons.fullscreen),
-                      label: const Text('Toggle Fullscreen'),
-                    ),
-                  ),
-                if (Platform.isWindows || Platform.isLinux || Platform.isMacOS)
-                  SwitchListTile(
-                    title: const Text('Use system tray'),
-                    contentPadding: EdgeInsets.zero,
-                    value: _settings.useSystemTray,
-                    onChanged: (v) async {
-                      await _settings.setUseSystemTray(v);
-                      if (!mounted) return;
-                      setState(() {});
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            v
-                                ? 'System tray will be enabled when you restart the app'
-                                : 'System tray will be disabled when you restart the app',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                if (Platform.isWindows || Platform.isLinux || Platform.isMacOS)
-                  SwitchListTile(
-                    title: const Text('Minimize to tray on close'),
-                    contentPadding: EdgeInsets.zero,
-                    value: _settings.minimizeToTrayOnClose,
-                    onChanged: (v) async {
-                      await _settings.setMinimizeToTrayOnClose(v);
-                      if (!mounted) return;
-                      setState(() {});
-                    },
-                  ),
               ],
             ),
             const SizedBox(height: 10),
@@ -814,45 +806,55 @@ class _AboutScreenState extends State<AboutScreen>
                         : 'Torrent manager with built-in AI copilot',
                   ),
                 ),
-                const ListTile(
+                ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(Icons.calendar_month),
-                  title: Text('App version'),
-                  subtitle: const Text('4.3.5'),
+                  title: const Text('App version'),
+                  subtitle: Text(_appVersionLabel),
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.security),
                   title: const Text('Privacy policy'),
                   subtitle: Text(kPrivacyPolicyUrl),
+                  onTap: _openPrivacyPolicy,
                 ),
-                Row(
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final now = DateTime.now().toIso8601String();
-                        await _settings.setLastDiagnosticsExport(now);
-                        if (!mounted) return;
-                        setState(() {});
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Diagnostics metadata updated'),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.bug_report_outlined),
-                      label: const Text('Mark Diagnostics Export'),
-                    ),
-                    const SizedBox(width: 8),
-                    OutlinedButton(
-                      onPressed: () async {
-                        await _settings.clearBrowserHistory();
-                        if (!mounted) return;
-                        setState(() {});
-                      },
-                      child: const Text('Clear Browser History'),
-                    ),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final narrow = constraints.maxWidth < 640;
+                    final actions = <Widget>[
+                      OutlinedButton.icon(
+                        onPressed: _exportDiagnostics,
+                        icon: const Icon(Icons.bug_report_outlined),
+                        label: const Text('Export Diagnostics'),
+                      ),
+                      OutlinedButton(
+                        onPressed: () async {
+                          await _settings.clearBrowserHistory();
+                          if (!mounted) return;
+                          setState(() {});
+                        },
+                        child: const Text('Clear Browser History'),
+                      ),
+                    ];
+
+                    if (narrow) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          actions[0],
+                          const SizedBox(height: 8),
+                          actions[1],
+                        ],
+                      );
+                    }
+
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: actions,
+                    );
+                  },
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -870,7 +872,9 @@ class _AboutScreenState extends State<AboutScreen>
                 ),
               ],
             ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );

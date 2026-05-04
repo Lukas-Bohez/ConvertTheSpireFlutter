@@ -11,6 +11,10 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 
+import '../config/build_flags.dart';
+import '../config/full_mode_access.dart';
+import '../services/ad_service.dart';
+
 import '../models/app_settings.dart';
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
@@ -27,7 +31,7 @@ import 'statistics_screen.dart';
 import 'watched_playlists_screen.dart';
 import 'browser_screen.dart';
 import 'support_screen.dart';
-import 'player.dart' show PlayerPage, PlayerState;
+import 'player.dart' show PlayerPage, PlayerState, MediaType;
 import '../vault/vault_hub_screen.dart';
 import '../widgets/browser_shell.dart';
 import '../widgets/onboarding_tooltip_service.dart';
@@ -35,7 +39,6 @@ import '../widgets/quick_links_page.dart';
 import '../widgets/quick_links_service.dart';
 import '../services/update_service.dart';
 import '../widgets/update_banner.dart';
-import '../config/build_flags.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppController controller;
@@ -111,7 +114,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _audioBitrate = 320;
   bool _useFormatSubfolders = true;
   bool _settingsInitialized = false;
-  bool _minimizeToTrayOnClose = false;
+  bool _minimizeToTrayOnClose = true;
   bool _sponsorBlockEnabled = false;
   bool _youtubeAuthEnabled = false;
   String _youtubeCookiesFromBrowser = '';
@@ -129,6 +132,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final List<int> _navHistory = [13];
   int _navHistoryIndex = 0;
   bool _queueOnRight = true;
+  int _playQueueViewIndex = 0;
 
   final OnboardingTooltipService _onboarding = OnboardingTooltipService();
   String? _dismissedBannerRoute;
@@ -171,15 +175,20 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           QuickLinksService.routeToIndex.keys.join(', '));
     }
 
-    UpdateService.isCheckOnLaunchEnabled().then((v) {
-      if (mounted) setState(() => _checkUpdatesOnLaunch = v);
-    });
+    if (!kPlayStoreBuild) {
+      UpdateService.isCheckOnLaunchEnabled().then((v) {
+        if (mounted) setState(() => _checkUpdatesOnLaunch = v);
+      });
 
-    _checkForUpdate();
+      _checkForUpdate();
+    } else {
+      _checkUpdatesOnLaunch = false;
+    }
   }
 
   Future<void> _checkForUpdate({bool force = false}) async {
     try {
+      if (kPlayStoreBuild) return;
       if (!_checkUpdatesOnLaunch && !force) return;
       final info = await UpdateService.checkForUpdate();
       if (info == null) return;
@@ -200,7 +209,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (kIsWeb) return;
     if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return;
 
-    _trayService = TrayService(shouldMinimiseToTray: () => true);
+    _trayService = TrayService(
+      shouldMinimiseToTray: () => _minimizeToTrayOnClose,
+    );
 
     _trayService!.onTrayQuit = () async {
       try {
@@ -343,6 +354,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _navigateToPage(int index) {
     if (index < 0 || index > 14) return;
+    if (!isTabVisibleInCurrentBuild(index)) return;
     if (index == _selectedPageIndex) return;
     if (_selectedPageIndex == 14 && index != 14) {
       unawaited(widget.controller.pullVaultSettingsIntoHost());
@@ -362,6 +374,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _selectedPageIndex = index;
       _visitedPages.add(index);
     });
+    AdService.instance.registerInteraction();
     try {
       widget.controller.switchToTab(index);
     } catch (_) {}
@@ -370,6 +383,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _goBack() {
     if (!_canGoBack) return;
+    AdService.instance.registerInteraction();
     setState(() {
       _navHistoryIndex--;
       _selectedPageIndex = _navHistory[_navHistoryIndex];
@@ -382,6 +396,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _goForward() {
     if (!_canGoForward) return;
+    AdService.instance.registerInteraction();
     setState(() {
       _navHistoryIndex++;
       _selectedPageIndex = _navHistory[_navHistoryIndex];
@@ -417,6 +432,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, _) {
+        context.watch<FullModeAccess>();
         final settings = widget.controller.settings;
         if (settings != null && !_settingsInitialized) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -495,6 +511,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           canPop: _selectedPageIndex == 13,
           onPopInvokedWithResult: (didPop, result) {
             if (!didPop && _selectedPageIndex != 13) {
+              AdService.instance.registerInteraction();
               setState(() => _selectedPageIndex = 13);
             }
           },
@@ -559,7 +576,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       }),
     );
 
-    if (_updateInfo != null && !_updateBannerDismissed) {
+    if (!kPlayStoreBuild && _updateInfo != null && !_updateBannerDismissed) {
       return Column(
         children: [
           UpdateBanner(
@@ -675,9 +692,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(16),
             ),
             title: const Text('Folder access lost'),
-            content: const Text(
-              'The app can no longer access your selected download folder. '
-              'Would you like to pick it again? Choosing "No" will use Downloads instead.',
+            // overflow-fix: long dialog prompt can clip on small-screen devices.
+            content: const SingleChildScrollView(
+              child: Text(
+                'The app can no longer access your selected download folder. '
+                'Would you like to pick it again? Choosing "No" will use Downloads instead.',
+              ),
             ),
             actions: [
               TextButton(
@@ -889,7 +909,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildSearchTab(AppSettings? settings) {
     final isNarrow = _isNarrowLayout(context);
-    final youtubeEnabled = kYouTubeConversionEnabled;
+    final youtubeEnabled = isYouTubeConversionEnabledInCurrentBuild;
 
     // Keep the top search row pinned while the rest of the UI scrolls.
     final searchHeader = Padding(
@@ -1441,7 +1461,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (_hasAndroidFolder) return true;
       Snack.show(
         context,
-        'Android needs a download folder set to work properly. Tap "Set folder" below.',
+        'Android needs a download folder set to work properly. Tap "Choose folder" below.',
         level: SnackLevel.warning,
         actionLabel: 'Go to Settings',
         onAction: () => _navigateToPage(7),
@@ -1466,7 +1486,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _downloadUrl(AppSettings settings) {
-    if (!kYouTubeConversionEnabled) {
+    if (!isYouTubeConversionEnabledInCurrentBuild) {
       Snack.show(
         context,
         'YouTube conversion is disabled in this build.',
@@ -1502,7 +1522,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _onSearch() {
-    if (!kYouTubeConversionEnabled) {
+    if (!isYouTubeConversionEnabledInCurrentBuild) {
       Snack.show(
         context,
         'YouTube conversion is disabled in this build.',
@@ -1965,6 +1985,36 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // -- Queue tab ----------------------------------------------------------
 
   Widget _buildQueueTab() {
+    final queueContent = kPlayStoreBuild
+        ? _buildMediaPlayerQueueTab()
+        : DefaultTabController(
+            length: 2,
+            child: Column(
+              children: [
+                const Material(
+                  child: TabBar(
+                    tabs: [
+                      Tab(text: 'Search Queue'),
+                      Tab(text: 'Media Player'),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildDownloadQueueTab(),
+                      _buildMediaPlayerQueueTab(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+
+    return SafeArea(top: true, bottom: true, child: queueContent);
+  }
+
+  Widget _buildDownloadQueueTab() {
     final items = widget.controller.queue;
     if (items.isEmpty) {
       return Center(
@@ -1983,7 +2033,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 6),
             Text(
-              'Add items from the Search tab',
+              kPlayStoreBuild
+                  ? 'Add items from the Player tab'
+                  : 'Add items from the Search tab',
               style: TextStyle(
                   fontSize: 13,
                   color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -2001,13 +2053,19 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isCompact = constraints.maxWidth < 400;
+        final safeBottom = MediaQuery.of(context).padding.bottom;
         return Column(
           children: [
             _buildQueueHeader(
                 items, inProgressCount, completedCount, isCompact),
             Expanded(
               child: ListView.builder(
-                padding: EdgeInsets.all(isCompact ? 8 : 16),
+                padding: EdgeInsets.fromLTRB(
+                  isCompact ? 8 : 16,
+                  isCompact ? 8 : 16,
+                  isCompact ? 8 : 16,
+                  (isCompact ? 12 : 20) + safeBottom,
+                ),
                 itemCount: items.length,
                 itemBuilder: (context, index) {
                   final item = items[index];
@@ -2018,6 +2076,141 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildMediaPlayerQueueTab() {
+    final playerState = context.watch<PlayerState>();
+    final upNext = playerState.queueSnapshot;
+    final previously = playerState.playHistorySnapshot.reversed
+        .where((index) => index != playerState.currentIndex)
+        .toList();
+
+    final showUpNext = _playQueueViewIndex == 0;
+    final selected = showUpNext ? upNext : previously;
+    final cs = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+          color: cs.primary.withValues(alpha: 0.06),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                showUpNext ? 'Up next' : 'Previously',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ChoiceChip(
+                      selected: showUpNext,
+                      label: const Text('Up next'),
+                      onSelected: (_) => setState(() => _playQueueViewIndex = 0),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ChoiceChip(
+                      selected: !showUpNext,
+                      label: const Text('Previously'),
+                      onSelected: (_) => setState(() => _playQueueViewIndex = 1),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: selected.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        showUpNext ? Icons.queue_music : Icons.history,
+                        size: 46,
+                        color: cs.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        showUpNext
+                            ? 'No songs in Up next'
+                            : 'No previously played songs yet',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      if (showUpNext) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Add items from the Player tab',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  padding: EdgeInsets.fromLTRB(
+                    12,
+                    12,
+                    12,
+                    12 + MediaQuery.of(context).padding.bottom,
+                  ),
+                  itemCount: selected.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) {
+                    final mediaIndex = selected[i];
+                    if (mediaIndex < 0 || mediaIndex >= playerState.library.length) {
+                      return const SizedBox.shrink();
+                    }
+                    final media = playerState.library[mediaIndex];
+                    final title = (media.title == null || media.title!.trim().isEmpty)
+                        ? media.path.split(RegExp(r'[\\/]')).last
+                        : media.title!;
+                    return RepaintBoundary(
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        child: ListTile(
+                          leading: Icon(
+                            media.type == MediaType.video
+                                ? Icons.videocam_outlined
+                                : Icons.music_note,
+                          ),
+                          title: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            showUpNext ? 'Queued' : 'Previously played',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: const Icon(Icons.play_arrow),
+                          onTap: () {
+                            playerState.select(mediaIndex);
+                            _navigateToPage(12);
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -2108,8 +2301,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               context: context,
                               builder: (context) => AlertDialog(
                                 title: const Text('Clear Queue'),
-                                content: const Text(
-                                    'Remove all items from the queue?'),
+                                // overflow-fix: keep confirmation text scroll-safe.
+                                content: const SingleChildScrollView(
+                                  child: Text('Remove all items from the queue?'),
+                                ),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
@@ -2148,18 +2343,19 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final statusColor = _getStatusColor(item.status);
     final statusIcon = _getStatusIcon(item.status);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 6),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(isCompact ? 8 : 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return RepaintBoundary(
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 6),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(isCompact ? 8 : 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Row(
               children: [
                 Icon(statusIcon, color: statusColor, size: 18),
@@ -2332,7 +2528,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
             ],
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -2424,10 +2621,237 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // -- Settings tab -------------------------------------------------------
 
+  Widget _buildSimplifiedSettingsTab(AppSettings settings) {
+    // Simplified settings for Play Store build: only torrent path and theme
+    final isNarrow = _isNarrowLayout(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: ListView(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: FilledButton.icon(
+              icon: const Icon(Icons.save),
+              label: const Text('Save Settings'),
+              onPressed: () => _saveAllSettings(settings),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+          ),
+
+          // Torrent Download Path (main setting)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.folder_outlined),
+                      const SizedBox(width: 8),
+                      Text('Torrent Storage',
+                          style: Theme.of(context).textTheme.titleLarge),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (_isAndroid)
+                    Column(
+                      children: [
+                        TextField(
+                          controller: _downloadDirTorrentsController,
+                          decoration: InputDecoration(
+                            labelText: 'Torrent folder',
+                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.folder),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.folder_open),
+                              onPressed: () =>
+                                  _pickFormatDownloadFolder(settings, 'torrent'),
+                            ),
+                          ),
+                          readOnly: true,
+                        ),
+                      ],
+                    )
+                  else
+                    Column(
+                      children: [
+                        if (isNarrow)
+                          Column(
+                            children: [
+                              TextField(
+                                controller: _downloadDirTorrentsController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Torrent folder',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.folder),
+                                ),
+                                readOnly: true,
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  icon: const Icon(Icons.folder_open),
+                                  label: const Text('Browse'),
+                                  onPressed: () async {
+                                    final result =
+                                        await FilePicker.platform.getDirectoryPath();
+                                    if (result != null && mounted) {
+                                      setState(() =>
+                                          _downloadDirTorrentsController.text =
+                                              result);
+                                      await widget.controller.saveSettings(
+                                          settings.copyWith(
+                                              downloadDirTorrents: result));
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _downloadDirTorrentsController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Torrent folder',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.folder),
+                                  ),
+                                  readOnly: true,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.folder_open),
+                                label: const Text('Browse'),
+                                onPressed: () async {
+                                  final result =
+                                      await FilePicker.platform.getDirectoryPath();
+                                  if (result != null && mounted) {
+                                    setState(() =>
+                                        _downloadDirTorrentsController.text =
+                                            result);
+                                    await widget.controller.saveSettings(
+                                        settings.copyWith(
+                                            downloadDirTorrents: result));
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Theme Settings
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.palette_outlined),
+                      const SizedBox(width: 8),
+                      Text('Appearance',
+                          style: Theme.of(context).textTheme.titleLarge),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    title: const Text('App Theme'),
+                    subtitle: Text(
+                      '${settings.themeMode[0].toUpperCase()}${settings.themeMode.substring(1)}',
+                    ),
+                    trailing: PopupMenuButton<String>(
+                      initialValue: settings.themeMode,
+                      onSelected: (String mode) async {
+                        await widget.controller.saveSettings(
+                          settings.copyWith(themeMode: mode),
+                        );
+                        widget.controller.setThemeMode(
+                          (_resolveThemeMode(mode)),
+                        );
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        const PopupMenuItem<String>(
+                          value: 'system',
+                          child: Text('System'),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'light',
+                          child: Text('Light'),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'dark',
+                          child: Text('Dark'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Info Card
+          Card(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Basic settings only',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'This version is optimized for torrent vault functionality and complies with app store policies.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSettingsTab(AppSettings? settings) {
     if (settings == null) {
       return const Center(child: CircularProgressIndicator());
     }
+
+    // For Play Store build, show only torrent path and theme settings
+    if (kPlayStoreBuild) {
+      return _buildSimplifiedSettingsTab(settings);
+    }
+
     final isNarrow = _isNarrowLayout(context);
 
     return Padding(
@@ -2553,12 +2977,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   if (_isAndroid) ...[
                     TextField(
                       controller: _downloadDirController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Download folder',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.folder),
                         helperText:
-                            'Pick a folder using the system file picker. If not set, files go to Downloads/ConvertTheSpireReborn.',
+                          'Pick a folder using the system file picker. If not set, files go to Downloads/${getDefaultDownloadFolderName()}.',
                         helperMaxLines: 3,
                       ),
                       readOnly: true,
@@ -2594,7 +3018,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                          'No folder selected. Downloads will be saved to Downloads/ConvertTheSpireReborn.',
+                          'No folder selected. Downloads will be saved to Downloads/${getDefaultDownloadFolderName()}.',
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
@@ -3484,7 +3908,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const Divider(),
                   const SizedBox(height: 8),
                   Text(
-                    'Convert the Spire Reborn',
+                    getAppTitle(),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -3584,6 +4008,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     title: const Text('Reset quick links'),
                     subtitle: const Text('Restore default quick links'),
                     onTap: () async {
+                      AdService.instance.registerInteraction();
                       await QuickLinksService.resetToDefaults();
                       if (mounted) {
                         Snack.show(context, 'Quick links reset to defaults',
@@ -3596,6 +4021,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     title: const Text('Replay tutorial tips'),
                     subtitle: const Text('Show screen descriptions again'),
                     onTap: () async {
+                      AdService.instance.registerInteraction();
                       await _onboarding.reset();
                       setState(() => _dismissedBannerRoute = null);
                       if (mounted) {
@@ -3605,22 +4031,24 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       }
                     },
                   ),
-                  // Update check toggle
-                  SwitchListTile(
-                    value: _checkUpdatesOnLaunch,
-                    onChanged: (value) async {
-                      await UpdateService.setCheckOnLaunch(value);
-                      if (mounted)
-                        setState(() => _checkUpdatesOnLaunch = value);
-                    },
-                    title: const Text('Check for updates on launch'),
-                    secondary: const Icon(Icons.system_update_alt),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.refresh),
-                    title: const Text('Check for updates now'),
-                    onTap: () => _checkForUpdate(force: true),
-                  ),
+                  if (!kPlayStoreBuild) ...[
+                    // Update check toggle
+                    SwitchListTile(
+                      value: _checkUpdatesOnLaunch,
+                      onChanged: (value) async {
+                        await UpdateService.setCheckOnLaunch(value);
+                        if (mounted)
+                          setState(() => _checkUpdatesOnLaunch = value);
+                      },
+                      title: const Text('Check for updates on launch'),
+                      secondary: const Icon(Icons.system_update_alt),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.refresh),
+                      title: const Text('Check for updates now'),
+                      onTap: () => _checkForUpdate(force: true),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -3810,6 +4238,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     onPressed: kIsWeb
                         ? null
                         : () async {
+                        AdService.instance.registerInteraction();
                             final result =
                                 await FilePicker.platform.pickFiles();
                             if (result == null || result.files.isEmpty) return;
@@ -3973,8 +4402,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       label: const Text('Convert File'),
                       onPressed: (_convertFile == null || settings == null)
                           ? null
-                          : () => widget.controller
-                              .convert(_convertFile!, _convertTarget),
+                          : () {
+                              AdService.instance.registerInteraction();
+                              widget.controller
+                                  .convert(_convertFile!, _convertTarget);
+                            },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -4036,6 +4468,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // -- Logs tab -----------------------------------------------------------
 
   Widget _buildLogsTab() {
+    if (_selectedPageIndex != 10) {
+      return const SizedBox.shrink();
+    }
     return ValueListenableBuilder<List<String>>(
       valueListenable: widget.controller.logs.logs,
       builder: (context, logs, _) {
@@ -4071,6 +4506,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           onPressed: logs.isEmpty
                               ? null
                               : () {
+                                  AdService.instance.registerInteraction();
                                   widget.controller.logs.logs.value = [];
                                 },
                         ),

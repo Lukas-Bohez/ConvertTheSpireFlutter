@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:convert_the_spire_reborn/src/config/full_mode_access.dart';
 import 'package:convert_the_spire_reborn/src/vault/constants.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/ai_chat_entry.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
@@ -159,10 +161,13 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: const Text('Set Download Folder'),
-        content: const Text(
-          'You must set a download folder before downloading torrents. '
-          'This prevents downloads from being stored in inaccessible app storage and causing file corruption. '
-          'Please navigate to Settings and select a folder on external storage.',
+        // overflow-fix: keep long guidance text scroll-safe on compact devices.
+        content: const SingleChildScrollView(
+          child: Text(
+            'You must set a download folder before downloading torrents. '
+            'This prevents downloads from being stored in inaccessible app storage and causing file corruption. '
+            'Please navigate to Settings and select a folder on external storage.',
+          ),
         ),
         actions: [
           FilledButton(
@@ -792,6 +797,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
 
   @override
   Widget build(BuildContext context) {
+    context.watch<FullModeAccess>();
     final isNarrow = MediaQuery.of(context).size.width < 900;
 
     final torrentPane = _buildTorrentPane(context);
@@ -1093,24 +1099,26 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                                 ),
                               ),
                             for (final item in activeDownloads)
-                              Builder(
-                                builder: (context) {
-                                  return ListTile(
-                                    dense: true,
-                                    title: Text(
-                                      item.model.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    subtitle: Padding(
-                                      padding: const EdgeInsets.only(top: 6),
-                                      child: Text(
-                                        '${item.statusLabel} • ${item.peers} peers',
-                                        style: const TextStyle(fontSize: 11),
+                              RepaintBoundary(
+                                child: Builder(
+                                  builder: (context) {
+                                    return ListTile(
+                                      dense: true,
+                                      title: Text(
+                                        item.model.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                    ),
-                                  );
-                                },
+                                      subtitle: Padding(
+                                        padding: const EdgeInsets.only(top: 6),
+                                        child: Text(
+                                          '${item.statusLabel} • ${item.peers} peers',
+                                          style: const TextStyle(fontSize: 11),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                             if (library.isNotEmpty)
                               const Padding(
@@ -1121,37 +1129,38 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                                 ),
                               ),
                             for (final item in library)
-                              ListTile(
-                                dense: true,
-                                leading: Icon(
-                                  Icons.check_circle_outline,
-                                  size: 18,
-                                  color: cs.primary,
+                              RepaintBoundary(
+                                child: ListTile(
+                                  dense: true,
+                                  leading: Icon(
+                                    Icons.check_circle_outline,
+                                    size: 18,
+                                    color: cs.primary,
+                                  ),
+                                  title: Text(
+                                    item.model.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  subtitle: Text(
+                                    item.model.filePath ?? 'Completed',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                  onTap: Platform.isWindows
+                                      ? () {
+                                          _triggeredEventKeys.remove(
+                                            'download_completed:${item.model.name}',
+                                          );
+                                          _triggerAutoEvent(
+                                            _triggers.onDownloadCompleted(
+                                              item.model.name,
+                                            ),
+                                          );
+                                        }
+                                      : null,
                                 ),
-                                title: Text(
-                                  item.model.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Text(
-                                  item.model.filePath ?? 'Completed',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                                onTap: Platform.isWindows
-                                    ? () {
-                                        // Allow re-triggering on each explicit tap
-                                        _triggeredEventKeys.remove(
-                                          'download_completed:${item.model.name}',
-                                        );
-                                        _triggerAutoEvent(
-                                          _triggers.onDownloadCompleted(
-                                            item.model.name,
-                                          ),
-                                        );
-                                      }
-                                    : null,
                               ),
                           ],
                         ),
@@ -1192,23 +1201,25 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                         color: selected
                             ? cs.secondaryContainer
                             : cs.surfaceContainerLow,
-                        child: ListTile(
-                          title: Text(
-                            safeTitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            '${sl.isEmpty ? '' : '$sl | '}Size ${item.size == null ? ' - ' : _formatSize(item.size!)} | Source $source | Age $age',
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 12,
+                        child: RepaintBoundary(
+                          child: ListTile(
+                            title: Text(
+                              safeTitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          onTap: () => _selectResult(item),
-                          trailing: IconButton(
-                            onPressed: () => _startDownload(item),
-                            icon: const Icon(Icons.download),
+                            subtitle: Text(
+                              '${sl.isEmpty ? '' : '$sl | '}Size ${item.size == null ? ' - ' : _formatSize(item.size!)} | Source $source | Age $age',
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 12,
+                              ),
+                            ),
+                            onTap: () => _selectResult(item),
+                            trailing: IconButton(
+                              onPressed: () => _startDownload(item),
+                              icon: const Icon(Icons.download),
+                            ),
                           ),
                         ),
                       );

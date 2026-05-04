@@ -223,12 +223,21 @@ class _CastDialogState extends State<CastDialog> {
   void _showCastingControls(DlnaDevice device) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.cast_connected, color: Colors.green),
+            Icon(Icons.cast_connected, color: cs.tertiary),
             const SizedBox(width: 8),
-            Expanded(child: Text('Casting to ${device.name}')),
+            // overflow-fix: dynamic device names can overflow dialog title row.
+            Expanded(
+              child: Text(
+                'Casting to ${device.name}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -307,7 +316,8 @@ class _CastDialogState extends State<CastDialog> {
             child: const Text('Disconnect'),
           ),
         ],
-      ),
+      );
+      },
     );
   }
 
@@ -403,15 +413,17 @@ class _CastDialogState extends State<CastDialog> {
                       const SizedBox(height: 8),
                       const Text('No devices found'),
                       const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      // overflow-fix: action row can overflow on very narrow screens.
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           OutlinedButton.icon(
                             onPressed: () => _startScan(forceRefresh: true),
                             icon: const Icon(Icons.refresh),
                             label: const Text('Rescan'),
                           ),
-                          const SizedBox(width: 8),
                           FilledButton.icon(
                             onPressed: () =>
                                 setState(() => _showManualInput = true),

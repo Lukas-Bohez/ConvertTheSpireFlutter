@@ -16,6 +16,7 @@ import '../models/queue_item.dart';
 import '../models/search_result.dart' as models;
 import '../services/bulk_import_service.dart';
 import '../services/convert_service.dart';
+import '../services/ad_service.dart';
 import '../services/download_service.dart';
 import '../services/file_organization_service.dart';
 import '../services/installer_service.dart';
@@ -32,9 +33,14 @@ import '../services/watched_playlist_service.dart';
 import '../services/youtube_service.dart';
 import '../services/vault_settings_bridge.dart';
 import '../config/build_flags.dart';
+import '../config/full_mode_access.dart';
+import '../vault/services/torrent_engine_service.dart';
+import '../vault/services/torrent_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/safe_json.dart';
 
 class AppController extends ChangeNotifier {
+  static const int _maxQueueCap = 1000;
   final WebViewEnvironment? webViewEnvironment;
   final SettingsStore settingsStore;
   final YouTubeService youtube;
@@ -74,6 +80,19 @@ class AppController extends ChangeNotifier {
   final List<ConvertResult> convertResults = <ConvertResult>[];
   Future<String?>? _ffmpegInstall;
   bool _downloadAllRunning = false;
+  bool _notifyPending = false;
+  late final VoidCallback _fullModeListener;
+
+  void scheduleNotify() {
+    if (_notifyPending) return;
+    _notifyPending = true;
+    Future.microtask(() {
+      _notifyPending = false;
+      if (hasListeners) {
+        notifyListeners();
+      }
+    });
+  }
 
   AppController({
     this.webViewEnvironment,
@@ -93,7 +112,14 @@ class AppController extends ChangeNotifier {
     required this.fileOrganizationService,
     required this.statisticsService,
     required this.notificationService,
-  });
+  }) {
+    _fullModeListener = _handleFullModeChanged;
+    FullModeAccess.instance.addListener(_fullModeListener);
+  }
+
+  void _handleFullModeChanged() {
+    scheduleNotify();
+  }
 
   Future<void> init() async {
     _settings = await settingsStore.load();
@@ -116,7 +142,7 @@ class AppController extends ChangeNotifier {
       if (kDebugMode)
         debugPrint('NotificationService.initialize error: $e\n$st');
     }
-    notifyListeners();
+    scheduleNotify();
 
     // Restore last selected tab (if present). Only restore once during
     // controller initialization to avoid racing with manual navigation.
@@ -153,7 +179,7 @@ class AppController extends ChangeNotifier {
     watchedPlaylistService.startAutoCheck(interval: const Duration(hours: 4));
   }
 
-  /// Programmatic tab switch. Persists preference and notifies listeners.
+  /// Programmatic tab switch. Persists preference and updates the active index.
   void switchToTab(int index) {
     if (index < 0 || index > 14) return;
     if (index == _activeTabIndex) return;
@@ -163,7 +189,6 @@ class AppController extends ChangeNotifier {
     // Persist asynchronously; don't await here.
     SharedPreferences.getInstance()
         .then((prefs) => prefs.setInt('last_tab', index));
-    notifyListeners();
   }
 
   /// Fire-and-forget FFmpeg check at startup so it's ready before downloads.
@@ -226,7 +251,7 @@ class AppController extends ChangeNotifier {
     _settings = next;
     await settingsStore.save(next);
     await VaultSettingsBridge.pushHostSettingsToVault(next);
-    notifyListeners();
+    scheduleNotify();
   }
 
   Future<void> pushHostSettingsToVault() async {
@@ -240,7 +265,7 @@ class AppController extends ChangeNotifier {
     if (merged.downloadDirTorrents == _settings!.downloadDirTorrents) return;
     _settings = merged;
     await settingsStore.save(merged);
-    notifyListeners();
+    scheduleNotify();
   }
 
   Future<void> checkOnboardingStatus() async {
@@ -254,7 +279,7 @@ class AppController extends ChangeNotifier {
       needsOnboarding = false;
     } finally {
       onboardingChecked = true;
-      notifyListeners();
+      scheduleNotify();
     }
   }
 
@@ -280,7 +305,7 @@ class AppController extends ChangeNotifier {
       if (kDebugMode) debugPrint('refreshAll playlist check failed: $e\n$st');
     }
 
-    notifyListeners();
+    scheduleNotify();
   }
 
   /// Called by the app when the lifecycle state changes. Used to adjust
@@ -313,7 +338,7 @@ class AppController extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('onboardingSeenVersion', v);
     needsOnboarding = false;
-    notifyListeners();
+    scheduleNotify();
   }
 
   /// Update the application's theme preference and persist it.
@@ -332,16 +357,16 @@ class AppController extends ChangeNotifier {
     if (_settings == null) {
       return;
     }
-    if (!kYouTubeConversionEnabled && _isYouTubeUrl(url)) {
+    if (!isYouTubeConversionEnabledInCurrentBuild && _isYouTubeUrl(url)) {
       logs.add('Preview blocked by build policy for YouTube URL.');
       previewItems = <PreviewItem>[];
       previewLoading = false;
-      notifyListeners();
+      scheduleNotify();
       return;
     }
 
     previewLoading = true;
-    notifyListeners();
+    scheduleNotify();
     try {
       final items = await youtube.preview(
         url,
@@ -356,13 +381,19 @@ class AppController extends ChangeNotifier {
       previewItems = <PreviewItem>[];
     } finally {
       previewLoading = false;
-      notifyListeners();
+      scheduleNotify();
     }
   }
 
   void addToQueue(PreviewItem item, String format,
       {String? videoQuality, String? outputFolder}) {
     if (queue.any((q) => q.url == item.url && q.format == format)) {
+      return;
+    }
+    if (queue.length >= _maxQueueCap) {
+      logs.add(
+        'Queue limit reached ($_maxQueueCap items). Remove completed items to add more.',
+      );
       return;
     }
     queue = List<QueueItem>.from(queue)
@@ -381,7 +412,7 @@ class AppController extends ChangeNotifier {
           videoQuality: videoQuality,
         ),
       );
-    notifyListeners();
+    scheduleNotify();
     unawaited(_saveQueue());
   }
 
@@ -390,7 +421,7 @@ class AppController extends ChangeNotifier {
     _tokens[key]?.cancel();
     queue = List<QueueItem>.from(queue)
       ..removeWhere((q) => q.url == item.url && q.format == item.format);
-    notifyListeners();
+    scheduleNotify();
     unawaited(_saveQueue());
   }
 
@@ -403,7 +434,7 @@ class AppController extends ChangeNotifier {
     // Resolve title if it's still a raw URL (user downloaded without preview)
     // Only attempt YouTube metadata fetch for YouTube URLs
     final isYouTube = _isYouTubeUrl(item.url);
-    if (!kYouTubeConversionEnabled && isYouTube) {
+    if (!isYouTubeConversionEnabledInCurrentBuild && isYouTube) {
       _updateQueue(
         item,
         item.copyWith(
@@ -712,10 +743,10 @@ class AppController extends ChangeNotifier {
           ffmpegPath: ffmpegPath);
       convertResults.add(result);
       logs.add('Conversion complete: ${result.name}');
-      notifyListeners();
+      scheduleNotify();
     } catch (e) {
       logs.add('Conversion failed: $e');
-      notifyListeners();
+      scheduleNotify();
     }
   }
 
@@ -817,7 +848,7 @@ class AppController extends ChangeNotifier {
     final next = List<QueueItem>.from(queue);
     next[index] = updated;
     queue = next;
-    notifyListeners();
+    scheduleNotify();
     unawaited(_saveQueue());
   }
 
@@ -840,14 +871,19 @@ class AppController extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_queueKey);
-      if (raw == null) return;
-      final list = jsonDecode(raw) as List<dynamic>;
+      if (raw == null || raw.trim().isEmpty) return;
+      final list = safeJsonDecode<List<dynamic>>(raw);
+      if (list == null) {
+        await prefs.remove(_queueKey);
+        return;
+      }
       final restored = list
           .map((e) => QueueItem.fromJson(e as Map<String, dynamic>))
           .toList();
       if (restored.isNotEmpty) {
-        queue = List<QueueItem>.from(queue)..addAll(restored);
-        notifyListeners();
+        final restoredQueue = List<QueueItem>.from(queue)..addAll(restored);
+        queue = restoredQueue;
+        scheduleNotify();
       }
     } catch (_) {
       // Corrupted data - remove to avoid repeated failures
@@ -1004,7 +1040,7 @@ class AppController extends ChangeNotifier {
   Future<List<models.SearchResult>> multiSearch(String query) async {
     try {
       final results = await searchService.searchAll(query);
-      final filtered = kYouTubeConversionEnabled
+        final filtered = isYouTubeConversionEnabledInCurrentBuild
           ? results
           : results.where((r) => r.source.toLowerCase() != 'youtube').toList();
       logs.add('Search found ${filtered.length} results for "$query"');
@@ -1041,7 +1077,7 @@ class AppController extends ChangeNotifier {
     final url =
         isGeneric ? result.id : 'https://www.youtube.com/watch?v=${result.id}';
 
-    if (!kYouTubeConversionEnabled && _isYouTubeUrl(url)) {
+    if (!isYouTubeConversionEnabledInCurrentBuild && _isYouTubeUrl(url)) {
       logs.add('Skipping YouTube queue add due to Play Store build policy.');
       return;
     }
@@ -1063,7 +1099,7 @@ class AppController extends ChangeNotifier {
 
   /// Bulk import: parses queries and adds each best match to the queue.
   Future<void> processBulkImport(List<String> queries, {String? format}) async {
-    if (!kYouTubeConversionEnabled) {
+    if (!isYouTubeConversionEnabledInCurrentBuild) {
       logs.add('Bulk import disabled: YouTube conversion is off in this build.');
       return;
     }
@@ -1086,7 +1122,7 @@ class AppController extends ChangeNotifier {
     }
     logs.add(
         'Bulk import: $found queued, $failed failed out of ${queries.length}');
-    notifyListeners();
+    scheduleNotify();
   }
 
   /// Record a completed download in statistics and show notification.
@@ -1106,12 +1142,18 @@ class AppController extends ChangeNotifier {
     if (success && (_settings?.showNotifications ?? false)) {
       await notificationService.showDownloadComplete(title, artist);
     }
+    if (success) {
+      unawaited(AdService.instance.maybeShowInterstitialAfterSuccess());
+    }
   }
 
   @override
   void dispose() {
+    FullModeAccess.instance.removeListener(_fullModeListener);
     watchedPlaylistService.dispose();
     previewPlayer.dispose();
+    TorrentService.instance.dispose();
+    TorrentEngineService.instance.dispose();
     try {
       youtube.close();
     } catch (_) {}

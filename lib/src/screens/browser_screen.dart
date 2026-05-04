@@ -772,7 +772,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: SafeArea(
-        top: true,
+        top: false,
         bottom: false,
         child: Stack(
           children: [
@@ -801,8 +801,8 @@ class _BrowserScreenState extends State<BrowserScreen>
                   onReleaseWebViewFocus: () => FocusScope.of(context).unfocus(),
                   onTabs: _showTabSwitcher,
                   tabCount: _tabManager.tabCount,
-                  onDownload: _addCurrentToQueue,
-                  downloadEnabled: !_showNewTabPage &&
+                    onDownload: _addCurrentToQueue,
+                    downloadEnabled: !_showNewTabPage &&
                       _addressController.text.trim().isNotEmpty,
                   isKnownDifficultSite: DownloadService.isDifficultSite(
                       _addressController.text.trim()),
@@ -866,8 +866,9 @@ class _BrowserScreenState extends State<BrowserScreen>
             if (_castService.activeDevice != null)
               Positioned(
                 bottom: viewPadding.bottom + 56,
-                left: 0,
-                right: 0,
+                // overflow-fix: respect horizontal safe insets for notched/curved displays.
+                left: viewPadding.left,
+                right: viewPadding.right,
                 child: CastMiniBar(
                   deviceName: _castService.activeDevice!.name,
                   isPlaying:
@@ -889,7 +890,8 @@ class _BrowserScreenState extends State<BrowserScreen>
                 DownloadService.isDifficultSite(_addressController.text))
               Positioned(
                 bottom: viewPadding.bottom + 72,
-                right: 16,
+                // overflow-fix: keep floating action safely inside right display inset.
+                right: viewPadding.right + 16,
                 child: FloatingActionButton.extended(
                   heroTag: 'extract_download',
                   onPressed: _addCurrentToQueue,

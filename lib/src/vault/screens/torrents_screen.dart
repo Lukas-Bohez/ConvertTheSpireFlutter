@@ -64,7 +64,9 @@ extension _SortLabel on _SortMode {
 }
 
 class TorrentsScreen extends StatefulWidget {
-  const TorrentsScreen({super.key});
+  final VoidCallback? onOpenSettingsTab;
+
+  const TorrentsScreen({super.key, this.onOpenSettingsTab});
 
   @override
   State<TorrentsScreen> createState() => _TorrentsScreenState();
@@ -81,6 +83,15 @@ class _TorrentsScreenState extends State<TorrentsScreen>
   _SortMode _sortMode = _SortMode.dateAdded;
   bool _fabExpanded = false;
   bool _pickerBusy = false;
+  Timer? _searchDebounce;
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 180), () {
+      if (!mounted) return;
+      setState(() => _searchQuery = value.trim());
+    });
+  }
 
   String? _androidDocumentsUriForPath(String directoryPath) {
     final normalized = directoryPath.replaceAll('\\', '/');
@@ -211,14 +222,20 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: const Text('Set Download Folder'),
-        content: const Text(
-          'You must set a download folder before adding torrents. '
-          'This prevents downloads from being stored in inaccessible app storage. '
-          'Please go to Settings > Download Location and select a folder on external storage.',
+        // overflow-fix: keep long settings guidance readable in constrained dialogs.
+        content: const SingleChildScrollView(
+          child: Text(
+            'You must set a download folder before adding torrents. '
+            'This prevents downloads from being stored in inaccessible app storage. '
+            'Please go to Settings > Download Location and select a folder on external storage.',
+          ),
         ),
         actions: [
           FilledButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () {
+              Navigator.pop(ctx);
+              widget.onOpenSettingsTab?.call();
+            },
             child: const Text('Open Settings'),
           ),
         ],
@@ -228,6 +245,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -247,6 +265,13 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     if (bps < 1024) return '${bps.round()} B/s';
     if (bps < 1024 * 1024) return '${(bps / 1024).toStringAsFixed(1)} KB/s';
     return '${(bps / (1024 * 1024)).toStringAsFixed(1)} MB/s';
+  }
+
+  String _fmtEta(double seconds) {
+    final etaSec = seconds.round();
+    if (etaSec < 60) return '${etaSec}s';
+    if (etaSec < 3600) return '${(etaSec / 60).round()}m';
+    return '${(etaSec / 3600).toStringAsFixed(1)}h';
   }
 
   Color _stateColor(BuildContext ctx, String state, String statusLabel) {
@@ -325,9 +350,12 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Redownload from scratch?'),
-        content: Text(
-          '"${ts.model.name}" will be deleted from disk and downloaded again '
-          'from 0%. The .torrent source file is preserved.',
+        // overflow-fix: torrent names can be long; keep dialog content scroll-safe.
+        content: SingleChildScrollView(
+          child: Text(
+            '"${ts.model.name}" will be deleted from disk and downloaded again '
+            'from 0%. The .torrent source file is preserved.',
+          ),
         ),
         actions: [
           TextButton(
@@ -358,38 +386,69 @@ class _TorrentsScreenState extends State<TorrentsScreen>
   }
 
   Future<void> _deleteTorrent(TorrentViewState ts) async {
+    var deleteFiles = false;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Remove torrent?'),
-        content: Text(
-          '"${ts.name}" will be removed from the list. '
-          'Downloaded files are NOT deleted.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-              foregroundColor: Theme.of(ctx).colorScheme.onError,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Remove torrent?'),
+          // overflow-fix: keep dynamic torrent name prompts scroll-safe.
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '"${ts.name}" will be removed from the list.',
+                ),
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  value: deleteFiles,
+                  onChanged: (value) =>
+                      setDialogState(() => deleteFiles = value ?? false),
+                  title: const Text('Also delete downloaded files'),
+                ),
+              ],
             ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Remove'),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error,
+                foregroundColor: Theme.of(ctx).colorScheme.onError,
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(deleteFiles ? 'Remove + Delete files' : 'Remove'),
+            ),
+          ],
+        ),
       ),
     );
     if (confirmed != true) return;
     try {
       await TorrentEngineService.instance.stopTorrent(ts.model.id);
+      if (deleteFiles) {
+        await TorrentService.instance.purgeTorrentArtifacts(ts.model.id);
+      }
       await TorrentService.instance.removeTorrent(ts.model.id);
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Torrent removed.')));
+      ).showSnackBar(
+        SnackBar(
+          content: Text(
+            deleteFiles
+                ? 'Torrent removed and files deleted.'
+                : 'Torrent removed.',
+          ),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -691,38 +750,67 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     return Scaffold(
       appBar: _buildAppBar(),
       floatingActionButton: _buildFab(),
-      body: TorrentDragDrop(
-        onTorrentFile: _handleDropPath,
-        onPath: _handleDropPath,
-        child: RefreshIndicator(
-          onRefresh: _refresh,
-          child: StreamBuilder<List<TorrentViewState>>(
-            stream: TorrentService.instance.torrentStatesStream,
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final all = snapshot.data!;
-              final torrents = _sorted(all);
+      body: FocusTraversalGroup(
+        policy: ReadingOrderTraversalPolicy(),
+        child: TorrentDragDrop(
+          onTorrentFile: _handleDropPath,
+          onPath: _handleDropPath,
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: StreamBuilder<List<TorrentViewState>>(
+              stream: TorrentService.instance.torrentStatesStream,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final all = snapshot.data!;
+                final torrents = _sorted(all);
 
-              // Empty: no torrents at all
-              if (all.isEmpty) {
-                return _buildEmptyState();
-              }
+                // Empty: no torrents at all
+                if (all.isEmpty) {
+                  return _buildEmptyState();
+                }
 
-              // Empty: search returned nothing
-              if (torrents.isEmpty) {
-                return _buildNoSearchResults();
-              }
+                // Empty: search returned nothing
+                if (torrents.isEmpty) {
+                  return _buildNoSearchResults();
+                }
 
-              return ListView.builder(
-                cacheExtent: 200,
-                padding: EdgeInsets.only(bottom: Platform.isAndroid ? 96 : 12),
-                itemCount: torrents.length,
-                itemBuilder: (context, index) =>
-                    _buildTorrentCard(context, torrents[index]),
-              );
-            },
+                final width = MediaQuery.of(context).size.width;
+                final useGrid = width > 900;
+                final bottomPad = Platform.isAndroid ? 96.0 : 12.0;
+                final horizontalPad = width > 1600 ? 24.0 : 12.0;
+
+                if (useGrid) {
+                  return GridView.builder(
+                    cacheExtent: 200,
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPad,
+                      12,
+                      horizontalPad,
+                      bottomPad,
+                    ),
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 430,
+                      mainAxisExtent: 182,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                    ),
+                    itemCount: torrents.length,
+                    itemBuilder: (context, index) =>
+                        _buildTorrentCard(context, torrents[index], isGridCard: true),
+                  );
+                }
+
+                return ListView.builder(
+                  cacheExtent: 200,
+                  padding: EdgeInsets.only(bottom: bottomPad),
+                  itemCount: torrents.length,
+                  itemBuilder: (context, index) =>
+                      _buildTorrentCard(context, torrents[index]),
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -743,7 +831,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                 ),
               ),
               style: Theme.of(context).textTheme.titleMedium,
-              onChanged: (v) => setState(() => _searchQuery = v.trim()),
+              onChanged: _onSearchChanged,
             )
           : const Text('Torrents'),
       actions: [
@@ -888,6 +976,16 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                     icon: const Icon(Icons.create_new_folder_outlined),
                     label: const Text('Create Torrent'),
                   ),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      launchUrl(
+                        Uri.parse('https://quizthespire.com/'),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    },
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('Visit Quiz the Spire'),
+                  ),
                 ],
               )
             else
@@ -933,10 +1031,24 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     );
   }
 
-  Widget _buildTorrentCard(BuildContext context, TorrentViewState ts) {
+  Widget _buildTorrentCard(
+    BuildContext context,
+    TorrentViewState ts, {
+    bool isGridCard = false,
+  }) {
     final torrent = ts.model;
     final stateColor = _stateColor(context, ts.state, ts.statusLabel);
     final cs = Theme.of(context).colorScheme;
+    final totalSize = torrent.totalSize ?? 0;
+    final progress = ts.progress.clamp(0.0, 1.0);
+    final progressPercent = (progress * 100).toStringAsFixed(1);
+    final remainingBytes = totalSize > 0
+        ? (totalSize - ts.downloaded).clamp(0, totalSize)
+        : 0;
+    final etaText = ts.downloadSpeed > 512 && remainingBytes > 0
+        ? _fmtEta(remainingBytes / ts.downloadSpeed)
+        : null;
+    final denseDesktop = isGridCard;
 
     void copyMagnetLink() {
       final magnet = torrent.magnetLink;
@@ -1001,165 +1113,70 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       );
     }
 
-    return Card(
-      key: ValueKey(ts.id),
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => TorrentDetailScreen(torrent: torrent),
-          ),
+    void openDetails() {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => TorrentDetailScreen(torrent: torrent),
         ),
-        onLongPress: showLongPressActions,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 4, 10),
-          child: Row(
-            children: [
-              // Main content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Name
-                    Text(
-                      torrent.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 7),
-                    const SizedBox(height: 5),
-                    // Status row
-                    Row(
-                      children: [
-                        // Status badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: stateColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            ts.statusLabel,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: stateColor,
-                            ),
-                          ),
-                        ),
-                        // Size
-                        if (torrent.totalSize != null &&
-                            torrent.totalSize! > 0) ...[
-                          Text(
-                            ' / ${_fmtSize(torrent.totalSize!)}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                        const Spacer(),
-                        // Download speed
-                        if (ts.downloadSpeed > 512) ...[
-                          Icon(
-                            Icons.arrow_downward,
-                            size: 10,
-                            color: cs.primary,
-                          ),
-                          Text(
-                            _fmtSpeed(ts.downloadSpeed),
-                            style: TextStyle(fontSize: 10, color: cs.primary),
-                          ),
-                        ],
-                        // Upload speed
-                        if (ts.uploadSpeed > 512) ...[
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_upward,
-                            size: 10,
-                            color: cs.tertiary,
-                          ),
-                          Text(
-                            _fmtSpeed(ts.uploadSpeed),
-                            style: TextStyle(fontSize: 10, color: cs.tertiary),
-                          ),
-                        ],
-                        // ETA while downloading
-                        if (ts.downloadSpeed > 512 &&
-                            ts.model.totalSize != null &&
-                            ts.model.totalSize! > 0 &&
-                            ts.downloaded < ts.model.totalSize!)
-                          ...() {
-                            final remaining =
-                                (ts.model.totalSize! - ts.downloaded).clamp(
-                                  0,
-                                  ts.model.totalSize!,
-                                );
-                            final etaSec = (remaining / ts.downloadSpeed)
-                                .round();
-                            String eta;
-                            if (etaSec < 60) {
-                              eta = '${etaSec}s';
-                            } else if (etaSec < 3600) {
-                              eta = '${(etaSec / 60).round()}m';
-                            } else {
-                              eta = '${(etaSec / 3600).toStringAsFixed(1)}h';
-                            }
-                            return [
-                              const SizedBox(width: 4),
-                              Text(
-                                'ETA $eta',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: cs.onSurfaceVariant,
-                                ),
-                              ),
-                              if (ts.model.totalSize != null &&
-                                  ts.model.totalSize! > 0 &&
-                                  ts.progress < 0.999) ...[
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${_fmtSize((ts.model.totalSize! * (1 - ts.progress)).round())} left',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: cs.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ];
-                          }(),
-                        // Peers
-                        if (ts.peers > 0) ...[
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.people_outline,
-                            size: 10,
-                            color: cs.onSurfaceVariant,
-                          ),
-                          Text(
-                            '${ts.peers}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
+      );
+    }
+
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            (event.logicalKey == LogicalKeyboardKey.enter ||
+                event.logicalKey == LogicalKeyboardKey.select)) {
+          openDetails();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: _HoverLift(
+          child: Card(
+          key: ValueKey(ts.id),
+          margin: EdgeInsets.symmetric(
+            horizontal: isGridCard ? 0 : 12,
+            vertical: isGridCard ? 0 : 5,
+          ),
+          clipBehavior: Clip.antiAlias,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.20)),
+          ),
+          child: InkWell(
+            onTap: openDetails,
+            onLongPress: showLongPressActions,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                denseDesktop ? 12 : 14,
+                denseDesktop ? 10 : 12,
+                8,
+                denseDesktop ? 8 : 12,
               ),
-              // Action menu
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, size: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          torrent.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: isGridCard ? 15.5 : 14.5,
+                            height: 1.18,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: isGridCard ? 2 : 1,
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert, size: 20),
+                        splashRadius: 18,
                 tooltip: 'More',
                 onSelected: (v) {
                   switch (v) {
@@ -1228,8 +1245,151 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                   ),
                 ],
               ),
-            ],
+                    ],
+                  ),
+                  SizedBox(height: denseDesktop ? 7 : 10),
+                  Wrap(
+                    spacing: denseDesktop ? 7 : 8,
+                    runSpacing: denseDesktop ? 4 : 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: stateColor.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          ts.statusLabel,
+                          style: TextStyle(
+                            fontSize: denseDesktop ? 10.5 : 11,
+                            fontWeight: FontWeight.w700,
+                            color: stateColor,
+                          ),
+                        ),
+                      ),
+                      if (totalSize > 0)
+                        Text(
+                          _fmtSize(totalSize),
+                          style: TextStyle(
+                            fontSize: denseDesktop ? 10.5 : 11,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      Text(
+                        '$progressPercent%',
+                        style: TextStyle(
+                          fontSize: denseDesktop ? 11 : 11.5,
+                          color: cs.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: denseDesktop ? 7 : 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: denseDesktop ? 5 : 6,
+                      backgroundColor: cs.surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation<Color>(stateColor),
+                    ),
+                  ),
+                  SizedBox(height: denseDesktop ? 5 : 12),
+                  Wrap(
+                    spacing: denseDesktop ? 8 : 10,
+                    runSpacing: denseDesktop ? 3 : 6,
+                    children: [
+                      if (ts.downloadSpeed > 512)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.arrow_downward, size: denseDesktop ? 11 : 12, color: cs.primary),
+                            const SizedBox(width: 2),
+                            Text(
+                              _fmtSpeed(ts.downloadSpeed),
+                              style: TextStyle(fontSize: denseDesktop ? 10.5 : 11, color: cs.primary),
+                            ),
+                          ],
+                        ),
+                      if (ts.uploadSpeed > 512)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.arrow_upward, size: denseDesktop ? 11 : 12, color: cs.tertiary),
+                            const SizedBox(width: 2),
+                            Text(
+                              _fmtSpeed(ts.uploadSpeed),
+                              style: TextStyle(fontSize: denseDesktop ? 10.5 : 11, color: cs.tertiary),
+                            ),
+                          ],
+                        ),
+                      if (etaText != null)
+                        Text(
+                          'ETA $etaText',
+                          style: TextStyle(
+                            fontSize: denseDesktop ? 11 : 11.5,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      if (ts.peers > 0)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.people_outline, size: denseDesktop ? 11 : 12, color: cs.onSurfaceVariant),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${ts.peers}',
+                              style: TextStyle(
+                                fontSize: denseDesktop ? 11 : 11.5,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HoverLift extends StatefulWidget {
+  final Widget child;
+
+  const _HoverLift({required this.child});
+
+  @override
+  State<_HoverLift> createState() => _HoverLiftState();
+}
+
+class _HoverLiftState extends State<_HoverLift> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedScale(
+        scale: _hovered ? 1.01 : 1.0,
+        duration: const Duration(milliseconds: 140),
+        curve: Curves.easeOut,
+        child: AnimatedSlide(
+          offset: _hovered ? const Offset(0, -0.01) : Offset.zero,
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeOut,
+          child: widget.child,
         ),
       ),
     );

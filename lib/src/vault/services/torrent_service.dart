@@ -296,9 +296,6 @@ class TorrentService {
 
   final StreamController<List<TorrentViewState>> _torrentStatesController =
       StreamController<List<TorrentViewState>>.broadcast();
-  StreamSubscription<TorrentEngineStatus>? _engineStatusSubscription;
-  Timer? _snapshotTimer;
-  Timer? _diskReconcileTimer;
   final Map<String, TorrentEngineStatus> _runtimeByTorrentId =
       <String, TorrentEngineStatus>{};
   final Map<String, TorrentViewState> _latestStatesByTorrentId =
@@ -313,17 +310,25 @@ class TorrentService {
   final Map<String, int> _pendingMetadataRetryAttempts = <String, int>{};
   final Set<String> _pendingMetadataRetryInFlight = <String>{};
   bool _stateSyncStarted = false;
-  DateTime _lastSnapshotTime = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastRefreshTrigger = DateTime.fromMillisecondsSinceEpoch(0);
   bool _snapshotInProgress = false;
   bool _snapshotPending = false;
-  static const Duration _snapshotInterval = Duration(seconds: 3);
-  static const Duration _minRefreshInterval = Duration(seconds: 1);
-  static const Duration _diskReconcileInterval = Duration(seconds: 90);
+    final Duration _snapshotInterval =
+      Platform.isWindows ? const Duration(seconds: 5) : const Duration(seconds: 3);
+    final Duration _minRefreshInterval =
+      Platform.isWindows ? const Duration(seconds: 2) : const Duration(seconds: 1);
+    final Duration _diskReconcileInterval =
+      Platform.isWindows ? const Duration(minutes: 10) : const Duration(seconds: 90);
 
   Stream<List<TorrentViewState>> get torrentStatesStream {
     _ensureStateSyncStarted();
     return _torrentStatesController.stream;
+  }
+
+  void dispose() {
+    if (!_torrentStatesController.isClosed) {
+      unawaited(_torrentStatesController.close());
+    }
   }
 
   Stream<TorrentViewState?> torrentStateStream(String torrentId) {
@@ -358,16 +363,15 @@ class TorrentService {
     if (_stateSyncStarted) return;
     _stateSyncStarted = true;
 
-    _engineStatusSubscription = TorrentEngineService.instance.statusStream
-        .listen((status) {
-          if (status.torrentId.isEmpty) return;
-          _runtimeByTorrentId[status.torrentId] = status;
-          _snapshotPending = true;
-        });
+    TorrentEngineService.instance.statusStream.listen((status) {
+      if (status.torrentId.isEmpty) return;
+      _runtimeByTorrentId[status.torrentId] = status;
+      _snapshotPending = true;
+    });
 
-    _snapshotTimer = Timer.periodic(_snapshotInterval, (_) => _takeSnapshot());
+    Timer.periodic(_snapshotInterval, (_) => _takeSnapshot());
 
-    _diskReconcileTimer = Timer.periodic(
+    Timer.periodic(
       _diskReconcileInterval,
       (_) => unawaited(_reconcileDiskState(force: false)),
     );
@@ -400,7 +404,6 @@ class TorrentService {
 
     _snapshotInProgress = true;
     _snapshotPending = false;
-    _lastSnapshotTime = DateTime.now();
 
     try {
       final torrents = await TorrentsDao.instance.getAllTorrents();
@@ -470,6 +473,15 @@ class TorrentService {
           effectiveDiskBytes < (totalSize * 0.98).round();
         final runtimeComplete =
             runtimeLooksComplete && !diskContradictsCompletion;
+        final downloadedImpliesComplete =
+            !missingOnDisk &&
+            totalSize > 0 &&
+            downloaded >= totalSize &&
+            (
+              (hasDiskSnapshot &&
+                  effectiveDiskBytes >= (totalSize * 0.995).round()) ||
+              ((runtime?.progress ?? 0.0) >= 0.999)
+            );
         final diskCompleteTrusted =
           effectiveDiskComplete &&
             (runtime == null ||
@@ -477,7 +489,8 @@ class TorrentService {
                 runtimeState.contains('pause') ||
                 runtimeState.contains('stop'));
         final isComplete =
-            !missingOnDisk && (diskCompleteTrusted || runtimeComplete);
+            !missingOnDisk &&
+            (diskCompleteTrusted || runtimeComplete || downloadedImpliesComplete);
 
         if (diskContradictsCompletion) {
           downloaded = effectiveDiskBytes;
@@ -497,8 +510,7 @@ class TorrentService {
           _lastDownloadActivityByTorrentId[torrent.id] = now;
         }
         final lastActive = _lastDownloadActivityByTorrentId[torrent.id];
-        final recentlyDownloading =
-          lastActive != null && now.difference(lastActive).inSeconds < 10;
+        final _ = lastActive != null && now.difference(lastActive).inSeconds < 10;
         final state = _deriveState(
           persistedState,
           runtimeState,
@@ -517,34 +529,8 @@ class TorrentService {
                   ? (downloadedClamped / totalSize).clamp(0.0, 0.9999)
                   : ((runtime?.progress ?? torrent.progress).clamp(0.0, 0.9999)));
 
-        const allowsProgressRegression = true;
-
-        if (allowsProgressRegression) {
-          _progressHighWaterByTorrentId[torrent.id] = progress;
-          _downloadedHighWaterByTorrentId[torrent.id] = downloaded;
-        } else {
-          final previousProgress =
-              _progressHighWaterByTorrentId[torrent.id] ??
-              _latestStatesByTorrentId[torrent.id]?.progress ??
-              torrent.progress;
-          if (progress + 0.02 < previousProgress) {
-            progress = previousProgress;
-          }
-          _progressHighWaterByTorrentId[torrent.id] = math.max(
-            previousProgress,
-            progress,
-          );
-
-          final previousDownloaded =
-              _downloadedHighWaterByTorrentId[torrent.id] ?? torrent.bytesDown;
-          if (totalSize > 0 && downloaded < previousDownloaded) {
-            downloaded = previousDownloaded;
-          }
-          _downloadedHighWaterByTorrentId[torrent.id] = math.max(
-            previousDownloaded,
-            downloaded,
-          );
-        }
+        _progressHighWaterByTorrentId[torrent.id] = progress;
+        _downloadedHighWaterByTorrentId[torrent.id] = downloaded;
 
         final isSeeding = state.contains('seed');
         final dlSpeed = isSeeding ? 0.0 : (runtime?.downloadSpeed ?? 0.0);
@@ -642,7 +628,14 @@ class TorrentService {
 
   Future<void> _reconcileDiskState({bool force = false}) async {
     final torrents = await TorrentsDao.instance.getAllTorrents();
-    final futures = torrents.map((torrent) async {
+    final maxScansPerPass = force ? torrents.length : (Platform.isWindows ? 1 : 4);
+    var scansCompleted = 0;
+
+    for (final torrent in torrents) {
+      if (!force && scansCompleted >= maxScansPerPass) {
+        break;
+      }
+
       final cached = _diskSnapshots[torrent.id];
       final status = (torrent.status ?? '').toLowerCase();
       final activeByPersistedState =
@@ -653,7 +646,7 @@ class TorrentService {
         torrent.id,
       );
       if (!force && (activeByPersistedState || activeByRuntime)) {
-        return;
+        continue;
       }
 
       final isSeedingOrPaused =
@@ -664,14 +657,14 @@ class TorrentService {
           isSeedingOrPaused &&
           cached != null &&
           DateTime.now().difference(cached.checkedAt) < longInterval) {
-        return;
+        continue;
       }
 
       if (!force &&
           cached != null &&
           DateTime.now().difference(cached.checkedAt) <
               _diskReconcileInterval) {
-        return;
+        continue;
       }
 
       try {
@@ -689,6 +682,16 @@ class TorrentService {
             fallbackBytes: cached?.bytesOnDisk ?? torrent.bytesDown,
             knownRelativePaths: knownPaths,
           ),
+        ).timeout(
+          Platform.isWindows
+              ? const Duration(seconds: 20)
+              : const Duration(seconds: 30),
+          onTimeout: () => _DiskScanResult(
+            torrentId: torrent.id,
+            bytesOnDisk: cached?.bytesOnDisk ?? torrent.bytesDown,
+            isComplete: cached?.isComplete ?? false,
+            pathMissing: cached?.pathMissing ?? false,
+          ),
         );
         _diskSnapshots[torrent.id] = _DiskReconcileSnapshot(
           bytesOnDisk: result.bytesOnDisk,
@@ -696,12 +699,12 @@ class TorrentService {
           pathMissing: result.pathMissing,
           checkedAt: DateTime.now(),
         );
+        scansCompleted++;
       } catch (_) {
         // Keep existing cache on failures.
       }
-    });
+    }
 
-    await Future.wait(futures);
     _snapshotPending = true;
   }
 
@@ -1360,7 +1363,10 @@ class TorrentService {
     await downloadTorrent(id, destinationPath);
   }
 
-  Future<void> addTorrentFromTorrentFile(String path) async {
+  Future<void> addTorrentFromTorrentFile(
+    String path, {
+    String? destinationPath,
+  }) async {
     final file = File(path);
     if (!await file.exists()) {
       throw FileSystemException('Torrent file does not exist', path);
@@ -1390,6 +1396,11 @@ class TorrentService {
       0,
       (sum, entry) => sum + entry.length,
     );
+    final configuredDestination = destinationPath?.trim() ?? '';
+    final fallbackDestination = SettingsService.instance.downloadDestination.trim();
+    final effectiveDestination = configuredDestination.isNotEmpty
+        ? configuredDestination
+        : (fallbackDestination.isNotEmpty ? fallbackDestination : file.parent.path);
     final magnetLink = createMagnetLink(
       infoHash,
       torrentName,
@@ -1405,7 +1416,8 @@ class TorrentService {
       pieceLength: metadata.pieceLength,
       piecesHave: null,
       status: 'added',
-      filePath: p.normalize(path),
+      filePath: p.normalize(effectiveDestination),
+      vaultLink: p.normalize(path),
       magnetLink: magnetLink,
       bytesDown: 0,
       bytesUp: 0,
@@ -1765,7 +1777,14 @@ class TorrentService {
     final torrentFile = File(torrentFilePath);
     await torrentFile.writeAsBytes(torrentBytes, flush: true);
 
-    await addTorrentFromTorrentFile(torrentFilePath);
+    final seedDestination = type == FileSystemEntityType.directory
+        ? baseDir.parent.path
+        : baseDir.path;
+
+    await addTorrentFromTorrentFile(
+      torrentFilePath,
+      destinationPath: seedDestination,
+    );
   }
 }
 

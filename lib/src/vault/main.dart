@@ -15,6 +15,7 @@ import 'package:convert_the_spire_reborn/src/vault/db/sqlcipher_bootstrap.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/desktop_window.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/hotkeys.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/notifications_desktop.dart';
+import 'package:convert_the_spire_reborn/src/config/build_flags.dart';
 // import './screens/home_screen.dart';
 import 'router.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/identity_service.dart';
@@ -26,6 +27,7 @@ import 'package:convert_the_spire_reborn/src/vault/services/tray_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/background_service.dart';
+import 'package:convert_the_spire_reborn/src/widgets/adaptive_ui_frame.dart';
 import 'package:window_manager/window_manager.dart';
 
 Future<bool> _requestAndroidPermissions() async {
@@ -338,13 +340,15 @@ class _MainAppState extends State<MainApp> {
 
   @override
   Widget build(BuildContext context) {
-    final isAndroid =
-        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
     return MaterialApp.router(
-      title: 'Vault The Spire',
+      title: getAppTitle(),
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: themeService.themeMode,
+      builder: (context, child) {
+        // TECH-DEBT: evaluate route-level overscan overrides for immersive pages.
+        return AdaptiveUiFrame(child: child ?? const SizedBox.shrink());
+      },
       routerConfig: appRouter,
     );
   }

@@ -42,9 +42,15 @@ import 'services/watched_playlist_service.dart';
 import 'services/youtube_service.dart';
 import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
+import 'widgets/adaptive_ui_frame.dart';
 import 'vault/vault_bootstrap.dart';
+import 'vault/platform/desktop_window.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'data/browser_db.dart';
+import 'config/build_flags.dart';
+import 'config/full_mode_access.dart';
+import 'features/colour_rewards/colour_reward_service.dart';
+import 'services/purchase_service.dart';
 
 class MyApp extends StatefulWidget {
   final String? mediaKitInitError;
@@ -85,9 +91,7 @@ class _MyAppState extends State<MyApp>
       } catch (_) {}
     }
 
-    if (widget.mediaKitInitError != null &&
-        !kIsWeb &&
-        Platform.isLinux) {
+    if (widget.mediaKitInitError != null && !kIsWeb && Platform.isLinux) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _dismissedMediaKitError) return;
         showDialog(
@@ -95,32 +99,35 @@ class _MyAppState extends State<MyApp>
           barrierDismissible: false,
           builder: (_) => AlertDialog(
             title: const Text('Missing dependency'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'libmpv is required for media playback on Linux. '
-                  'Install it with your package manager:',
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
+            // overflow-fix: dialog body can exceed small screen height.
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'libmpv is required for media playback on Linux. '
+                    'Install it with your package manager:',
                   ),
-                  child: const SelectableText(
-                    'Ubuntu/Debian:  sudo apt install libmpv1\n'
-                    'Fedora:         sudo dnf install mpv-libs\n'
-                    'Arch:           sudo pacman -S mpv',
-                    style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const SelectableText(
+                      'Ubuntu/Debian:  sudo apt install libmpv1\n'
+                      'Fedora:         sudo dnf install mpv-libs\n'
+                      'Arch:           sudo pacman -S mpv',
+                      style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                const Text('Restart the app after installing.'),
-              ],
+                  const SizedBox(height: 8),
+                  const Text('Restart the app after installing.'),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -168,11 +175,11 @@ class _MyAppState extends State<MyApp>
           (defaultTargetPlatform == TargetPlatform.windows ||
               defaultTargetPlatform == TargetPlatform.linux ||
               defaultTargetPlatform == TargetPlatform.macOS)) {
-        windowManager.isFullScreen().then((isFull) {
-          windowManager.setFullScreen(!isFull);
-        }).catchError((e) {
-          if (kDebugMode) debugPrint('Failed to toggle fullscreen: $e');
-        });
+        unawaited(
+          toggleDesktopFullScreen().catchError((e) {
+            if (kDebugMode) debugPrint('Failed to toggle fullscreen: $e');
+          }),
+        );
       }
     }
   }
@@ -223,7 +230,6 @@ class _MyAppState extends State<MyApp>
               .getFolderForPlaylist(playlistUrl, format: defaultFormat);
           final folder = folderForFormat ??
               await watchedPlaylistService.getFolderForPlaylist(playlistUrl);
-
           controller.addSearchResultToQueue(
             track,
             format: defaultFormat,
@@ -252,6 +258,8 @@ class _MyAppState extends State<MyApp>
         notificationService: notificationService,
       );
 
+      await ColourRewardService.instance.init();
+
       // Prune old album art cache in background.
       albumArtService.pruneOldAlbumArt();
 
@@ -265,9 +273,12 @@ class _MyAppState extends State<MyApp>
           context: ctx,
           builder: (dctx) => AlertDialog(
             title: const Text('Folder access lost'),
-            content: const Text(
-              'The app can no longer access your selected download folder. '
-              'Would you like to pick it again? Choosing "No" will use Downloads instead.',
+            // overflow-fix: keep long prompt scroll-safe inside dialog.
+            content: const SingleChildScrollView(
+              child: Text(
+                'The app can no longer access your selected download folder. '
+                'Would you like to pick it again? Choosing "No" will use Downloads instead.',
+              ),
             ),
             actions: [
               TextButton(
@@ -322,13 +333,29 @@ class _MyAppState extends State<MyApp>
     if (kIsWeb) return;
     if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) return;
 
+    // Close-to-tray must be a pure hide path. Do not dispose WebViews,
+    // kill WebView2 processes, or destroy the window in this branch.
+    final shouldMinimiseToTray = _controller?.settings?.minimizeToTrayOnClose ??
+        TrayService.shouldMinimiseToTrayOnClose;
+    if (TrayService.enabled && shouldMinimiseToTray) {
+      if (kDebugMode) {
+        debugPrint('[App] Tray mode active; hiding window (skip teardown)');
+      }
+      try {
+        await windowManager.hide();
+      } catch (e) {
+        if (kDebugMode) debugPrint('[App] windowManager.hide failed: $e');
+      }
+      return;
+    }
+
     if (kDebugMode) {
       debugPrint('[App] Window close requested - disposing WebViews...');
     }
 
     try {
-      final future = BrowserScreen.browserKey.currentState
-          ?.disposeAllWebViewControllers();
+      final future =
+          BrowserScreen.browserKey.currentState?.disposeAllWebViewControllers();
       if (future != null) {
         await future.timeout(const Duration(seconds: 3), onTimeout: () {
           if (kDebugMode) {
@@ -374,17 +401,10 @@ class _MyAppState extends State<MyApp>
                 '[App] taskkill msedgewebview2 exit=${r.exitCode} stderr=${r.stderr}');
           }
         } catch (e) {
-          if (kDebugMode) debugPrint('[App] taskkill msedgewebview2 failed: $e');
+          if (kDebugMode)
+            debugPrint('[App] taskkill msedgewebview2 failed: $e');
         }
       }
-    }
-
-    // If tray mode is enabled then hiding the window is the expected behaviour
-    // (so playback and background tasks can continue) instead of tearing down.
-    if (TrayService.enabled && TrayService.shouldMinimiseToTrayOnClose) {
-      if (kDebugMode) debugPrint('[App] Tray mode active; hiding window instead of destroying');
-      await windowManager.hide();
-      return;
     }
 
     try {
@@ -406,13 +426,20 @@ class _MyAppState extends State<MyApp>
 
   @override
   Widget build(BuildContext context) {
+    final listenables = <Listenable>[FullModeAccess.instance, ColourRewardService.instance];
+    final controller = _controller;
+    if (controller != null) {
+      listenables.add(controller);
+    }
+
     return AnimatedBuilder(
-      animation: _controller ?? Listenable.merge([]),
+      animation: Listenable.merge(listenables),
       builder: (context, _) {
         final themeMode = _resolveThemeMode(_controller?.settings?.themeMode);
-        final lightScheme = ColorScheme.fromSeed(seedColor: Colors.deepPurple);
+        final seed = ColourRewardService.instance.equipped.color;
+        final lightScheme = ColorScheme.fromSeed(seedColor: seed);
         final darkScheme = ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
+          seedColor: seed,
           brightness: Brightness.dark,
         );
 
@@ -462,10 +489,14 @@ class _MyAppState extends State<MyApp>
 
         return MaterialApp(
           navigatorKey: _navigatorKey,
-          title: 'Convert the Spire',
+          title: getAppTitle(),
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: themeMode,
+          builder: (context, child) {
+            // TECH-DEBT: add per-route adaptive exclusions for full-bleed media pages.
+            return AdaptiveUiFrame(child: child ?? const SizedBox.shrink());
+          },
           home: _buildHome(),
         );
       },
@@ -527,8 +558,9 @@ class _MyAppState extends State<MyApp>
               children: [
                 const Icon(Icons.error_outline, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
-                Builder(builder: (ctx) => Text('Failed to start',
-                    style: Theme.of(ctx).textTheme.headlineSmall)),
+                Builder(
+                    builder: (ctx) => Text('Failed to start',
+                        style: Theme.of(ctx).textTheme.headlineSmall)),
                 const SizedBox(height: 8),
                 Text(_initError!, textAlign: TextAlign.center),
                 const SizedBox(height: 16),
@@ -572,12 +604,13 @@ class _MyAppState extends State<MyApp>
           contentChild = OnboardingScreen(
             onFinish: controller.completeOnboarding,
             onThemeChanged: (mode) => controller.setThemeMode(mode),
-            themeMode:
-                _resolveThemeMode(controller.settings?.themeMode),
+            themeMode: _resolveThemeMode(controller.settings?.themeMode),
           );
         } else {
           contentChild = MultiProvider(
             providers: [
+              ChangeNotifierProvider.value(value: PurchaseService.instance),
+              ChangeNotifierProvider.value(value: FullModeAccess.instance),
               ChangeNotifierProvider(create: (_) => PlayerState(prefs)),
               ChangeNotifierProvider.value(value: controller),
             ],

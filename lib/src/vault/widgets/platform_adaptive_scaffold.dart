@@ -7,6 +7,7 @@ import 'package:convert_the_spire_reborn/src/vault/screens/browser_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/guide_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/torrents_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+import 'package:convert_the_spire_reborn/src/config/build_flags.dart';
 
 class AppShell extends StatefulWidget {
   final Widget child;
@@ -53,8 +54,8 @@ class _AppShellState extends State<AppShell> {
       builder: (context, persistentSidebar, _) {
         if (persistentSidebar) {
           final sidebarWidth = MediaQuery.of(context).size.width > 1400
-              ? 240.0
-              : 200.0;
+              ? 256.0
+              : 220.0;
           return Scaffold(
             body: Row(
               children: [
@@ -285,9 +286,9 @@ class _Sidebar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Text(
-                  'Vault The Spire',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                Text(
+                  getAppTitle(),
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                 ),
               ],
             ),
@@ -298,48 +299,22 @@ class _Sidebar extends StatelessWidget {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Vault The Spire',
+                getAppSubtitle(),
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           ...items.map((item) {
             final isActive = currentPath == item.route;
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: isActive ? cs.primaryContainer : Colors.transparent,
-                  border: Border.all(
-                    color: isActive ? cs.primary.withValues(alpha: 0.2) : Colors.transparent,
-                  ),
-                ),
-                child: ListTile(
-                  leading: Icon(
-                    isActive ? item.activeIcon : item.icon,
-                    color: isActive ? cs.primary : cs.onSurfaceVariant,
-                  ),
-                  title: Text(
-                    item.label,
-                    style: TextStyle(
-                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                      color: isActive ? cs.primary : cs.onSurface,
-                    ),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  onTap: () => context.go(item.route),
-                ),
-              ),
+            return _SidebarNavTile(
+              item: item,
+              isActive: isActive,
+              onTap: () => context.go(item.route),
             );
           }),
           const Spacer(),
@@ -370,6 +345,76 @@ class _Sidebar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SidebarNavTile extends StatefulWidget {
+  final _NavItem item;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _SidebarNavTile({
+    required this.item,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  State<_SidebarNavTile> createState() => _SidebarNavTileState();
+}
+
+class _SidebarNavTileState extends State<_SidebarNavTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final highlighted = widget.isActive || _hovered;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        cursor: SystemMouseCursors.click,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: widget.isActive
+                ? cs.primaryContainer
+                : (_hovered ? cs.surfaceContainerHigh : Colors.transparent),
+            border: Border.all(
+              color: widget.isActive
+                  ? cs.primary.withValues(alpha: 0.22)
+                  : (_hovered
+                        ? cs.outlineVariant.withValues(alpha: 0.28)
+                        : Colors.transparent),
+            ),
+          ),
+          child: ListTile(
+            dense: true,
+            minTileHeight: 46,
+            leading: Icon(
+              widget.isActive ? widget.item.activeIcon : widget.item.icon,
+              color: highlighted ? cs.primary : cs.onSurfaceVariant,
+            ),
+            title: Text(
+              widget.item.label,
+              style: TextStyle(
+                fontWeight: widget.isActive ? FontWeight.w700 : FontWeight.w600,
+                color: highlighted ? cs.primary : cs.onSurface,
+              ),
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            onTap: widget.onTap,
+          ),
+        ),
       ),
     );
   }

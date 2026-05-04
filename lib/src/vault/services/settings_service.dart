@@ -89,42 +89,44 @@ class SettingsService {
   String lastDiagnosticsExport = '';
 
   Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    displayName = prefs.getString(_kDisplayName) ?? 'Anonymous';
-    useSystemTray = prefs.getBool(_kUseSystemTray) ?? true;
-    minimizeToTrayOnClose = prefs.getBool(_kMinimizeToTrayOnClose) ?? true;
-    launchOnStartup = prefs.getBool(_kLaunchOnStartup) ?? false;
-    soundEffectsEnabled = prefs.getBool(_kSoundEffectsEnabled) ?? true;
-    usePersistentSidebar = prefs.getBool(_kUsePersistentSidebar) ?? false;
-    persistentSidebarListenable.value = usePersistentSidebar;
-    downloadDestination = prefs.getString(_kDownloadDestination) ?? '';
-    windowX = prefs.getDouble(_kWindowX) ?? 0.0;
-    windowY = prefs.getDouble(_kWindowY) ?? 0.0;
-    windowW = prefs.getDouble(_kWindowW) ?? 0.0;
-    windowH = prefs.getDouble(_kWindowH) ?? 0.0;
-    torrentSortMode = prefs.getInt(_kTorrentSortMode) ?? 0;
-    browserHomeUrl = prefs.getString(_kBrowserHomeUrl) ?? browserHomeUrl;
-    browserFavorites =
-        prefs.getStringList(_kBrowserFavorites) ?? browserFavorites;
-    browserLastUrl = prefs.getString(_kBrowserLastUrl) ?? '';
-    browserHistory = prefs.getStringList(_kBrowserHistory) ?? <String>[];
-    aiOllamaUrl = prefs.getString(_kAiOllamaUrl) ?? _defaultOllamaUrl();
-    aiDefaultModel = prefs.getString(_kAiDefaultModel) ?? kDefaultAiModel;
-    autoStartOnAdd = prefs.getBool(_kAutoStartOnAdd) ?? true;
-    useDht = prefs.getBool(_kUseDht) ?? true;
-    usePex = prefs.getBool(_kUsePex) ?? true;
-    useLpd = prefs.getBool(_kUseLpd) ?? false;
-    listenPort = prefs.getInt(_kListenPort) ?? 6881;
-    maxConnectionsGlobal = prefs.getInt(_kMaxConnectionsGlobal) ?? 300;
-    maxConnectionsPerTorrent = prefs.getInt(_kMaxConnectionsPerTorrent) ?? 80;
-    maxActiveDownloads = prefs.getInt(_kMaxActiveDownloads) ?? 3;
-    downloadRateLimitKib = prefs.getInt(_kDownloadRateLimitKib) ?? 0;
-    uploadRateLimitKib = prefs.getInt(_kUploadRateLimitKib) ?? 0;
-    enableAiCopilot = prefs.getBool(_kEnableAiCopilot) ?? true;
-    enableSmartSuggestions = prefs.getBool(_kEnableSmartSuggestions) ?? true;
-    compactTorrentRows = prefs.getBool(_kCompactTorrentRows) ?? false;
-    confirmOnExit = prefs.getBool(_kConfirmOnExit) ?? true;
-    lastDiagnosticsExport = prefs.getString(_kLastDiagnosticsExport) ?? '';
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      displayName = prefs.getString(_kDisplayName) ?? 'Anonymous';
+      useSystemTray = prefs.getBool(_kUseSystemTray) ?? true;
+      minimizeToTrayOnClose = prefs.getBool(_kMinimizeToTrayOnClose) ?? true;
+      launchOnStartup = prefs.getBool(_kLaunchOnStartup) ?? false;
+      soundEffectsEnabled = prefs.getBool(_kSoundEffectsEnabled) ?? true;
+      usePersistentSidebar = prefs.getBool(_kUsePersistentSidebar) ?? false;
+      persistentSidebarListenable.value = usePersistentSidebar;
+      downloadDestination = prefs.getString(_kDownloadDestination) ?? '';
+      windowX = prefs.getDouble(_kWindowX) ?? 0.0;
+      windowY = prefs.getDouble(_kWindowY) ?? 0.0;
+      windowW = prefs.getDouble(_kWindowW) ?? 0.0;
+      windowH = prefs.getDouble(_kWindowH) ?? 0.0;
+      torrentSortMode = prefs.getInt(_kTorrentSortMode) ?? 0;
+      browserHomeUrl = prefs.getString(_kBrowserHomeUrl) ?? browserHomeUrl;
+      browserFavorites =
+          prefs.getStringList(_kBrowserFavorites) ?? browserFavorites;
+      browserLastUrl = prefs.getString(_kBrowserLastUrl) ?? '';
+      browserHistory = prefs.getStringList(_kBrowserHistory) ?? <String>[];
+      aiOllamaUrl = prefs.getString(_kAiOllamaUrl) ?? _defaultOllamaUrl();
+      aiDefaultModel = prefs.getString(_kAiDefaultModel) ?? kDefaultAiModel;
+      autoStartOnAdd = prefs.getBool(_kAutoStartOnAdd) ?? true;
+      useDht = prefs.getBool(_kUseDht) ?? true;
+      usePex = prefs.getBool(_kUsePex) ?? true;
+      useLpd = prefs.getBool(_kUseLpd) ?? false;
+      listenPort = prefs.getInt(_kListenPort) ?? 6881;
+      maxConnectionsGlobal = prefs.getInt(_kMaxConnectionsGlobal) ?? 300;
+      maxConnectionsPerTorrent = prefs.getInt(_kMaxConnectionsPerTorrent) ?? 80;
+      maxActiveDownloads = prefs.getInt(_kMaxActiveDownloads) ?? 3;
+      downloadRateLimitKib = prefs.getInt(_kDownloadRateLimitKib) ?? 0;
+      uploadRateLimitKib = prefs.getInt(_kUploadRateLimitKib) ?? 0;
+      enableAiCopilot = prefs.getBool(_kEnableAiCopilot) ?? true;
+      enableSmartSuggestions = prefs.getBool(_kEnableSmartSuggestions) ?? true;
+      compactTorrentRows = prefs.getBool(_kCompactTorrentRows) ?? false;
+      confirmOnExit = prefs.getBool(_kConfirmOnExit) ?? true;
+      lastDiagnosticsExport = prefs.getString(_kLastDiagnosticsExport) ?? '';
+    } catch (_) {}
   }
 
   Future<void> setUseSystemTray(bool value) async {

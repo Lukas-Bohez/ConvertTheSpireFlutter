@@ -701,11 +701,25 @@ class _BrowserScreenState extends State<BrowserScreen>
     final canBack = Platform.isWindows ? _windowsCanGoBack : _canGoBack;
     final canFwd = Platform.isWindows ? _windowsCanGoForward : _canGoForward;
     final isActivelyLoading = Platform.isWindows ? _windowsIsLoading : _isLoading;
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 400;
+    final wide = width > 840;
+    final buttonSize = wide ? 56.0 : (compact ? 34.0 : 48.0);
+    final iconButtonTheme = IconButtonThemeData(
+      style: IconButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+        padding: EdgeInsets.zero,
+        minimumSize: Size(buttonSize, buttonSize),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
+      padding: EdgeInsets.fromLTRB(8, compact ? 2 : 4, 8, compact ? 4 : 6),
+      child: IconButtonTheme(
+        data: iconButtonTheme,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
           final narrow = constraints.maxWidth < 720;
 
           final navButtons = [
@@ -889,7 +903,8 @@ class _BrowserScreenState extends State<BrowserScreen>
               navButtons[6],
             ],
           );
-        },
+          },
+        ),
       ),
     );
   }
@@ -1065,6 +1080,7 @@ class _BrowserScreenState extends State<BrowserScreen>
                   spacing: isMobile ? 6 : 10,
                   runSpacing: isMobile ? 6 : 10,
                   children: [
+                    'https://quizthespire.com/',
                     'https://www.startpage.com/',
                     'https://duckduckgo.com/',
                     'https://news.ycombinator.com/',
@@ -1190,6 +1206,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
     return Scaffold(
       body: SafeArea(
+        top: false,
         bottom: false,
         child: column,
       ),

@@ -13,6 +13,9 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart'
+  as vault_bencode;
+import 'package:convert_the_spire_reborn/src/vault/bittorrent/torrent_file.dart';
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/magnet_link.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/notification_service.dart';
@@ -127,12 +130,12 @@ class TorrentEngineService {
   final Map<String, Map<String, DateTime>> _trackerBackoffUntilByTorrent = {};
   final Set<String> _refreshInFlight = <String>{};
   final Set<String> _forceRedownloadInFlight = <String>{};
+  bool _runtimePubspecEnsured = false;
   DateTime _lastPollingRestartAt = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastPeerLogTime = DateTime.fromMillisecondsSinceEpoch(0);
   int _peerEventsSinceLastLog = 0;
   DateTime _lastDhtLogTime = DateTime.fromMillisecondsSinceEpoch(0);
   int _dhtNodesSinceLastLog = 0;
-  bool _defaultPortsBlocked = false;
 
   int get currentDhtNodeCount {
     int nodes = 0;
@@ -171,7 +174,7 @@ class TorrentEngineService {
   Future<void> _detectRestrictedNetwork() async {
     // Port probe was producing false positives on some networks.
     // Peers are found via DHT/tracker, so do not force restrictions.
-    _defaultPortsBlocked = false;
+    return;
   }
 
   void _log(String torrentId, String message) {
@@ -182,10 +185,19 @@ class TorrentEngineService {
     }
   }
 
+  void _debugLog(String message) {
+    if (kDebugMode) {
+      debugPrint(message);
+    }
+  }
+
   void _logPeerEventThrottled(String label, dt.TorrentTask task) {
     _peerEventsSinceLastLog++;
     final now = DateTime.now();
     if (now.difference(_lastPeerLogTime).inSeconds >= 10) {
+      _debugLog(
+        '[TorrentPeer] $label: $_peerEventsSinceLastLog event(s) in last 10s',
+      );
       _peerEventsSinceLastLog = 0;
       _lastPeerLogTime = now;
     }
@@ -195,6 +207,7 @@ class TorrentEngineService {
     _dhtNodesSinceLastLog++;
     final now = DateTime.now();
     if (now.difference(_lastDhtLogTime).inSeconds >= 10) {
+      _debugLog('[TorrentDht] $_dhtNodesSinceLastLog node event(s) in last 10s');
       _dhtNodesSinceLastLog = 0;
       _lastDhtLogTime = now;
     }
@@ -255,6 +268,7 @@ class TorrentEngineService {
   }
 
   Future<void> _configureTask(dt.TorrentTask task) async {
+    await _ensureRuntimePubspecForDtorrent();
     // dtorrent_task_v2 enables DHT/tracker/PEX through internal defaults.
     // CLI-level calls are not available in this API surface.
     await _mapPorts(task);
@@ -263,10 +277,31 @@ class TorrentEngineService {
     }
   }
 
+  Future<void> _ensureRuntimePubspecForDtorrent() async {
+    if (_runtimePubspecEnsured) return;
+    _runtimePubspecEnsured = true;
+
+    try {
+      final cwd = Directory.current;
+      final pubspecFile = File(p.join(cwd.path, 'pubspec.yaml'));
+      if (await pubspecFile.exists()) {
+        return;
+      }
+
+      const fallback = 'name: convert_the_spire_reborn\nversion: 0.0.0\n';
+      await pubspecFile.writeAsString(fallback, flush: true);
+      debugPrint(
+        'Created runtime pubspec.yaml for dtorrent_task_v2 at ${pubspecFile.path}',
+      );
+    } catch (e) {
+      debugPrint('Failed to create runtime pubspec.yaml for dtorrent_task_v2: $e');
+    }
+  }
+
   Future<void> _mapPorts(dt.TorrentTask task) async {
     // This package version does not expose setPort/UPnP/NAT-PMP mutators.
     // Allow the task to bind ports internally instead of spamming NoSuchMethod.
-    _defaultPortsBlocked = true;
+    return;
   }
 
   void _addDhtBootstrapNodes(dt.TorrentTask task) {
@@ -367,7 +402,7 @@ class TorrentEngineService {
             force: force,
           );
           if (trackers.isEmpty) {
-            debugPrint('[Trackers] No eligible trackers found for $torrentId');
+            _debugLog('[Trackers] No eligible trackers found for $torrentId');
             return;
           }
 
@@ -384,7 +419,7 @@ class TorrentEngineService {
               torrentId,
               'WARNING: Could not extract announce info-hash for $torrentId. Info-hash mismatch may prevent tracker peers from being returned. Try redownloading to fix the stored torrent ID.',
             );
-            debugPrint(
+            _debugLog(
               '[Trackers] Could not extract infoHash for $torrentId (runtimeType=$runtimeType)',
             );
             return;
@@ -409,7 +444,7 @@ class TorrentEngineService {
             ),
           );
         } catch (e) {
-          debugPrint('[Trackers] _announceTrackers error: $e');
+          _debugLog('[Trackers] _announceTrackers error: $e');
         }
       }),
     );
@@ -434,7 +469,7 @@ class TorrentEngineService {
       } catch (e) {
         final msg = 'Announce URL attempt $attempt failed: $url $e';
         if (effectiveTorrentId.isNotEmpty) _log(effectiveTorrentId, msg);
-        debugPrint('[Trackers] $msg');
+        _debugLog('[Trackers] $msg');
         if (attempt < retries) {
           await Future.delayed(delay);
         }
@@ -443,7 +478,7 @@ class TorrentEngineService {
     _markTrackerAnnounceFailure(effectiveTorrentId, url);
     final finalMsg = 'All announce attempts failed for $url';
     if (effectiveTorrentId.isNotEmpty) _log(effectiveTorrentId, finalMsg);
-    debugPrint('[Trackers] $finalMsg');
+    _debugLog('[Trackers] $finalMsg');
     throw StateError(finalMsg);
   }
 
@@ -506,10 +541,10 @@ class TorrentEngineService {
     if (task != null) {
       try {
         await (task as dynamic).startAnnounceUrl(uri, infoHash);
-        debugPrint('Announced tracker via dtorrent_task_v2 for $uri');
+        _debugLog('Announced tracker via dtorrent_task_v2 for $uri');
       } catch (e, st) {
-        debugPrint('dtorrent_task_v2 announceTrackerUri failed for $uri: $e');
-        debugPrint(st.toString());
+        _debugLog('dtorrent_task_v2 announceTrackerUri failed for $uri: $e');
+        _debugLog(st.toString());
         rethrow;
       }
     } else {
@@ -581,23 +616,8 @@ class TorrentEngineService {
     return buf.toString();
   }
 
-  bool _looksLikeIPv4(String address) {
-    final parts = address.split('.');
-    if (parts.length != 4) return false;
-    for (final p in parts) {
-      final value = int.tryParse(p);
-      if (value == null || value < 0 || value > 255) return false;
-    }
-    return true;
-  }
-
-  List<int>? _ipv4ToBytes(String address) {
-    if (!_looksLikeIPv4(address)) return null;
-    return address.split('.').map((e) => int.parse(e)).toList();
-  }
-
   Future<void> _refreshConnection(String torrentId, dt.TorrentTask task) async {
-    debugPrint(
+    _debugLog(
       'Refreshing connection for $torrentId: reannounce trackers and DHT bootstrap',
     );
     _log(torrentId, 'Triggered force refresh.');
@@ -613,7 +633,7 @@ class TorrentEngineService {
       } catch (_) {
         runtimeType = 'unknown';
       }
-      debugPrint(
+      _debugLog(
         '[HealthCheck] Unsupported infoHash type for $torrentId: $runtimeType',
       );
     }
@@ -662,8 +682,8 @@ class TorrentEngineService {
         }
       }
     } catch (e, st) {
-      debugPrint('Re-bootstrap DHT nodes failed: $e');
-      debugPrint(st.toString());
+      _debugLog('Re-bootstrap DHT nodes failed: $e');
+      _debugLog(st.toString());
     }
   }
 
@@ -972,6 +992,36 @@ class TorrentEngineService {
   final _statusController = StreamController<TorrentEngineStatus>.broadcast();
   Stream<TorrentEngineStatus> get statusStream => _statusController.stream;
 
+  void dispose() {
+    for (final timer in _pollTimers.values) {
+      timer.cancel();
+    }
+    for (final timer in _scrapeTimers.values) {
+      timer.cancel();
+    }
+    for (final timer in _healthCheckTimers.values) {
+      timer.cancel();
+    }
+    for (final timer in _fastHealthCheckTimers.values) {
+      timer.cancel();
+    }
+    for (final timer in _discoveryTimers.values) {
+      timer.cancel();
+    }
+    for (final timer in _progressTimers.values) {
+      timer.cancel();
+    }
+    _pollTimers.clear();
+    _scrapeTimers.clear();
+    _healthCheckTimers.clear();
+    _fastHealthCheckTimers.clear();
+    _discoveryTimers.clear();
+    _progressTimers.clear();
+    if (!_statusController.isClosed) {
+      unawaited(_statusController.close());
+    }
+  }
+
   bool isRunning(String torrentId) => _tasks.containsKey(torrentId);
 
   Future<void> cacheTorrentSource(String torrentId, List<int> torrentBytes) async {
@@ -999,20 +1049,27 @@ class TorrentEngineService {
     }
 
     try {
-      final decoded = decode(raw);
+      final decoded = _decodeTorrentBencode(raw);
       if (decoded is! Map) return null;
 
-      final hasInfoKey = decoded.containsKey('info');
+      final hasInfoKey = decoded.keys.any((key) {
+        if (key == 'info') return true;
+        if (key is Uint8List) {
+          try {
+            return utf8.decode(key, allowMalformed: true) == 'info';
+          } catch (_) {
+            return false;
+          }
+        }
+        return false;
+      });
       final normalizedMap = hasInfoKey
           ? decoded
           : <String, dynamic>{
               'announce': _fallbackTrackers.first,
               'info': decoded,
             };
-      final encoded = encode(normalizedMap);
-      final normalizedBytes = encoded is Uint8List
-          ? encoded
-          : Uint8List.fromList(List<int>.from(encoded as List));
+      final normalizedBytes = vault_bencode.bencode(normalizedMap);
 
       if (_isValidTorrentSourceBytes(normalizedBytes)) {
         return normalizedBytes;
@@ -1024,7 +1081,20 @@ class TorrentEngineService {
     return null;
   }
 
+  dynamic _decodeTorrentBencode(Uint8List bytes) {
+    try {
+      return vault_bencode.bdecode(bytes);
+    } catch (_) {
+      return decode(bytes);
+    }
+  }
+
   bool _isValidTorrentSourceBytes(Uint8List bytes) {
+    try {
+      TorrentFileParser.parse(bytes);
+      return true;
+    } catch (_) {}
+
     try {
       dt.TorrentParser.parseBytes(bytes);
       return true;
@@ -1175,19 +1245,37 @@ class TorrentEngineService {
     final torrent = await TorrentService.instance.getTorrentById(torrentId);
     if (torrent == null) throw StateError('Torrent not found: $torrentId');
 
+    final sourceTorrentPath = _sourceTorrentPath(torrent);
     final hasTorrentFileSource =
-        torrent.type == 'torrent_file' && _isTorrentFilePath(torrent.filePath);
+        torrent.type == 'torrent_file' && sourceTorrentPath != null;
     final managedSourceFile = await _tryGetManagedTorrentSource(torrent.id);
+    final hasMagnetSource = torrent.magnetLink?.trim().isNotEmpty == true;
 
     if (hasTorrentFileSource) {
-      await _startFromFile(torrent, destinationPath: destinationPath);
-    } else if (managedSourceFile != null) {
       try {
-        final synthetic = torrent.copyWith(
-          type: 'torrent_file',
-          filePath: managedSourceFile.path,
+        await _startFromFile(
+          torrent,
+          sourceTorrentPath: sourceTorrentPath,
+          destinationPath: destinationPath,
         );
-        await _startFromFile(synthetic, destinationPath: destinationPath);
+        return;
+      } catch (e) {
+        final missingSource = _isMissingTorrentSourceError(e);
+        _log(
+          torrent.id,
+          'Primary torrent file source failed${missingSource ? ' (missing file)' : ''}: $e',
+        );
+      }
+    }
+
+    if (managedSourceFile != null) {
+      try {
+        await _startFromFile(
+          torrent,
+          sourceTorrentPath: managedSourceFile.path,
+          destinationPath: destinationPath,
+        );
+        return;
       } catch (e) {
         // Managed source can be stale/corrupt after app upgrades.
         // Delete it and fall back to magnet discovery instead of hard-failing resume.
@@ -1195,17 +1283,15 @@ class TorrentEngineService {
           'Managed torrent source failed for $torrentId, falling back to magnet: $e',
         );
         await removeCachedTorrentSource(torrent.id);
-        if (torrent.magnetLink != null && torrent.magnetLink!.trim().isNotEmpty) {
-          await _startFromMagnet(torrent, destinationPath: destinationPath);
-        } else {
-          rethrow;
-        }
       }
-    } else if (torrent.magnetLink != null) {
-      await _startFromMagnet(torrent, destinationPath: destinationPath);
-    } else {
-      throw StateError('Torrent has no source');
     }
+
+    if (hasMagnetSource) {
+      await _startFromMagnet(torrent, destinationPath: destinationPath);
+      return;
+    }
+
+    throw StateError('Torrent has no usable source');
   }
 
   /// Attach DHT event listeners to a task BEFORE task.start() is called
@@ -1214,7 +1300,8 @@ class TorrentEngineService {
     final dht = task.dht;
     if (dht == null) return;
 
-    dht.createListener()?..on<NewPeerEvent>((event) {
+    final dhtListener = dht.createListener();
+    dhtListener.on<NewPeerEvent>((event) {
       _logDhtThrottled(task);
       try {
         task.addPeer(event.address, dt.PeerSource.dht, type: dt.PeerType.TCP);
@@ -1233,7 +1320,9 @@ class TorrentEngineService {
       }
     });
 
-    dht.krpc?.createListener()?..on<AnnouncePeerResponseEvent>((event) {
+    final krpc = dht.krpc;
+    if (krpc == null) return;
+    krpc.createListener().on<AnnouncePeerResponseEvent>((event) {
       _logDhtThrottled(task);
 
       // Try adding direct announce peer from event.address:event.port
@@ -1286,24 +1375,36 @@ class TorrentEngineService {
 
   Future<void> _startFromFile(
     TorrentModel torrent, {
+    required String sourceTorrentPath,
     String? destinationPath,
   }) async {
-    final sourcePathIsTorrentFile = _isTorrentFilePath(torrent.filePath);
+    final sourcePath = sourceTorrentPath.trim();
+    final sourceFile = File(sourcePath);
+    if (!await sourceFile.exists()) {
+      throw FileSystemException('Torrent source file does not exist', sourcePath);
+    }
 
-    if (_isTorrentFilePath(torrent.filePath)) {
+    if (_isTorrentFilePath(sourcePath)) {
       try {
-        final sourcePath = torrent.filePath!.trim();
-        final sourceFile = File(sourcePath);
-        if (await sourceFile.exists()) {
-          final bytes = await sourceFile.readAsBytes();
-          await cacheTorrentSource(torrent.id, bytes);
-        }
+        final bytes = await sourceFile.readAsBytes();
+        await cacheTorrentSource(torrent.id, bytes);
       } catch (e) {
         debugPrint('Managed torrent source cache write failed for ${torrent.id}: $e');
       }
     }
 
-    var dtModel = await dt.TorrentModel.parse(torrent.filePath!);
+    dt.TorrentModel dtModel;
+    try {
+      dtModel = await dt.TorrentModel.parse(sourcePath);
+    } catch (e) {
+      final bytes = await sourceFile.readAsBytes();
+      final decoded = _decodeTorrentBencode(bytes);
+      dtModel = await _parseTorrentModelFromRawBencode(decoded);
+      _log(
+        torrent.id,
+        'Fell back to in-app torrent parser for source file: $e',
+      );
+    }
 
     final expectedInfoHash = _hexToBytes(torrent.id);
     if (expectedInfoHash != null && expectedInfoHash.length == 20) {
@@ -1340,12 +1441,10 @@ class TorrentEngineService {
     final totalBytes = dtModel.files.fold<int>(0, (s, f) => s + f.length);
     if (totalBytes > 0 && (torrent.totalSize ?? 0) != totalBytes) {
       await TorrentService.instance.updateTorrent(
-        torrent.copyWith(totalSize: totalBytes, filePath: saveDir),
+        torrent.copyWith(totalSize: totalBytes),
       );
     } else {
-      await TorrentService.instance.updateTorrent(
-        torrent.copyWith(filePath: saveDir),
-      );
+      await TorrentService.instance.updateTorrent(torrent);
     }
 
     // Aggressive peer connectivity: enable DHT, PEX, sequential video streaming,
@@ -1540,7 +1639,7 @@ class TorrentEngineService {
       if (cachedMetadata != null) {
         _log(torrent.id, 'Using cached metadata from previous download');
         downloadedMetadataBytes = Uint8List.fromList(cachedMetadata);
-        final msg = decode(cachedMetadata);
+        final msg = _decodeTorrentBencode(downloadedMetadataBytes);
         dtModel = await _parseTorrentModelFromRawBencode(msg);
       }
     } catch (e) {
@@ -1560,7 +1659,7 @@ class TorrentEngineService {
               try {
                 final Uint8List rawData = Uint8List.fromList(event.data);
                 downloadedMetadataBytes = rawData;
-                final msg = decode(rawData);
+                final msg = _decodeTorrentBencode(rawData);
 
                 final model = await _parseTorrentModelFromRawBencode(msg);
                 completer.complete(model);
@@ -1658,12 +1757,11 @@ class TorrentEngineService {
         torrent.copyWith(
           name: updatedName,
           totalSize: totalBytes,
-          filePath: saveDir,
         ),
       );
     } else {
       await TorrentService.instance.updateTorrent(
-        torrent.copyWith(name: updatedName, filePath: saveDir),
+        torrent.copyWith(name: updatedName),
       );
     }
 
@@ -1831,24 +1929,36 @@ class TorrentEngineService {
   }
 
   Future<dt.TorrentModel> _parseTorrentModelFromRawBencode(
-    dynamic infoDict,
+    dynamic rawMetadata,
   ) async {
-    if (infoDict is! Map) {
-      throw FormatException('Invalid metadata: expected info dictionary');
+    if (rawMetadata is! Map) {
+      throw FormatException('Invalid metadata: expected bencoded dictionary');
     }
 
-    // Normalize all map and list values; keep binary buffers in place.
-    final normalizedInfo = _normalizeBencodeMap(infoDict);
-    if (normalizedInfo is! Map<String, dynamic>) {
+    final normalizedRoot = _normalizeBencodeMap(rawMetadata);
+    if (normalizedRoot is! Map<String, dynamic>) {
       throw FormatException('Invalid metadata after normalization');
     }
 
-    _ensureInfoNameIsString(normalizedInfo);
-    _ensureAnnounceFieldsAreString(normalizedInfo);
-    _ensureFilePathsAreString(normalizedInfo);
+    final dynamic nestedInfo = normalizedRoot['info'];
+    final infoMap = nestedInfo is Map
+        ? Map<String, dynamic>.from(_normalizeBencodeMap(nestedInfo) as Map)
+        : Map<String, dynamic>.from(normalizedRoot);
 
-    _normalizePiecesField(normalizedInfo);
-    final torrentMap = <String, dynamic>{'info': normalizedInfo};
+    if (infoMap.isEmpty) {
+      throw FormatException('Invalid torrent metadata: info dictionary is empty');
+    }
+
+    _ensureInfoNameIsString(infoMap);
+    _ensureFilePathsAreString(infoMap);
+    _normalizePiecesField(infoMap);
+
+    final torrentMap = <String, dynamic>{};
+    if (nestedInfo is Map) {
+      torrentMap.addAll(normalizedRoot);
+    }
+    torrentMap['info'] = infoMap;
+    _ensureAnnounceFieldsAreString(torrentMap);
 
     return dt.TorrentParser.parseFromMap(torrentMap);
   }
@@ -2013,7 +2123,6 @@ class TorrentEngineService {
   bool _hasAllPiecesComplete(dt.TorrentTask task) {
     try {
       final dynamic t = task;
-      final fileComplete = (t.fileManager?.isAllComplete as bool?) ?? false;
       final piecesMap = t.pieceManager?.pieces as Map?;
       if (piecesMap == null || piecesMap.isEmpty) {
         // Never trust an empty piece map as complete; this can happen with
@@ -2059,24 +2168,6 @@ class TorrentEngineService {
     }
   }
 
-  Future<bool> _verifyCompletionIntegrity(
-    String torrentId,
-    dt.TorrentTask task,
-  ) async {
-    await _forceStateRecovery(torrentId, task);
-    final complete = _hasAllPiecesComplete(task);
-    if (!complete) {
-      _log(
-        torrentId,
-        'Completion check failed after recovery: missing/corrupt pieces detected. Resuming download.',
-      );
-      _requestMissingPieces(task);
-      _ensureTaskRunningMode(torrentId, task);
-      return false;
-    }
-    return true;
-  }
-
   void _wireEvents(String torrentId, dt.TorrentTask task) {
     task.createListener()
       ..on<dt.StateFileUpdated>((_) {
@@ -2086,7 +2177,7 @@ class TorrentEngineService {
       ..on<dt.TaskCompleted>((_) async {
         _emitStats(torrentId, task);
         try {
-          final dynamic fm = (task as dynamic).fileManager;
+          final dynamic fm = task.fileManager;
           if (fm != null) {
             final files = fm.files as List? ?? [];
             for (final file in files) {
@@ -2144,8 +2235,7 @@ class TorrentEngineService {
 
       // Run full disk validation. If pieces are missing/corrupt, the recovery path
       // will push the torrent back to downloading and request missing pieces.
-      final fileManagerComplete =
-          (task.fileManager?.isAllComplete as bool?) ?? false;
+      final fileManagerComplete = task.fileManager?.isAllComplete ?? false;
       _log(
         torrentId,
         'Deferred completion check: fileManager.isAllComplete=$fileManagerComplete; running disk validation',
@@ -2462,20 +2552,6 @@ class TorrentEngineService {
     ]).catchError((_) => ProcessResult(0, 1, '', ''));
   }
 
-  /// Scan a directory and hide any .bt.state files found there.
-  Future<void> _hideStateFilesInDir(String dirPath) async {
-    if (!Platform.isWindows) return;
-    try {
-      final dir = Directory(dirPath);
-      if (!await dir.exists()) return;
-      await for (final entity in dir.list(recursive: false)) {
-        if (entity is File && entity.path.toLowerCase().endsWith('.bt.state')) {
-          markFileHiddenOnWindows(entity.path);
-        }
-      }
-    } catch (_) {}
-  }
-
   Future<void> _forceStateRecovery(
     String torrentId,
     dt.TorrentTask task,
@@ -2691,37 +2767,6 @@ class TorrentEngineService {
     }
   }
 
-  Future<void> _deleteBtStateFiles(
-    String directoryPath,
-    String torrentId,
-  ) async {
-    final dir = Directory(directoryPath);
-    if (!await dir.exists()) return;
-    final hash = torrentId.trim().toLowerCase();
-    if (hash.isEmpty) return;
-
-    final candidates = <FileSystemEntity>[];
-    await for (final entity in dir.list(recursive: false, followLinks: false)) {
-      if (entity is! File) continue;
-      final name = p.basename(entity.path).toLowerCase();
-      final isState = name == '$hash.bt.state';
-      final isBackup =
-          name.startsWith('$hash.bt.state.backup.') ||
-          name.startsWith('$hash.bt.state.bak');
-      if (isState || isBackup) {
-        candidates.add(entity);
-      }
-    }
-
-    for (final entity in candidates) {
-      try {
-        await entity.delete();
-      } catch (_) {
-        // Best-effort cleanup only.
-      }
-    }
-  }
-
   Future<void> _hideBtStateFilesOnWindows(
     String directoryPath, {
     String? torrentId,
@@ -2762,43 +2807,11 @@ class TorrentEngineService {
         .trim();
   }
 
-  Future<String> _createIsolatedRedownloadDir(
-    String baseDir,
-    String torrentName,
-  ) async {
-    final safeName = _sanitizePathSegment(torrentName);
-    final suffix = DateTime.now().millisecondsSinceEpoch;
-    final folderName = safeName.isEmpty
-        ? 'redownload_$suffix'
-        : '${safeName}_redownload_$suffix';
-    final dir = Directory(p.join(baseDir, folderName));
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dir.path;
-  }
-
   bool _isPathInside(String candidatePath, String baseDir) {
     final base = p.normalize(p.absolute(baseDir));
     final candidate = p.normalize(p.absolute(candidatePath));
     return candidate == base ||
         candidate.startsWith('$base${Platform.pathSeparator}');
-  }
-
-  Future<bool> _deletePathIfExists(String targetPath) async {
-    final type = await FileSystemEntity.type(targetPath, followLinks: false);
-    if (type == FileSystemEntityType.notFound) return false;
-    try {
-      if (type == FileSystemEntityType.directory) {
-        await Directory(targetPath).delete(recursive: true);
-      } else {
-        await File(targetPath).delete();
-      }
-      return true;
-    } catch (e) {
-      debugPrint('forceRedownload: delete failed for $targetPath: $e');
-      return false;
-    }
   }
 
   bool _isFileInUseError(Object error) {
@@ -2850,7 +2863,9 @@ class TorrentEngineService {
         cacheKey,
       );
       if (cachedMetadata == null) return null;
-      final decoded = decode(cachedMetadata);
+      final decoded = _decodeTorrentBencode(
+        Uint8List.fromList(cachedMetadata),
+      );
       return _parseTorrentModelFromRawBencode(decoded);
     } catch (e) {
       debugPrint('forceRedownload: metadata cache unavailable: $e');
@@ -2866,7 +2881,13 @@ class TorrentEngineService {
       if (torrent.type != 'torrent_file' || !_isTorrentFilePath(path)) {
         return null;
       }
-      return dt.TorrentModel.parse(path);
+      try {
+        return dt.TorrentModel.parse(path);
+      } catch (_) {
+        final bytes = await File(path).readAsBytes();
+        final decoded = _decodeTorrentBencode(bytes);
+        return _parseTorrentModelFromRawBencode(decoded);
+      }
     } catch (e) {
       debugPrint('forceRedownload: torrent file parse failed: $e');
       return null;
@@ -3050,7 +3071,6 @@ class TorrentEngineService {
           completedAt: null,
           seeders: 0,
           leechers: 0,
-          filePath: saveDir,
         ),
       );
       TorrentService.instance.resetProgressTracking(torrentId);
@@ -3179,6 +3199,34 @@ class TorrentEngineService {
     return normalized.isNotEmpty && normalized.endsWith('.torrent');
   }
 
+  bool _isMissingTorrentSourceError(Object error) {
+    if (error is FileSystemException) {
+      final message = error.message.toLowerCase();
+      if (message.contains('does not exist') ||
+          message.contains('cannot open file')) {
+        return true;
+      }
+    }
+    if (error is PathNotFoundException) {
+      return true;
+    }
+    final text = error.toString().toLowerCase();
+    return text.contains('pathnotfoundexception') ||
+        text.contains('cannot open file');
+  }
+
+  String? _sourceTorrentPath(TorrentModel torrent) {
+    final explicit = torrent.vaultLink?.trim();
+    if (_isTorrentFilePath(explicit)) {
+      return explicit;
+    }
+    final legacy = torrent.filePath?.trim();
+    if (_isTorrentFilePath(legacy)) {
+      return legacy;
+    }
+    return null;
+  }
+
   void _forceAllFilesNormalPriority(dt.TorrentTask task) {
     try {
       final files = task.metaInfo.files;
@@ -3195,7 +3243,17 @@ class TorrentEngineService {
   String? _storedDownloadDirForResume(TorrentModel torrent) {
     final path = torrent.filePath?.trim();
     if (path == null || path.isEmpty) return null;
-    if (_isTorrentFilePath(path)) return null;
+    if (_isTorrentFilePath(path)) {
+      final configured = SettingsService.instance.downloadDestination.trim();
+      if (configured.isNotEmpty) {
+        return configured;
+      }
+      try {
+        return File(path).parent.path;
+      } catch (_) {
+        return null;
+      }
+    }
     return path;
   }
 
@@ -3352,23 +3410,6 @@ class TorrentEngineService {
     for (final id in ids) {
       await stopTorrent(id);
     }
-  }
-
-  Future<String> _defaultDownloadDir() async {
-    final configured = SettingsService.instance.downloadDestination.trim();
-    if (configured.isNotEmpty) {
-      final configuredDir = Directory(configured);
-      if (!await configuredDir.exists()) {
-        await configuredDir.create(recursive: true);
-      }
-      return configuredDir.path;
-    }
-    final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory(
-      '${docs.path}${Platform.pathSeparator}TorrentSpireAI',
-    );
-    if (!await dir.exists()) await dir.create(recursive: true);
-    return dir.path;
   }
 
   Future<File> _managedTorrentSourceFile(String torrentId) async {

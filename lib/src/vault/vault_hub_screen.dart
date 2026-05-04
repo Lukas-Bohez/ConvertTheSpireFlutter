@@ -24,12 +24,22 @@ class _VaultHubScreenState extends State<VaultHubScreen>
 
   int _index = 0;
 
+  void _openSettingsTab() {
+    final entries = _buildEntries();
+    final settingsIndex = entries.indexWhere((entry) => entry.tab.label == 'Settings');
+    if (settingsIndex < 0) return;
+    setState(() => _index = settingsIndex);
+  }
+
   List<_VaultEntry> _buildEntries() {
     final hideAi = !kIsWeb && Platform.isAndroid;
     return [
-      const _VaultEntry(
+      _VaultEntry(
         tab: _VaultTab(label: 'Torrents', icon: Icons.download_outlined),
-        page: TorrentsScreen(key: ValueKey('vault-hub-torrents')),
+        page: TorrentsScreen(
+          key: ValueKey('vault-hub-torrents'),
+          onOpenSettingsTab: _openSettingsTab,
+        ),
       ),
       if (!hideAi)
         const _VaultEntry(

@@ -2,9 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../models/search_result.dart';
 import '../services/folder_access_service.dart';
+import '../config/build_flags.dart';
+import '../config/full_mode_access.dart';
 import 'quick_download_card.dart';
 import 'quick_links_service.dart';
 
@@ -100,6 +103,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<FullModeAccess>();
     final cs = Theme.of(context).colorScheme;
     final width = MediaQuery.of(context).size.width;
     final crossAxisCount = width < 500
@@ -148,13 +152,17 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                         size: 56, color: cs.primary),
                   ),
                   const SizedBox(height: 18),
-                  Text(
-                    'Convert the Spire',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.3,
-                          color: cs.onSurface,
-                        ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      getAppTitle(),
+                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.3,
+                            color: cs.onSurface,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -311,7 +319,8 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
       child: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(child: buildHeader()),
-          SliverToBoxAdapter(child: buildDownloadSection()),
+          if (!kPlayStoreBuild)
+            SliverToBoxAdapter(child: buildDownloadSection()),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             sliver: _buildLinksGrid(crossAxisCount, visibleLinks),

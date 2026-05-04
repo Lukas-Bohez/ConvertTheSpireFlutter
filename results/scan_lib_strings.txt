@@ -1,0 +1,1210 @@
+﻿
+lib\main.dart:139:      final userData = 
+Directory('$local\\ConvertTheSpireReborn\\WebView2');
+lib\src\app.dart:12:import 
+'package:youtube_explode_dart/youtube_explode_dart.dart'
+lib\src\app.dart:27:import 'services/convert_service.dart';
+lib\src\app.dart:42:import 'services/youtube_service.dart';
+lib\src\app.dart:68:  YoutubeExplode? _ytExplode;
+lib\src\app.dart:198:      final ytExplode = YoutubeExplode();
+lib\src\app.dart:200:      final youtube = YouTubeService(yt: ytExplode);
+lib\src\app.dart:206:      final convertService = ConvertService(ffmpeg: 
+ffmpeg);
+lib\src\app.dart:209:      final youtubeSearcher = YouTubeSearcher(yt: 
+ytExplode);
+lib\src\app.dart:212:        youtubeSearcher: youtubeSearcher,
+lib\src\app.dart:231:            playlistService.getYouTubePlaylistTracks(url),
+lib\src\app.dart:234:              controller.settings?.defaultAudioFormat ?? 
+'mp3';
+lib\src\app.dart:251:        youtube: youtube,
+lib\src\app.dart:253:        convertService: convertService,
+lib\src\browser\adblock\adblock_service.dart:3:import 'dart:convert';
+lib\src\browser\adblock\adblock_service.dart:169:      for (final line in 
+const LineSplitter().convert(response.body)) {
+lib\src\config\build_flags.dart:9:bool get 
+isYouTubeConversionEnabledInCurrentBuild {
+lib\src\config\build_flags.dart:11:  return false; // YouTube conversion 
+disabled in Play Store builds per policy
+lib\src\config\build_flags.dart:15:String getAppTitle() => kPlayStoreBuild ? 
+'Bitplayer' : 'Convert the Spire Reborn';
+lib\src\config\build_flags.dart:17:String getDefaultDownloadFolderName() => 
+kPlayStoreBuild ? 'Bitplayer' : 'ConvertTheSpireReborn';
+lib\src\config\build_flags.dart:21:  // Convert tab (tabIndex 9) is disabled 
+on Android per platform limitations
+lib\src\constants\strings.dart:21:  static const tabConvert = 'Convert';
+lib\src\constants\strings.dart:33:  static const converting = 'Converting';
+lib\src\models\app_settings.dart:3:  final String? downloadDirMp3;
+lib\src\models\app_settings.dart:17:  final int convertMaxMb;
+lib\src\models\app_settings.dart:18:  final int convertCleanupMinutes;
+lib\src\models\app_settings.dart:19:  final int convertMaxAgeHours;
+lib\src\models\app_settings.dart:25:  final String defaultAudioFormat; // mp3, 
+m4a
+lib\src\models\app_settings.dart:38:  final bool youtubeAuthEnabled;
+lib\src\models\app_settings.dart:39:  final String? youtubeCookiesFromBrowser;
+lib\src\models\app_settings.dart:40:  final String? youtubeCookiesFile;
+lib\src\models\app_settings.dart:53:    required this.convertMaxMb,
+lib\src\models\app_settings.dart:54:    required this.convertCleanupMinutes,
+lib\src\models\app_settings.dart:55:    required this.convertMaxAgeHours,
+lib\src\models\app_settings.dart:58:    this.downloadDirMp3,
+lib\src\models\app_settings.dart:63:    this.defaultAudioFormat = 'mp3',
+lib\src\models\app_settings.dart:72:    this.youtubeAuthEnabled = false,
+lib\src\models\app_settings.dart:73:    this.youtubeCookiesFromBrowser,
+lib\src\models\app_settings.dart:74:    this.youtubeCookiesFile,
+lib\src\models\app_settings.dart:89:      convertMaxMb: 0,
+lib\src\models\app_settings.dart:90:      convertCleanupMinutes: 15,
+lib\src\models\app_settings.dart:91:      convertMaxAgeHours: 2,
+lib\src\models\app_settings.dart:93:      defaultAudioFormat: 'mp3',
+lib\src\models\app_settings.dart:94:      downloadDirMp3: null,
+lib\src\models\app_settings.dart:107:      youtubeAuthEnabled: false,
+lib\src\models\app_settings.dart:108:      youtubeCookiesFromBrowser: null,
+lib\src\models\app_settings.dart:109:      youtubeCookiesFile: null,
+lib\src\models\app_settings.dart:125:    int? convertMaxMb,
+lib\src\models\app_settings.dart:126:    int? convertCleanupMinutes,
+lib\src\models\app_settings.dart:127:    int? convertMaxAgeHours,
+lib\src\models\app_settings.dart:129:    String? downloadDirMp3,
+lib\src\models\app_settings.dart:143:    bool? youtubeAuthEnabled,
+lib\src\models\app_settings.dart:144:    String? youtubeCookiesFromBrowser,
+lib\src\models\app_settings.dart:145:    String? youtubeCookiesFile,
+lib\src\models\app_settings.dart:160:      convertMaxMb: convertMaxMb ?? 
+this.convertMaxMb,
+lib\src\models\app_settings.dart:161:      convertCleanupMinutes:
+lib\src\models\app_settings.dart:162:          convertCleanupMinutes ?? 
+this.convertCleanupMinutes,
+lib\src\models\app_settings.dart:163:      convertMaxAgeHours: 
+convertMaxAgeHours ?? this.convertMaxAgeHours,
+lib\src\models\app_settings.dart:165:      downloadDirMp3: downloadDirMp3 ?? 
+this.downloadDirMp3,
+lib\src\models\app_settings.dart:184:      youtubeAuthEnabled: 
+youtubeAuthEnabled ?? this.youtubeAuthEnabled,
+lib\src\models\app_settings.dart:185:      youtubeCookiesFromBrowser:
+lib\src\models\app_settings.dart:186:          youtubeCookiesFromBrowser ?? 
+this.youtubeCookiesFromBrowser,
+lib\src\models\app_settings.dart:187:      youtubeCookiesFile: 
+youtubeCookiesFile ?? this.youtubeCookiesFile,
+lib\src\models\app_settings.dart:206:      convertMaxMb: 
+(json['convert_max_mb'] as num?)?.toInt() ?? 0,
+lib\src\models\app_settings.dart:207:      convertCleanupMinutes:
+lib\src\models\app_settings.dart:208:          
+(json['convert_cleanup_minutes'] as num?)?.toInt() ?? 15,
+lib\src\models\app_settings.dart:209:      convertMaxAgeHours: 
+(json['convert_max_age_hours'] as num?)?.toInt() ?? 2,
+lib\src\models\app_settings.dart:211:      defaultAudioFormat: 
+json['default_audio_format'] as String? ?? 'mp3',
+lib\src\models\app_settings.dart:222:      youtubeAuthEnabled: 
+json['youtube_auth_enabled'] as bool? ?? false,
+lib\src\models\app_settings.dart:223:      youtubeCookiesFromBrowser:
+lib\src\models\app_settings.dart:224:          
+(json['youtube_cookies_from_browser'] as String?)?.trim(),
+lib\src\models\app_settings.dart:225:      youtubeCookiesFile: 
+(json['youtube_cookies_file'] as String?)?.trim(),
+lib\src\models\app_settings.dart:227:      downloadDirMp3: 
+(json['download_dir_mp3'] as String?)?.trim(),
+lib\src\models\app_settings.dart:248:      'convert_max_mb': convertMaxMb,
+lib\src\models\app_settings.dart:249:      'convert_cleanup_minutes': 
+convertCleanupMinutes,
+lib\src\models\app_settings.dart:250:      'convert_max_age_hours': 
+convertMaxAgeHours,
+lib\src\models\app_settings.dart:261:      'youtube_auth_enabled': 
+youtubeAuthEnabled,
+lib\src\models\app_settings.dart:262:      'youtube_cookies_from_browser': 
+youtubeCookiesFromBrowser,
+lib\src\models\app_settings.dart:263:      'youtube_cookies_file': 
+youtubeCookiesFile,
+lib\src\models\app_settings.dart:265:      'download_dir_mp3': downloadDirMp3,
+lib\src\models\audio_format.dart:3:  mp3('mp3', 'MP3', 'Widely compatible, 
+good quality'),
+lib\src\models\audio_format.dart:5:      'Apple-compatible, higher quality 
+than MP3 at same bitrate');
+lib\src\models\audio_format.dart:16:      case AudioFormat.mp3:
+lib\src\models\audio_format.dart:17:        return 'libmp3lame';
+lib\src\models\convert_result.dart:1:class ConvertResult {
+lib\src\models\convert_result.dart:7:  const ConvertResult({
+lib\src\models\queue_item.dart:6:  converting,
+lib\src\models\queue_item.dart:110:          if (s == 'downloading' || s == 
+'converting')
+lib\src\models\search_result.dart:1:/// A search result from any music source 
+(YouTube, SoundCloud, etc.).
+lib\src\models\search_result.dart:8:  final String source; // 'youtube', 
+'soundcloud', etc.
+lib\src\models\search_result.dart:21:  /// Convert to a search query string 
+(for cross-platform matching).
+lib\src\models\track_metadata.dart:5:  final String codec; // mp3, aac, etc.
+lib\src\screens\browser_screen.dart:462:    // Ad-block (skip on 
+YouTube/Google sites whose players depend on Google ad
+lib\src\screens\browser_screen.dart:467:      final isGoogleSite = 
+pageHost.endsWith('youtube.com') ||
+lib\src\screens\browser_screen.dart:468:          
+pageHost.endsWith('.youtube.com') ||
+lib\src\screens\browser_screen.dart:613:      if (host.contains('youtube.com') 
+||
+lib\src\screens\browser_screen.dart:615:          
+host.contains('music.youtube.com')) {
+lib\src\screens\browser_screen.dart:637:        artist: 'YouTube',
+lib\src\screens\browser_screen.dart:639:        thumbnailUrl: 
+'https://img.youtube.com/vi/$id/default.jpg',
+lib\src\screens\browser_screen.dart:640:        source: 'youtube',
+lib\src\screens\bulk_import_screen.dart:26:  String _selectedFormat = 'mp3';
+lib\src\screens\bulk_import_screen.dart:111:                      
+DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+lib\src\screens\cast_dialog.dart:159:        'mp3' => 'audio/mpeg',
+lib\src\screens\guide_screen.dart:88:                      'Downloads, 
+conversion, notifications, file converter',
+lib\src\screens\guide_screen.dart:293:                    name: 'Convert',
+lib\src\screens\guide_screen.dart:295:                    'Convert any local 
+audio/video file between formats using FFmpeg.'),
+lib\src\screens\guide_screen.dart:384:                      format: 'MP3',
+lib\src\screens\guide_screen.dart:391:                          'AAC audio in 
+MP4 container. Better quality than MP3 at same bitrate. Works on Apple devices 
+and modern players.'),
+lib\src\screens\home_screen.dart:92:  static final Uri _websiteUri = 
+Uri.parse('https://quizthespire.com/');
+lib\src\screens\home_screen.dart:95:  final TextEditingController 
+_downloadDirMp3Controller = TextEditingController();
+lib\src\screens\home_screen.dart:111:  String _downloadFormat = 'mp3';
+lib\src\screens\home_screen.dart:118:  bool _youtubeAuthEnabled = false;
+lib\src\screens\home_screen.dart:119:  String _youtubeCookiesFromBrowser = '';
+lib\src\screens\home_screen.dart:124:  File? _convertFile;
+lib\src\screens\home_screen.dart:125:  String _convertTarget = 'mp4';
+lib\src\screens\home_screen.dart:243:    _downloadDirMp3Controller.dispose();
+lib\src\screens\home_screen.dart:298:        return _buildConvertTab(settings);
+lib\src\screens\home_screen.dart:647:      _ytCookiesFileController.text = 
+settings.youtubeCookiesFile ?? '';
+lib\src\screens\home_screen.dart:653:      _downloadDirMp3Controller.text = 
+settings.downloadDirMp3 ?? '';
+lib\src\screens\home_screen.dart:658:        _youtubeAuthEnabled = 
+settings.youtubeAuthEnabled;
+lib\src\screens\home_screen.dart:659:        _youtubeCookiesFromBrowser = 
+settings.youtubeCookiesFromBrowser?.trim() ??
+lib\src\screens\home_screen.dart:759:  Future<void> 
+_openYouTubeSignInExternal() async {
+lib\src\screens\home_screen.dart:762:        'https://accounts.google.com/Servi
+ceLogin?service=youtube&continue=https://www.youtube.com/',
+lib\src\screens\home_screen.dart:854:      if (format == 'mp3') {
+lib\src\screens\home_screen.dart:855:        _downloadDirMp3Controller.text = 
+selected!;
+lib\src\screens\home_screen.dart:867:        downloadDirMp3: 
+_downloadDirMp3Controller.text.trim().isEmpty
+lib\src\screens\home_screen.dart:869:            : 
+_downloadDirMp3Controller.text.trim(),
+lib\src\screens\home_screen.dart:907:    final youtubeEnabled = 
+isYouTubeConversionEnabledInCurrentBuild;
+lib\src\screens\home_screen.dart:918:                labelText: 'YouTube URL',
+lib\src\screens\home_screen.dart:920:                hintText: 'Enter or paste 
+a YouTube URL',
+lib\src\screens\home_screen.dart:925:                        onPressed: 
+youtubeEnabled
+lib\src\screens\home_screen.dart:935:              enabled: youtubeEnabled,
+lib\src\screens\home_screen.dart:941:            onPressed: youtubeEnabled
+lib\src\screens\home_screen.dart:975:                if (!youtubeEnabled)
+lib\src\screens\home_screen.dart:988:                              'YouTube 
+conversion is disabled in this build.',
+lib\src\screens\home_screen.dart:999:                if (!youtubeEnabled) 
+const SizedBox(height: 12),
+lib\src\screens\home_screen.dart:1029:                                      
+value: 'mp3', child: Text('MP3')),
+lib\src\screens\home_screen.dart:1131:                                         
+   value: 'mp3', child: Text('MP3')),
+lib\src\screens\home_screen.dart:1346:                                  
+'YouTube Mix playlists (IDs starting with RD) cannot be expanded.',
+lib\src\screens\home_screen.dart:1371:                              
+!youtubeEnabled
+lib\src\screens\home_screen.dart:1387:                              
+!youtubeEnabled
+lib\src\screens\home_screen.dart:1406:                              
+!youtubeEnabled
+lib\src\screens\home_screen.dart:1421:                              
+!youtubeEnabled
+lib\src\screens\home_screen.dart:1484:    if 
+(!isYouTubeConversionEnabledInCurrentBuild) {
+lib\src\screens\home_screen.dart:1487:        'YouTube conversion is disabled 
+in this build.',
+lib\src\screens\home_screen.dart:1520:    if 
+(!isYouTubeConversionEnabledInCurrentBuild) {
+lib\src\screens\home_screen.dart:1523:        'YouTube conversion is disabled 
+in this build.',
+lib\src\screens\home_screen.dart:1586:                'Enter a YouTube URL 
+above and click Search',
+lib\src\screens\home_screen.dart:2251:                  
+DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+lib\src\screens\home_screen.dart:2405:                          value: 'mp3',
+lib\src\screens\home_screen.dart:2406:                          child: 
+Text('MP3', style: TextStyle(fontSize: 11))),
+lib\src\screens\home_screen.dart:2415:                            item.status 
+== DownloadStatus.converting ||
+lib\src\screens\home_screen.dart:2472:                    item.status == 
+DownloadStatus.converting)
+lib\src\screens\home_screen.dart:2501:                    item.status != 
+DownloadStatus.converting)
+lib\src\screens\home_screen.dart:2555:      case DownloadStatus.converting:
+lib\src\screens\home_screen.dart:2572:      case DownloadStatus.converting:
+lib\src\screens\home_screen.dart:3028:                          'When 
+disabled, the selected output folder is used directly (mp3/m4a/mp4 subfolders 
+are skipped).'),
+lib\src\screens\home_screen.dart:3039:                      controller: 
+_downloadDirMp3Controller,
+lib\src\screens\home_screen.dart:3041:                        labelText: 'MP3 
+folder (optional)',
+lib\src\screens\home_screen.dart:3046:                          onPressed: () 
+=> _pickFormatDownloadFolder(settings, 'mp3'),
+lib\src\screens\home_screen.dart:3163:                          'When 
+disabled, the selected output folder is used directly (mp3/m4a/mp4 subfolders 
+are skipped).'),
+lib\src\screens\home_screen.dart:3178:                            controller: 
+_downloadDirMp3Controller,
+lib\src\screens\home_screen.dart:3180:                              labelText: 
+'MP3 folder (optional)',
+lib\src\screens\home_screen.dart:3192:                              
+_pickFormatDownloadFolder(settings, 'mp3'),
+lib\src\screens\home_screen.dart:3661:                      value: 
+_youtubeAuthEnabled,
+lib\src\screens\home_screen.dart:3663:                          setState(() => 
+_youtubeAuthEnabled = value),
+lib\src\screens\home_screen.dart:3664:                      title: const 
+Text('Use signed-in YouTube session'),
+lib\src\screens\home_screen.dart:3670:                    if 
+(_youtubeAuthEnabled) ...[
+lib\src\screens\home_screen.dart:3675:                              
+'settings-cookies-browser-$_youtubeCookiesFromBrowser'),
+lib\src\screens\home_screen.dart:3677:                                  
+.contains(_youtubeCookiesFromBrowser)
+lib\src\screens\home_screen.dart:3678:                              ? 
+_youtubeCookiesFromBrowser
+lib\src\screens\home_screen.dart:3685:                                'Select 
+the browser where you are signed in to YouTube.',
+lib\src\screens\home_screen.dart:3697:                            setState(() 
+=> _youtubeCookiesFromBrowser = value);
+lib\src\screens\home_screen.dart:3749:                            label: const 
+Text('Sign in to YouTube'),
+lib\src\screens\home_screen.dart:3750:                            onPressed: 
+_openYouTubeSignInExternal,
+lib\src\screens\home_screen.dart:3913:                    'A Red Bull Basement 
+/ SpireAI project',
+lib\src\screens\home_screen.dart:3940:                        label: const 
+Text('Visit quizthespire.com'),
+lib\src\screens\home_screen.dart:3949:                                
+'https://github.com/Lukas-Bohez/ConvertTheSpireFlutter'),
+lib\src\screens\home_screen.dart:4097:      downloadDirMp3: 
+_downloadDirMp3Controller.text.trim().isEmpty
+lib\src\screens\home_screen.dart:4099:          : 
+_downloadDirMp3Controller.text.trim(),
+lib\src\screens\home_screen.dart:4112:      youtubeAuthEnabled: 
+_youtubeAuthEnabled,
+lib\src\screens\home_screen.dart:4113:      youtubeCookiesFromBrowser: 
+_youtubeCookiesFromBrowser.trim().isEmpty
+lib\src\screens\home_screen.dart:4115:          : 
+_youtubeCookiesFromBrowser.trim(),
+lib\src\screens\home_screen.dart:4116:      youtubeCookiesFile: 
+_ytCookiesFileController.text.trim().isEmpty
+lib\src\screens\home_screen.dart:4205:  // -- Convert tab 
+--------------------------------------------------------
+lib\src\screens\home_screen.dart:4207:  Widget _buildConvertTab(AppSettings? 
+settings) {
+lib\src\screens\home_screen.dart:4222:                      Text('File 
+Converter',
+lib\src\screens\home_screen.dart:4230:                    label: const 
+Text('Select file to convert'),
+lib\src\screens\home_screen.dart:4239:                            setState(() 
+=> _convertFile = File(path));
+lib\src\screens\home_screen.dart:4246:                  if (_convertFile != 
+null)
+lib\src\screens\home_screen.dart:4275:                                  
+_convertFile!.path
+lib\src\screens\home_screen.dart:4286:                                
+setState(() => _convertFile = null),
+lib\src\screens\home_screen.dart:4329:                    key: 
+ValueKey('convert-$_convertTarget'),
+lib\src\screens\home_screen.dart:4330:                    initialValue: 
+_convertTarget,
+lib\src\screens\home_screen.dart:4332:                      labelText: 
+'Convert to format',
+lib\src\screens\home_screen.dart:4338:                          value: 'mp3', 
+child: Text('MP3 (Audio)')),
+lib\src\screens\home_screen.dart:4386:                      if (value != null) 
+setState(() => _convertTarget = value);
+lib\src\screens\home_screen.dart:4394:                      label: const 
+Text('Convert File'),
+lib\src\screens\home_screen.dart:4395:                      onPressed: 
+(_convertFile == null || settings == null)
+lib\src\screens\home_screen.dart:4398:                              
+.convert(_convertFile!, _convertTarget),
+lib\src\screens\home_screen.dart:4409:          if 
+(widget.controller.convertResults.isNotEmpty)
+lib\src\screens\home_screen.dart:4421:                          'Converted 
+Files (${widget.controller.convertResults.length})',
+lib\src\screens\home_screen.dart:4431:                    
+...widget.controller.convertResults.map(
+lib\src\screens\home_screen.dart:4443:                                
+widget.controller.saveConvertedResult(result),
+lib\src\screens\onboarding_screen.dart:60:            ? 'Vault the Spire is a 
+torrent vault and media hub. '
+lib\src\screens\onboarding_screen.dart:63:            : 'Convert Spire Reborn 
+is a cross-platform torrent and '
+lib\src\screens\onboarding_screen.dart:65:              'downloads, convert 
+formats, cast to your TV, and more - all from '
+lib\src\screens\onboarding_screen.dart:150:    // Convert
+lib\src\screens\onboarding_screen.dart:153:      title: 'Convert',
+lib\src\screens\onboarding_screen.dart:154:      detail: 'Convert any local 
+audio/video file between popular formats '
+lib\src\screens\onboarding_screen.dart:844:            subtitle: const 
+Text('3:42 \u00b7 MP3 320 kbps',
+lib\src\screens\onboarding_screen.dart:860:      label: 'Live at the Spire',
+lib\src\screens\player.dart:4:import 'dart:convert';
+lib\src\screens\player.dart:235:    '.mp3', '.m4a', '.flac', '.wav', '.ogg', 
+'.opus', '.aac', '.wma',
+lib\src\screens\playlist_screen.dart:38:  String _selectedFormat = 'mp3';
+lib\src\screens\playlist_screen.dart:69:      final tracksFuture = 
+widget.playlistService.getYouTubePlaylistTracks(url);
+lib\src\screens\playlist_screen.dart:240:                      hintText: 
+'YouTube playlist URL',
+lib\src\screens\playlist_screen.dart:294:                      
+DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+lib\src\screens\search_screen.dart:46:  String _selectedFormat = 'mp3';
+lib\src\screens\search_screen.dart:127:    final extWhitelist = {'.mp3', 
+'.m4a', '.mp4'};
+lib\src\screens\search_screen.dart:234:                  
+DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+lib\src\screens\search_screen.dart:476:    final url = 
+'https://www.youtube.com/watch?v=$id';
+lib\src\screens\statistics_screen.dart:414:      'youtube': Colors.red,
+lib\src\screens\watched_playlists_screen.dart:10:  final String? mp3Folder;
+lib\src\screens\watched_playlists_screen.dart:16:    this.mp3Folder,
+lib\src\screens\watched_playlists_screen.dart:23:      
+(mp3Folder?.trim().isNotEmpty == true) ||
+lib\src\screens\watched_playlists_screen.dart:65:      final mp3Folder = await 
+widget.watchedService.getFolderForPlaylist(url, format: 'mp3');
+lib\src\screens\watched_playlists_screen.dart:70:        mp3Folder: mp3Folder,
+lib\src\screens\watched_playlists_screen.dart:85:    if 
+(!url.contains('youtube.com/playlist') && !url.contains('youtu.be')) {
+lib\src\screens\watched_playlists_screen.dart:87:        Snack.show(context, 
+'Please enter a valid YouTube playlist URL',
+lib\src\screens\watched_playlists_screen.dart:133:            child: const 
+Text('MP3 folder'),
+lib\src\screens\watched_playlists_screen.dart:134:            onPressed: () => 
+Navigator.pop(ctx, 'mp3'),
+lib\src\screens\watched_playlists_screen.dart:219:                        
+hintText: 'Paste YouTube playlist URL',
+lib\src\screens\watched_playlists_screen.dart:256:                      'Add a 
+YouTube playlist URL above to track new tracks',
+lib\src\screens\watched_playlists_screen.dart:273:                      if 
+(folder.mp3Folder?.trim().isNotEmpty == true) {
+lib\src\screens\watched_playlists_screen.dart:274:                        
+parts.add('MP3: ${folder.mp3Folder!.split(RegExp(r'[/\\]')).last}');
+lib\src\screens\browser\new_tab_page.dart:68:      'url': 
+'https://www.youtube.com',
+lib\src\screens\browser\new_tab_page.dart:69:      'title': 'YouTube',
+lib\src\screens\browser\new_tab_page.dart:71:          
+'https://www.google.com/s2/favicons?sz=64&domain_url=youtube.com'
+lib\src\screens\browser\new_tab_page.dart:98:      'url': 
+'https://music.youtube.com',
+lib\src\screens\browser\new_tab_page.dart:99:      'title': 'YouTube Music',
+lib\src\screens\browser\new_tab_page.dart:101:          
+'https://www.google.com/s2/favicons?sz=64&domain_url=music.youtube.com'
+lib\src\services\android_saf.dart:7:  static const MethodChannel _channel = 
+MethodChannel('convert_the_spire/saf');
+lib\src\services\audio_handler.dart:91:        androidNotificationChannelId: 
+'com.orokaconner.convertthespire.audio',
+lib\src\services\bulk_import_service.dart:77:  // lists of strings. This 
+avoids depending on `CsvToListConverter` API
+lib\src\services\convert_service.dart:1:import 'dart:convert';
+lib\src\services\convert_service.dart:13:import 
+'../models/convert_result.dart';
+lib\src\services\convert_service.dart:16:class ConvertService {
+lib\src\services\convert_service.dart:19:  ConvertService({required 
+this.ffmpeg});
+lib\src\services\convert_service.dart:21:  Future<ConvertResult> 
+convertFile(File input, String target,
+lib\src\services\convert_service.dart:31:      return _convertMedia(input, 
+targetLower, baseName,
+lib\src\services\convert_service.dart:51:      return 
+_convertImage(inputBytes, targetLower, baseName);
+lib\src\services\convert_service.dart:60:      return ConvertResult(
+lib\src\services\convert_service.dart:69:      return 
+_convertToPdf(inputBytes, inputName, baseName, inputExt);
+lib\src\services\convert_service.dart:84:      'mp3',
+lib\src\services\convert_service.dart:338:  ConvertResult _zipBytes(
+lib\src\services\convert_service.dart:343:    return ConvertResult(
+lib\src\services\convert_service.dart:354:  ConvertResult _convertImage(
+lib\src\services\convert_service.dart:376:          return ConvertResult(
+lib\src\services\convert_service.dart:384:          return ConvertResult(
+lib\src\services\convert_service.dart:405:    return ConvertResult(
+lib\src\services\convert_service.dart:409:      message: 'Image converted to 
+${target.toUpperCase()}',
+lib\src\services\convert_service.dart:415:  Future<ConvertResult> 
+_convertMedia(
+lib\src\services\convert_service.dart:433:    if (<String>{'mp3', 'm4a', 
+'wav', 'flac', 'ogg', 'aac', 'wma'}
+lib\src\services\convert_service.dart:438:        case 'mp3':
+lib\src\services\convert_service.dart:439:          args.addAll(['-c:a', 
+'libmp3lame', '-b:a', '192k']);
+lib\src\services\convert_service.dart:474:      return ConvertResult(
+lib\src\services\convert_service.dart:478:        message: 'Media converted to 
+${target.toUpperCase()}',
+lib\src\services\convert_service.dart:488:  Future<ConvertResult> 
+_convertToPdf(Uint8List inputBytes, String inputName,
+lib\src\services\convert_service.dart:529:    return ConvertResult(
+lib\src\services\convert_service.dart:539:  ConvertResult _buildEpub(String 
+text, String baseName) {
+lib\src\services\convert_service.dart:595:    return ConvertResult(
+lib\src\services\convert_service.dart:605:  ConvertResult _report(String 
+inputName, String target, String reason) {
+lib\src\services\convert_service.dart:608:    return ConvertResult(
+lib\src\services\dlna_control_service.dart:24:    String title = 'Vault the 
+Spire',
+lib\src\services\dlna_control_service.dart:51:    String title = 'Vault the 
+Spire',
+lib\src\services\dlna_discovery_service.dart:2:import 'dart:convert';
+lib\src\services\download_service.dart:8:import 
+'package:youtube_explode_dart/youtube_explode_dart.dart';
+lib\src\services\download_service.dart:35:  final YoutubeExplode yt;
+lib\src\services\download_service.dart:50:  static const supportedFormats = 
+{'mp3', 'm4a', 'mp4'};
+lib\src\services\download_service.dart:116:  /// Download a non-YouTube URL 
+using yt-dlp exclusively.
+lib\src\services\download_service.dart:119:  /// sites, etc.).  YouTube URLs 
+should still use [download] which goes
+lib\src\services\download_service.dart:120:  /// through youtube_explode_dart 
+first with a yt-dlp fast-path.
+lib\src\services\download_service.dart:143:      throw Exception('Unsupported 
+format: $format. Use MP3, M4A, or MP4.');
+lib\src\services\download_service.dart:146:    // yt-dlp is required for 
+non-YouTube downloads
+lib\src\services\download_service.dart:199:              ? 
+DownloadStatus.converting
+lib\src\services\download_service.dart:210:      onProgress(98, 
+DownloadStatus.converting);
+lib\src\services\download_service.dart:226:      // Retry with 
+force-generic-extractor for difficult sites
+lib\src\services\download_service.dart:232:          debugPrint('yt-dlp: 
+retrying with --force-generic-extractor');
+lib\src\services\download_service.dart:246:            forceGenericExtractor: 
+true,
+lib\src\services\download_service.dart:250:                  ? 
+DownloadStatus.converting
+lib\src\services\download_service.dart:256:            onProgress(98, 
+DownloadStatus.converting);
+lib\src\services\download_service.dart:301:      throw Exception('Unsupported 
+format: $format. Use MP3, M4A, or MP4.');
+lib\src\services\download_service.dart:319:    // adaptive stream merging 
+natively - bypassing the youtube_explode_dart
+lib\src\services\download_service.dart:343:    // -- Fallback: 
+youtube_explode_dart -----------------------------------
+lib\src\services\download_service.dart:346:    // Fetch stream manifest with 
+retry using different YouTube API clients
+lib\src\services\download_service.dart:357:        ytClients: 
+[YoutubeApiClient.safari, YoutubeApiClient.androidVr],
+lib\src\services\download_service.dart:398:    // (a) Audio conversion 
+(MP3/M4A): prefer muxed, fall back audio-only
+lib\src\services\download_service.dart:400:    //     (muxed streams are 
+capped at 360p by YouTube)
+lib\src\services\download_service.dart:479:        // -- Convert to the 
+requested audio format ---------------------
+lib\src\services\download_service.dart:485:        onProgress(95, 
+DownloadStatus.converting);
+lib\src\services\download_service.dart:487:        final args = 
+_buildAudioConvertArgs(
+lib\src\services\download_service.dart:509:        onProgress(isHdMerge ? 85 : 
+95, DownloadStatus.converting);
+lib\src\services\download_service.dart:560:  /// audio extraction.  yt-dlp 
+handles YouTube's throttle-token decryption
+lib\src\services\download_service.dart:562:  /// youtube_explode_dart.
+lib\src\services\download_service.dart:564:    required dynamic video, // 
+Video from youtube_explode_dart
+lib\src\services\download_service.dart:595:    // Fetch thumbnail via 
+youtube_explode_dart for display in the queue
+lib\src\services\download_service.dart:619:              ? 
+DownloadStatus.converting
+lib\src\services\download_service.dart:630:      onProgress(98, 
+DownloadStatus.converting);
+lib\src\services\download_service.dart:648:  /// Build FFmpeg arguments to 
+convert source audio to the requested format
+lib\src\services\download_service.dart:651:  List<String> 
+_buildAudioConvertArgs({
+lib\src\services\download_service.dart:663:    //   MP3 - ID3v2 attached 
+picture (mjpeg + attached_pic)
+lib\src\services\download_service.dart:665:    final supportsCoverEmbed = 
+{'mp3', 'm4a'}.contains(format);
+lib\src\services\download_service.dart:689:      case 'mp3':
+lib\src\services\download_service.dart:691:            ['-c:a', 'libmp3lame', 
+'-b:a', bitrateStr, '-id3v2_version', '3']);
+lib\src\services\download_service.dart:786:  /// Download a stream using 
+YouTube-native chunked range parameters.
+lib\src\services\download_service.dart:788:  /// On desktop, uses YouTube's 
+own `&range=START-END` and `&rn=N` URL query
+lib\src\services\download_service.dart:866:  /// Build a chunk URL using 
+YouTube-native range parameters.
+lib\src\services\download_service.dart:868:  /// YouTube's CDN expects 
+`&range=START-END&rn=N&rbuf=0` as URL query params,
+lib\src\services\download_service.dart:873:  /// URL first, because 
+youtube_explode_dart may embed its own values which
+lib\src\services\download_service.dart:993:  /// YouTube's URL-param range 
+approach (`&range=START-END`) fails after 2-3
+lib\src\services\download_service.dart:1048:                  
+'com.google.android.youtube/19.09.37 (Linux; U; Android 14; en_US) gzip';
+lib\src\services\download_service.dart:1067:                        
+YoutubeApiClient.safari,
+lib\src\services\download_service.dart:1068:                        
+YoutubeApiClient.androidVr
+lib\src\services\download_service.dart:1124:                      
+YoutubeApiClient.safari,
+lib\src\services\download_service.dart:1125:                      
+YoutubeApiClient.androidVr
+lib\src\services\download_service.dart:1154:        // Small delay between 
+chunks to avoid YouTube throttle detection
+lib\src\services\download_service.dart:1165:  /// Strip pre-existing 
+range/rn/rbuf params from a YouTube CDN URL.
+lib\src\services\download_service.dart:1395:      case 'mp3':
+lib\src\services\download_service.dart:1438:  /// Convert quality string like 
+'1080p' to pixel height.
+lib\src\services\foreground_service.dart:4:  static const MethodChannel 
+_channel = MethodChannel('convert_the_spire/foreground');
+lib\src\services\local_media_server.dart:196:      return 'DLNA.ORG_PN=MP3;';
+lib\src\services\metadata_service.dart:2:import 'dart:convert';
+lib\src\services\metadata_service.dart:17:  static const _userAgent = 
+'ConvertTheSpireReborn/1.0 (https://github.com)';
+lib\src\services\metadata_service.dart:135:      final digest = 
+md5.convert(utf8.encode(keySource));
+lib\src\services\multi_source_search_service.dart:2:import 
+'package:youtube_explode_dart/youtube_explode_dart.dart'
+lib\src\services\multi_source_search_service.dart:8:// --─ YouTube searcher 
+--------------------------------------------------------
+lib\src\services\multi_source_search_service.dart:10:class YouTubeSearcher {
+lib\src\services\multi_source_search_service.dart:11:  final YoutubeExplode 
+_yt;
+lib\src\services\multi_source_search_service.dart:13:  
+YouTubeSearcher({required YoutubeExplode yt}) : _yt = yt;
+lib\src\services\multi_source_search_service.dart:24:        source: 'youtube',
+lib\src\services\multi_source_search_service.dart:82:  final YouTubeSearcher 
+youtubeSearcher;
+lib\src\services\multi_source_search_service.dart:88:    required 
+this.youtubeSearcher,
+lib\src\services\multi_source_search_service.dart:94:  /// Search YouTube and 
+SoundCloud in parallel, merge and rank results.
+lib\src\services\multi_source_search_service.dart:100:    final futYouTube = 
+youtubeSearcher
+lib\src\services\multi_source_search_service.dart:106:    final results = 
+await Future.wait([futYouTube, futSoundCloud])
+lib\src\services\multi_source_search_service.dart:119:      const 
+sourceQuality = {'soundcloud': 2, 'youtube': 1};
+lib\src\services\platform_dirs.dart:15:  static const MethodChannel _channel = 
+MethodChannel('convert_the_spire/saf');
+lib\src\services\platform_dirs.dart:86:      // so we need to manually convert 
+each entry to a Map<String,String> rather
+lib\src\services\playlist_service.dart:5:import 
+'package:youtube_explode_dart/youtube_explode_dart.dart'
+lib\src\services\playlist_service.dart:12:  final YoutubeExplode _yt;
+lib\src\services\playlist_service.dart:16:  PlaylistService({required 
+YoutubeExplode yt}) : _yt = yt;
+lib\src\services\playlist_service.dart:18:  // --─ YouTube playlists 
+--------------------------------------------------─
+lib\src\services\playlist_service.dart:20:  Future<List<SearchResult>> 
+getYouTubePlaylistTracks(String playlistUrl,
+lib\src\services\playlist_service.dart:44:          source: 'youtube',
+lib\src\services\playlist_service.dart:56:        source: 'youtube',
+lib\src\services\playlist_service.dart:73:  /// Get the audio URL for a given 
+YouTube video id.
+lib\src\services\playlist_service.dart:86:      {String format = 'mp3'}) async 
+{
+lib\src\services\playlist_service.dart:150:      '.mp3',
+lib\src\services\playlist_service.dart:319:    // Remove common YouTube 
+suffixes
+lib\src\services\settings_store.dart:1:import 'dart:convert';
+lib\src\services\shortcut_service.dart:75:    final shortcutPath = 
+'$desktopDir/vault-spire.desktop';
+lib\src\services\shortcut_service.dart:97:Comment=Download, convert & play 
+media
+lib\src\services\statistics_service.dart:1:import 'dart:convert';
+lib\src\services\update_service.dart:31:  static const _repoName = 
+'ConvertTheSpireFlutter';
+lib\src\services\watched_playlist_service.dart:2:import 'dart:convert';
+lib\src\services\watched_playlist_service.dart:105:    await 
+prefs.remove('pl_folder_mp3_$url');
+lib\src\services\watched_playlist_service.dart:185:    return 
+md5.convert(utf8.encode(ids)).toString();
+lib\src\services\youtube_service.dart:2:import 
+'package:youtube_explode_dart/youtube_explode_dart.dart';
+lib\src\services\youtube_service.dart:6:class YouTubeService {
+lib\src\services\youtube_service.dart:7:  final YoutubeExplode _yt;
+lib\src\services\youtube_service.dart:12:  YouTubeService({required 
+YoutubeExplode yt}) : _yt = yt;
+lib\src\services\yt_dlp_service.dart:2:import 'dart:convert';
+lib\src\services\yt_dlp_service.dart:12:/// YouTube/media downloader that 
+handles throttling, rate-limiting, and
+lib\src\services\yt_dlp_service.dart:21:/// youtube_explode_dart for stream 
+downloads.
+lib\src\services\yt_dlp_service.dart:33:      bool forceGenericExtractor = 
+false,
+lib\src\services\yt_dlp_service.dart:65:      if (forceGenericExtractor) {
+lib\src\services\yt_dlp_service.dart:66:        
+args.add('--force-generic-extractor');
+lib\src\services\yt_dlp_service.dart:272:  /// This is useful when YouTube 
+breaks and a newer yt-dlp release is needed.
+lib\src\services\yt_dlp_service.dart:310:  /// [url]            - Video / 
+media URL (YouTube, SoundCloud, etc.)
+lib\src\services\yt_dlp_service.dart:312:  /// [format]         - Target 
+format: `mp4`, `mp3`, or `m4a`.
+lib\src\services\yt_dlp_service.dart:333:    bool forceGenericExtractor = 
+false,
+lib\src\services\yt_dlp_service.dart:339:      // Video download: best 
+video+audio up to target quality
+lib\src\services\yt_dlp_service.dart:348:      // Audio download: extract 
+audio in target format
+lib\src\services\yt_dlp_service.dart:403:    // Force generic extractor as 
+fallback
+lib\src\services\yt_dlp_service.dart:404:    if (forceGenericExtractor) {
+lib\src\services\yt_dlp_service.dart:405:      
+args.add('--force-generic-extractor');
+lib\src\services\yt_dlp_updater.dart:104:        final sum = 
+sha256.convert(bytes).toString();
+lib\src\state\app_controller.dart:2:import 'dart:convert';
+lib\src\state\app_controller.dart:13:import '../models/convert_result.dart';
+lib\src\state\app_controller.dart:18:import '../services/convert_service.dart';
+lib\src\state\app_controller.dart:33:import '../services/youtube_service.dart';
+lib\src\state\app_controller.dart:46:  final YouTubeService youtube;
+lib\src\state\app_controller.dart:48:  final ConvertService convertService;
+lib\src\state\app_controller.dart:80:  final List<ConvertResult> 
+convertResults = <ConvertResult>[];
+lib\src\state\app_controller.dart:100:    required this.youtube,
+lib\src\state\app_controller.dart:102:    required this.convertService,
+lib\src\state\app_controller.dart:360:    if 
+(!isYouTubeConversionEnabledInCurrentBuild && _isYouTubeUrl(url)) {
+lib\src\state\app_controller.dart:361:      logs.add('Preview blocked by build 
+policy for YouTube URL.');
+lib\src\state\app_controller.dart:371:      final items = await 
+youtube.preview(
+lib\src\state\app_controller.dart:435:    // Only attempt YouTube metadata 
+fetch for YouTube URLs
+lib\src\state\app_controller.dart:436:    final isYouTube = 
+_isYouTubeUrl(item.url);
+lib\src\state\app_controller.dart:437:    if 
+(!isYouTubeConversionEnabledInCurrentBuild && isYouTube) {
+lib\src\state\app_controller.dart:443:              'YouTube 
+download/conversion is disabled in this Play Store build.',
+lib\src\state\app_controller.dart:448:    if (isYouTube &&
+lib\src\state\app_controller.dart:471:        : (item.format.toLowerCase() == 
+'mp3'
+lib\src\state\app_controller.dart:472:            ? 
+settings.downloadDirMp3?.trim()
+lib\src\state\app_controller.dart:518:    final cookiesFile = 
+settings.youtubeAuthEnabled
+lib\src\state\app_controller.dart:519:      ? 
+settings.youtubeCookiesFile?.trim()
+lib\src\state\app_controller.dart:521:    final cookiesFromBrowser = 
+settings.youtubeAuthEnabled
+lib\src\state\app_controller.dart:522:      ? 
+settings.youtubeCookiesFromBrowser?.trim()
+lib\src\state\app_controller.dart:537:        if (isYouTube) {
+lib\src\state\app_controller.dart:538:          // YouTube → use 
+youtube_explode_dart (with yt-dlp fast-path on desktop)
+lib\src\state\app_controller.dart:564:          // Non-YouTube → route to 
+yt-dlp generic download
+lib\src\state\app_controller.dart:603:          source: 'youtube',
+lib\src\state\app_controller.dart:628:        // Don't retry YouTube permanent 
+errors (bot detection, unavailable, etc.)
+lib\src\state\app_controller.dart:629:        final isRetryable = 
+!_isYouTubePermanentError(msg) &&
+lib\src\state\app_controller.dart:645:            source: 'youtube',
+lib\src\state\app_controller.dart:735:  Future<void> convert(File file, String 
+target) async {
+lib\src\state\app_controller.dart:742:      final result = await 
+convertService.convertFile(file, target,
+lib\src\state\app_controller.dart:744:      convertResults.add(result);
+lib\src\state\app_controller.dart:753:  Future<void> 
+saveConvertedResult(ConvertResult result) async {
+lib\src\state\app_controller.dart:782:          logs.add('Saved converted 
+file: $dest');
+lib\src\state\app_controller.dart:797:    logs.add('Saved converted file: 
+$path');
+lib\src\state\app_controller.dart:820:      case 'mp3':
+lib\src\state\app_controller.dart:924:  /// Returns true for YouTube errors 
+that will never succeed on retry
+lib\src\state\app_controller.dart:926:  static bool 
+_isYouTubePermanentError(String msg) {
+lib\src\state\app_controller.dart:1043:        final filtered = 
+isYouTubeConversionEnabledInCurrentBuild
+lib\src\state\app_controller.dart:1045:          : results.where((r) => 
+r.source.toLowerCase() != 'youtube').toList();
+lib\src\state\app_controller.dart:1054:  /// Detect whether a URL is a YouTube 
+video/playlist.
+lib\src\state\app_controller.dart:1055:  static bool _isYouTubeUrl(String url) 
+{
+lib\src\state\app_controller.dart:1059:      return 
+host.contains('youtube.com') ||
+lib\src\state\app_controller.dart:1061:          
+host.contains('music.youtube.com');
+lib\src\state\app_controller.dart:1069:  /// YouTube results are queued with a 
+`youtube.com/watch?v=` URL.
+lib\src\state\app_controller.dart:1070:  /// Generic (non-YouTube) results are 
+queued with the raw URL stored in [id].
+lib\src\state\app_controller.dart:1073:    final fmt = format ?? 
+_settings?.defaultAudioFormat ?? 'mp3';
+lib\src\state\app_controller.dart:1078:        isGeneric ? result.id : 
+'https://www.youtube.com/watch?v=${result.id}';
+lib\src\state\app_controller.dart:1080:    if 
+(!isYouTubeConversionEnabledInCurrentBuild && _isYouTubeUrl(url)) {
+lib\src\state\app_controller.dart:1081:      logs.add('Skipping YouTube queue 
+add due to Play Store build policy.');
+lib\src\state\app_controller.dart:1102:    if 
+(!isYouTubeConversionEnabledInCurrentBuild) {
+lib\src\state\app_controller.dart:1103:      logs.add('Bulk import disabled: 
+YouTube conversion is off in this build.');
+lib\src\state\app_controller.dart:1112:            await 
+searchService.youtubeSearcher.search(query, limit: 1);
+lib\src\state\app_controller.dart:1158:      youtube.close();
+lib\src\utils\safe_json.dart:1:import 'dart:convert';
+lib\src\vault\constants.dart:1:const String kBaseUrl = 
+'https://quizthespire.com/vault/api';
+lib\src\vault\constants.dart:3:const String kPrivacyPolicyUrl = 
+'https://quizthespire.com/privacy-policy';
+lib\src\vault\main.dart:14:import 
+'package:convert_the_spire_reborn/src/vault/db/sqlcipher_bootstrap.dart';
+lib\src\vault\main.dart:15:import 
+'package:convert_the_spire_reborn/src/vault/platform/desktop_window.dart';
+lib\src\vault\main.dart:16:import 
+'package:convert_the_spire_reborn/src/vault/platform/hotkeys.dart';
+lib\src\vault\main.dart:17:import 'package:convert_the_spire_reborn/src/vault/p
+latform/notifications_desktop.dart';
+lib\src\vault\main.dart:18:import 
+'package:convert_the_spire_reborn/src/config/build_flags.dart';
+lib\src\vault\main.dart:21:import 
+'package:convert_the_spire_reborn/src/vault/services/identity_service.dart';
+lib\src\vault\main.dart:22:import 
+'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+lib\src\vault\main.dart:23:import 
+'package:convert_the_spire_reborn/src/vault/services/service_locator.dart';
+lib\src\vault\main.dart:24:import 
+'package:convert_the_spire_reborn/src/vault/services/startup_service.dart';
+lib\src\vault\main.dart:25:import 
+'package:convert_the_spire_reborn/src/vault/services/theme_service.dart';
+lib\src\vault\main.dart:26:import 
+'package:convert_the_spire_reborn/src/vault/services/tray_service.dart';
+lib\src\vault\main.dart:27:import 'package:convert_the_spire_reborn/src/vault/s
+ervices/torrent_engine_service.dart';
+lib\src\vault\main.dart:28:import 
+'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
+lib\src\vault\main.dart:29:import 
+'package:convert_the_spire_reborn/src/vault/services/background_service.dart';
+lib\src\vault\main.dart:30:import 
+'package:convert_the_spire_reborn/src/widgets/adaptive_ui_frame.dart';
+lib\src\vault\main.dart:137:            final downloadsDir = 
+Directory('${externalDir.path}/VaultTheSpire');
+lib\src\vault\router.dart:9:import 'screens/torrentspire_ai_screen.dart';
+lib\src\vault\router.dart:26:              : const TorrentSpireAiScreen(),
+lib\src\vault\vault_bootstrap.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/db/sqlcipher_bootstrap.dart';
+lib\src\vault\vault_bootstrap.dart:4:import 
+'package:convert_the_spire_reborn/src/vault/services/identity_service.dart';
+lib\src\vault\vault_bootstrap.dart:5:import 
+'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+lib\src\vault\vault_bootstrap.dart:6:import 
+'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
+lib\src\vault\vault_hub_screen.dart:6:import 
+'package:convert_the_spire_reborn/src/vault/screens/about_screen.dart';
+lib\src\vault\vault_hub_screen.dart:7:import 
+'package:convert_the_spire_reborn/src/vault/screens/ai_chat_screen.dart';
+lib\src\vault\vault_hub_screen.dart:8:import 
+'package:convert_the_spire_reborn/src/vault/screens/browser_screen.dart';
+lib\src\vault\vault_hub_screen.dart:9:import 
+'package:convert_the_spire_reborn/src/vault/screens/guide_screen.dart';
+lib\src\vault\vault_hub_screen.dart:10:import 
+'package:convert_the_spire_reborn/src/vault/screens/torrents_screen.dart';
+lib\src\vault\vault_hub_screen.dart:11:import 'package:convert_the_spire_reborn
+/src/vault/screens/torrentspire_ai_screen.dart';
+lib\src\vault\vault_hub_screen.dart:47:          page: 
+TorrentSpireAiScreen(key: ValueKey('vault-hub-copilot')),
+lib\src\vault\bittorrent\bencode.dart:1:import 'dart:convert';
+lib\src\vault\bittorrent\dht.dart:1:import 'dart:convert';
+lib\src\vault\bittorrent\dht.dart:5:import 
+'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart';
+lib\src\vault\bittorrent\piece_manager.dart:63:      final actual = 
+sha1.convert(data).bytes;
+lib\src\vault\bittorrent\piece_manager.dart:90:    final hash = 
+sha1.convert(piece).bytes;
+lib\src\vault\bittorrent\torrent_file.dart:1:import 'dart:convert';
+lib\src\vault\bittorrent\torrent_file.dart:5:import 
+'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart';
+lib\src\vault\bittorrent\torrent_file.dart:49:    final infoHashV1 = 
+sha1.convert(infoBencoded).toString();
+lib\src\vault\bittorrent\torrent_file.dart:50:    final infoHashV2 = 
+sha256.convert(infoBencoded).toString();
+lib\src\vault\bittorrent\torrent_isolate.dart:24:  return 
+sha1.convert(pieceData).bytes;
+lib\src\vault\crypto\identity.dart:1:import 'dart:convert';
+lib\src\vault\db\chat_dao.dart:2:import 
+'package:convert_the_spire_reborn/src/vault/db/database.dart';
+lib\src\vault\db\chat_dao.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/models/chat_message.dart';
+lib\src\vault\db\conversation_dao.dart:2:import 
+'package:convert_the_spire_reborn/src/vault/db/database.dart';
+lib\src\vault\db\conversation_dao.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/models/conversation.dart';
+lib\src\vault\db\database.dart:61:    return join(documentsDirectory.path, 
+'vault_the_spire.db');
+lib\src\vault\db\dm_messages_dao.dart:2:import 
+'package:convert_the_spire_reborn/src/vault/db/database.dart';
+lib\src\vault\db\dm_messages_dao.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/models/dm_message.dart';
+lib\src\vault\db\messages_dao.dart:2:import 
+'package:convert_the_spire_reborn/src/vault/db/database.dart';
+lib\src\vault\db\messages_dao.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/models/message.dart';
+lib\src\vault\db\server_dao.dart:2:import 
+'package:convert_the_spire_reborn/src/vault/db/database.dart';
+lib\src\vault\db\server_dao.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/models/server.dart';
+lib\src\vault\db\torrents_dao.dart:2:import 
+'package:convert_the_spire_reborn/src/vault/db/database.dart';
+lib\src\vault\db\torrents_dao.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
+lib\src\vault\db\users_dao.dart:2:import 
+'package:convert_the_spire_reborn/src/vault/db/database.dart';
+lib\src\vault\db\users_dao.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/models/chat_user.dart';
+lib\src\vault\models\chat_message.dart:1:import 'dart:convert';
+lib\src\vault\models\chat_message.dart:3:import 
+'package:convert_the_spire_reborn/src/utils/safe_json.dart';
+lib\src\vault\models\server.dart:1:import 'dart:convert';
+lib\src\vault\models\server.dart:3:import 
+'package:convert_the_spire_reborn/src/utils/safe_json.dart';
+lib\src\vault\models\torrent.dart:1:import 'dart:convert';
+lib\src\vault\platform\desktop_window.dart:2:import 'package:convert_the_spire_
+reborn/src/vault/services/torrent_engine_service.dart';
+lib\src\vault\platform\desktop_window.dart:26:    title: 'Vault The Spire',
+lib\src\vault\platform\notifications_desktop.dart:37:        'VaultTheSpire',
+lib\src\vault\screens\about_screen.dart:2:import 'dart:convert';
+lib\src\vault\screens\about_screen.dart:9:import 
+'package:convert_the_spire_reborn/src/vault/constants.dart';
+lib\src\vault\screens\about_screen.dart:10:import 
+'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
+lib\src\vault\screens\about_screen.dart:11:import 
+'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+lib\src\vault\screens\about_screen.dart:415:      const 
+JsonEncoder.withIndent('  ').convert(payload),
+lib\src\vault\screens\about_screen.dart:802:                  title: const 
+Text('Vault The Spire'),
+lib\src\vault\screens\ai_chat_screen.dart:7:import 
+'package:convert_the_spire_reborn/src/vault/constants.dart';
+lib\src\vault\screens\ai_chat_screen.dart:8:import 
+'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
+lib\src\vault\screens\ai_chat_screen.dart:9:import 
+'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+lib\src\vault\screens\browser_screen.dart:2:import 'dart:convert';
+lib\src\vault\screens\browser_screen.dart:1083:                    
+'https://quizthespire.com/',
+lib\src\vault\screens\chat_hub_screen.dart:2:import 
+'package:convert_the_spire_reborn/src/vault/models/chat_hub_entry.dart';
+lib\src\vault\screens\chat_hub_screen.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/models/server.dart';
+lib\src\vault\screens\chat_hub_screen.dart:4:import 
+'package:convert_the_spire_reborn/src/vault/screens/chat_screen.dart';
+lib\src\vault\screens\chat_hub_screen.dart:5:import 
+'package:convert_the_spire_reborn/src/vault/screens/dm_screen.dart';
+lib\src\vault\screens\chat_hub_screen.dart:6:import 
+'package:convert_the_spire_reborn/src/vault/services/chat_service.dart';
+lib\src\vault\screens\chat_hub_screen.dart:7:import 
+'package:convert_the_spire_reborn/src/vault/services/identity_service.dart';
+lib\src\vault\screens\chat_hub_screen.dart:8:import 
+'package:convert_the_spire_reborn/src/vault/services/server_service.dart';
+lib\src\vault\screens\chat_screen.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/models/chat_message.dart';
+lib\src\vault\screens\chat_screen.dart:4:import 
+'package:convert_the_spire_reborn/src/vault/models/server.dart';
+lib\src\vault\screens\chat_screen.dart:5:import 
+'package:convert_the_spire_reborn/src/vault/services/chat_service.dart';
+lib\src\vault\screens\chat_screen.dart:6:import 
+'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+lib\src\vault\screens\chat_screen.dart:7:import 
+'package:convert_the_spire_reborn/src/vault/services/sound_service.dart';
+lib\src\vault\screens\chat_screen.dart:94:      // await 
+SoundService.instance.playMention(); // mention.mp3 asset missing
+lib\src\vault\screens\create_torrent_screen.dart:6:import 
+'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+lib\src\vault\screens\create_torrent_screen.dart:7:import 'package:convert_the_
+spire_reborn/src/vault/services/torrent_creator_service.dart';
+lib\src\vault\screens\create_torrent_screen.dart:8:import 
+'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
+lib\src\vault\screens\dm_screen.dart:5:import 
+'package:convert_the_spire_reborn/src/vault/models/chat_message.dart';
+lib\src\vault\screens\dm_screen.dart:6:import 
+'package:convert_the_spire_reborn/src/vault/services/chat_service.dart';
+lib\src\vault\screens\dm_screen.dart:7:import 
+'package:convert_the_spire_reborn/src/vault/services/sound_service.dart';
+lib\src\vault\screens\dm_screen.dart:88:      // await 
+SoundService.instance.playMention(); // mention.mp3 asset missing
+lib\src\vault\screens\guide_screen.dart:55:                        'Vault The 
+Spire',
+lib\src\vault\screens\guide_screen.dart:90:            body: 'Vault The Spire 
+is designed exclusively for legal downloading. '
+lib\src\vault\screens\guide_screen.dart:157:            body: 'Vault The Spire 
+stores all data locally on your device. '
+lib\src\vault\screens\guide_screen.dart:172:                ? '- Disable 
+battery optimisation for Vault The Spire in Android '
+lib\src\vault\screens\home_screen.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/services/identity_service.dart';
+lib\src\vault\screens\home_screen.dart:17:        title: const Text('Vault The 
+Spire'),
+lib\src\vault\screens\home_screen.dart:34:              'Vault The Spire',
+lib\src\vault\screens\torrentspire_ai_screen.dart:7:import 
+'package:convert_the_spire_reborn/src/config/full_mode_access.dart';
+lib\src\vault\screens\torrentspire_ai_screen.dart:8:import 
+'package:convert_the_spire_reborn/src/vault/constants.dart';
+lib\src\vault\screens\torrentspire_ai_screen.dart:9:import 
+'package:convert_the_spire_reborn/src/vault/models/ai_chat_entry.dart';
+lib\src\vault\screens\torrentspire_ai_screen.dart:10:import 
+'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
+lib\src\vault\screens\torrentspire_ai_screen.dart:11:import 
+'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
+lib\src\vault\screens\torrentspire_ai_screen.dart:12:import 
+'package:convert_the_spire_reborn/src/vault/services/ai_triggers.dart';
+lib\src\vault\screens\torrentspire_ai_screen.dart:13:import 
+'package:convert_the_spire_reborn/src/vault/services/intent_parser.dart';
+lib\src\vault\screens\torrentspire_ai_screen.dart:14:import 
+'package:convert_the_spire_reborn/src/vault/services/search_service.dart';
+lib\src\vault\screens\torrentspire_ai_screen.dart:15:import 
+'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+lib\src\vault\screens\torrentspire_ai_screen.dart:16:import 
+'package:convert_the_spire_reborn/src/vault/services/torrent_context.dart';
+lib\src\vault\screens\torrentspire_ai_screen.dart:17:import 
+'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
+lib\src\vault\screens\torrentspire_ai_screen.dart:18:import 'package:convert_th
+e_spire_reborn/src/vault/screens/create_torrent_screen.dart';
+lib\src\vault\screens\torrentspire_ai_screen.dart:20:class 
+TorrentSpireAiScreen extends StatefulWidget {
+lib\src\vault\screens\torrentspire_ai_screen.dart:21:  const 
+TorrentSpireAiScreen({super.key});
+lib\src\vault\screens\torrentspire_ai_screen.dart:24:  
+State<TorrentSpireAiScreen> createState() => _TorrentSpireAiScreenState();
+lib\src\vault\screens\torrentspire_ai_screen.dart:27:class 
+_TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
+lib\src\vault\screens\torrentspire_ai_screen.dart:672:        'You are Vault 
+The Spire AI, an in-app torrent copilot. '
+lib\src\vault\screens\torrentspire_ai_screen.dart:860:        title: const 
+Text('Vault The Spire AI'),
+lib\src\vault\screens\torrents_screen.dart:7:import 
+'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
+lib\src\vault\screens\torrents_screen.dart:8:import 
+'package:convert_the_spire_reborn/src/vault/platform/drag_drop.dart';
+lib\src\vault\screens\torrents_screen.dart:9:import 'package:convert_the_spire_
+reborn/src/vault/screens/create_torrent_screen.dart';
+lib\src\vault\screens\torrents_screen.dart:10:import 'package:convert_the_spire
+_reborn/src/vault/screens/torrent_detail_screen.dart';
+lib\src\vault\screens\torrents_screen.dart:11:import 
+'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+lib\src\vault\screens\torrents_screen.dart:13:import 'package:convert_the_spire
+_reborn/src/vault/services/torrent_engine_service.dart';
+lib\src\vault\screens\torrents_screen.dart:14:import 
+'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
+lib\src\vault\screens\torrents_screen.dart:982:                        
+Uri.parse('https://quizthespire.com/'),
+lib\src\vault\screens\torrents_screen.dart:987:                    label: 
+const Text('Visit Quiz the Spire'),
+lib\src\vault\screens\torrent_detail_screen.dart:5:import 
+'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
+lib\src\vault\screens\torrent_detail_screen.dart:6:import 'package:convert_the_
+spire_reborn/src/vault/services/torrent_engine_service.dart';
+lib\src\vault\screens\torrent_detail_screen.dart:7:import 
+'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
+lib\src\vault\services\ai_copilot_service.dart:1:import 'dart:convert';
+lib\src\vault\services\ai_triggers.dart:1:import 
+'package:convert_the_spire_reborn/src/vault/services/search_service.dart';
+lib\src\vault\services\background_service.dart:4:import 'package:convert_the_sp
+ire_reborn/src/vault/services/torrent_engine_service.dart';
+lib\src\vault\services\background_service.dart:18:      
+initialNotificationTitle: 'Vault The Spire Torrent Service',
+lib\src\vault\services\background_service.dart:45:        title: 'Vault The 
+Spire Torrent Service',
+lib\src\vault\services\chat_service.dart:4:import 
+'package:convert_the_spire_reborn/src/vault/db/chat_dao.dart';
+lib\src\vault\services\chat_service.dart:5:import 
+'package:convert_the_spire_reborn/src/vault/db/conversation_dao.dart';
+lib\src\vault\services\chat_service.dart:6:import 
+'package:convert_the_spire_reborn/src/vault/db/dm_messages_dao.dart';
+lib\src\vault\services\chat_service.dart:7:import 
+'package:convert_the_spire_reborn/src/vault/db/users_dao.dart';
+lib\src\vault\services\chat_service.dart:8:import 
+'package:convert_the_spire_reborn/src/vault/models/chat_hub_entry.dart';
+lib\src\vault\services\chat_service.dart:9:import 
+'package:convert_the_spire_reborn/src/vault/models/chat_message.dart';
+lib\src\vault\services\chat_service.dart:10:import 
+'package:convert_the_spire_reborn/src/vault/services/server_service.dart';
+lib\src\vault\services\chat_service.dart:11:import 
+'package:convert_the_spire_reborn/src/vault/models/chat_user.dart';
+lib\src\vault\services\chat_service.dart:12:import 
+'package:convert_the_spire_reborn/src/vault/models/conversation.dart';
+lib\src\vault\services\chat_service.dart:13:import 
+'package:convert_the_spire_reborn/src/vault/models/dm_message.dart';
+lib\src\vault\services\identity_service.dart:1:import 'dart:convert';
+lib\src\vault\services\identity_service.dart:4:import 
+'package:convert_the_spire_reborn/src/vault/crypto/identity.dart';
+lib\src\vault\services\identity_service.dart:12:  static const _kIdentityKey = 
+'vault_the_spire_identity';
+lib\src\vault\services\message_service.dart:2:import 
+'package:convert_the_spire_reborn/src/vault/db/messages_dao.dart';
+lib\src\vault\services\message_service.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/models/message.dart';
+lib\src\vault\services\notification_service.dart:39:      // include windows: 
+const WindowsInitializationSettings(appName: 'VaultTheSpire'),
+lib\src\vault\services\search_service.dart:2:import 'dart:convert';
+lib\src\vault\services\search_service.dart:5:import 
+'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
+lib\src\vault\services\server_service.dart:1:import 'dart:convert';
+lib\src\vault\services\server_service.dart:4:import 
+'package:convert_the_spire_reborn/src/vault/db/server_dao.dart';
+lib\src\vault\services\server_service.dart:5:import 
+'package:convert_the_spire_reborn/src/vault/models/server.dart';
+lib\src\vault\services\service_locator.dart:2:import 
+'package:convert_the_spire_reborn/src/vault/services/identity_service.dart';
+lib\src\vault\services\service_locator.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+lib\src\vault\services\service_locator.dart:4:import 
+'package:convert_the_spire_reborn/src/vault/services/theme_service.dart';
+lib\src\vault\services\service_locator.dart:5:import 
+'package:convert_the_spire_reborn/src/vault/services/startup_service.dart';
+lib\src\vault\services\service_locator.dart:6:import 
+'package:convert_the_spire_reborn/src/vault/services/tray_service.dart';
+lib\src\vault\services\settings_service.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/constants.dart';
+lib\src\vault\services\sound_service.dart:7:import 
+'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+lib\src\vault\services\sound_service.dart:45:  Future<void> playClick() async 
+=> _play('sounds/click.mp3');
+lib\src\vault\services\sound_service.dart:46:  Future<void> playSend() async 
+=> _play('sounds/send.mp3');
+lib\src\vault\services\sound_service.dart:47:  Future<void> playNotification() 
+async => _play('sounds/notification.mp3');
+lib\src\vault\services\sound_service.dart:48:  Future<void> playMention() 
+async => _play('sounds/mention.mp3');
+lib\src\vault\services\sound_service.dart:58:            
+AssetSource('sounds/notification.mp3'),
+lib\src\vault\services\startup_service.dart:50:      final linkPath = 
+p.join(desktopPath, 'VaultTheSpire.lnk');
+lib\src\vault\services\startup_service.dart:60:\$s.Description = 
+"VaultTheSpire  -  Private Torrent & Messaging"
+lib\src\vault\services\startup_service.dart:74:      final shortcutPath = 
+p.join(desktopPath, 'vault_the_spire.desktop');
+lib\src\vault\services\startup_service.dart:82:Name=VaultTheSpire
+lib\src\vault\services\startup_service.dart:109:      final linkPath = 
+p.join(startupDir, 'VaultTheSpire.lnk');
+lib\src\vault\services\startup_service.dart:136:        'VaultTheSpire.lnk',
+lib\src\vault\services\startup_service.dart:154:      final desktopFile = 
+p.join(autostartDir, 'vault_the_spire.desktop');
+lib\src\vault\services\startup_service.dart:159:Name=VaultTheSpire
+lib\src\vault\services\startup_service.dart:178:        
+'vault_the_spire.desktop',
+lib\src\vault\services\torrent_context.dart:2:import 
+'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
+lib\src\vault\services\torrent_context.dart:3:import 
+'package:convert_the_spire_reborn/src/vault/services/search_service.dart';
+lib\src\vault\services\torrent_context.dart:4:import 'package:convert_the_spire
+_reborn/src/vault/services/torrent_engine_service.dart';
+lib\src\vault\services\torrent_creator_service.dart:217:          final digest 
+= sha1.convert(pieceData);
+lib\src\vault\services\torrent_creator_service.dart:236:      final digest = 
+sha1.convert(buffer.toBytes());
+lib\src\vault\services\torrent_creator_service.dart:272:          : 'Convert 
+the Spire Reborn 1.0',
+lib\src\vault\services\torrent_engine_service.dart:2:import 'dart:convert';
+lib\src\vault\services\torrent_engine_service.dart:16:import 
+'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart'
+lib\src\vault\services\torrent_engine_service.dart:18:import 
+'package:convert_the_spire_reborn/src/vault/bittorrent/torrent_file.dart';
+lib\src\vault\services\torrent_engine_service.dart:19:import 
+'package:convert_the_spire_reborn/src/vault/bittorrent/magnet_link.dart';
+lib\src\vault\services\torrent_engine_service.dart:20:import 
+'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
+lib\src\vault\services\torrent_engine_service.dart:21:import 'package:convert_t
+he_spire_reborn/src/vault/services/notification_service.dart';
+lib\src\vault\services\torrent_engine_service.dart:22:import 
+'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+lib\src\vault\services\torrent_engine_service.dart:23:import 
+'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
+lib\src\vault\services\torrent_engine_service.dart:154:  int get 
+activeSpiresCount => currentDhtNodeCount;
+lib\src\vault\services\torrent_engine_service.dart:291:      const fallback = 
+'name: convert_the_spire_reborn\nversion: 0.0.0\n';
+lib\src\vault\services\torrent_engine_service.dart:342:      '.mp3',
+lib\src\vault\services\torrent_engine_service.dart:2030:      // Convert file 
+tree keys and names from Uint8List to String if needed.
+lib\src\vault\services\torrent_engine_service.dart:3633:    final appPrivate = 
+'${docs.path}${Platform.pathSeparator}TorrentSpireAI';
+lib\src\vault\services\torrent_service.dart:2:import 'dart:convert';
+lib\src\vault\services\torrent_service.dart:10:import 
+'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart';
+lib\src\vault\services\torrent_service.dart:11:import 
+'package:convert_the_spire_reborn/src/vault/bittorrent/magnet_link.dart';
+lib\src\vault\services\torrent_service.dart:12:import 
+'package:convert_the_spire_reborn/src/vault/bittorrent/torrent_file.dart';
+lib\src\vault\services\torrent_service.dart:13:import 
+'package:convert_the_spire_reborn/src/vault/db/torrents_dao.dart';
+lib\src\vault\services\torrent_service.dart:14:import 
+'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
+lib\src\vault\services\torrent_service.dart:15:import 
+'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+lib\src\vault\services\torrent_service.dart:16:import 'package:convert_the_spir
+e_reborn/src/vault/services/torrent_engine_service.dart';
+lib\src\vault\services\torrent_service.dart:1727:        final digest = 
+sha1.convert(toHash);
+lib\src\vault\services\torrent_service.dart:1745:      final digest = 
+sha1.convert(bytesBuilder.toBytes());
+lib\src\vault\services\tray_service.dart:9:import 
+'package:convert_the_spire_reborn/src/vault/constants.dart';
+lib\src\vault\services\tray_service.dart:10:import 
+'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+lib\src\vault\services\tray_service.dart:11:import 'package:convert_the_spire_r
+eborn/src/vault/services/torrent_engine_service.dart';
+lib\src\vault\services\tray_service.dart:77:      await 
+trayManager.setToolTip('Vault The Spire');
+lib\src\vault\widgets\platform_adaptive_scaffold.dart:4:import 
+'package:convert_the_spire_reborn/src/vault/platform/desktop_window.dart';
+lib\src\vault\widgets\platform_adaptive_scaffold.dart:5:import 
+'package:convert_the_spire_reborn/src/vault/screens/about_screen.dart';
+lib\src\vault\widgets\platform_adaptive_scaffold.dart:6:import 
+'package:convert_the_spire_reborn/src/vault/screens/browser_screen.dart';
+lib\src\vault\widgets\platform_adaptive_scaffold.dart:7:import 
+'package:convert_the_spire_reborn/src/vault/screens/guide_screen.dart';
+lib\src\vault\widgets\platform_adaptive_scaffold.dart:8:import 
+'package:convert_the_spire_reborn/src/vault/screens/torrents_screen.dart';
+lib\src\vault\widgets\platform_adaptive_scaffold.dart:9:import 
+'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+lib\src\vault\widgets\platform_adaptive_scaffold.dart:10:import 
+'package:convert_the_spire_reborn/src/config/build_flags.dart';
+lib\src\widgets\onboarding_tooltip_service.dart:71:    'convert.tab':
+lib\src\widgets\onboarding_tooltip_service.dart:72:        'Convert audio and 
+video files between formats using FFmpeg.',
+lib\src\widgets\quick_download_card.dart:4:import 
+'package:youtube_explode_dart/youtube_explode_dart.dart'
+lib\src\widgets\quick_download_card.dart:13:/// It fetches basic metadata for 
+YouTube URLs and shows a preview before enqueueing.
+lib\src\widgets\quick_download_card.dart:26:  String _format = 'mp3';
+lib\src\widgets\quick_download_card.dart:41:      final isYouTube = 
+url.contains('youtube.com') || url.contains('youtu.be');
+lib\src\widgets\quick_download_card.dart:43:      if (isYouTube && isPlaylist) 
+{
+lib\src\widgets\quick_download_card.dart:45:        final yt = 
+YoutubeExplode();
+lib\src\widgets\quick_download_card.dart:48:            await 
+playlistService.getYouTubePlaylistTracks(url);
+lib\src\widgets\quick_download_card.dart:81:        if (isYouTube) {
+lib\src\widgets\quick_download_card.dart:82:          final yt = 
+YoutubeExplode();
+lib\src\widgets\quick_download_card.dart:91:              source: 'youtube',
+lib\src\widgets\quick_download_card.dart:208:                                  
+  value: 'mp3', child: Text('MP3')),
+lib\src\widgets\quick_download_card.dart:283:                            
+DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+lib\src\widgets\quick_links_service.dart:1:import 'dart:convert';
+lib\src\widgets\quick_links_service.dart:48:    'convert.tab': Icons.transform,
+lib\src\widgets\quick_links_service.dart:73:      description: 'Download from 
+YouTube URL',
+lib\src\widgets\quick_links_service.dart:79:      description: 'Search YouTube 
+& SoundCloud',
+lib\src\widgets\quick_links_service.dart:91:      description: 'YouTube 
+playlists & folders',
+lib\src\widgets\quick_links_service.dart:118:      name: 'Convert',
+lib\src\widgets\quick_links_service.dart:120:      route: 'convert.tab',
+lib\src\widgets\quick_links_service.dart:121:      description: 'Convert 
+audio/video files',
+lib\src\widgets\quick_links_service.dart:160:    'convert.tab': 9,
+lib\src\widgets\quick_links_service.dart:179:    9: 'convert.tab',
+lib\src\widgets\quick_links_service.dart:198:    9: 'Convert',
+
+

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../config/build_flags.dart';
+
 /// A multi-page onboarding flow that introduces the app's features.
 ///
 /// Used in two places:
@@ -31,16 +33,37 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late ThemeMode _themeMode;
   int _page = 0;
 
-  // --─ Pages --------------------------------------------------------------─
+  // Get filtered pages based on build type
+  List<_OnboardingPage> get _pages {
+    final allPages = _OnboardingScreenState._allPages();
+    if (!kPlayStoreBuild) return allPages;
+    
+    // For Play Store build, only show essential pages:
+    // 0: Welcome, 4: Browser, 8: Settings, 11: Guide, 12: Player, 13: Support
+    return [
+      allPages[0], // Welcome (but with modified text)
+      allPages[4], // Browser
+      allPages[8], // Settings
+      allPages[11], // Guide
+      allPages[12], // Player
+      allPages[13], // Support
+    ];
+  }
 
-  static const _pages = <_OnboardingPage>[
+  // All onboarding pages
+  static List<_OnboardingPage> _allPages() => <_OnboardingPage>[
     // Welcome
     _OnboardingPage(
       icon: Icons.download_rounded,
       title: 'Welcome',
-      detail: 'Convert the Spire Reborn is a cross-platform media toolkit. '
-          'Download audio & video from dozens of sites, convert formats, '
-          'cast to your TV, and more \u2014 all from one app.',
+        detail: kPlayStoreBuild
+            ? 'Vault the Spire is a torrent vault and media hub. '
+              'Add magnet links and .torrent files, manage downloads, '
+              'and keep everything organized from one app.'
+            : 'Convert Spire Reborn is a cross-platform torrent and '
+              'media toolkit. Add magnet links and .torrent files, manage '
+              'downloads, convert formats, cast to your TV, and more - all from '
+              'one app.',
       color: Color(0xFF00897B),
       preview: _WelcomePreview(),
     ),
@@ -48,9 +71,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     // Supported Platforms
     _OnboardingPage(
       icon: Icons.language_rounded,
-      title: 'Supported Platforms',
-      detail: 'Not just YouTube! This app uses yt-dlp under the hood, '
-          'supporting 1\u202F000+ websites. Here are some popular ones:',
+        title: 'Supported Sources',
+        detail: 'Not just torrents. The app can work with magnet links, '
+          '.torrent files, browser links, local files, and other supported '
+          'sources in the host shell.',
       color: Color(0xFFFF6D00),
       preview: _PlatformsPreview(),
     ),
@@ -59,8 +83,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.search_rounded,
       title: 'Search',
-      detail: 'Look up a video by keyword or paste a link from any supported '
-          'site. Preview the result and pick a format before downloading.',
+        detail: 'Look up a title by keyword or paste a magnet / torrent link. '
+          'Preview the result and pick a destination before downloading.',
       color: Color(0xFF6C63FF),
       preview: _SearchPreview(),
     ),
@@ -69,8 +93,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.travel_explore_rounded,
       title: 'Multi-Search',
-      detail: 'Fetch results from YouTube and SoundCloud simultaneously. '
-          'Tap a row to hear a preview.',
+        detail: 'Search multiple sources at once and compare results side by '
+          'side. Tap a row to inspect details before adding it to the queue.',
       color: Color(0xFF43CFBB),
     ),
 
@@ -78,8 +102,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.open_in_browser_rounded,
       title: 'Browser',
-      detail: 'Browse the web in the built-in view and add videos directly '
-          'to the queue without leaving the app.',
+        detail: 'Browse the web in the built-in view and open magnet or '
+          'torrent links directly without leaving the app.',
       color: Color(0xFF4A90D9),
     ),
 
@@ -87,26 +111,20 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.queue_music_rounded,
       title: 'Queue',
-      detail: 'Manage your downloads. Start all, cancel, retry failures, '
-          'cast to your TV, or show completed files in your file manager.',
+      detail: kPlayStoreBuild
+          ? 'Manage your downloads. Start all, cancel, retry failures, '
+            'or show completed files in your file manager.'
+          : 'Manage your downloads. Start all, cancel, retry failures, '
+            'cast to your TV, or show completed files in your file manager.',
       color: Color(0xFFE07B54),
       preview: _QueuePreview(),
-    ),
-
-    // Playlists
-    _OnboardingPage(
-      icon: Icons.playlist_play_rounded,
-      title: 'Playlists',
-      detail: 'Load a playlist, compare against a local folder to spot '
-          'missing tracks, and batch-download.',
-      color: Color(0xFFAB6BD9),
     ),
 
     // Bulk Import
     _OnboardingPage(
       icon: Icons.upload_file_rounded,
       title: 'Bulk Import',
-      detail: 'Paste a list of names or import a text/CSV file to enqueue '
+        detail: 'Paste a list of links or import a text/CSV file to enqueue '
           'many items at once.',
       color: Color(0xFF5BA85A),
     ),
@@ -115,8 +133,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.bar_chart_rounded,
       title: 'Stats',
-      detail: 'See download totals, success rate, format breakdown, top '
-          'artists, and trends over time.',
+        detail: 'See download totals, success rate, format breakdown, top '
+          'sources, and trends over time.',
       color: Color(0xFFD4A017),
     ),
 
@@ -124,9 +142,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.settings_rounded,
       title: 'Settings',
-      detail: 'Choose download folder, quality defaults (1080p video, '
-          '320\u202Fkbps audio), FFmpeg options, retry behaviour, and '
-          'appearance.',
+        detail: 'Choose download folders, format defaults, FFmpeg options, '
+          'retry behaviour, and appearance.',
       color: Color(0xFF607D8B),
     ),
 
@@ -152,7 +169,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPage(
       icon: Icons.menu_book_rounded,
       title: 'Guide',
-      detail: 'A help screen you can revisit from the Guide tab.',
+      detail: kPlayStoreBuild
+          ? 'A help screen you can revisit from the Guide tab for Browser, Player, Torrents, and Settings.'
+          : 'A help screen you can revisit from the Guide tab.',
       color: Color(0xFF26A69A),
     ),
 
@@ -475,9 +494,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Convert the Spire',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          getAppTitle(),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         automaticallyImplyLeading: false,
         centerTitle: true,
@@ -653,12 +672,18 @@ class _WelcomePreview extends StatelessWidget {
     final bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final border = isDark ? const Color(0xFF3A3A3A) : const Color(0xFFDDDDDD);
 
-    const features = [
-      (Icons.download_rounded, 'Multi-site downloads'),
-      (Icons.transform_rounded, 'Format conversion'),
-      (Icons.cast_rounded, 'DLNA / Cast to TV'),
-      (Icons.favorite_outline, 'Support via donations'),
-    ];
+    final features = kPlayStoreBuild
+        ? const [
+            (Icons.download_rounded, 'Torrent downloads'),
+            (Icons.folder_copy_rounded, 'Queue & library'),
+            (Icons.favorite_outline, 'Support via donations'),
+          ]
+        : const [
+            (Icons.download_rounded, 'Torrent downloads'),
+            (Icons.transform_rounded, 'Format conversion'),
+            (Icons.cast_rounded, 'DLNA / Cast to TV'),
+            (Icons.favorite_outline, 'Support via donations'),
+          ];
 
     return Container(
       width: 280,
@@ -694,34 +719,34 @@ class _PlatformsPreview extends StatelessWidget {
   const _PlatformsPreview();
 
   static const _platforms = [
-    'YouTube',
-    'SoundCloud',
-    'Vimeo',
-    'Dailymotion',
-    'Twitch',
-    'Bandcamp',
-    'Reddit',
-    'Twitter / X',
-    'Facebook',
-    'Instagram',
-    'TikTok',
-    'Bilibili',
-    'Rumble',
-    'Mixcloud',
-    'Odysee',
-    '1000+ more',
+    '.torrent files',
+    'Magnet links',
+    'Browser links',
+    'Local files',
+    'Queue actions',
+    'Library tracking',
+    'Download folders',
+    'Clipboard import',
+    'Search results',
+    'Saved collections',
+    'Settings sync',
+    'Vault tabs',
+    'and more',
   ];
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = const Color(0xFFFF6D00);
+    final platforms = kPlayStoreBuild
+      ? _platforms
+        : _platforms;
 
     return Wrap(
       spacing: 6,
       runSpacing: 6,
       alignment: WrapAlignment.center,
-      children: _platforms.map((name) {
+      children: platforms.map((name) {
         final isMore = name.startsWith('1000');
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

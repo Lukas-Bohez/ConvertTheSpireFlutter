@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:convert_the_spire_reborn/src/vault/db/chat_dao.dart';
 import 'package:convert_the_spire_reborn/src/vault/db/conversation_dao.dart';
@@ -132,7 +130,7 @@ class ChatService {
     }
 
     final sender = await _ensureUserExists(from);
-    final recipient = await _ensureUserExists(to);
+    await _ensureUserExists(to);
 
     final conversation = await getOrCreateConversation(from, to);
 
@@ -218,8 +216,6 @@ class ChatService {
     );
 
     final userAInfo = await UsersDao.instance.getUserByName(userA);
-    final userBInfo = await UsersDao.instance.getUserByName(userB);
-
     return dmMessages
         .map(
           (dm) => ChatMessage(
@@ -341,25 +337,4 @@ class ChatService {
         .replaceAll(RegExp(r"[\x00-\x1F]"), '')
         .replaceAll(RegExp(r'<[^>]*>'), '');
   }
-
-  String _ensureString(dynamic value) {
-    if (value == null) return '';
-    if (value is String) return value;
-    if (value is Uint8List) {
-      try {
-        return utf8.decode(value, allowMalformed: true);
-      } catch (e) {
-        debugPrint('ChatService._ensureString decode error: $e');
-        return value.toString();
-      }
-    }
-    try {
-      return value.toString();
-    } catch (e) {
-      debugPrint('ChatService._ensureString toString error: $e');
-      return '';
-    }
-  }
-
-  Future<void> _listenForPendingMessages() async {}
 }

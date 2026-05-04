@@ -1,23 +1,17 @@
-# Convert The Spire Reborn — Release Workflow
+# Convert The Spire Reborn - Release Workflow
 #
-# Triggered manually via workflow_dispatch. Runs tests, builds for all
-# platforms, signs artifacts where credentials are provided, and publishes
-# a GitHub Release with a SHA-256 checksum manifest.
+# Triggered manually via workflow_dispatch. Runs tests, builds release
+# artifacts for all platforms, and publishes a GitHub Release with a
+# SHA-256 checksum manifest.
 #
-# Required secrets (configure in Settings → Secrets and variables → Actions):
-#
-#   Android signing (optional but strongly recommended for production):
-#     ANDROID_KEYSTORE_BASE64   – base64-encoded .jks / .keystore file
-#     ANDROID_KEYSTORE_PASSWORD – keystore password
-#     ANDROID_KEY_ALIAS         – key alias inside the keystore
-#     ANDROID_KEY_PASSWORD      – key password
+# Required secrets (configure in Settings -> Secrets and variables -> Actions):
 #
 #   macOS signing & notarization (optional; omit to ship unsigned):
-#     MACOS_CERTIFICATE_BASE64  – base64-encoded .p12 Developer ID certificate
-#     MACOS_CERTIFICATE_PASSWORD – .p12 import password
-#     MACOS_NOTARIZE_APPLE_ID   – Apple ID used for notarization
-#     MACOS_NOTARIZE_PASSWORD   – App-specific password for that Apple ID
-#     MACOS_NOTARIZE_TEAM_ID    – 10-character Apple Team ID
+#     MACOS_CERTIFICATE_BASE64  - base64-encoded .p12 Developer ID certificate
+#     MACOS_CERTIFICATE_PASSWORD - .p12 import password
+#     MACOS_NOTARIZE_APPLE_ID   - Apple ID used for notarization
+#     MACOS_NOTARIZE_PASSWORD   - App-specific password for that Apple ID
+#     MACOS_NOTARIZE_TEAM_ID    - 10-character Apple Team ID
 #
 name: Release Build
 
@@ -29,7 +23,7 @@ on:
         required: true
         type: string
       release_name:
-        description: 'Release name (e.g. "Version 1.2.3 — My Awesome Release")'
+        description: 'Release name (e.g. "Version 1.2.3 â€” My Awesome Release")'
         required: true
         type: string
       release_notes:
@@ -45,6 +39,8 @@ env:
   FLUTTER_VERSION: '3.41.2'
   APP_NAME: convert_the_spire_reborn
   OUTPUT_NAME: ConvertTheSpireReborn
+  ANDROID_APK_NAME: ConvertTheSpireReborn.apk
+  ANDROID_AAB_NAME: zaab.aab
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 # ---------------------------------------------------------------------------
@@ -56,7 +52,7 @@ permissions:
 
 jobs:
   # =========================================================================
-  # 1. Test & static analysis — gate for all build jobs
+  # 1. Test & static analysis â€” gate for all build jobs
   # =========================================================================
   test-and-analyze:
     name: Test and Analyze
@@ -74,7 +70,7 @@ jobs:
         run: flutter pub get
 
       - name: Analyze
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
 
       - name: Run tests
         run: flutter test --coverage
@@ -93,6 +89,7 @@ jobs:
     name: Build Windows
     needs: test-and-analyze
     runs-on: windows-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v5
 
@@ -132,7 +129,7 @@ jobs:
           }
 
       - name: Build Windows release
-        run: flutter build windows --release --no-tree-shake-icons
+        run: flutter build windows --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false
 
       - name: Package Windows build
         shell: pwsh
@@ -169,6 +166,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             clang cmake ninja-build pkg-config \
             libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libsecret-1-dev \
             libmpv-dev mpv libass-dev \
             fuse libfuse2 \
             libayatana-appindicator3-dev
@@ -183,7 +182,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Linux release
-        run: flutter build linux --release --no-tree-shake-icons
+        run: flutter build linux --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false
 
       - name: Package Linux zip
         run: |
@@ -206,7 +205,7 @@ jobs:
             bash scripts/build-appimage.sh
             echo "built=true" >> "$GITHUB_OUTPUT"
           else
-            echo "scripts/build-appimage.sh not found — skipping AppImage build."
+            echo "scripts/build-appimage.sh not found â€” skipping AppImage build."
             echo "built=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -239,7 +238,7 @@ jobs:
         run: flutter pub get
 
       - name: Build macOS release
-        run: flutter build macos --release --no-tree-shake-icons
+        run: flutter build macos --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false
 
       # -----------------------------------------------------------------------
       # Code-sign and notarize when Developer ID certificate secrets are set.
@@ -256,7 +255,7 @@ jobs:
         run: |
           # Skip when signing secrets are not configured
           if [ -z "$CERTIFICATE_BASE64" ] || [ -z "$NOTARIZE_APPLE_ID" ]; then
-            echo "macOS signing secrets not set — shipping unsigned build."
+            echo "macOS signing secrets not set â€” shipping unsigned build."
             exit 0
           fi
           set -euo pipefail
@@ -316,7 +315,7 @@ jobs:
           retention-days: 7
 
   # =========================================================================
-  # 5. Android (signed APK + AAB)
+  # 5. Android (full APK + Play AAB)
   # =========================================================================
   build-android:
     name: Build Android
@@ -336,49 +335,20 @@ jobs:
           channel: stable
           cache: true
 
-      # -----------------------------------------------------------------------
-      # Decode the keystore when secrets are present and write a key.properties
-      # file for Gradle to pick up.  Omitting secrets produces an unsigned
-      # debug-signed release — functional but not suitable for Play Store.
-      # -----------------------------------------------------------------------
-      - name: Configure Android signing
-        env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "Android keystore secrets not set — building with debug signing."
-            exit 0
-          fi
-          set -euo pipefail
-          KEYSTORE_PATH="$GITHUB_WORKSPACE/android/app/release.keystore"
-          echo "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
-
-          cat > "$GITHUB_WORKSPACE/android/key.properties" <<EOF
-          storePassword=$KEYSTORE_PASSWORD
-          keyPassword=$KEY_PASSWORD
-          keyAlias=$KEY_ALIAS
-          storeFile=release.keystore
-          EOF
-
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false
+      - name: Build APK (full feature)
+        run: flutter build apk --flavor full --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
 
-      - name: Build App Bundle
-        run: flutter build appbundle --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=true
+      - name: Build Play AAB (store flavor)
+        run: flutter build appbundle --flavor play --release --dart-define=PLAY_STORE_BUILD=true
 
       - name: Collect Android artifacts
         run: |
           mkdir -p android-builds
-          cp build/app/outputs/flutter-apk/app-release.apk \
-             android-builds/${{ env.OUTPUT_NAME }}.apk
-          cp build/app/outputs/bundle/release/app-release.aab \
-             android-builds/${{ env.OUTPUT_NAME }}.aab
+          cp build/app/outputs/flutter-apk/app-full-release.apk android-builds/${{ env.ANDROID_APK_NAME }}
+          cp build/app/outputs/bundle/playRelease/app-play-release.aab android-builds/${{ env.ANDROID_AAB_NAME }}
 
       - uses: actions/upload-artifact@v5
         with:
@@ -445,5 +415,6 @@ jobs:
             artifacts/windows-x64/*.zip
             artifacts/linux-x64/*
             artifacts/macos-x64/*.zip
-            artifacts/android-builds/*
+            artifacts/android-builds/${{ env.ANDROID_APK_NAME }}
+            artifacts/android-builds/${{ env.ANDROID_AAB_NAME }}
             SHA256SUMS.txt

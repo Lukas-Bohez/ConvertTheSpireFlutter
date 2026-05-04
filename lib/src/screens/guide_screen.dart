@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'onboarding_screen.dart';
+import '../config/build_flags.dart';
 
 /// In-app guide covering usage instructions, supported platforms,
 /// and feature explanations.
@@ -38,15 +39,15 @@ class GuideScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Icon(Icons.music_note,
+                  Icon(kPlayStoreBuild ? Icons.lock_outline : Icons.music_note,
                       size: 48, color: cs.onPrimaryContainer),
                   const SizedBox(height: 12),
-                  Text('Convert the Spire Reborn',
+                  Text(getAppTitle(),
                       style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: cs.onPrimaryContainer)),
                   const SizedBox(height: 4),
-                  Text('YouTube audio downloader & converter',
+                    Text(getAppSubtitle(),
                       style: theme.textTheme.bodyMedium?.copyWith(
                           color: cs.onPrimaryContainer.withValues(alpha: 0.8))),
                 ],
@@ -133,19 +134,21 @@ class GuideScreen extends StatelessWidget {
             cs: cs,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                _RequirementRow(
-                  text: 'FFmpeg',
-                  detail:
-                      'Required for audio conversion. On Windows it is installed automatically on first launch. On Linux, install via your package manager (e.g. sudo apt install ffmpeg).',
-                ),
+              children: [
+                if (!kPlayStoreBuild)
+                  const _RequirementRow(
+                    text: 'FFmpeg',
+                    detail:
+                        'Required for audio conversion. On Windows it is installed automatically on first launch. On Linux, install via your package manager (e.g. sudo apt install ffmpeg).',
+                  ),
+                if (!kPlayStoreBuild) const SizedBox(height: 8),
                 SizedBox(height: 8),
-                _RequirementRow(
+                const _RequirementRow(
                   text: 'Internet connection',
-                  detail: 'Needed to search and download from YouTube.',
+                  detail: 'Needed to fetch torrent metadata and download sources.',
                 ),
                 SizedBox(height: 8),
-                _RequirementRow(
+                const _RequirementRow(
                   text: 'Storage space',
                   detail:
                       'Downloaded files are saved to your chosen download folder. Videos can be large before conversion.',
@@ -162,30 +165,31 @@ class GuideScreen extends StatelessWidget {
             cs: cs,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                _StepRow(
+              children: [
+                const _StepRow(
                     number: '1',
                     title: 'Set download folder',
                     detail:
                         'Go to Settings and pick where files should be saved.'),
-                SizedBox(height: 12),
-                _StepRow(
+                const SizedBox(height: 12),
+                const _StepRow(
                     number: '2',
-                    title: 'Search for music',
+                    title: 'Browse & open links',
                     detail:
-                        'Use the Search tab to find a YouTube video by name or URL.'),
-                SizedBox(height: 12),
-                _StepRow(
+                        'Use the Browser tab to open pages, magnet links, and .torrent links safely inside the app.'),
+                const SizedBox(height: 12),
+                const _StepRow(
                     number: '3',
                     title: 'Add to queue',
                     detail:
-                        'Choose a format (MP3, M4A, or MP4) and add tracks to the download queue.'),
-                SizedBox(height: 12),
+                        'Choose your destination and add items to the download queue.'),
+                const SizedBox(height: 12),
                 _StepRow(
                     number: '4',
                     title: 'Download',
-                    detail:
-                        'Go to the Queue tab and press "Download All". The app downloads the video and converts it with FFmpeg.'),
+                    detail: kPlayStoreBuild
+                        ? 'Go to the Torrents tab to monitor progress, pause/resume, and manage completed files.'
+                        : 'Go to the Queue tab and press "Download All". The app fetches the selected content and processes it with FFmpeg when needed.'),
               ],
             ),
           ),
@@ -198,24 +202,61 @@ class GuideScreen extends StatelessWidget {
             cs: cs,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                _FeatureRow(
+              children: kPlayStoreBuild
+                ? const [
+                  _FeatureRow(
+                    icon: Icons.open_in_browser,
+                    name: 'Browser',
+                    detail:
+                      'Browse pages and open magnet or torrent links in-app.'),
+                  SizedBox(height: 8),
+                  _FeatureRow(
+                    icon: Icons.settings,
+                    name: 'Settings',
+                    detail:
+                      'Configure download folder, appearance, and app behavior.'),
+                  SizedBox(height: 8),
+                  _FeatureRow(
+                    icon: Icons.volunteer_activism,
+                    name: 'Support',
+                    detail: 'Support links and project information.'),
+                  SizedBox(height: 8),
+                  _FeatureRow(
+                    icon: Icons.menu_book,
+                    name: 'Guide',
+                    detail:
+                      'Instructions, supported platforms, and tips.'),
+                  SizedBox(height: 8),
+                  _FeatureRow(
+                    icon: Icons.music_note,
+                    name: 'Player',
+                    detail:
+                      'Built-in media player for local files with shuffle and repeat.'),
+                  SizedBox(height: 8),
+                  _FeatureRow(
+                    icon: Icons.download,
+                    name: 'Vault',
+                    detail:
+                      'Torrent manager and download control center.'),
+                ]
+                : const [
+              _FeatureRow(
                     icon: Icons.search,
                     name: 'Search',
-                    detail:
-                        'Search YouTube by keyword or paste a URL. Preview results, choose format, and add to queue.'),
+                  detail:
+                    'Search by keyword or paste a magnet / torrent link. Preview results and add them to the queue.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.travel_explore,
                     name: 'Multi-Search',
-                    detail:
-                        'Search across multiple sources at once. Hover a result to hear a preview.'),
+                  detail:
+                    'Search across multiple sources at once and compare results side by side.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.open_in_browser,
                     name: 'Browser',
-                    detail:
-                        'Use an integrated web view to browse YouTube (or other sites) and add videos directly to the queue.'),
+                  detail:
+                    'Use an integrated web view to browse supported sites and open magnet or torrent links directly.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.queue_music,
@@ -226,32 +267,32 @@ class GuideScreen extends StatelessWidget {
                 _FeatureRow(
                     icon: Icons.playlist_play,
                     name: 'Playlists',
-                    detail:
-                        'Load a YouTube playlist, compare against a local folder to find missing tracks, and batch-download them.'),
+                  detail:
+                    'Load a collection, compare against a local folder to find missing items, and batch-download them.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.upload_file,
                     name: 'Bulk Import',
-                    detail:
-                        'Paste a list of track names (one per line) or import from a text/CSV file to add many items to the queue at once.'),
+                  detail:
+                    'Paste a list of links or import from a text/CSV file to add many items to the queue at once.'),
                 SizedBox(height: 8),
                 _FeatureRow(
-                    icon: Icons.bar_chart,
-                    name: 'Stats',
-                    detail:
-                        'View download statistics: totals, success rate, format breakdown, top artists, and trends over time.'),
+                  icon: Icons.bar_chart,
+                  name: 'Stats',
+                  detail:
+                    'View download statistics: totals, success rate, format breakdown, top artists, and trends over time.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.settings,
                     name: 'Settings',
-                    detail:
-                        'Configure download folder, parallel workers, FFmpeg, retry behavior, and notifications.'),
+                  detail:
+                    'Configure download folders, parallel workers, FFmpeg, retry behavior, and notifications.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.transform,
                     name: 'Convert',
-                    detail:
-                        'Convert any local audio/video file between formats (MP3, M4A, MP4, WAV, FLAC, OGG, etc.) using FFmpeg.'),
+                  detail:
+                    'Convert any local audio/video file between formats using FFmpeg.'),
                 SizedBox(height: 8),
                 _FeatureRow(
                     icon: Icons.list_alt,
@@ -275,86 +316,89 @@ class GuideScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // -- Tips ----------------------------------------------
-          _SectionCard(
-            icon: Icons.lightbulb_outline,
-            title: 'Tips & Troubleshooting',
-            cs: cs,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                _TipRow(
-                  title: 'Downloads fail at 0%',
-                  detail:
-                      'This usually means FFmpeg is missing. On Windows the app installs it automatically; on Linux run: sudo apt install ffmpeg (or dnf install ffmpeg on Fedora).',
-                ),
-                SizedBox(height: 10),
-                _TipRow(
-                  title: 'YouTube blocks requests',
-                  detail:
-                      'YouTube may temporarily block rapid downloads. The app will automatically retry with backoff. You can increase retry count in Settings.',
-                ),
-                SizedBox(height: 10),
-                _TipRow(
-                  title: 'Large playlists are slow',
-                  detail:
-                      'When loading large playlists, use the preview limit to load just 10-50 items first. You can always load more.',
-                ),
-                SizedBox(height: 10),
-                _TipRow(
-                  title: 'Android: choose a writable folder',
-                  detail:
-                      'On Android you must pick a download folder through the system file picker so the app gets write permission.',
-                ),
-                SizedBox(height: 10),
-                _TipRow(
-                  title: 'Linux: enable video playback',
-                  detail:
-                      'Install mpv/libmpv with your package manager (e.g. sudo apt install mpv libmpv-dev) to enable video playback. Without libmpv the app will fall back to audio-only mode.',
-                ),
-                SizedBox(height: 10),
-                _TipRow(
-                  title: 'Parallel workers',
-                  detail:
-                      'More workers means faster batch downloads but uses more bandwidth and may trigger YouTube rate limits. 2-3 is recommended.',
-                ),
-                SizedBox(height: 10),
-                _TipRow(
-                  title: 'Need a refresher?',
-                  detail:
-                      'Tap "Show onboarding" at the top of this screen to walk through every tab again.',
-                ),
-              ],
+          if (!kPlayStoreBuild) ...[
+            // -- Tips ----------------------------------------------
+            _SectionCard(
+              icon: Icons.lightbulb_outline,
+              title: 'Tips & Troubleshooting',
+              cs: cs,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  _TipRow(
+                    title: 'Downloads fail at 0%',
+                    detail:
+                        'This usually means FFmpeg is missing. On Windows the app installs it automatically; on Linux run: sudo apt install ffmpeg (or dnf install ffmpeg on Fedora).',
+                  ),
+                  SizedBox(height: 10),
+                  _TipRow(
+                    title: 'Source sites block requests',
+                    detail:
+                        'Some source sites may temporarily block rapid requests. The app will automatically retry with backoff. You can increase retry count in Settings.',
+                  ),
+                  SizedBox(height: 10),
+                  _TipRow(
+                    title: 'Large libraries are slow',
+                    detail:
+                        'When loading large collections, use the preview limit to load just 10-50 items first. You can always load more.'),
+                  SizedBox(height: 10),
+                  _TipRow(
+                    title: 'Android: choose a writable folder',
+                    detail:
+                        'On Android you must pick a download folder through the system file picker so the app gets write permission.',
+                  ),
+                  SizedBox(height: 10),
+                  _TipRow(
+                    title: 'Linux: enable video playback',
+                    detail:
+                        'Install mpv/libmpv with your package manager (e.g. sudo apt install mpv libmpv-dev) to enable video playback. Without libmpv the app will fall back to audio-only mode.',
+                  ),
+                  SizedBox(height: 10),
+                  _TipRow(
+                    title: 'Parallel workers',
+                    detail:
+                        'More workers means faster batch downloads but uses more bandwidth and may trigger rate limits. 2-3 is recommended.',
+                  ),
+                  SizedBox(height: 10),
+                  _TipRow(
+                    title: 'Need a refresher?',
+                    detail:
+                        'Tap "Show onboarding" at the top of this screen to walk through every tab again.',
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
+          ],
 
           // -- Supported formats --------------------------------─
-          _SectionCard(
-            icon: Icons.audio_file,
-            title: 'Supported Formats',
-            cs: cs,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                _FormatRow(
-                    format: 'MP3',
-                    detail:
-                        'Universal audio format. Best compatibility across all devices and players.'),
-                SizedBox(height: 6),
-                _FormatRow(
-                    format: 'M4A',
-                    detail:
-                        'AAC audio in MP4 container. Better quality than MP3 at same bitrate. Works on Apple devices and modern players.'),
-                SizedBox(height: 6),
-                _FormatRow(
-                    format: 'MP4',
-                    detail:
-                        'Video with audio. Downloads the original YouTube video without re-encoding.'),
-              ],
+          if (!kPlayStoreBuild) ...[
+            _SectionCard(
+              icon: Icons.audio_file,
+              title: 'Supported Formats',
+              cs: cs,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  _FormatRow(
+                      format: 'MP3',
+                      detail:
+                          'Universal audio format. Best compatibility across all devices and players.'),
+                  SizedBox(height: 6),
+                  _FormatRow(
+                      format: 'M4A',
+                      detail:
+                          'AAC audio in MP4 container. Better quality than MP3 at same bitrate. Works on Apple devices and modern players.'),
+                  SizedBox(height: 6),
+                  _FormatRow(
+                      format: 'MP4',
+                      detail:
+                      'Video with audio. Keeps the video track intact when that is the selected target format.'),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
+          ],
 
           // -- Current platform info ----------------------------─
           _SectionCard(
