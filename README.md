@@ -2,7 +2,7 @@
 
 ## 📥 Quick Downloads
 
-* **[Latest GitHub Release (v10.2.3)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v10.2.3)**: Get the full-featured app for Windows, Linux, macOS, and Android (APK).
+* **[Latest GitHub Release (v10.8.0+1080)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v10.8.0)**: Get the full-featured app for Windows, Linux, macOS, and Android (APK).
 * **[Official Website (quizthespire.com)](https://quizthespire.com/)**: An additional place to download the app and learn more.
 * **[Google Play Store (BitPlayer: Torrent and Media)](https://play.google.com/store/apps/details?id=com.torrentspire.ai)**: The limited, App Store-compatible version featuring only the torrenting and media player functionality to comply with Play policies.
 
@@ -15,6 +15,16 @@ Hey everyone! If you remember the old web-based Convert the Spire downloader, yo
 It is a fully native Flutter app that handles torrent management, media downloading, playlist importing, and playback right on your own device. It started out as a simple, ad-free tool to bulk-download massive playlists, but it has grown into a full media suite. You can now work with torrents and supported sources, cast to your TV, and easily manage your local library.
 
 Because it runs natively on Windows, Linux, Android, and macOS, there is no heavy Electron bloat and no browser overhead. Android Play builds ship with YouTube conversion disabled to match Play policy, while APK builds keep the full downloader available.
+
+## Repository Layout
+
+The main code lives in `lib/`, platform configuration is under `android/`, `windows/`, `linux/`, `macos/`, `ios/`, and `web/`, and the reorganized documentation hub now lives in `docs/`.
+
+Start here for docs:
+
+* [Documentation index](docs/README.md)
+* [Play AAB build guide](docs/build/play-store-aab.md)
+* [Latest release notes](docs/releases/latest.md)
 
 ---
 
