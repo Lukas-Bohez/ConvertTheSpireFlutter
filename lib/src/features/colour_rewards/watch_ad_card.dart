@@ -28,10 +28,21 @@ class _WatchAdCardState extends State<WatchAdCard> {
     AdService.instance.registerInteraction();
     setState(() => _loading = true);
     final granted = await AdService.instance.showRewardedWithCustomReward(() async {
-      final reward = ColourRewardService.instance.rollReward();
-      await ColourRewardService.instance.unlockColour(reward.id);
-      if (!mounted) return;
-      await showDialog(context: context, builder: (_) => ColourRevealDialog(reward: reward));
+      // On Play Store builds, grant a batch of 10 sequential reveals per ad
+      if (kPlayStoreBuild) {
+        for (int i = 0; i < 10; i++) {
+          final reward = ColourRewardService.instance.rollReward();
+          await ColourRewardService.instance.unlockColour(reward.id);
+          if (!mounted) return;
+          await showDialog(context: context, builder: (_) => ColourRevealDialog(reward: reward));
+        }
+      } else {
+        // Non-Play builds: single reveal (or free spin behavior handled elsewhere)
+        final reward = ColourRewardService.instance.rollReward();
+        await ColourRewardService.instance.unlockColour(reward.id);
+        if (!mounted) return;
+        await showDialog(context: context, builder: (_) => ColourRevealDialog(reward: reward));
+      }
     });
     if (!granted) {
       // noop: no reward granted
@@ -173,14 +184,14 @@ class _WatchAdCardState extends State<WatchAdCard> {
                       const Icon(Icons.auto_awesome, size: 22, color: Color(0xFFB8860B)),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'Unlock All 28 Colours',
-                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
-                            ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Unlock All 28 Colours',
+                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface),
+                                  ),
                             const SizedBox(height: 2),
                             Text(
                               'One-time purchase · No ads needed',

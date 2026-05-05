@@ -229,6 +229,12 @@ class AppController extends ChangeNotifier {
           await saveSettings(settings.copyWith(ytDlpPath: resolved));
         }
         logs.add('yt-dlp found: $resolved');
+        // Check for updates to yt-dlp and auto-update if outdated.
+        try {
+          await downloadService.ytDlp.updateIfOutdated(configuredPath: settings.ytDlpPath, onProgress: (pct, msg) {
+            if (pct == 0 || pct == 100) logs.add('yt-dlp $msg ($pct%)');
+          });
+        } catch (_) {}
         return;
       }
       // Not found - auto-download (Windows/Linux/macOS)

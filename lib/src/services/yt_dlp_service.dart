@@ -267,6 +267,43 @@ class YtDlpService {
     }
   }
 
+  /// Checks remote yt-dlp latest release and updates the local binary if
+  /// the versions differ. Safe no-op on mobile/web.
+  Future<void> updateIfOutdated({String? configuredPath, void Function(int percent, String message)? onProgress}) async {
+    if (kIsWeb || Platform.isAndroid || Platform.isIOS) return;
+    final appBin = await _getAppBinaryPath();
+    if (appBin == null) return;
+
+    // If local binary missing, ensureAvailable will install it.
+    final existing = await resolveAvailablePath(configuredPath);
+    if (existing == null) {
+      await ensureAvailable(configuredPath: configuredPath, onProgress: onProgress);
+      return;
+    }
+
+    try {
+      // Local version
+      final local = await Process.run(existing, ['--version']).timeout(const Duration(seconds: 5));
+      final localVersion = local.stdout.toString().trim().split(RegExp(r'\s+'))[0];
+
+      // Remote latest tag via GitHub API
+      final resp = await http.get(Uri.parse('https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest')).timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200) return;
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      final tag = (data['tag_name'] ?? '').toString().trim();
+      if (tag.isEmpty) return;
+
+      // yt-dlp local --version typically returns a short version like '2024.03.05'
+      if (!localVersion.contains(tag) && !tag.contains(localVersion)) {
+        // Delete current binary and fetch latest
+        await _safeDelete(existing);
+        await ensureAvailable(configuredPath: configuredPath, onProgress: onProgress);
+      }
+    } catch (_) {
+      // Non-fatal - ignore network/parse errors
+    }
+  }
+
   /// Force-update the local yt-dlp binary by re-downloading it.
   ///
   /// This is useful when YouTube breaks and a newer yt-dlp release is needed.

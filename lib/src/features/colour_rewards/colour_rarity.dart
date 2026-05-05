@@ -47,37 +47,43 @@ class ColourReward {
 
 const List<ColourReward> kAllColours = [
   // Common
-  ColourReward(id: 'slate',        displayName: 'Slate',        color: Color(0xFF607D8B), rarity: RarityTier.common),
-  ColourReward(id: 'steel',        displayName: 'Steel',        color: Color(0xFF455A64), rarity: RarityTier.common),
-  ColourReward(id: 'graphite',     displayName: 'Graphite',     color: Color(0xFF37474F), rarity: RarityTier.common),
-  ColourReward(id: 'mist',         displayName: 'Mist',         color: Color(0xFF78909C), rarity: RarityTier.common),
-  ColourReward(id: 'ash',          displayName: 'Ash',          color: Color(0xFF546E7A), rarity: RarityTier.common),
+  // Common — tuned to be visually distinct (different hue/saturation)
+  ColourReward(id: 'slate',        displayName: 'Slate',        color: Color(0xFF4B5B6A), rarity: RarityTier.common),
+  ColourReward(id: 'steel',        displayName: 'Steel',        color: Color(0xFF2F4F57), rarity: RarityTier.common),
+  ColourReward(id: 'graphite',     displayName: 'Graphite',     color: Color(0xFF263238), rarity: RarityTier.common),
+  ColourReward(id: 'mist',         displayName: 'Mist',         color: Color(0xFF90A4AE), rarity: RarityTier.common),
+  ColourReward(id: 'ash',          displayName: 'Ash',          color: Color(0xFF8A9BA7), rarity: RarityTier.common),
   // Uncommon
-  ColourReward(id: 'ocean_blue',   displayName: 'Ocean Blue',   color: Color(0xFF1565C0), rarity: RarityTier.uncommon),
-  ColourReward(id: 'deep_teal',    displayName: 'Deep Teal',    color: Color(0xFF00695C), rarity: RarityTier.uncommon),
-  ColourReward(id: 'indigo',       displayName: 'Indigo',       color: Color(0xFF6A1B9A), rarity: RarityTier.uncommon),
-  ColourReward(id: 'burnt_sienna', displayName: 'Burnt Sienna', color: Color(0xFFE65100), rarity: RarityTier.uncommon),
-  ColourReward(id: 'bark',         displayName: 'Bark',         color: Color(0xFF4E342E), rarity: RarityTier.uncommon),
+  // Uncommon — stronger contrasts and saturation
+  ColourReward(id: 'ocean_blue',   displayName: 'Ocean Blue',   color: Color(0xFF0077CC), rarity: RarityTier.uncommon),
+  ColourReward(id: 'deep_teal',    displayName: 'Deep Teal',    color: Color(0xFF00796B), rarity: RarityTier.uncommon),
+  ColourReward(id: 'indigo',       displayName: 'Indigo',       color: Color(0xFF3F1F8A), rarity: RarityTier.uncommon),
+  ColourReward(id: 'burnt_sienna', displayName: 'Burnt Sienna', color: Color(0xFFBF4A00), rarity: RarityTier.uncommon),
+  ColourReward(id: 'bark',         displayName: 'Bark',         color: Color(0xFF5D3526), rarity: RarityTier.uncommon),
   // Rare
-  ColourReward(id: 'ruby',         displayName: 'Ruby',         color: Color(0xFFC62828), rarity: RarityTier.rare),
-  ColourReward(id: 'berry',        displayName: 'Berry',        color: Color(0xFFAD1457), rarity: RarityTier.rare),
-  ColourReward(id: 'cyan_depth',   displayName: 'Cyan Depth',   color: Color(0xFF00838F), rarity: RarityTier.rare),
-  ColourReward(id: 'fern',         displayName: 'Fern',         color: Color(0xFF558B2F), rarity: RarityTier.rare),
-  ColourReward(id: 'saffron',      displayName: 'Saffron',      color: Color(0xFFF57F17), rarity: RarityTier.rare),
+  // Rare — vivid and unique
+  ColourReward(id: 'ruby',         displayName: 'Ruby',         color: Color(0xFFB71C1C), rarity: RarityTier.rare),
+  ColourReward(id: 'berry',        displayName: 'Berry',        color: Color(0xFF9C1850), rarity: RarityTier.rare),
+  ColourReward(id: 'cyan_depth',   displayName: 'Cyan Depth',   color: Color(0xFF007B8A), rarity: RarityTier.rare),
+  ColourReward(id: 'fern',         displayName: 'Fern',         color: Color(0xFF2E7D32), rarity: RarityTier.rare),
+  ColourReward(id: 'saffron',      displayName: 'Saffron',      color: Color(0xFFF57C00), rarity: RarityTier.rare),
   // Epic
-  ColourReward(id: 'void_purple',  displayName: 'Void Purple',  color: Color(0xFF4A148C), rarity: RarityTier.epic),
-  ColourReward(id: 'crimson_rose', displayName: 'Crimson Rose', color: Color(0xFF880E4F), rarity: RarityTier.epic),
-  ColourReward(id: 'abyss',        displayName: 'Abyss',        color: Color(0xFF006064), rarity: RarityTier.epic),
-  ColourReward(id: 'forest_king',  displayName: 'Forest King',  color: Color(0xFF1B5E20), rarity: RarityTier.epic),
-  ColourReward(id: 'ember',        displayName: 'Ember',        color: Color(0xFFBF360C), rarity: RarityTier.epic),
+  // Epic — deeper tones with character
+  ColourReward(id: 'void_purple',  displayName: 'Void Purple',  color: Color(0xFF5E2A8A), rarity: RarityTier.epic),
+  ColourReward(id: 'crimson_rose', displayName: 'Crimson Rose', color: Color(0xFFC2185B), rarity: RarityTier.epic),
+  ColourReward(id: 'abyss',        displayName: 'Abyss',        color: Color(0xFF004D54), rarity: RarityTier.epic),
+  ColourReward(id: 'forest_king',  displayName: 'Forest King',  color: Color(0xFF145A32), rarity: RarityTier.epic),
+  ColourReward(id: 'ember',        displayName: 'Ember',        color: Color(0xFFD84315), rarity: RarityTier.epic),
   // Legendary
+  // Legendary — bold & recognizable
   ColourReward(id: 'dark_gold',    displayName: 'Dark Gold',    color: Color(0xFFB8860B), rarity: RarityTier.legendary),
-  ColourReward(id: 'royal_amethyst',displayName: 'Royal Amethyst',color: Color(0xFF4B0082), rarity: RarityTier.legendary),
-  ColourReward(id: 'dragon_teal',  displayName: 'Dragon Teal',  color: Color(0xFF008080), rarity: RarityTier.legendary),
-  ColourReward(id: 'wine_crest',   displayName: 'Wine Crest',   color: Color(0xFF722F37), rarity: RarityTier.legendary),
+  ColourReward(id: 'royal_amethyst',displayName: 'Royal Amethyst',color: Color(0xFF6A1B9A), rarity: RarityTier.legendary),
+  ColourReward(id: 'dragon_teal',  displayName: 'Dragon Teal',  color: Color(0xFF007A7A), rarity: RarityTier.legendary),
+  ColourReward(id: 'wine_crest',   displayName: 'Wine Crest',   color: Color(0xFF7B2C2C), rarity: RarityTier.legendary),
   // Mythic
-  ColourReward(id: 'mythic_red',        displayName: 'Mythic Red',         color: Color(0xFFCC1100), rarity: RarityTier.mythic),
-  ColourReward(id: 'mango_passion',     displayName: 'Mango Passion',      color: Color(0xFFFFB347), rarity: RarityTier.mythic),
-  ColourReward(id: 'obsidian_black',    displayName: 'Obsidian Black',     color: Color(0xFF0A0A0A), rarity: RarityTier.mythic),
-  ColourReward(id: 'ivory_prime',       displayName: 'Ivory Prime',        color: Color(0xFFE8D5B7), rarity: RarityTier.mythic),
+  // Mythic — extreme contrast and uniqueness
+  ColourReward(id: 'mythic_red',        displayName: 'Mythic Red',         color: Color(0xFFE53935), rarity: RarityTier.mythic),
+  ColourReward(id: 'mango_passion',     displayName: 'Mango Passion',      color: Color(0xFFFFA726), rarity: RarityTier.mythic),
+  ColourReward(id: 'obsidian_black',    displayName: 'Obsidian Black',     color: Color(0xFF0D0D0D), rarity: RarityTier.mythic),
+  ColourReward(id: 'ivory_prime',       displayName: 'Ivory Prime',        color: Color(0xFFF2E8D5), rarity: RarityTier.mythic),
 ];

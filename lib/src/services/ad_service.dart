@@ -398,18 +398,33 @@ class AdService with WidgetsBindingObserver {
     Future<void> Function() onRewardEarned,
   ) async {
     if (!_isSupportedPlatform || _adsSuppressed) return false;
+    // Try to load rewarded ad and wait briefly for the SDK callback to complete.
     await loadRewarded();
-    final ad = _rewardedAd;
+    RewardedAd? ad = _rewardedAd;
+    // Wait a short period for the ad object to be assigned by the loader
+    var attempts = 0;
+    while (ad == null && attempts < 8) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      ad = _rewardedAd;
+      attempts++;
+    }
     if (ad == null) return false;
 
     _rewardedAd = null;
     var rewardEarned = false;
-    await ad.show(
-      onUserEarnedReward: (ad, reward) {
-        rewardEarned = true;
-        unawaited(onRewardEarned());
-      },
-    );
+    try {
+      await ad.show(
+        onUserEarnedReward: (ad, reward) {
+          rewardEarned = true;
+          unawaited(onRewardEarned());
+        },
+      );
+    } catch (e) {
+      // If showing the ad fails, attempt to reload for next time and return false.
+      debugPrint('Rewarded ad show failed: $e');
+      unawaited(loadRewarded());
+      return false;
+    }
     return rewardEarned;
   }
 
