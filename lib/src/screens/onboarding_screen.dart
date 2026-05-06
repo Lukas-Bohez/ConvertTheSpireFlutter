@@ -447,6 +447,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           child: isLast
               ? ElevatedButton.icon(
                   key: const ValueKey('done'),
+                  autofocus: true,
                   onPressed: widget.onFinish,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: pageColor,
@@ -464,6 +465,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 )
               : ElevatedButton.icon(
                   key: const ValueKey('next'),
+                  autofocus: true,
                   onPressed: _next,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: pageColor,

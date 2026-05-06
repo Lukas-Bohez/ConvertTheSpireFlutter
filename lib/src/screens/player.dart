@@ -48,11 +48,15 @@ enum PlaybackMode { all, songs, videos, favourites, favouriteSongs, favouriteVid
 
 enum QueueScope { all, songs, videos, favourites, favSongs, favVideos }
 
+enum MediaSortOrder { newestFirst, oldestFirst, titleAZ, titleZA, shortestDuration }
+
 class MediaItem {
   final String path;
   final MediaType type;
   final String? title;
   final String? artist;
+  final String? genre;
+  final DateTime? modifiedAt;
   final Uint8List? thumbnailData;
   final Duration? duration;
 
@@ -61,6 +65,8 @@ class MediaItem {
     this.type, {
     this.title,
     this.artist,
+    this.genre,
+    this.modifiedAt,
     this.thumbnailData,
     this.duration,
   });
@@ -68,6 +74,8 @@ class MediaItem {
   MediaItem copyWith({
     String? title,
     String? artist,
+    String? genre,
+    DateTime? modifiedAt,
     Uint8List? thumbnailData,
     Duration? duration,
   }) =>
@@ -76,6 +84,8 @@ class MediaItem {
         type,
         title: title ?? this.title,
         artist: artist ?? this.artist,
+        genre: genre ?? this.genre,
+        modifiedAt: modifiedAt ?? this.modifiedAt,
         thumbnailData: thumbnailData ?? this.thumbnailData,
         duration: duration ?? this.duration,
       );
@@ -742,7 +752,8 @@ class PlayerState with ChangeNotifier {
       final item = _favouriteCache[path];
       if (item != null) {
         list.add('${item.path}\t${item.type == MediaType.video ? 'v' : 'a'}'
-            '\t${item.title ?? ''}\t${item.artist ?? ''}');
+            '\t${item.title ?? ''}\t${item.artist ?? ''}\t${item.genre ?? ''}'
+            '\t${item.modifiedAt?.toIso8601String() ?? ''}');
         if (item.thumbnailData != null) _saveThumbToCache(path, item.thumbnailData!);
       }
     }
@@ -989,6 +1000,8 @@ class PlayerState with ChangeNotifier {
       lib[i] = item.copyWith(
         title: tag.title?.trim().isNotEmpty == true ? tag.title!.trim() : item.title,
         artist: tag.artist?.trim().isNotEmpty == true ? tag.artist!.trim() : item.artist,
+        genre: _extractGenre(tag) ?? item.genre,
+        modifiedAt: item.modifiedAt ?? _modifiedAtForPath(item.path),
       );
       if (i == currentIndex) {
         _updateMediaNotification(lib[i]);
@@ -2007,11 +2020,58 @@ class PlayerState with ChangeNotifier {
         final type = parts[1] == 'v' ? MediaType.video : MediaType.audio;
         final title = parts.length > 2 && parts[2].isNotEmpty ? parts[2] : null;
         final artist = parts.length > 3 && parts[3].isNotEmpty ? parts[3] : null;
-        _favouriteCache[path] = MediaItem(path, type, title: title, artist: artist);
+        final genre = parts.length > 4 && parts[4].isNotEmpty ? parts[4] : null;
+        final modifiedAt = parts.length > 5 ? DateTime.tryParse(parts[5]) : null;
+        _favouriteCache[path] = MediaItem(
+          path,
+          type,
+          title: title,
+          artist: artist,
+          genre: genre,
+          modifiedAt: modifiedAt,
+        );
       }
     }
     _loadFavouriteThumbsFromDisk();
     notifyListeners();
+  }
+
+  String? _extractGenre(dynamic tag) {
+    try {
+      final raw = (tag as dynamic).genre;
+      if (raw == null) return null;
+      if (raw is Iterable) {
+        final values = raw
+            .map((value) => value.toString().trim())
+            .where((value) => value.isNotEmpty)
+            .toList();
+        return values.isEmpty ? null : values.join(', ');
+      }
+      final text = raw.toString().trim();
+      return text.isEmpty ? null : text;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  DateTime? _modifiedAtForPath(String path) {
+    try {
+      return File(path).statSync().modified;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool hasPlayedPath(String path) {
+    final historyPaths = _playHistory
+        .where((index) => index >= 0 && index < library.length)
+        .map((index) => library[index].path)
+        .toSet();
+    if (historyPaths.contains(path)) return true;
+    return _recentlyPlayed
+        .where((index) => index >= 0 && index < library.length)
+        .map((index) => library[index].path)
+        .contains(path);
   }
 
   /// Enqueue a set of tracks determined by [scope]. Returns the number of
@@ -2225,6 +2285,7 @@ class PlayerState with ChangeNotifier {
             entity.path,
             isVideo ? MediaType.video : MediaType.audio,
             title: p.basenameWithoutExtension(entity.path),
+            modifiedAt: _modifiedAtForPath(entity.path),
           ),
         );
       }
@@ -2745,37 +2806,50 @@ class _VideoPaneState extends State<_VideoPane> {
       child = const Center(child: CircularProgressIndicator(color: _PlayerTheme.accent));
     }
 
-    return GestureDetector(
-      onTap: widget.onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox.expand(
-        child: ColoredBox(
-          color: Theme.of(context).colorScheme.background,
-          child: widget.ready
-              ? Stack(
-                  fit: StackFit.loose,
-                  children: [
-                    Center(child: child),
-                    Positioned(
-                      // overflow-fix: keep top-right overlay control inside safe insets.
-                      top: mq.padding.top + 10,
-                      right: mq.padding.right + 10,
-                      child: IconButton(
-                        icon: Icon(
-                          widget.isFullScreen
-                              ? Icons.fullscreen_exit
-                              : Icons.fullscreen,
-                          color: Colors.white.withOpacity(0.85),
+    return Focus(
+      canRequestFocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            (event.logicalKey == LogicalKeyboardKey.select ||
+                event.logicalKey == LogicalKeyboardKey.enter ||
+                event.logicalKey == LogicalKeyboardKey.gameButtonA)) {
+          widget.onTap();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
+        onTap: widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox.expand(
+          child: ColoredBox(
+            color: Theme.of(context).colorScheme.background,
+            child: widget.ready
+                ? Stack(
+                    fit: StackFit.loose,
+                    children: [
+                      Center(child: child),
+                      Positioned(
+                        // overflow-fix: keep top-right overlay control inside safe insets.
+                        top: mq.padding.top + 10,
+                        right: mq.padding.right + 10,
+                        child: IconButton(
+                          icon: Icon(
+                            widget.isFullScreen
+                                ? Icons.fullscreen_exit
+                                : Icons.fullscreen,
+                            color: Colors.white.withOpacity(0.85),
+                          ),
+                          tooltip: widget.isFullScreen
+                              ? 'Exit fullscreen'
+                              : 'Fullscreen',
+                          onPressed: widget.onToggleFullScreen,
                         ),
-                        tooltip: widget.isFullScreen
-                            ? 'Exit fullscreen'
-                            : 'Fullscreen',
-                        onPressed: widget.onToggleFullScreen,
                       ),
-                    ),
-                  ],
-                )
-              : const Center(child: CircularProgressIndicator(color: _PlayerTheme.accent)),
+                    ],
+                  )
+                : const Center(child: CircularProgressIndicator(color: _PlayerTheme.accent)),
+          ),
         ),
       ),
     );
@@ -2814,6 +2888,11 @@ class _PlayerScreenState extends State<PlayerScreen>
   late final TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  MediaSortOrder _sortOrder = MediaSortOrder.newestFirst;
+  final Set<String> _activeGenres = <String>{};
+  bool _showOnlyUnplayed = false;
+  bool _showOnlyFavourites = false;
+  bool _uiPrefsLoaded = false;
   bool _isFullScreen = false;
 
   // One scroll controller per tab to avoid cross-tab controller conflicts.
@@ -2825,6 +2904,19 @@ class _PlayerScreenState extends State<PlayerScreen>
     WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() { if (!_tabController.indexIsChanging) setState(() {}); });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_uiPrefsLoaded) return;
+    _uiPrefsLoaded = true;
+    final prefs = context.read<PlayerState>().prefs;
+    _sortOrder = MediaSortOrder.values[
+        (prefs.getInt('player_sort_order') ?? 0).clamp(0, MediaSortOrder.values.length - 1)];
+    _activeGenres.addAll(prefs.getStringList('player_filter_genres') ?? const []);
+    _showOnlyUnplayed = prefs.getBool('player_filter_unplayed') ?? false;
+    _showOnlyFavourites = prefs.getBool('player_filter_favourites') ?? false;
   }
 
   @override
@@ -2869,6 +2961,71 @@ class _PlayerScreenState extends State<PlayerScreen>
     return title.contains(q) || artist.contains(q);
   }
 
+  List<MapEntry<int, MediaItem>> _sortAndFilterEntries(
+    Iterable<MapEntry<int, MediaItem>> source,
+    PlayerState state,
+  ) {
+    final filtered = source.where((entry) {
+      final item = entry.value;
+      if (!_matchesSearch(item)) return false;
+      if (_showOnlyUnplayed && state.hasPlayedPath(item.path)) return false;
+      if (_showOnlyFavourites && !state.isFavourite(item.path)) return false;
+      if (_activeGenres.isNotEmpty) {
+        final genres = (item.genre ?? '')
+            .split(',')
+            .map((value) => value.trim())
+            .where((value) => value.isNotEmpty)
+            .toSet();
+        if (genres.intersection(_activeGenres).isEmpty) return false;
+      }
+      return true;
+    }).toList();
+
+    filtered.sort((a, b) {
+      switch (_sortOrder) {
+        case MediaSortOrder.oldestFirst:
+          return (a.value.modifiedAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+              .compareTo(b.value.modifiedAt ?? DateTime.fromMillisecondsSinceEpoch(0));
+        case MediaSortOrder.titleAZ:
+          return _sortTitleOf(a.value).compareTo(_sortTitleOf(b.value));
+        case MediaSortOrder.titleZA:
+          return _sortTitleOf(b.value).compareTo(_sortTitleOf(a.value));
+        case MediaSortOrder.shortestDuration:
+          return (a.value.duration ?? Duration.zero)
+              .compareTo(b.value.duration ?? Duration.zero);
+        case MediaSortOrder.newestFirst:
+          return (b.value.modifiedAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+              .compareTo(a.value.modifiedAt ?? DateTime.fromMillisecondsSinceEpoch(0));
+      }
+    });
+    return filtered;
+  }
+
+  String _sortTitleOf(MediaItem item) =>
+      (item.title ?? p.basenameWithoutExtension(item.path)).toLowerCase();
+
+  List<String> _availableGenres(PlayerState state) {
+    final genres = <String>{};
+    for (final item in state.library) {
+      final raw = item.genre;
+      if (raw == null || raw.trim().isEmpty) continue;
+      for (final value in raw.split(',')) {
+        final genre = value.trim();
+        if (genre.isNotEmpty) genres.add(genre);
+      }
+    }
+    final result = genres.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return result;
+  }
+
+  void _saveUiPrefs(PlayerState state) {
+    final prefs = state.prefs;
+    prefs.setInt('player_sort_order', _sortOrder.index);
+    prefs.setStringList('player_filter_genres', _activeGenres.toList()..sort());
+    prefs.setBool('player_filter_unplayed', _showOnlyUnplayed);
+    prefs.setBool('player_filter_favourites', _showOnlyFavourites);
+  }
+
   Future<void> _pickFolder() async {
     if (kIsWeb) return;
     String? dirPath;
@@ -2889,8 +3046,12 @@ class _PlayerScreenState extends State<PlayerScreen>
         .map((f) {
           final ext = p.extension(f.path).toLowerCase();
           final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
-          return MediaItem(f.path, isVideo ? MediaType.video : MediaType.audio,
-              title: p.basenameWithoutExtension(f.path));
+          return MediaItem(
+            f.path,
+            isVideo ? MediaType.video : MediaType.audio,
+            title: p.basenameWithoutExtension(f.path),
+            modifiedAt: f.statSync().modified,
+          );
         })
         .toList();
 
@@ -2902,6 +3063,8 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   Widget build(BuildContext context) {
     final state = context.watch<PlayerState>();
+    final screenWidth = MediaQuery.of(context).size.width;
+    final searchBarHeight = screenWidth < 600 ? 128.0 : 88.0;
 
     final songCount = state.audioEntries.length;
     final videoCount = state.videoEntries.length;
@@ -3012,8 +3175,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                 SliverPersistentHeader(
                   pinned: true,
                   delegate: _FixedHeightSliverDelegate(
-                    height: 68,
-                    child: _buildSearchBar(),
+                    height: searchBarHeight,
+                    child: _buildSearchBar(state),
                   ),
                 ),
             ];
@@ -3021,10 +3184,33 @@ class _PlayerScreenState extends State<PlayerScreen>
           body: TabBarView(
             controller: _tabController,
             children: [
-              _AllTab(state: state, scrollCtl: _scrollControllers[0], matchFn: _matchesSearch, onTap: _onTrackTap),
-              _SongsTab(state: state, scrollCtl: _scrollControllers[1], matchFn: _matchesSearch, onTap: _onTrackTap),
-              _VideosTab(state: state, scrollCtl: _scrollControllers[2], matchFn: _matchesSearch, onTap: _onTrackTap),
-              _FavouritesTab(state: state, scrollCtl: _scrollControllers[3], matchFn: _matchesSearch, onTap: _onTrackTap),
+              _AllTab(
+                entries: _sortAndFilterEntries(
+                  state.library.asMap().entries.take(state.folderItemCount > 0 ? state.folderItemCount : state.library.length),
+                  state,
+                ),
+                state: state,
+                scrollCtl: _scrollControllers[0],
+                onTap: _onTrackTap,
+              ),
+              _SongsTab(
+                entries: _sortAndFilterEntries(state.audioEntries, state),
+                state: state,
+                scrollCtl: _scrollControllers[1],
+                onTap: _onTrackTap,
+              ),
+              _VideosTab(
+                entries: _sortAndFilterEntries(state.videoEntries, state),
+                state: state,
+                scrollCtl: _scrollControllers[2],
+                onTap: _onTrackTap,
+              ),
+              _FavouritesTab(
+                entries: _sortAndFilterEntries(state.favouriteEntries, state),
+                state: state,
+                scrollCtl: _scrollControllers[3],
+                onTap: _onTrackTap,
+              ),
             ],
           ),
         ),
@@ -3136,29 +3322,127 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(PlayerState state) {
+    final width = MediaQuery.of(context).size.width;
+    final isWide = width >= 600;
+    final genres = _availableGenres(state);
+
+    Widget sortButton() {
+      return PopupMenuButton<MediaSortOrder>(
+        tooltip: 'Sort',
+        icon: const Icon(Icons.sort_rounded),
+        initialValue: _sortOrder,
+        onSelected: (value) {
+          setState(() => _sortOrder = value);
+          _saveUiPrefs(state);
+        },
+        itemBuilder: (context) => const [
+          PopupMenuItem(value: MediaSortOrder.newestFirst, child: Text('Newest first')),
+          PopupMenuItem(value: MediaSortOrder.oldestFirst, child: Text('Oldest first')),
+          PopupMenuItem(value: MediaSortOrder.titleAZ, child: Text('Title A-Z')),
+          PopupMenuItem(value: MediaSortOrder.titleZA, child: Text('Title Z-A')),
+          PopupMenuItem(value: MediaSortOrder.shortestDuration, child: Text('Shortest first')),
+        ],
+      );
+    }
+
+    Widget filterChips() {
+      final chips = <Widget>[
+        FilterChip(
+          label: const Text('Unplayed'),
+          selected: _showOnlyUnplayed,
+          onSelected: (value) {
+            setState(() => _showOnlyUnplayed = value);
+            _saveUiPrefs(state);
+          },
+        ),
+        FilterChip(
+          label: const Text('Favourites'),
+          selected: _showOnlyFavourites,
+          onSelected: (value) {
+            setState(() => _showOnlyFavourites = value);
+            _saveUiPrefs(state);
+          },
+        ),
+        for (final genre in genres)
+          FilterChip(
+            label: Text(genre),
+            selected: _activeGenres.contains(genre),
+            onSelected: (value) {
+              setState(() {
+                if (value) {
+                  _activeGenres.add(genre);
+                } else {
+                  _activeGenres.remove(genre);
+                }
+              });
+              _saveUiPrefs(state);
+            },
+          ),
+      ];
+      return Wrap(spacing: 8, runSpacing: 8, children: chips);
+    }
+
+    final searchField = TextField(
+      controller: _searchController,
+      decoration: InputDecoration(
+        hintText: 'Search…',
+        prefixIcon: const Icon(Icons.search, size: 20),
+        suffixIcon: _searchQuery.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear, size: 18),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                },
+              )
+            : null,
+        isDense: true,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      ),
+      onChanged: (v) => setState(() => _searchQuery = v.trim()),
+    );
+
+    if (isWide) {
+      return Container(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              children: [
+                Expanded(child: searchField),
+                const SizedBox(width: 8),
+                sortButton(),
+              ],
+            ),
+            if (genres.isNotEmpty || _showOnlyUnplayed || _showOnlyFavourites)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: filterChips(),
+              ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Search…',
-          prefixIcon: const Icon(Icons.search, size: 20),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear, size: 18),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _searchQuery = '');
-                  },
-                )
-              : null,
-          isDense: true,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        ),
-        onChanged: (v) => setState(() => _searchQuery = v.trim()),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: searchField),
+              const SizedBox(width: 8),
+              sortButton(),
+            ],
+          ),
+          const SizedBox(height: 8),
+          filterChips(),
+        ],
       ),
     );
   }
@@ -3675,85 +3959,75 @@ class _TrackMenuButton extends StatelessWidget {
 /// repaint the visible tab, not the entire screen.
 
 class _AllTab extends StatelessWidget {
+  final List<MapEntry<int, MediaItem>> entries;
   final PlayerState state;
   final ScrollController scrollCtl;
-  final bool Function(MediaItem) matchFn;
   final void Function(PlayerState, int) onTap;
 
   const _AllTab({
+    required this.entries,
     required this.state,
     required this.scrollCtl,
-    required this.matchFn,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final scope = state.folderItemCount > 0 ? state.folderItemCount : state.library.length;
-    final filtered = state.library
-        .asMap()
-        .entries
-        .where((e) => e.key < scope && matchFn(e.value))
-        .toList();
-
-    if (filtered.isEmpty) {
+    if (entries.isEmpty) {
       return _EmptyHint(message: state.library.isEmpty
           ? 'Your library is empty.\nTap the folder icon to open a folder or download media.'
           : 'No results for this search.');
     }
 
     // Keep visual parity with Songs/Videos/Fav by reusing the same grid widget.
-    return _MediaGrid(entries: filtered, state: state, onTap: onTap);
+    return _MediaGrid(entries: entries, state: state, onTap: onTap);
   }
 }
 
 class _SongsTab extends StatelessWidget {
+  final List<MapEntry<int, MediaItem>> entries;
   final PlayerState state;
   final ScrollController scrollCtl;
-  final bool Function(MediaItem) matchFn;
   final void Function(PlayerState, int) onTap;
 
-  const _SongsTab({required this.state, required this.scrollCtl, required this.matchFn, required this.onTap});
+  const _SongsTab({required this.entries, required this.state, required this.scrollCtl, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final filtered = state.audioEntries.where((e) => matchFn(e.value)).toList();
-    if (filtered.isEmpty) return const _EmptyHint(message: 'No songs found.');
-    return _MediaGrid(entries: filtered, state: state, onTap: onTap);
+    if (entries.isEmpty) return const _EmptyHint(message: 'No songs found.');
+    return _MediaGrid(entries: entries, state: state, onTap: onTap);
   }
 }
 
 class _VideosTab extends StatelessWidget {
+  final List<MapEntry<int, MediaItem>> entries;
   final PlayerState state;
   final ScrollController scrollCtl;
-  final bool Function(MediaItem) matchFn;
   final void Function(PlayerState, int) onTap;
 
-  const _VideosTab({required this.state, required this.scrollCtl, required this.matchFn, required this.onTap});
+  const _VideosTab({required this.entries, required this.state, required this.scrollCtl, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final filtered = state.videoEntries.where((e) => matchFn(e.value)).toList();
-    if (filtered.isEmpty) return const _EmptyHint(message: 'No videos found.');
-    return _MediaGrid(entries: filtered, state: state, onTap: onTap);
+    if (entries.isEmpty) return const _EmptyHint(message: 'No videos found.');
+    return _MediaGrid(entries: entries, state: state, onTap: onTap);
   }
 }
 
 class _FavouritesTab extends StatelessWidget {
+  final List<MapEntry<int, MediaItem>> entries;
   final PlayerState state;
   final ScrollController scrollCtl;
-  final bool Function(MediaItem) matchFn;
   final void Function(PlayerState, int) onTap;
 
-  const _FavouritesTab({required this.state, required this.scrollCtl, required this.matchFn, required this.onTap});
+  const _FavouritesTab({required this.entries, required this.state, required this.scrollCtl, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final filtered = state.favouriteEntries.where((e) => matchFn(e.value)).toList();
-    if (filtered.isEmpty) {
+    if (entries.isEmpty) {
       return const _EmptyHint(message: 'No favourites yet.\nTap ★ on any track to add it here.');
     }
-    return _MediaGrid(entries: filtered, state: state, onTap: onTap);
+    return _MediaGrid(entries: entries, state: state, onTap: onTap);
   }
 }
 

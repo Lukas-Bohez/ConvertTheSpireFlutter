@@ -427,6 +427,16 @@ class _MyAppState extends State<MyApp>
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final isTvLikeAndroid = !kIsWeb &&
+        Platform.isAndroid &&
+        mediaQuery.size.shortestSide >= 600;
+    final tvMediaQuery = mediaQuery.copyWith(
+      navigationMode: isTvLikeAndroid
+          ? NavigationMode.directional
+          : mediaQuery.navigationMode,
+    );
+
     final listenables = <Listenable>[FullModeAccess.instance, ColourRewardService.instance];
     final controller = _controller;
     if (controller != null) {
@@ -496,8 +506,11 @@ class _MyAppState extends State<MyApp>
           themeMode: themeMode,
           builder: (context, child) {
             // TECH-DEBT: add per-route adaptive exclusions for full-bleed media pages.
-            return TvDpadScope(
-              child: AdaptiveUiFrame(child: child ?? const SizedBox.shrink()),
+            return MediaQuery(
+              data: tvMediaQuery,
+              child: TvDpadScope(
+                child: AdaptiveUiFrame(child: child ?? const SizedBox.shrink()),
+              ),
             );
           },
           home: _buildHome(),

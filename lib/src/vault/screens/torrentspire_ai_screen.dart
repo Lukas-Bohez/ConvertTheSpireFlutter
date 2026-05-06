@@ -831,20 +831,41 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
               SizedBox(width: left, child: torrentPane),
               MouseRegion(
                 cursor: SystemMouseCursors.resizeColumn,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onHorizontalDragUpdate: (details) {
-                    setState(() {
-                      _splitRatio =
-                          ((_splitRatio * constraints.maxWidth) +
-                              details.delta.dx) /
-                          constraints.maxWidth;
-                      _splitRatio = _splitRatio.clamp(0.3, 0.75);
-                    });
+                child: Focus(
+                  canRequestFocus: true,
+                  onKeyEvent: (node, event) {
+                    if (event is KeyDownEvent) {
+                      const step = 0.02;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        setState(() {
+                          _splitRatio = (_splitRatio - step).clamp(0.3, 0.75);
+                        });
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                        setState(() {
+                          _splitRatio = (_splitRatio + step).clamp(0.3, 0.75);
+                        });
+                        return KeyEventResult.handled;
+                      }
+                    }
+                    return KeyEventResult.ignored;
                   },
-                  child: Container(
-                    width: 8,
-                    color: Theme.of(context).colorScheme.outlineVariant,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onHorizontalDragUpdate: (details) {
+                      setState(() {
+                        _splitRatio =
+                            ((_splitRatio * constraints.maxWidth) +
+                                details.delta.dx) /
+                            constraints.maxWidth;
+                        _splitRatio = _splitRatio.clamp(0.3, 0.75);
+                      });
+                    },
+                    child: Container(
+                      width: 8,
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
                   ),
                 ),
               ),

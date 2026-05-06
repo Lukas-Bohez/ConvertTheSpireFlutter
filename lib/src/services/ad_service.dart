@@ -457,51 +457,80 @@ class AdService with WidgetsBindingObserver {
   ///   Publish the message.
   /// Without this step, requestConsentInfoUpdate() will always return NOT_REQUIRED
   /// and no form will ever show, even for EU users.
-  Future<void> initAdsWithConsent() async {
+  Future<void> initWithConsent() async {
     if (!_isSupportedPlatform) return;
 
-    final params = ConsentRequestParameters();
+    try {
+      await _updateConsentInfo();
+      await _showConsentFormIfRequired();
 
-    // Step 1: Update consent info. This is fast for returning users (cached).
-    // For EU users on first launch, it downloads the consent form in background.
-    await _requestConsentInfoUpdate(params);
+      final canRequest = await ConsentInformation.instance.canRequestAds();
+      debugPrint('AdService: canRequestAds = $canRequest');
 
-    // Step 2: Show the consent form if required (EU/EEA users, or if consent expired).
-    // This is a no-op for non-EU users — safe to call everywhere.
-    await ConsentForm.loadAndShowConsentFormIfRequired((formError) {
-      if (formError != null) {
-        debugPrint('UMP form error: ${formError.message}');
+      if (canRequest) {
+        await MobileAds.instance.initialize();
+        _adsInitialised = true;
+        debugPrint('AdService: MobileAds initialised');
+        _preloadNextInterstitial();
+        unawaited(loadRewarded());
+        unawaited(loadRewardedInterstitial());
+      } else {
+        debugPrint('AdService: consent not obtained, ads not initialised');
       }
-    });
-
-    // Step 3: Only initialise the SDK if we are allowed to request ads.
-    // For EU users who declined: canRequestAds() is false → no ads served.
-    // For everyone else: canRequestAds() is true → proceed.
-    if (await ConsentInformation.instance.canRequestAds()) {
-      await MobileAds.instance.initialize();
-      _adsInitialised = true;
-      // Pre-load the first interstitial immediately after init.
-      _preloadNextInterstitial();
-      unawaited(loadRewarded());
-      unawaited(loadRewardedInterstitial());
-    } else {
-      debugPrint('UMP: user declined or consent not yet obtained — skipping ad init');
+    } catch (e) {
+      debugPrint('AdService: consent flow error, attempting fallback init: $e');
+      try {
+        await MobileAds.instance.initialize();
+        _adsInitialised = true;
+        _preloadNextInterstitial();
+        unawaited(loadRewarded());
+        unawaited(loadRewardedInterstitial());
+      } catch (e2) {
+        debugPrint('AdService: fallback init also failed: $e2');
+      }
     }
   }
 
+  Future<void> initAdsWithConsent() => initWithConsent();
+
   /// Request consent info update from UMP SDK.
   /// Handles errors gracefully by completing the future so the flow continues.
-  Future<void> _requestConsentInfoUpdate(ConsentRequestParameters params) async {
+  Future<void> _updateConsentInfo() async {
+    final params = ConsentRequestParameters();
     final completer = Completer<void>();
     ConsentInformation.instance.requestConsentInfoUpdate(
       params,
-      () => completer.complete(),
+      () {
+        debugPrint('AdService: consent info updated successfully');
+        if (!completer.isCompleted) completer.complete();
+      },
       (error) {
-        debugPrint('UMP requestConsentInfoUpdate failed: ${error.message}');
-        completer.complete(); // still proceed — will serve non-personalised ads
+        debugPrint('AdService: consent info update failed: ${error.message}');
+        if (!completer.isCompleted) completer.complete();
       },
     );
-    return completer.future;
+    return completer.future.timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        debugPrint('AdService: consent info update timed out');
+      },
+    );
+  }
+
+  Future<void> _showConsentFormIfRequired() async {
+    final completer = Completer<void>();
+    await ConsentForm.loadAndShowConsentFormIfRequired((formError) {
+      if (formError != null) {
+        debugPrint('AdService: consent form error: ${formError.message}');
+      }
+      if (!completer.isCompleted) completer.complete();
+    });
+    return completer.future.timeout(
+      const Duration(seconds: 30),
+      onTimeout: () {
+        debugPrint('AdService: consent form timed out');
+      },
+    );
   }
 
   // TO TEST UMP LOCALLY (debug builds only — never in release):
