@@ -3390,37 +3390,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
 
     Widget filterChips() {
+      // Media type filters are handled elsewhere in the UI; only show
+      // genre chips here to avoid duplication and visual clutter.
       final chips = <Widget>[];
-      chips.add(
-        FilterChip(
-          label: const Text('All'),
-          selected: _activeMediaType == null,
-          onSelected: (_) {
-            setState(() => _activeMediaType = null);
-            _saveUiPrefs(state);
-          },
-        ),
-      );
-      chips.add(
-        FilterChip(
-          label: const Text('Audio'),
-          selected: _activeMediaType == MediaType.audio,
-          onSelected: (_) {
-            setState(() => _activeMediaType = MediaType.audio);
-            _saveUiPrefs(state);
-          },
-        ),
-      );
-      chips.add(
-        FilterChip(
-          label: const Text('Video'),
-          selected: _activeMediaType == MediaType.video,
-          onSelected: (_) {
-            setState(() => _activeMediaType = MediaType.video);
-            _saveUiPrefs(state);
-          },
-        ),
-      );
       for (final genre in genres)
         chips.add(FilterChip(
           label: Text(genre),
