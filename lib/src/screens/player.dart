@@ -3347,39 +3347,24 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
 
     Widget filterChips() {
-      final chips = <Widget>[
-        FilterChip(
-          label: const Text('Unplayed'),
-          selected: _showOnlyUnplayed,
+      final chips = <Widget>[];
+      // Only show genre filter chips (removed Unplayed and Favourites as they looked bad)
+      for (final genre in genres)
+        chips.add(FilterChip(
+          label: Text(genre),
+          selected: _activeGenres.contains(genre),
           onSelected: (value) {
-            setState(() => _showOnlyUnplayed = value);
+            setState(() {
+              if (value) {
+                _activeGenres.add(genre);
+              } else {
+                _activeGenres.remove(genre);
+              }
+            });
             _saveUiPrefs(state);
           },
-        ),
-        FilterChip(
-          label: const Text('Favourites'),
-          selected: _showOnlyFavourites,
-          onSelected: (value) {
-            setState(() => _showOnlyFavourites = value);
-            _saveUiPrefs(state);
-          },
-        ),
-        for (final genre in genres)
-          FilterChip(
-            label: Text(genre),
-            selected: _activeGenres.contains(genre),
-            onSelected: (value) {
-              setState(() {
-                if (value) {
-                  _activeGenres.add(genre);
-                } else {
-                  _activeGenres.remove(genre);
-                }
-              });
-              _saveUiPrefs(state);
-            },
-          ),
-      ];
+        ));
+      if (chips.isEmpty) return const SizedBox.shrink();
       return Wrap(spacing: 8, runSpacing: 8, children: chips);
     }
 
@@ -3418,7 +3403,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 sortButton(),
               ],
             ),
-            if (genres.isNotEmpty || _showOnlyUnplayed || _showOnlyFavourites)
+            if (genres.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: filterChips(),
@@ -3428,20 +3413,15 @@ class _PlayerScreenState extends State<PlayerScreen>
       );
     }
 
+    // Mobile: only show search and sort, NO filter chips to avoid clutter
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(child: searchField),
-              const SizedBox(width: 8),
-              sortButton(),
-            ],
-          ),
-          const SizedBox(height: 8),
-          filterChips(),
+          Expanded(child: searchField),
+          const SizedBox(width: 8),
+          sortButton(),
         ],
       ),
     );

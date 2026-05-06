@@ -431,8 +431,9 @@ class _MyAppState extends State<MyApp>
     final isTvLikeAndroid = !kIsWeb &&
         Platform.isAndroid &&
         mediaQuery.size.shortestSide >= 600;
+    final isDesktopForDpad = !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
     final tvMediaQuery = mediaQuery.copyWith(
-      navigationMode: isTvLikeAndroid
+      navigationMode: (isTvLikeAndroid || isDesktopForDpad)
           ? NavigationMode.directional
           : mediaQuery.navigationMode,
     );
