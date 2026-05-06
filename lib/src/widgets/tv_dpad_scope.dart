@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,11 +10,10 @@ class TvDpadScope extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDirectionalTv = !kIsWeb &&
-        Platform.isAndroid &&
-        MediaQuery.of(context).navigationMode == NavigationMode.directional;
+    final isDirectionalNavigation =
+        !kIsWeb && MediaQuery.of(context).navigationMode == NavigationMode.directional;
 
-    if (!isDirectionalTv) {
+    if (!isDirectionalNavigation) {
       return child;
     }
 

@@ -3,8 +3,9 @@ import 'package:provider/provider.dart';
 import '../../services/ad_service.dart';
 import '../../services/purchase_service.dart';
 import '../../config/build_flags.dart';
+import 'colour_rarity.dart';
 import 'colour_reward_service.dart';
-import 'colour_reveal_dialog.dart';
+import 'colour_reward_session_dialog.dart';
 import 'colour_collection_grid.dart';
 
 class WatchAdCard extends StatefulWidget {
@@ -24,30 +25,36 @@ class _WatchAdCardState extends State<WatchAdCard> {
     ColourRewardService.instance.init();
   }
 
+  Future<List<ColourReward>> _rollBatch(int count) async {
+    final rewards = <ColourReward>[];
+    for (int i = 0; i < count; i++) {
+      final reward = ColourRewardService.instance.rollReward();
+      rewards.add(reward);
+      await ColourRewardService.instance.unlockColour(reward.id);
+    }
+    return rewards;
+  }
+
+  Future<void> _showRewardSession(List<ColourReward> rewards) async {
+    if (!mounted || rewards.isEmpty) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => ColourRewardSessionDialog(rewards: rewards),
+    );
+  }
+
   Future<void> _showAdAndReward() async {
     AdService.instance.registerInteraction();
     setState(() => _loading = true);
     final granted = await AdService.instance.showRewardedWithCustomReward(() async {
-      // On Play Store builds, grant a batch of 10 sequential reveals per ad
-      if (kPlayStoreBuild) {
-        for (int i = 0; i < 10; i++) {
-          final reward = ColourRewardService.instance.rollReward();
-          await ColourRewardService.instance.unlockColour(reward.id);
-          if (!mounted) return;
-          await showDialog(context: context, builder: (_) => ColourRevealDialog(reward: reward));
-        }
-      } else {
-        // Non-Play builds: single reveal (or free spin behavior handled elsewhere)
-        final reward = ColourRewardService.instance.rollReward();
-        await ColourRewardService.instance.unlockColour(reward.id);
-        if (!mounted) return;
-        await showDialog(context: context, builder: (_) => ColourRevealDialog(reward: reward));
-      }
+      final rewards = await _rollBatch(10);
+      await _showRewardSession(rewards);
     });
     if (!granted) {
       // noop: no reward granted
     }
-    setState(() => _loading = false);
+    if (mounted) setState(() => _loading = false);
   }
 
   /// GitHub release builds allow free spins without ads.
@@ -55,14 +62,9 @@ class _WatchAdCardState extends State<WatchAdCard> {
   Future<void> _spinDirectly() async {
     AdService.instance.registerInteraction();
     setState(() => _loading = true);
-    final reward = ColourRewardService.instance.rollReward();
-    await ColourRewardService.instance.unlockColour(reward.id);
-    if (!mounted) {
-      setState(() => _loading = false);
-      return;
-    }
-    await showDialog(context: context, builder: (_) => ColourRevealDialog(reward: reward));
-    setState(() => _loading = false);
+    final rewards = await _rollBatch(10);
+    await _showRewardSession(rewards);
+    if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _buyAllThemes() async {

@@ -22,12 +22,14 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:video_player/video_player.dart';
+import 'package:window_manager/window_manager.dart';
 import '../services/platform_dirs.dart';
 import '../services/audio_handler.dart';
 import '../services/background_media_update_guard.dart';
 import '../services/ffmpeg_service.dart';
 import '../utils/snack.dart';
 import '../utils/lock.dart';
+import '../vault/platform/desktop_window.dart';
 
 // --- Public entry point -------------------------------------------------------
 
@@ -2889,11 +2891,14 @@ class _PlayerScreenState extends State<PlayerScreen>
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   MediaSortOrder _sortOrder = MediaSortOrder.newestFirst;
+  MediaType? _activeMediaType;
   final Set<String> _activeGenres = <String>{};
-  bool _showOnlyUnplayed = false;
-  bool _showOnlyFavourites = false;
   bool _uiPrefsLoaded = false;
   bool _isFullScreen = false;
+
+  bool get _usesNativeWindowFullscreen =>
+      !kIsWeb &&
+      (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
 
   // One scroll controller per tab to avoid cross-tab controller conflicts.
   final _scrollControllers = List.generate(4, (_) => ScrollController());
@@ -2904,6 +2909,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() { if (!_tabController.indexIsChanging) setState(() {}); });
+    if (_usesNativeWindowFullscreen) {
+      unawaited(_syncFullscreenState());
+    }
   }
 
   @override
@@ -2914,9 +2922,13 @@ class _PlayerScreenState extends State<PlayerScreen>
     final prefs = context.read<PlayerState>().prefs;
     _sortOrder = MediaSortOrder.values[
         (prefs.getInt('player_sort_order') ?? 0).clamp(0, MediaSortOrder.values.length - 1)];
+    final mediaTypeFilter = prefs.getString('player_filter_media_type');
+    _activeMediaType = switch (mediaTypeFilter) {
+      'audio' => MediaType.audio,
+      'video' => MediaType.video,
+      _ => null,
+    };
     _activeGenres.addAll(prefs.getStringList('player_filter_genres') ?? const []);
-    _showOnlyUnplayed = prefs.getBool('player_filter_unplayed') ?? false;
-    _showOnlyFavourites = prefs.getBool('player_filter_favourites') ?? false;
   }
 
   @override
@@ -2929,15 +2941,30 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _exitFullScreen();
+    unawaited(_exitFullScreen());
     _tabController.dispose();
     _searchController.dispose();
     for (final sc in _scrollControllers) { sc.dispose(); }
     super.dispose();
   }
 
+  Future<void> _syncFullscreenState() async {
+    if (!_usesNativeWindowFullscreen) return;
+    try {
+      final isFullScreen = await windowManager.isFullScreen();
+      if (mounted && _isFullScreen != isFullScreen) {
+        setState(() => _isFullScreen = isFullScreen);
+      }
+    } catch (_) {}
+  }
+
   Future<void> _enterFullScreen() async {
     if (_isFullScreen) return;
+    if (_usesNativeWindowFullscreen) {
+      await toggleDesktopFullScreen();
+      await _syncFullscreenState();
+      return;
+    }
     _isFullScreen = true;
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     await SystemChrome.setPreferredOrientations([
@@ -2947,10 +2974,31 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   Future<void> _exitFullScreen() async {
+    if (_usesNativeWindowFullscreen) {
+      try {
+        if (await windowManager.isFullScreen()) {
+          await toggleDesktopFullScreen();
+        }
+      } finally {
+        await _syncFullscreenState();
+      }
+      return;
+    }
     if (!_isFullScreen) return;
     _isFullScreen = false;
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+  }
+
+  Future<void> _toggleFullScreen() async {
+    if (_isFullScreen) {
+      await _exitFullScreen();
+    } else {
+      await _enterFullScreen();
+    }
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   bool _matchesSearch(MediaItem item) {
@@ -2968,8 +3016,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     final filtered = source.where((entry) {
       final item = entry.value;
       if (!_matchesSearch(item)) return false;
-      if (_showOnlyUnplayed && state.hasPlayedPath(item.path)) return false;
-      if (_showOnlyFavourites && !state.isFavourite(item.path)) return false;
+      if (_activeMediaType != null && item.type != _activeMediaType) return false;
       if (_activeGenres.isNotEmpty) {
         final genres = (item.genre ?? '')
             .split(',')
@@ -3021,9 +3068,12 @@ class _PlayerScreenState extends State<PlayerScreen>
   void _saveUiPrefs(PlayerState state) {
     final prefs = state.prefs;
     prefs.setInt('player_sort_order', _sortOrder.index);
+    if (_activeMediaType == null) {
+      prefs.remove('player_filter_media_type');
+    } else {
+      prefs.setString('player_filter_media_type', _activeMediaType == MediaType.audio ? 'audio' : 'video');
+    }
     prefs.setStringList('player_filter_genres', _activeGenres.toList()..sort());
-    prefs.setBool('player_filter_unplayed', _showOnlyUnplayed);
-    prefs.setBool('player_filter_favourites', _showOnlyFavourites);
   }
 
   Future<void> _pickFolder() async {
@@ -3125,14 +3175,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                         ready: state.videoReady,
                         isFullScreen: _isFullScreen,
                         onTap: state.togglePlay,
-                        onToggleFullScreen: () async {
-                          if (_isFullScreen) {
-                            await _exitFullScreen();
-                          } else {
-                            await _enterFullScreen();
-                          }
-                          setState(() {});
-                        },
+                        onToggleFullScreen: _toggleFullScreen,
                       ),
                     ),
                   ),
@@ -3348,7 +3391,36 @@ class _PlayerScreenState extends State<PlayerScreen>
 
     Widget filterChips() {
       final chips = <Widget>[];
-      // Only show genre filter chips (removed Unplayed and Favourites as they looked bad)
+      chips.add(
+        FilterChip(
+          label: const Text('All'),
+          selected: _activeMediaType == null,
+          onSelected: (_) {
+            setState(() => _activeMediaType = null);
+            _saveUiPrefs(state);
+          },
+        ),
+      );
+      chips.add(
+        FilterChip(
+          label: const Text('Audio'),
+          selected: _activeMediaType == MediaType.audio,
+          onSelected: (_) {
+            setState(() => _activeMediaType = MediaType.audio);
+            _saveUiPrefs(state);
+          },
+        ),
+      );
+      chips.add(
+        FilterChip(
+          label: const Text('Video'),
+          selected: _activeMediaType == MediaType.video,
+          onSelected: (_) {
+            setState(() => _activeMediaType = MediaType.video);
+            _saveUiPrefs(state);
+          },
+        ),
+      );
       for (final genre in genres)
         chips.add(FilterChip(
           label: Text(genre),
@@ -3403,11 +3475,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                 sortButton(),
               ],
             ),
-            if (genres.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: filterChips(),
-              ),
+            const SizedBox(height: 8),
+            filterChips(),
           ],
         ),
       );
