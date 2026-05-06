@@ -353,24 +353,28 @@ class _BrowserShellState extends State<BrowserShell> {
             Positioned(
               right: 0,
               top: 2,
-              child: GestureDetector(
-                onTap: _toggleQueue,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  constraints: const BoxConstraints(minWidth: 16),
-                  decoration: BoxDecoration(
-                    color: cs.primary,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    widget.queueCount > 99 ? '99+' : '${widget.queueCount}',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      color: cs.onPrimary,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _toggleQueue,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    constraints: const BoxConstraints(minWidth: 16),
+                    decoration: BoxDecoration(
+                      color: cs.primary,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    textAlign: TextAlign.center,
+                    child: Text(
+                      widget.queueCount > 99 ? '99+' : '${widget.queueCount}',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: cs.onPrimary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
               ),
@@ -827,34 +831,38 @@ class _BrowserShellState extends State<BrowserShell> {
 
   Widget _buildUrlBar(ColorScheme cs) {
     if (!_isEditing) {
-      return GestureDetector(
-        onTap: _startEditing,
-        child: Container(
-          height: 34,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
-            border: Border.all(
-              color: cs.outlineVariant.withValues(alpha: 0.35),
-            ),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Icon(_currentFavicon, size: 15, color: cs.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  _currentTitle,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: cs.onSurface,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _startEditing,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+              border: Border.all(
+                color: cs.outlineVariant.withValues(alpha: 0.35),
               ),
-            ],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(_currentFavicon, size: 15, color: cs.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _currentTitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: cs.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );

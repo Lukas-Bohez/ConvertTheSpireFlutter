@@ -43,6 +43,7 @@ import 'services/youtube_service.dart';
 import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
 import 'widgets/adaptive_ui_frame.dart';
+import 'widgets/tv_dpad_scope.dart';
 import 'vault/vault_bootstrap.dart';
 import 'vault/platform/desktop_window.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -495,7 +496,9 @@ class _MyAppState extends State<MyApp>
           themeMode: themeMode,
           builder: (context, child) {
             // TECH-DEBT: add per-route adaptive exclusions for full-bleed media pages.
-            return AdaptiveUiFrame(child: child ?? const SizedBox.shrink());
+            return TvDpadScope(
+              child: AdaptiveUiFrame(child: child ?? const SizedBox.shrink()),
+            );
           },
           home: _buildHome(),
         );
@@ -621,9 +624,14 @@ class _MyAppState extends State<MyApp>
         // Wrap in KeyboardListener for F11 fullscreen toggling.
         // Fix: _keyboardFocusNode is now initialised in initState so it's
         // guaranteed non-null here.
+        final desktopF11Enabled = !kIsWeb &&
+            (defaultTargetPlatform == TargetPlatform.windows ||
+                defaultTargetPlatform == TargetPlatform.linux ||
+                defaultTargetPlatform == TargetPlatform.macOS);
+
         return KeyboardListener(
           focusNode: _keyboardFocusNode!,
-          autofocus: true,
+          autofocus: desktopF11Enabled,
           onKeyEvent: _handleKey,
           child: contentChild,
         );

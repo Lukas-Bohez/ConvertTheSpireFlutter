@@ -1330,104 +1330,118 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                     itemBuilder: (context, index) {
                       final tab = widget.tabManager.tabs[index];
                       final isActive = index == widget.tabManager.activeIndex;
-                      return GestureDetector(
-                        onTap: () => widget.onSelectTab(index),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isActive ? cs.primary : cs.outlineVariant,
-                              width: isActive ? 2 : 1,
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => widget.onSelectTab(index),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isActive ? cs.primary : cs.outlineVariant,
+                                width: isActive ? 2 : 1,
+                              ),
+                              color: tab.isIncognito
+                                  ? const Color(0xFF1A1A2E)
+                                  : cs.surfaceContainerLow,
                             ),
-                            color: tab.isIncognito
-                                ? const Color(0xFF1A1A2E)
-                                : cs.surfaceContainerLow,
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                // Preview occupies most of the tile.
-                                Positioned.fill(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(6.0),
-                                    child: AspectRatio(
-                                      aspectRatio: 16 / 9,
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: () {
-                                          final bytes = widget.tabManager
-                                              .getScreenshotBytes(tab.id);
-                                          if (bytes != null &&
-                                              bytes.isNotEmpty) {
-                                            return Image.memory(
-                                              bytes,
-                                              key: ValueKey(widget.tabManager
-                                                      .getScreenshotBytes(
-                                                          tab.id) ??
-                                                  tab.screenshotPath),
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  // Preview occupies most of the tile.
+                                  Positioned.fill(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(6.0),
+                                      child: AspectRatio(
+                                        aspectRatio: 16 / 9,
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: () {
+                                            final bytes = widget.tabManager
+                                                .getScreenshotBytes(tab.id);
+                                            if (bytes != null &&
+                                                bytes.isNotEmpty) {
+                                              return Image.memory(
+                                                bytes,
+                                                key: ValueKey(widget.tabManager
+                                                        .getScreenshotBytes(
+                                                            tab.id) ??
+                                                    tab.screenshotPath),
+                                                fit: BoxFit.cover,
+                                                width: double.infinity,
+                                              );
+                                            }
+                                            if (tab.screenshotPath != null) {
+                                              return Image.file(
+                                                File(tab.screenshotPath!),
+                                                key: ValueKey(tab.screenshotPath),
+                                                fit: BoxFit.cover,
+                                                width: double.infinity,
+                                              );
+                                            }
+                                            return Container(
+                                              color: cs.surfaceContainerHighest,
+                                              child: Center(
+                                                child: Icon(Icons.web,
+                                                    size: 28,
+                                                    color: cs.outlineVariant),
+                                              ),
                                             );
-                                          }
-                                          if (tab.screenshotPath != null) {
-                                            return Image.file(
-                                              File(tab.screenshotPath!),
-                                              key: ValueKey(tab.screenshotPath),
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                            );
-                                          }
-                                          return Container(
-                                            color: cs.surfaceContainerHighest,
-                                            child: Center(
-                                              child: Icon(Icons.web,
-                                                  size: 28,
-                                                  color: cs.outlineVariant),
-                                            ),
-                                          );
-                                        }(),
+                                          }(),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                // Title / close overlay at top.
-                                Positioned(
-                                  left: 8,
-                                  right: 8,
-                                  top: 8,
-                                  child: Row(
-                                    children: [
-                                      if (tab.isIncognito)
-                                        const Icon(Icons.visibility_off,
-                                            size: 14, color: Colors.white70),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        child: Text(
-                                          tab.title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: tab.isIncognito
-                                                ? Colors.white70
-                                                : null,
+                                  // Title / close overlay at top.
+                                  Positioned(
+                                    left: 8,
+                                    right: 8,
+                                    top: 8,
+                                    child: Row(
+                                      children: [
+                                        if (tab.isIncognito)
+                                          const Icon(Icons.visibility_off,
+                                              size: 14, color: Colors.white70),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            tab.title,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: tab.isIncognito
+                                                  ? Colors.white70
+                                                  : null,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      GestureDetector(
-                                        onTap: () => widget.onCloseTab(index),
-                                        child: Icon(Icons.close,
+                                        IconButton(
+                                          onPressed: () =>
+                                              widget.onCloseTab(index),
+                                          icon: Icon(
+                                            Icons.close,
                                             size: 18,
                                             color: tab.isIncognito
                                                 ? Colors.white70
-                                                : cs.onSurfaceVariant),
-                                      ),
-                                    ],
+                                                : cs.onSurfaceVariant,
+                                          ),
+                                          splashRadius: 16,
+                                          constraints: const BoxConstraints(
+                                            minHeight: 28,
+                                            minWidth: 28,
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          tooltip: 'Close tab',
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
