@@ -21,6 +21,166 @@ class BrowserShell extends StatefulWidget {
   final bool isRefreshing;
   final VoidCallback onHome;
   final bool canGoBack;
+  final bool canGoForward;
+  final bool queueOnRight;
+  final int queueCount;
+  final Widget child;
+  final GlobalKey<ScaffoldState> scaffoldKey;
+
+  const BrowserShell({
+    super.key,
+    required this.currentIndex,
+    required this.queueWidget,
+    required this.onNavigate,
+    this.onOpenUrl,
+    required this.onBack,
+    required this.onForward,
+    required this.onRefresh,
+    required this.isRefreshing,
+    required this.onHome,
+    required this.canGoBack,
+    required this.canGoForward,
+    required this.queueOnRight,
+    required this.queueCount,
+    required this.child,
+    required this.scaffoldKey,
+  });
+
+  @override
+  State<BrowserShell> createState() => _BrowserShellState();
+}
+
+class _BrowserShellState extends State<BrowserShell> {
+  bool _isEditing = false;
+  bool _showQueueDesktop = true;
+  bool _playerCollapsed = true;
+  late final TextEditingController _urlEditController;
+  final FocusNode _urlFocusNode = FocusNode();
+  // overlay/old suggestion machinery removed in favor of RawAutocomplete
+
+  @override
+  void initState() {
+    super.initState();
+    _urlEditController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _urlEditController.dispose();
+    _urlFocusNode.dispose();
+    super.dispose();
+  }
+
+  String get _currentTitle =>
+      QuickLinksService.titleForIndex(widget.currentIndex);
+
+  IconData get _currentFavicon =>
+      QuickLinksService.indexToIcon[widget.currentIndex] ?? Icons.search;
+
+  // -- URL bar editing --
+
+  void _startEditing() {
+    _urlEditController.text = '';
+    setState(() => _isEditing = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _urlFocusNode.requestFocus();
+    });
+  }
+
+  Future<void> _submitUrl(String value) async {
+    setState(() => _isEditing = false);
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return;
+
+    final lower = trimmed.toLowerCase();
+
+    // Prefer exact route matches first (e.g. "queue.tab") so suggestions
+    // that use route strings navigate the app instead of being treated as URLs.
+    if (QuickLinksService.routeToIndex.containsKey(lower)) {
+      final idx = QuickLinksService.routeToIndex[lower];
+      if (idx != null) {
+        try {
+          final app = Provider.of<AppController>(context, listen: false);
+          app.switchToTab(idx);
+          return;
+        } catch (_) {}
+      }
+      widget.onNavigate(lower);
+      return;
+    }
+
+    // Title exact match (case-insensitive)
+    for (final entry in QuickLinksService.indexToTitle.entries) {
+      final displayTitle = QuickLinksService.titleForIndex(entry.key);
+      if (displayTitle.toLowerCase() == lower) {
+        final route = QuickLinksService.indexToRoute[entry.key];
+        if (route != null) {
+          widget.onNavigate(route);
+          return;
+        }
+      }
+    }
+
+    // Web URL detection - open in browser tab
+    if (_looksLikeUrl(trimmed)) {
+      final url = trimmed.startsWith('http') ? trimmed : 'https://$trimmed';
+      widget.onOpenUrl?.call(url);
+      return;
+    }
+
+    // Partial route/name match fallback
+    for (final entry in QuickLinksService.routeToIndex.entries) {
+      final name = entry.key.replaceAll('.tab', '');
+      if (name.startsWith(lower) || name.contains(lower)) {
+        widget.onNavigate(entry.key);
+        return;
+      }
+    }
+  }
+
+  bool _looksLikeUrl(String text) {
+    final lower = text.toLowerCase();
+    return lower.startsWith('http://') ||
+        lower.startsWith('https://') ||
+        lower.startsWith('www.') ||
+        (lower.contains('.') &&
+            !lower.contains(' ') &&
+            RegExp(r'\.[a-z]{2,}$', caseSensitive: false).hasMatch(lower));
+  }
+
+  void _cancelEditing() {
+    setState(() => _isEditing = false);
+  }
+
+  // Suggestions are handled by RawAutocomplete in the URL bar.
+
+  // -- Queue toggle --
+
+  void _toggleQueue() {
+    final scaffold = widget.scaffoldKey.currentState;
+    if (scaffold == null) return;
+    if (widget.queueOnRight) {
+      if (scaffold.isEndDrawerOpen) {
+        Navigator.pop(scaffold.context);
+      } else {
+        scaffold.openEndDrawer();
+      }
+    } else {
+      if (scaffold.isDrawerOpen) {
+        Navigator.pop(scaffold.context);
+      } else {
+        scaffold.openDrawer();
+      }
+    }
+  }
+
+  // -- Build --
+
+  static const double _playerOverlayCollapsedHeight = 64.0;
+  static const double _playerOverlayExpandedHeight = 220.0;
+
+  @override
+  Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width > 1024;
     final cs = Theme.of(context).colorScheme;
@@ -33,7 +193,9 @@ class BrowserShell extends StatefulWidget {
 
     final safeBottom = MediaQuery.of(context).padding.bottom;
     final overlayHeight = showPlayerOverlay
-        ? (_playerCollapsed ? _playerOverlayCollapsedHeight : _playerOverlayExpandedHeight) +
+        ? (_playerCollapsed
+                ? _playerOverlayCollapsedHeight
+                : _playerOverlayExpandedHeight) +
             safeBottom
         : 0.0;
 
@@ -67,170 +229,82 @@ class BrowserShell extends StatefulWidget {
           ],
         ),
       ),
-      bottomNavigationBar: showPlayerOverlay
+        bottomNavigationBar: showPlayerOverlay
           ? _buildPlayerOverlay(playerState, currentItem, isPlaying, cs, overlayHeight)
           : null,
     );
   }
 
   Widget _buildDesktopQueuePanel(ColorScheme cs) {
-    if (widget.queueOnRight) {
-      if (scaffold.isEndDrawerOpen) {
-        Navigator.pop(scaffold.context);
-      } else {
-        scaffold.openEndDrawer();
-      }
-    } else {
-      if (scaffold.isDrawerOpen) {
-        Navigator.pop(scaffold.context);
-      } else {
-        scaffold.openDrawer();
-      }
-    }
+    return Container(
+      width: 300,
+      decoration: BoxDecoration(
+        border: Border(
+          left: widget.queueOnRight
+              ? BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3))
+              : BorderSide.none,
+          right: !widget.queueOnRight
+              ? BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3))
+              : BorderSide.none,
+        ),
+      ),
+      child: widget.queueWidget,
+    );
   }
 
-  // -- Build --
-
-  static const double _playerOverlayCollapsedHeight = 64.0;
-  static const double _playerOverlayExpandedHeight = 220.0;
-
-  @override
-  Widget build(BuildContext context) {
-                      Focus(
-                        canRequestFocus: true,
-                        onKeyEvent: (node, event) {
-                          if (event is KeyDownEvent &&
-                              event.logicalKey == LogicalKeyboardKey.select) {
-                            setState(() => _playerCollapsed = !_playerCollapsed);
-                            return KeyEventResult.handled;
-                          }
-                          return KeyEventResult.ignored;
-                        },
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.translucent,
-                          onVerticalDragEnd: (details) {
-                            final velocity = details.primaryVelocity ?? 0;
-                            if (velocity < -250) {
-                              setState(() => _playerCollapsed = false);
-                            } else if (velocity > 250) {
-                              setState(() => _playerCollapsed = true);
-                            }
-                          },
-                          child: Row(
-                            children: [
-                              _buildArtwork(
-                                artwork,
-                                cs,
-                                isVideo,
-                                size: collapsed ? 34 : 44,
-                              ),
-                              SizedBox(width: collapsed ? 8 : 10),
-                              Expanded(
-                                child: InkWell(
-                                  onTap: () => widget.onNavigate('player.tab'),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        title,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: collapsed
-                                              ? 13
-                                              : (wideOverlay ? 16 : 14),
-                                          color: cs.onSurface,
-                                        ),
-                                      ),
-                                      if (artist.isNotEmpty)
-                                        Text(
-                                          artist,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: collapsed
-                                                ? 11
-                                                : (wideOverlay ? 13 : 12),
-                                            color: cs.onSurfaceVariant,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              if (collapsed) ...[
-                                IconButton(
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 34,
-                                    minHeight: 34,
-                                  ),
-                                  visualDensity: VisualDensity.compact,
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: cs.primary.withValues(alpha: 0.12),
-                                    foregroundColor: cs.primary,
-                                  ),
-                                  onPressed: state.togglePlay,
-                                  icon: Icon(
-                                    isPlaying ? Icons.pause : Icons.play_arrow,
-                                    size: 18,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                IconButton(
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 34,
-                                    minHeight: 34,
-                                  ),
-                                  visualDensity: VisualDensity.compact,
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: cs.surfaceContainerHighest,
-                                    foregroundColor: cs.onSurface,
-                                  ),
-                                  onPressed: () => setState(() => _playerCollapsed = false),
-                                  icon: const Icon(Icons.keyboard_arrow_up, size: 18),
-                                ),
-                              ],
-                              if (!collapsed) ...[
-                                IconButton(
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 36,
-                                    minHeight: 36,
-                                  ),
-                                  visualDensity: VisualDensity.compact,
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: cs.primary.withValues(alpha: 0.12),
-                                    foregroundColor: cs.primary,
-                                  ),
-                                  onPressed: state.togglePlay,
-                                  icon: Icon(
-                                    isPlaying ? Icons.pause : Icons.play_arrow,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                IconButton(
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 36,
-                                    minHeight: 36,
-                                  ),
-                                  visualDensity: VisualDensity.compact,
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: cs.surfaceContainerHighest,
-                                    foregroundColor: cs.onSurface,
-                                  ),
-                                  onPressed: () => setState(() => _playerCollapsed = true),
-                                  icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-                                ),
-                              ],
-                            ],
+  Widget _buildNavBar(ColorScheme cs, bool isDesktop) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        border: Border(
+          bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.2)),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: 46,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Row(
+              children: [
+                _navButton(Icons.arrow_back_ios_new_rounded, 'Back',
+                    widget.canGoBack ? widget.onBack : null, cs),
+                _navButton(Icons.arrow_forward_ios_rounded, 'Forward',
+                    widget.canGoForward ? widget.onForward : null, cs),
+                widget.isRefreshing
+                    ? SizedBox(
+                        width: 34,
+                        height: 34,
+                        child: Center(
+                            child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(cs.primary),
                           ),
-                        ),
+                        )),
+                      )
+                    : _navButton(
+                        Icons.refresh_rounded,
+                        'Refresh',
+                        widget.onRefresh,
+                        cs,
                       ),
+                _navButton(Icons.home_rounded, 'Home', widget.onHome, cs),
+                const SizedBox(width: 6),
+                Expanded(child: _buildUrlBar(cs)),
+                const SizedBox(width: 6),
+                _buildQueueButton(cs, isDesktop),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _navButton(
       IconData icon, String tooltip, VoidCallback? onPressed, ColorScheme cs) {
     return SizedBox(

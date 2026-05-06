@@ -225,41 +225,34 @@ class _DMScreenState extends State<DMScreen> {
                           } else if (action == 'reply') {
                             setState(() {
                               _replyTarget = m;
-                                TextButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _replyTarget = null;
-                                    });
-                                  },
-                                  style: TextButton.styleFrom(
-                                    padding: EdgeInsets.zero,
-                                    alignment: Alignment.centerLeft,
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 4,
-                                      horizontal: 8,
-                                    ),
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainerHighest,
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            'Replying to ${_replyTarget!.author}',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        const Icon(Icons.close, size: 18),
-                                      ],
+                            });
+                          } else if (action == 'edit') {
+                            final editController = TextEditingController(
+                              text: m.text,
+                            );
+                            final edited = await showDialog<String>(
+                              context: parentContext,
+                              builder: (ctx) {
+                                return AlertDialog(
+                                  title: const Text('Edit message'),
+                                  // overflow-fix: allow dialog content to scroll when keyboard reduces height.
+                                  content: SingleChildScrollView(
+                                    child: TextField(
+                                      controller: editController,
+                                      autofocus: true,
                                     ),
                                   ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(ctx).pop(),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.of(
+                                        ctx,
+                                      ).pop(editController.text.trim()),
+                                      child: const Text('Save'),
+                                    ),
                                   ],
                                 );
                               },
@@ -321,34 +314,25 @@ class _DMScreenState extends State<DMScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (_replyTarget != null)
-                          TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _replyTarget = null;
-                              });
-                            },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              alignment: Alignment.centerLeft,
-                              foregroundColor:
-                                  Theme.of(context).colorScheme.onSurface,
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _replyTarget = null;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 4,
+                              horizontal: 8,
                             ),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 4,
-                                horizontal: 8,
-                              ),
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                              child: Text(
-                                'Replying to ${_replyTarget!.author} • tap to cancel',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                            child: Text(
+                              'Replying to ${_replyTarget!.author} • tap to cancel',
                             ),
                           ),
+                        ),
                       TextField(
                         controller: _controller,
                         textInputAction: TextInputAction.send,
