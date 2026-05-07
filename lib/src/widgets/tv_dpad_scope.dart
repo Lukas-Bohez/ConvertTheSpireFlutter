@@ -5,18 +5,32 @@ import 'package:flutter/services.dart';
 /// Adds consistent Android TV remote/D-pad navigation across the app.
 class TvDpadScope extends StatelessWidget {
   final Widget child;
+  final bool directionalModeEnabled;
+  final VoidCallback? onDirectionalInputDetected;
+  final VoidCallback? onPointerInputDetected;
 
-  const TvDpadScope({super.key, required this.child});
+  const TvDpadScope({
+    super.key,
+    required this.child,
+    required this.directionalModeEnabled,
+    this.onDirectionalInputDetected,
+    this.onPointerInputDetected,
+  });
 
-  @override
-  Widget build(BuildContext context) {
-    final isDirectionalNavigation =
-        !kIsWeb && MediaQuery.of(context).navigationMode == NavigationMode.directional;
+  bool _isDirectionalKey(LogicalKeyboardKey key) {
+    return key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.gameButtonA ||
+        key == LogicalKeyboardKey.escape ||
+        key == LogicalKeyboardKey.goBack;
+  }
 
-    if (!isDirectionalNavigation) {
-      return child;
-    }
-
+  Widget _buildDirectionalLayer(BuildContext context) {
     return FocusTraversalGroup(
       policy: WidgetOrderTraversalPolicy(),
       child: Shortcuts(
@@ -49,11 +63,31 @@ class TvDpadScope extends StatelessWidget {
               },
             ),
           },
-          child: Focus(
-            autofocus: true,
-            child: child,
-          ),
+          child: child,
         ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final allowDirectionalScope = !kIsWeb && directionalModeEnabled;
+    final wrappedChild = allowDirectionalScope
+        ? _buildDirectionalLayer(context)
+        : child;
+
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => onPointerInputDetected?.call(),
+      child: Focus(
+        autofocus: true,
+        onKeyEvent: (_, event) {
+          if (event is KeyDownEvent && _isDirectionalKey(event.logicalKey)) {
+            onDirectionalInputDetected?.call();
+          }
+          return KeyEventResult.ignored;
+        },
+        child: wrappedChild,
       ),
     );
   }

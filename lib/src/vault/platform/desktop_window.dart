@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:window_manager/window_manager.dart';
@@ -42,8 +45,14 @@ Future<void> setupDesktopWindow({required bool installShutdownListener}) async {
 Future<void> toggleDesktopFullScreen() async {
   if (await windowManager.isFullScreen()) {
     await windowManager.setFullScreen(false);
+    if (!kIsWeb && Platform.isWindows) {
+      await windowManager.setTitleBarStyle(TitleBarStyle.normal);
+    }
     return;
   }
 
+  if (!kIsWeb && Platform.isWindows) {
+    await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+  }
   await windowManager.setFullScreen(true);
 }

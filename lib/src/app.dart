@@ -77,6 +77,12 @@ class _MyAppState extends State<MyApp>
   // Fix: declare as a regular field, initialised in initState, to avoid
   // "accessed before initialization" issues on some platforms.
   FocusNode? _keyboardFocusNode;
+  bool _tvDirectionalModeEnabled = false;
+
+  void _setTvDirectionalMode(bool enabled) {
+    if (_tvDirectionalModeEnabled == enabled) return;
+    setState(() => _tvDirectionalModeEnabled = enabled);
+  }
 
   @override
   void initState() {
@@ -431,9 +437,10 @@ class _MyAppState extends State<MyApp>
     final isTvLikeAndroid = !kIsWeb &&
         Platform.isAndroid &&
         mediaQuery.size.shortestSide >= 600;
-    final isDesktopForDpad = !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
     final tvMediaQuery = mediaQuery.copyWith(
-      navigationMode: (isTvLikeAndroid || isDesktopForDpad)
+      // Default to traditional (mouse-like) navigation.
+      // Switch to directional only after D-pad input is detected.
+      navigationMode: (isTvLikeAndroid && _tvDirectionalModeEnabled)
           ? NavigationMode.directional
           : mediaQuery.navigationMode,
     );
@@ -510,6 +517,12 @@ class _MyAppState extends State<MyApp>
             return MediaQuery(
               data: tvMediaQuery,
               child: TvDpadScope(
+                directionalModeEnabled:
+                    tvMediaQuery.navigationMode == NavigationMode.directional,
+                onDirectionalInputDetected:
+                    isTvLikeAndroid ? () => _setTvDirectionalMode(true) : null,
+                onPointerInputDetected:
+                    isTvLikeAndroid ? () => _setTvDirectionalMode(false) : null,
                 child: AdaptiveUiFrame(child: child ?? const SizedBox.shrink()),
               ),
             );
