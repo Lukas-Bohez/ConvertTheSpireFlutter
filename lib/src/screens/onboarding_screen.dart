@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../config/build_flags.dart';
 
@@ -258,6 +259,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
   }
 
+  void _handleKeyboardAdvance() {
+    if (_page < _pages.length - 1) {
+      _next();
+      return;
+    }
+    widget.onFinish();
+  }
+
   void _back() {
     if (_page > 0) {
       _controller.previousPage(
@@ -509,112 +518,139 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           ),
         ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            _buildProgressBar(theme),
-            Expanded(
-              child: PageView(
-                controller: _controller,
-                onPageChanged: _onPageChanged,
-                children: List.generate(_pages.length, (index) {
-                  final p = _pages[index];
-                  return _KeepAlivePage(
-                    key: ValueKey('onboarding_page_$index'),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 28.0, vertical: 12),
-                      child: FadeTransition(
-                        opacity: _fadeAnim,
-                        child: SlideTransition(
-                          position: _slideAnim,
-                          child: SingleChildScrollView(
-                            physics: const BouncingScrollPhysics(),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const SizedBox(height: 8),
-                                // Icon card with coloured glow
-                                Container(
-                                  width: squareSide,
-                                  height: squareSide,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        p.color.withValues(alpha: 0.18),
-                                        p.color.withValues(alpha: 0.06),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(28),
-                                    border: Border.all(
-                                      color: p.color.withValues(alpha: 0.30),
-                                      width: 1.5,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: p.color.withValues(alpha: 0.15),
-                                        blurRadius: 28,
-                                        offset: const Offset(0, 8),
+      body: Shortcuts(
+        shortcuts: const <ShortcutActivator, Intent>{
+          SingleActivator(LogicalKeyboardKey.arrowRight): _OnboardingNextIntent(),
+          SingleActivator(LogicalKeyboardKey.enter): _OnboardingNextIntent(),
+          SingleActivator(LogicalKeyboardKey.numpadEnter): _OnboardingNextIntent(),
+          SingleActivator(LogicalKeyboardKey.select): _OnboardingNextIntent(),
+          SingleActivator(LogicalKeyboardKey.arrowLeft): _OnboardingBackIntent(),
+        },
+        child: Actions(
+          actions: <Type, Action<Intent>>{
+            _OnboardingNextIntent: CallbackAction<_OnboardingNextIntent>(
+              onInvoke: (intent) {
+                _handleKeyboardAdvance();
+                return null;
+              },
+            ),
+            _OnboardingBackIntent: CallbackAction<_OnboardingBackIntent>(
+              onInvoke: (intent) {
+                _back();
+                return null;
+              },
+            ),
+          },
+          child: Focus(
+            autofocus: true,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  const SizedBox(height: 8),
+                  _buildProgressBar(theme),
+                  Expanded(
+                    child: PageView(
+                      controller: _controller,
+                      onPageChanged: _onPageChanged,
+                      children: List.generate(_pages.length, (index) {
+                        final p = _pages[index];
+                        return _KeepAlivePage(
+                          key: ValueKey('onboarding_page_$index'),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 28.0, vertical: 12),
+                            child: FadeTransition(
+                              opacity: _fadeAnim,
+                              child: SlideTransition(
+                                position: _slideAnim,
+                                child: SingleChildScrollView(
+                                  physics: const BouncingScrollPhysics(),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const SizedBox(height: 8),
+                                      // Icon card with coloured glow
+                                      Container(
+                                        width: squareSide,
+                                        height: squareSide,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              p.color.withValues(alpha: 0.18),
+                                              p.color.withValues(alpha: 0.06),
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          borderRadius: BorderRadius.circular(28),
+                                          border: Border.all(
+                                            color: p.color.withValues(alpha: 0.30),
+                                            width: 1.5,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: p.color.withValues(alpha: 0.15),
+                                              blurRadius: 28,
+                                              offset: const Offset(0, 8),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Icon(
+                                          p.icon,
+                                          size: squareSide * 0.42,
+                                          color: p.color,
+                                        ),
                                       ),
+
+                                      // Optional preview
+                                      if (p.preview != null) ...[
+                                        const SizedBox(height: 20),
+                                        p.preview!,
+                                      ],
+
+                                      const SizedBox(height: 28),
+
+                                      Text(
+                                        p.title,
+                                        style: theme.textTheme.headlineMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: p.color,
+                                          letterSpacing: -0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 14),
+                                      Text(
+                                        p.detail,
+                                        textAlign: TextAlign.center,
+                                        style: theme.textTheme.bodyLarge?.copyWith(
+                                          height: 1.65,
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.78),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
                                     ],
                                   ),
-                                  child: Icon(
-                                    p.icon,
-                                    size: squareSide * 0.42,
-                                    color: p.color,
-                                  ),
                                 ),
-
-                                // Optional preview
-                                if (p.preview != null) ...[
-                                  const SizedBox(height: 20),
-                                  p.preview!,
-                                ],
-
-                                const SizedBox(height: 28),
-
-                                Text(
-                                  p.title,
-                                  style:
-                                      theme.textTheme.headlineMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: p.color,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
-                                Text(
-                                  p.detail,
-                                  textAlign: TextAlign.center,
-                                  style: theme.textTheme.bodyLarge?.copyWith(
-                                    height: 1.65,
-                                    color: theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.78),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      }),
                     ),
-                  );
-                }),
+                  ),
+                  _buildDots(theme),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0, vertical: 8),
+                    child: _buildControls(theme),
+                  ),
+                  const SizedBox(height: 12),
+                ],
               ),
             ),
-            _buildDots(theme),
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
-              child: _buildControls(theme),
-            ),
-            const SizedBox(height: 12),
-          ],
+          ),
         ),
       ),
     );
@@ -662,6 +698,14 @@ class _KeepAlivePageState extends State<_KeepAlivePage>
   }
 }
 
+class _OnboardingNextIntent extends Intent {
+  const _OnboardingNextIntent();
+}
+
+class _OnboardingBackIntent extends Intent {
+  const _OnboardingBackIntent();
+}
+
 // --─ Preview widgets --------------------------------------------------------
 
 /// Welcome page - shows a brief feature overview.
@@ -704,9 +748,17 @@ class _WelcomePreview extends StatelessWidget {
                     children: [
                       Icon(f.$1, size: 20, color: const Color(0xFF00897B)),
                       const SizedBox(width: 10),
-                      Text(f.$2,
+                      Expanded(
+                        child: Text(
+                          f.$2,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w500)),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ))

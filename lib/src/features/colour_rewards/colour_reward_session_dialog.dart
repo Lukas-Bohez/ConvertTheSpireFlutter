@@ -19,6 +19,7 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
   bool _showSummary = false;
   int _summaryVisibleCount = 0;
   Timer? _summaryTimer;
+  final ScrollController _summaryScrollController = ScrollController();
 
   List<RarityTier> get _previewTiers {
     final reward = widget.rewards[_rewardIndex];
@@ -32,6 +33,7 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
   @override
   void dispose() {
     _summaryTimer?.cancel();
+    _summaryScrollController.dispose();
     super.dispose();
   }
 
@@ -261,56 +263,67 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
 
   Widget _buildSummary(BuildContext context) {
     final summaryReady = _summaryVisibleCount >= widget.rewards.length;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'All colours pulled',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Everything that dropped this time, popping in one by one.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 16),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 1.3,
+    final maxHeight = MediaQuery.of(context).size.height * 0.82;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: Column(
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          Text(
+            'All colours pulled',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
-          itemCount: widget.rewards.length,
-          itemBuilder: (context, index) {
-            final reward = widget.rewards[index];
-            final visible = index < _summaryVisibleCount;
-            return AnimatedOpacity(
-              opacity: visible ? 1 : 0,
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeOut,
-              child: AnimatedScale(
-                scale: visible ? 1 : 0.82,
-                duration: const Duration(milliseconds: 260),
-                curve: Curves.easeOutBack,
-                child: _summaryTile(reward),
+          const SizedBox(height: 6),
+          Text(
+            'Everything that dropped this time, popping in one by one.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: Scrollbar(
+              controller: _summaryScrollController,
+              thumbVisibility: true,
+              child: GridView.builder(
+                controller: _summaryScrollController,
+                padding: const EdgeInsets.only(right: 8),
+                physics: const ClampingScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 1.3,
+                ),
+                itemCount: widget.rewards.length,
+                itemBuilder: (context, index) {
+                  final reward = widget.rewards[index];
+                  final visible = index < _summaryVisibleCount;
+                  return AnimatedOpacity(
+                    opacity: visible ? 1 : 0,
+                    duration: const Duration(milliseconds: 260),
+                    curve: Curves.easeOut,
+                    child: AnimatedScale(
+                      scale: visible ? 1 : 0.82,
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.easeOutBack,
+                      child: _summaryTile(reward),
+                    ),
+                  );
+                },
               ),
-            );
-          },
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: summaryReady ? _advance : null,
-            icon: const Icon(Icons.check_circle),
-            label: const Text('Claim'),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: summaryReady ? _advance : null,
+              icon: const Icon(Icons.check_circle),
+              label: const Text('Claim'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -197,6 +197,7 @@ Future<void> main() async {
         minimumSize: ui.Size(480, 600),
         center: true,
         title: getAppTitle(),
+        backgroundColor: const Color(0x00000000),
       );
       await windowManager.waitUntilReadyToShow(windowOptions, () async {
         await windowManager.show();
