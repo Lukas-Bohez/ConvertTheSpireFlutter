@@ -97,9 +97,8 @@ const wchar_t* WindowClassRegistrar::GetWindowClass() {
     window_class.hInstance = GetModuleHandle(nullptr);
     window_class.hIcon =
         LoadIcon(window_class.hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
-    // Use the system window background brush so the native frame/background
-    // matches the platform theme instead of showing an ugly black bar.
-    window_class.hbrBackground = GetSysColorBrush(COLOR_WINDOW);
+    // Leave the client area unpainted so Flutter can render the full surface.
+    window_class.hbrBackground = 0;
     window_class.lpszMenuName = nullptr;
     window_class.lpfnWndProc = Win32Window::WndProc;
     RegisterClass(&window_class);

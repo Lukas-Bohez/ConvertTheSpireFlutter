@@ -456,7 +456,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           child: isLast
               ? ElevatedButton.icon(
                   key: const ValueKey('done'),
-                  autofocus: true,
                   onPressed: widget.onFinish,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: pageColor,
@@ -474,7 +473,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 )
               : ElevatedButton.icon(
                   key: const ValueKey('next'),
-                  autofocus: true,
                   onPressed: _next,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: pageColor,
@@ -543,6 +541,23 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           },
           child: Focus(
             autofocus: true,
+            onKeyEvent: (node, event) {
+              if (event is! KeyDownEvent) {
+                return KeyEventResult.ignored;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
+                  event.logicalKey == LogicalKeyboardKey.enter ||
+                  event.logicalKey == LogicalKeyboardKey.numpadEnter ||
+                  event.logicalKey == LogicalKeyboardKey.select) {
+                _handleKeyboardAdvance();
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                _back();
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
             child: SafeArea(
               child: Column(
                 children: [

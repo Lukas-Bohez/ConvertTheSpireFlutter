@@ -25,7 +25,7 @@ Future<void> setupDesktopWindow({required bool installShutdownListener}) async {
     center: true,
     title: 'Vault The Spire',
     titleBarStyle: TitleBarStyle.normal,
-    backgroundColor: Color(0x00000000),
+    backgroundColor: Color(0xFF17110B),
   );
 
   await windowManager.waitUntilReadyToShow(options, () async {
