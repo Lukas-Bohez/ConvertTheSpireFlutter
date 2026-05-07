@@ -43,7 +43,6 @@ import 'services/youtube_service.dart';
 import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
 import 'widgets/adaptive_ui_frame.dart';
-import 'widgets/tv_dpad_scope.dart';
 import 'vault/vault_bootstrap.dart';
 import 'vault/platform/desktop_window.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -77,12 +76,6 @@ class _MyAppState extends State<MyApp>
   // Fix: declare as a regular field, initialised in initState, to avoid
   // "accessed before initialization" issues on some platforms.
   FocusNode? _keyboardFocusNode;
-  bool _tvDirectionalModeEnabled = false;
-
-  void _setTvDirectionalMode(bool enabled) {
-    if (_tvDirectionalModeEnabled == enabled) return;
-    setState(() => _tvDirectionalModeEnabled = enabled);
-  }
 
   @override
   void initState() {
@@ -433,18 +426,6 @@ class _MyAppState extends State<MyApp>
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final isTvLikeAndroid = !kIsWeb &&
-        Platform.isAndroid &&
-        mediaQuery.size.shortestSide >= 600;
-    final tvMediaQuery = mediaQuery.copyWith(
-      // Default to traditional (mouse-like) navigation.
-      // Switch to directional only after D-pad input is detected.
-      navigationMode: (isTvLikeAndroid && _tvDirectionalModeEnabled)
-          ? NavigationMode.directional
-          : mediaQuery.navigationMode,
-    );
-
     final listenables = <Listenable>[FullModeAccess.instance, ColourRewardService.instance];
     final controller = _controller;
     if (controller != null) {
@@ -514,18 +495,7 @@ class _MyAppState extends State<MyApp>
           themeMode: themeMode,
           builder: (context, child) {
             // TECH-DEBT: add per-route adaptive exclusions for full-bleed media pages.
-            return MediaQuery(
-              data: tvMediaQuery,
-              child: TvDpadScope(
-                directionalModeEnabled:
-                    tvMediaQuery.navigationMode == NavigationMode.directional,
-                onDirectionalInputDetected:
-                    isTvLikeAndroid ? () => _setTvDirectionalMode(true) : null,
-                onPointerInputDetected:
-                    isTvLikeAndroid ? () => _setTvDirectionalMode(false) : null,
-                child: AdaptiveUiFrame(child: child ?? const SizedBox.shrink()),
-              ),
-            );
+            return AdaptiveUiFrame(child: child ?? const SizedBox.shrink());
           },
           home: _buildHome(),
         );
