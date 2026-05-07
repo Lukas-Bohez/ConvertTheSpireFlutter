@@ -42,12 +42,8 @@ Future<void> setupDesktopWindow({required bool installShutdownListener}) async {
 Future<void> toggleDesktopFullScreen() async {
   if (await windowManager.isFullScreen()) {
     await windowManager.setFullScreen(false);
-    await windowManager.show();
-    await windowManager.focus();
     return;
   }
 
   await windowManager.setFullScreen(true);
-  await windowManager.show();
-  await windowManager.focus();
 }
