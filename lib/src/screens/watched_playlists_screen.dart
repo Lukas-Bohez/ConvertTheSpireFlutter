@@ -228,21 +228,28 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton.filled(
-                    icon: Icon(Icons.add,
-                        color: Theme.of(context).colorScheme.onPrimary),
-                    style: IconButton.styleFrom(
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primary,
+                  DpadFocusableSurface(
+                    autofocus: true,
+                    onSelect: _addPlaylist,
+                    child: IconButton.filled(
+                      icon: Icon(Icons.add,
+                          color: Theme.of(context).colorScheme.onPrimary),
+                      style: IconButton.styleFrom(
+                        backgroundColor:
+                            Theme.of(context).colorScheme.primary,
+                      ),
+                      tooltip: 'Add playlist',
+                      onPressed: _addPlaylist,
                     ),
-                    tooltip: 'Add playlist',
-                    onPressed: _addPlaylist,
                   ),
                   const SizedBox(width: 8),
-                  IconButton.outlined(
-                    icon: const Icon(Icons.refresh),
-                    tooltip: 'Check all for new tracks',
-                    onPressed: _checking ? null : _checkNow,
+                  DpadFocusableSurface(
+                    onSelect: _checking ? null : _checkNow,
+                    child: IconButton.outlined(
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Check all for new tracks',
+                      onPressed: _checking ? null : _checkNow,
+                    ),
                   ),
                 ],
               ),
@@ -284,39 +291,43 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
                       }
                       folderLabel = parts.join(' • ');
                     }
-                    return Card(
-                      child: ListTile(
-                        leading: Icon(Icons.playlist_play, color: cs.primary),
-                        title: Text(url,
-                            maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Checked periodically for new tracks'),
-                            const SizedBox(height: 2),
-                            Text(
-                              folderLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  color: cs.onSurfaceVariant, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.folder_open),
-                              tooltip: 'Choose folder for this playlist',
-                              onPressed: () => _pickPlaylistFolder(url),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline),
-                              tooltip: 'Remove playlist',
-                              onPressed: () => _removePlaylist(url),
-                            ),
-                          ],
+                    return DpadFocusableSurface(
+                      autoScroll: true,
+                      onSelect: () => _pickPlaylistFolder(url),
+                      child: Card(
+                        child: ListTile(
+                          leading: Icon(Icons.playlist_play, color: cs.primary),
+                          title: Text(url,
+                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Checked periodically for new tracks'),
+                              const SizedBox(height: 2),
+                              Text(
+                                folderLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: cs.onSurfaceVariant, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.folder_open),
+                                tooltip: 'Choose folder for this playlist',
+                                onPressed: () => _pickPlaylistFolder(url),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: 'Remove playlist',
+                                onPressed: () => _removePlaylist(url),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );

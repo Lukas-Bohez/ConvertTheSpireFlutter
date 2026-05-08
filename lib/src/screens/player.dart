@@ -30,6 +30,7 @@ import '../services/ffmpeg_service.dart';
 import '../utils/snack.dart';
 import '../utils/lock.dart';
 import '../vault/platform/desktop_window.dart';
+import '../widgets/dpad_focusable_surface.dart';
 
 // --- Public entry point -------------------------------------------------------
 
@@ -50,7 +51,7 @@ enum PlaybackMode { all, songs, videos, favourites, favouriteSongs, favouriteVid
 
 enum QueueScope { all, songs, videos, favourites, favSongs, favVideos }
 
-enum MediaSortOrder { newestFirst, oldestFirst, titleAZ, titleZA, shortestDuration }
+enum MediaSortOrder { newestFirst, oldestFirst, titleAZ, titleZA, shortestDuration, mostPlayed, leastPlayed, recentlyPlayed }
 
 class MediaItem {
   final String path;
@@ -61,8 +62,10 @@ class MediaItem {
   final DateTime? modifiedAt;
   final Uint8List? thumbnailData;
   final Duration? duration;
+  int playCount;           // number of times this track has been played
+  DateTime? lastPlayedAt;  // timestamp of most recent play
 
-  const MediaItem(
+  MediaItem(
     this.path,
     this.type, {
     this.title,
@@ -71,6 +74,8 @@ class MediaItem {
     this.modifiedAt,
     this.thumbnailData,
     this.duration,
+    this.playCount = 0,
+    this.lastPlayedAt,
   });
 
   MediaItem copyWith({
@@ -80,6 +85,8 @@ class MediaItem {
     DateTime? modifiedAt,
     Uint8List? thumbnailData,
     Duration? duration,
+    int? playCount,
+    DateTime? lastPlayedAt,
   }) =>
       MediaItem(
         path,
@@ -90,6 +97,8 @@ class MediaItem {
         modifiedAt: modifiedAt ?? this.modifiedAt,
         thumbnailData: thumbnailData ?? this.thumbnailData,
         duration: duration ?? this.duration,
+        playCount: playCount ?? this.playCount,
+        lastPlayedAt: lastPlayedAt ?? this.lastPlayedAt,
       );
 }
 
@@ -3040,6 +3049,15 @@ class _PlayerScreenState extends State<PlayerScreen>
         case MediaSortOrder.shortestDuration:
           return (a.value.duration ?? Duration.zero)
               .compareTo(b.value.duration ?? Duration.zero);
+        case MediaSortOrder.mostPlayed:
+          return b.value.playCount.compareTo(a.value.playCount);
+        case MediaSortOrder.leastPlayed:
+          return a.value.playCount.compareTo(b.value.playCount);
+        case MediaSortOrder.recentlyPlayed:
+          if (a.value.lastPlayedAt == null && b.value.lastPlayedAt == null) return 0;
+          if (a.value.lastPlayedAt == null) return 1;
+          if (b.value.lastPlayedAt == null) return -1;
+          return b.value.lastPlayedAt!.compareTo(a.value.lastPlayedAt!);
         case MediaSortOrder.newestFirst:
           return (b.value.modifiedAt ?? DateTime.fromMillisecondsSinceEpoch(0))
               .compareTo(a.value.modifiedAt ?? DateTime.fromMillisecondsSinceEpoch(0));
@@ -3385,6 +3403,10 @@ class _PlayerScreenState extends State<PlayerScreen>
           PopupMenuItem(value: MediaSortOrder.titleAZ, child: Text('Title A-Z')),
           PopupMenuItem(value: MediaSortOrder.titleZA, child: Text('Title Z-A')),
           PopupMenuItem(value: MediaSortOrder.shortestDuration, child: Text('Shortest first')),
+          PopupMenuDivider(),
+          PopupMenuItem(value: MediaSortOrder.mostPlayed, child: Text('Most played')),
+          PopupMenuItem(value: MediaSortOrder.leastPlayed, child: Text('Least played')),
+          PopupMenuItem(value: MediaSortOrder.recentlyPlayed, child: Text('Recently played')),
         ],
       );
     }
@@ -4101,11 +4123,14 @@ class _MediaCard extends StatelessWidget {
     final idx = entry.key;
     final cs = Theme.of(context).colorScheme;
     if (item.thumbnailData == null) Future.microtask(() => state.requestThumbnailForIndex(idx));
-    return Card(
-      clipBehavior: Clip.hardEdge,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => onTap(state, idx),
+    return DpadFocusableSurface(
+      autoScroll: true,
+      onSelect: () => onTap(state, idx),
+      child: Card(
+        clipBehavior: Clip.hardEdge,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: InkWell(
+          onTap: () => onTap(state, idx),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -4172,6 +4197,7 @@ class _MediaCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

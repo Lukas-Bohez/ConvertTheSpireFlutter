@@ -13,7 +13,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../browser/adblock/adblock_service.dart';
 import '../browser/cast/cast_service.dart';
-import '../widgets/dpad_focusable_surface.dart';
 import '../browser/cast/unified_cast_service.dart';
 import '../browser/tabs/tab_manager.dart';
 import '../browser/video/video_detector_service.dart';

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../browser/adblock/adblock_service.dart';
 import '../../data/browser_db.dart';
+import '../../widgets/dpad_focusable_surface.dart';
 
 /// Browser settings screen: search engine, ad-block, privacy, display.
 class BrowserSettingsScreen extends StatefulWidget {
@@ -72,34 +73,54 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
 
             // -- Privacy --
             _SectionHeader(title: 'Privacy'),
-            SwitchListTile(
-              secondary: const Icon(Icons.block),
-              title: const Text('Ad Blocker'),
-              subtitle: Text(
-                  widget.adBlockService.adBlockEnabled ? 'Enabled' : 'Disabled'),
-              value: widget.adBlockService.adBlockEnabled,
-              onChanged: (v) {
+            DpadFocusableSurface(
+              autofocus: true,
+              onSelect: () {
+                final v = !widget.adBlockService.adBlockEnabled;
                 widget.adBlockService.setEnabled(v);
                 setState(() {});
               },
+              child: SwitchListTile(
+                secondary: const Icon(Icons.block),
+                title: const Text('Ad Blocker'),
+                subtitle: Text(
+                    widget.adBlockService.adBlockEnabled ? 'Enabled' : 'Disabled'),
+                value: widget.adBlockService.adBlockEnabled,
+                onChanged: (v) {
+                  widget.adBlockService.setEnabled(v);
+                  setState(() {});
+                },
+              ),
             ),
-            SwitchListTile(
-              secondary: const Icon(Icons.web_asset_off),
-              title: const Text('Block Pop-ups'),
-              value: _blockPopups,
-              onChanged: (v) {
-                setState(() => _blockPopups = v);
-                _savePref('browser_block_popups', v);
+            DpadFocusableSurface(
+              onSelect: () {
+                setState(() => _blockPopups = !_blockPopups);
+                _savePref('browser_block_popups', !_blockPopups);
               },
+              child: SwitchListTile(
+                secondary: const Icon(Icons.web_asset_off),
+                title: const Text('Block Pop-ups'),
+                value: _blockPopups,
+                onChanged: (v) {
+                  setState(() => _blockPopups = v);
+                  _savePref('browser_block_popups', v);
+                },
+              ),
             ),
-            SwitchListTile(
-              secondary: const Icon(Icons.do_not_disturb_on),
-              title: const Text('Do Not Track'),
-              value: _doNotTrack,
-              onChanged: (v) {
-                setState(() => _doNotTrack = v);
-                _savePref('browser_dnt', v);
+            DpadFocusableSurface(
+              onSelect: () {
+                setState(() => _doNotTrack = !_doNotTrack);
+                _savePref('browser_dnt', !_doNotTrack);
               },
+              child: SwitchListTile(
+                secondary: const Icon(Icons.do_not_disturb_on),
+                title: const Text('Do Not Track'),
+                value: _doNotTrack,
+                onChanged: (v) {
+                  setState(() => _doNotTrack = v);
+                  _savePref('browser_dnt', v);
+                },
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.update),
@@ -121,15 +142,21 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
 
             // -- Display --
             _SectionHeader(title: 'Display'),
-            SwitchListTile(
-              secondary: const Icon(Icons.desktop_windows),
-              title: const Text('Desktop Mode'),
-              subtitle: const Text('Request desktop version of websites'),
-              value: _desktopMode,
-              onChanged: (v) {
-                setState(() => _desktopMode = v);
-                _savePref('browser_desktop_mode', v);
+            DpadFocusableSurface(
+              onSelect: () {
+                setState(() => _desktopMode = !_desktopMode);
+                _savePref('browser_desktop_mode', !_desktopMode);
               },
+              child: SwitchListTile(
+                secondary: const Icon(Icons.desktop_windows),
+                title: const Text('Desktop Mode'),
+                subtitle: const Text('Request desktop version of websites'),
+                value: _desktopMode,
+                onChanged: (v) {
+                  setState(() => _desktopMode = v);
+                  _savePref('browser_desktop_mode', v);
+                },
+              ),
             ),
           ],
         ),

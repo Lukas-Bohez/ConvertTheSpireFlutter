@@ -256,10 +256,14 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                   ),
                 ),
                 const SizedBox(width: 8),
-                FilledButton.icon(
-                  onPressed: _loading ? null : _loadPlaylist,
-                  icon: const Icon(Icons.playlist_play, size: 20),
-                  label: const Text('Load'),
+                DpadFocusableSurface(
+                  autofocus: true,
+                  onSelect: _loading ? null : _loadPlaylist,
+                  child: FilledButton.icon(
+                    onPressed: _loading ? null : _loadPlaylist,
+                    icon: const Icon(Icons.playlist_play, size: 20),
+                    label: const Text('Load'),
+                  ),
                 ),
               ],
             ),
@@ -280,16 +284,22 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton.outlined(
-                    onPressed: _pickFolder,
-                    icon: const Icon(Icons.folder_open),
-                    tooltip: 'Browse…',
+                  DpadFocusableSurface(
+                    onSelect: _pickFolder,
+                    child: IconButton.outlined(
+                      onPressed: _pickFolder,
+                      icon: const Icon(Icons.folder_open),
+                      tooltip: 'Browse…',
+                    ),
                   ),
                   const SizedBox(width: 4),
-                  FilledButton.tonalIcon(
-                    onPressed: _loading ? null : _compareToFolder,
-                    icon: const Icon(Icons.compare_arrows, size: 20),
-                    label: const Text('Compare'),
+                  DpadFocusableSurface(
+                    onSelect: _loading ? null : _compareToFolder,
+                    child: FilledButton.tonalIcon(
+                      onPressed: _loading ? null : _compareToFolder,
+                      icon: const Icon(Icons.compare_arrows, size: 20),
+                      label: const Text('Compare'),
+                    ),
                   ),
                 ],
               ),
@@ -664,7 +674,11 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                   itemCount: matches.length,
                   itemBuilder: (context, i) {
                     final m = matches[i];
-                    return _MatchedTile(match: m);
+                    return DpadFocusableSurface(
+                      autoScroll: true,
+                      onSelect: () {},
+                      child: _MatchedTile(match: m),
+                    );
                   },
                 ),
                 ),
@@ -749,63 +763,75 @@ class _PlaylistScreenState extends State<PlaylistScreen>
             itemBuilder: (context, i) {
               final t = _comparison!.missing[i];
               final selected = _missingSelection.contains(t);
-              return ListTile(
-                dense: true,
-                onLongPress: () {
+              return DpadFocusableSurface(
+                autoScroll: true,
+                onSelect: () {
                   setState(() {
-                    _lastMissingSelectedIndex = i;
+                    if (_missingSelection.contains(t)) {
+                      _missingSelection.remove(t);
+                    } else {
+                      _missingSelection.add(t);
+                    }
                   });
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text(
-                      'Range select started. Tap another item to select a range.',
-                    ),
-                    duration: Duration(seconds: 2),
-                  ));
                 },
-                leading: Checkbox(
-                  value: selected,
-                  onChanged: (value) {
+                child: ListTile(
+                  dense: true,
+                  onLongPress: () {
                     setState(() {
-                      if (value == null) return;
-
-                      // Range selection (shift-click style): long-press to set a
-                      // starting point, then tap another item to select the range.
-                      if (_lastMissingSelectedIndex != null &&
-                          _lastMissingSelectedIndex != i) {
-                        final start = _lastMissingSelectedIndex!;
-                        final end = i;
-                        final range = start < end
-                            ? List.generate(end - start + 1, (j) => start + j)
-                            : List.generate(start - end + 1, (j) => end + j);
-                        for (final idx in range) {
-                          final item = _comparison!.missing[idx];
-                          if (value) {
-                            _missingSelection.add(item);
-                          } else {
-                            _missingSelection.remove(item);
-                          }
-                        }
-                        _lastMissingSelectedIndex = null;
-                      } else {
-                        if (value) {
-                          _missingSelection.add(t);
-                        } else {
-                          _missingSelection.remove(t);
-                        }
-                        _lastMissingSelectedIndex = i;
-                      }
+                      _lastMissingSelectedIndex = i;
                     });
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text(
+                        'Range select started. Tap another item to select a range.',
+                      ),
+                      duration: Duration(seconds: 2),
+                    ));
                   },
-                ),
-                title:
-                    Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle:
-                    Text('${t.artist}  •  ${_formatDuration(t.duration)}'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.download, size: 20),
-                  tooltip: 'Download this track',
-                  onPressed: () =>
-                      widget.onDownloadMissing([t], _selectedFormat),
+                  leading: Checkbox(
+                    value: selected,
+                    onChanged: (value) {
+                      setState(() {
+                        if (value == null) return;
+
+                        // Range selection (shift-click style): long-press to set a
+                        // starting point, then tap another item to select the range.
+                        if (_lastMissingSelectedIndex != null &&
+                            _lastMissingSelectedIndex != i) {
+                          final start = _lastMissingSelectedIndex!;
+                          final end = i;
+                          final range = start < end
+                              ? List.generate(end - start + 1, (j) => start + j)
+                              : List.generate(start - end + 1, (j) => end + j);
+                          for (final idx in range) {
+                            final item = _comparison!.missing[idx];
+                            if (value) {
+                              _missingSelection.add(item);
+                            } else {
+                              _missingSelection.remove(item);
+                            }
+                          }
+                          _lastMissingSelectedIndex = null;
+                        } else {
+                          if (value) {
+                            _missingSelection.add(t);
+                          } else {
+                            _missingSelection.remove(t);
+                          }
+                          _lastMissingSelectedIndex = i;
+                        }
+                      });
+                    },
+                  ),
+                  title:
+                      Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  subtitle:
+                      Text('${t.artist}  •  ${_formatDuration(t.duration)}'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.download, size: 20),
+                    tooltip: 'Download this track',
+                    onPressed: () =>
+                        widget.onDownloadMissing([t], _selectedFormat),
+                  ),
                 ),
               );
             },
@@ -858,16 +884,20 @@ class _PlaylistScreenState extends State<PlaylistScreen>
             itemCount: _comparison!.extras.length,
             itemBuilder: (context, i) {
               final f = _comparison!.extras[i];
-              return ListTile(
-                dense: true,
-                leading: const Icon(Icons.audio_file, color: Colors.blue),
-                title: Text(f.fileName,
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text(f.filePath,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: Colors.grey)),
+              return DpadFocusableSurface(
+                autoScroll: true,
+                onSelect: () {},
+                child: ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.audio_file, color: Colors.blue),
+                  title: Text(f.fileName,
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  subtitle: Text(f.filePath,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: Colors.grey)),
+                ),
               );
             },
           ),
