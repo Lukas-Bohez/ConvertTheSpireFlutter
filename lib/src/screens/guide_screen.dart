@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'onboarding_screen.dart';
 import '../config/build_flags.dart';
+import '../widgets/dpad_focusable_surface.dart';
 
 /// In-app guide covering usage instructions, supported platforms,
 /// and feature explanations.
@@ -27,51 +28,66 @@ class GuideScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    return SelectionArea(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // -- Header --------------------------------------------─
-          Card(
-            color: cs.primaryContainer,
-            elevation: 0,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  Icon(kPlayStoreBuild ? Icons.lock_outline : Icons.music_note,
-                      size: 48, color: cs.onPrimaryContainer),
-                  const SizedBox(height: 12),
-                  Text(getAppTitle(),
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: cs.onPrimaryContainer)),
-                  const SizedBox(height: 4),
-                    Text(getAppSubtitle(),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                          color: cs.onPrimaryContainer.withValues(alpha: 0.8))),
-                ],
+    return PopScope(
+      canPop: true,
+      child: SelectionArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // -- Header --------------------------------------------─
+            Card(
+              color: cs.primaryContainer,
+              elevation: 0,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Icon(kPlayStoreBuild ? Icons.lock_outline : Icons.music_note,
+                        size: 48, color: cs.onPrimaryContainer),
+                    const SizedBox(height: 12),
+                    Text(getAppTitle(),
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: cs.onPrimaryContainer)),
+                    const SizedBox(height: 4),
+                      Text(getAppSubtitle(),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                            color: cs.onPrimaryContainer.withValues(alpha: 0.8))),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: OutlinedButton(
-              onPressed: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => OnboardingScreen(
-                          onFinish: () {
-                            Navigator.of(context).pop();
-                          },
-                          themeMode: themeMode,
-                          onThemeChanged: onThemeChanged,
-                        )));
-              },
-              child: const Text('Show onboarding'),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: DpadFocusableSurface(
+                autofocus: true,
+                onSelect: () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => OnboardingScreen(
+                            onFinish: () {
+                              Navigator.of(context).pop();
+                            },
+                            themeMode: themeMode,
+                            onThemeChanged: onThemeChanged,
+                          )));
+                },
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => OnboardingScreen(
+                              onFinish: () {
+                                Navigator.of(context).pop();
+                              },
+                              themeMode: themeMode,
+                              onThemeChanged: onThemeChanged,
+                            )));
+                  },
+                  child: const Text('Show onboarding'),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
           // -- Platform support ----------------------------------─
           _SectionCard(
@@ -419,6 +435,7 @@ class GuideScreen extends StatelessWidget {
           const SizedBox(height: 24),
         ],
       ),
+    ),
     );
   }
 
