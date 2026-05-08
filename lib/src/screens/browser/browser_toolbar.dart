@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../config/build_flags.dart';
+import '../../widgets/dpad_focusable_surface.dart';
 
 /// Top toolbar for the browser with URL bar, navigation, cast button, and menu.
 class BrowserToolbar extends StatelessWidget {
@@ -97,14 +98,21 @@ class BrowserToolbar extends StatelessWidget {
           child: Row(
             children: [
             // Back
-            IconButton(
-              icon: const Icon(Icons.arrow_back, size: 20),
-              onPressed: canGoBack ? onBack : null,
+            DpadFocusableSurface(
+              autofocus: true,
+              onSelect: canGoBack ? onBack : null,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, size: 20),
+                onPressed: canGoBack ? onBack : null,
+              ),
             ),
             // Forward
-            IconButton(
-              icon: const Icon(Icons.arrow_forward, size: 20),
-              onPressed: canGoForward ? onForward : null,
+            DpadFocusableSurface(
+              onSelect: canGoForward ? onForward : null,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_forward, size: 20),
+                onPressed: canGoForward ? onForward : null,
+              ),
             ),
             // URL bar
             Expanded(
@@ -129,97 +137,120 @@ class BrowserToolbar extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Expanded(
-                      child: TextField(
-                        controller: addressController,
-                        keyboardType: TextInputType.url,
-                        textInputAction: TextInputAction.go,
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: isIncognito ? Colors.white : null,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        onSubmitted: onSubmitted,
-                        onTap: () {
-                          // Select all text when the URL bar is tapped (standard browser UX)
-                          addressController.selection = TextSelection(
-                            baseOffset: 0,
-                            extentOffset: addressController.text.length,
-                          );
-                        },
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 8),
-                          hintText: pageTitle.isNotEmpty
-                              ? pageTitle
-                              : 'Search or enter URL',
-                          hintStyle: TextStyle(
+                      child: DpadFocusableSurface(
+                        autofocus: true,
+                        region: 'browser-bar',
+                        onSelect: onUrlBarTap,
+                        child: TextField(
+                          controller: addressController,
+                          keyboardType: TextInputType.url,
+                          textInputAction: TextInputAction.go,
+                          maxLines: 1,
+                          style: TextStyle(
                             fontSize: 13,
-                            color: isIncognito
-                                ? Colors.white54
-                                : cs.onSurface.withValues(alpha: 0.6),
+                            color: isIncognito ? Colors.white : null,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          onSubmitted: onSubmitted,
+                          onTap: () {
+                            // Select all text when the URL bar is tapped (standard browser UX)
+                            addressController.selection = TextSelection(
+                              baseOffset: 0,
+                              extentOffset: addressController.text.length,
+                            );
+                          },
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 8, horizontal: 8),
+                            hintText: pageTitle.isNotEmpty
+                                ? pageTitle
+                                : 'Search or enter URL',
+                            hintStyle: TextStyle(
+                              fontSize: 13,
+                              color: isIncognito
+                                  ? Colors.white54
+                                  : cs.onSurface.withValues(alpha: 0.6),
+                            ),
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 6),
                     // Tabs button
-                    IconButton(
-                      icon: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          const Icon(Icons.tab_rounded, size: 20),
-                          if (tabCount > 1)
-                            Positioned(
-                              right: 0,
-                              top: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                constraints: const BoxConstraints(
-                                    minWidth: 14, minHeight: 14),
-                                child: Text(
-                                  '$tabCount',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      onPressed: () {
+                    DpadFocusableSurface(
+                      onSelect: () {
                         onReleaseWebViewFocus?.call();
                         onTabs();
                       },
-                      tooltip: 'Tabs',
+                      child: Tooltip(
+                        message: 'Tabs',
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.center,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.tab_rounded, size: 20),
+                              onPressed: () {
+                                onReleaseWebViewFocus?.call();
+                                onTabs();
+                              },
+                            ),
+                            if (tabCount > 1)
+                              Positioned(
+                                right: 4,
+                                top: 4,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 14,
+                                    minHeight: 14,
+                                  ),
+                                  child: Text(
+                                    '$tabCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
 
                     // Reload
-                    IconButton(
-                      icon: const Icon(Icons.refresh, size: 20),
-                      onPressed: onReload,
+                    DpadFocusableSurface(
+                      onSelect: onReload,
+                      child: IconButton(
+                        icon: const Icon(Icons.refresh, size: 20),
+                        onPressed: onReload,
+                      ),
                     ),
                     // Favourite
-                    IconButton(
-                      icon: Icon(
-                        isFavourited
-                            ? Icons.star_rounded
-                            : Icons.star_border_rounded,
-                        size: 20,
-                        color: isFavourited ? Colors.amber : null,
+                    DpadFocusableSurface(
+                      onSelect: onFavouriteTap,
+                      child: IconButton(
+                        icon: Icon(
+                          isFavourited
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          size: 20,
+                          color: isFavourited ? Colors.amber : null,
+                        ),
+                        tooltip: isFavourited
+                            ? 'Remove from favourites'
+                            : 'Add to favourites',
+                        onPressed: onFavouriteTap,
                       ),
-                      tooltip: isFavourited
-                          ? 'Remove from favourites'
-                          : 'Add to favourites',
-                      onPressed: onFavouriteTap,
                     ),
                     // Download (primary action)
                     Padding(
@@ -239,22 +270,30 @@ class BrowserToolbar extends StatelessWidget {
                                     ),
                                   ),
                                 )
-                                : IconButton(
-                                  icon: const Icon(Icons.download_rounded,
-                                      size: 20),
-                                  onPressed: downloadEnabled
+                                : DpadFocusableSurface(
+                                  onSelect: downloadEnabled
                                       ? () {
                                           onReleaseWebViewFocus?.call();
                                           onDownload?.call();
                                         }
                                       : null,
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Theme.of(context)
-                                        .colorScheme
-                                        .primaryContainer,
-                                    foregroundColor: Theme.of(context)
-                                        .colorScheme
-                                        .onPrimaryContainer,
+                                  child: IconButton(
+                                    icon: const Icon(Icons.download_rounded,
+                                        size: 20),
+                                    onPressed: downloadEnabled
+                                        ? () {
+                                            onReleaseWebViewFocus?.call();
+                                            onDownload?.call();
+                                          }
+                                        : null,
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Theme.of(context)
+                                          .colorScheme
+                                          .primaryContainer,
+                                      foregroundColor: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimaryContainer,
+                                    ),
                                   ),
                                 )),
                     ),

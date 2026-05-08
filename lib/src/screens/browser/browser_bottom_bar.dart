@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/dpad_focusable_surface.dart';
+
 /// Bottom bar for the browser with tabs count, home, and favourite toggle.
 class BrowserBottomBar extends StatelessWidget {
   final int tabCount;
@@ -36,47 +38,57 @@ class BrowserBottomBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             // Tabs button with count badge
-            IconButton(
-              icon: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  const Icon(Icons.tab),
-                  Positioned(
-                    right: -6,
-                    top: -4,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: cs.primary,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '$tabCount',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: cs.onPrimary,
-                          fontWeight: FontWeight.bold,
+            DpadFocusableSurface(
+              autofocus: true,
+              onSelect: onTabs,
+              child: IconButton(
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.tab),
+                    Positioned(
+                      right: -6,
+                      top: -4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: cs.primary,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '$tabCount',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: cs.onPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                onPressed: onTabs,
               ),
-              onPressed: onTabs,
             ),
             // Home
-            IconButton(
-              icon: const Icon(Icons.home_outlined),
-              onPressed: onHome,
+            DpadFocusableSurface(
+              onSelect: onHome,
+              child: IconButton(
+                icon: const Icon(Icons.home_outlined),
+                onPressed: onHome,
+              ),
             ),
             // Favourite toggle - filled when page is bookmarked
-            IconButton(
-              icon: Icon(
-                isFavourited ? Icons.favorite : Icons.favorite_border,
-                color: isFavourited ? Colors.red : null,
+            DpadFocusableSurface(
+              onSelect: onFavourite,
+              child: IconButton(
+                icon: Icon(
+                  isFavourited ? Icons.favorite : Icons.favorite_border,
+                  color: isFavourited ? Colors.red : null,
+                ),
+                onPressed: onFavourite,
               ),
-              onPressed: onFavourite,
             ),
           ],
         ),

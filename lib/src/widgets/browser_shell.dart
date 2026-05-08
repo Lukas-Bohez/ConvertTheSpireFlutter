@@ -1,13 +1,13 @@
+import 'dart:typed_data';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../screens/player.dart' show PlayerState, PositionUiState, MediaItem, MediaType;
 import '../state/app_controller.dart';
 import '../config/build_flags.dart';
 
+import 'dpad_focusable_surface.dart';
 import 'quick_links_service.dart';
 
 /// Persistent browser-like shell that wraps all app content.
@@ -55,7 +55,6 @@ class _BrowserShellState extends State<BrowserShell> {
   bool _isEditing = false;
   bool _showQueueDesktop = true;
   bool _playerCollapsed = true;
-  bool _tvDpadMode = false;
   late final TextEditingController _urlEditController;
   final FocusNode _urlFocusNode = FocusNode();
   // overlay/old suggestion machinery removed in favor of RawAutocomplete
@@ -176,85 +175,6 @@ class _BrowserShellState extends State<BrowserShell> {
     }
   }
 
-  bool get _isTvLikeAndroid =>
-      !kIsWeb && Platform.isAndroid && MediaQuery.of(context).size.shortestSide >= 600;
-
-  bool _isTvDirectionalKey(LogicalKeyboardKey key) {
-    return key == LogicalKeyboardKey.arrowUp ||
-        key == LogicalKeyboardKey.arrowDown ||
-        key == LogicalKeyboardKey.arrowLeft ||
-        key == LogicalKeyboardKey.arrowRight ||
-        key == LogicalKeyboardKey.select ||
-        key == LogicalKeyboardKey.enter ||
-        key == LogicalKeyboardKey.numpadEnter ||
-        key == LogicalKeyboardKey.gameButtonA ||
-        key == LogicalKeyboardKey.escape ||
-        key == LogicalKeyboardKey.goBack;
-  }
-
-  void _setTvDpadMode(bool enabled) {
-    if (_tvDpadMode == enabled) return;
-    setState(() => _tvDpadMode = enabled);
-  }
-
-  KeyEventResult _handleTvKeyEvent(FocusNode node, KeyEvent event) {
-    if (!_isTvLikeAndroid) return KeyEventResult.ignored;
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-
-    if (_isTvDirectionalKey(event.logicalKey) && !_tvDpadMode) {
-      setState(() => _tvDpadMode = true);
-    }
-
-    return KeyEventResult.ignored;
-  }
-
-  Widget _buildTvNavigationWrapper(Widget child) {
-    if (!_isTvLikeAndroid) return child;
-
-    final shortcuts = <ShortcutActivator, Intent>{
-      SingleActivator(LogicalKeyboardKey.arrowUp):
-          DirectionalFocusIntent(TraversalDirection.up),
-      SingleActivator(LogicalKeyboardKey.arrowDown):
-          DirectionalFocusIntent(TraversalDirection.down),
-      SingleActivator(LogicalKeyboardKey.arrowLeft):
-          DirectionalFocusIntent(TraversalDirection.left),
-      SingleActivator(LogicalKeyboardKey.arrowRight):
-          DirectionalFocusIntent(TraversalDirection.right),
-      SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
-      SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-      SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
-      SingleActivator(LogicalKeyboardKey.gameButtonA): ActivateIntent(),
-      SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
-      SingleActivator(LogicalKeyboardKey.goBack): DismissIntent(),
-    };
-
-    return FocusTraversalGroup(
-      policy: WidgetOrderTraversalPolicy(),
-      child: Shortcuts(
-        shortcuts: shortcuts,
-        child: Actions(
-          actions: <Type, Action<Intent>>{
-            DirectionalFocusIntent: DirectionalFocusAction(),
-            DismissIntent: CallbackAction<DismissIntent>(
-              onInvoke: (intent) {
-                if (_tvDpadMode) {
-                  setState(() => _tvDpadMode = false);
-                  return null;
-                }
-                final nav = Navigator.maybeOf(context);
-                if (nav?.canPop() ?? false) {
-                  nav!.maybePop();
-                }
-                return null;
-              },
-            ),
-          },
-          child: child,
-        ),
-      ),
-    );
-  }
-
   // -- Build --
 
   static const double _playerOverlayCollapsedHeight = 64.0;
@@ -265,7 +185,6 @@ class _BrowserShellState extends State<BrowserShell> {
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width > 1024;
     final cs = Theme.of(context).colorScheme;
-    final isTvLikeAndroid = _isTvLikeAndroid;
 
     // Only listen to the fields that actually affect the shell layout.
     final currentItem = context.select<PlayerState, MediaItem?>((state) => state.currentItem);
@@ -290,37 +209,25 @@ class _BrowserShellState extends State<BrowserShell> {
       key: widget.scaffoldKey,
       endDrawer: !isDesktop && widget.queueOnRight ? queueDrawer : null,
       drawer: !isDesktop && !widget.queueOnRight ? queueDrawer : null,
-      body: Listener(
-        behavior: HitTestBehavior.translucent,
-        onPointerDown: (_) {
-          if (isTvLikeAndroid) _setTvDpadMode(false);
-        },
-        child: Focus(
-          autofocus: isTvLikeAndroid,
-          onKeyEvent: _handleTvKeyEvent,
-          child: _buildTvNavigationWrapper(
-            SafeArea(
-              top: false,
-              child: Column(
-                children: [
-                  _buildNavBar(cs, isDesktop, isTvLikeAndroid),
-                  Expanded(
-                    child: isDesktop
-                        ? Row(
-                            children: [
-                              if (!widget.queueOnRight && _showQueueDesktop)
-                                _buildDesktopQueuePanel(cs),
-                              Expanded(child: widget.child),
-                              if (widget.queueOnRight && _showQueueDesktop)
-                                _buildDesktopQueuePanel(cs),
-                            ],
-                          )
-                        : widget.child,
-                  ),
-                ],
-              ),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            FocusTraversalGroup(child: _buildNavBar(cs, isDesktop)),
+            Expanded(
+              child: isDesktop
+                  ? Row(
+                      children: [
+                        if (!widget.queueOnRight && _showQueueDesktop)
+                          _buildDesktopQueuePanel(cs),
+                        Expanded(child: widget.child),
+                        if (widget.queueOnRight && _showQueueDesktop)
+                          _buildDesktopQueuePanel(cs),
+                      ],
+                    )
+                  : widget.child,
             ),
-          ),
+          ],
         ),
       ),
         bottomNavigationBar: showPlayerOverlay
@@ -346,7 +253,7 @@ class _BrowserShellState extends State<BrowserShell> {
     );
   }
 
-  Widget _buildNavBar(ColorScheme cs, bool isDesktop, bool isTvLikeAndroid) {
+  Widget _buildNavBar(ColorScheme cs, bool isDesktop) {
     return Container(
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
@@ -363,7 +270,8 @@ class _BrowserShellState extends State<BrowserShell> {
             child: Row(
               children: [
                 _navButton(Icons.arrow_back_ios_new_rounded, 'Back',
-                    widget.canGoBack ? widget.onBack : null, cs),
+                    widget.canGoBack ? widget.onBack : null, cs,
+                    autofocus: true),
                 _navButton(Icons.arrow_forward_ios_rounded, 'Forward',
                     widget.canGoForward ? widget.onForward : null, cs),
                 widget.isRefreshing
@@ -390,16 +298,6 @@ class _BrowserShellState extends State<BrowserShell> {
                 const SizedBox(width: 6),
                 Expanded(child: _buildUrlBar(cs)),
                 const SizedBox(width: 6),
-                if (isTvLikeAndroid) ...[
-                  _navButton(
-                    _tvDpadMode ? Icons.mouse_rounded : Icons.gamepad_rounded,
-                    _tvDpadMode ? 'Switch to pointer mode' : 'Switch to D-pad mode',
-                    () => _setTvDpadMode(!_tvDpadMode),
-                    cs,
-                    selected: _tvDpadMode,
-                  ),
-                  const SizedBox(width: 6),
-                ],
                 _buildQueueButton(cs, isDesktop),
               ],
             ),
@@ -414,21 +312,27 @@ class _BrowserShellState extends State<BrowserShell> {
       String tooltip,
       VoidCallback? onPressed,
       ColorScheme cs, {
+      bool autofocus = false,
       bool selected = false,
     }) {
     return SizedBox(
       width: 34,
       height: 34,
-      child: IconButton(
-        icon: Icon(icon, size: 17),
-        onPressed: onPressed,
-        tooltip: tooltip,
-        visualDensity: VisualDensity.compact,
-        padding: EdgeInsets.zero,
-        style: IconButton.styleFrom(
-          foregroundColor: onPressed != null
-              ? (selected ? cs.primary : cs.onSurface)
-              : cs.outline,
+      child: DpadFocusableSurface(
+        autofocus: autofocus,
+        selected: selected,
+        onSelect: onPressed,
+        child: IconButton(
+          icon: Icon(icon, size: 17),
+          onPressed: onPressed,
+          tooltip: tooltip,
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          style: IconButton.styleFrom(
+            foregroundColor: onPressed != null
+                ? (selected ? cs.primary : cs.onSurface)
+                : cs.outline,
+          ),
         ),
       ),
     );
@@ -441,22 +345,29 @@ class _BrowserShellState extends State<BrowserShell> {
       child: Stack(
         children: [
           Center(
-            child: IconButton(
-              icon: Icon(
-                isDesktop
-                    ? Icons.view_sidebar_rounded
-                    : Icons.queue_music_rounded,
-                size: 18,
-              ),
-              onPressed: isDesktop
+            child: DpadFocusableSurface(
+              region: 'tabs',
+              onSelect: isDesktop
                   ? () => setState(() => _showQueueDesktop = !_showQueueDesktop)
                   : _toggleQueue,
-              tooltip: isDesktop ? 'Toggle queue panel' : 'Open queue',
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              style: IconButton.styleFrom(
-                foregroundColor:
-                    isDesktop && _showQueueDesktop ? cs.primary : cs.onSurface,
+              selected: isDesktop && _showQueueDesktop,
+              child: IconButton(
+                icon: Icon(
+                  isDesktop
+                      ? Icons.view_sidebar_rounded
+                      : Icons.queue_music_rounded,
+                  size: 18,
+                ),
+                onPressed: isDesktop
+                    ? () => setState(() => _showQueueDesktop = !_showQueueDesktop)
+                    : _toggleQueue,
+                tooltip: isDesktop ? 'Toggle queue panel' : 'Open queue',
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                style: IconButton.styleFrom(
+                  foregroundColor:
+                      isDesktop && _showQueueDesktop ? cs.primary : cs.onSurface,
+                ),
               ),
             ),
           ),
@@ -942,37 +853,42 @@ class _BrowserShellState extends State<BrowserShell> {
 
   Widget _buildUrlBar(ColorScheme cs) {
     if (!_isEditing) {
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _startEditing,
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            height: 34,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
-              border: Border.all(
-                color: cs.outlineVariant.withValues(alpha: 0.35),
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(_currentFavicon, size: 15, color: cs.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _currentTitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: cs.onSurface,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+      return DpadFocusableSurface(
+        autofocus: true,
+        region: 'browser-bar',
+        onSelect: _startEditing,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _startEditing,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+                border: Border.all(
+                  color: cs.outlineVariant.withValues(alpha: 0.35),
                 ),
-              ],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(_currentFavicon, size: 15, color: cs.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _currentTitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: cs.onSurface,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

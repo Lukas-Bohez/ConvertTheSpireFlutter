@@ -236,7 +236,6 @@ class AdService with WidgetsBindingObserver {
               _preloadNextInterstitial();
             },
           );
-          ad.setImmersiveMode(true);
           _preloadedInterstitial = ad;
         },
         onAdFailedToLoad: (error) {

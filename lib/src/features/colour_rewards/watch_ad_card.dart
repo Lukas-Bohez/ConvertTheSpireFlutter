@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../services/ad_service.dart';
 import '../../services/purchase_service.dart';
 import '../../config/build_flags.dart';
+import '../../widgets/dpad_focusable_surface.dart';
 import 'colour_rarity.dart';
 import 'colour_reward_service.dart';
 import 'colour_reward_session_dialog.dart';
@@ -131,8 +132,20 @@ class _WatchAdCardState extends State<WatchAdCard> {
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            const Expanded(child: Text('Watch an ad → unlock a colour', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
-            TextButton(onPressed: _openCollection, child: const Text('My collection'))
+            const Expanded(
+              child: Text(
+                'Watch an ad → unlock a colour',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+            DpadFocusableSurface(
+              autofocus: true,
+              onSelect: _openCollection,
+              child: TextButton(
+                onPressed: _openCollection,
+                child: const Text('My collection'),
+              ),
+            ),
           ]),
           const SizedBox(height: 8),
           Wrap(spacing: 8, children: [
@@ -162,85 +175,100 @@ class _WatchAdCardState extends State<WatchAdCard> {
               ),
             )
           else ...[
-            InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: _buyingThemes ? null : _buyAllThemes,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(1.5),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFB8860B), Color(0xFFCC1100)],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+            DpadFocusableSurface(
+              onSelect: _buyingThemes ? null : _buyAllThemes,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: _buyingThemes ? null : _buyAllThemes,
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(1.5),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.80),
-                    borderRadius: BorderRadius.circular(11),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFB8860B), Color(0xFFCC1100)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.auto_awesome, size: 22, color: Color(0xFFB8860B)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Unlock All 28 Colours',
-                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface),
-                                  ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'One-time purchase · No ads needed',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.80),
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.auto_awesome, size: 22, color: Color(0xFFB8860B)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Unlock All 28 Colours',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              purchase.storeAvailable
-                                  ? (hasPrice
-                                      ? purchase.getAllThemesPriceLabel
-                                      : 'Loading price…')
-                                  : 'See price in store',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              const SizedBox(height: 2),
+                              Text(
+                                'One-time purchase · No ads needed',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 4),
+                              Text(
+                                purchase.storeAvailable
+                                    ? (hasPrice
+                                        ? purchase.getAllThemesPriceLabel
+                                        : 'Loading price…')
+                                    : 'See price in store',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      if (_buyingThemes)
-                        const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      else
-                        const Icon(Icons.chevron_right),
-                    ],
+                        if (_buyingThemes)
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        else
+                          const Icon(Icons.chevron_right),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: _loading
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : Icon(kIsGithubRelease ? Icons.auto_awesome : Icons.ondemand_video),
-                label: Text(kIsGithubRelease ? 'Spin for Colour' : 'Watch Ad'),
-                onPressed: _loading
-                    ? null
-                    : (kIsGithubRelease ? _spinDirectly : _showAdAndReward),
+            DpadFocusableSurface(
+              autofocus: true,
+              onSelect: _loading ? null : (kIsGithubRelease ? _spinDirectly : _showAdAndReward),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: _loading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(kIsGithubRelease ? Icons.auto_awesome : Icons.ondemand_video),
+                  label: Text(kIsGithubRelease ? 'Spin for Colour' : 'Watch Ad'),
+                  onPressed: _loading
+                      ? null
+                      : (kIsGithubRelease ? _spinDirectly : _showAdAndReward),
+                ),
               ),
             ),
           ],

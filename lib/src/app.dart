@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
+import 'package:dpad/dpad.dart';
 
 // Use explicit show clauses to avoid ambiguous_import errors:
 // home_screen.dart imports PlayerState from player.dart internally.
@@ -432,16 +433,29 @@ class _MyAppState extends State<MyApp>
       listenables.add(controller);
     }
 
-    return AnimatedBuilder(
-      animation: Listenable.merge(listenables),
-      builder: (context, _) {
-        final themeMode = _resolveThemeMode(_controller?.settings?.themeMode);
-        final seed = ColourRewardService.instance.equipped.color;
-        final lightScheme = ColorScheme.fromSeed(seedColor: seed);
-        final darkScheme = ColorScheme.fromSeed(
-          seedColor: seed,
-          brightness: Brightness.dark,
-        );
+    return DpadNavigator(
+      enabled: true,
+      focusMemory: const FocusMemoryOptions(
+        enabled: true,
+        maxHistory: 20,
+      ),
+      onBackPressed: () {
+        final context = _navigatorKey.currentContext;
+        if (context != null && Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      },
+      onMenuPressed: () {},
+      child: AnimatedBuilder(
+        animation: Listenable.merge(listenables),
+        builder: (context, _) {
+          final themeMode = _resolveThemeMode(_controller?.settings?.themeMode);
+          final seed = ColourRewardService.instance.equipped.color;
+          final lightScheme = ColorScheme.fromSeed(seedColor: seed);
+          final darkScheme = ColorScheme.fromSeed(
+            seedColor: seed,
+            brightness: Brightness.dark,
+          );
 
         final lightTheme = ThemeData.from(
           colorScheme: lightScheme,
@@ -487,19 +501,20 @@ class _MyAppState extends State<MyApp>
           ),
         );
 
-        return MaterialApp(
-          navigatorKey: _navigatorKey,
-          title: getAppTitle(),
-          theme: lightTheme,
-          darkTheme: darkTheme,
-          themeMode: themeMode,
-          builder: (context, child) {
-            // TECH-DEBT: add per-route adaptive exclusions for full-bleed media pages.
-            return AdaptiveUiFrame(child: child ?? const SizedBox.shrink());
-          },
-          home: _buildHome(),
-        );
-      },
+          return MaterialApp(
+            navigatorKey: _navigatorKey,
+            title: getAppTitle(),
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: themeMode,
+            builder: (context, child) {
+              // TECH-DEBT: add per-route adaptive exclusions for full-bleed media pages.
+              return AdaptiveUiFrame(child: child ?? const SizedBox.shrink());
+            },
+            home: _buildHome(),
+          );
+        },
+      ),
     );
   }
 
