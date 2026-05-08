@@ -13,6 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../browser/adblock/adblock_service.dart';
 import '../browser/cast/cast_service.dart';
+import '../widgets/dpad_focusable_surface.dart';
 import '../browser/cast/unified_cast_service.dart';
 import '../browser/tabs/tab_manager.dart';
 import '../browser/video/video_detector_service.dart';
@@ -769,9 +770,11 @@ class _BrowserScreenState extends State<BrowserScreen>
     final isIncognito = _tabManager.activeTab?.isIncognito ?? false;
     final viewPadding = MediaQuery.of(context).viewPadding;
 
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: SafeArea(
+    return PopScope(
+      canPop: true,
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        body: SafeArea(
         top: false,
         bottom: false,
         child: Stack(
@@ -902,7 +905,8 @@ class _BrowserScreenState extends State<BrowserScreen>
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildWebView() {

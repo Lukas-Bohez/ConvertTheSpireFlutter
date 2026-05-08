@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/dpad_focusable_surface.dart';
 
 /// Persistent mini bar shown at the bottom of the browser when casting is active.
 /// Slides in from the bottom with an animated transition.
@@ -57,18 +58,24 @@ class CastMiniBar extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                icon: Icon(
-                  isPlaying ? Icons.pause : Icons.play_arrow,
-                  color: cs.onPrimaryContainer,
+              DpadFocusableSurface(
+                onSelect: onPlayPause,
+                child: IconButton(
+                  icon: Icon(
+                    isPlaying ? Icons.pause : Icons.play_arrow,
+                    color: cs.onPrimaryContainer,
+                  ),
+                  onPressed: onPlayPause,
+                  visualDensity: VisualDensity.compact,
                 ),
-                onPressed: onPlayPause,
-                visualDensity: VisualDensity.compact,
               ),
-              IconButton(
-                icon: Icon(Icons.stop, color: cs.onPrimaryContainer),
-                onPressed: onStop,
-                visualDensity: VisualDensity.compact,
+              DpadFocusableSurface(
+                onSelect: onStop,
+                child: IconButton(
+                  icon: Icon(Icons.stop, color: cs.onPrimaryContainer),
+                  onPressed: onStop,
+                  visualDensity: VisualDensity.compact,
+                ),
               ),
             ],
           ),

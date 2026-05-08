@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../utils/snack.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/dpad_focusable_surface.dart';
 
 import '../services/watched_playlist_service.dart';
 
@@ -203,7 +204,9 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final cs = Theme.of(context).colorScheme;
-    return Column(
+    return PopScope(
+      canPop: true,
+      child: Column(
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
@@ -321,6 +324,7 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
                 ),
         ),
       ],
-    );
+    ),
+  );
   }
 }

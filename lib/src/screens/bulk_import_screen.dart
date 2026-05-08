@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/bulk_import_service.dart';
+import '../widgets/dpad_focusable_surface.dart';
 
 /// Screen for bulk-importing a track list from text or file.
 class BulkImportScreen extends StatefulWidget {
@@ -82,81 +83,91 @@ class _BulkImportScreenState extends State<BulkImportScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          TextField(
-            controller: _textController,
-            maxLines: 10,
-            decoration: const InputDecoration(
-              hintText: 'Paste track list here\nFormat: Artist - Song',
-              border: OutlineInputBorder(),
+    return PopScope(
+      canPop: true,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: _textController,
+              maxLines: 10,
+              decoration: const InputDecoration(
+                hintText: 'Paste track list here\nFormat: Artist - Song',
+                border: OutlineInputBorder(),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.start,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Format: '),
-                  DropdownButton<String>(
-                    value: _selectedFormat,
-                    items: const [
-                      DropdownMenuItem(value: 'mp3', child: Text('MP3')),
-                      DropdownMenuItem(value: 'm4a', child: Text('M4A')),
-                      DropdownMenuItem(value: 'mp4', child: Text('MP4')),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) setState(() => _selectedFormat = v);
-                    },
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.start,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Format: '),
+                    DropdownButton<String>(
+                      value: _selectedFormat,
+                      items: const [
+                        DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+                        DropdownMenuItem(value: 'm4a', child: Text('M4A')),
+                        DropdownMenuItem(value: 'mp4', child: Text('MP4')),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) setState(() => _selectedFormat = v);
+                      },
+                    ),
+                  ],
+                ),
+                DpadFocusableSurface(
+                  autofocus: true,
+                  onSelect: _processing ? null : _importFromText,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.text_fields),
+                    label: const Text('Import from Text'),
+                    onPressed: _processing ? null : _importFromText,
                   ),
-                ],
-              ),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.text_fields),
-                label: const Text('Import from Text'),
-                onPressed: _processing ? null : _importFromText,
-              ),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.file_upload),
-                label: const Text('Import from File'),
-                onPressed: _processing ? null : _importFromFile,
+                ),
+                DpadFocusableSurface(
+                  onSelect: _processing ? null : _importFromFile,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.file_upload),
+                    label: const Text('Import from File'),
+                    onPressed: _processing ? null : _importFromFile,
+                  ),
+                ),
+              ],
+            ),
+            if (_processing) ...[
+              const SizedBox(height: 16),
+              const CircularProgressIndicator(),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!, style: const TextStyle(color: Colors.red)),
+            ],
+            if (_parsedQueries != null && !_processing) ...[
+              const SizedBox(height: 16),
+              Text('Parsed ${_parsedQueries!.length} tracks',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _parsedQueries!.length,
+                  itemBuilder: (context, i) {
+                    return ListTile(
+                      dense: true,
+                      leading: Text('${i + 1}'),
+                      title: Text(_parsedQueries![i]),
+                    );
+                  },
+                ),
               ),
             ],
-          ),
-          if (_processing) ...[
-            const SizedBox(height: 16),
-            const CircularProgressIndicator(),
           ],
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(_error!, style: const TextStyle(color: Colors.red)),
-          ],
-          if (_parsedQueries != null && !_processing) ...[
-            const SizedBox(height: 16),
-            Text('Parsed ${_parsedQueries!.length} tracks',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _parsedQueries!.length,
-                itemBuilder: (context, i) {
-                  return ListTile(
-                    dense: true,
-                    leading: Text('${i + 1}'),
-                    title: Text(_parsedQueries![i]),
-                  );
-                },
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

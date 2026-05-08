@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../browser/cast/cast_service.dart';
 import '../../../browser/cast/unified_cast_service.dart';
+import '../../../widgets/dpad_focusable_surface.dart';
 
 /// Bottom sheet picker showing detected video URLs and discovered cast devices.
 class CastPickerSheet extends StatefulWidget {
@@ -192,12 +193,18 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: SizedBox(
                   width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: (_selectedUrl != null && _selectedDevice != null)
+                  child: DpadFocusableSurface(
+                    autofocus: true,
+                    onSelect: (_selectedUrl != null && _selectedDevice != null)
                         ? () => widget.onCast(_selectedDevice!, _selectedUrl!)
                         : null,
-                    icon: const Icon(Icons.cast),
-                    label: const Text('Cast Selected Video'),
+                    child: FilledButton.icon(
+                      onPressed: (_selectedUrl != null && _selectedDevice != null)
+                          ? () => widget.onCast(_selectedDevice!, _selectedUrl!)
+                          : null,
+                      icon: const Icon(Icons.cast),
+                      label: const Text('Cast Selected Video'),
+                    ),
                   ),
                 ),
               ),

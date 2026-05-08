@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/browser_db.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/dpad_focusable_surface.dart';
 
 /// History screen with date-grouped entries, search, swipe-to-delete,
 /// clear by time range, and infinite scroll pagination.
@@ -89,7 +90,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final cs = Theme.of(context).colorScheme;
     final grouped = _groupByDate(_items);
 
-    return Scaffold(
+    return PopScope(
+      canPop: true,
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('History'),
         actions: [
@@ -209,6 +212,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -332,20 +336,24 @@ class _HistoryTile extends StatelessWidget {
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (_) => onDismissed(),
-      child: ListTile(
-        leading: _buildFavicon(favicon),
-        title: Text(title.isNotEmpty ? title : host,
-            maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text(host,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12)),
-        trailing: Text(time,
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            )),
-        onTap: onTap,
+      child: DpadFocusableSurface(
+        autoScroll: true,
+        onSelect: onTap,
+        child: ListTile(
+          leading: _buildFavicon(favicon),
+          title: Text(title.isNotEmpty ? title : host,
+              maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Text(host,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12)),
+          trailing: Text(time,
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              )),
+          onTap: onTap,
+        ),
       ),
     );
   }

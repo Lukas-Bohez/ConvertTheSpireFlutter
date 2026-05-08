@@ -5,6 +5,7 @@ import '../utils/snack.dart';
 import '../models/search_result.dart';
 import '../services/ad_service.dart';
 import '../services/playlist_service.dart';
+import '../widgets/dpad_focusable_surface.dart';
 
 /// Screen for loading a playlist, cross-referencing it against a local folder,
 /// and taking action on missing / matched / extra tracks.
@@ -203,7 +204,9 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    return Column(
+    return PopScope(
+      canPop: true,
+      child: Column(
       children: [
         // -- Top bar: URL + folder inputs --------------------------------
         _buildInputSection(theme, cs),
@@ -225,7 +228,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
           ),
         ],
       ],
-    );
+    ),
+  );
   }
 
   // --─ Input Section --------------------------------------------------------

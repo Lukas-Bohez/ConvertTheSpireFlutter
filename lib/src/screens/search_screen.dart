@@ -209,43 +209,45 @@ class _SearchScreenState extends State<SearchScreen>
   Widget build(BuildContext context) {
     super.build(context);
     context.watch<FullModeAccess>();
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final narrow = constraints.maxWidth < 500;
-              final searchField = Expanded(
-                child: TextField(
-                  controller: _controller,
-                  decoration: const InputDecoration(
-                    hintText: 'Search for music across sources…',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                    isDense: true,
+    return PopScope(
+      canPop: true,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final narrow = constraints.maxWidth < 500;
+                final searchField = Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: const InputDecoration(
+                      hintText: 'Search for music across sources…',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _search(),
                   ),
-                  onSubmitted: (_) => _search(),
-                ),
-              );
-              final formatDropdown = DropdownButton<String>(
-                value: _selectedFormat,
-                items: const [
-                  DropdownMenuItem(value: 'mp3', child: Text('MP3')),
-                  DropdownMenuItem(value: 'm4a', child: Text('M4A')),
-                  DropdownMenuItem(value: 'mp4', child: Text('MP4')),
-                ],
-                onChanged: (v) {
-                  if (v != null) setState(() => _selectedFormat = v);
-                },
-              );
-              final searchButton = ElevatedButton(
-                onPressed: _loading ? null : _search,
-                child: const Text('Search'),
-              );
-              final refreshButton = IconButton(
-                icon: _scanningDownloadFolder
-                    ? const SizedBox(
+                );
+                final formatDropdown = DropdownButton<String>(
+                  value: _selectedFormat,
+                  items: const [
+                    DropdownMenuItem(value: 'mp3', child: Text('MP3')),
+                    DropdownMenuItem(value: 'm4a', child: Text('M4A')),
+                    DropdownMenuItem(value: 'mp4', child: Text('MP4')),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setState(() => _selectedFormat = v);
+                  },
+                );
+                final searchButton = ElevatedButton(
+                  onPressed: _loading ? null : _search,
+                  child: const Text('Search'),
+                );
+                final refreshButton = IconButton(
+                  icon: _scanningDownloadFolder
+                      ? const SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
@@ -460,10 +462,9 @@ class _SearchScreenState extends State<SearchScreen>
                   },
                 ),
         ),
-        const SizedBox(height: 8),
-        const AdBannerSlot(),
-      ],
-    );
+        ],
+        ),
+      );
   }
 
   String _formatDuration(Duration d) {

@@ -55,81 +55,84 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Browser Settings')),
-      body: ListView(
-        children: [
-          // -- General --
-          _SectionHeader(title: 'General'),
-          ListTile(
-            leading: const Icon(Icons.search),
-            title: const Text('Search Engine'),
-            subtitle: Text(_searchEngine),
-            onTap: _pickSearchEngine,
-          ),
+    return PopScope(
+      canPop: true,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Browser Settings')),
+        body: ListView(
+          children: [
+            // -- General --
+            _SectionHeader(title: 'General'),
+            ListTile(
+              leading: const Icon(Icons.search),
+              title: const Text('Search Engine'),
+              subtitle: Text(_searchEngine),
+              onTap: _pickSearchEngine,
+            ),
 
-          // -- Privacy --
-          _SectionHeader(title: 'Privacy'),
-          SwitchListTile(
-            secondary: const Icon(Icons.block),
-            title: const Text('Ad Blocker'),
-            subtitle: Text(
-                widget.adBlockService.adBlockEnabled ? 'Enabled' : 'Disabled'),
-            value: widget.adBlockService.adBlockEnabled,
-            onChanged: (v) {
-              widget.adBlockService.setEnabled(v);
-              setState(() {});
-            },
-          ),
-          SwitchListTile(
-            secondary: const Icon(Icons.web_asset_off),
-            title: const Text('Block Pop-ups'),
-            value: _blockPopups,
-            onChanged: (v) {
-              setState(() => _blockPopups = v);
-              _savePref('browser_block_popups', v);
-            },
-          ),
-          SwitchListTile(
-            secondary: const Icon(Icons.do_not_disturb_on),
-            title: const Text('Do Not Track'),
-            value: _doNotTrack,
-            onChanged: (v) {
-              setState(() => _doNotTrack = v);
-              _savePref('browser_dnt', v);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.update),
-            title: const Text('Update Blocklist'),
-            subtitle: const Text('Re-download EasyList rules'),
-            onTap: () async {
-              await widget.adBlockService.updateBlocklist();
-              if (mounted) {
-                Snack.show(context, 'Blocklist updated',
-                    level: SnackLevel.info);
-              }
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.delete_forever, color: cs.error),
-            title: const Text('Clear Browsing Data'),
-            onTap: _showClearDataDialog,
-          ),
+            // -- Privacy --
+            _SectionHeader(title: 'Privacy'),
+            SwitchListTile(
+              secondary: const Icon(Icons.block),
+              title: const Text('Ad Blocker'),
+              subtitle: Text(
+                  widget.adBlockService.adBlockEnabled ? 'Enabled' : 'Disabled'),
+              value: widget.adBlockService.adBlockEnabled,
+              onChanged: (v) {
+                widget.adBlockService.setEnabled(v);
+                setState(() {});
+              },
+            ),
+            SwitchListTile(
+              secondary: const Icon(Icons.web_asset_off),
+              title: const Text('Block Pop-ups'),
+              value: _blockPopups,
+              onChanged: (v) {
+                setState(() => _blockPopups = v);
+                _savePref('browser_block_popups', v);
+              },
+            ),
+            SwitchListTile(
+              secondary: const Icon(Icons.do_not_disturb_on),
+              title: const Text('Do Not Track'),
+              value: _doNotTrack,
+              onChanged: (v) {
+                setState(() => _doNotTrack = v);
+                _savePref('browser_dnt', v);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.update),
+              title: const Text('Update Blocklist'),
+              subtitle: const Text('Re-download EasyList rules'),
+              onTap: () async {
+                await widget.adBlockService.updateBlocklist();
+                if (mounted) {
+                  Snack.show(context, 'Blocklist updated',
+                      level: SnackLevel.info);
+                }
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.delete_forever, color: cs.error),
+              title: const Text('Clear Browsing Data'),
+              onTap: _showClearDataDialog,
+            ),
 
-          // -- Display --
-          _SectionHeader(title: 'Display'),
-          SwitchListTile(
-            secondary: const Icon(Icons.desktop_windows),
-            title: const Text('Desktop Mode'),
-            subtitle: const Text('Request desktop version of websites'),
-            value: _desktopMode,
-            onChanged: (v) {
-              setState(() => _desktopMode = v);
-              _savePref('browser_desktop_mode', v);
-            },
-          ),
-        ],
+            // -- Display --
+            _SectionHeader(title: 'Display'),
+            SwitchListTile(
+              secondary: const Icon(Icons.desktop_windows),
+              title: const Text('Desktop Mode'),
+              subtitle: const Text('Request desktop version of websites'),
+              value: _desktopMode,
+              onChanged: (v) {
+                setState(() => _desktopMode = v);
+                _savePref('browser_desktop_mode', v);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
