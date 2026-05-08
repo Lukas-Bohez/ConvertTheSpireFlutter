@@ -22,11 +22,13 @@ class NewTabPage extends StatefulWidget {
 
 class _NewTabPageState extends State<NewTabPage> {
   final _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   List<Map<String, dynamic>> _recentSites = [];
   List<Map<String, dynamic>> _favourites = [];
   List<Map<String, dynamic>> _recentHistory = [];
   final GlobalKey _repaintKey = GlobalKey();
   final ScrollController _favouritesScrollController = ScrollController();
+  bool _searchEditing = false;
 
   @override
   void initState() {
@@ -47,8 +49,100 @@ class _NewTabPageState extends State<NewTabPage> {
   void dispose() {
     widget.repo.removeListener(_load);
     _searchController.dispose();
+    _searchFocusNode.dispose();
     _favouritesScrollController.dispose();
     super.dispose();
+  }
+
+  void _startSearchEditing() {
+    if (_searchEditing) return;
+    setState(() => _searchEditing = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchFocusNode.requestFocus();
+    });
+  }
+
+  void _stopSearchEditing() {
+    if (!_searchEditing) return;
+    setState(() => _searchEditing = false);
+    _searchFocusNode.unfocus();
+  }
+
+  Widget _buildSearchBar(ColorScheme cs) {
+    if (!_searchEditing) {
+      return DpadFocusableSurface(
+        autofocus: true,
+        region: 'browser-bar',
+        onSelect: _startSearchEditing,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _startSearchEditing,
+            borderRadius: BorderRadius.circular(28),
+            child: Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.search),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _searchController.text.trim().isEmpty
+                          ? 'Search or enter URL'
+                          : _searchController.text.trim(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: _searchController.text.trim().isEmpty
+                            ? cs.onSurfaceVariant.withValues(alpha: 0.75)
+                            : cs.onSurface,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return DpadFocusableSurface(
+      autofocus: !_searchEditing,
+      region: 'browser-bar',
+      onSelect: _startSearchEditing,
+      child: TextField(
+        controller: _searchController,
+        focusNode: _searchFocusNode,
+        decoration: InputDecoration(
+          hintText: 'Search or enter URL',
+          prefixIcon: const Icon(Icons.search),
+          filled: true,
+          fillColor: cs.surfaceContainerHighest,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(28),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+        ),
+        textInputAction: TextInputAction.go,
+        onSubmitted: (val) {
+          final trimmed = val.trim();
+          if (trimmed.isNotEmpty) {
+            widget.onNavigate(trimmed);
+            _searchController.clear();
+          }
+          _stopSearchEditing();
+        },
+        onTapOutside: (_) => _stopSearchEditing(),
+      ),
+    );
   }
 
   void _load() async {
@@ -131,32 +225,7 @@ class _NewTabPageState extends State<NewTabPage> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: DpadFocusableSurface(
-                  autofocus: true,
-                  region: 'browser-bar',
-                  onSelect: () {},
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search or enter URL',
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: cs.surfaceContainerHighest,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(28),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    textInputAction: TextInputAction.go,
-                    onSubmitted: (val) {
-                      if (val.trim().isNotEmpty) {
-                        widget.onNavigate(val.trim());
-                        _searchController.clear();
-                      }
-                    },
-                  ),
-                ),
+                child: _buildSearchBar(cs),
               ),
             ),
 

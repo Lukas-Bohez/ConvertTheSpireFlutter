@@ -53,6 +53,46 @@ enum QueueScope { all, songs, videos, favourites, favSongs, favVideos }
 
 enum MediaSortOrder { newestFirst, oldestFirst, titleAZ, titleZA, shortestDuration, mostPlayed, leastPlayed, recentlyPlayed }
 
+class _PlaybackStats {
+  final int playCount;
+  final Duration totalPlayedDuration;
+  final DateTime? lastPlayedAt;
+
+  const _PlaybackStats({
+    this.playCount = 0,
+    this.totalPlayedDuration = Duration.zero,
+    this.lastPlayedAt,
+  });
+
+  _PlaybackStats copyWith({
+    int? playCount,
+    Duration? totalPlayedDuration,
+    DateTime? lastPlayedAt,
+  }) {
+    return _PlaybackStats(
+      playCount: playCount ?? this.playCount,
+      totalPlayedDuration: totalPlayedDuration ?? this.totalPlayedDuration,
+      lastPlayedAt: lastPlayedAt ?? this.lastPlayedAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'playCount': playCount,
+        'totalPlayedMilliseconds': totalPlayedDuration.inMilliseconds,
+        'lastPlayedAt': lastPlayedAt?.toIso8601String(),
+      };
+
+  factory _PlaybackStats.fromJson(Map<String, dynamic> json) {
+    return _PlaybackStats(
+      playCount: (json['playCount'] as num?)?.toInt() ?? 0,
+      totalPlayedDuration: Duration(
+        milliseconds: (json['totalPlayedMilliseconds'] as num?)?.toInt() ?? 0,
+      ),
+      lastPlayedAt: DateTime.tryParse(json['lastPlayedAt']?.toString() ?? ''),
+    );
+  }
+}
+
 class MediaItem {
   final String path;
   final MediaType type;
@@ -63,6 +103,7 @@ class MediaItem {
   final Uint8List? thumbnailData;
   final Duration? duration;
   int playCount;           // number of times this track has been played
+  Duration totalPlayedDuration;
   DateTime? lastPlayedAt;  // timestamp of most recent play
 
   MediaItem(
@@ -75,6 +116,7 @@ class MediaItem {
     this.thumbnailData,
     this.duration,
     this.playCount = 0,
+    this.totalPlayedDuration = Duration.zero,
     this.lastPlayedAt,
   });
 
@@ -86,6 +128,7 @@ class MediaItem {
     Uint8List? thumbnailData,
     Duration? duration,
     int? playCount,
+    Duration? totalPlayedDuration,
     DateTime? lastPlayedAt,
   }) =>
       MediaItem(
@@ -98,6 +141,7 @@ class MediaItem {
         thumbnailData: thumbnailData ?? this.thumbnailData,
         duration: duration ?? this.duration,
         playCount: playCount ?? this.playCount,
+        totalPlayedDuration: totalPlayedDuration ?? this.totalPlayedDuration,
         lastPlayedAt: lastPlayedAt ?? this.lastPlayedAt,
       );
 }
@@ -183,6 +227,7 @@ img.Image? _decodeByMagic(Uint8List raw) {
 //   FIX: All just_audio calls are wrapped in _runOnMainThread().
 
 class PlayerState with ChangeNotifier {
+  static const String _playStatsPrefsKey = 'player_play_stats';
   // TECH-DEBT: add first-class sleep timer state/countdown exposure for all
   // player surfaces (main player + mini overlay) in a dedicated follow-up.
   final SharedPreferences prefs;
@@ -209,6 +254,7 @@ class PlayerState with ChangeNotifier {
   final List<int> _recentlyPlayed = [];
   static const int _maxHistoryEntries = 50;
   static const int _maxRecentShuffleEntries = 24;
+  final Map<String, _PlaybackStats> _playStats = {};
 
   Directory? _thumbCacheDir;
   Set<String> _favourites = {};
@@ -667,8 +713,10 @@ class PlayerState with ChangeNotifier {
     _favourites.remove(path);
     _favouriteCache.remove(path);
     _disliked.remove(path);
+    _playStats.remove(path);
     prefs.setStringList('player_favourites', _favourites.toList());
     prefs.setStringList('player_disliked', _disliked.toList());
+    _savePlayStats();
     _saveFavouriteCache();
 
     library.removeAt(index);
@@ -771,6 +819,82 @@ class PlayerState with ChangeNotifier {
     prefs.setStringList('player_favourites_cache', list);
   }
 
+  _PlaybackStats _statsForPath(String path) => _playStats[path] ?? const _PlaybackStats();
+
+  void _applyStatsToItem(MediaItem item) {
+    final stats = _playStats[item.path];
+    if (stats == null) return;
+    item.playCount = stats.playCount;
+    item.totalPlayedDuration = stats.totalPlayedDuration;
+    item.lastPlayedAt = stats.lastPlayedAt;
+  }
+
+  void _applyStatsToLibrary() {
+    for (final item in library) {
+      _applyStatsToItem(item);
+    }
+    for (final item in _favouriteCache.values) {
+      _applyStatsToItem(item);
+    }
+  }
+
+  void _savePlayStats() {
+    final jsonMap = <String, dynamic>{};
+    for (final entry in _playStats.entries) {
+      jsonMap[entry.key] = entry.value.toJson();
+    }
+    unawaited(prefs.setString(_playStatsPrefsKey, jsonEncode(jsonMap)));
+  }
+
+  void _loadPlayStatsFromPrefs() {
+    _playStats.clear();
+    final raw = prefs.getString(_playStatsPrefsKey);
+    if (raw == null || raw.trim().isEmpty) return;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return;
+      decoded.forEach((path, value) {
+        if (value is Map<String, dynamic>) {
+          _playStats[path] = _PlaybackStats.fromJson(value);
+        } else if (value is Map) {
+          _playStats[path] =
+              _PlaybackStats.fromJson(Map<String, dynamic>.from(value));
+        }
+      });
+    } catch (e) {
+      debugPrint('Failed to load play stats: $e');
+    }
+  }
+
+  void _recordPlayStart(MediaItem item) {
+    final current = _statsForPath(item.path);
+    _playStats[item.path] = current.copyWith(
+      playCount: current.playCount + 1,
+      lastPlayedAt: DateTime.now(),
+    );
+    _applyStatsToItem(item);
+    _savePlayStats();
+  }
+
+  void _commitCurrentPlayStats() {
+    final item = currentItem;
+    if (item == null) return;
+    final played = position;
+    if (played <= Duration.zero) return;
+    final current = _statsForPath(item.path);
+    _playStats[item.path] = current.copyWith(
+      totalPlayedDuration: current.totalPlayedDuration + played,
+      lastPlayedAt: DateTime.now(),
+    );
+    _applyStatsToItem(item);
+    final idx = library.indexWhere((libraryItem) => libraryItem.path == item.path);
+    if (idx >= 0) {
+      _applyStatsToItem(library[idx]);
+    }
+    _savePlayStats();
+    notifyListeners();
+  }
+
   // --- Thumb disk cache -----------------------------------------------------
 
   Future<Directory> _getThumbCacheDir() async {
@@ -824,6 +948,7 @@ class PlayerState with ChangeNotifier {
     await _disposeAndroidController();
 
     library = List.from(items);
+    _applyStatsToLibrary();
     currentIndex = 0;
     position = Duration.zero;
     duration = null;
@@ -853,6 +978,7 @@ class PlayerState with ChangeNotifier {
     for (int i = 0; i < _folderItemCount; i++) {
       if (_favourites.contains(library[i].path)) _favouriteCache[library[i].path] = library[i];
     }
+    _applyStatsToLibrary();
     _saveFavouriteCache();
 
     currentIndex = 0;
@@ -1032,6 +1158,7 @@ class PlayerState with ChangeNotifier {
 
   Future<void> _selectInternal(int index, {required bool fromHistory}) async {
     if (index < 0 || index >= library.length) return;
+    _commitCurrentPlayStats();
     _recordHistorySelection(index, fromHistory: fromHistory);
     // Capture NOW before any async gap.
     final targetIndex = index;
@@ -1118,6 +1245,7 @@ class PlayerState with ChangeNotifier {
             position = Duration.zero;
             if (generation != _loadGeneration) return;
             await _audio!.play();
+            _recordPlayStart(item);
             _updateMediaNotification(item);
           } else if (_useMediaKit) {
             final player = _audioMkPlayer ?? _mkPlayer;
@@ -1141,6 +1269,7 @@ class PlayerState with ChangeNotifier {
                           onTimeout: () => Duration.zero);
                 } catch (_) {}
                 position = Duration.zero;
+                _recordPlayStart(item);
               } catch (e) {
                 debugPrint('media_kit audio load error for ${item.path}: $e');
                 await _handleMalformedMedia(item.path, e, context: 'media_kit audio load');
@@ -1190,12 +1319,16 @@ class PlayerState with ChangeNotifier {
               return;
             }
             await _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+            _recordPlayStart(item);
           } catch (e) {
             debugPrint('media_kit video load error: $e');
             await _handleMalformedMedia(item.path, e, context: 'media_kit video load');
           }
         } else {
-          await _loadAndroidVideo(item.path, generation);
+          final loaded = await _loadAndroidVideo(item.path, generation);
+          if (loaded) {
+            _recordPlayStart(item);
+          }
         }
       }
     } catch (e, st) {
@@ -1209,10 +1342,10 @@ class PlayerState with ChangeNotifier {
     }
   }
 
-  Future<void> _loadAndroidVideo(String path, int generation) async {
+  Future<bool> _loadAndroidVideo(String path, int generation) async {
     try {
       await _disposeAndroidController();
-      if (generation != _loadGeneration) return;
+      if (generation != _loadGeneration) return false;
 
       VideoPlayerController? ctrl;
 
@@ -1239,7 +1372,7 @@ class PlayerState with ChangeNotifier {
     ];
 
     for (final strategy in strategies) {
-      if (generation != _loadGeneration) return;
+      if (generation != _loadGeneration) return false;
       try {
         ctrl = await strategy();
         if (ctrl != null) break;
@@ -1252,7 +1385,7 @@ class PlayerState with ChangeNotifier {
 
     if (ctrl == null || generation != _loadGeneration) {
       try { await ctrl?.dispose(); } catch (_) {}
-      return;
+      return false;
     }
 
     _androidController = ctrl;
@@ -1285,9 +1418,11 @@ class PlayerState with ChangeNotifier {
 
     _androidListener = listener;
     ctrl.addListener(listener);
+    return true;
   } catch (e, st) {
     debugPrint('Android video player failed: $e\n$st');
     await _handleMalformedMedia(path, e, context: 'android video load');
+    return false;
   }
 }
 
@@ -1298,6 +1433,7 @@ class PlayerState with ChangeNotifier {
       if (state == AppLifecycleState.inactive ||
           state == AppLifecycleState.hidden ||
           state == AppLifecycleState.paused) {
+        _commitCurrentPlayStats();
         await _enterBackgroundVideoAudioMode();
         return;
       }
@@ -1311,6 +1447,7 @@ class PlayerState with ChangeNotifier {
       if (state == AppLifecycleState.inactive ||
           state == AppLifecycleState.hidden ||
           state == AppLifecycleState.paused) {
+        _commitCurrentPlayStats();
         await _enterDesktopBackgroundVideoAudioMode();
         return;
       }
@@ -1952,6 +2089,8 @@ class PlayerState with ChangeNotifier {
   }
 
   void _handleCompletion() {
+    _commitCurrentPlayStats();
+    position = Duration.zero;
     final queuedIndex = _popNextQueuedIndex();
     if (queuedIndex != null) {
       select(queuedIndex);
@@ -2020,6 +2159,7 @@ class PlayerState with ChangeNotifier {
     playbackMode = PlaybackMode.values[
         (prefs.getInt('playbackMode') ?? 0).clamp(0, PlaybackMode.values.length - 1)];
     _applyPlaybackMode();
+    _loadPlayStatsFromPrefs();
     _favourites = (prefs.getStringList('player_favourites') ?? []).toSet();
     _disliked = (prefs.getStringList('player_disliked') ?? []).toSet();
 
@@ -2041,6 +2181,7 @@ class PlayerState with ChangeNotifier {
           genre: genre,
           modifiedAt: modifiedAt,
         );
+        _applyStatsToItem(_favouriteCache[path]!);
       }
     }
     _loadFavouriteThumbsFromDisk();
@@ -2685,6 +2826,9 @@ class PlayerState with ChangeNotifier {
                 duration = _audio!.duration;
                 position = Duration.zero;
                 await _audio!.play();
+                if (idx >= 0 && idx < library.length) {
+                  _recordPlayStart(library[idx]);
+                }
                 if (idx >= 0) _updateMediaNotification(library[idx]);
               } catch (e) {
                 debugPrint('playFileDirect audio load error for $path: $e');
@@ -2704,9 +2848,15 @@ class PlayerState with ChangeNotifier {
             await _openMediaWithFallback(_mkPlayer!, path, play: true);
           }
           await _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+          if (idx >= 0 && idx < library.length) {
+            _recordPlayStart(library[idx]);
+          }
         } else {
           // Android fallback
-          await _loadAndroidVideo(path, generation);
+          final loaded = await _loadAndroidVideo(path, generation);
+          if (loaded && idx >= 0 && idx < library.length) {
+            _recordPlayStart(library[idx]);
+          }
         }
       }
     } catch (e) {
@@ -2898,12 +3048,14 @@ class _PlayerScreenState extends State<PlayerScreen>
   with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
   MediaSortOrder _sortOrder = MediaSortOrder.newestFirst;
   MediaType? _activeMediaType;
   final Set<String> _activeGenres = <String>{};
   bool _uiPrefsLoaded = false;
   bool _isFullScreen = false;
+  bool _searchEditing = false;
 
   bool get _usesNativeWindowFullscreen =>
       !kIsWeb &&
@@ -2953,8 +3105,23 @@ class _PlayerScreenState extends State<PlayerScreen>
     unawaited(_exitFullScreen());
     _tabController.dispose();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     for (final sc in _scrollControllers) { sc.dispose(); }
     super.dispose();
+  }
+
+  void _startSearchEditing() {
+    if (_searchEditing) return;
+    setState(() => _searchEditing = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchFocusNode.requestFocus();
+    });
+  }
+
+  void _stopSearchEditing() {
+    if (!_searchEditing) return;
+    setState(() => _searchEditing = false);
+    _searchFocusNode.unfocus();
   }
 
   Future<void> _syncFullscreenState() async {
@@ -3434,26 +3601,81 @@ class _PlayerScreenState extends State<PlayerScreen>
       return Wrap(spacing: 8, runSpacing: 8, children: chips);
     }
 
-    final searchField = TextField(
-      controller: _searchController,
-      decoration: InputDecoration(
-        hintText: 'Search…',
-        prefixIcon: const Icon(Icons.search, size: 20),
-        suffixIcon: _searchQuery.isNotEmpty
-            ? IconButton(
-                icon: const Icon(Icons.clear, size: 18),
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() => _searchQuery = '');
-                },
-              )
-            : null,
-        isDense: true,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      ),
-      onChanged: (v) => setState(() => _searchQuery = v.trim()),
-    );
+    final searchText = _searchController.text.trim();
+    final searchField = _searchEditing
+        ? TextField(
+            controller: _searchController,
+            focusNode: _searchFocusNode,
+            decoration: InputDecoration(
+              hintText: 'Search…',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
+              isDense: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            ),
+            onChanged: (v) => setState(() => _searchQuery = v.trim()),
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _stopSearchEditing(),
+            onTapOutside: (_) => _stopSearchEditing(),
+          )
+        : DpadFocusableSurface(
+          autofocus: !_searchEditing,
+            region: 'player-search',
+            onSelect: _startSearchEditing,
+            child: Material(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                onTap: _startSearchEditing,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.search, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          searchText.isEmpty ? 'Search…' : searchText,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: searchText.isEmpty
+                                ? Theme.of(context).colorScheme.onSurfaceVariant
+                                : Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      if (searchText.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
 
     if (isWide) {
       return Container(
@@ -4181,11 +4403,24 @@ class _MediaCard extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      item.artist ?? '',
-                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          item.artist ?? '',
+                          style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${item.playCount} plays • ${_formatPlayedDuration(item.totalPlayedDuration)}',
+                          style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
                   ),
                   if (item.duration != null) ...[
@@ -4208,6 +4443,13 @@ class _MediaCard extends StatelessWidget {
     final hh = d.inHours;
     if (hh > 0) return '$hh:$mm:$ss';
     return '$mm:$ss';
+  }
+
+  static String _formatPlayedDuration(Duration d) {
+    final mm = d.inMinutes.toString();
+    final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final ms = d.inMilliseconds.remainder(1000).toString().padLeft(3, '0');
+    return '$mm:$ss.$ms';
   }
 }
 
