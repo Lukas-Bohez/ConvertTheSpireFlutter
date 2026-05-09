@@ -125,7 +125,13 @@ Future<void> main() async {
     // This must be called after AdService.instance.initialize() but should replace
     // any raw MobileAds.instance.initialize() calls.
     if (!kIsWeb && Platform.isAndroid && kPlayStoreBuild) {
+      if (kDebugMode) {
+        debugPrint('main: starting UMP consent flow via AdService.initAdsWithConsent()');
+      }
       await AdService.instance.initAdsWithConsent();
+      if (kDebugMode) {
+        debugPrint('main: AdService.initAdsWithConsent() completed');
+      }
     }
 
     PurchaseService.instance.addListener(() {

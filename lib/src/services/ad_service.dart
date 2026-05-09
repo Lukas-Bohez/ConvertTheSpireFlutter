@@ -460,6 +460,7 @@ class AdService with WidgetsBindingObserver {
     if (!_isSupportedPlatform) return;
 
     try {
+      debugPrint('AdService: initWithConsent() start');
       await _updateConsentInfo();
       await _showConsentFormIfRequired();
 
@@ -500,6 +501,10 @@ class AdService with WidgetsBindingObserver {
     ConsentInformation.instance.requestConsentInfoUpdate(
       params,
       () {
+        unawaited(() async {
+          final status = await ConsentInformation.instance.getConsentStatus();
+          debugPrint('AdService: consent status after update = $status');
+        }());
         debugPrint('AdService: consent info updated successfully');
         if (!completer.isCompleted) completer.complete();
       },

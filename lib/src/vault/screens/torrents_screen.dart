@@ -3,12 +3,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/drag_drop.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/create_torrent_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/torrent_detail_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+import 'package:convert_the_spire_reborn/src/widgets/tv_file_browser.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
@@ -547,12 +547,11 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     if (_pickerBusy) return;
     _pickerBusy = true;
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowMultiple: false,
+      final path = await pickSingleFilePath(
+        context,
+        dialogTitle: 'Select torrent file',
         allowedExtensions: const <String>['torrent'],
       );
-      final path = result?.files.single.path;
       if (path == null || path.isEmpty) {
         return;
       }

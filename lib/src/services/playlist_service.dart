@@ -11,7 +11,10 @@ import '../models/search_result.dart';
 class PlaylistService {
   final YoutubeExplode _yt;
 
-  static const Duration _playlistStreamTimeout = Duration(seconds: 10);
+  static const Duration _playlistStreamTimeout = Duration(seconds: 25);
+
+  String? _lastPlaylistDiagnostics;
+  String? get lastPlaylistDiagnostics => _lastPlaylistDiagnostics;
 
   PlaylistService({required YoutubeExplode yt}) : _yt = yt;
 
@@ -21,19 +24,33 @@ class PlaylistService {
       {int? maxVideos}) async {
     final playlistId = PlaylistId(playlistUrl);
     final cap = maxVideos;
-    final videos = <Video>[];
+    final videosById = <String, Video>{};
+    _lastPlaylistDiagnostics = null;
+
+    int expectedCount = 0;
+    try {
+      final playlist = await _yt.playlists.get(playlistId);
+      expectedCount = playlist.videoCount ?? 0;
+    } catch (_) {}
 
     try {
-      final stream =
-          _yt.playlists.getVideos(playlistId).timeout(_playlistStreamTimeout);
-      await for (final video in stream) {
-        videos.add(video);
-        if (cap != null && videos.length >= cap) break;
+      for (var attempt = 0; attempt < 3; attempt++) {
+        final before = videosById.length;
+        final stream =
+            _yt.playlists.getVideos(playlistId).timeout(_playlistStreamTimeout);
+        await for (final video in stream) {
+          videosById[video.id.value] = video;
+          if (cap != null && videosById.length >= cap) break;
+        }
+        final reachedCap = cap != null && videosById.length >= cap;
+        final reachedExpected = expectedCount > 0 && videosById.length >= expectedCount;
+        if (reachedCap || reachedExpected) break;
+        if (videosById.length == before) break;
       }
     } on TimeoutException catch (_) {
-      // Stream stalled; return whatever we've collected so far
+      // Stream stalled; return whatever we've collected so far.
     } catch (_) {
-      // Other errors - return whatever we have (or empty list)
+      final videos = videosById.values.toList();
       return videos.map((video) {
         return SearchResult(
           id: video.id.value,
@@ -44,6 +61,15 @@ class PlaylistService {
           source: 'youtube',
         );
       }).toList();
+    }
+
+    final videos = videosById.values.toList();
+
+    if (expectedCount > 0 && videos.length < expectedCount) {
+      _lastPlaylistDiagnostics =
+          'Loaded ${videos.length} of reported $expectedCount playlist entries. '
+          'This mismatch usually means some videos are private, deleted, region-restricted, '
+          'or temporarily unavailable through the API.';
     }
 
     return videos.map((video) {

@@ -37,6 +37,7 @@ import '../widgets/browser_shell.dart';
 import '../widgets/onboarding_tooltip_service.dart';
 import '../widgets/quick_links_page.dart';
 import '../widgets/quick_links_service.dart';
+import '../widgets/tv_file_browser.dart';
 import '../services/update_service.dart';
 import '../widgets/update_banner.dart';
 
@@ -3511,19 +3512,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           icon: const Icon(Icons.folder_open),
                           label: const Text('Browse'),
                           onPressed: () async {
-                            final result = await FilePicker.platform.pickFiles(
-                              type: FileType.any,
+                            final selectedPath = await pickSingleFilePath(
+                              context,
                               dialogTitle: 'Select FFmpeg executable',
                             );
-                            if (result != null &&
-                                result.files.single.path != null &&
-                                mounted) {
-                              setState(() => _ffmpegPathController.text =
-                                  result.files.single.path!);
+                            if (selectedPath != null && mounted) {
+                              setState(() => _ffmpegPathController.text = selectedPath);
                               final s = widget.controller.settings;
                               if (s != null) {
-                                widget.controller.saveSettings(s.copyWith(
-                                    ffmpegPath: result.files.single.path!));
+                                widget.controller
+                                    .saveSettings(s.copyWith(ffmpegPath: selectedPath));
                               }
                             }
                           },
@@ -3591,19 +3589,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           icon: const Icon(Icons.folder_open),
                           label: const Text('Browse'),
                           onPressed: () async {
-                            final result = await FilePicker.platform.pickFiles(
-                              type: FileType.any,
+                            final selectedPath = await pickSingleFilePath(
+                              context,
                               dialogTitle: 'Select yt-dlp executable',
                             );
-                            if (result != null &&
-                                result.files.single.path != null &&
-                                mounted) {
-                              setState(() => _ytDlpPathController.text =
-                                  result.files.single.path!);
+                            if (selectedPath != null && mounted) {
+                              setState(() => _ytDlpPathController.text = selectedPath);
                               final s = widget.controller.settings;
                               if (s != null) {
-                                widget.controller.saveSettings(s.copyWith(
-                                    ytDlpPath: result.files.single.path!));
+                                widget.controller
+                                    .saveSettings(s.copyWith(ytDlpPath: selectedPath));
                               }
                             }
                           },
@@ -3730,18 +3725,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             icon: const Icon(Icons.folder_open),
                             label: const Text('Browse'),
                             onPressed: () async {
-                              final result = await FilePicker.platform.pickFiles(
-                                type: FileType.any,
+                              final selectedPath = await pickSingleFilePath(
+                                context,
                                 dialogTitle: 'Select cookies.txt',
+                                allowedExtensions: const <String>['txt'],
                               );
-                              if (result == null ||
-                                  result.files.single.path == null ||
-                                  !mounted) {
+                              if (selectedPath == null || !mounted) {
                                 return;
                               }
                               setState(() {
-                                _ytCookiesFileController.text =
-                                    result.files.single.path!;
+                                _ytCookiesFileController.text = selectedPath;
                               });
                             },
                           ),

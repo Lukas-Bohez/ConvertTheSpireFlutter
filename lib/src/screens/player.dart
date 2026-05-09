@@ -6,7 +6,6 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show MissingPluginException, DeviceOrientation, SystemChrome, SystemUiMode, KeyDownEvent, LogicalKeyboardKey;
@@ -31,6 +30,7 @@ import '../utils/snack.dart';
 import '../utils/lock.dart';
 import '../vault/platform/desktop_window.dart';
 import '../widgets/dpad_focusable_surface.dart';
+import '../widgets/tv_file_browser.dart';
 
 // --- Public entry point -------------------------------------------------------
 
@@ -682,6 +682,60 @@ class PlayerState with ChangeNotifier {
     notifyListeners();
   }
 
+  String _favouriteDedupKey(String rawPath) {
+    final value = rawPath.trim();
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return 'url:${value.toLowerCase()}';
+    }
+    if (value.startsWith('content://')) {
+      return 'id:${value.toLowerCase()}';
+    }
+    final normalised = Platform.isWindows ? value.toLowerCase() : value;
+    return 'path:$normalised';
+  }
+
+  bool _isValidFavouritePath(String rawPath) {
+    final value = rawPath.trim();
+    if (value.isEmpty) return false;
+    if (value.startsWith('http://') ||
+        value.startsWith('https://') ||
+        value.startsWith('content://')) {
+      return true;
+    }
+    return File(value).existsSync();
+  }
+
+  int _cleanupFavouriteData({bool persist = true}) {
+    final deduped = <String>{};
+    final cleaned = <String>{};
+
+    for (final raw in _favourites) {
+      if (!_isValidFavouritePath(raw)) continue;
+      final key = _favouriteDedupKey(raw);
+      if (deduped.add(key)) cleaned.add(raw.trim());
+    }
+
+    final before = _favourites.length;
+    _favourites = cleaned;
+
+    final nextCache = <String, MediaItem>{};
+    final cacheSeen = <String>{};
+    _favouriteCache.forEach((path, item) {
+      if (!_favourites.contains(path)) return;
+      final key = _favouriteDedupKey(path);
+      if (!cacheSeen.add(key)) return;
+      nextCache[path] = item;
+    });
+    _favouriteCache = nextCache;
+
+    if (persist) {
+      prefs.setStringList('player_favourites', _favourites.toList()..sort());
+      _saveFavouriteCache();
+    }
+
+    return before - _favourites.length;
+  }
+
   void toggleDislike(String path) {
     if (_disliked.contains(path)) {
       _disliked.remove(path);
@@ -806,6 +860,7 @@ class PlayerState with ChangeNotifier {
   }
 
   void _saveFavouriteCache() {
+    _cleanupFavouriteData(persist: false);
     final list = <String>[];
     for (final path in _favourites) {
       final item = _favouriteCache[path];
@@ -968,10 +1023,16 @@ class PlayerState with ChangeNotifier {
 
     _folderItemCount = library.length;
 
+    _cleanupFavouriteData(persist: false);
+
     // Append cached favourites not in this folder.
     final folderPaths = library.map((e) => e.path).toSet();
+    final appendedFavouriteKeys = <String>{};
     for (final path in _favourites) {
-      if (!folderPaths.contains(path) && _favouriteCache.containsKey(path)) {
+      final key = _favouriteDedupKey(path);
+      if (!folderPaths.contains(path) &&
+          appendedFavouriteKeys.add(key) &&
+          _favouriteCache.containsKey(path)) {
         library.add(_favouriteCache[path]!);
       }
     }
@@ -2185,6 +2246,7 @@ class PlayerState with ChangeNotifier {
       }
     }
     _loadFavouriteThumbsFromDisk();
+    _cleanupFavouriteData();
     notifyListeners();
   }
 
@@ -3265,7 +3327,10 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (kIsWeb) return;
     String? dirPath;
     try {
-      dirPath = await FilePicker.platform.getDirectoryPath(dialogTitle: 'Select media folder');
+      dirPath = await pickDirectoryPath(
+        context,
+        dialogTitle: 'Select media folder',
+      );
     } catch (e) {
       debugPrint('folder picker error: $e');
     }

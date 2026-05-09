@@ -1,11 +1,11 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_creator_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
+import 'package:convert_the_spire_reborn/src/widgets/tv_file_browser.dart';
 
 class CreateTorrentScreen extends StatefulWidget {
   const CreateTorrentScreen({super.key});
@@ -59,16 +59,14 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
     if (_pickerBusy) return;
     _pickerBusy = true;
     try {
-      final result = await FilePicker.platform.pickFiles(
-        allowMultiple: true,
-        type: Platform.isAndroid ? FileType.custom : FileType.any,
-        allowedExtensions: Platform.isAndroid ? const <String>[] : null,
+      final selectedPaths = await pickMultipleFilePaths(
+        context,
+        dialogTitle: 'Select files',
       );
-      if (result == null) return;
+      if (selectedPaths.isEmpty) return;
       setState(() {
-        for (final file in result.files) {
-          final path = file.path;
-          if (path != null && !_files.contains(path)) {
+        for (final path in selectedPaths) {
+          if (!_files.contains(path)) {
             _files.add(path);
           }
         }
@@ -83,7 +81,10 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
     if (_pickerBusy) return;
     _pickerBusy = true;
     try {
-      final path = await FilePicker.platform.getDirectoryPath();
+      final path = await pickDirectoryPath(
+        context,
+        dialogTitle: 'Select folder',
+      );
       if (path == null) return;
       setState(() {
         if (!_folders.contains(path)) {
@@ -100,7 +101,10 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
     if (_pickerBusy) return;
     _pickerBusy = true;
     try {
-      final path = await FilePicker.platform.getDirectoryPath();
+      final path = await pickDirectoryPath(
+        context,
+        dialogTitle: 'Select output folder',
+      );
       if (path == null) return;
       setState(() {
         _outputPath = path;

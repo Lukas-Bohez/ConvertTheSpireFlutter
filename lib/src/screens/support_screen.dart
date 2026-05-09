@@ -1,9 +1,11 @@
 ﻿import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/build_flags.dart';
 import '../state/app_controller.dart';
@@ -293,6 +295,69 @@ class _SupportScreenState extends State<SupportScreen> {
     }
   }
 
+  String _favouriteDedupKey(String rawPath) {
+    final value = rawPath.trim();
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return 'url:${value.toLowerCase()}';
+    }
+    if (value.startsWith('content://')) {
+      return 'id:${value.toLowerCase()}';
+    }
+    final normalised = Platform.isWindows ? value.toLowerCase() : value;
+    return 'path:$normalised';
+  }
+
+  bool _isValidFavouritePath(String rawPath) {
+    final value = rawPath.trim();
+    if (value.isEmpty) return false;
+    if (value.startsWith('http://') ||
+        value.startsWith('https://') ||
+        value.startsWith('content://')) {
+      return true;
+    }
+    return File(value).existsSync();
+  }
+
+  Future<void> _cleanupPlayerFavourites() async {
+    final prefs = await SharedPreferences.getInstance();
+    final favourites = prefs.getStringList('player_favourites') ?? const [];
+
+    final dedup = <String>{};
+    final cleaned = <String>[];
+    for (final path in favourites) {
+      if (!_isValidFavouritePath(path)) continue;
+      final key = _favouriteDedupKey(path);
+      if (dedup.add(key)) cleaned.add(path.trim());
+    }
+
+    final cleanedSet = cleaned.toSet();
+    final rawCache = prefs.getStringList('player_favourites_cache') ?? const [];
+    final nextCache = <String>[];
+    final cacheSeen = <String>{};
+    for (final row in rawCache) {
+      final parts = row.split('\t');
+      if (parts.length < 2) continue;
+      final path = parts[0].trim();
+      if (!cleanedSet.contains(path)) continue;
+      final key = _favouriteDedupKey(path);
+      if (!cacheSeen.add(key)) continue;
+      nextCache.add(row);
+    }
+
+    await prefs.setStringList('player_favourites', cleaned..sort());
+    await prefs.setStringList('player_favourites_cache', nextCache);
+
+    final removed = favourites.length - cleaned.length;
+    if (!mounted) return;
+    Snack.show(
+      context,
+      removed > 0
+          ? 'Favourites cleaned: removed $removed invalid or duplicate entries.'
+          : 'No invalid or duplicate favourites found.',
+      level: SnackLevel.success,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -435,6 +500,33 @@ class _SupportScreenState extends State<SupportScreen> {
         ),
         const SizedBox(height: 12),
         _buildAppearanceCard(theme, controller),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Player Favourites',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Remove ghost entries and deduplicate favourites by path, URL, or content id.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: _cleanupPlayerFavourites,
+                  icon: const Icon(Icons.cleaning_services),
+                  label: const Text('Clean Up Favourites'),
+                ),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 12),
         _buildPrivacyOptionsCard(context, theme, playAdMode),
         const SizedBox(height: 12),

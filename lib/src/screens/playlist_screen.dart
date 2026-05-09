@@ -5,6 +5,7 @@ import '../utils/snack.dart';
 import '../models/search_result.dart';
 import '../services/ad_service.dart';
 import '../services/playlist_service.dart';
+import '../widgets/tv_file_browser.dart';
 import '../widgets/dpad_focusable_surface.dart';
 
 /// Screen for loading a playlist, cross-referencing it against a local folder,
@@ -38,6 +39,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   int? _lastMissingSelectedIndex;
   String? _error;
   String _selectedFormat = 'mp3';
+  String? _playlistDiagnostics;
 
   late final TabController _tabController;
 
@@ -64,6 +66,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       _error = null;
       _comparison = null;
       _playlistInfo = null;
+      _playlistDiagnostics = null;
     });
 
     try {
@@ -78,6 +81,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       setState(() {
         _playlistInfo = info;
         _tracks = tracks;
+        _playlistDiagnostics = widget.playlistService.lastPlaylistDiagnostics;
         _loading = false;
         _loadingMessage = null;
         _tabController.index = 0; // Switch to Overview tab
@@ -95,7 +99,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
   Future<void> _pickFolder() async {
     AdService.instance.registerInteraction();
-    final result = await FilePicker.platform.getDirectoryPath(
+    final result = await pickDirectoryPath(
+      context,
       dialogTitle: 'Select music folder to compare',
     );
     if (result != null) {
@@ -448,6 +453,23 @@ class _PlaylistScreenState extends State<PlaylistScreen>
               ),
             ),
           ),
+
+        if (_playlistDiagnostics != null) ...[
+          const SizedBox(height: 12),
+          Card(
+            color: Colors.amber.withValues(alpha: 0.15),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Colors.amber),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(_playlistDiagnostics!)),
+                ],
+              ),
+            ),
+          ),
+        ],
 
         const SizedBox(height: 16),
 

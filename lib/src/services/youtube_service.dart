@@ -6,7 +6,7 @@ import '../models/preview_item.dart';
 class YouTubeService {
   final YoutubeExplode _yt;
 
-  static const Duration _playlistItemTimeout = Duration(seconds: 10);
+  static const Duration _playlistItemTimeout = Duration(seconds: 25);
   static const Duration _singleVideoTimeout = Duration(seconds: 8);
 
   YouTubeService({required YoutubeExplode yt}) : _yt = yt;
@@ -24,18 +24,14 @@ class YouTubeService {
         if (parsedId != null && parsedId.isNotEmpty) {
           if (!_isAutoMixPlaylist(parsedId)) {
             final playlistId = PlaylistId(parsedId);
-            final playlistVideos = _yt.playlists
-                .getVideos(playlistId)
-                .timeout(_playlistItemTimeout);
+            final videos = await _collectPlaylistVideos(
+              playlistId,
+              maxRequired: startIndex + limit,
+            );
             final items = <PreviewItem>[];
-            int index = 0;
-
-            await for (final video in playlistVideos) {
-              if (index >= startIndex) {
-                items.add(_toPreviewItem(video));
-                if (items.length >= limit) break;
-              }
-              index++;
+            for (var index = startIndex; index < videos.length; index++) {
+              items.add(_toPreviewItem(videos[index]));
+              if (items.length >= limit) break;
             }
 
             if (items.isNotEmpty) return items;
@@ -77,5 +73,23 @@ class YouTubeService {
 
   bool _isAutoMixPlaylist(String playlistId) {
     return playlistId.startsWith('RD');
+  }
+
+  Future<List<Video>> _collectPlaylistVideos(
+    PlaylistId playlistId, {
+    required int maxRequired,
+  }) async {
+    final byId = <String, Video>{};
+    for (var attempt = 0; attempt < 3; attempt++) {
+      final before = byId.length;
+      final playlistVideos =
+          _yt.playlists.getVideos(playlistId).timeout(_playlistItemTimeout);
+      await for (final video in playlistVideos) {
+        byId[video.id.value] = video;
+        if (byId.length >= maxRequired) break;
+      }
+      if (byId.length >= maxRequired || byId.length == before) break;
+    }
+    return byId.values.toList();
   }
 }
