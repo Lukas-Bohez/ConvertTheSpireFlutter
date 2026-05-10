@@ -3,8 +3,11 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 
 import 'dpad_focusable_surface.dart';
+
+enum TvFileBrowserMode { file, folder }
 
 Future<String?> pickSingleFilePath(
   BuildContext context, {
@@ -24,13 +27,11 @@ Future<String?> pickSingleFilePath(
     return result?.files.single.path;
   }
 
-  return showDialog<String>(
+  return TvFileBrowser.pickFile(
     context: context,
-    builder: (_) => TvFileBrowser(
-      title: dialogTitle,
-      allowedExtensions: allowedExtensions,
-      initialDirectory: initialDirectory,
-    ),
+    allowedExtensions: allowedExtensions ?? const [],
+    title: dialogTitle,
+    initialDirectory: initialDirectory,
   );
 }
 
@@ -40,33 +41,22 @@ Future<List<String>> pickMultipleFilePaths(
   List<String>? allowedExtensions,
   String? initialDirectory,
 }) async {
-  if (kIsWeb || !Platform.isAndroid) {
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: true,
-      type: (allowedExtensions != null && allowedExtensions.isNotEmpty)
-          ? FileType.custom
-          : FileType.any,
-      allowedExtensions: allowedExtensions,
-      dialogTitle: dialogTitle,
-    );
-    return result?.files
-            .map((f) => f.path)
-            .whereType<String>()
-            .where((path) => path.isNotEmpty)
-            .toList() ??
-        const [];
-  }
-
-  final selected = await showDialog<List<String>>(
-    context: context,
-    builder: (_) => TvFileBrowser(
-      title: dialogTitle,
-      allowMultiple: true,
-      allowedExtensions: allowedExtensions,
-      initialDirectory: initialDirectory,
-    ),
+  // Use FilePicker for all platforms including Android TV
+  // (TvFileBrowser is optimized for single file/folder selection)
+  final result = await FilePicker.platform.pickFiles(
+    allowMultiple: true,
+    type: (allowedExtensions != null && allowedExtensions.isNotEmpty)
+        ? FileType.custom
+        : FileType.any,
+    allowedExtensions: allowedExtensions,
+    dialogTitle: dialogTitle,
   );
-  return selected ?? const [];
+  return result?.files
+          .map((f) => f.path)
+          .whereType<String>()
+          .where((path) => path.isNotEmpty)
+          .toList() ??
+      const [];
 }
 
 Future<String?> pickDirectoryPath(
@@ -78,31 +68,67 @@ Future<String?> pickDirectoryPath(
     return FilePicker.platform.getDirectoryPath(dialogTitle: dialogTitle);
   }
 
-  return showDialog<String>(
+  return TvFileBrowser.pickFolder(
     context: context,
-    builder: (_) => TvFileBrowser(
-      title: dialogTitle,
-      selectDirectory: true,
-      initialDirectory: initialDirectory,
-    ),
+    title: dialogTitle,
+    initialDirectory: initialDirectory,
   );
 }
 
 class TvFileBrowser extends StatefulWidget {
   final String title;
   final bool allowMultiple;
-  final bool selectDirectory;
   final List<String>? allowedExtensions;
   final String? initialDirectory;
+  final TvFileBrowserMode mode;
 
   const TvFileBrowser({
     super.key,
     required this.title,
     this.allowMultiple = false,
-    this.selectDirectory = false,
     this.allowedExtensions,
     this.initialDirectory,
+    this.mode = TvFileBrowserMode.file,
   });
+
+  /// Pick a single file. Returns the file path or null if cancelled.
+  static Future<String?> pickFile({
+    required BuildContext context,
+    required List<String> allowedExtensions,
+    String title = 'Select file',
+    String? initialDirectory,
+  }) {
+    return Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => TvFileBrowser(
+          title: title,
+          allowedExtensions: allowedExtensions,
+          initialDirectory: initialDirectory,
+          mode: TvFileBrowserMode.file,
+        ),
+      ),
+    );
+  }
+
+  /// Pick a folder. Returns the folder path or null if cancelled.
+  static Future<String?> pickFolder({
+    required BuildContext context,
+    String title = 'Select folder',
+    String? initialDirectory,
+  }) {
+    return Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => TvFileBrowser(
+          title: title,
+          allowedExtensions: const [],
+          initialDirectory: initialDirectory,
+          mode: TvFileBrowserMode.folder,
+        ),
+      ),
+    );
+  }
 
   @override
   State<TvFileBrowser> createState() => _TvFileBrowserState();
@@ -165,7 +191,11 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
       for (final entity in all) {
         if (entity is Directory) {
           directories.add(entity);
-        } else if (!widget.selectDirectory && entity is File && _isAllowedFile(entity)) {
+        } else if (widget.mode == TvFileBrowserMode.folder) {
+          // Folder mode: show all files so user can navigate to the right folder
+          files.add(entity as File);
+        } else if (entity is File && _isAllowedFile(entity)) {
+          // File mode: filter by allowed extensions
           files.add(entity);
         }
       }
@@ -197,17 +227,18 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     return pieces.last.isEmpty && pieces.length > 1 ? pieces[pieces.length - 2] : pieces.last;
   }
 
-  Future<void> _openParent() async {
+  Future<bool> _goBack() async {
     final parent = _currentDir.parent;
-    if (parent.path == _currentDir.path) return;
+    if (parent.path == _currentDir.path) return false; // at root
     setState(() {
       _currentDir = parent;
       _selected.clear();
     });
     await _loadEntries();
+    return true;
   }
 
-  Future<void> _openDirectory(Directory dir) async {
+  Future<void> _navigateTo(Directory dir) async {
     setState(() {
       _currentDir = dir;
       _selected.clear();
@@ -215,146 +246,151 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     await _loadEntries();
   }
 
-  void _toggleSelected(String path) {
-    setState(() {
-      if (_selected.contains(path)) {
-        _selected.remove(path);
-      } else {
-        if (!widget.allowMultiple) _selected.clear();
-        _selected.add(path);
-      }
-    });
+  void _onTap(FileSystemEntity entity) {
+    if (entity is Directory) {
+      // Always navigate into a directory
+      _navigateTo(entity);
+    } else if (widget.mode == TvFileBrowserMode.file) {
+      // File mode: tapping a file returns it immediately
+      Navigator.of(context).pop(entity.path);
+    }
+    // Folder mode: tapping a file does nothing (user must use the "Use this folder" button)
   }
 
   @override
   Widget build(BuildContext context) {
-    final titleStyle = Theme.of(context)
-        .textTheme
-        .titleMedium
-        ?.copyWith(fontWeight: FontWeight.w700);
+    final isWide = MediaQuery.of(context).size.width >= 600;
 
-    return AlertDialog(
-      titlePadding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      title: Text(widget.title, style: titleStyle),
-      content: SizedBox(
-        width: 680,
-        height: 520,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(_currentDir.path, maxLines: 2, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                DpadFocusableSurface(
-                  onSelect: _openParent,
-                  child: OutlinedButton.icon(
-                    onPressed: _openParent,
-                    icon: const Icon(Icons.arrow_upward),
-                    label: const Text('Parent'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                DpadFocusableSurface(
-                  onSelect: _loadEntries,
-                  child: OutlinedButton.icon(
-                    onPressed: _loadEntries,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Refresh'),
-                  ),
-                ),
-                if (widget.selectDirectory) ...[
-                  const SizedBox(width: 8),
-                  DpadFocusableSurface(
-                    onSelect: () => Navigator.of(context).pop(_currentDir.path),
-                    child: FilledButton.icon(
-                      onPressed: () => Navigator.of(context).pop(_currentDir.path),
-                      icon: const Icon(Icons.check),
-                      label: const Text('Use this folder'),
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop && widget.mode == TvFileBrowserMode.folder && _currentDir.parent.path != _currentDir.path) {
+          // Prevent pop if we can go back and are in folder mode
+          await _goBack();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            widget.title,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () async {
+              if (!await _goBack()) {
+                if (mounted) Navigator.of(context).pop(null);
+              }
+            },
+          ),
+          actions: [
+            // "Use this folder" button — only shown in folder mode when inside a dir
+            if (widget.mode == TvFileBrowserMode.folder && _currentDir.parent.path != _currentDir.path)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: DpadFocusableSurface(
+                  autofocus: false,
+                  onSelect: () => Navigator.of(context).pop(_currentDir.path),
+                  child: FilledButton.icon(
+                    onPressed: () => Navigator.of(context).pop(_currentDir.path),
+                    icon: const Icon(Icons.folder_open, size: 18),
+                    label: Text(
+                      isWide ? 'Use this folder' : 'Select',
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: Card(
-                margin: EdgeInsets.zero,
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _error != null
-                        ? Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Text(_error!),
-                          )
-                        : ListView.builder(
-                            itemCount: _entries.length,
-                            itemBuilder: (context, index) {
-                              final entity = _entries[index];
-                              final isDirectory = entity is Directory;
-                              final path = entity.path;
-                              final selected = _selected.contains(path);
-
-                              return DpadFocusableSurface(
-                                onSelect: () {
-                                  if (isDirectory) {
-                                    _openDirectory(entity);
-                                    return;
-                                  }
-                                  if (widget.allowMultiple) {
-                                    _toggleSelected(path);
-                                  } else {
-                                    Navigator.of(context).pop(path);
-                                  }
-                                },
-                                child: ListTile(
-                                  dense: true,
-                                  leading: Icon(
-                                    isDirectory ? Icons.folder : Icons.insert_drive_file,
-                                    color: isDirectory ? Colors.amber : null,
-                                  ),
-                                  title: Text(_nameForPath(path)),
-                                  subtitle: Text(path, maxLines: 1, overflow: TextOverflow.ellipsis),
-                                  trailing: widget.allowMultiple && !isDirectory
-                                      ? Checkbox(
-                                          value: selected,
-                                          onChanged: (_) => _toggleSelected(path),
-                                        )
-                                      : null,
-                                  onTap: () {
-                                    if (isDirectory) {
-                                      _openDirectory(entity);
-                                      return;
-                                    }
-                                    if (widget.allowMultiple) {
-                                      _toggleSelected(path);
-                                    } else {
-                                      Navigator.of(context).pop(path);
-                                    }
-                                  },
-                                ),
-                              );
-                            },
-                          ),
+                ),
               ),
-            ),
           ],
+          // Current path shown as subtitle — truncated on narrow screens
+          bottom: _currentDir.parent.path == _currentDir.path
+              ? null
+              : PreferredSize(
+                  preferredSize: const Size.fromHeight(20),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      child: Text(
+                        _currentDir.path,
+                        style: Theme.of(context).textTheme.bodySmall,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  ),
+                ),
+        ),
+        body: SafeArea(
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+                  ? Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(_error!),
+                    )
+                  : ListView.builder(
+                      itemCount: _entries.length,
+                      itemBuilder: (context, index) {
+                        final entity = _entries[index];
+                        final isDir = entity is Directory;
+                        final name = _nameForPath(entity.path);
+
+                        return DpadFocusableSurface(
+                          autofocus: index == 0,
+                          autoScroll: true,
+                          region: 'file-browser',
+                          onSelect: () => _onTap(entity),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            leading: Icon(
+                              isDir ? Icons.folder : _iconForExtension(p.extension(entity.path)),
+                              color: isDir
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.onSurface,
+                              size: 24,
+                            ),
+                            title: Text(
+                              name,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                            subtitle: !isDir
+                                ? FutureBuilder<FileStat>(
+                                    future: entity.stat(),
+                                    builder: (_, snap) {
+                                      if (!snap.hasData) return const SizedBox.shrink();
+                                      final mb = snap.data!.size / (1024 * 1024);
+                                      return Text(
+                                        '${mb.toStringAsFixed(1)} MB',
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                        overflow: TextOverflow.ellipsis,
+                                      );
+                                    },
+                                  )
+                                : null,
+                            onTap: () => _onTap(entity),
+                          ),
+                        );
+                      },
+                    ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        if (widget.allowMultiple)
-          FilledButton(
-            onPressed: _selected.isEmpty
-                ? null
-                : () => Navigator.of(context).pop(_selected.toList()..sort()),
-            child: Text('Select (${_selected.length})'),
-          ),
-      ],
     );
+  }
+
+  IconData _iconForExtension(String ext) {
+    ext = ext.toLowerCase();
+    if ({'.mp3', '.m4a', '.flac', '.wav', '.ogg', '.opus', '.aac', '.wma'}.contains(ext)) {
+      return Icons.music_note;
+    }
+    if ({'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext)) {
+      return Icons.videocam;
+    }
+    return Icons.insert_drive_file;
   }
 }
