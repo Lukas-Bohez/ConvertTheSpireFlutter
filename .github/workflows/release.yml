@@ -19,11 +19,11 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release tag (e.g. v1.2.3)'
-        required: true
+        description: 'Release tag (optional; defaults to the commit SHA)'
+        required: false
         type: string
       release_name:
-        description: 'Release name (e.g. "Version 1.2.3 â€” My Awesome Release")'
+        description: 'Release name (e.g. "Version 1.2.3 Ã¢â‚¬â€ My Awesome Release")'
         required: true
         type: string
       release_notes:
@@ -52,7 +52,7 @@ permissions:
 
 jobs:
   # =========================================================================
-  # 1. Test & static analysis â€” gate for all build jobs
+  # 1. Test & static analysis Ã¢â‚¬â€ gate for all build jobs
   # =========================================================================
   test-and-analyze:
     name: Test and Analyze
@@ -205,7 +205,7 @@ jobs:
             bash scripts/build-appimage.sh
             echo "built=true" >> "$GITHUB_OUTPUT"
           else
-            echo "scripts/build-appimage.sh not found â€” skipping AppImage build."
+            echo "scripts/build-appimage.sh not found Ã¢â‚¬â€ skipping AppImage build."
             echo "built=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -219,103 +219,7 @@ jobs:
           retention-days: 7
 
   # =========================================================================
-  # 4. macOS (universal / arm64 + x64)
-  # =========================================================================
-  build-macos:
-    name: Build macOS
-    needs: test-and-analyze
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build macOS release
-        run: flutter build macos --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
-
-      # -----------------------------------------------------------------------
-      # Code-sign and notarize when Developer ID certificate secrets are set.
-      # This is required for the app to run on Macs without security warnings.
-      # If secrets are absent the step is skipped and the unsigned build ships.
-      # -----------------------------------------------------------------------
-      - name: Sign and notarize macOS app
-        env:
-          CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
-          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-          NOTARIZE_APPLE_ID: ${{ secrets.MACOS_NOTARIZE_APPLE_ID }}
-          NOTARIZE_PASSWORD: ${{ secrets.MACOS_NOTARIZE_PASSWORD }}
-          NOTARIZE_TEAM_ID: ${{ secrets.MACOS_NOTARIZE_TEAM_ID }}
-        run: |
-          # Skip when signing secrets are not configured
-          if [ -z "$CERTIFICATE_BASE64" ] || [ -z "$NOTARIZE_APPLE_ID" ]; then
-            echo "macOS signing secrets not set â€” shipping unsigned build."
-            exit 0
-          fi
-          set -euo pipefail
-
-          # Import the signing certificate into a temporary keychain
-          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
-          CERT_PATH="$RUNNER_TEMP/certificate.p12"
-          echo "$CERTIFICATE_BASE64" | base64 --decode > "$CERT_PATH"
-
-          security create-keychain -p "" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "" "$KEYCHAIN_PATH"
-          security import "$CERT_PATH" -k "$KEYCHAIN_PATH" \
-            -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security list-keychain -d user -s "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple: \
-            -s -k "" "$KEYCHAIN_PATH"
-
-          APP=$(find build/macos/Build/Products/Release \
-            -maxdepth 1 -name "*.app" | head -1)
-          [ -n "$APP" ] || { echo "ERROR: .app bundle not found"; exit 1; }
-
-          # Deep-sign the bundle (entitlements file is optional; adjust path if needed)
-          ENTITLEMENTS=""
-          [ -f "macos/Runner/Release.entitlements" ] && \
-            ENTITLEMENTS="--entitlements macos/Runner/Release.entitlements"
-          codesign --deep --force --options runtime \
-            --sign "Developer ID Application" \
-            $ENTITLEMENTS "$APP"
-
-          # Notarize
-          ditto -c -k --keepParent "$APP" /tmp/notarize.zip
-          xcrun notarytool submit /tmp/notarize.zip \
-            --apple-id "$NOTARIZE_APPLE_ID" \
-            --password "$NOTARIZE_PASSWORD" \
-            --team-id "$NOTARIZE_TEAM_ID" \
-            --wait
-          xcrun stapler staple "$APP"
-
-          # Cleanup
-          security delete-keychain "$KEYCHAIN_PATH"
-          rm -f "$CERT_PATH" /tmp/notarize.zip
-
-      - name: Package macOS build
-        run: |
-          set -euo pipefail
-          APP=$(find build/macos/Build/Products/Release \
-            -maxdepth 1 -name "*.app" | head -1)
-          [ -n "$APP" ] || { echo "ERROR: .app bundle not found"; exit 1; }
-          ditto -c -k --keepParent "$APP" \
-            "${{ env.OUTPUT_NAME }}-macOS.zip"
-
-      - uses: actions/upload-artifact@v5
-        with:
-          name: macos-x64
-          path: ${{ env.OUTPUT_NAME }}-macOS.zip
-          retention-days: 7
-
-  # =========================================================================
-  # 5. Android (full APK + Play AAB)
+  # 4. Android (full APK + Play AAB)
   # =========================================================================
   build-android:
     name: Build Android
@@ -357,11 +261,11 @@ jobs:
           retention-days: 7
 
   # =========================================================================
-  # 6. Publish GitHub Release
+  # 5. Publish GitHub Release
   # =========================================================================
   release:
     name: Publish Release
-    needs: [build-windows, build-linux, build-macos, build-android]
+    needs: [build-windows, build-linux, build-android]
     runs-on: ubuntu-latest
     permissions:
       contents: write   # Required to create releases and upload assets
@@ -380,7 +284,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          for dir in windows-x64 linux-x64 macos-x64 android-builds; do
+          for dir in windows-x64 linux-x64 android-builds; do
             count=$(find "artifacts/$dir" -type f 2>/dev/null | wc -l)
             if [ "$count" -eq 0 ]; then
               echo "ERROR: No files found in artifacts/$dir"
@@ -406,7 +310,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ inputs.release_tag }}
+          tag_name: ${{ inputs.release_tag || github.sha }}
           name: ${{ inputs.release_name }}
           body: ${{ inputs.release_notes }}
           prerelease: ${{ inputs.is_prerelease }}
@@ -414,7 +318,6 @@ jobs:
           files: |
             artifacts/windows-x64/*.zip
             artifacts/linux-x64/*
-            artifacts/macos-x64/*.zip
             artifacts/android-builds/${{ env.ANDROID_APK_NAME }}
             artifacts/android-builds/${{ env.ANDROID_AAB_NAME }}
             SHA256SUMS.txt
