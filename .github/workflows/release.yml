@@ -306,7 +306,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.sha }}
+          tag_name: v11.0.2
           name: ${{ inputs.release_name }}
           body: ${{ inputs.release_notes }}
           prerelease: ${{ inputs.is_prerelease }}
