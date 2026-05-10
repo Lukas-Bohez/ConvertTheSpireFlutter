@@ -18,12 +18,8 @@ name: Release Build
 on:
   workflow_dispatch:
     inputs:
-      release_tag:
-        description: 'Release tag (optional; defaults to the commit SHA)'
-        required: false
-        type: string
       release_name:
-        description: 'Release name (e.g. "Version 1.2.3 Ã¢â‚¬â€ My Awesome Release")'
+        description: 'Release name (e.g. "Version 1.2.3 - My Awesome Release")'
         required: true
         type: string
       release_notes:
@@ -52,7 +48,7 @@ permissions:
 
 jobs:
   # =========================================================================
-  # 1. Test & static analysis Ã¢â‚¬â€ gate for all build jobs
+  # 1. Test & static analysis - gate for all build jobs
   # =========================================================================
   test-and-analyze:
     name: Test and Analyze
@@ -205,7 +201,7 @@ jobs:
             bash scripts/build-appimage.sh
             echo "built=true" >> "$GITHUB_OUTPUT"
           else
-            echo "scripts/build-appimage.sh not found Ã¢â‚¬â€ skipping AppImage build."
+            echo "scripts/build-appimage.sh not found - skipping AppImage build."
             echo "built=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -310,7 +306,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ inputs.release_tag || github.sha }}
+          tag_name: ${{ github.sha }}
           name: ${{ inputs.release_name }}
           body: ${{ inputs.release_notes }}
           prerelease: ${{ inputs.is_prerelease }}
