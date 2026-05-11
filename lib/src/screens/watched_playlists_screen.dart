@@ -1,8 +1,8 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../utils/snack.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/dpad_focusable_surface.dart';
+import '../widgets/tv_file_browser.dart';
 
 import '../services/watched_playlist_service.dart';
 
@@ -160,7 +160,10 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
       return;
     }
 
-    final directory = await FilePicker.platform.getDirectoryPath();
+    final directory = await pickDirectoryPath(
+      context,
+      dialogTitle: 'Select watched folder',
+    );
     if (directory == null || !mounted) return;
 
     if (choice == 'default') {

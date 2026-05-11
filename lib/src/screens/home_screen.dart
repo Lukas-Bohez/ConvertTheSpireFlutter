@@ -828,7 +828,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       return;
     }
 
-    final result = await FilePicker.platform.getDirectoryPath();
+    final result = await pickDirectoryPath(
+      context,
+      dialogTitle: 'Select download folder',
+    );
     if (result == null || !mounted) return;
 
     setState(() {
@@ -855,7 +858,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return;
       }
     } else {
-      selected = await FilePicker.platform.getDirectoryPath();
+      selected = await pickDirectoryPath(
+        context,
+        dialogTitle: 'Select download folder',
+      );
       if (selected == null || !mounted) return;
     }
 
@@ -2703,7 +2709,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   label: const Text('Browse'),
                                   onPressed: () async {
                                     final result =
-                                        await FilePicker.platform.getDirectoryPath();
+                                        await pickDirectoryPath(
+                                          context,
+                                          dialogTitle: 'Select torrent folder',
+                                        );
                                     if (result != null && mounted) {
                                       setState(() =>
                                           _downloadDirTorrentsController.text =
@@ -2737,7 +2746,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 label: const Text('Browse'),
                                 onPressed: () async {
                                   final result =
-                                      await FilePicker.platform.getDirectoryPath();
+                                      await pickDirectoryPath(
+                                        context,
+                                        dialogTitle: 'Select torrent folder',
+                                      );
                                   if (result != null && mounted) {
                                     setState(() =>
                                         _downloadDirTorrentsController.text =
@@ -3120,8 +3132,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               icon: const Icon(Icons.folder_open),
                               label: const Text('Browse'),
                               onPressed: () async {
-                                final result = await FilePicker.platform
-                                    .getDirectoryPath();
+                                final result = await pickDirectoryPath(
+                                  context,
+                                  dialogTitle: 'Select download folder',
+                                );
                                 if (result != null && mounted) {
                                   setState(() =>
                                       _downloadDirController.text = result);
@@ -3153,7 +3167,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             label: const Text('Browse'),
                             onPressed: () async {
                               final result =
-                                  await FilePicker.platform.getDirectoryPath();
+                                  await pickDirectoryPath(
+                                    context,
+                                    dialogTitle: 'Select download folder',
+                                  );
                               if (result != null && mounted) {
                                 setState(
                                     () => _downloadDirController.text = result);

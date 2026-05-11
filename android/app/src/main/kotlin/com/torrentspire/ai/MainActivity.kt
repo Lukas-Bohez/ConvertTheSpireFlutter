@@ -26,6 +26,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.ArrayList
 
 class MainActivity : AudioServiceActivity() {
     private val channelName = "convert_the_spire/saf"
@@ -138,6 +139,21 @@ class MainActivity : AudioServiceActivity() {
                                 runOnUiThread { result.success(copied) }
                             } catch (e: Exception) {
                                 runOnUiThread { result.error("COPY_TEMP_FAILED", e.localizedMessage, null) }
+                            }
+                        }.start()
+                    }
+                    "listTree" -> {
+                        val treeUri = call.argument<String>("treeUri")
+                        if (treeUri.isNullOrBlank()) {
+                            result.success(emptyList<Map<String, String>>())
+                            return@setMethodCallHandler
+                        }
+                        Thread {
+                            try {
+                                val items = listTree(treeUri)
+                                runOnUiThread { result.success(items) }
+                            } catch (e: Exception) {
+                                runOnUiThread { result.error("LIST_TREE_FAILED", e.localizedMessage, null) }
                             }
                         }.start()
                     }
@@ -270,6 +286,35 @@ class MainActivity : AudioServiceActivity() {
         }
         MediaScannerConnection.scanFile(this, arrayOf(target.absolutePath), null, null)
         return target.absolutePath
+    }
+
+    private fun listTree(treeUriString: String): List<Map<String, String>> {
+        val treeUri = Uri.parse(treeUriString)
+        val root = DocumentFile.fromTreeUri(this, treeUri) ?: return emptyList()
+        val items = ArrayList<Map<String, String>>()
+
+        fun walk(document: DocumentFile) {
+            for (child in document.listFiles()) {
+                if (!child.exists()) continue
+                if (child.isDirectory) {
+                    walk(child)
+                    continue
+                }
+                if (!child.isFile) continue
+                items.add(
+                    mapOf(
+                        "uri" to child.uri.toString(),
+                        "name" to (child.name ?: child.uri.lastPathSegment ?: ""),
+                        "mimeType" to (child.type ?: ""),
+                        "size" to child.length().toString(),
+                        "lastModified" to child.lastModified().toString(),
+                    )
+                )
+            }
+        }
+
+        walk(root)
+        return items
     }
 
     private fun copyContentUriToTemp(uriString: String): String? {

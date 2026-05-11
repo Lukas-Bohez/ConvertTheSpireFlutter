@@ -8,7 +8,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show MissingPluginException, DeviceOrientation, SystemChrome, SystemUiMode, KeyDownEvent, LogicalKeyboardKey, MethodChannel;
+import 'package:flutter/services.dart' show MissingPluginException, DeviceOrientation, SystemChrome, SystemUiMode, KeyDownEvent, LogicalKeyboardKey;
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
@@ -26,6 +26,7 @@ import '../services/platform_dirs.dart';
 import '../services/audio_handler.dart';
 import '../services/background_media_update_guard.dart';
 import '../services/ffmpeg_service.dart';
+import '../services/file_resolver.dart';
 import '../utils/snack.dart';
 import '../utils/lock.dart';
 import '../vault/platform/desktop_window.dart';
@@ -3340,7 +3341,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     List<MediaItem> items = [];
     
     if (dirPath.startsWith('content://')) {
-      // SAF URI - try to scan the directory using SAF
+      // SAF tree URI - list the documents using the native tree scanner.
       items = await _scanMediaFromSAF(dirPath);
     } else {
       // Regular filesystem path
@@ -3375,35 +3376,31 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   /// Scans a SAF tree URI for media files using native Android API
   Future<List<MediaItem>> _scanMediaFromSAF(String treeUri) async {
-    const platform = MethodChannel('convert_the_spire/saf');
     try {
-      // For now, try to get the actual path and fall back to returning empty list if SAF URI
-      // In a production version, you'd implement a full DocumentFile listing in Kotlin
-      final path = await platform.invokeMethod<String>('getPathFromTreeUri', {
-        'treeUri': treeUri,
-      });
-      
-      if (path != null && !path.startsWith('content://')) {
-        // Successfully got a real filesystem path, use it
-        final dir = Directory(path);
-        if (dir.existsSync()) {
-          return dir
-              .listSync(recursive: true)
-              .whereType<File>()
-              .where((f) => PlayerState._mediaExtensions.contains(p.extension(f.path).toLowerCase()))
-              .map((f) {
-                final ext = p.extension(f.path).toLowerCase();
-                final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
-                return MediaItem(
-                  f.path,
-                  isVideo ? MediaType.video : MediaType.audio,
-                  title: p.basenameWithoutExtension(f.path),
-                  modifiedAt: f.statSync().modified,
-                );
-              })
-              .toList();
-        }
+      final entries = await PlatformDirs.listTree(treeUri);
+      final mediaItems = <MediaItem>[];
+
+      for (final entry in entries) {
+        final uri = entry['uri'];
+        final name = entry['name'] ?? '';
+        if (uri == null || uri.isEmpty || name.isEmpty) continue;
+        final ext = p.extension(name).toLowerCase();
+        if (!PlayerState._mediaExtensions.contains(ext)) continue;
+
+        final contentPath = await FileResolver.ensureLocalPath(uri);
+        final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
+        final modifiedMillis = int.tryParse(entry['lastModified'] ?? '') ?? 0;
+        mediaItems.add(
+          MediaItem(
+            contentPath,
+            isVideo ? MediaType.video : MediaType.audio,
+            title: p.basenameWithoutExtension(name),
+            modifiedAt: modifiedMillis > 0 ? DateTime.fromMillisecondsSinceEpoch(modifiedMillis) : null,
+          ),
+        );
       }
+
+      return mediaItems;
     } catch (e) {
       debugPrint('SAF media scan error: $e');
     }

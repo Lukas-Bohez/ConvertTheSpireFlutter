@@ -17,7 +17,7 @@ Future<String?> pickSingleFilePath(
   List<String>? allowedExtensions,
   String? initialDirectory,
 }) async {
-  if (kIsWeb || !Platform.isAndroid) {
+  if (kIsWeb) {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: false,
       type: (allowedExtensions != null && allowedExtensions.isNotEmpty)
@@ -59,22 +59,35 @@ Future<List<String>> pickMultipleFilePaths(
   List<String>? allowedExtensions,
   String? initialDirectory,
 }) async {
-  // Use FilePicker for all platforms including Android TV
-  // (TvFileBrowser is optimized for single file/folder selection)
-  final result = await FilePicker.platform.pickFiles(
-    allowMultiple: true,
-    type: (allowedExtensions != null && allowedExtensions.isNotEmpty)
-        ? FileType.custom
-        : FileType.any,
-    allowedExtensions: allowedExtensions,
-    dialogTitle: dialogTitle,
+  if (kIsWeb) {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: (allowedExtensions != null && allowedExtensions.isNotEmpty)
+          ? FileType.custom
+          : FileType.any,
+      allowedExtensions: allowedExtensions,
+      dialogTitle: dialogTitle,
+    );
+    return result?.files
+            .map((f) => f.path)
+            .whereType<String>()
+            .where((path) => path.isNotEmpty)
+            .toList() ??
+        const [];
+  }
+
+  final initial = initialDirectory == null || initialDirectory.isEmpty
+      ? await FolderHistoryService().getLastFolder()
+      : initialDirectory;
+
+  final chosen = await TvFileBrowser.pickFile(
+    context: context,
+    allowedExtensions: allowedExtensions ?? const [],
+    title: dialogTitle,
+    initialDirectory: initial,
   );
-  return result?.files
-          .map((f) => f.path)
-          .whereType<String>()
-          .where((path) => path.isNotEmpty)
-          .toList() ??
-      const [];
+  if (chosen == null) return const [];
+  return [chosen];
 }
 
 Future<String?> pickDirectoryPath(
@@ -82,7 +95,7 @@ Future<String?> pickDirectoryPath(
   String dialogTitle = 'Select folder',
   String? initialDirectory,
 }) async {
-  if (kIsWeb || !Platform.isAndroid) {
+  if (kIsWeb) {
     return FilePicker.platform.getDirectoryPath(dialogTitle: dialogTitle);
   }
 
@@ -133,13 +146,8 @@ Future<String?> _pickDirectoryUsingSAF() async {
     if (treeUri == null || treeUri.isEmpty) {
       return null; // User cancelled
     }
-    
-    // Try to get the actual filesystem path from the tree URI
-    final path = await platform.invokeMethod<String>('getPathFromTreeUri', {
-      'treeUri': treeUri,
-    });
-    
-    return path ?? treeUri; // Return path if available, otherwise return URI as fallback
+
+    return treeUri;
   } catch (e) {
     debugPrint('SAF error: $e');
     return null;
