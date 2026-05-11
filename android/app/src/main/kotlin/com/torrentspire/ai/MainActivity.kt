@@ -141,6 +141,21 @@ class MainActivity : AudioServiceActivity() {
                             }
                         }.start()
                     }
+                    "getPathFromTreeUri" -> {
+                        val treeUri = call.argument<String>("treeUri")
+                        if (treeUri.isNullOrBlank()) {
+                            result.success(null)
+                            return@setMethodCallHandler
+                        }
+                        Thread {
+                            try {
+                                val path = getPathFromTreeUri(treeUri)
+                                runOnUiThread { result.success(path) }
+                            } catch (e: Exception) {
+                                runOnUiThread { result.error("GET_PATH_FAILED", e.localizedMessage, null) }
+                            }
+                        }.start()
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -264,6 +279,26 @@ class MainActivity : AudioServiceActivity() {
             FileOutputStream(tempFile).use { output -> input.copyTo(output) }
         } ?: return null
         return tempFile.absolutePath
+    }
+
+    private fun getPathFromTreeUri(treeUriString: String): String? {
+        return try {
+            val treeUri = Uri.parse(treeUriString)
+            val documentFile = DocumentFile.fromTreeUri(this, treeUri) ?: return null
+            // Try to get the actual file path if this is a real file system directory
+            // This works for USB drives and external storage mounted as directories
+            val path = documentFile.uri.path
+            if (path != null && path.startsWith("/storage/")) {
+                // This is a real filesystem path, not a content:// provider path
+                path
+            } else {
+                // For SAF URIs without direct filesystem paths, we return the tree URI itself
+                // The Dart code will need to handle this as a special case
+                treeUriString
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     // Picture-in-Picture support: called when user navigates away while video is playing

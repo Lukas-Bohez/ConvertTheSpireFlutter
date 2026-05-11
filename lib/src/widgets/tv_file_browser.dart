@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
 import 'dpad_focusable_surface.dart';
@@ -68,11 +69,43 @@ Future<String?> pickDirectoryPath(
     return FilePicker.platform.getDirectoryPath(dialogTitle: dialogTitle);
   }
 
+  // On Android, try SAF first (gives access to USB drives), then fall back to directory picker
+  try {
+    final safPath = await _pickDirectoryUsingSAF();
+    if (safPath != null) {
+      return safPath;
+    }
+  } catch (e) {
+    debugPrint('SAF picker failed: $e');
+  }
+
   return TvFileBrowser.pickFolder(
     context: context,
     title: dialogTitle,
     initialDirectory: initialDirectory,
   );
+}
+
+/// Invokes Android's Storage Access Framework (SAF) document tree picker
+/// Returns the selected directory path, or a SAF tree URI if it's an external location
+Future<String?> _pickDirectoryUsingSAF() async {
+  const platform = MethodChannel('convert_the_spire/saf');
+  try {
+    final treeUri = await platform.invokeMethod<String>('pickTree');
+    if (treeUri == null || treeUri.isEmpty) {
+      return null; // User cancelled
+    }
+    
+    // Try to get the actual filesystem path from the tree URI
+    final path = await platform.invokeMethod<String>('getPathFromTreeUri', {
+      'treeUri': treeUri,
+    });
+    
+    return path ?? treeUri; // Return path if available, otherwise return URI as fallback
+  } catch (e) {
+    debugPrint('SAF error: $e');
+    return null;
+  }
 }
 
 class TvFileBrowser extends StatefulWidget {

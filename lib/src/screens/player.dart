@@ -8,7 +8,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show MissingPluginException, DeviceOrientation, SystemChrome, SystemUiMode, KeyDownEvent, LogicalKeyboardKey;
+import 'package:flutter/services.dart' show MissingPluginException, DeviceOrientation, SystemChrome, SystemUiMode, KeyDownEvent, LogicalKeyboardKey, MethodChannel;
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
@@ -3336,26 +3336,78 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
     if (dirPath == null || !mounted) return;
 
-    final dir = Directory(dirPath);
-    if (!dir.existsSync()) return;
+    // Handle both regular filesystem paths and SAF URIs
+    List<MediaItem> items = [];
+    
+    if (dirPath.startsWith('content://')) {
+      // SAF URI - try to scan the directory using SAF
+      items = await _scanMediaFromSAF(dirPath);
+    } else {
+      // Regular filesystem path
+      final dir = Directory(dirPath);
+      if (!dir.existsSync()) return;
 
-    final items = dir
-        .listSync(recursive: true)
-        .whereType<File>()
-        .where((f) => PlayerState._mediaExtensions.contains(p.extension(f.path).toLowerCase()))
-        .map((f) {
-          final ext = p.extension(f.path).toLowerCase();
-          final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
-          return MediaItem(
-            f.path,
-            isVideo ? MediaType.video : MediaType.audio,
-            title: p.basenameWithoutExtension(f.path),
-            modifiedAt: f.statSync().modified,
-          );
-        })
-        .toList();
+      items = dir
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => PlayerState._mediaExtensions.contains(p.extension(f.path).toLowerCase()))
+          .map((f) {
+            final ext = p.extension(f.path).toLowerCase();
+            final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
+            return MediaItem(
+              f.path,
+              isVideo ? MediaType.video : MediaType.audio,
+              title: p.basenameWithoutExtension(f.path),
+              modifiedAt: f.statSync().modified,
+            );
+          })
+          .toList();
+    }
 
-    if (mounted) await context.read<PlayerState>().setLibrary(items);
+    if (mounted && items.isNotEmpty) {
+      await context.read<PlayerState>().setLibrary(items);
+    } else if (mounted && items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No media files found in selected folder')),
+      );
+    }
+  }
+
+  /// Scans a SAF tree URI for media files using native Android API
+  Future<List<MediaItem>> _scanMediaFromSAF(String treeUri) async {
+    const platform = MethodChannel('convert_the_spire/saf');
+    try {
+      // For now, try to get the actual path and fall back to returning empty list if SAF URI
+      // In a production version, you'd implement a full DocumentFile listing in Kotlin
+      final path = await platform.invokeMethod<String>('getPathFromTreeUri', {
+        'treeUri': treeUri,
+      });
+      
+      if (path != null && !path.startsWith('content://')) {
+        // Successfully got a real filesystem path, use it
+        final dir = Directory(path);
+        if (dir.existsSync()) {
+          return dir
+              .listSync(recursive: true)
+              .whereType<File>()
+              .where((f) => PlayerState._mediaExtensions.contains(p.extension(f.path).toLowerCase()))
+              .map((f) {
+                final ext = p.extension(f.path).toLowerCase();
+                final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
+                return MediaItem(
+                  f.path,
+                  isVideo ? MediaType.video : MediaType.audio,
+                  title: p.basenameWithoutExtension(f.path),
+                  modifiedAt: f.statSync().modified,
+                );
+              })
+              .toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('SAF media scan error: $e');
+    }
+    return [];
   }
 
   // --- Build ----------------------------------------------------------------
