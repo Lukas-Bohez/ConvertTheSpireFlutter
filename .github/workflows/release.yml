@@ -18,6 +18,10 @@ name: Release Build
 on:
   workflow_dispatch:
     inputs:
+      release_tag:
+        description: 'Git tag to publish (e.g. v1.2.3)'
+        required: true
+        type: string
       release_name:
         description: 'Release name (e.g. "Version 1.2.3 - My Awesome Release")'
         required: true
@@ -215,7 +219,44 @@ jobs:
           retention-days: 7
 
   # =========================================================================
-  # 4. Android (full APK + Play AAB)
+  # 4. macOS (universal / arm64 + x64)
+  # =========================================================================
+  build-macos:
+    name: Build macOS
+    needs: test-and-analyze
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build macOS release
+        run: flutter build macos --release --no-tree-shake-icons
+
+      - name: Package macOS build
+        run: |
+          set -euo pipefail
+          APP=$(find build/macos/Build/Products/Release \
+            -maxdepth 1 -name "*.app" | head -1)
+          [ -n "$APP" ] || { echo "ERROR: .app bundle not found"; exit 1; }
+          ditto -c -k --keepParent "$APP" \
+            "${{ env.OUTPUT_NAME }}-macOS.zip"
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: macos-x64
+          path: ${{ env.OUTPUT_NAME }}-macOS.zip
+          retention-days: 7
+
+  # =========================================================================
+  # 5. Android (full APK + Play AAB)
   # =========================================================================
   build-android:
     name: Build Android
@@ -257,11 +298,11 @@ jobs:
           retention-days: 7
 
   # =========================================================================
-  # 5. Publish GitHub Release
+  # 6. Publish GitHub Release
   # =========================================================================
   release:
     name: Publish Release
-    needs: [build-windows, build-linux, build-android]
+    needs: [build-windows, build-linux, build-macos, build-android]
     runs-on: ubuntu-latest
     permissions:
       contents: write   # Required to create releases and upload assets
@@ -280,7 +321,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          for dir in windows-x64 linux-x64 android-builds; do
+          for dir in windows-x64 linux-x64 macos-x64 android-builds; do
             count=$(find "artifacts/$dir" -type f 2>/dev/null | wc -l)
             if [ "$count" -eq 0 ]; then
               echo "ERROR: No files found in artifacts/$dir"
@@ -306,7 +347,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v11.0.2
+          tag_name: ${{ inputs.release_tag }}
           name: ${{ inputs.release_name }}
           body: ${{ inputs.release_notes }}
           prerelease: ${{ inputs.is_prerelease }}
@@ -314,6 +355,7 @@ jobs:
           files: |
             artifacts/windows-x64/*.zip
             artifacts/linux-x64/*
+            artifacts/macos-x64/*.zip
             artifacts/android-builds/${{ env.ANDROID_APK_NAME }}
             artifacts/android-builds/${{ env.ANDROID_AAB_NAME }}
             SHA256SUMS.txt
