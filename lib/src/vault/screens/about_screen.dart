@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:convert_the_spire_reborn/src/vault/constants.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+import 'package:convert_the_spire_reborn/src/widgets/tv_file_browser.dart';
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
@@ -494,8 +495,10 @@ class _AboutScreenState extends State<AboutScreen>
                           if (_pickerBusy) return;
                           _pickerBusy = true;
                           try {
-                            final result = await FilePicker.platform
-                                .getDirectoryPath();
+                            final result = await pickDirectoryPath(
+                              context,
+                              dialogTitle: 'Select download folder',
+                            );
                             if (result != null) {
                               _downloadDirController.text = result;
                               await _settings.setDownloadDestination(result);

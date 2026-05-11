@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
+import '../services/folder_history_service.dart';
 import 'dpad_focusable_surface.dart';
 
 enum TvFileBrowserMode { file, folder }
@@ -28,12 +29,28 @@ Future<String?> pickSingleFilePath(
     return result?.files.single.path;
   }
 
-  return TvFileBrowser.pickFile(
+  // Use last opened folder as initial directory if not specified
+  String? resolvedInitialDirectory = initialDirectory;
+  if (resolvedInitialDirectory == null || resolvedInitialDirectory.isEmpty) {
+    resolvedInitialDirectory = await FolderHistoryService().getLastFolder();
+  }
+
+  final result = await TvFileBrowser.pickFile(
     context: context,
     allowedExtensions: allowedExtensions ?? const [],
     title: dialogTitle,
-    initialDirectory: initialDirectory,
+    initialDirectory: resolvedInitialDirectory,
   );
+
+  if (result != null) {
+    // Save parent directory to history for next time
+    final parentDir = result.split(Platform.pathSeparator)..removeLast();
+    if (parentDir.isNotEmpty) {
+      await FolderHistoryService().saveLastFolder(parentDir.join(Platform.pathSeparator));
+    }
+  }
+
+  return result;
 }
 
 Future<List<String>> pickMultipleFilePaths(
@@ -73,17 +90,38 @@ Future<String?> pickDirectoryPath(
   try {
     final safPath = await _pickDirectoryUsingSAF();
     if (safPath != null) {
+      // Save to history
+      await FolderHistoryService().saveLastFolder(safPath);
       return safPath;
     }
   } catch (e) {
     debugPrint('SAF picker failed: $e');
   }
 
-  return TvFileBrowser.pickFolder(
-    context: context,
-    title: dialogTitle,
-    initialDirectory: initialDirectory,
+  // Use last opened folder as initial directory if not specified
+  String? resolvedInitialDirectory = initialDirectory;
+  if (resolvedInitialDirectory == null || resolvedInitialDirectory.isEmpty) {
+    resolvedInitialDirectory = await FolderHistoryService().getLastFolder();
+  }
+
+  final result = await Navigator.of(context).push<String>(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => TvFileBrowser(
+        title: dialogTitle,
+        allowedExtensions: const [],
+        initialDirectory: resolvedInitialDirectory,
+        mode: TvFileBrowserMode.folder,
+      ),
+    ),
   );
+
+  if (result != null) {
+    // Save to history
+    await FolderHistoryService().saveLastFolder(result);
+  }
+
+  return result;
 }
 
 /// Invokes Android's Storage Access Framework (SAF) document tree picker
