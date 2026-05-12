@@ -3833,27 +3833,35 @@ class _PlayerScreenState extends State<PlayerScreen>
                   // If no sources selected, include discovered as sources
                   srcs.addAll(discovered);
                 }
-                final res = await MediaOrganizer.moveAndDeduplicate(srcs, targetPath!);
-                if (!mounted) return;
-                final moved = res['moved'] ?? 0;
-                final deleted = res['deleted'] ?? 0;
-                // Optionally create a playlist file in the target folder (filesystem only)
-                if (createPlaylist && !targetPath!.startsWith('content://')) {
-                  try {
-                    final tdir = Directory(targetPath!);
-                    final files = tdir
-                        .listSync(recursive: true)
-                        .whereType<File>()
-                        .where((f) => PlayerState._mediaExtensions.contains(p.extension(f.path).toLowerCase()))
-                        .map((f) => f.path)
-                        .toList();
-                    if (files.isNotEmpty) {
-                      final playlist = File(p.join(tdir.path, 'organized_playlist.m3u'));
-                      playlist.writeAsStringSync(files.join('\n'));
+                try {
+                  final res = await MediaOrganizer.moveAndDeduplicate(srcs, targetPath!);
+                  if (!mounted) return;
+                  final moved = res['moved'] ?? 0;
+                  final deleted = res['deleted'] ?? 0;
+                  // Optionally create a playlist file in the target folder (filesystem only)
+                  if (createPlaylist && !targetPath!.startsWith('content://')) {
+                    try {
+                      final tdir = Directory(targetPath!);
+                      final files = tdir
+                          .listSync(recursive: true)
+                          .whereType<File>()
+                          .where((f) => PlayerState._mediaExtensions.contains(p.extension(f.path).toLowerCase()))
+                          .map((f) => f.path)
+                          .toList();
+                      if (files.isNotEmpty) {
+                        final playlist = File(p.join(tdir.path, 'organized_playlist.m3u'));
+                        playlist.writeAsStringSync(files.join('\n'));
+                      }
+                    } catch (e) {
+                      debugPrint('Playlist creation error: $e');
                     }
-                  } catch (_) {}
+                  }
+                  Snack.show(context, 'Organized: moved $moved files, deleted $deleted duplicates', level: SnackLevel.info);
+                } catch (e) {
+                  if (!mounted) return;
+                  debugPrint('Organize media error: $e');
+                  Snack.show(context, 'Error during organization: $e', level: SnackLevel.error);
                 }
-                Snack.show(context, 'Organized: moved $moved files, deleted $deleted duplicates', level: SnackLevel.info);
               },
               child: const Text('Organize'),
             ),

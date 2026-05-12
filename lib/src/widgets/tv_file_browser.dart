@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
 import '../services/folder_history_service.dart';
@@ -99,24 +98,13 @@ Future<String?> pickDirectoryPath(
     return FilePicker.platform.getDirectoryPath(dialogTitle: dialogTitle);
   }
 
-  // On Android, try SAF first (gives access to USB drives), then fall back to directory picker
-  try {
-    final safPath = await _pickDirectoryUsingSAF();
-    if (safPath != null) {
-      // Save to history
-      await FolderHistoryService().saveLastFolder(safPath);
-      return safPath;
-    }
-  } catch (e) {
-    debugPrint('SAF picker failed: $e');
-  }
-
   // Use last opened folder as initial directory if not specified
   String? resolvedInitialDirectory = initialDirectory;
   if (resolvedInitialDirectory == null || resolvedInitialDirectory.isEmpty) {
     resolvedInitialDirectory = await FolderHistoryService().getLastFolder();
   }
 
+  // Use TV file browser on all platforms for consistent UX
   final result = await Navigator.of(context).push<String>(
     MaterialPageRoute(
       fullscreenDialog: true,
@@ -135,23 +123,6 @@ Future<String?> pickDirectoryPath(
   }
 
   return result;
-}
-
-/// Invokes Android's Storage Access Framework (SAF) document tree picker
-/// Returns the selected directory path, or a SAF tree URI if it's an external location
-Future<String?> _pickDirectoryUsingSAF() async {
-  const platform = MethodChannel('convert_the_spire/saf');
-  try {
-    final treeUri = await platform.invokeMethod<String>('pickTree');
-    if (treeUri == null || treeUri.isEmpty) {
-      return null; // User cancelled
-    }
-
-    return treeUri;
-  } catch (e) {
-    debugPrint('SAF error: $e');
-    return null;
-  }
 }
 
 class TvFileBrowser extends StatefulWidget {
