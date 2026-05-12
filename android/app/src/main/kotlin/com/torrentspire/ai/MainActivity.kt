@@ -12,6 +12,8 @@ import android.os.Environment
 import android.media.MediaScannerConnection
 import android.util.Rational
 import android.graphics.Color
+import android.os.SystemClock
+import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -21,6 +23,10 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodCall
 import androidx.core.content.ContextCompat
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+import android.webkit.WebView
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -30,8 +36,10 @@ import java.util.ArrayList
 
 class MainActivity : AudioServiceActivity() {
     private val channelName = "convert_the_spire/saf"
+    private val webviewChannel = "com.yourapp/webview_input"
     private val pickTreeRequestCode = 5011
     private var pendingResult: MethodChannel.Result? = null
+    private var browserWebView: WebView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Android 15+ mandatory edge-to-edge support
@@ -175,6 +183,70 @@ class MainActivity : AudioServiceActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, webviewChannel)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "registerWebView" -> {
+                        browserWebView = findWebView(window.decorView.rootView)
+                        val url = browserWebView?.url ?: "null"
+                        Log.d("CursorBridge", "WebView registered: url=$url, view=$browserWebView")
+                        result.success(null)
+                    }
+                    "injectTap" -> {
+                        val x = (call.argument<Double>("x") ?: 0.0).toFloat()
+                        val y = (call.argument<Double>("y") ?: 0.0).toFloat()
+                        val webView = browserWebView
+                        if (webView == null) {
+                            Log.e("CursorBridge", "injectTap: WebView not registered")
+                            result.error("NO_WEBVIEW", "WebView not registered", null)
+                            return@setMethodCallHandler
+                        }
+
+                        Log.d("CursorBridge", "injectTap at ($x, $y) on ${webView.url}")
+                        val downTime = SystemClock.uptimeMillis()
+                        val down = MotionEvent.obtain(
+                            downTime,
+                            downTime,
+                            MotionEvent.ACTION_DOWN,
+                            x,
+                            y,
+                            0
+                        )
+                        val up = MotionEvent.obtain(
+                            downTime,
+                            downTime + 100,
+                            MotionEvent.ACTION_UP,
+                            x,
+                            y,
+                            0
+                        )
+
+                        webView.post {
+                            webView.dispatchTouchEvent(down)
+                            webView.dispatchTouchEvent(up)
+                            down.recycle()
+                            up.recycle()
+                            result.success(null)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
+    private fun findWebView(view: View): WebView? {
+        if (view is WebView) {
+            Log.d("CursorBridge", "Found WebView: ${view.javaClass.simpleName}")
+            return view
+        }
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                val found = findWebView(view.getChildAt(index))
+                if (found != null) return found
+            }
+        }
+        return null
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

@@ -27,6 +27,7 @@ import 'browser/new_tab_page.dart';
 import 'browser/history_screen.dart';
 import 'browser/favourites_screen.dart';
 import 'browser/browser_settings_screen.dart';
+import '../widgets/cursor_overlay.dart';
 
 /// Full-featured browser screen with ad-blocking, video detection, and casting.
 class BrowserScreen extends StatefulWidget {
@@ -47,6 +48,9 @@ class BrowserScreen extends StatefulWidget {
 
 class _BrowserScreenState extends State<BrowserScreen>
     with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
+  static const MethodChannel _webviewInputChannel =
+      MethodChannel('com.yourapp/webview_input');
+
   // -- Services --
   final BrowserRepository _repo = BrowserRepository();
   final AdBlockService _adBlock = AdBlockService();
@@ -128,6 +132,8 @@ class _BrowserScreenState extends State<BrowserScreen>
       _pendingUrl = widget.initialUrl;
     }
   }
+
+
 
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
@@ -274,6 +280,10 @@ class _BrowserScreenState extends State<BrowserScreen>
   void _onWebViewCreated(InAppWebViewController controller) {
     debugPrint('[BROWSER] onWebViewCreated - controller ready');
     _webViewController = controller;
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      _webviewInputChannel.invokeMethod('registerWebView');
+    });
 
     controller.addJavaScriptHandler(
       handlerName: 'onVideoFound',
@@ -771,6 +781,11 @@ class _BrowserScreenState extends State<BrowserScreen>
 
     return PopScope(
       canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackPressed();
+        }
+      },
       child: Scaffold(
         resizeToAvoidBottomInset: false,
         body: SafeArea(
@@ -800,7 +815,9 @@ class _BrowserScreenState extends State<BrowserScreen>
                   onCastTap: _openCastSheet,
                   onMenuAction: _handleMenuAction,
                   onUrlBarTap: _showTabSwitcher,
-                  onReleaseWebViewFocus: () => FocusScope.of(context).unfocus(),
+                  onReleaseWebViewFocus: () {
+                    FocusScope.of(context).unfocus();
+                  },
                   onTabs: _showTabSwitcher,
                   tabCount: _tabManager.tabCount,
                     onDownload: _addCurrentToQueue,
@@ -827,7 +844,13 @@ class _BrowserScreenState extends State<BrowserScreen>
                       // Windows - no HWND overlay issues). NewTabPage
                       // is placed on top when active.
                       if (_webViewSupported)
-                        Positioned.fill(child: _buildWebView())
+                        Positioned.fill(
+                          child: CursorOverlay(
+                            active: _webViewController != null && !_showNewTabPage,
+                            onTap: _injectTap,
+                            child: _buildWebView(),
+                          ),
+                        )
                       else
                         _buildPlatformUnavailable(),
 
@@ -1222,11 +1245,40 @@ class _BrowserScreenState extends State<BrowserScreen>
           Navigator.pop(context);
         },
       ),
-    );
-    // Sheet closed - stop tab-switcher periodic captures.
-    _tabSwitcherScreenshotTimer?.cancel();
-    _tabSwitcherScreenshotTimer = null;
-    setState(() => _isTabSwitcherVisible = false);
+    ).whenComplete(() {
+      // Sheet closed - stop tab-switcher periodic captures.
+      _tabSwitcherScreenshotTimer?.cancel();
+      _tabSwitcherScreenshotTimer = null;
+      if (mounted) {
+        setState(() => _isTabSwitcherVisible = false);
+      }
+    });
+  }
+
+  Future<void> _injectTap(Offset position) async {
+    if (_webViewController == null) return;
+    try {
+      // The position is in CursorOverlay's local coordinates (relative to the WebView area).
+      // The WebView's coordinate space should match since CursorOverlay uses Positioned.fill
+      // to wrap the WebView. If taps land offset (especially vertically due to toolbar),
+      // we may need to adjust by calling RenderObject.getTransformTo() or using global keys.
+      // For now, pass the raw position; logcat will show if taps are offset.
+      debugPrint('[CURSOR] Injecting tap at (${position.dx}, ${position.dy})');
+      await _webviewInputChannel.invokeMethod('injectTap', {
+        'x': position.dx,
+        'y': position.dy,
+      });
+    } catch (e) {
+      debugPrint('injectTap failed: $e');
+    }
+  }
+
+  void _handleBackPressed() {
+    // In cursor mode on web pages, back should navigate browser history,
+    // not exit the screen. The cursor is always active on web pages.
+    if (!_showNewTabPage && _webViewController != null) {
+      _webViewController!.goBack();
+    }
   }
 }
 

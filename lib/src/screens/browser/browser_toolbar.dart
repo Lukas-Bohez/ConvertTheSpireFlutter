@@ -137,41 +137,49 @@ class BrowserToolbar extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Expanded(
-                      child: DpadFocusableSurface(
-                        autofocus: true,
-                        region: 'browser-bar',
-                        onSelect: onUrlBarTap,
-                        child: TextField(
-                          controller: addressController,
-                          keyboardType: TextInputType.url,
-                          textInputAction: TextInputAction.go,
-                          maxLines: 1,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isIncognito ? Colors.white : null,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          onSubmitted: onSubmitted,
-                          onTap: () {
-                            // Select all text when the URL bar is tapped (standard browser UX)
-                            addressController.selection = TextSelection(
-                              baseOffset: 0,
-                              extentOffset: addressController.text.length,
-                            );
-                          },
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(
-                                vertical: 8, horizontal: 8),
-                            hintText: pageTitle.isNotEmpty
-                                ? pageTitle
-                                : 'Search or enter URL',
-                            hintStyle: TextStyle(
+                      child: Focus(
+                        onFocusChange: (focused) {
+                          if (focused) {
+                            onReleaseWebViewFocus?.call();
+                          }
+                        },
+                        child: DpadFocusableSurface(
+                          autofocus: true,
+                          region: 'browser-bar',
+                          onSelect: onUrlBarTap,
+                          child: TextField(
+                            controller: addressController,
+                            keyboardType: TextInputType.url,
+                            textInputAction: TextInputAction.go,
+                            maxLines: 1,
+                            style: TextStyle(
                               fontSize: 13,
-                              color: isIncognito
-                                  ? Colors.white54
-                                  : cs.onSurface.withValues(alpha: 0.6),
+                              color: isIncognito ? Colors.white : null,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            onSubmitted: onSubmitted,
+                            onTap: () {
+                              onReleaseWebViewFocus?.call();
+                              // Select all text when the URL bar is tapped (standard browser UX)
+                              addressController.selection = TextSelection(
+                                baseOffset: 0,
+                                extentOffset: addressController.text.length,
+                              );
+                            },
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 8),
+                              hintText: pageTitle.isNotEmpty
+                                  ? pageTitle
+                                  : 'Search or enter URL',
+                              hintStyle: TextStyle(
+                                fontSize: 13,
+                                color: isIncognito
+                                    ? Colors.white54
+                                    : cs.onSurface.withValues(alpha: 0.6),
+                              ),
                             ),
                           ),
                         ),
