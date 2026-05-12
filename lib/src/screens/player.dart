@@ -6,7 +6,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show MissingPluginException, DeviceOrientation, SystemChrome, SystemUiMode, KeyDownEvent, LogicalKeyboardKey;
 import 'package:image/image.dart' as img;
@@ -3338,67 +3338,64 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
     if (dirPath == null || !mounted) return;
 
-    // Handle both regular filesystem paths and SAF URIs
-    List<MediaItem> items = [];
-    
-    if (dirPath.startsWith('content://')) {
-      // SAF tree URI - first ask native code whether this tree maps to a
-      // real filesystem path (mounted USB/external). If so, scan the
-      // filesystem for better performance. Otherwise fall back to the
-      // native tree enumerator.
-      final mapped = await PlatformDirs.getPathFromTreeUri(dirPath);
-      if (mapped != null && mapped.startsWith('/storage/')) {
-        final dir = Directory(mapped);
-        if (dir.existsSync()) {
-          items = dir
-              .listSync(recursive: true)
-              .whereType<File>()
-              .where((f) => PlayerState._mediaExtensions.contains(p.extension(f.path).toLowerCase()))
-              .map((f) {
-                final ext = p.extension(f.path).toLowerCase();
-                final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
-                return MediaItem(
-                  f.path,
-                  isVideo ? MediaType.video : MediaType.audio,
-                  title: p.basenameWithoutExtension(f.path),
-                  modifiedAt: f.statSync().modified,
-                );
-              })
-              .toList();
+    // Show loading dialog while scanning folder (prevents UI freeze on large folders)
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Scanning folder'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Please wait...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Handle both regular filesystem paths and SAF URIs
+      List<MediaItem> items = [];
+      
+      if (dirPath.startsWith('content://')) {
+        // SAF tree URI - first ask native code whether this tree maps to a
+        // real filesystem path (mounted USB/external). If so, scan the
+        // filesystem for better performance. Otherwise fall back to the
+        // native tree enumerator.
+        final mapped = await PlatformDirs.getPathFromTreeUri(dirPath);
+        if (mapped != null && mapped.startsWith('/storage/')) {
+          items = await _scanFolderInBackground(mapped);
         }
+        if (items.isEmpty) {
+          // Native tree enumerator fallback
+          items = await _scanMediaFromSAF(dirPath);
+        }
+      } else {
+        // Regular filesystem path - scan in background to avoid UI freeze
+        items = await _scanFolderInBackground(dirPath);
       }
+      
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
       if (items.isEmpty) {
-        // Native tree enumerator fallback
-        items = await _scanMediaFromSAF(dirPath);
+        if (mounted) {
+          Snack.show(context, 'No media files found in folder', level: SnackLevel.warning);
+        }
+        return;
       }
-    } else {
-      // Regular filesystem path
-      final dir = Directory(dirPath);
-      if (!dir.existsSync()) return;
 
-      items = dir
-          .listSync(recursive: true)
-          .whereType<File>()
-          .where((f) => PlayerState._mediaExtensions.contains(p.extension(f.path).toLowerCase()))
-          .map((f) {
-            final ext = p.extension(f.path).toLowerCase();
-            final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
-            return MediaItem(
-              f.path,
-              isVideo ? MediaType.video : MediaType.audio,
-              title: p.basenameWithoutExtension(f.path),
-              modifiedAt: f.statSync().modified,
-            );
-          })
-          .toList();
-    }
-
-    if (mounted && items.isNotEmpty) {
+      if (!mounted) return;
       await context.read<PlayerState>().setLibrary(items);
-    } else if (mounted && items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No media files found in selected folder')),
-      );
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        Snack.show(context, 'Error scanning folder: $e', level: SnackLevel.error);
+      }
+      debugPrint('folder scan error: $e');
     }
   }
 
@@ -3447,6 +3444,39 @@ class _PlayerScreenState extends State<PlayerScreen>
       debugPrint('SAF media scan error: $e');
     }
     return [];
+  }
+
+  // Scan a filesystem folder in background to avoid UI freeze on large folders
+  Future<List<MediaItem>> _scanFolderInBackground(String dirPath) async {
+    return await compute(_scanFolderSync, dirPath);
+  }
+
+  // Static method to scan folder synchronously (runs in isolate)
+  static List<MediaItem> _scanFolderSync(String dirPath) {
+    try {
+      final dir = Directory(dirPath);
+      if (!dir.existsSync()) return [];
+
+      final items = <MediaItem>[];
+      dir.listSync(recursive: true).whereType<File>().forEach((f) {
+        final ext = p.extension(f.path).toLowerCase();
+        if (ext.isEmpty) return;
+        if (!PlayerState._mediaExtensions.contains(ext)) return;
+
+        final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
+        items.add(MediaItem(
+          f.path,
+          isVideo ? MediaType.video : MediaType.audio,
+          title: p.basenameWithoutExtension(f.path),
+          modifiedAt: f.statSync().modified,
+        ));
+      });
+
+      return items;
+    } catch (e) {
+      debugPrint('Background folder scan error: $e');
+      return [];
+    }
   }
 
   // --- Build ----------------------------------------------------------------
@@ -3865,11 +3895,15 @@ class _PlayerScreenState extends State<PlayerScreen>
                   // If no sources selected, include discovered as sources
                   srcs.addAll(discovered);
                 }
+                debugPrint('[Organize] Starting with sources=$srcs, target=$targetPath');
                 try {
+                  debugPrint('[Organize] Calling moveAndDeduplicate with ${srcs.length} sources');
                   final res = await MediaOrganizer.moveAndDeduplicate(srcs, targetPath!);
+                  debugPrint('[Organize] Result: $res');
                   if (!mounted) return;
                   final moved = res['moved'] ?? 0;
                   final deleted = res['deleted'] ?? 0;
+                  debugPrint('[Organize] Moved=$moved, Deleted=$deleted');
                   // Optionally create a playlist file in the target folder (filesystem only)
                   if (createPlaylist && !targetPath!.startsWith('content://')) {
                     try {
@@ -3891,7 +3925,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                   Snack.show(context, 'Organized: moved $moved files, deleted $deleted duplicates', level: SnackLevel.info);
                 } catch (e) {
                   if (!mounted) return;
-                  debugPrint('Organize media error: $e');
+                  debugPrint('[Organize] Error: $e');
                   Snack.show(context, 'Error during organization: $e', level: SnackLevel.error);
                 }
               },

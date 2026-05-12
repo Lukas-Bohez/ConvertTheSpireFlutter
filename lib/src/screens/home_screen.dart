@@ -674,7 +674,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _settingsInitialized = true;
     });
 
-    if (_isAndroid && _hasAndroidFolder) {
+    // Only check SAF folder writability if we have a SAF URI.
+    // Filesystem paths are assumed writable if they were selected via the picker.
+    if (_isAndroid && _androidDownloadUri.isNotEmpty) {
       final writable = await FolderAccessService.ensureSafeFolderIsWritable(
         context,
         _androidDownloadUri,

@@ -11,6 +11,7 @@ class MediaOrganizer {
   ///   file size and the largest is kept; smaller duplicates are deleted.
   /// Returns a map with counts: {"moved": int, "skipped": int, "deleted": int}
   static Future<Map<String, int>> moveAndDeduplicate(List<String> sourceDirs, String target) async {
+    print('[MediaOrganizer] Starting moveAndDeduplicate with ${sourceDirs.length} sources, target=$target');
     final moved = <String>[];
     final deleted = <String>[];
     final seen = <String, File>{};
@@ -20,14 +21,23 @@ class MediaOrganizer {
     for (final dirPath in sourceDirs) {
       try {
         final dir = Directory(dirPath);
-        if (!dir.existsSync()) continue;
+        if (!dir.existsSync()) {
+          print('[MediaOrganizer] Source dir does not exist: $dirPath');
+          continue;
+        }
+        print('[MediaOrganizer] Scanning source: $dirPath');
         dir.listSync(recursive: true).whereType<File>().forEach((f) {
           final ext = p.extension(f.path).toLowerCase();
           if (ext.isEmpty) return;
           candidates.add(f);
         });
-      } catch (_) {}
+        print('[MediaOrganizer] Found ${candidates.length} candidates in $dirPath');
+      } catch (e) {
+        print('[MediaOrganizer] Error scanning source $dirPath: $e');
+      }
     }
+
+    print('[MediaOrganizer] Total candidates collected: ${candidates.length}');
 
     // Group by basename
     for (final f in candidates) {
@@ -46,14 +56,20 @@ class MediaOrganizer {
       }
     }
 
+    print('[MediaOrganizer] After dedup: ${seen.length} unique files, ${deleted.length} duplicates to delete');
+
     var movedCount = 0;
     var deletedCount = 0;
     // Ensure target when filesystem path
     final targetIsSAF = target.startsWith('content://');
+    print('[MediaOrganizer] Target is SAF: $targetIsSAF');
     Directory? targetDir;
     if (!targetIsSAF) {
       targetDir = Directory(target);
-      if (!targetDir.existsSync()) targetDir.createSync(recursive: true);
+      if (!targetDir.existsSync()) {
+        print('[MediaOrganizer] Creating target directory: $target');
+        targetDir.createSync(recursive: true);
+      }
     }
 
     for (final entry in seen.values) {
@@ -61,27 +77,37 @@ class MediaOrganizer {
       try {
         if (targetIsSAF) {
           final mime = _mimeTypeForExtension(p.extension(entry.path).toLowerCase());
+          print('[MediaOrganizer] Copying to SAF: ${entry.path} -> $destName (mime=$mime)');
           final copied = await PlatformDirs.copyToTree(target, entry.path, destName, mime);
           if (copied != null) {
             moved.add(copied);
             movedCount++;
+            print('[MediaOrganizer] Successfully copied: $destName');
+          } else {
+            print('[MediaOrganizer] Failed to copy: $destName');
           }
         } else {
           final dest = File(p.join(targetDir!.path, destName));
           if (p.equals(entry.path, dest.path)) {
+            print('[MediaOrganizer] Skipping (same path): $destName');
             continue;
           }
+          print('[MediaOrganizer] Copying to filesystem: ${entry.path} -> ${dest.path}');
           if (dest.existsSync()) {
             // If existing, keep larger file
             if (entry.lengthSync() > dest.lengthSync()) {
               entry.copySync(dest.path);
+              print('[MediaOrganizer] Overwrote existing: $destName');
             }
           } else {
             entry.copySync(dest.path);
+            print('[MediaOrganizer] Copied: $destName');
           }
           movedCount++;
         }
-      } catch (_) {}
+      } catch (e) {
+        print('[MediaOrganizer] Error moving ${entry.path}: $e');
+      }
     }
 
     // Delete duplicates
@@ -91,11 +117,17 @@ class MediaOrganizer {
         if (f.existsSync()) {
           f.deleteSync();
           deletedCount++;
+          print('[MediaOrganizer] Deleted duplicate: $path');
         }
-      } catch (_) {}
+      } catch (e) {
+        print('[MediaOrganizer] Error deleting $path: $e');
+      }
     }
 
-    return {"moved": movedCount, "deleted": deletedCount, "skipped": candidates.length - movedCount - deletedCount};
+    final skipped = candidates.length - movedCount - deletedCount;
+    final result = {"moved": movedCount, "deleted": deletedCount, "skipped": skipped};
+    print('[MediaOrganizer] Final result: $result');
+    return result;
   }
 
   static String _mimeTypeForExtension(String ext) {
