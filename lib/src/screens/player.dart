@@ -32,6 +32,7 @@ import '../utils/lock.dart';
 import '../vault/platform/desktop_window.dart';
 import '../widgets/dpad_focusable_surface.dart';
 import '../widgets/tv_file_browser.dart';
+import '../services/media_organizer.dart';
 
 // --- Public entry point -------------------------------------------------------
 
@@ -3341,8 +3342,35 @@ class _PlayerScreenState extends State<PlayerScreen>
     List<MediaItem> items = [];
     
     if (dirPath.startsWith('content://')) {
-      // SAF tree URI - list the documents using the native tree scanner.
-      items = await _scanMediaFromSAF(dirPath);
+      // SAF tree URI - first ask native code whether this tree maps to a
+      // real filesystem path (mounted USB/external). If so, scan the
+      // filesystem for better performance. Otherwise fall back to the
+      // native tree enumerator.
+      final mapped = await PlatformDirs.getPathFromTreeUri(dirPath);
+      if (mapped != null && mapped.startsWith('/storage/')) {
+        final dir = Directory(mapped);
+        if (dir.existsSync()) {
+          items = dir
+              .listSync(recursive: true)
+              .whereType<File>()
+              .where((f) => PlayerState._mediaExtensions.contains(p.extension(f.path).toLowerCase()))
+              .map((f) {
+                final ext = p.extension(f.path).toLowerCase();
+                final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
+                return MediaItem(
+                  f.path,
+                  isVideo ? MediaType.video : MediaType.audio,
+                  title: p.basenameWithoutExtension(f.path),
+                  modifiedAt: f.statSync().modified,
+                );
+              })
+              .toList();
+        }
+      }
+      if (items.isEmpty) {
+        // Native tree enumerator fallback
+        items = await _scanMediaFromSAF(dirPath);
+      }
     } else {
       // Regular filesystem path
       final dir = Directory(dirPath);
@@ -3383,11 +3411,25 @@ class _PlayerScreenState extends State<PlayerScreen>
       for (final entry in entries) {
         final uri = entry['uri'];
         final name = entry['name'] ?? '';
+        final mime = entry['mimeType'] ?? '';
         if (uri == null || uri.isEmpty || name.isEmpty) continue;
-        final ext = p.extension(name).toLowerCase();
+
+        // Determine extension: prefer name-based extension, fallback to mimeType
+        var ext = p.extension(name).toLowerCase();
+        if (ext.isEmpty && mime.isNotEmpty) {
+          if (mime.startsWith('audio/')) ext = '.mp3';
+          if (mime.startsWith('video/')) ext = '.mp4';
+        }
         if (!PlayerState._mediaExtensions.contains(ext)) continue;
 
-        final contentPath = await FileResolver.ensureLocalPath(uri);
+        // Try to obtain a local filesystem path. If that fails we'll still
+        // provide the content URI so platform players can use it.
+        String contentPath = uri;
+        try {
+          final resolved = await FileResolver.ensureLocalPath(uri);
+          if (resolved.isNotEmpty) contentPath = resolved;
+        } catch (_) {}
+
         final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
         final modifiedMillis = int.tryParse(entry['lastModified'] ?? '') ?? 0;
         mediaItems.add(
@@ -3610,6 +3652,12 @@ class _PlayerScreenState extends State<PlayerScreen>
               tooltip: 'Open folder',
               onPressed: _pickFolder,
             ),
+            IconButton(
+              icon: Icon(Icons.merge_type_rounded,
+                  color: Theme.of(context).colorScheme.onSurface),
+              tooltip: 'Organize media',
+              onPressed: () => _showOrganizeDialog(),
+            ),
             PopupMenuButton<String>(
               tooltip: 'Queue actions',
               icon: Icon(Icons.queue_music_rounded,
@@ -3661,6 +3709,157 @@ class _PlayerScreenState extends State<PlayerScreen>
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _showOrganizeDialog() async {
+    if (!mounted) return;
+
+    // Auto-discover candidate folders (filesystem only).
+    Future<List<String>> autoDiscover() async {
+      final roots = <String>[];
+      if (Platform.isAndroid) {
+        roots.addAll(['/storage/emulated/0', '/sdcard', '/storage']);
+      } else if (Platform.isWindows) {
+        roots.addAll([Platform.environment['USERPROFILE'] ?? r'C:\Users', r'C:\']);
+      } else if (Platform.isLinux || Platform.isMacOS) {
+        roots.addAll([Platform.environment['HOME'] ?? '/home']);
+      }
+
+      final found = <String>{};
+      final mediaExts = PlayerState._mediaExtensions;
+
+      for (final root in roots) {
+        try {
+          final r = Directory(root);
+          if (!r.existsSync()) continue;
+          final children = r.listSync().whereType<Directory>();
+          for (final child in children) {
+            try {
+              final files = child.listSync(recursive: true).whereType<File>().where((f) {
+                final ext = p.extension(f.path).toLowerCase();
+                return mediaExts.contains(ext);
+              }).take(5).toList();
+              if (files.isNotEmpty) found.add(child.path);
+            } catch (_) {}
+          }
+        } catch (_) {}
+      }
+      return found.toList()..sort();
+    }
+
+    final sources = <String>{};
+    String? targetPath;
+    bool scanning = true;
+    List<String> discovered = [];
+    bool createPlaylist = true;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(builder: (dCtx, setState) {
+        if (scanning) {
+          autoDiscover().then((list) {
+            if (!mounted) return;
+            setState(() {
+              discovered = list;
+              scanning = false;
+            });
+          });
+        }
+
+        return AlertDialog(
+          title: const Text('Organize media'),
+          content: SizedBox(
+            width: 560,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (scanning) ...[
+                  const LinearProgressIndicator(),
+                  const SizedBox(height: 12),
+                  const Text('Scanning common folders for media...')
+                ] else ...[
+                  Align(alignment: Alignment.centerLeft, child: Text('Discovered folders (${discovered.length})')),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: discovered.length,
+                      itemBuilder: (context, idx) {
+                        final path = discovered[idx];
+                        final selected = sources.contains(path);
+                        return CheckboxListTile(
+                          title: Text(path, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          value: selected,
+                          onChanged: (v) => setState(() => v == true ? sources.add(path) : sources.remove(path)),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    FilledButton(
+                      onPressed: () async {
+                        final chosen = await pickDirectoryPath(context, dialogTitle: 'Select target folder');
+                        if (chosen != null) setState(() => targetPath = chosen);
+                      },
+                      child: const Text('Choose target folder'),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(targetPath ?? 'No target selected', maxLines: 1, overflow: TextOverflow.ellipsis)),
+                  ])
+                  ,
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Checkbox(value: createPlaylist, onChanged: (v) => setState(() => createPlaylist = v ?? true)),
+                    const SizedBox(width: 8),
+                    const Expanded(child: Text('Create playlist in target folder after organizing')),
+                  ])
+                ]
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dCtx).pop(), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () async {
+                if (targetPath == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please choose a target folder')));
+                  return;
+                }
+                Navigator.of(dCtx).pop();
+                final srcs = sources.toList();
+                if (srcs.isEmpty) {
+                  // If no sources selected, include discovered as sources
+                  srcs.addAll(discovered);
+                }
+                final res = await MediaOrganizer.moveAndDeduplicate(srcs, targetPath!);
+                if (!mounted) return;
+                final moved = res['moved'] ?? 0;
+                final deleted = res['deleted'] ?? 0;
+                // Optionally create a playlist file in the target folder (filesystem only)
+                if (createPlaylist && !targetPath!.startsWith('content://')) {
+                  try {
+                    final tdir = Directory(targetPath!);
+                    final files = tdir
+                        .listSync(recursive: true)
+                        .whereType<File>()
+                        .where((f) => PlayerState._mediaExtensions.contains(p.extension(f.path).toLowerCase()))
+                        .map((f) => f.path)
+                        .toList();
+                    if (files.isNotEmpty) {
+                      final playlist = File(p.join(tdir.path, 'organized_playlist.m3u'));
+                      playlist.writeAsStringSync(files.join('\n'));
+                    }
+                  } catch (_) {}
+                }
+                Snack.show(context, 'Organized: moved $moved files, deleted $deleted duplicates', level: SnackLevel.info);
+              },
+              child: const Text('Organize'),
+            ),
+          ],
+        );
+      }),
     );
   }
 

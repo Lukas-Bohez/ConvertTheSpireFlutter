@@ -113,6 +113,18 @@ class PlatformDirs {
     }
   }
 
+  /// Ask native code to convert a SAF tree URI into a filesystem path when
+  /// possible (e.g. mounted USB drives). Returns the filesystem path or the
+  /// original tree URI string if conversion isn't possible.
+  static Future<String?> getPathFromTreeUri(String treeUri) async {
+    if (kIsWeb) return null;
+    try {
+      return await _channel.invokeMethod<String>('getPathFromTreeUri', {'treeUri': treeUri});
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Copy a document represented by a content:// URI into a temporary file
   /// under the app cache directory.  Returns the local file path or null on
   /// failure.  The native implementation (`copyToTemp`) is provided in
@@ -122,6 +134,23 @@ class PlatformDirs {
     if (kIsWeb) return null;
     try {
       return await _channel.invokeMethod<String>('copyToTemp', {'uri': uri});
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Copy a local file (sourcePath) into a SAF tree target (treeUri).
+  /// Returns the destination content URI string on success or null on failure.
+  static Future<String?> copyToTree(String treeUri, String sourcePath, String displayName, String mimeType, {String? subdir}) async {
+    if (kIsWeb) return null;
+    try {
+      return await _channel.invokeMethod<String>('copyToTree', {
+        'treeUri': treeUri,
+        'sourcePath': sourcePath,
+        'displayName': displayName,
+        'mimeType': mimeType,
+        'subdir': subdir ?? ''
+      });
     } catch (_) {
       return null;
     }
