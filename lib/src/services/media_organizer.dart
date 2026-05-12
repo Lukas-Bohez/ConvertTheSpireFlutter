@@ -16,9 +16,38 @@ class MediaOrganizer {
     final deleted = <String>[];
     final seen = <String, File>{};
 
+    final normalizedTarget = target.startsWith('content://')
+        ? target
+        : p.normalize(p.absolute(target));
+    final filteredSources = <String>[];
+    for (final source in sourceDirs) {
+      if (source.trim().isEmpty) continue;
+      if (target.startsWith('content://')) {
+        filteredSources.add(source);
+        continue;
+      }
+
+      final normalizedSource = p.normalize(p.absolute(source));
+      final overlapsTarget = normalizedSource == normalizedTarget ||
+          p.isWithin(normalizedSource, normalizedTarget) ||
+          p.isWithin(normalizedTarget, normalizedSource);
+      if (overlapsTarget) {
+        print('[MediaOrganizer] Skipping overlapping source/target path: $source');
+        continue;
+      }
+      if (!filteredSources.contains(source)) {
+        filteredSources.add(source);
+      }
+    }
+
+    if (filteredSources.isEmpty) {
+      print('[MediaOrganizer] No valid source directories after filtering overlaps.');
+      return {"moved": 0, "deleted": 0, "skipped": 0};
+    }
+
     // Collect candidate files from sources
     final candidates = <File>[];
-    for (final dirPath in sourceDirs) {
+    for (final dirPath in filteredSources) {
       try {
         final dir = Directory(dirPath);
         if (!dir.existsSync()) {

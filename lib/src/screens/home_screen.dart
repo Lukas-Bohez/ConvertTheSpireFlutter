@@ -645,8 +645,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _androidDownloadUri = settings.downloadDir.startsWith('content://')
             ? settings.downloadDir
             : '';
-        _downloadDirController.text =
-            _formatAndroidFolderLabel(settings.downloadDir);
+        _downloadDirController.text = _androidDownloadUri.isNotEmpty
+            ? _formatAndroidFolderLabel(settings.downloadDir)
+            : 'Not set';
       } else {
         _downloadDirController.text = settings.downloadDir;
       }
@@ -737,7 +738,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         if (!mounted) return chosen;
         setState(() {
           _androidDownloadUri = chosen.startsWith('content://') ? chosen : '';
-          _downloadDirController.text = _formatAndroidFolderLabel(chosen);
+          _downloadDirController.text = _androidDownloadUri.isNotEmpty
+              ? _formatAndroidFolderLabel(chosen)
+              : 'Not set';
         });
         Snack.show(context, 'Download folder updated', level: SnackLevel.info);
         return chosen;
@@ -807,28 +810,20 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   bool get _hasAndroidFolder {
+    if (_isAndroid) {
+      return _androidDownloadUri.isNotEmpty;
+    }
     final value = _downloadDirController.text.trim();
     return value.isNotEmpty && value != 'Not set';
   }
 
   Future<void> _pickAndroidFolder(AppSettings settings) async {
-    final initialDirectory = _androidDownloadUri.isNotEmpty
-        ? null
-        : (_downloadDirController.text.trim().isNotEmpty &&
-                _downloadDirController.text.trim() != 'Not set'
-            ? _downloadDirController.text.trim()
-            : null);
-
-    final chosen = await pickDirectoryPath(
-      context,
-      dialogTitle: 'Select download folder',
-      initialDirectory: initialDirectory,
-    );
+    final chosen = await _androidSaf.pickTree();
     if (chosen == null || chosen.isEmpty) return;
 
     if (!mounted) return;
     setState(() {
-      _androidDownloadUri = chosen.startsWith('content://') ? chosen : '';
+      _androidDownloadUri = chosen;
       _downloadDirController.text = _formatAndroidFolderLabel(chosen);
     });
     await widget.controller.saveSettings(settings.copyWith(downloadDir: chosen));
@@ -902,32 +897,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _openAndroidFolder(AppSettings settings) async {
-    final currentFolder = _androidDownloadUri.isNotEmpty
-        ? _androidDownloadUri
-        : _downloadDirController.text.trim();
+    final currentFolder = _androidDownloadUri;
     if (currentFolder.isEmpty || currentFolder == 'Not set') return;
 
-    if (currentFolder.startsWith('content://')) {
-      final ok = await _androidSaf.openTree(currentFolder);
-      if (!ok && mounted) {
-        Snack.show(context, 'Could not open the selected folder.',
-            level: SnackLevel.error);
-      }
-      return;
+    final ok = await _androidSaf.openTree(currentFolder);
+    if (!ok && mounted) {
+      Snack.show(context, 'Could not open the selected folder.',
+          level: SnackLevel.error);
     }
-
-    final browsed = await pickDirectoryPath(
-      context,
-      dialogTitle: 'Browse download folder',
-      initialDirectory: currentFolder,
-    );
-    if (browsed == null || browsed.isEmpty || !mounted) return;
-
-    setState(() {
-      _androidDownloadUri = browsed.startsWith('content://') ? browsed : '';
-      _downloadDirController.text = _formatAndroidFolderLabel(browsed);
-    });
-    await widget.controller.saveSettings(settings.copyWith(downloadDir: browsed));
   }
 
   Future<void> _clearAndroidFolder(AppSettings settings) async {
