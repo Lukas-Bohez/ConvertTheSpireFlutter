@@ -3728,21 +3728,51 @@ class _PlayerScreenState extends State<PlayerScreen>
 
       final found = <String>{};
       final mediaExts = PlayerState._mediaExtensions;
+      const maxResults = 20;
+      const maxDepth = 2;
+      const maxChildrenPerLevel = 24;
+      const minMediaHits = 2;
+
+      Future<void> inspectDirectory(Directory dir, int depth) async {
+        if (found.length >= maxResults || depth > maxDepth) return;
+
+        List<FileSystemEntity> entries;
+        try {
+          entries = dir.listSync(followLinks: false);
+        } catch (_) {
+          return;
+        }
+
+        var mediaHits = 0;
+        final childDirs = <Directory>[];
+        for (final entry in entries) {
+          if (entry is File) {
+            final ext = p.extension(entry.path).toLowerCase();
+            if (mediaExts.contains(ext)) {
+              mediaHits++;
+              if (mediaHits >= minMediaHits) {
+                found.add(dir.path);
+                return;
+              }
+            }
+          } else if (entry is Directory) {
+            childDirs.add(entry);
+          }
+        }
+
+        if (depth == maxDepth) return;
+
+        for (final child in childDirs.take(maxChildrenPerLevel)) {
+          await inspectDirectory(child, depth + 1);
+          if (found.length >= maxResults) return;
+        }
+      }
 
       for (final root in roots) {
         try {
           final r = Directory(root);
           if (!r.existsSync()) continue;
-          final children = r.listSync().whereType<Directory>();
-          for (final child in children) {
-            try {
-              final files = child.listSync(recursive: true).whereType<File>().where((f) {
-                final ext = p.extension(f.path).toLowerCase();
-                return mediaExts.contains(ext);
-              }).take(5).toList();
-              if (files.isNotEmpty) found.add(child.path);
-            } catch (_) {}
-          }
+          await inspectDirectory(r, 0);
         } catch (_) {}
       }
       return found.toList()..sort();
@@ -3751,13 +3781,15 @@ class _PlayerScreenState extends State<PlayerScreen>
     final sources = <String>{};
     String? targetPath;
     bool scanning = true;
+    bool scanStarted = false;
     List<String> discovered = [];
     bool createPlaylist = true;
 
     await showDialog<void>(
       context: context,
       builder: (dialogCtx) => StatefulBuilder(builder: (dCtx, setState) {
-        if (scanning) {
+        if (scanning && !scanStarted) {
+          scanStarted = true;
           autoDiscover().then((list) {
             if (!mounted) return;
             setState(() {

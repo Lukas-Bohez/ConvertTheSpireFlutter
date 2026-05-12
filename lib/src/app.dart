@@ -26,7 +26,6 @@ import 'screens/onboarding_screen.dart';
 import 'screens/browser_screen.dart';
 import 'services/bulk_import_service.dart';
 import 'services/convert_service.dart';
-import 'services/android_saf.dart';
 import 'services/download_service.dart';
 import 'services/ffmpeg_service.dart';
 import 'services/file_organization_service.dart';
@@ -44,6 +43,7 @@ import 'services/youtube_service.dart';
 import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
 import 'widgets/adaptive_ui_frame.dart';
+import 'widgets/tv_file_browser.dart';
 import 'vault/vault_bootstrap.dart';
 import 'vault/platform/desktop_window.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -69,7 +69,6 @@ class _MyAppState extends State<MyApp>
   YoutubeExplode? _ytExplode;
   String? _initError;
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-  final AndroidSaf _androidSaf = AndroidSaf();
   bool _dismissedMediaKitError = false;
   late final Future<SharedPreferences> _prefsFuture =
       SharedPreferences.getInstance();
@@ -296,17 +295,20 @@ class _MyAppState extends State<MyApp>
 
         if (choose != true) return null;
 
-        final uri = await _androidSaf.pickTree();
-        if (uri == null || uri.isEmpty) return null;
+        final chosen = await pickDirectoryPath(
+          ctx,
+          dialogTitle: 'Select download folder',
+        );
+        if (chosen == null || chosen.isEmpty) return null;
 
         try {
           final current = controller.settings;
           if (current != null) {
-            await controller.saveSettings(current.copyWith(downloadDir: uri));
+            await controller.saveSettings(current.copyWith(downloadDir: chosen));
           }
         } catch (_) {}
 
-        return uri;
+        return chosen;
       };
 
       if (kDebugMode) debugPrint('MyApp: all services created, calling init()');

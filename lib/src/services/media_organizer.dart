@@ -68,6 +68,9 @@ class MediaOrganizer {
           }
         } else {
           final dest = File(p.join(targetDir!.path, destName));
+          if (p.equals(entry.path, dest.path)) {
+            continue;
+          }
           if (dest.existsSync()) {
             // If existing, keep larger file
             if (entry.lengthSync() > dest.lengthSync()) {
