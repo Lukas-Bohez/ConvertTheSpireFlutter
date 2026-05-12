@@ -5,13 +5,13 @@ import 'package:flutter/services.dart';
 class CursorOverlay extends StatefulWidget {
   final Widget child;
   final bool active;
-  final Future<void> Function(Offset) onTap;
+  final Future<void> Function(Offset)? onTap;
 
   const CursorOverlay({
     super.key,
     required this.child,
-    required this.active,
-    required this.onTap,
+    this.active = true,
+    this.onTap,
   });
 
   @override
@@ -122,8 +122,8 @@ class _CursorOverlayState extends State<CursorOverlay>
       case LogicalKeyboardKey.select:
       case LogicalKeyboardKey.enter:
       case LogicalKeyboardKey.numpadEnter:
-        if (isDown) {
-          widget.onTap(_position);
+        if (isDown && widget.onTap != null) {
+          widget.onTap!(_position);
         }
         return KeyEventResult.handled;
       default:

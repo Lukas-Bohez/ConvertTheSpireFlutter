@@ -43,6 +43,7 @@ import 'services/youtube_service.dart';
 import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
 import 'widgets/adaptive_ui_frame.dart';
+import 'widgets/cursor_overlay.dart';
 import 'widgets/tv_file_browser.dart';
 import 'vault/vault_bootstrap.dart';
 import 'vault/platform/desktop_window.dart';
@@ -511,7 +512,9 @@ class _MyAppState extends State<MyApp>
             themeMode: themeMode,
             builder: (context, child) {
               // TECH-DEBT: add per-route adaptive exclusions for full-bleed media pages.
-              return AdaptiveUiFrame(child: child ?? const SizedBox.shrink());
+              return CursorOverlay(
+                child: AdaptiveUiFrame(child: child ?? const SizedBox.shrink()),
+              );
             },
             home: _buildHome(),
           );

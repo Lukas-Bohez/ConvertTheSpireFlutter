@@ -27,7 +27,6 @@ import 'browser/new_tab_page.dart';
 import 'browser/history_screen.dart';
 import 'browser/favourites_screen.dart';
 import 'browser/browser_settings_screen.dart';
-import '../widgets/cursor_overlay.dart';
 
 /// Full-featured browser screen with ad-blocking, video detection, and casting.
 class BrowserScreen extends StatefulWidget {
@@ -845,11 +844,7 @@ class _BrowserScreenState extends State<BrowserScreen>
                       // is placed on top when active.
                       if (_webViewSupported)
                         Positioned.fill(
-                          child: CursorOverlay(
-                            active: _webViewController != null && !_showNewTabPage,
-                            onTap: _injectTap,
-                            child: _buildWebView(),
-                          ),
+                          child: _buildWebView(),
                         )
                       else
                         _buildPlatformUnavailable(),
