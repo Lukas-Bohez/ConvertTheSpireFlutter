@@ -84,6 +84,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   bool _showFindBar = false;
   int _findMatchCount = 0;
   int _findActiveIndex = 0;
+  Offset _lastCursorPosition = Offset.zero;
 
   // Pending URL - loaded once the WebView controller is ready.
   String? _pendingUrl;
@@ -604,18 +605,8 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   Future<void> _injectTap(Offset position) async {
-    // Blur any focused DOM element first so the MotionEvent
-    // lands clean without competing with keyboard focus
-    await _webViewController?.evaluateJavascript(source:
-      "if (document.activeElement && document.activeElement !== document.body) "
-      "{ document.activeElement.blur(); }"
-    );
+    _lastCursorPosition = position;
     try {
-      // Coordinate system note: CursorOverlay coordinates are in the local widget space
-      // of the InAppWebView. Since the WebView receives MotionEvent via native dispatch,
-      // no y-offset correction is needed — CursorOverlay is directly above the WebView
-      // with no intermediate positioned elements. The outer Column (with BrowserToolbar)
-      // is a parent container, not in the Stack containing the WebView.
       await _webviewInputChannel.invokeMethod('injectTap', {
         'x': position.dx,
         'y': position.dy,
@@ -625,9 +616,27 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   }
 
-  Future<void> _injectScroll(double deltaY) async {
+  Future<void> _injectScroll(double deltaY, Offset cursorPosition) async {
+    _lastCursorPosition = cursorPosition;
     try {
-      await _webviewInputChannel.invokeMethod('injectScroll', {'deltaY': deltaY});
+      await _webViewController?.evaluateJavascript(source: """
+        (function() {
+          var x = ${_lastCursorPosition.dx};
+          var y = ${_lastCursorPosition.dy};
+          var deltaY = ${deltaY.toStringAsFixed(3)};
+          var el = document.elementFromPoint(x, y);
+          while (el && el !== document.body) {
+            var style = window.getComputedStyle(el);
+            var overflowY = style.overflowY;
+            if ((overflowY === 'scroll' || overflowY === 'auto') && el.scrollHeight > el.clientHeight) {
+              el.scrollTop += deltaY;
+              return;
+            }
+            el = el.parentElement;
+          }
+          window.scrollBy(0, deltaY);
+        })();
+      """);
     } catch (e) {
       debugPrint('injectScroll failed: $e');
     }
@@ -1119,7 +1128,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     return CursorOverlay(
       active: _cursorActive,
       onTap: (pos) async => await _injectTap(pos),
-      onScroll: (dy) async => await _injectScroll(dy),
+      onScroll: (dy, pos) async => await _injectScroll(dy, pos),
       child: InAppWebView(
       key: const ValueKey('browser_webview'),
       initialSettings: _buildSettings(),

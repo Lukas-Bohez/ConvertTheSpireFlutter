@@ -8,7 +8,7 @@ class CursorOverlay extends StatefulWidget {
   final Widget child;
   final bool active;
   final Future<void> Function(Offset)? onTap;
-  final Future<void> Function(double deltaY)? onScroll;
+  final Future<void> Function(double deltaY, Offset cursorPosition)? onScroll;
 
   const CursorOverlay({
     super.key,
@@ -48,6 +48,7 @@ class _CursorOverlayState extends State<CursorOverlay>
   void initState() {
     super.initState();
     _ticker = createTicker(_onTick)..start();
+    HardwareKeyboard.instance.addHandler(_hardwareKeyHandler);
   }
 
   @override
@@ -73,6 +74,7 @@ class _CursorOverlayState extends State<CursorOverlay>
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_hardwareKeyHandler);
     _ticker.dispose();
     _hideTimer?.cancel();
     _focusNode.dispose();
@@ -87,12 +89,59 @@ class _CursorOverlayState extends State<CursorOverlay>
     });
   }
 
+  bool _hardwareKeyHandler(KeyEvent event) {
+    if (!widget.active) return false;
+    return _handleKeyEvent(event);
+  }
+
+  bool _handleKeyEvent(KeyEvent event) {
+    final isDown = event is KeyDownEvent || event is KeyRepeatEvent;
+    final isUp = event is KeyUpEvent;
+
+    var dx = _direction.dx;
+    var dy = _direction.dy;
+
+    switch (event.logicalKey) {
+      case LogicalKeyboardKey.arrowLeft:
+        dx = isDown ? -1 : (isUp ? 0 : dx);
+        break;
+      case LogicalKeyboardKey.arrowRight:
+        dx = isDown ? 1 : (isUp ? 0 : dx);
+        break;
+      case LogicalKeyboardKey.arrowUp:
+        dy = isDown ? -1 : (isUp ? 0 : dy);
+        break;
+      case LogicalKeyboardKey.arrowDown:
+        dy = isDown ? 1 : (isUp ? 0 : dy);
+        break;
+      case LogicalKeyboardKey.select:
+      case LogicalKeyboardKey.enter:
+      case LogicalKeyboardKey.numpadEnter:
+        if (isDown && widget.onTap != null) {
+          widget.onTap!(_position);
+        }
+        return true;
+      default:
+        return false;
+    }
+
+    final newDirection = Offset(dx, dy);
+    if (newDirection != _direction) {
+      _direction = newDirection;
+      if (isDown) {
+        _resetHideTimer();
+      }
+    }
+
+    return true;
+  }
+
   void _onTick(Duration elapsed) {
     final dt = _lastElapsed == Duration.zero
         ? 0.0
         : (elapsed - _lastElapsed).inMicroseconds / 1000000.0;
     _lastElapsed = elapsed;
-    if (!widget.active || dt <= 0) return;
+    if (!widget.active || dt <= 0 || dt > 0.1) return;
 
     var accel = _direction * _acceleration;
     if (_velocity != Offset.zero) {
@@ -125,10 +174,10 @@ class _CursorOverlayState extends State<CursorOverlay>
       if (py >= _viewportSize.height - _edgeScrollZone && _direction.dy > 0) {
         // Stay within bottom edge zone and request scroll down
         py = _viewportSize.height - _edgeScrollZone;
-        widget.onScroll?.call(_edgeScrollSpeed * dt);
+        widget.onScroll?.call(_edgeScrollSpeed * dt, _position);
       } else if (py <= _edgeScrollZone && _direction.dy < 0) {
         py = _edgeScrollZone;
-        widget.onScroll?.call(-_edgeScrollSpeed * dt);
+        widget.onScroll?.call(-_edgeScrollSpeed * dt, _position);
       } else {
         py = py.clamp(0, _viewportSize.height);
       }
@@ -143,64 +192,15 @@ class _CursorOverlayState extends State<CursorOverlay>
     }
   }
 
-  KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
-    if (!widget.active) return KeyEventResult.ignored;
-
-    final isDown = event is KeyDownEvent || event is KeyRepeatEvent;
-    final isUp = event is KeyUpEvent;
-
-    var dx = _direction.dx;
-    var dy = _direction.dy;
-
-    switch (event.logicalKey) {
-      case LogicalKeyboardKey.arrowLeft:
-        dx = isDown ? -1 : (isUp ? 0 : dx);
-        break;
-      case LogicalKeyboardKey.arrowRight:
-        dx = isDown ? 1 : (isUp ? 0 : dx);
-        break;
-      case LogicalKeyboardKey.arrowUp:
-        dy = isDown ? -1 : (isUp ? 0 : dy);
-        break;
-      case LogicalKeyboardKey.arrowDown:
-        dy = isDown ? 1 : (isUp ? 0 : dy);
-        break;
-      case LogicalKeyboardKey.select:
-      case LogicalKeyboardKey.enter:
-      case LogicalKeyboardKey.numpadEnter:
-        if (isDown && widget.onTap != null) {
-          widget.onTap!(_position);
-        }
-        return KeyEventResult.handled;
-      default:
-        return KeyEventResult.ignored;
-    }
-
-    final newDirection = Offset(dx, dy);
-    if (newDirection != _direction) {
-      _direction = newDirection;
-      // Reset hide timer on any direction change
-      if (isDown) {
-        _resetHideTimer();
-      }
-    }
-
-    // When cursor mode is active we MUST consume directional keys so the
-    // Flutter focus traversal system does not move focus — cursor is the
-    // active input mode.
-    return KeyEventResult.handled;
-  }
-
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         _viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
-        return Focus(
+        return KeyboardListener(
           focusNode: _focusNode,
           autofocus: widget.active,
-          canRequestFocus: widget.active,
-          onKeyEvent: _handleKey,
+          onKeyEvent: (_) {},
           child: Stack(
             children: [
               widget.child,
