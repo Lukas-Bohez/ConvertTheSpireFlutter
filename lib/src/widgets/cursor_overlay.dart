@@ -24,13 +24,18 @@ class CursorOverlay extends StatefulWidget {
 
 class _CursorOverlayState extends State<CursorOverlay>
     with SingleTickerProviderStateMixin {
+  static const MethodChannel _nativeKeyChannel =
+      MethodChannel('com.yourapp/cursor_keys');
+  static bool _nativeKeyChannelInstalled = false;
+  static final List<_CursorOverlayState> _activeKeyHandlers =
+      <_CursorOverlayState>[];
+
   Offset _position = const Offset(400, 300);
   Offset _velocity = Offset.zero;
   Offset _direction = Offset.zero;
   late Ticker _ticker;
   Size _viewportSize = Size.zero;
   Duration _lastElapsed = Duration.zero;
-  final FocusNode _focusNode = FocusNode(debugLabel: 'cursor_overlay');
 
   // Auto-hide timer state
   bool _cursorVisible = true;
@@ -48,13 +53,17 @@ class _CursorOverlayState extends State<CursorOverlay>
   void initState() {
     super.initState();
     _ticker = createTicker(_onTick)..start();
-    HardwareKeyboard.instance.addHandler(_hardwareKeyHandler);
+    _installNativeKeyChannelHandler();
+    if (widget.active) {
+      _registerAsActiveKeyHandler();
+    }
   }
 
   @override
   void didUpdateWidget(covariant CursorOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.active && !oldWidget.active) {
+      _registerAsActiveKeyHandler();
       _lastElapsed = Duration.zero;
       _resetHideTimer();
       // Reset cursor position to center of viewport (or fallback)
@@ -66,19 +75,40 @@ class _CursorOverlayState extends State<CursorOverlay>
         _position = center;
         _velocity = Offset.zero;
         _direction = Offset.zero;
-        _focusNode.requestFocus();
         setState(() {});
       });
+    } else if (!widget.active && oldWidget.active) {
+      _unregisterAsActiveKeyHandler();
     }
   }
 
   @override
   void dispose() {
-    HardwareKeyboard.instance.removeHandler(_hardwareKeyHandler);
+    _unregisterAsActiveKeyHandler();
     _ticker.dispose();
     _hideTimer?.cancel();
-    _focusNode.dispose();
     super.dispose();
+  }
+
+  static void _installNativeKeyChannelHandler() {
+    if (_nativeKeyChannelInstalled) return;
+    _nativeKeyChannelInstalled = true;
+    _nativeKeyChannel.setMethodCallHandler((call) async {
+      final handler = _activeKeyHandlers.isNotEmpty ? _activeKeyHandlers.last : null;
+      if (handler == null || !handler.mounted || !handler.widget.active) {
+        return;
+      }
+      return handler._onNativeKeyEvent(call);
+    });
+  }
+
+  void _registerAsActiveKeyHandler() {
+    _activeKeyHandlers.remove(this);
+    _activeKeyHandlers.add(this);
+  }
+
+  void _unregisterAsActiveKeyHandler() {
+    _activeKeyHandlers.remove(this);
   }
 
   void _resetHideTimer() {
@@ -89,51 +119,54 @@ class _CursorOverlayState extends State<CursorOverlay>
     });
   }
 
-  bool _hardwareKeyHandler(KeyEvent event) {
-    if (!widget.active) return false;
-    return _handleKeyEvent(event);
-  }
+  Future<dynamic> _onNativeKeyEvent(MethodCall call) async {
+    if (call.method != 'onDpadKey' || !widget.active) return;
 
-  bool _handleKeyEvent(KeyEvent event) {
-    final isDown = event is KeyDownEvent || event is KeyRepeatEvent;
-    final isUp = event is KeyUpEvent;
+    final arguments = call.arguments;
+    if (arguments is! Map) return;
 
-    var dx = _direction.dx;
-    var dy = _direction.dy;
+    final keyCode = arguments['keyCode'] as int?;
+    final action = arguments['action'] as String?;
+    if (keyCode == null || action == null) return;
 
-    switch (event.logicalKey) {
-      case LogicalKeyboardKey.arrowLeft:
-        dx = isDown ? -1 : (isUp ? 0 : dx);
+    final isDown = action == 'down';
+    final isUp = action == 'up';
+
+    const dpadUp = 19;
+    const dpadDown = 20;
+    const dpadLeft = 21;
+    const dpadRight = 22;
+    const dpadCenter = 23;
+    const enter = 66;
+    const numEnter = 160;
+
+    switch (keyCode) {
+      case dpadLeft:
+        _direction = Offset(isDown ? -1 : (isUp ? 0 : _direction.dx), _direction.dy);
         break;
-      case LogicalKeyboardKey.arrowRight:
-        dx = isDown ? 1 : (isUp ? 0 : dx);
+      case dpadRight:
+        _direction = Offset(isDown ? 1 : (isUp ? 0 : _direction.dx), _direction.dy);
         break;
-      case LogicalKeyboardKey.arrowUp:
-        dy = isDown ? -1 : (isUp ? 0 : dy);
+      case dpadUp:
+        _direction = Offset(_direction.dx, isDown ? -1 : (isUp ? 0 : _direction.dy));
         break;
-      case LogicalKeyboardKey.arrowDown:
-        dy = isDown ? 1 : (isUp ? 0 : dy);
+      case dpadDown:
+        _direction = Offset(_direction.dx, isDown ? 1 : (isUp ? 0 : _direction.dy));
         break;
-      case LogicalKeyboardKey.select:
-      case LogicalKeyboardKey.enter:
-      case LogicalKeyboardKey.numpadEnter:
+      case dpadCenter:
+      case enter:
+      case numEnter:
         if (isDown && widget.onTap != null) {
-          widget.onTap!(_position);
+          await widget.onTap!(_position);
         }
-        return true;
+        break;
       default:
-        return false;
+        return;
     }
 
-    final newDirection = Offset(dx, dy);
-    if (newDirection != _direction) {
-      _direction = newDirection;
-      if (isDown) {
-        _resetHideTimer();
-      }
+    if (isDown) {
+      _resetHideTimer();
     }
-
-    return true;
   }
 
   void _onTick(Duration elapsed) {
@@ -197,26 +230,21 @@ class _CursorOverlayState extends State<CursorOverlay>
     return LayoutBuilder(
       builder: (context, constraints) {
         _viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
-        return KeyboardListener(
-          focusNode: _focusNode,
-          autofocus: widget.active,
-          onKeyEvent: (_) {},
-          child: Stack(
-            children: [
-              widget.child,
-              if (widget.active && _cursorVisible)
-                Positioned(
-                  left: _position.dx - _cursorRadius,
-                  top: _position.dy - _cursorRadius,
-                  child: IgnorePointer(
-                    child: CustomPaint(
-                      size: const Size(_cursorRadius * 2, _cursorRadius * 2),
-                      painter: _CursorPainter(),
-                    ),
+        return Stack(
+          children: [
+            widget.child,
+            if (widget.active && _cursorVisible)
+              Positioned(
+                left: _position.dx - _cursorRadius,
+                top: _position.dy - _cursorRadius,
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    size: const Size(_cursorRadius * 2, _cursorRadius * 2),
+                    painter: _CursorPainter(),
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         );
       },
     );

@@ -55,6 +55,8 @@ class _BrowserScreenState extends State<BrowserScreen>
     with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   static const MethodChannel _webviewInputChannel =
       MethodChannel('com.yourapp/webview_input');
+  static const MethodChannel _cursorKeysChannel =
+      MethodChannel('com.yourapp/cursor_keys');
 
   // -- Services --
   final BrowserRepository _repo = BrowserRepository();
@@ -595,13 +597,23 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _pauseCursor() {
-    if (_cursorActive && mounted) setState(() => _cursorActive = false);
+    if (!mounted) return;
+    if (_cursorActive) {
+      setState(() => _cursorActive = false);
+    }
+    unawaited(_cursorKeysChannel.invokeMethod('setCursorActive', {
+      'active': false,
+    }));
   }
 
   void _resumeCursor() {
-    if (!_cursorActive && mounted && _webViewController != null) {
+    if (!mounted || _webViewController == null) return;
+    if (!_cursorActive) {
       setState(() => _cursorActive = true);
     }
+    unawaited(_cursorKeysChannel.invokeMethod('setCursorActive', {
+      'active': true,
+    }));
   }
 
   Future<void> _injectTap(Offset position) async {

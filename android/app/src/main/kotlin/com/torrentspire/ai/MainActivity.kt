@@ -12,6 +12,7 @@ import android.os.Environment
 import android.media.MediaScannerConnection
 import android.util.Rational
 import android.graphics.Color
+import android.view.KeyEvent
 import android.os.SystemClock
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
@@ -37,9 +38,12 @@ import java.util.ArrayList
 class MainActivity : AudioServiceActivity() {
     private val channelName = "convert_the_spire/saf"
     private val webviewChannel = "com.yourapp/webview_input"
+    private val cursorKeysChannel = "com.yourapp/cursor_keys"
     private val pickTreeRequestCode = 5011
     private var pendingResult: MethodChannel.Result? = null
     private var browserWebView: WebView? = null
+    private var cursorModeActive = false
+    private var keyEventChannel: MethodChannel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Android 15+ mandatory edge-to-edge support
@@ -261,6 +265,52 @@ class MainActivity : AudioServiceActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        keyEventChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, cursorKeysChannel)
+        keyEventChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "setCursorActive" -> {
+                    cursorModeActive = call.argument<Boolean>("active") ?: false
+                    Log.d("CursorBridge", "cursorModeActive = $cursorModeActive")
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (cursorModeActive && isCursorKeyEvent(event)) {
+            val action = when (event.action) {
+                KeyEvent.ACTION_DOWN -> "down"
+                KeyEvent.ACTION_UP -> "up"
+                else -> return true
+            }
+
+            keyEventChannel?.invokeMethod(
+                "onDpadKey",
+                mapOf(
+                    "keyCode" to event.keyCode,
+                    "action" to action,
+                    "repeatCount" to event.repeatCount,
+                ),
+            )
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun isCursorKeyEvent(event: KeyEvent): Boolean {
+        return when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER -> true
+            else -> false
+        }
     }
 
     private fun findWebView(view: View): WebView? {
