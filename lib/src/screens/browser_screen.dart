@@ -604,6 +604,12 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   Future<void> _injectTap(Offset position) async {
+    // Blur any focused DOM element first so the MotionEvent
+    // lands clean without competing with keyboard focus
+    await _webViewController?.evaluateJavascript(source:
+      "if (document.activeElement && document.activeElement !== document.body) "
+      "{ document.activeElement.blur(); }"
+    );
     try {
       // Coordinate system note: CursorOverlay coordinates are in the local widget space
       // of the InAppWebView. Since the WebView receives MotionEvent via native dispatch,

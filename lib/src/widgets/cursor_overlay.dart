@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -30,12 +32,17 @@ class _CursorOverlayState extends State<CursorOverlay>
   Duration _lastElapsed = Duration.zero;
   final FocusNode _focusNode = FocusNode(debugLabel: 'cursor_overlay');
 
+  // Auto-hide timer state
+  bool _cursorVisible = true;
+  Timer? _hideTimer;
+
   static const double _maxSpeed = 1200.0;
   static const double _acceleration = 3600.0;
   static const double _friction = 8.0;
   static const double _cursorRadius = 12.0;
   static const double _edgeScrollZone = 80.0;
   static const double _edgeScrollSpeed = 400.0;
+  static const Duration _hideDelay = Duration(seconds: 2);
 
   @override
   void initState() {
@@ -48,6 +55,7 @@ class _CursorOverlayState extends State<CursorOverlay>
     super.didUpdateWidget(oldWidget);
     if (widget.active && !oldWidget.active) {
       _lastElapsed = Duration.zero;
+      _resetHideTimer();
       // Reset cursor position to center of viewport (or fallback)
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -66,8 +74,17 @@ class _CursorOverlayState extends State<CursorOverlay>
   @override
   void dispose() {
     _ticker.dispose();
+    _hideTimer?.cancel();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _resetHideTimer() {
+    _hideTimer?.cancel();
+    if (!_cursorVisible) setState(() => _cursorVisible = true);
+    _hideTimer = Timer(_hideDelay, () {
+      if (mounted) setState(() => _cursorVisible = false);
+    });
   }
 
   void _onTick(Duration elapsed) {
@@ -159,7 +176,14 @@ class _CursorOverlayState extends State<CursorOverlay>
         return KeyEventResult.ignored;
     }
 
-    _direction = Offset(dx, dy);
+    final newDirection = Offset(dx, dy);
+    if (newDirection != _direction) {
+      _direction = newDirection;
+      // Reset hide timer on any direction change
+      if (isDown) {
+        _resetHideTimer();
+      }
+    }
 
     // When cursor mode is active we MUST consume directional keys so the
     // Flutter focus traversal system does not move focus — cursor is the
@@ -180,7 +204,7 @@ class _CursorOverlayState extends State<CursorOverlay>
           child: Stack(
             children: [
               widget.child,
-              if (widget.active)
+              if (widget.active && _cursorVisible)
                 Positioned(
                   left: _position.dx - _cursorRadius,
                   top: _position.dy - _cursorRadius,

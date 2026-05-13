@@ -203,9 +203,40 @@ class _MyAppState extends State<MyApp>
 
       final youtubeSearcher = YouTubeSearcher(yt: ytExplode);
       final soundcloudSearcher = SoundCloudSearcher();
+
+      // Desktop platforms: resolve yt-dlp path for multi-platform search
+      String? resolvedYtDlpPath;
+      BiliSearcher? biliSearcher;
+      RumbleSearcher? rumbleSearcher;
+      DailymotionSearcher? dailymotionSearcher;
+      OdyseeSearcher? odyseeSearcher;
+
+      try {
+        // Try to resolve yt-dlp from system PATH or app support dir
+        // (configuredPath is null at startup since settings load asynchronously)
+        resolvedYtDlpPath = await ytDlp.resolveAvailablePath(null);
+        if (resolvedYtDlpPath != null) {
+          // yt-dlp is available on desktop: instantiate platform-specific searchers
+          biliSearcher =
+              BiliSearcher(ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath);
+          rumbleSearcher =
+              RumbleSearcher(ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath);
+          dailymotionSearcher = DailymotionSearcher(
+              ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath);
+          odyseeSearcher =
+              OdyseeSearcher(ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath);
+        }
+      } catch (_) {
+        // yt-dlp unavailable or error resolving - continue without it
+      }
+
       final searchService = MultiSourceSearchService(
         youtubeSearcher: youtubeSearcher,
         soundcloudSearcher: soundcloudSearcher,
+        biliSearcher: biliSearcher,
+        rumbleSearcher: rumbleSearcher,
+        dailymotionSearcher: dailymotionSearcher,
+        odyseeSearcher: odyseeSearcher,
       );
       final previewPlayer = PreviewPlayerService();
       final playlistService = PlaylistService(yt: ytExplode);

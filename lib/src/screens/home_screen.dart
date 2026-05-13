@@ -508,6 +508,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           queueCount: widget.controller.queue.length,
           onHome: _navigateHome,
           onOpenUrl: openBrowserWith,
+          onUrlEditingStart: () => BrowserScreen.pauseCursor(),
+          onUrlEditingEnd: () => BrowserScreen.resumeCursor(),
           child: _buildPageWithBanner(settings),
         );
 
