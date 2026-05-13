@@ -6,12 +6,14 @@ class CursorOverlay extends StatefulWidget {
   final Widget child;
   final bool active;
   final Future<void> Function(Offset)? onTap;
+  final Future<void> Function(double deltaY)? onScroll;
 
   const CursorOverlay({
     super.key,
     required this.child,
     this.active = true,
     this.onTap,
+    this.onScroll,
   });
 
   @override
@@ -32,6 +34,8 @@ class _CursorOverlayState extends State<CursorOverlay>
   static const double _acceleration = 3600.0;
   static const double _friction = 8.0;
   static const double _cursorRadius = 12.0;
+  static const double _edgeScrollZone = 80.0;
+  static const double _edgeScrollSpeed = 400.0;
 
   @override
   void initState() {
@@ -44,8 +48,17 @@ class _CursorOverlayState extends State<CursorOverlay>
     super.didUpdateWidget(oldWidget);
     if (widget.active && !oldWidget.active) {
       _lastElapsed = Duration.zero;
+      // Reset cursor position to center of viewport (or fallback)
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _focusNode.requestFocus();
+        if (!mounted) return;
+        final center = _viewportSize == Size.zero
+            ? const Offset(400, 300)
+            : Offset(_viewportSize.width / 2, _viewportSize.height / 2);
+        _position = center;
+        _velocity = Offset.zero;
+        _direction = Offset.zero;
+        _focusNode.requestFocus();
+        setState(() {});
       });
     }
   }
@@ -86,10 +99,26 @@ class _CursorOverlayState extends State<CursorOverlay>
     _position = _position + _velocity * dt;
 
     if (_viewportSize != Size.zero) {
-      _position = Offset(
-        _position.dx.clamp(0, _viewportSize.width),
-        _position.dy.clamp(0, _viewportSize.height),
-      );
+      // Edge scroll handling: if cursor nears an edge and direction pushes
+      // further, trigger onScroll instead of moving cursor off-screen.
+      double px = _position.dx;
+      double py = _position.dy;
+
+      // Vertical edge scroll
+      if (py >= _viewportSize.height - _edgeScrollZone && _direction.dy > 0) {
+        // Stay within bottom edge zone and request scroll down
+        py = _viewportSize.height - _edgeScrollZone;
+        widget.onScroll?.call(_edgeScrollSpeed * dt);
+      } else if (py <= _edgeScrollZone && _direction.dy < 0) {
+        py = _edgeScrollZone;
+        widget.onScroll?.call(-_edgeScrollSpeed * dt);
+      } else {
+        py = py.clamp(0, _viewportSize.height);
+      }
+
+      px = px.clamp(0, _viewportSize.width);
+
+      _position = Offset(px, py);
     }
 
     if (mounted) {
@@ -131,6 +160,10 @@ class _CursorOverlayState extends State<CursorOverlay>
     }
 
     _direction = Offset(dx, dy);
+
+    // When cursor mode is active we MUST consume directional keys so the
+    // Flutter focus traversal system does not move focus — cursor is the
+    // active input mode.
     return KeyEventResult.handled;
   }
 

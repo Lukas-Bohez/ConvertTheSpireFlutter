@@ -27,6 +27,8 @@ class BrowserShell extends StatefulWidget {
   final int queueCount;
   final Widget child;
   final GlobalKey<ScaffoldState> scaffoldKey;
+  final VoidCallback? onUrlEditingStart;
+  final VoidCallback? onUrlEditingEnd;
 
   const BrowserShell({
     super.key,
@@ -45,6 +47,8 @@ class BrowserShell extends StatefulWidget {
     required this.queueCount,
     required this.child,
     required this.scaffoldKey,
+    this.onUrlEditingStart,
+    this.onUrlEditingEnd,
   });
 
   @override
@@ -84,12 +88,16 @@ class _BrowserShellState extends State<BrowserShell> {
     _urlEditController.text = '';
     setState(() => _isEditing = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _urlFocusNode.requestFocus();
+      if (mounted) {
+        _urlFocusNode.requestFocus();
+        widget.onUrlEditingStart?.call();
+      }
     });
   }
 
   Future<void> _submitUrl(String value) async {
     setState(() => _isEditing = false);
+    widget.onUrlEditingEnd?.call();
     final trimmed = value.trim();
     if (trimmed.isEmpty) return;
 
@@ -151,6 +159,7 @@ class _BrowserShellState extends State<BrowserShell> {
 
   void _cancelEditing() {
     setState(() => _isEditing = false);
+    widget.onUrlEditingEnd?.call();
   }
 
   // Suggestions are handled by RawAutocomplete in the URL bar.
@@ -926,6 +935,7 @@ class _BrowserShellState extends State<BrowserShell> {
       },
       onSelected: (suggestion) {
         setState(() => _isEditing = false);
+        widget.onUrlEditingEnd?.call();
         _submitUrl(suggestion.route);
       },
       fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
@@ -953,6 +963,7 @@ class _BrowserShellState extends State<BrowserShell> {
             ),
             onSubmitted: (v) {
               setState(() => _isEditing = false);
+              widget.onUrlEditingEnd?.call();
               _submitUrl(v);
             },
             onTapOutside: (_) => _cancelEditing(),

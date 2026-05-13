@@ -190,20 +190,30 @@ class MainActivity : AudioServiceActivity() {
                     "registerWebView" -> {
                         browserWebView = findWebView(window.decorView.rootView)
                         val url = browserWebView?.url ?: "null"
-                        Log.d("CursorBridge", "WebView registered: url=$url, view=$browserWebView")
+                        Log.d("CursorBridge", "registerWebView url=$url")
                         result.success(null)
                     }
                     "injectTap" -> {
                         val x = (call.argument<Double>("x") ?: 0.0).toFloat()
                         val y = (call.argument<Double>("y") ?: 0.0).toFloat()
-                        val webView = browserWebView
+                        var webView = browserWebView
+
+                        // Null-safety fallback: if WebView not yet registered (race condition on slow
+                        // devices), attempt re-registration before failing.
                         if (webView == null) {
-                            Log.e("CursorBridge", "injectTap: WebView not registered")
-                            result.error("NO_WEBVIEW", "WebView not registered", null)
-                            return@setMethodCallHandler
+                            Log.d("CursorBridge", "injectTap: WebView null, attempting re-registration")
+                            webView = findWebView(window.decorView.rootView)
+                            if (webView != null) {
+                                browserWebView = webView
+                                Log.d("CursorBridge", "injectTap: Re-registration SUCCESS")
+                            } else {
+                                Log.e("CursorBridge", "injectTap: Re-registration FAILED")
+                                result.error("NO_WEBVIEW", "WebView not found", null)
+                                return@setMethodCallHandler
+                            }
                         }
 
-                        Log.d("CursorBridge", "injectTap at ($x, $y) on ${webView.url}")
+                        Log.d("CursorBridge", "injectTap x=$x y=$y url=${webView?.url}")
                         val downTime = SystemClock.uptimeMillis()
                         val down = MotionEvent.obtain(
                             downTime,
@@ -228,6 +238,24 @@ class MainActivity : AudioServiceActivity() {
                             down.recycle()
                             up.recycle()
                             result.success(null)
+                        }
+                    }
+                    "injectScroll" -> {
+                        val deltaY = (call.argument<Double>("deltaY") ?: 0.0)
+                        val webView2 = browserWebView
+                        if (webView2 != null) {
+                            Log.d("CursorBridge", "injectScroll deltaY=$deltaY")
+                            webView2.post {
+                                try {
+                                    webView2.evaluateJavascript("window.scrollBy(0, $deltaY)", null)
+                                } catch (e: Exception) {
+                                    Log.e("CursorBridge", "injectScroll FAILED: $e")
+                                }
+                            }
+                            result.success(null)
+                        } else {
+                            Log.e("CursorBridge", "injectScroll: WebView not registered")
+                            result.error("NO_WEBVIEW", "WebView not registered", null)
                         }
                     }
                     else -> result.notImplemented()

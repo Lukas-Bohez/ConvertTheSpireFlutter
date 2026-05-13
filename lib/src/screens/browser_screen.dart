@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import '../widgets/cursor_overlay.dart';
 import '../utils/screenshot_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
@@ -41,6 +42,11 @@ class BrowserScreen extends StatefulWidget {
     browserKey.currentState?._navigateTo(url);
   }
 
+  // Public hooks for external widgets (e.g. BrowserShell) to pause/resume
+  // cursor mode on this screen.
+  static void pauseCursor() => browserKey.currentState?._pauseCursor();
+  static void resumeCursor() => browserKey.currentState?._resumeCursor();
+
   @override
   State<BrowserScreen> createState() => _BrowserScreenState();
 }
@@ -58,6 +64,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   VideoDetectorService _videoDetector = VideoDetectorService();
 
   InAppWebViewController? _webViewController;
+  bool _cursorActive = false;
   FindInteractionController? _findInteractionController;
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _findController = TextEditingController();
@@ -104,6 +111,22 @@ class _BrowserScreenState extends State<BrowserScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Re-register the WebView with the native bridge when the screen becomes
+    // active again (e.g., after navigation back to this route).
+    if (_webViewController != null) {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          try {
+            _webviewInputChannel.invokeMethod('registerWebView');
+          } catch (_) {}
+        }
+      });
+    }
     try {
       _findInteractionController = FindInteractionController(
         onFindResultReceived:
@@ -170,6 +193,12 @@ class _BrowserScreenState extends State<BrowserScreen>
     _castService.dispose();
     _videoDetector.dispose();
     super.dispose();
+  }
+
+  @override
+  void deactivate() {
+    _pauseCursor();
+    super.deactivate();
   }
 
   /// Dispose any active WebView controllers (used during app shutdown).
@@ -283,6 +312,20 @@ class _BrowserScreenState extends State<BrowserScreen>
       if (!mounted) return;
       _webviewInputChannel.invokeMethod('registerWebView');
     });
+
+    // Handler to receive input focus events from page JS
+    controller.addJavaScriptHandler(
+      handlerName: 'InputFocusChannel',
+      callback: (args) {
+        final msg = args.isNotEmpty ? args[0].toString() : '';
+        if (msg == '__blur__') {
+          _resumeCursor();
+        } else {
+          _pauseCursor();
+          _showTextInputOverlay(currentValue: msg);
+        }
+      },
+    );
 
     controller.addJavaScriptHandler(
       handlerName: 'onVideoFound',
@@ -402,6 +445,17 @@ class _BrowserScreenState extends State<BrowserScreen>
     // Inject video detection JS.
     controller.evaluateJavascript(source: VideoDetectorService.injectionJs);
 
+    // Inject input focus listeners so we can pause the cursor when an input
+    // gains focus and surface a native text field for TV remote typing.
+    try {
+      await _injectInputFocusListeners();
+    } catch (_) {}
+
+    // Enable cursor mode for this screen once page has finished loading.
+    if (mounted && !_cursorActive) {
+      setState(() => _cursorActive = true);
+    }
+
     // Inject popup blocker when ad-block is on.
     if (_adBlock.adBlockEnabled) {
       controller.evaluateJavascript(
@@ -509,6 +563,135 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _onScrollChanged(InAppWebViewController controller, int x, int y) {
     controller.evaluateJavascript(source: VideoDetectorService.injectionJs);
+  }
+
+  // ---------------- WebView input / cursor helpers ----------------
+
+  Future<void> _injectInputFocusListeners() async {
+    await _webViewController?.evaluateJavascript(source: """
+      if (!window.__cursorListenersInjected) {
+        window.__cursorListenersInjected = true;
+        document.addEventListener('focusin', function(e) {
+          try {
+            var tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+            if (tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable)) {
+              var val = e.target.value || '';
+              if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+                window.flutter_inappwebview.callHandler('InputFocusChannel', val);
+              }
+            }
+          } catch(ex){}
+        });
+        document.addEventListener('focusout', function(e) {
+          try {
+            if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+              window.flutter_inappwebview.callHandler('InputFocusChannel', '__blur__');
+            }
+          } catch(ex){}
+        });
+      }
+    """);
+  }
+
+  void _pauseCursor() {
+    if (_cursorActive && mounted) setState(() => _cursorActive = false);
+  }
+
+  void _resumeCursor() {
+    if (!_cursorActive && mounted && _webViewController != null) {
+      setState(() => _cursorActive = true);
+    }
+  }
+
+  Future<void> _injectTap(Offset position) async {
+    try {
+      // Coordinate system note: CursorOverlay coordinates are in the local widget space
+      // of the InAppWebView. Since the WebView receives MotionEvent via native dispatch,
+      // no y-offset correction is needed — CursorOverlay is directly above the WebView
+      // with no intermediate positioned elements. The outer Column (with BrowserToolbar)
+      // is a parent container, not in the Stack containing the WebView.
+      await _webviewInputChannel.invokeMethod('injectTap', {
+        'x': position.dx,
+        'y': position.dy,
+      });
+    } catch (e) {
+      debugPrint('injectTap failed: $e');
+    }
+  }
+
+  Future<void> _injectScroll(double deltaY) async {
+    try {
+      await _webviewInputChannel.invokeMethod('injectScroll', {'deltaY': deltaY});
+    } catch (e) {
+      debugPrint('injectScroll failed: $e');
+    }
+  }
+
+  Future<void> _injectTextAndBlur(String value) async {
+    final escaped = value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
+    try {
+      await _webViewController?.evaluateJavascript(source: """
+        (function(){
+          var el = document.activeElement;
+          if (el) {
+            try {
+              var nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+              if (nativeInputSetter) {
+                nativeInputSetter.call(el, '$escaped');
+                el.dispatchEvent(new Event('input', {bubbles: true}));
+                el.dispatchEvent(new Event('change', {bubbles: true}));
+              } else {
+                el.value = '$escaped';
+              }
+              el.blur();
+            } catch(e){}
+          }
+        })();
+      """);
+    } catch (e) {
+      debugPrint('injectTextAndBlur failed: $e');
+    }
+  }
+
+  Future<void> _blurWebViewInput() async {
+    try {
+      await _webViewController?.evaluateJavascript(source: "if (document.activeElement) document.activeElement.blur();");
+    } catch (_) {}
+  }
+
+  void _showTextInputOverlay({String currentValue = ''}) {
+    final controller = TextEditingController(text: currentValue);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.black87,
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: 'Type here...',
+            hintStyle: TextStyle(color: Colors.white38),
+          ),
+          onSubmitted: (value) async {
+            await _injectTextAndBlur(value);
+            Navigator.of(context).pop();
+            _resumeCursor();
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await _blurWebViewInput();
+              Navigator.of(context).pop();
+              _resumeCursor();
+            },
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          ),
+        ],
+      ),
+    );
   }
 
   // -- Actions --
@@ -927,7 +1110,11 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   Widget _buildWebView() {
-    return InAppWebView(
+    return CursorOverlay(
+      active: _cursorActive,
+      onTap: (pos) async => await _injectTap(pos),
+      onScroll: (dy) async => await _injectScroll(dy),
+      child: InAppWebView(
       key: const ValueKey('browser_webview'),
       initialSettings: _buildSettings(),
       findInteractionController: _findInteractionController,
@@ -970,6 +1157,7 @@ class _BrowserScreenState extends State<BrowserScreen>
         }
         return false;
       },
+      ),
     );
   }
 
@@ -1250,23 +1438,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     });
   }
 
-  Future<void> _injectTap(Offset position) async {
-    if (_webViewController == null) return;
-    try {
-      // The position is in CursorOverlay's local coordinates (relative to the WebView area).
-      // The WebView's coordinate space should match since CursorOverlay uses Positioned.fill
-      // to wrap the WebView. If taps land offset (especially vertically due to toolbar),
-      // we may need to adjust by calling RenderObject.getTransformTo() or using global keys.
-      // For now, pass the raw position; logcat will show if taps are offset.
-      debugPrint('[CURSOR] Injecting tap at (${position.dx}, ${position.dy})');
-      await _webviewInputChannel.invokeMethod('injectTap', {
-        'x': position.dx,
-        'y': position.dy,
-      });
-    } catch (e) {
-      debugPrint('injectTap failed: $e');
-    }
-  }
 
   void _handleBackPressed() {
     // In cursor mode on web pages, back should navigate browser history,
