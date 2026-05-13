@@ -271,7 +271,21 @@ class MainActivity : AudioServiceActivity() {
             when (call.method) {
                 "setCursorActive" -> {
                     cursorModeActive = call.argument<Boolean>("active") ?: false
-                    Log.d("CursorBridge", "cursorModeActive = $cursorModeActive")
+                    val webView = browserWebView
+                    if (webView != null) {
+                        webView.post {
+                            if (cursorModeActive) {
+                                webView.isFocusable = false
+                                webView.isFocusableInTouchMode = false
+                                webView.clearFocus()
+                                Log.d("CursorBridge", "WebView focus disabled for cursor mode")
+                            } else {
+                                webView.isFocusable = true
+                                webView.isFocusableInTouchMode = true
+                                Log.d("CursorBridge", "WebView focus restored")
+                            }
+                        }
+                    }
                     result.success(null)
                 }
                 else -> result.notImplemented()

@@ -86,7 +86,6 @@ class _BrowserScreenState extends State<BrowserScreen>
   bool _showFindBar = false;
   int _findMatchCount = 0;
   int _findActiveIndex = 0;
-  Offset _lastCursorPosition = Offset.zero;
 
   // Pending URL - loaded once the WebView controller is ready.
   String? _pendingUrl;
@@ -592,6 +591,15 @@ class _BrowserScreenState extends State<BrowserScreen>
             }
           } catch(ex){}
         });
+        if (!window.__cursorKeyBlockerInjected) {
+          window.__cursorKeyBlockerInjected = true;
+          document.addEventListener('keydown', function(e) {
+            if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter',' '].includes(e.key)) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+            }
+          }, true);
+        }
       }
     """);
   }
@@ -617,36 +625,61 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   Future<void> _injectTap(Offset position) async {
-    _lastCursorPosition = position;
     try {
-      await _webviewInputChannel.invokeMethod('injectTap', {
-        'x': position.dx,
-        'y': position.dy,
-      });
+      await _webViewController?.evaluateJavascript(source: """
+        (function() {
+          var x = ${position.dx};
+          var y = ${position.dy};
+          var el = document.elementFromPoint(x, y);
+          if (!el) return;
+          // Walk up to find the nearest clickable ancestor
+          var target = el;
+          while (target && target !== document.body) {
+            var tag = target.tagName.toLowerCase();
+            if (tag === 'a' || tag === 'button' || tag === 'input' ||
+                tag === 'select' || tag === 'textarea' ||
+                target.onclick || target.getAttribute('role') === 'button' ||
+                target.getAttribute('tabindex') != null) {
+              break;
+            }
+            target = target.parentElement;
+          }
+          if (!target || target === document.body) target = el;
+          // Dispatch full pointer event sequence
+          var rect = target.getBoundingClientRect();
+          var cx = rect.left + rect.width / 2;
+          var cy = rect.top + rect.height / 2;
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(type) {
+            target.dispatchEvent(new MouseEvent(type, {
+              bubbles: true, cancelable: true,
+              clientX: cx, clientY: cy, view: window
+            }));
+          });
+          // Special handling for inputs
+          var tag = target.tagName.toLowerCase();
+          if (tag === 'input' || tag === 'textarea' || target.isContentEditable) {
+            window.flutter_inappwebview.callHandler('InputFocusChannel', target.value || '');
+          }
+        })();
+      """);
     } catch (e) {
       debugPrint('injectTap failed: $e');
     }
   }
 
   Future<void> _injectScroll(double deltaY, Offset cursorPosition) async {
-    _lastCursorPosition = cursorPosition;
     try {
       await _webViewController?.evaluateJavascript(source: """
         (function() {
-          var x = ${_lastCursorPosition.dx};
-          var y = ${_lastCursorPosition.dy};
-          var deltaY = ${deltaY.toStringAsFixed(3)};
-          var el = document.elementFromPoint(x, y);
+          var el = document.elementFromPoint(${cursorPosition.dx}, ${cursorPosition.dy});
           while (el && el !== document.body) {
             var style = window.getComputedStyle(el);
-            var overflowY = style.overflowY;
-            if ((overflowY === 'scroll' || overflowY === 'auto') && el.scrollHeight > el.clientHeight) {
-              el.scrollTop += deltaY;
-              return;
-            }
+            var canScroll = (style.overflowY === 'scroll' || style.overflowY === 'auto')
+                            && el.scrollHeight > el.clientHeight;
+            if (canScroll) { el.scrollTop += $deltaY; return; }
             el = el.parentElement;
           }
-          window.scrollBy(0, deltaY);
+          window.scrollBy(0, $deltaY);
         })();
       """);
     } catch (e) {
