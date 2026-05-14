@@ -375,9 +375,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _selectedPageIndex = index;
       _visitedPages.add(index);
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FocusScope.of(context).nextFocus();
-    });
     AdService.instance.registerInteraction();
     try {
       widget.controller.switchToTab(index);
@@ -550,10 +547,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 } catch (_) {}
               },
             },
-            child: Focus(
-              autofocus: true,
-              child: popWrapped,
-            ),
+            child: popWrapped,
           );
         }
 

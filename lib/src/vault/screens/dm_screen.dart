@@ -239,7 +239,6 @@ class _DMScreenState extends State<DMScreen> {
                                   content: SingleChildScrollView(
                                     child: TextField(
                                       controller: editController,
-                                      autofocus: true,
                                     ),
                                   ),
                                   actions: [

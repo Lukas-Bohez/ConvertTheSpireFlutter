@@ -8,7 +8,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show MissingPluginException, DeviceOrientation, SystemChrome, SystemUiMode, KeyDownEvent, LogicalKeyboardKey;
+import 'package:flutter/services.dart' show MissingPluginException, DeviceOrientation, SystemChrome, SystemUiMode;
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
@@ -3030,50 +3030,37 @@ class _VideoPaneState extends State<_VideoPane> {
       child = const Center(child: CircularProgressIndicator(color: _PlayerTheme.accent));
     }
 
-    return Focus(
-      canRequestFocus: true,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            (event.logicalKey == LogicalKeyboardKey.select ||
-                event.logicalKey == LogicalKeyboardKey.enter ||
-                event.logicalKey == LogicalKeyboardKey.gameButtonA)) {
-          widget.onTap();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: SizedBox.expand(
-          child: ColoredBox(
-            color: Theme.of(context).colorScheme.background,
-            child: widget.ready
-                ? Stack(
-                    fit: StackFit.loose,
-                    children: [
-                      Center(child: child),
-                      Positioned(
-                        // overflow-fix: keep top-right overlay control inside safe insets.
-                        top: mq.padding.top + 10,
-                        right: mq.padding.right + 10,
-                        child: IconButton(
-                          icon: Icon(
-                            widget.isFullScreen
-                                ? Icons.fullscreen_exit
-                                : Icons.fullscreen,
-                            color: Colors.white.withOpacity(0.85),
-                          ),
-                          tooltip: widget.isFullScreen
-                              ? 'Exit fullscreen'
-                              : 'Fullscreen',
-                          onPressed: widget.onToggleFullScreen,
+    return GestureDetector(
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox.expand(
+        child: ColoredBox(
+          color: Theme.of(context).colorScheme.background,
+          child: widget.ready
+              ? Stack(
+                  fit: StackFit.loose,
+                  children: [
+                    Center(child: child),
+                    Positioned(
+                      // overflow-fix: keep top-right overlay control inside safe insets.
+                      top: mq.padding.top + 10,
+                      right: mq.padding.right + 10,
+                      child: IconButton(
+                        icon: Icon(
+                          widget.isFullScreen
+                              ? Icons.fullscreen_exit
+                              : Icons.fullscreen,
+                          color: Colors.white.withOpacity(0.85),
                         ),
+                        tooltip: widget.isFullScreen
+                            ? 'Exit fullscreen'
+                            : 'Fullscreen',
+                        onPressed: widget.onToggleFullScreen,
                       ),
-                    ],
-                  )
-                : const Center(child: CircularProgressIndicator(color: _PlayerTheme.accent)),
-          ),
+                    ),
+                  ],
+                )
+              : const Center(child: CircularProgressIndicator(color: _PlayerTheme.accent)),
         ),
       ),
     );

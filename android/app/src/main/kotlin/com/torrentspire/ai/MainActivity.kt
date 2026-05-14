@@ -43,7 +43,6 @@ class MainActivity : AudioServiceActivity() {
     private var pendingResult: MethodChannel.Result? = null
     private var browserWebView: WebView? = null
     private var keyEventChannel: MethodChannel? = null
-    private var textInputActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Android 15+ mandatory edge-to-edge support
@@ -262,11 +261,6 @@ class MainActivity : AudioServiceActivity() {
                             result.error("NO_WEBVIEW", "WebView not registered", null)
                         }
                     }
-                    "setTextInputActive" -> {
-                        textInputActive = call.argument<Boolean>("active") ?: false
-                        Log.d("CursorBridge", "setTextInputActive=$textInputActive")
-                        result.success(null)
-                    }
                     "getExternalVolumes" -> {
                         val storageManager = getSystemService(android.content.Context.STORAGE_SERVICE) as android.os.storage.StorageManager
                         val volumes = storageManager.storageVolumes
@@ -302,20 +296,17 @@ class MainActivity : AudioServiceActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (textInputActive) return super.dispatchKeyEvent(event)
-        
-        val shouldIntercept = when (event.keyCode) {
-            android.view.KeyEvent.KEYCODE_DPAD_UP,
-            android.view.KeyEvent.KEYCODE_DPAD_DOWN,
-            android.view.KeyEvent.KEYCODE_DPAD_LEFT,
-            android.view.KeyEvent.KEYCODE_DPAD_RIGHT,
-            android.view.KeyEvent.KEYCODE_DPAD_CENTER,
-            android.view.KeyEvent.KEYCODE_ENTER,
-            android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> true
+        val intercept = when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER -> true
             else -> false
         }
-        
-        if (shouldIntercept) {
+        if (intercept) {
             val action = when (event.action) {
                 KeyEvent.ACTION_DOWN -> "down"
                 KeyEvent.ACTION_UP -> "up"
@@ -326,10 +317,8 @@ class MainActivity : AudioServiceActivity() {
                 mapOf(
                     "keyCode" to event.keyCode,
                     "action" to action,
-                    "repeatCount" to event.repeatCount,
                 ),
             )
-            Log.d("CursorBridge", "Intercepted keyCode=${event.keyCode} action=$action")
             return true
         }
         return super.dispatchKeyEvent(event)

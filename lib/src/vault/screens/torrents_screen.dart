@@ -608,7 +608,6 @@ class _TorrentsScreenState extends State<TorrentsScreen>
         title: const Text('Add torrent'),
         content: TextField(
           controller: ctrl,
-          autofocus: true,
           minLines: 1,
           maxLines: 5,
           decoration: const InputDecoration(
@@ -821,7 +820,6 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       title: _showSearch
           ? TextField(
               controller: _searchController,
-              autofocus: true,
               decoration: InputDecoration(
                 hintText: 'Search torrents…',
                 border: InputBorder.none,
@@ -1120,20 +1118,10 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       );
     }
 
-    return Focus(
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            (event.logicalKey == LogicalKeyboardKey.enter ||
-                event.logicalKey == LogicalKeyboardKey.select)) {
-          openDetails();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: _HoverLift(
-          child: Card(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: _HoverLift(
+        child: Card(
           key: ValueKey(ts.id),
           margin: EdgeInsets.symmetric(
             horizontal: isGridCard ? 0 : 12,
@@ -1355,7 +1343,6 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                 ],
               ),
             ),
-          ),
           ),
         ),
       ),

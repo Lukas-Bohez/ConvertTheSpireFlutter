@@ -277,8 +277,7 @@ class _BrowserShellState extends State<BrowserShell> {
             child: Row(
               children: [
                 _navButton(Icons.arrow_back_ios_new_rounded, 'Back',
-                    widget.canGoBack ? widget.onBack : null, cs,
-                    autofocus: true),
+                    widget.canGoBack ? widget.onBack : null, cs),
                 _navButton(Icons.arrow_forward_ios_rounded, 'Forward',
                     widget.canGoForward ? widget.onForward : null, cs),
                 widget.isRefreshing
@@ -319,7 +318,6 @@ class _BrowserShellState extends State<BrowserShell> {
       String tooltip,
       VoidCallback? onPressed,
       ColorScheme cs, {
-      bool autofocus = false,
       bool selected = false,
     }) {
     return SizedBox(

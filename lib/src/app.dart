@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart'
-    show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
-import 'package:flutter/services.dart'
-    show LogicalKeyboardKey, KeyEvent, KeyDownEvent;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+
 import 'package:window_manager/window_manager.dart';
 import 'services/tray_service.dart';
 import 'dart:io' show Platform, Process;
@@ -45,7 +43,7 @@ import 'widgets/adaptive_ui_frame.dart';
 import 'widgets/global_cursor_overlay.dart';
 import 'widgets/tv_file_browser.dart';
 import 'vault/vault_bootstrap.dart';
-import 'vault/platform/desktop_window.dart';
+
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'data/browser_db.dart';
 import 'config/build_flags.dart';
@@ -73,14 +71,9 @@ class _MyAppState extends State<MyApp>
   late final Future<SharedPreferences> _prefsFuture =
       SharedPreferences.getInstance();
 
-  // Fix: declare as a regular field, initialised in initState, to avoid
-  // "accessed before initialization" issues on some platforms.
-  FocusNode? _keyboardFocusNode;
-
   @override
   void initState() {
     super.initState();
-    _keyboardFocusNode = FocusNode();
     WidgetsBinding.instance.addObserver(this);
     _initController();
 
@@ -157,7 +150,6 @@ class _MyAppState extends State<MyApp>
     try {
       BrowserDb.close();
     } catch (_) {}
-    _keyboardFocusNode?.dispose();
     super.dispose();
   }
 
@@ -167,21 +159,6 @@ class _MyAppState extends State<MyApp>
     try {
       _controller?.handleAppLifecycleState(state);
     } catch (_) {}
-  }
-
-  void _handleKey(KeyEvent event) {
-    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.f11) {
-      if (!kIsWeb &&
-          (defaultTargetPlatform == TargetPlatform.windows ||
-              defaultTargetPlatform == TargetPlatform.linux ||
-              defaultTargetPlatform == TargetPlatform.macOS)) {
-        unawaited(
-          toggleDesktopFullScreen().catchError((e) {
-            if (kDebugMode) debugPrint('Failed to toggle fullscreen: $e');
-          }),
-        );
-      }
-    }
   }
 
   Future<void> _initController() async {
@@ -467,16 +444,18 @@ class _MyAppState extends State<MyApp>
     }
 
     return GlobalCursorOverlay(
-      child: AnimatedBuilder(
-        animation: Listenable.merge(listenables),
-        builder: (context, _) {
-          final themeMode = _resolveThemeMode(_controller?.settings?.themeMode);
-          final seed = ColourRewardService.instance.equipped.color;
-          final lightScheme = ColorScheme.fromSeed(seedColor: seed);
-          final darkScheme = ColorScheme.fromSeed(
-            seedColor: seed,
-            brightness: Brightness.dark,
-          );
+      child: FocusTraversalGroup(
+        policy: _NullTraversalPolicy(),
+        child: AnimatedBuilder(
+          animation: Listenable.merge(listenables),
+          builder: (context, _) {
+            final themeMode = _resolveThemeMode(_controller?.settings?.themeMode);
+            final seed = ColourRewardService.instance.equipped.color;
+            final lightScheme = ColorScheme.fromSeed(seedColor: seed);
+            final darkScheme = ColorScheme.fromSeed(
+              seedColor: seed,
+              brightness: Brightness.dark,
+            );
 
         final lightTheme = ThemeData.from(
           colorScheme: lightScheme,
@@ -522,19 +501,22 @@ class _MyAppState extends State<MyApp>
           ),
         );
 
-          return MaterialApp(
-            navigatorKey: _navigatorKey,
-            title: getAppTitle(),
-            theme: lightTheme,
-            darkTheme: darkTheme,
-            themeMode: themeMode,
-            builder: (context, child) {
-              // TECH-DEBT: add per-route adaptive exclusions for full-bleed media pages.
-              return AdaptiveUiFrame(child: child ?? const SizedBox.shrink());
-            },
-            home: _buildHome(),
-          );
-        },
+            return MaterialApp(
+              navigatorKey: _navigatorKey,
+              title: getAppTitle(),
+              shortcuts: const <ShortcutActivator, Intent>{},
+              actions: const <Type, Action<Intent>>{},
+              theme: lightTheme,
+              darkTheme: darkTheme,
+              themeMode: themeMode,
+              builder: (context, child) {
+                // TECH-DEBT: add per-route adaptive exclusions for full-bleed media pages.
+                return AdaptiveUiFrame(child: child ?? const SizedBox.shrink());
+              },
+              home: _buildHome(),
+            );
+          },
+        ),
       ),
     );
   }
@@ -654,20 +636,7 @@ class _MyAppState extends State<MyApp>
           );
         }
 
-        // Wrap in KeyboardListener for F11 fullscreen toggling.
-        // Fix: _keyboardFocusNode is now initialised in initState so it's
-        // guaranteed non-null here.
-        final desktopF11Enabled = !kIsWeb &&
-            (defaultTargetPlatform == TargetPlatform.windows ||
-                defaultTargetPlatform == TargetPlatform.linux ||
-                defaultTargetPlatform == TargetPlatform.macOS);
-
-        return KeyboardListener(
-          focusNode: _keyboardFocusNode!,
-          autofocus: desktopF11Enabled,
-          onKeyEvent: _handleKey,
-          child: contentChild,
-        );
+        return contentChild;
       },
     );
   }
@@ -682,4 +651,33 @@ class _MyAppState extends State<MyApp>
         return ThemeMode.system;
     }
   }
+}
+
+class _NullTraversalPolicy extends FocusTraversalPolicy {
+  @override
+  Iterable<FocusNode> sortDescendants(
+    Iterable<FocusNode> descendants,
+    FocusNode currentNode,
+  ) =>
+      const [];
+
+  @override
+  FocusNode? findFirstFocusInDirection(
+    FocusNode scope,
+    TraversalDirection direction,
+  ) =>
+      null;
+
+  @override
+  bool inDirection(
+    FocusNode focusedNode,
+    TraversalDirection direction,
+  ) =>
+      false;
+
+  @override
+  bool next(FocusNode node) => false;
+
+  @override
+  bool previous(FocusNode node) => false;
 }

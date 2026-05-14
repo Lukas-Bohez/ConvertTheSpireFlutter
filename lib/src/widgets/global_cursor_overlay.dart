@@ -11,6 +11,17 @@ import 'package:flutter/services.dart';
 class GlobalCursorOverlay extends StatefulWidget {
   final Widget child;
 
+  static Future<void> Function(Offset position)? _webViewTapCallback;
+  static Future<void> Function(double deltaY, Offset position)? _webViewScrollCallback;
+
+  static void registerWebViewCallbacks({
+    Future<void> Function(Offset position)? onTap,
+    Future<void> Function(double deltaY, Offset position)? onScroll,
+  }) {
+    _webViewTapCallback = onTap;
+    _webViewScrollCallback = onScroll;
+  }
+
   const GlobalCursorOverlay({super.key, required this.child});
 
   @override
@@ -20,7 +31,6 @@ class GlobalCursorOverlay extends StatefulWidget {
 class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
     with SingleTickerProviderStateMixin {
   static const MethodChannel _keyChannel = MethodChannel('com.yourapp/cursor_keys');
-  static const MethodChannel _webviewChannel = MethodChannel('com.yourapp/webview_input');
 
   Offset _position = const Offset(400, 300);
   Offset _velocity = Offset.zero;
@@ -103,7 +113,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
       case enter:
       case numEnter:
         if (isDown) {
-          _simulateTap(_position);
+          _fireTap();
         }
         break;
       default:
@@ -115,23 +125,21 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
     }
   }
 
-  /// Simulate a tap at the given screen position.
-  /// Uses Flutter's gesture binding to synthesize pointer events,
-  /// which goes through the hit-test system and activates whatever
-  /// is at that position (GestureDetector, InkWell, TextButton, etc.)
-  void _simulateTap(Offset screenPosition) {
+  void _fireTap() {
+    final renderView = WidgetsBinding.instance.renderViews.first;
+    final result = HitTestResult();
+    renderView.hitTest(result, position: _position);
+
     GestureBinding.instance.handlePointerEvent(
-      PointerDownEvent(
-        position: screenPosition,
-        timeStamp: Duration.zero,
-      ),
+      PointerDownEvent(position: _position),
     );
-    GestureBinding.instance.handlePointerEvent(
-      PointerUpEvent(
-        position: screenPosition,
-        timeStamp: const Duration(milliseconds: 100),
-      ),
-    );
+    Future.delayed(const Duration(milliseconds: 50), () {
+      GestureBinding.instance.handlePointerEvent(
+        PointerUpEvent(position: _position),
+      );
+    });
+
+    unawaited(GlobalCursorOverlay._webViewTapCallback?.call(_position));
   }
 
   void _onTick(Duration elapsed) {
@@ -190,11 +198,10 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   /// Inject scroll via JavaScript if a WebView is active, or default to window scroll.
   Future<void> _injectScroll(double deltaY, Offset cursorPosition) async {
     try {
-      await _webviewChannel.invokeMethod('injectScroll', {
-        'deltaY': deltaY,
-        'cursorX': cursorPosition.dx,
-        'cursorY': cursorPosition.dy,
-      });
+      final callback = GlobalCursorOverlay._webViewScrollCallback;
+      if (callback != null) {
+        await callback(deltaY, cursorPosition);
+      }
     } catch (_) {
       // WebView not available or call failed; ignore
     }

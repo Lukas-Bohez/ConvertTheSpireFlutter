@@ -539,27 +539,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               },
             ),
           },
-          child: Focus(
-            autofocus: true,
-            onKeyEvent: (node, event) {
-              if (event is! KeyDownEvent) {
-                return KeyEventResult.ignored;
-              }
-              if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
-                  event.logicalKey == LogicalKeyboardKey.enter ||
-                  event.logicalKey == LogicalKeyboardKey.numpadEnter ||
-                  event.logicalKey == LogicalKeyboardKey.select) {
-                _handleKeyboardAdvance();
-                return KeyEventResult.handled;
-              }
-              if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                _back();
-                return KeyEventResult.handled;
-              }
-              return KeyEventResult.ignored;
-            },
-            child: SafeArea(
-              child: Column(
+          child: SafeArea(
+            child: Column(
                 children: [
                   const SizedBox(height: 8),
                   _buildProgressBar(theme),
@@ -665,7 +646,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 ],
               ),
             ),
-          ),
         ),
       ),
     );
