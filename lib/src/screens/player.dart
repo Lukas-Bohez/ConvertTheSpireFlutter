@@ -30,7 +30,6 @@ import '../services/file_resolver.dart';
 import '../utils/snack.dart';
 import '../utils/lock.dart';
 import '../vault/platform/desktop_window.dart';
-import '../widgets/dpad_focusable_surface.dart';
 import '../widgets/tv_file_browser.dart';
 import '../services/media_organizer.dart';
 
@@ -4014,11 +4013,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             onSubmitted: (_) => _stopSearchEditing(),
             onTapOutside: (_) => _stopSearchEditing(),
           )
-        : DpadFocusableSurface(
-          autofocus: !_searchEditing,
-            region: 'player-search',
-            onSelect: _startSearchEditing,
-            child: Material(
+: Material(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(10),
               child: InkWell(
@@ -4061,8 +4056,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                   ),
                 ),
               ),
-            ),
-          );
+            );
 
     if (isWide) {
       return Container(
@@ -4732,32 +4726,29 @@ class _MediaCard extends StatelessWidget {
     final idx = entry.key;
     final cs = Theme.of(context).colorScheme;
     if (item.thumbnailData == null) Future.microtask(() => state.requestThumbnailForIndex(idx));
-    return DpadFocusableSurface(
-      autoScroll: true,
-      onSelect: () => onTap(state, idx),
-      child: Card(
-        clipBehavior: Clip.hardEdge,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: InkWell(
-          onTap: () => onTap(state, idx),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: state.thumbnailForItem(item, size: 0, expand: true) ?? Container(color: cs.surfaceContainerHighest),
-                  ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.transparent, cs.surface.withOpacity(0.9)],
+    return Card(
+      clipBehavior: Clip.hardEdge,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () => onTap(state, idx),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: state.thumbnailForItem(item, size: 0, expand: true) ?? Container(color: cs.surfaceContainerHighest),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.transparent, cs.surface.withOpacity(0.9)],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                         ),
@@ -4819,7 +4810,6 @@ class _MediaCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
       ),
     );
   }

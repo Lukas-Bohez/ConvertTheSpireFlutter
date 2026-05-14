@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 import 'onboarding_screen.dart';
 import '../config/build_flags.dart';
-import '../widgets/dpad_focusable_surface.dart';
 
 /// In-app guide covering usage instructions, supported platforms,
 /// and feature explanations.
@@ -60,9 +59,8 @@ class GuideScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
-              child: DpadFocusableSurface(
-                autofocus: true,
-                onSelect: () {
+              child: OutlinedButton(
+                onPressed: () {
                   Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => OnboardingScreen(
                             onFinish: () {
@@ -72,19 +70,7 @@ class GuideScreen extends StatelessWidget {
                             onThemeChanged: onThemeChanged,
                           )));
                 },
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => OnboardingScreen(
-                              onFinish: () {
-                                Navigator.of(context).pop();
-                              },
-                              themeMode: themeMode,
-                              onThemeChanged: onThemeChanged,
-                            )));
-                  },
-                  child: const Text('Show onboarding'),
-                ),
+                child: const Text('Show onboarding'),
               ),
             ),
             const SizedBox(height: 16),

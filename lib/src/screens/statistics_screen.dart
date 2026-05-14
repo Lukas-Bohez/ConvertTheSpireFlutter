@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../models/download_stats.dart';
 import '../services/ad_service.dart';
 import '../services/statistics_service.dart';
-import '../widgets/dpad_focusable_surface.dart';
 
 /// Dashboard screen showing download statistics with charts.
 class StatisticsScreen extends StatefulWidget {
@@ -138,26 +137,19 @@ class _StatisticsScreenState extends State<StatisticsScreen>
 
           // -- Reset ----------------------------------------------
           Center(
-            child: DpadFocusableSurface(
-              autofocus: true,
-              onSelect: () {
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Reset Statistics'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: cs.error,
+                side: BorderSide(color: cs.error.withValues(alpha: 0.5)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              onPressed: () {
                 AdService.instance.registerInteraction();
                 _confirmReset();
               },
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.delete_outline),
-                label: const Text('Reset Statistics'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: cs.error,
-                  side: BorderSide(color: cs.error.withValues(alpha: 0.5)),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-                onPressed: () {
-                  AdService.instance.registerInteraction();
-                  _confirmReset();
-                },
-              ),
             ),
           ),
           const SizedBox(height: 16),

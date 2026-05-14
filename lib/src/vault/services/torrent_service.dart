@@ -1310,49 +1310,6 @@ class TorrentService {
     }
   }
 
-  // ignore: unused_element
-  Future<TorrentMetadata?> _loadTorrentMetadata(TorrentModel torrent) async {
-    if (torrent.type == 'torrent_file' && torrent.filePath != null) {
-      final file = File(torrent.filePath!);
-      if (await file.exists()) {
-        try {
-          return TorrentFileParser.parse(await file.readAsBytes());
-        } catch (_) {
-          // fallback
-        }
-      }
-    }
-    return null;
-  }
-
-  // ignore: unused_element
-  Future<void> _prepareTargetFiles(
-    TorrentModel torrent,
-    Directory destinationDir,
-    TorrentMetadata? metadata,
-    int totalSize,
-  ) async {
-    if (metadata != null && metadata.files.isNotEmpty) {
-      for (final fileEntry in metadata.files) {
-        final targetPath = p.join(destinationDir.path, fileEntry.path);
-        final targetFile = File(targetPath);
-        await targetFile.parent.create(recursive: true);
-        final raf = await targetFile.open(mode: FileMode.write);
-        await raf.truncate(fileEntry.length);
-        await raf.close();
-      }
-    } else {
-      final name = torrent.name.isNotEmpty ? torrent.name : torrent.id;
-      final sanitized = name.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
-      final filePath = p.join(destinationDir.path, '$sanitized.bin');
-      final file = File(filePath);
-      await file.parent.create(recursive: true);
-      final raf = await file.open(mode: FileMode.write);
-      await raf.truncate(totalSize);
-      await raf.close();
-    }
-  }
-
   Future<void> setDestinationAndStart(String id, String destinationPath) async {
     final torrent = await getTorrentById(id);
     if (torrent == null) {

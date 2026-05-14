@@ -6,8 +6,6 @@ import 'package:provider/provider.dart';
 import '../screens/player.dart' show PlayerState, PositionUiState, MediaItem, MediaType;
 import '../state/app_controller.dart';
 import '../config/build_flags.dart';
-
-import 'dpad_focusable_surface.dart';
 import 'quick_links_service.dart';
 
 /// Persistent browser-like shell that wraps all app content.
@@ -327,21 +325,16 @@ class _BrowserShellState extends State<BrowserShell> {
     return SizedBox(
       width: 34,
       height: 34,
-      child: DpadFocusableSurface(
-        autofocus: autofocus,
-        selected: selected,
-        onSelect: onPressed,
-        child: IconButton(
-          icon: Icon(icon, size: 17),
-          onPressed: onPressed,
-          tooltip: tooltip,
-          visualDensity: VisualDensity.compact,
-          padding: EdgeInsets.zero,
-          style: IconButton.styleFrom(
-            foregroundColor: onPressed != null
-                ? (selected ? cs.primary : cs.onSurface)
-                : cs.outline,
-          ),
+      child: IconButton(
+        icon: Icon(icon, size: 17),
+        onPressed: onPressed,
+        tooltip: tooltip,
+        visualDensity: VisualDensity.compact,
+        padding: EdgeInsets.zero,
+        style: IconButton.styleFrom(
+          foregroundColor: onPressed != null
+              ? (selected ? cs.primary : cs.onSurface)
+              : cs.outline,
         ),
       ),
     );
@@ -354,29 +347,22 @@ class _BrowserShellState extends State<BrowserShell> {
       child: Stack(
         children: [
           Center(
-            child: DpadFocusableSurface(
-              region: 'tabs',
-              onSelect: isDesktop
+            child: IconButton(
+              icon: Icon(
+                isDesktop
+                    ? Icons.view_sidebar_rounded
+                    : Icons.queue_music_rounded,
+                size: 18,
+              ),
+              onPressed: isDesktop
                   ? () => setState(() => _showQueueDesktop = !_showQueueDesktop)
                   : _toggleQueue,
-              selected: isDesktop && _showQueueDesktop,
-              child: IconButton(
-                icon: Icon(
-                  isDesktop
-                      ? Icons.view_sidebar_rounded
-                      : Icons.queue_music_rounded,
-                  size: 18,
-                ),
-                onPressed: isDesktop
-                    ? () => setState(() => _showQueueDesktop = !_showQueueDesktop)
-                    : _toggleQueue,
-                tooltip: isDesktop ? 'Toggle queue panel' : 'Open queue',
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                style: IconButton.styleFrom(
-                  foregroundColor:
-                      isDesktop && _showQueueDesktop ? cs.primary : cs.onSurface,
-                ),
+              tooltip: isDesktop ? 'Toggle queue panel' : 'Open queue',
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              style: IconButton.styleFrom(
+                foregroundColor:
+                    isDesktop && _showQueueDesktop ? cs.primary : cs.onSurface,
               ),
             ),
           ),
@@ -862,42 +848,37 @@ class _BrowserShellState extends State<BrowserShell> {
 
   Widget _buildUrlBar(ColorScheme cs) {
     if (!_isEditing) {
-      return DpadFocusableSurface(
-        autofocus: true,
-        region: 'browser-bar',
-        onSelect: _startEditing,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: _startEditing,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
-                border: Border.all(
-                  color: cs.outlineVariant.withValues(alpha: 0.35),
-                ),
-                borderRadius: BorderRadius.circular(8),
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _startEditing,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+              border: Border.all(
+                color: cs.outlineVariant.withValues(alpha: 0.35),
               ),
-              child: Row(
-                children: [
-                  Icon(_currentFavicon, size: 15, color: cs.primary),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _currentTitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: cs.onSurface,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(_currentFavicon, size: 15, color: cs.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _currentTitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: cs.onSurface,
+                      fontWeight: FontWeight.w500,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

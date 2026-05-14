@@ -2,8 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../widgets/dpad_focusable_surface.dart';
-
 import 'colour_rarity.dart';
 
 class ColourRewardSessionDialog extends StatefulWidget {
@@ -157,15 +155,11 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: 16),
-        DpadFocusableSurface(
-          autofocus: true,
-          onSelect: _advance,
-          child: SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _advance,
-              child: Text(_showFinalReveal ? 'Next' : 'Next'),
-            ),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: _advance,
+            child: Text(_showFinalReveal ? 'Next' : 'Next'),
           ),
         ),
       ],

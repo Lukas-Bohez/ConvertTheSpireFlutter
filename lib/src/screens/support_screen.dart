@@ -13,7 +13,6 @@ import '../services/ad_service.dart';
 import '../services/purchase_service.dart';
 import '../utils/snack.dart';
 import '../features/colour_rewards/watch_ad_card.dart';
-import '../widgets/dpad_focusable_surface.dart';
 
 /// Support and monetization page for donations, ads, and the Remove Ads unlock.
 class SupportScreen extends StatefulWidget {
@@ -597,31 +596,24 @@ class _SupportScreenState extends State<SupportScreen> {
           const WatchAdCard(),
           const SizedBox(height: 16),
         ],
-        DpadFocusableSurface(
-          autofocus: true,
-          onSelect: () => _openUrl('https://buymeacoffee.com/orokaconner'),
-          child: Card(
-            child: ListTile(
-              leading: const Icon(Icons.coffee, color: Colors.brown),
-              title: const Text('Buy Me a Coffee'),
-              subtitle: const Text('Help keep this project free & open-source'),
-              trailing: const Icon(Icons.open_in_new),
-              onTap: () => _openUrl('https://buymeacoffee.com/orokaconner'),
-            ),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.coffee, color: Colors.brown),
+            title: const Text('Buy Me a Coffee'),
+            subtitle: const Text('Help keep this project free & open-source'),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () => _openUrl('https://buymeacoffee.com/orokaconner'),
           ),
         ),
         const SizedBox(height: 12),
-        DpadFocusableSurface(
-          onSelect: () => _openUrl('https://github.com/sponsors/Lukas-Bohez'),
-          child: Card(
-            child: ListTile(
-              leading: const Icon(Icons.favorite, color: Colors.pink),
-              title: const Text('GitHub Sponsors'),
-              subtitle:
-                  const Text('Support ongoing development and feature work'),
-              trailing: const Icon(Icons.open_in_new),
-              onTap: () => _openUrl('https://github.com/sponsors/Lukas-Bohez'),
-            ),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.favorite, color: Colors.pink),
+            title: const Text('GitHub Sponsors'),
+            subtitle:
+                const Text('Support ongoing development and feature work'),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () => _openUrl('https://github.com/sponsors/Lukas-Bohez'),
           ),
         ),
         const SizedBox(height: 16),

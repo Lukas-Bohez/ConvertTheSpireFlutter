@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../services/ad_service.dart';
-import '../../widgets/dpad_focusable_surface.dart';
 import 'colour_rarity.dart';
 import 'colour_reward_service.dart';
 
@@ -67,67 +66,54 @@ class _ColourCollectionGridState extends State<ColourCollectionGrid> {
                 final c = themeColours[tier]![index];
                 final isOwned = owned.isOwned(c.id);
                 final equipped = owned.equippedId == c.id;
-                return DpadFocusableSurface(
-                  autofocus: equipped,
-                  autoScroll: true,
-                  region: 'colour-grid',
-                  selected: equipped,
-                  onSelect: isOwned
-                      ? () async {
-                          AdService.instance.registerInteraction();
-                          await ColourRewardService.instance.equipColour(c.id);
-                          if (mounted) setState(() {});
-                        }
-                      : null,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: isOwned
-                          ? () async {
-                              AdService.instance.registerInteraction();
-                              await ColourRewardService.instance.equipColour(c.id);
-                              if (mounted) setState(() {});
-                            }
-                          : null,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: c.color.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: c.rarity.glowColor.withValues(alpha: 0.6),
-                          ),
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: isOwned
+                        ? () async {
+                            AdService.instance.registerInteraction();
+                            await ColourRewardService.instance.equipColour(c.id);
+                            if (mounted) setState(() {});
+                          }
+                        : null,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: c.color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: c.rarity.glowColor.withValues(alpha: 0.6),
                         ),
-                        child: Stack(
-                          children: [
-                            Center(
-                              child: Text(
-                                c.displayName,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(fontSize: 12),
+                      ),
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Text(
+                              c.displayName,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                          if (!isOwned)
+                            Positioned.fill(
+                              child: Container(
+                                color: Colors.black.withValues(alpha: 0.45),
+                                child: const Center(
+                                  child: Icon(Icons.lock, color: Colors.white70),
+                                ),
                               ),
                             ),
-                            if (!isOwned)
-                              Positioned.fill(
-                                child: Container(
-                                  color: Colors.black.withValues(alpha: 0.45),
-                                  child: const Center(
-                                    child: Icon(Icons.lock, color: Colors.white70),
-                                  ),
-                                ),
+                          if (equipped)
+                            const Positioned(
+                              top: 4,
+                              right: 4,
+                              child: Icon(
+                                Icons.check_circle,
+                                color: Colors.white70,
+                                size: 18,
                               ),
-                            if (equipped)
-                              const Positioned(
-                                top: 4,
-                                right: 4,
-                                child: Icon(
-                                  Icons.check_circle,
-                                  color: Colors.white70,
-                                  size: 18,
-                                ),
-                              ),
-                          ],
-                        ),
+                            ),
+                        ],
                       ),
                     ),
                   ),

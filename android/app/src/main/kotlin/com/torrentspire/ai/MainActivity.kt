@@ -42,8 +42,8 @@ class MainActivity : AudioServiceActivity() {
     private val pickTreeRequestCode = 5011
     private var pendingResult: MethodChannel.Result? = null
     private var browserWebView: WebView? = null
-    private var cursorModeActive = false
     private var keyEventChannel: MethodChannel? = null
+    private var textInputActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Android 15+ mandatory edge-to-edge support
@@ -262,6 +262,33 @@ class MainActivity : AudioServiceActivity() {
                             result.error("NO_WEBVIEW", "WebView not registered", null)
                         }
                     }
+                    "setTextInputActive" -> {
+                        textInputActive = call.argument<Boolean>("active") ?: false
+                        Log.d("CursorBridge", "setTextInputActive=$textInputActive")
+                        result.success(null)
+                    }
+                    "getExternalVolumes" -> {
+                        val storageManager = getSystemService(android.content.Context.STORAGE_SERVICE) as android.os.storage.StorageManager
+                        val volumes = storageManager.storageVolumes
+                        val removable = volumes
+                            .filter { it.isRemovable && it.state == Environment.MEDIA_MOUNTED }
+                            .mapNotNull { vol ->
+                                val dir = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                    vol.directory?.absolutePath
+                                } else {
+                                    try {
+                                        val m = vol.javaClass.getMethod("getPath")
+                                        m.invoke(vol) as? String
+                                    } catch (e: Exception) { null }
+                                }
+                                if (dir != null) mapOf(
+                                    "path" to dir,
+                                    "label" to (vol.getDescription(this@MainActivity) ?: "USB Drive"),
+                                    "uuid" to (vol.uuid ?: "")
+                                ) else null
+                            }
+                        result.success(removable)
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -269,38 +296,31 @@ class MainActivity : AudioServiceActivity() {
         keyEventChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, cursorKeysChannel)
         keyEventChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
-                "setCursorActive" -> {
-                    cursorModeActive = call.argument<Boolean>("active") ?: false
-                    val webView = browserWebView
-                    if (webView != null) {
-                        webView.post {
-                            if (cursorModeActive) {
-                                webView.isFocusable = false
-                                webView.isFocusableInTouchMode = false
-                                webView.clearFocus()
-                                Log.d("CursorBridge", "WebView focus disabled for cursor mode")
-                            } else {
-                                webView.isFocusable = true
-                                webView.isFocusableInTouchMode = true
-                                Log.d("CursorBridge", "WebView focus restored")
-                            }
-                        }
-                    }
-                    result.success(null)
-                }
                 else -> result.notImplemented()
             }
         }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (cursorModeActive && isCursorKeyEvent(event)) {
+        if (textInputActive) return super.dispatchKeyEvent(event)
+        
+        val shouldIntercept = when (event.keyCode) {
+            android.view.KeyEvent.KEYCODE_DPAD_UP,
+            android.view.KeyEvent.KEYCODE_DPAD_DOWN,
+            android.view.KeyEvent.KEYCODE_DPAD_LEFT,
+            android.view.KeyEvent.KEYCODE_DPAD_RIGHT,
+            android.view.KeyEvent.KEYCODE_DPAD_CENTER,
+            android.view.KeyEvent.KEYCODE_ENTER,
+            android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> true
+            else -> false
+        }
+        
+        if (shouldIntercept) {
             val action = when (event.action) {
                 KeyEvent.ACTION_DOWN -> "down"
                 KeyEvent.ACTION_UP -> "up"
                 else -> return true
             }
-
             keyEventChannel?.invokeMethod(
                 "onDpadKey",
                 mapOf(
@@ -309,23 +329,13 @@ class MainActivity : AudioServiceActivity() {
                     "repeatCount" to event.repeatCount,
                 ),
             )
+            Log.d("CursorBridge", "Intercepted keyCode=${event.keyCode} action=$action")
             return true
         }
         return super.dispatchKeyEvent(event)
     }
 
-    private fun isCursorKeyEvent(event: KeyEvent): Boolean {
-        return when (event.keyCode) {
-            KeyEvent.KEYCODE_DPAD_UP,
-            KeyEvent.KEYCODE_DPAD_DOWN,
-            KeyEvent.KEYCODE_DPAD_LEFT,
-            KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_DPAD_CENTER,
-            KeyEvent.KEYCODE_ENTER,
-            KeyEvent.KEYCODE_NUMPAD_ENTER -> true
-            else -> false
-        }
-    }
+
 
     private fun findWebView(view: View): WebView? {
         if (view is WebView) {

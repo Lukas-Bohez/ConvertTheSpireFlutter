@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../services/bulk_import_service.dart';
-import '../widgets/dpad_focusable_surface.dart';
 
 /// Screen for bulk-importing a track list from text or file.
 class BulkImportScreen extends StatefulWidget {
@@ -121,22 +120,15 @@ class _BulkImportScreenState extends State<BulkImportScreen>
                     ),
                   ],
                 ),
-                DpadFocusableSurface(
-                  autofocus: true,
-                  onSelect: _processing ? null : _importFromText,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.text_fields),
-                    label: const Text('Import from Text'),
-                    onPressed: _processing ? null : _importFromText,
-                  ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.text_fields),
+                  label: const Text('Import from Text'),
+                  onPressed: _processing ? null : _importFromText,
                 ),
-                DpadFocusableSurface(
-                  onSelect: _processing ? null : _importFromFile,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.file_upload),
-                    label: const Text('Import from File'),
-                    onPressed: _processing ? null : _importFromFile,
-                  ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.file_upload),
+                  label: const Text('Import from File'),
+                  onPressed: _processing ? null : _importFromFile,
                 ),
               ],
             ),

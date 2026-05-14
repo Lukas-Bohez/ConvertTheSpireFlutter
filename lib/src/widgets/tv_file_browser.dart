@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 
 import '../services/folder_history_service.dart';
-import 'dpad_focusable_surface.dart';
 
 enum TvFileBrowserMode { file, folder }
 
@@ -339,16 +338,12 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
             if (widget.mode == TvFileBrowserMode.folder && _currentDir.parent.path != _currentDir.path)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: DpadFocusableSurface(
-                  autofocus: false,
-                  onSelect: () => Navigator.of(context).pop(_currentDir.path),
-                  child: FilledButton.icon(
-                    onPressed: () => Navigator.of(context).pop(_currentDir.path),
-                    icon: const Icon(Icons.folder_open, size: 18),
-                    label: Text(
-                      isWide ? 'Use this folder' : 'Select',
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                child: FilledButton.icon(
+                  onPressed: () => Navigator.of(context).pop(_currentDir.path),
+                  icon: const Icon(Icons.folder_open, size: 18),
+                  label: Text(
+                    isWide ? 'Use this folder' : 'Select',
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
@@ -387,44 +382,38 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
                         final isDir = entity is Directory;
                         final name = _nameForPath(entity.path);
 
-                        return DpadFocusableSurface(
-                          autofocus: index == 0,
-                          autoScroll: true,
-                          region: 'file-browser',
-                          onSelect: () => _onTap(entity),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 4,
-                            ),
-                            leading: Icon(
-                              isDir ? Icons.folder : _iconForExtension(p.extension(entity.path)),
-                              color: isDir
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context).colorScheme.onSurface,
-                              size: 24,
-                            ),
-                            title: Text(
-                              name,
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                            subtitle: !isDir
-                                ? FutureBuilder<FileStat>(
-                                    future: entity.stat(),
-                                    builder: (_, snap) {
-                                      if (!snap.hasData) return const SizedBox.shrink();
-                                      final mb = snap.data!.size / (1024 * 1024);
-                                      return Text(
-                                        '${mb.toStringAsFixed(1)} MB',
-                                        style: Theme.of(context).textTheme.bodySmall,
-                                        overflow: TextOverflow.ellipsis,
-                                      );
-                                    },
-                                  )
-                                : null,
-                            onTap: () => _onTap(entity),
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
                           ),
+                          leading: Icon(
+                            isDir ? Icons.folder : _iconForExtension(p.extension(entity.path)),
+                            color: isDir
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.onSurface,
+                            size: 24,
+                          ),
+                          title: Text(
+                            name,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                          subtitle: !isDir
+                              ? FutureBuilder<FileStat>(
+                                  future: entity.stat(),
+                                  builder: (_, snap) {
+                                    if (!snap.hasData) return const SizedBox.shrink();
+                                    final mb = snap.data!.size / (1024 * 1024);
+                                    return Text(
+                                      '${mb.toStringAsFixed(1)} MB',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                      overflow: TextOverflow.ellipsis,
+                                    );
+                                  },
+                                )
+                              : null,
+                          onTap: () => _onTap(entity),
                         );
                       },
                     ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../widgets/dpad_focusable_surface.dart';
 
 import '../config/build_flags.dart';
 
@@ -371,35 +370,32 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   Widget _buildThemeToggle(ThemeData theme) {
     final pageColor = _pages[_page].color;
-    return DpadFocusableSurface(
-      onSelect: _cycleTheme,
-      child: Tooltip(
-        message: 'Theme: $_themeLabel \u2014 tap to cycle',
-        child: InkWell(
-          onTap: _cycleTheme,
-          borderRadius: BorderRadius.circular(20),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: pageColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: pageColor.withValues(alpha: 0.35)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(_themeIcon, size: 16, color: pageColor),
-                const SizedBox(width: 6),
-                Text(
-                  _themeLabel,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: pageColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+    return Tooltip(
+      message: 'Theme: $_themeLabel \u2014 tap to cycle',
+      child: InkWell(
+        onTap: _cycleTheme,
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: pageColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: pageColor.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(_themeIcon, size: 16, color: pageColor),
+              const SizedBox(width: 6),
+              Text(
+                _themeLabel,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: pageColor,
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -420,41 +416,35 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             if (!isFirst)
-              DpadFocusableSurface(
-                onSelect: _back,
-                child: TextButton.icon(
-                  key: const ValueKey('back'),
-                  onPressed: _back,
-                  style: TextButton.styleFrom(
-                    foregroundColor: onSurface.withValues(alpha: 0.65),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  ),
-                  icon: const Icon(Icons.arrow_back_ios_rounded, size: 15),
-                  label: const Text(
-                    'Back',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                  ),
+              TextButton.icon(
+                key: const ValueKey('back'),
+                onPressed: _back,
+                style: TextButton.styleFrom(
+                  foregroundColor: onSurface.withValues(alpha: 0.65),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                icon: const Icon(Icons.arrow_back_ios_rounded, size: 15),
+                label: const Text(
+                  'Back',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
               ),
             if (!isLast)
-              DpadFocusableSurface(
-                onSelect: widget.onFinish,
-                child: TextButton(
-                  key: const ValueKey('skip'),
-                  onPressed: widget.onFinish,
-                  style: TextButton.styleFrom(
-                    foregroundColor: onSurface.withValues(alpha: 0.55),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  ),
-                  child: const Text(
-                    'Skip',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      decoration: TextDecoration.underline,
-                    ),
+              TextButton(
+                key: const ValueKey('skip'),
+                onPressed: widget.onFinish,
+                style: TextButton.styleFrom(
+                  foregroundColor: onSurface.withValues(alpha: 0.55),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                child: const Text(
+                  'Skip',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    decoration: TextDecoration.underline,
                   ),
                 ),
               ),
@@ -464,47 +454,39 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
           child: isLast
-              ? DpadFocusableSurface(
-                  autofocus: true,
-                  onSelect: widget.onFinish,
-                  child: ElevatedButton.icon(
-                    key: const ValueKey('done'),
-                    onPressed: widget.onFinish,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: pageColor,
-                      foregroundColor: Colors.white,
-                      elevation: 2,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 28, vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                      textStyle: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-                    icon: const Icon(Icons.check_rounded, size: 18),
-                    label: const Text("Let's Go!"),
+              ? ElevatedButton.icon(
+                  key: const ValueKey('done'),
+                  onPressed: widget.onFinish,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: pageColor,
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 28, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    textStyle: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold),
                   ),
+                  icon: const Icon(Icons.check_rounded, size: 18),
+                  label: const Text("Let's Go!"),
                 )
-              : DpadFocusableSurface(
-                  autofocus: true,
-                  onSelect: _next,
-                  child: ElevatedButton.icon(
-                    key: const ValueKey('next'),
-                    onPressed: _next,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: pageColor,
-                      foregroundColor: Colors.white,
-                      elevation: 2,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 28, vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                      textStyle: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-                    icon: const Icon(Icons.arrow_forward_ios_rounded, size: 15),
-                    label: const Text('Next'),
+              : ElevatedButton.icon(
+                  key: const ValueKey('next'),
+                  onPressed: _next,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: pageColor,
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 28, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    textStyle: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold),
                   ),
+                  icon: const Icon(Icons.arrow_forward_ios_rounded, size: 15),
+                  label: const Text('Next'),
                 ),
         ),
       ],

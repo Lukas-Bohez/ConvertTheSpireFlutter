@@ -8,7 +8,6 @@ import '../services/dlna_control_service.dart';
 import '../services/dlna_discovery_service.dart';
 import '../services/local_media_server.dart';
 import '../services/platform_dirs.dart';
-import '../widgets/dpad_focusable_surface.dart';
 
 /// A dialog that discovers DLNA devices on the network and allows the user
 /// to cast a local media file to a selected device.
@@ -451,32 +450,27 @@ class _CastDialogState extends State<CastDialog> {
                     final device = _devices![index];
                     final isCastTarget =
                         _castingTo != null && _castingTo!.udn == device.udn;
-                    return DpadFocusableSurface(
-                      autofocus: index == 0,
-                      autoScroll: true,
-                      onSelect: _isCasting ? null : () => _castToDevice(device),
-                      child: ListTile(
-                        leading: Icon(
-                          device.deviceType.icon,
-                          color:
-                              device.isPanasonicViera ? Colors.blue : cs.primary,
-                        ),
-                        title: Text(device.name),
-                        subtitle: Text(
-                          device.isPanasonicViera
-                              ? 'Panasonic Viera • ${device.address.address}'
-                              : '${device.deviceType.name} • ${device.address.address}',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        trailing: isCastTarget && _isCasting
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Icon(Icons.play_arrow, color: cs.primary),
-                        onTap: _isCasting ? null : () => _castToDevice(device),
+                    return ListTile(
+                      leading: Icon(
+                        device.deviceType.icon,
+                        color:
+                            device.isPanasonicViera ? Colors.blue : cs.primary,
                       ),
+                      title: Text(device.name),
+                      subtitle: Text(
+                        device.isPanasonicViera
+                            ? 'Panasonic Viera • ${device.address.address}'
+                            : '${device.deviceType.name} • ${device.address.address}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      trailing: isCastTarget && _isCasting
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(Icons.play_arrow, color: cs.primary),
+                      onTap: _isCasting ? null : () => _castToDevice(device),
                     );
                   },
                 ),

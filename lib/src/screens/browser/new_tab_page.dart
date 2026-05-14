@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../data/browser_db.dart';
 import '../../utils/screenshot_helper.dart';
-import '../../widgets/dpad_focusable_surface.dart';
 
 /// Premium "New Tab" page with search bar, quick-access tiles,
 /// favourites horizontal scroll, and recent history.
@@ -70,78 +69,68 @@ class _NewTabPageState extends State<NewTabPage> {
 
   Widget _buildSearchBar(ColorScheme cs) {
     if (!_searchEditing) {
-      return DpadFocusableSurface(
-        autofocus: true,
-        region: 'browser-bar',
-        onSelect: _startSearchEditing,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: _startSearchEditing,
-            borderRadius: BorderRadius.circular(28),
-            child: Container(
-              height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.search),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      _searchController.text.trim().isEmpty
-                          ? 'Search or enter URL'
-                          : _searchController.text.trim(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: _searchController.text.trim().isEmpty
-                            ? cs.onSurfaceVariant.withValues(alpha: 0.75)
-                            : cs.onSurface,
-                      ),
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _startSearchEditing,
+          borderRadius: BorderRadius.circular(28),
+          child: Container(
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.search),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _searchController.text.trim().isEmpty
+                        ? 'Search or enter URL'
+                        : _searchController.text.trim(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: _searchController.text.trim().isEmpty
+                          ? cs.onSurfaceVariant.withValues(alpha: 0.75)
+                          : cs.onSurface,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
       );
     }
 
-    return DpadFocusableSurface(
-      autofocus: !_searchEditing,
-      region: 'browser-bar',
-      onSelect: _startSearchEditing,
-      child: TextField(
-        controller: _searchController,
-        focusNode: _searchFocusNode,
-        decoration: InputDecoration(
-          hintText: 'Search or enter URL',
-          prefixIcon: const Icon(Icons.search),
-          filled: true,
-          fillColor: cs.surfaceContainerHighest,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(28),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+    return TextField(
+      controller: _searchController,
+      focusNode: _searchFocusNode,
+      decoration: InputDecoration(
+        hintText: 'Search or enter URL',
+        prefixIcon: const Icon(Icons.search),
+        filled: true,
+        fillColor: cs.surfaceContainerHighest,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: BorderSide.none,
         ),
-        textInputAction: TextInputAction.go,
-        onSubmitted: (val) {
-          final trimmed = val.trim();
-          if (trimmed.isNotEmpty) {
-            widget.onNavigate(trimmed);
-            _searchController.clear();
-          }
-          _stopSearchEditing();
-        },
-        onTapOutside: (_) => _stopSearchEditing(),
+        contentPadding: const EdgeInsets.symmetric(vertical: 14),
       ),
+      textInputAction: TextInputAction.go,
+      onSubmitted: (val) {
+        final trimmed = val.trim();
+        if (trimmed.isNotEmpty) {
+          widget.onNavigate(trimmed);
+          _searchController.clear();
+        }
+        _stopSearchEditing();
+      },
+      onTapOutside: (_) => _stopSearchEditing(),
     );
   }
 
@@ -314,21 +303,16 @@ class _NewTabPageState extends State<NewTabPage> {
                                       rawTitle.toLowerCase() != 'new tab')
                                   ? rawTitle
                                   : host;
-                              return DpadFocusableSurface(
-                                region: 'browser-bar',
-                                autoScroll: true,
-                                onSelect: () => widget.onNavigate(url),
-                                child: ActionChip(
-                                  avatar: const Icon(Icons.star, size: 16),
-                                  label: ConstrainedBox(
-                                    constraints: const BoxConstraints(maxWidth: 240),
-                                    child: Text(
-                                      title,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                              return ActionChip(
+                                avatar: const Icon(Icons.star, size: 16),
+                                label: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 240),
+                                  child: Text(
+                                    title,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  onPressed: () => widget.onNavigate(url),
                                 ),
+                                onPressed: () => widget.onNavigate(url),
                               );
                             },
                           ),
@@ -351,21 +335,16 @@ class _NewTabPageState extends State<NewTabPage> {
                                   rawTitle.toLowerCase() != 'new tab')
                               ? rawTitle
                               : host;
-                          return DpadFocusableSurface(
-                            region: 'browser-bar',
-                            autoScroll: true,
-                            onSelect: () => widget.onNavigate(url),
-                            child: ActionChip(
-                              avatar: const Icon(Icons.star, size: 16),
-                              label: ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: width * 0.33),
-                                child: Text(
-                                  title,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                          return ActionChip(
+                            avatar: const Icon(Icons.star, size: 16),
+                            label: ConstrainedBox(
+                              constraints: BoxConstraints(maxWidth: width * 0.33),
+                              child: Text(
+                                title,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              onPressed: () => widget.onNavigate(url),
                             ),
+                            onPressed: () => widget.onNavigate(url),
                           );
                         }).toList(),
                       ),
@@ -396,35 +375,30 @@ class _NewTabPageState extends State<NewTabPage> {
                     final host = Uri.tryParse(url)?.host ?? url;
                     final time = DateTime.fromMillisecondsSinceEpoch(
                         item['visited_at'] as int);
-                    return DpadFocusableSurface(
-                      region: 'browser-bar',
-                      autoScroll: true,
-                      onSelect: () => widget.onNavigate(url),
-                      child: ListTile(
-                        leading: _FaviconWidget(faviconUrl: favicon),
-                        title: Text(
-                          title.isNotEmpty ? title : host,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          host,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                        trailing: Text(
-                          _formatTime(time),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                        onTap: () => widget.onNavigate(url),
+                    return ListTile(
+                      leading: _FaviconWidget(faviconUrl: favicon),
+                      title: Text(
+                        title.isNotEmpty ? title : host,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      subtitle: Text(
+                        host,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      trailing: Text(
+                        _formatTime(time),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      onTap: () => widget.onNavigate(url),
                     );
                   },
                   childCount: _recentHistory.length,
@@ -465,14 +439,10 @@ class _QuickAccessTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return DpadFocusableSurface(
-      autoScroll: true,
-      region: 'browser-bar',
-      onSelect: onTap,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Container(
         decoration: BoxDecoration(
           color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(12),
@@ -505,7 +475,6 @@ class _QuickAccessTile extends StatelessWidget {
               ),
             ),
           ],
-        ),
         ),
       ),
     );

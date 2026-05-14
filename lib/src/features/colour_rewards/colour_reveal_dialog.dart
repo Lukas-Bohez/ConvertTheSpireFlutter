@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../services/ad_service.dart';
-import '../../widgets/dpad_focusable_surface.dart';
 import 'colour_rarity.dart';
 import 'colour_reward_service.dart';
 
@@ -64,25 +63,15 @@ class _ColourRevealDialogState extends State<ColourRevealDialog> with SingleTick
               Row(children: [
                 if (!owned)
                   Expanded(
-                    child: DpadFocusableSurface(
-                      autofocus: true,
-                      onSelect: () async {
+                    child: ElevatedButton(
+                      onPressed: () async {
                         AdService.instance.registerInteraction();
                         await ColourRewardService.instance.unlockColour(reward.id);
                         await ColourRewardService.instance.equipColour(reward.id);
                         if (!mounted) return;
                         Navigator.of(context).pop(true);
                       },
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          AdService.instance.registerInteraction();
-                          await ColourRewardService.instance.unlockColour(reward.id);
-                          await ColourRewardService.instance.equipColour(reward.id);
-                          if (!mounted) return;
-                          Navigator.of(context).pop(true);
-                        },
-                        child: const Text('Equip'),
-                      ),
+                      child: const Text('Equip'),
                     ),
                   )
                 else
@@ -98,18 +87,12 @@ class _ColourRevealDialogState extends State<ColourRevealDialog> with SingleTick
                   ),
                 if (!owned) const SizedBox(width: 12),
                 Expanded(
-                  child: DpadFocusableSurface(
-                    onSelect: () {
+                  child: OutlinedButton(
+                    onPressed: () {
                       AdService.instance.registerInteraction();
                       Navigator.of(context).pop(false);
                     },
-                    child: OutlinedButton(
-                      onPressed: () {
-                        AdService.instance.registerInteraction();
-                        Navigator.of(context).pop(false);
-                      },
-                      child: const Text('Close'),
-                    ),
+                    child: const Text('Close'),
                   ),
                 ),
               ])

@@ -11,7 +11,6 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
-import 'package:dpad/dpad.dart';
 
 // Use explicit show clauses to avoid ambiguous_import errors:
 // home_screen.dart imports PlayerState from player.dart internally.
@@ -43,7 +42,7 @@ import 'services/youtube_service.dart';
 import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
 import 'widgets/adaptive_ui_frame.dart';
-import 'widgets/cursor_overlay.dart';
+import 'widgets/global_cursor_overlay.dart';
 import 'widgets/tv_file_browser.dart';
 import 'vault/vault_bootstrap.dart';
 import 'vault/platform/desktop_window.dart';
@@ -467,19 +466,7 @@ class _MyAppState extends State<MyApp>
       listenables.add(controller);
     }
 
-    return DpadNavigator(
-      enabled: true,
-      focusMemory: const FocusMemoryOptions(
-        enabled: true,
-        maxHistory: 20,
-      ),
-      onBackPressed: () {
-        final context = _navigatorKey.currentContext;
-        if (context != null && Navigator.canPop(context)) {
-          Navigator.pop(context);
-        }
-      },
-      onMenuPressed: () {},
+    return GlobalCursorOverlay(
       child: AnimatedBuilder(
         animation: Listenable.merge(listenables),
         builder: (context, _) {
@@ -543,9 +530,7 @@ class _MyAppState extends State<MyApp>
             themeMode: themeMode,
             builder: (context, child) {
               // TECH-DEBT: add per-route adaptive exclusions for full-bleed media pages.
-              return CursorOverlay(
-                child: AdaptiveUiFrame(child: child ?? const SizedBox.shrink()),
-              );
+              return AdaptiveUiFrame(child: child ?? const SizedBox.shrink());
             },
             home: _buildHome(),
           );

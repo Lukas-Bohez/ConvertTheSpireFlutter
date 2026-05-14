@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../data/browser_db.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/dpad_focusable_surface.dart';
 
 /// Full favourites manager with folders, search, grid/list toggle,
 /// drag-to-reorder, and bulk editing.
@@ -186,14 +185,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
             child: const Icon(Icons.delete, color: Colors.white),
           ),
           onDismissed: (_) => widget.repo.removeFavourite(url),
-          child: DpadFocusableSurface(
-            autofocus: index == 0,
-            autoScroll: true,
-            onSelect: () {
-              widget.onNavigate(url);
-              Navigator.pop(context);
-            },
-            child: ListTile(
+          child: ListTile(
             leading: _favicon(favicon),
             title: Text(title.isNotEmpty ? title : host,
                 maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -212,7 +204,6 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
               Navigator.pop(context);
             },
             onLongPress: () => _showEditDialog(item),
-            ),
           ),
         );
       },
