@@ -5,9 +5,17 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 
+import '../services/android_saf.dart';
 import '../services/folder_history_service.dart';
 
 enum TvFileBrowserMode { file, folder }
+
+class _FolderChoice {
+  final String label;
+  final String path;
+
+  const _FolderChoice({required this.label, required this.path});
+}
 
 Future<String?> pickSingleFilePath(
   BuildContext context, {
@@ -95,6 +103,55 @@ Future<String?> pickDirectoryPath(
 }) async {
   if (kIsWeb) {
     return FilePicker.platform.getDirectoryPath(dialogTitle: dialogTitle);
+  }
+
+  if (AndroidSaf().isSupported) {
+    final androidSaf = AndroidSaf();
+    final volumes = await androidSaf.getExternalVolumes();
+    final chosenRoot = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        final choices = <_FolderChoice>[
+          const _FolderChoice(
+            label: 'Internal storage',
+            path: '/storage/emulated/0',
+          ),
+        ];
+        if (initialDirectory != null && initialDirectory.isNotEmpty) {
+          choices.add(_FolderChoice(label: 'Last folder', path: initialDirectory));
+        }
+        for (final volume in volumes) {
+          final path = volume['path'] ?? '';
+          if (path.isEmpty) continue;
+          final labelBase = volume['label']?.isNotEmpty == true ? volume['label']! : 'USB Drive';
+          final uuid = volume['uuid']?.isNotEmpty == true ? volume['uuid']! : '';
+          choices.add(
+            _FolderChoice(
+              label: uuid.isNotEmpty ? '$labelBase ($uuid)' : labelBase,
+              path: path,
+            ),
+          );
+        }
+
+        return SimpleDialog(
+          title: Text(dialogTitle),
+          children: [
+            for (final choice in choices)
+              SimpleDialogOption(
+                onPressed: () => Navigator.of(dialogContext).pop(choice.path),
+                child: Text(choice.label),
+              ),
+          ],
+        );
+      },
+    );
+    if (chosenRoot == null || chosenRoot.isEmpty) return null;
+
+    return TvFileBrowser.pickFolder(
+      context: context,
+      title: dialogTitle,
+      initialDirectory: chosenRoot,
+    );
   }
 
   // Use last opened folder as initial directory if not specified
@@ -204,7 +261,6 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
       '/storage/emulated/0',
       '/storage/self/primary',
       '/sdcard',
-      '/storage',
     ];
 
     for (final candidate in candidates) {
@@ -233,7 +289,10 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     });
 
     try {
-      final all = _currentDir.listSync(followLinks: false);
+      final all = <FileSystemEntity>[];
+      await for (final entity in _currentDir.list(followLinks: false)) {
+        all.add(entity);
+      }
       final directories = <Directory>[];
       final files = <File>[];
 

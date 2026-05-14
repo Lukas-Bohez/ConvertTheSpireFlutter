@@ -443,82 +443,84 @@ class _MyAppState extends State<MyApp>
       listenables.add(controller);
     }
 
-    return GlobalCursorOverlay(
-      child: FocusTraversalGroup(
-        policy: _NullTraversalPolicy(),
-        child: AnimatedBuilder(
-          animation: Listenable.merge(listenables),
-          builder: (context, _) {
-            final themeMode = _resolveThemeMode(_controller?.settings?.themeMode);
-            final seed = ColourRewardService.instance.equipped.color;
-            final lightScheme = ColorScheme.fromSeed(seedColor: seed);
-            final darkScheme = ColorScheme.fromSeed(
-              seedColor: seed,
-              brightness: Brightness.dark,
-            );
+    return AnimatedBuilder(
+        animation: Listenable.merge(listenables),
+        builder: (context, _) {
+          final themeMode = _resolveThemeMode(_controller?.settings?.themeMode);
+          final seed = ColourRewardService.instance.equipped.color;
+          final lightScheme = ColorScheme.fromSeed(seedColor: seed);
+          final darkScheme = ColorScheme.fromSeed(
+            seedColor: seed,
+            brightness: Brightness.dark,
+          );
 
-        final lightTheme = ThemeData.from(
-          colorScheme: lightScheme,
-          useMaterial3: true,
-        ).copyWith(
-          iconTheme: IconThemeData(size: 20, color: lightScheme.onSurface),
-          appBarTheme: AppBarTheme(
-            backgroundColor: lightScheme.surface,
-            foregroundColor: lightScheme.onSurface,
-            iconTheme: IconThemeData(color: lightScheme.onSurface),
-            titleTextStyle: TextStyle(
-              color: lightScheme.onSurface,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
+          final lightTheme = ThemeData.from(
+            colorScheme: lightScheme,
+            useMaterial3: true,
+          ).copyWith(
+            iconTheme: IconThemeData(size: 20, color: lightScheme.onSurface),
+            appBarTheme: AppBarTheme(
+              backgroundColor: lightScheme.surface,
+              foregroundColor: lightScheme.onSurface,
+              iconTheme: IconThemeData(color: lightScheme.onSurface),
+              titleTextStyle: TextStyle(
+                color: lightScheme.onSurface,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          bottomNavigationBarTheme: BottomNavigationBarThemeData(
-            backgroundColor: lightScheme.surface,
-            selectedItemColor: lightScheme.primary,
-            unselectedItemColor: lightScheme.onSurface.withValues(alpha: 0.7),
-          ),
-        );
-
-        final darkTheme = ThemeData.from(
-          colorScheme: darkScheme,
-          useMaterial3: true,
-        ).copyWith(
-          iconTheme: IconThemeData(size: 20, color: darkScheme.onSurface),
-          appBarTheme: AppBarTheme(
-            backgroundColor: darkScheme.surface,
-            foregroundColor: darkScheme.onSurface,
-            iconTheme: IconThemeData(color: darkScheme.onSurface),
-            titleTextStyle: TextStyle(
-              color: darkScheme.onSurface,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
+            bottomNavigationBarTheme: BottomNavigationBarThemeData(
+              backgroundColor: lightScheme.surface,
+              selectedItemColor: lightScheme.primary,
+              unselectedItemColor: lightScheme.onSurface.withValues(alpha: 0.7),
             ),
-          ),
-          bottomNavigationBarTheme: BottomNavigationBarThemeData(
-            backgroundColor: darkScheme.surface,
-            selectedItemColor: darkScheme.primary,
-            unselectedItemColor: darkScheme.onSurface.withValues(alpha: 0.7),
-          ),
-        );
+          );
 
-            return MaterialApp(
-              navigatorKey: _navigatorKey,
-              title: getAppTitle(),
-              shortcuts: const <ShortcutActivator, Intent>{},
-              actions: const <Type, Action<Intent>>{},
-              theme: lightTheme,
-              darkTheme: darkTheme,
-              themeMode: themeMode,
-              builder: (context, child) {
-                // TECH-DEBT: add per-route adaptive exclusions for full-bleed media pages.
-                return AdaptiveUiFrame(child: child ?? const SizedBox.shrink());
-              },
-              home: _buildHome(),
-            );
-          },
-        ),
-      ),
-    );
+          final darkTheme = ThemeData.from(
+            colorScheme: darkScheme,
+            useMaterial3: true,
+          ).copyWith(
+            iconTheme: IconThemeData(size: 20, color: darkScheme.onSurface),
+            appBarTheme: AppBarTheme(
+              backgroundColor: darkScheme.surface,
+              foregroundColor: darkScheme.onSurface,
+              iconTheme: IconThemeData(color: darkScheme.onSurface),
+              titleTextStyle: TextStyle(
+                color: darkScheme.onSurface,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            bottomNavigationBarTheme: BottomNavigationBarThemeData(
+              backgroundColor: darkScheme.surface,
+              selectedItemColor: darkScheme.primary,
+              unselectedItemColor: darkScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          );
+
+          return ExcludeFocus(
+            excluding: true,
+            child: FocusTraversalGroup(
+              policy: const _DeadTraversalPolicy(),
+              child: MaterialApp(
+                navigatorKey: _navigatorKey,
+                title: getAppTitle(),
+                shortcuts: const <ShortcutActivator, Intent>{},
+                actions: const <Type, Action<Intent>>{},
+                theme: lightTheme,
+                darkTheme: darkTheme,
+                themeMode: themeMode,
+                builder: (context, child) {
+                  return GlobalCursorOverlay(
+                    child: AdaptiveUiFrame(child: child ?? const SizedBox.shrink()),
+                  );
+                },
+                home: _buildHome(),
+              ),
+            ),
+          );
+        },
+      );
   }
 
   Widget _buildHome() {
@@ -653,7 +655,9 @@ class _MyAppState extends State<MyApp>
   }
 }
 
-class _NullTraversalPolicy extends FocusTraversalPolicy {
+class _DeadTraversalPolicy extends FocusTraversalPolicy {
+  const _DeadTraversalPolicy();
+
   @override
   Iterable<FocusNode> sortDescendants(
     Iterable<FocusNode> descendants,
@@ -674,6 +678,10 @@ class _NullTraversalPolicy extends FocusTraversalPolicy {
     TraversalDirection direction,
   ) =>
       false;
+
+  bool inVerticalGroupOf(FocusNode node) => false;
+
+  bool inHorizontalGroupOf(FocusNode node) => false;
 
   @override
   bool next(FocusNode node) => false;

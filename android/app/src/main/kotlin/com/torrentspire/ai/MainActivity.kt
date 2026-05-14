@@ -51,6 +51,7 @@ class MainActivity : AudioServiceActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         
         super.onCreate(savedInstanceState)
+        Log.i("CursorBridge", "MainActivity onCreate")
         
         // Set window background to transparent for edge-to-edge rendering
         window.decorView.setBackgroundColor(Color.TRANSPARENT)
@@ -296,30 +297,23 @@ class MainActivity : AudioServiceActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        val intercept = when (event.keyCode) {
+        when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_UP,
             KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT,
             KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_ENTER,
-            KeyEvent.KEYCODE_NUMPAD_ENTER -> true
-            else -> false
-        }
-        if (intercept) {
-            val action = when (event.action) {
-                KeyEvent.ACTION_DOWN -> "down"
-                KeyEvent.ACTION_UP -> "up"
-                else -> return true
+            KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                if (event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP) {
+                    Log.i("CursorBridge", "Intercepted keyCode=${event.keyCode} action=${if (event.action == KeyEvent.ACTION_DOWN) "down" else "up"}")
+                    keyEventChannel?.invokeMethod("onDpadKey", mapOf(
+                        "keyCode" to event.keyCode,
+                        "action" to if (event.action == KeyEvent.ACTION_DOWN) "down" else "up"
+                    ))
+                }
+                return true
             }
-            keyEventChannel?.invokeMethod(
-                "onDpadKey",
-                mapOf(
-                    "keyCode" to event.keyCode,
-                    "action" to action,
-                ),
-            )
-            return true
         }
         return super.dispatchKeyEvent(event)
     }

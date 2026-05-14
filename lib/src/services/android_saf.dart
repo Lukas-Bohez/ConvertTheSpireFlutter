@@ -67,4 +67,20 @@ class AndroidSaf {
     if (!isSupported) return null;
     return _channel.invokeMethod<String>('copyToTemp', {'uri': uri});
   }
+
+  Future<List<Map<String, String>>> getExternalVolumes() async {
+    if (!isSupported) return const [];
+    final result = await _channel.invokeMethod<List<dynamic>>('getExternalVolumes');
+    final volumes = <Map<String, String>>[];
+    for (final item in result ?? const []) {
+      if (item is Map) {
+        final volume = <String, String>{};
+        item.forEach((key, value) {
+          volume[key.toString()] = value?.toString() ?? '';
+        });
+        volumes.add(volume);
+      }
+    }
+    return volumes;
+  }
 }

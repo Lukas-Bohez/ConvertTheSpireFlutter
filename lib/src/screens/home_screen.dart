@@ -814,7 +814,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _pickAndroidFolder(AppSettings settings) async {
-    final chosen = await _androidSaf.pickTree();
+    final chosen = await pickDirectoryPath(
+      context,
+      dialogTitle: 'Select download folder',
+    );
     if (chosen == null || chosen.isEmpty) return;
 
     if (!mounted) return;

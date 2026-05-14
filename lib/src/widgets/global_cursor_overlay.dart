@@ -88,6 +88,11 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
     final isDown = action == 'down';
     final isUp = action == 'up';
 
+    // Debug: log native key events to help verify interception and Flutter handling
+    try {
+      debugPrint('GlobalCursorOverlay: onDpadKey key=$keyCode action=$action');
+    } catch (_) {}
+
     const dpadUp = 19;
     const dpadDown = 20;
     const dpadLeft = 21;
@@ -126,19 +131,36 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   }
 
   void _fireTap() {
-    final renderView = WidgetsBinding.instance.renderViews.first;
-    final result = HitTestResult();
-    renderView.hitTest(result, position: _position);
+    final position = _position;
 
+    try {
+      debugPrint('GlobalCursorOverlay: _fireTap at=$position');
+    } catch (_) {}
+
+    // Inject a touch-style pointer down/up sequence using logical coordinates.
+    // Flutter pointer events are handled in logical pixels.
+    const int pointerId = 1;
     GestureBinding.instance.handlePointerEvent(
-      PointerDownEvent(position: _position),
+      PointerDownEvent(
+        pointer: pointerId,
+        position: position,
+        kind: PointerDeviceKind.touch,
+        buttons: kPrimaryButton,
+      ),
     );
     Future.delayed(const Duration(milliseconds: 50), () {
-      GestureBinding.instance.handlePointerEvent(
-        PointerUpEvent(position: _position),
-      );
+      if (mounted) {
+        GestureBinding.instance.handlePointerEvent(
+          PointerUpEvent(
+            pointer: pointerId,
+            position: position,
+            kind: PointerDeviceKind.touch,
+          ),
+        );
+      }
     });
 
+    // Also dispatch the WebView JS tap path (logical coordinates)
     unawaited(GlobalCursorOverlay._webViewTapCallback?.call(_position));
   }
 
@@ -170,6 +192,11 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
 
     _position = _position + _velocity * dt;
 
+    // If the cursor is moving, keep it visible by resetting the hide timer.
+    if (_velocity.distance > 0.5) {
+      _resetHideTimer();
+    }
+
     if (_viewportSize != Size.zero) {
       double px = _position.dx;
       double py = _position.dy;
@@ -198,10 +225,19 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   /// Inject scroll via JavaScript if a WebView is active, or default to window scroll.
   Future<void> _injectScroll(double deltaY, Offset cursorPosition) async {
     try {
+      debugPrint('GlobalCursorOverlay: _injectScroll deltaY=$deltaY at=$cursorPosition');
       final callback = GlobalCursorOverlay._webViewScrollCallback;
       if (callback != null) {
         await callback(deltaY, cursorPosition);
+        return;
       }
+
+      GestureBinding.instance.handlePointerEvent(
+        PointerScrollEvent(
+          position: cursorPosition,
+          scrollDelta: Offset(0, deltaY),
+        ),
+      );
     } catch (_) {
       // WebView not available or call failed; ignore
     }

@@ -3352,7 +3352,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         // filesystem for better performance. Otherwise fall back to the
         // native tree enumerator.
         final mapped = await PlatformDirs.getPathFromTreeUri(dirPath);
-        if (mapped != null && mapped.startsWith('/storage/')) {
+        if (mapped != null && mapped.isNotEmpty && mapped != dirPath) {
           items = await _scanFolderInBackground(mapped);
         }
         if (items.isEmpty) {

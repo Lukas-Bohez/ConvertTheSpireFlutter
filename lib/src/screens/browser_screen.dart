@@ -589,12 +589,11 @@ class _BrowserScreenState extends State<BrowserScreen>
             }
           } catch(ex){}
         });
-        if (!window.__cursorKeyBlockerInjected) {
-          window.__cursorKeyBlockerInjected = true;
+        if (!window.__keyBlocker) {
+          window.__keyBlocker = true;
           document.addEventListener('keydown', function(e) {
-            if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter',' '].includes(e.key)) {
-              e.preventDefault();
-              e.stopImmediatePropagation();
+            if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.key)) {
+              e.preventDefault(); e.stopImmediatePropagation();
             }
           }, true);
         }
