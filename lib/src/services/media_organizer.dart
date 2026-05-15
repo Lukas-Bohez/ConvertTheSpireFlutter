@@ -49,6 +49,22 @@ class MediaOrganizer {
     final candidates = <File>[];
     for (final dirPath in filteredSources) {
       try {
+        // If the source is a SAF tree URI, enumerate via native channel
+        if (dirPath.startsWith('content://')) {
+          print('[MediaOrganizer] Enumerating SAF tree: $dirPath');
+          final items = await PlatformDirs.listTree(dirPath);
+          for (final item in items) {
+            final uri = item['uri'] ?? '';
+            if (uri.isEmpty) continue;
+            // Copy content URI into a temp file so it can be processed like a File
+            final temp = await PlatformDirs.copyToTemp(uri);
+            if (temp == null || temp.isEmpty) continue;
+            candidates.add(File(temp));
+          }
+          print('[MediaOrganizer] Found ${candidates.length} candidates in SAF $dirPath');
+          continue;
+        }
+
         final dir = Directory(dirPath);
         if (!dir.existsSync()) {
           print('[MediaOrganizer] Source dir does not exist: $dirPath');

@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 /// Global cursor overlay that covers the entire app.
 /// Always active, always visible, handles all D-pad input.
@@ -61,6 +62,15 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   }
 
   Future<void> _detectAndroidTV() async {
+    // In debug builds, always enable cursor so it can be tested on desktop
+    if (kDebugMode) {
+      if (!mounted) return;
+      setState(() => _isAndroidTV = true);
+      _keyChannel.setMethodCallHandler(_onNativeKeyEvent);
+      if (!_ticker.isActive) _ticker.start();
+      return;
+    }
+
     var isTV = false;
     try {
       isTV = await _platformChannel.invokeMethod<bool>('isAndroidTV') ?? false;

@@ -99,30 +99,30 @@ Future<String?> pickDirectoryPath(
     return FilePicker.platform.getDirectoryPath(dialogTitle: dialogTitle);
   }
 
-  final browserFallback = await _pickDirectoryWithBuiltInBrowser(
-    context,
-    dialogTitle: dialogTitle,
-    initialDirectory: initialDirectory,
-  );
-
   if (AndroidSaf().isSupported) {
     try {
       final result = await AndroidSaf().pickTree();
       debugPrint('SAF folder selected: $result');
-      return result;
+      if (result != null && result.isNotEmpty) return result;
+      // If user cancelled (null/empty) fall through to browser fallback
     } on PlatformException catch (e) {
       debugPrint('SAF folder picker failed: ${e.code} ${e.message}');
-      if (e.code == 'NO_DOCUMENTS_UI' || e.code == 'CANCELLED') {
-        return browserFallback;
+      if (e.code != 'NO_DOCUMENTS_UI' && e.code != 'CANCELLED') {
+        // Unexpected error - still fallthrough to browser fallback
+        debugPrint('SAF unexpected error, falling back to built-in browser');
       }
-      return browserFallback;
+      // For NO_DOCUMENTS_UI or CANCELLED, we will present the built-in browser as fallback
     } catch (e) {
       debugPrint('SAF folder picker failed: $e');
-      return browserFallback;
     }
-  }
 
-  return browserFallback;
+  }
+  // Only show built-in browser if SAF is unsupported, cancelled, or failed.
+  return await _pickDirectoryWithBuiltInBrowser(
+    context,
+    dialogTitle: dialogTitle,
+    initialDirectory: initialDirectory,
+  );
 }
 
 Future<String?> _pickDirectoryWithBuiltInBrowser(
