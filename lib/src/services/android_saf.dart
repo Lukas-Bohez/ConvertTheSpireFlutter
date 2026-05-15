@@ -8,6 +8,15 @@ class AndroidSaf {
 
   bool get isSupported => !kIsWeb && Platform.isAndroid;
 
+  Future<bool> isAndroidTV() async {
+    if (!isSupported) return false;
+    try {
+      return await _channel.invokeMethod<bool>('isAndroidTV') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<String?> pickTree() async {
     if (!isSupported) return null;
     return _channel.invokeMethod<String>('pickTree');

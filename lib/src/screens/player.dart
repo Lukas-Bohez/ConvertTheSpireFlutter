@@ -26,7 +26,6 @@ import '../services/platform_dirs.dart';
 import '../services/audio_handler.dart';
 import '../services/background_media_update_guard.dart';
 import '../services/ffmpeg_service.dart';
-import '../services/file_resolver.dart';
 import '../utils/snack.dart';
 import '../utils/lock.dart';
 import '../vault/platform/desktop_window.dart';
@@ -3405,19 +3404,11 @@ class _PlayerScreenState extends State<PlayerScreen>
         }
         if (!PlayerState._mediaExtensions.contains(ext)) continue;
 
-        // Try to obtain a local filesystem path. If that fails we'll still
-        // provide the content URI so platform players can use it.
-        String contentPath = uri;
-        try {
-          final resolved = await FileResolver.ensureLocalPath(uri);
-          if (resolved.isNotEmpty) contentPath = resolved;
-        } catch (_) {}
-
         final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
         final modifiedMillis = int.tryParse(entry['lastModified'] ?? '') ?? 0;
         mediaItems.add(
           MediaItem(
-            contentPath,
+            uri,
             isVideo ? MediaType.video : MediaType.audio,
             title: p.basenameWithoutExtension(name),
             modifiedAt: modifiedMillis > 0 ? DateTime.fromMillisecondsSinceEpoch(modifiedMillis) : null,

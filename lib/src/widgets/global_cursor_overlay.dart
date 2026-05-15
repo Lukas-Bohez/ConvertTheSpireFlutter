@@ -3,7 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 /// Global cursor overlay that covers the entire app.
 /// Always active, always visible, handles all D-pad input.
@@ -58,6 +58,9 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   void initState() {
     super.initState();
     _ticker = createTicker(_onTick);
+    if (!kIsWeb && _isDesktopPlatform) {
+      HardwareKeyboard.instance.addHandler(_onHardwareKeyEvent);
+    }
     _detectAndroidTV();
   }
 
@@ -90,10 +93,46 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
 
   @override
   void dispose() {
+    if (!kIsWeb && _isDesktopPlatform) {
+      HardwareKeyboard.instance.removeHandler(_onHardwareKeyEvent);
+    }
     _ticker.dispose();
     _hideTimer?.cancel();
     _keyChannel.setMethodCallHandler(null);
     super.dispose();
+  }
+
+  bool get _isDesktopPlatform =>
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.linux ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
+  bool _onHardwareKeyEvent(KeyEvent event) {
+    if (!_isAndroidTV) return false;
+
+    final isDown = event is KeyDownEvent;
+    final isUp = event is KeyUpEvent;
+    if (!isDown && !isUp) return false;
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      _direction = Offset(isDown ? -1 : (isUp ? 0 : _direction.dx), _direction.dy);
+    } else if (key == LogicalKeyboardKey.arrowRight) {
+      _direction = Offset(isDown ? 1 : (isUp ? 0 : _direction.dx), _direction.dy);
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      _direction = Offset(_direction.dx, isDown ? -1 : (isUp ? 0 : _direction.dy));
+    } else if (key == LogicalKeyboardKey.arrowDown) {
+      _direction = Offset(_direction.dx, isDown ? 1 : (isUp ? 0 : _direction.dy));
+    } else if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter || key == LogicalKeyboardKey.select) {
+      if (isDown) _fireTap();
+    } else {
+      return false;
+    }
+
+    if (isDown) {
+      _resetHideTimer();
+    }
+    return true;
   }
 
   void _resetHideTimer() {

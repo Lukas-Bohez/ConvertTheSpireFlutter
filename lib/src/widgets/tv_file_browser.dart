@@ -100,6 +100,15 @@ Future<String?> pickDirectoryPath(
   }
 
   if (AndroidSaf().isSupported) {
+    final isTv = await AndroidSaf().isAndroidTV();
+    if (isTv) {
+      return await _pickDirectoryWithBuiltInBrowser(
+        context,
+        dialogTitle: dialogTitle,
+        initialDirectory: initialDirectory,
+      );
+    }
+
     try {
       final result = await AndroidSaf().pickTree();
       debugPrint('SAF folder selected: $result');
@@ -115,8 +124,8 @@ Future<String?> pickDirectoryPath(
     } catch (e) {
       debugPrint('SAF folder picker failed: $e');
     }
-
   }
+
   // Only show built-in browser if SAF is unsupported, cancelled, or failed.
   return await _pickDirectoryWithBuiltInBrowser(
     context,
