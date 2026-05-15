@@ -253,8 +253,8 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
       await for (final entity in _currentDir.list(followLinks: false)) {
         if (entity is Directory) {
           directories.add(entity);
-        } else if (widget.mode == TvFileBrowserMode.folder) {
-          files.add(entity as File);
+        } else if (entity is File && widget.mode == TvFileBrowserMode.folder) {
+          files.add(entity);
         } else if (entity is File && _isAllowedFile(entity)) {
           files.add(entity);
         }
