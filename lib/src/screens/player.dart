@@ -6,7 +6,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kIsWeb, compute;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show MissingPluginException, DeviceOrientation, SystemChrome, SystemUiMode;
 import 'package:image/image.dart' as img;
@@ -3425,29 +3425,44 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   // Scan a filesystem folder in background to avoid UI freeze on large folders
   Future<List<MediaItem>> _scanFolderInBackground(String dirPath) async {
-    return await compute(_scanFolderSync, dirPath);
-  }
-
-  // Static method to scan folder synchronously (runs in isolate)
-  static List<MediaItem> _scanFolderSync(String dirPath) {
     try {
       final dir = Directory(dirPath);
-      if (!dir.existsSync()) return [];
+      if (!await dir.exists()) return [];
 
       final items = <MediaItem>[];
-      dir.listSync(recursive: true).whereType<File>().forEach((f) {
-        final ext = p.extension(f.path).toLowerCase();
-        if (ext.isEmpty) return;
-        if (!PlayerState._mediaExtensions.contains(ext)) return;
+      final pending = <Directory>[dir];
+      var visited = 0;
 
-        final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
-        items.add(MediaItem(
-          f.path,
-          isVideo ? MediaType.video : MediaType.audio,
-          title: p.basenameWithoutExtension(f.path),
-          modifiedAt: f.statSync().modified,
-        ));
-      });
+      while (pending.isNotEmpty) {
+        final current = pending.removeLast();
+        try {
+          await for (final entity in current.list(followLinks: false)) {
+            if (entity is Directory) {
+              pending.add(entity);
+            } else if (entity is File) {
+              final ext = p.extension(entity.path).toLowerCase();
+              if (ext.isEmpty) continue;
+              if (!PlayerState._mediaExtensions.contains(ext)) continue;
+
+              final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
+              final stat = await entity.stat();
+              items.add(MediaItem(
+                entity.path,
+                isVideo ? MediaType.video : MediaType.audio,
+                title: p.basenameWithoutExtension(entity.path),
+                modifiedAt: stat.modified,
+              ));
+            }
+
+            visited++;
+            if (visited % 200 == 0) {
+              await Future<void>.delayed(Duration.zero);
+            }
+          }
+        } catch (e) {
+          debugPrint('Background folder scan skipped $current: $e');
+        }
+      }
 
       return items;
     } catch (e) {

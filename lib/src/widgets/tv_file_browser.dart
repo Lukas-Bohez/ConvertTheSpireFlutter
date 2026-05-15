@@ -241,24 +241,31 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     setState(() {
       _loading = true;
       _error = null;
+      _entries = const [];
     });
 
     try {
-      final all = <FileSystemEntity>[];
-      await for (final entity in _currentDir.list(followLinks: false)) {
-        all.add(entity);
-      }
-
       final directories = <Directory>[];
       final files = <File>[];
+      var scanned = 0;
 
-      for (final entity in all) {
+      await for (final entity in _currentDir.list(followLinks: false)) {
         if (entity is Directory) {
           directories.add(entity);
         } else if (widget.mode == TvFileBrowserMode.folder) {
           files.add(entity as File);
         } else if (entity is File && _isAllowedFile(entity)) {
           files.add(entity);
+        }
+
+        scanned++;
+        if (scanned % 200 == 0 && mounted) {
+          directories.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+          files.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+          setState(() {
+            _entries = <FileSystemEntity>[...directories, ...files];
+          });
+          await Future<void>.delayed(Duration.zero);
         }
       }
 
@@ -303,6 +310,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
             icon: Icons.usb,
           ));
         }
+        locations.addAll(_discoverAndroidStorageLocations());
       }
 
       if (!mounted) return;
@@ -324,7 +332,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
         final letter = String.fromCharCode(code);
         final path = '$letter:${Platform.pathSeparator}';
         if (Directory(path).existsSync()) {
-          locations.add(_StorageLocation(label: letter, path: path, icon: Icons.storage));
+          locations.add(_StorageLocation(label: '$letter drive', path: path, icon: Icons.storage));
         }
       }
       return locations;
@@ -366,21 +374,46 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     }
 
     if (Platform.isAndroid) {
-      final candidates = <String>[
-        '/storage/emulated/0',
-        '/storage/self/primary',
-        '/sdcard',
-      ];
-      for (final candidate in candidates) {
-        final dir = Directory(candidate);
-        if (dir.existsSync()) {
-          locations.add(_StorageLocation(
-            label: 'Device',
-            path: dir.path,
-            icon: Icons.phone_android,
-          ));
-          break;
-        }
+      locations.addAll(_discoverAndroidStorageLocations());
+    }
+
+    return locations;
+  }
+
+  List<_StorageLocation> _discoverAndroidStorageLocations() {
+    final locations = <_StorageLocation>[];
+    final candidates = <Map<String, Object>>[
+      {'label': 'Device storage', 'path': '/storage/emulated/0', 'icon': Icons.phone_android},
+      {'label': 'Primary storage', 'path': '/storage/self/primary', 'icon': Icons.phone_android},
+      {'label': 'SD card', 'path': '/sdcard', 'icon': Icons.sd_storage},
+    ];
+
+    for (final candidate in candidates) {
+      final path = candidate['path'] as String;
+      final dir = Directory(path);
+      if (dir.existsSync()) {
+        locations.add(_StorageLocation(
+          label: candidate['label'] as String,
+          path: dir.path,
+          icon: candidate['icon'] as IconData,
+        ));
+      }
+    }
+
+    for (final rootPath in ['/storage', '/mnt/media_rw']) {
+      final root = Directory(rootPath);
+      if (!root.existsSync()) continue;
+      final children = root.listSync(followLinks: false).whereType<Directory>().toList();
+      children.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+      for (final child in children) {
+        if (child.path == '/storage/emulated' || child.path == '/storage/self') continue;
+        final label = _nameForPath(child.path);
+        if (label.isEmpty) continue;
+        locations.add(_StorageLocation(
+          label: label,
+          path: child.path,
+          icon: Icons.usb,
+        ));
       }
     }
 
@@ -496,72 +529,79 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
               if (_storageLocations.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final location in _storageLocations)
-                          ChoiceChip(
-                            label: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(location.icon, size: 18),
-                                const SizedBox(width: 8),
-                                Text(location.label),
-                              ],
+                  child: SizedBox(
+                    height: 40,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          for (final location in _storageLocations)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(location.icon, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(location.label),
+                                  ],
+                                ),
+                                selected: _isCurrentStorageLocation(location),
+                                onSelected: (_) => _openStorageLocation(location),
+                              ),
                             ),
-                            selected: _isCurrentStorageLocation(location),
-                            onSelected: (_) => _openStorageLocation(location),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
+              if (_loading)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: LinearProgressIndicator(minHeight: 2),
+                ),
               Expanded(
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _error != null
-                        ? Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(_error!),
-                          )
-                        : ListView.builder(
-                            itemCount: _entries.length,
-                            itemBuilder: (context, index) {
-                              final entity = _entries[index];
-                              final isDir = entity is Directory;
-                              final name = _nameForPath(entity.path);
+                child: _error != null
+                    ? Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(_error!),
+                      )
+                    : ListView.builder(
+                        itemCount: _entries.length,
+                        itemBuilder: (context, index) {
+                          final entity = _entries[index];
+                          final isDir = entity is Directory;
+                          final name = _nameForPath(entity.path);
 
-                              return ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                leading: Icon(
-                                  isDir ? Icons.folder : _iconForExtension(p.extension(entity.path)),
-                                  color: isDir
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(context).colorScheme.onSurface,
-                                  size: 24,
-                                ),
-                                title: Text(name, overflow: TextOverflow.ellipsis, maxLines: 1),
-                                subtitle: !isDir
-                                    ? FutureBuilder<FileStat>(
-                                        future: entity.stat(),
-                                        builder: (_, snap) {
-                                          if (!snap.hasData) return const SizedBox.shrink();
-                                          final mb = snap.data!.size / (1024 * 1024);
-                                          return Text(
-                                            '${mb.toStringAsFixed(1)} MB',
-                                            style: Theme.of(context).textTheme.bodySmall,
-                                            overflow: TextOverflow.ellipsis,
-                                          );
-                                        },
-                                      )
-                                    : null,
-                                onTap: () => _onTap(entity),
-                              );
-                            },
-                          ),
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            leading: Icon(
+                              isDir ? Icons.folder : _iconForExtension(p.extension(entity.path)),
+                              color: isDir
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.onSurface,
+                              size: 24,
+                            ),
+                            title: Text(name, overflow: TextOverflow.ellipsis, maxLines: 1),
+                            subtitle: !isDir
+                                ? FutureBuilder<FileStat>(
+                                    future: entity.stat(),
+                                    builder: (_, snap) {
+                                      if (!snap.hasData) return const SizedBox.shrink();
+                                      final mb = snap.data!.size / (1024 * 1024);
+                                      return Text(
+                                        '${mb.toStringAsFixed(1)} MB',
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                        overflow: TextOverflow.ellipsis,
+                                      );
+                                    },
+                                  )
+                                : null,
+                            onTap: () => _onTap(entity),
+                          );
+                        },
+                      ),
               ),
             ],
           ),
