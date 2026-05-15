@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
 import '../services/android_saf.dart';
@@ -98,17 +99,37 @@ Future<String?> pickDirectoryPath(
     return FilePicker.platform.getDirectoryPath(dialogTitle: dialogTitle);
   }
 
+  final browserFallback = await _pickDirectoryWithBuiltInBrowser(
+    context,
+    dialogTitle: dialogTitle,
+    initialDirectory: initialDirectory,
+  );
+
   if (AndroidSaf().isSupported) {
     try {
       final result = await AndroidSaf().pickTree();
       debugPrint('SAF folder selected: $result');
       return result;
+    } on PlatformException catch (e) {
+      debugPrint('SAF folder picker failed: ${e.code} ${e.message}');
+      if (e.code == 'NO_DOCUMENTS_UI' || e.code == 'CANCELLED') {
+        return browserFallback;
+      }
+      return browserFallback;
     } catch (e) {
       debugPrint('SAF folder picker failed: $e');
-      return null;
+      return browserFallback;
     }
   }
 
+  return browserFallback;
+}
+
+Future<String?> _pickDirectoryWithBuiltInBrowser(
+  BuildContext context, {
+  required String dialogTitle,
+  String? initialDirectory,
+}) async {
   // Use last opened folder as initial directory if not specified
   String? resolvedInitialDirectory = initialDirectory;
   if (resolvedInitialDirectory == null || resolvedInitialDirectory.isEmpty) {

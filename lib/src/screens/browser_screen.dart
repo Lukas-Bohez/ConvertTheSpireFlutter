@@ -611,6 +611,9 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _resumeCursor() {
     if (!mounted || _webViewController == null) return;
+    try {
+      _webviewInputChannel.invokeMethod('dismissIME');
+    } catch (_) {}
     if (!_cursorActive) {
       setState(() => _cursorActive = true);
     }
@@ -729,6 +732,9 @@ class _BrowserScreenState extends State<BrowserScreen>
           ),
           onSubmitted: (value) async {
             await _injectTextAndBlur(value);
+            try {
+              await _webviewInputChannel.invokeMethod('dismissIME');
+            } catch (_) {}
             Navigator.of(context).pop();
             _resumeCursor();
           },
@@ -737,6 +743,9 @@ class _BrowserScreenState extends State<BrowserScreen>
           TextButton(
             onPressed: () async {
               await _blurWebViewInput();
+              try {
+                await _webviewInputChannel.invokeMethod('dismissIME');
+              } catch (_) {}
               Navigator.of(context).pop();
               _resumeCursor();
             },

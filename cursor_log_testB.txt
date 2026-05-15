@@ -1,0 +1,7 @@
+﻿--------- beginning of main
+05-15 13:59:24.418  1266  1266 I CursorBridge: Intercepted keyCode=20 action=down
+05-15 13:59:24.423  1266  1266 I CursorBridge: Intercepted keyCode=20 action=up
+05-15 13:59:24.550  1266  1266 I CursorBridge: Intercepted keyCode=20 action=down
+05-15 13:59:24.553  1266  1266 I CursorBridge: Intercepted keyCode=20 action=up
+05-15 13:59:24.665  1266  1266 I CursorBridge: Intercepted keyCode=23 action=down
+05-15 13:59:24.695  1266  1266 I CursorBridge: Intercepted keyCode=23 action=up

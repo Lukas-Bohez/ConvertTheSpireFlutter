@@ -2,6 +2,7 @@ package com.torrentspire.ai
 
 import android.app.Activity
 import android.app.PictureInPictureParams
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.ContentValues
 import android.content.Context
@@ -14,6 +15,7 @@ import android.media.MediaScannerConnection
 import android.util.Rational
 import android.graphics.Color
 import android.view.KeyEvent
+import android.view.inputmethod.InputMethodManager
 import android.os.SystemClock
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
@@ -60,6 +62,12 @@ class MainActivity : AudioServiceActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        keyEventChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, cursorKeysChannel)
+        keyEventChannel?.setMethodCallHandler { _, result ->
+            result.notImplemented()
+        }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -77,7 +85,17 @@ class MainActivity : AudioServiceActivity() {
                                     Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
                             )
                         }
-                        startActivityForResult(intent, pickTreeRequestCode)
+                        if (intent.resolveActivity(packageManager) == null) {
+                            pendingResult = null
+                            result.error("NO_DOCUMENTS_UI", "No file picker app available", null)
+                            return@setMethodCallHandler
+                        }
+                        try {
+                            startActivityForResult(intent, pickTreeRequestCode)
+                        } catch (e: ActivityNotFoundException) {
+                            pendingResult = null
+                            result.error("NO_DOCUMENTS_UI", "No file picker app available", null)
+                        }
                     }
                     "copyToTree" -> {
                         val treeUri = call.argument<String>("treeUri")
@@ -290,16 +308,26 @@ class MainActivity : AudioServiceActivity() {
                             }
                         result.success(removable)
                     }
+                    "dismissIME" -> {
+                        try {
+                            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                            imm?.hideSoftInputFromWindow(window.decorView.windowToken, 0)
+                            val view = browserWebView ?: findWebView(window.decorView.rootView)
+                            view?.clearFocus()
+                            if (view != null) {
+                                imm?.restartInput(view)
+                            }
+                            Log.d("CursorBridge", "dismissIME called — IME connection reset")
+                            result.success(null)
+                        } catch (e: Exception) {
+                            Log.e("CursorBridge", "dismissIME FAILED: $e")
+                            result.error("DISMISS_FAILED", e.localizedMessage, null)
+                        }
+                    }
                     else -> result.notImplemented()
                 }
             }
 
-        keyEventChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, cursorKeysChannel)
-        keyEventChannel?.setMethodCallHandler { call, result ->
-            when (call.method) {
-                else -> result.notImplemented()
-            }
-        }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -312,7 +340,10 @@ class MainActivity : AudioServiceActivity() {
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_NUMPAD_ENTER -> {
                 if (event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP) {
-                    Log.i("CursorBridge", "Intercepted keyCode=${event.keyCode} action=${if (event.action == KeyEvent.ACTION_DOWN) "down" else "up"}")
+                    Log.d(
+                        "CursorBridge",
+                        "dispatchKeyEvent: keyCode=${event.keyCode} channel=${keyEventChannel != null} action=${event.action}"
+                    )
                     keyEventChannel?.invokeMethod("onDpadKey", mapOf(
                         "keyCode" to event.keyCode,
                         "action" to if (event.action == KeyEvent.ACTION_DOWN) "down" else "up"
@@ -322,6 +353,46 @@ class MainActivity : AudioServiceActivity() {
             }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                Log.d("CursorBridge", "onKeyDown: keyCode=$keyCode channel=${keyEventChannel != null}")
+                keyEventChannel?.invokeMethod("onDpadKey", mapOf(
+                    "keyCode" to keyCode,
+                    "action" to "down"
+                ))
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                Log.d("CursorBridge", "onKeyUp: keyCode=$keyCode channel=${keyEventChannel != null}")
+                keyEventChannel?.invokeMethod("onDpadKey", mapOf(
+                    "keyCode" to keyCode,
+                    "action" to "up"
+                ))
+                return true
+            }
+        }
+        return super.onKeyUp(keyCode, event)
     }
 
 
@@ -347,7 +418,7 @@ class MainActivity : AudioServiceActivity() {
             pendingResult = null
             if (result == null) return
             if (resultCode != Activity.RESULT_OK || data?.data == null) {
-                result.success(null)
+                result.error("CANCELLED", "User cancelled folder picker", null)
                 return
             }
             val treeUri = data.data!!
