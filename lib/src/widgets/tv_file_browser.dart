@@ -229,7 +229,9 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
   late Directory _currentDir;
   List<FileSystemEntity> _entries = const [];
   final Set<String> _selected = <String>{};
+  List<_StorageLocation> _storageLocations = const [];
   bool _loading = false;
+  bool _loadingStorageLocations = false;
   String? _error;
 
   @override
@@ -237,6 +239,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     super.initState();
     _currentDir = _resolveInitialDirectory();
     _loadEntries();
+    _loadStorageLocations();
   }
 
   Directory _resolveInitialDirectory() {
@@ -314,6 +317,62 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     }
   }
 
+  Future<void> _loadStorageLocations() async {
+    if (_loadingStorageLocations) return;
+    if (!Platform.isAndroid) return;
+
+    _loadingStorageLocations = true;
+    try {
+      final locations = <_StorageLocation>[];
+      final deviceRoot = _resolveDeviceRoot();
+      if (deviceRoot != null) {
+        locations.add(deviceRoot);
+      }
+
+      final volumes = await AndroidSaf().getExternalVolumes();
+      for (final volume in volumes) {
+        final path = volume['path']?.trim() ?? '';
+        if (path.isEmpty) continue;
+        final label = volume['label']?.trim().isNotEmpty == true
+            ? volume['label']!.trim()
+            : 'USB Drive';
+        locations.add(_StorageLocation(
+          label: label,
+          path: path,
+          icon: Icons.usb,
+        ));
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _storageLocations = locations;
+      });
+    } catch (_) {
+      // Best effort only; the browser still works without volume shortcuts.
+    } finally {
+      _loadingStorageLocations = false;
+    }
+  }
+
+  _StorageLocation? _resolveDeviceRoot() {
+    final candidates = <String>[
+      '/storage/emulated/0',
+      '/storage/self/primary',
+      '/sdcard',
+    ];
+    for (final candidate in candidates) {
+      final dir = Directory(candidate);
+      if (dir.existsSync()) {
+        return _StorageLocation(
+          label: 'Device',
+          path: dir.path,
+          icon: Icons.phone_android,
+        );
+      }
+    }
+    return null;
+  }
+
   String _nameForPath(String path) {
     final pieces = path.split(Platform.pathSeparator);
     if (pieces.isEmpty) return path;
@@ -339,6 +398,25 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     await _loadEntries();
   }
 
+  Future<void> _openStorageLocation(_StorageLocation location) async {
+    final dir = Directory(location.path);
+    if (!dir.existsSync()) {
+      if (mounted) {
+        setState(() {
+          _error = 'Storage location not available: ${location.label}';
+        });
+      }
+      return;
+    }
+    await _navigateTo(dir);
+  }
+
+  bool _isCurrentStorageLocation(_StorageLocation location) {
+    final current = _currentDir.path.toLowerCase();
+    final root = location.path.toLowerCase();
+    return current == root || current.startsWith('$root${Platform.pathSeparator}');
+  }
+
   void _onTap(FileSystemEntity entity) {
     if (entity is Directory) {
       // Always navigate into a directory
@@ -353,6 +431,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width >= 600;
+    final showStorageLocations = Platform.isAndroid && _storageLocations.isNotEmpty;
 
     return PopScope(
       canPop: true,
@@ -412,55 +491,87 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
                 ),
         ),
         body: SafeArea(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-                  ? Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(_error!),
-                    )
-                  : ListView.builder(
-                      itemCount: _entries.length,
-                      itemBuilder: (context, index) {
-                        final entity = _entries[index];
-                        final isDir = entity is Directory;
-                        final name = _nameForPath(entity.path);
-
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
+          child: Column(
+            children: [
+              if (showStorageLocations)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final location in _storageLocations)
+                          ChoiceChip(
+                            label: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(location.icon, size: 18),
+                                const SizedBox(width: 8),
+                                Text(location.label),
+                              ],
+                            ),
+                            selected: _isCurrentStorageLocation(location),
+                            onSelected: (_) => _openStorageLocation(location),
                           ),
-                          leading: Icon(
-                            isDir ? Icons.folder : _iconForExtension(p.extension(entity.path)),
-                            color: isDir
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface,
-                            size: 24,
-                          ),
-                          title: Text(
-                            name,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                          subtitle: !isDir
-                              ? FutureBuilder<FileStat>(
-                                  future: entity.stat(),
-                                  builder: (_, snap) {
-                                    if (!snap.hasData) return const SizedBox.shrink();
-                                    final mb = snap.data!.size / (1024 * 1024);
-                                    return Text(
-                                      '${mb.toStringAsFixed(1)} MB',
-                                      style: Theme.of(context).textTheme.bodySmall,
-                                      overflow: TextOverflow.ellipsis,
-                                    );
-                                  },
-                                )
-                              : null,
-                          onTap: () => _onTap(entity),
-                        );
-                      },
+                      ],
                     ),
+                  ),
+                ),
+              Expanded(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _error != null
+                        ? Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(_error!),
+                          )
+                        : ListView.builder(
+                            itemCount: _entries.length,
+                            itemBuilder: (context, index) {
+                              final entity = _entries[index];
+                              final isDir = entity is Directory;
+                              final name = _nameForPath(entity.path);
+
+                              return ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
+                                leading: Icon(
+                                  isDir ? Icons.folder : _iconForExtension(p.extension(entity.path)),
+                                  color: isDir
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context).colorScheme.onSurface,
+                                  size: 24,
+                                ),
+                                title: Text(
+                                  name,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                subtitle: !isDir
+                                    ? FutureBuilder<FileStat>(
+                                        future: entity.stat(),
+                                        builder: (_, snap) {
+                                          if (!snap.hasData) return const SizedBox.shrink();
+                                          final mb = snap.data!.size / (1024 * 1024);
+                                          return Text(
+                                            '${mb.toStringAsFixed(1)} MB',
+                                            style: Theme.of(context).textTheme.bodySmall,
+                                            overflow: TextOverflow.ellipsis,
+                                          );
+                                        },
+                                      )
+                                    : null,
+                                onTap: () => _onTap(entity),
+                              );
+                            },
+                          ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -476,4 +587,16 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     }
     return Icons.insert_drive_file;
   }
+}
+
+class _StorageLocation {
+  final String label;
+  final String path;
+  final IconData icon;
+
+  const _StorageLocation({
+    required this.label,
+    required this.path,
+    required this.icon,
+  });
 }
