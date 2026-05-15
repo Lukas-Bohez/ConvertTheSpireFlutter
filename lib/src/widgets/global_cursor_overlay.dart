@@ -3,7 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 /// Global cursor overlay that covers the entire app.
 /// Always active, always visible, handles all D-pad input.
@@ -59,21 +59,15 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
     super.initState();
     _ticker = createTicker(_onTick);
     if (!kIsWeb && _isDesktopPlatform) {
+      _isAndroidTV = true;
       HardwareKeyboard.instance.addHandler(_onHardwareKeyEvent);
+      if (!_ticker.isActive) _ticker.start();
+      return;
     }
     _detectAndroidTV();
   }
 
   Future<void> _detectAndroidTV() async {
-    // In debug builds, always enable cursor so it can be tested on desktop
-    if (kDebugMode) {
-      if (!mounted) return;
-      setState(() => _isAndroidTV = true);
-      _keyChannel.setMethodCallHandler(_onNativeKeyEvent);
-      if (!_ticker.isActive) _ticker.start();
-      return;
-    }
-
     var isTV = false;
     try {
       isTV = await _platformChannel.invokeMethod<bool>('isAndroidTV') ?? false;
@@ -107,8 +101,10 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
       defaultTargetPlatform == TargetPlatform.linux ||
       defaultTargetPlatform == TargetPlatform.macOS;
 
+  bool get _cursorEnabled => _isDesktopPlatform || _isAndroidTV;
+
   bool _onHardwareKeyEvent(KeyEvent event) {
-    if (!_isAndroidTV) return false;
+    if (!_cursorEnabled) return false;
 
     final isDown = event is KeyDownEvent;
     final isUp = event is KeyUpEvent;
@@ -146,7 +142,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   }
 
   Future<dynamic> _onNativeKeyEvent(MethodCall call) async {
-    if (!_isAndroidTV) return;
+    if (!_cursorEnabled) return;
     if (call.method != 'onDpadKey') return;
 
     final arguments = call.arguments;
@@ -202,7 +198,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   }
 
   void _fireTap() {
-    if (!_isAndroidTV) return;
+    if (!_cursorEnabled) return;
     final position = _position;
 
     try {
@@ -237,7 +233,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   }
 
   void _onTick(Duration elapsed) {
-    if (!_isAndroidTV) return;
+    if (!_cursorEnabled) return;
     final dt = _lastElapsed == Duration.zero
         ? 0.0
         : (elapsed - _lastElapsed).inMicroseconds / 1000000.0;
@@ -297,7 +293,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
 
   /// Inject scroll via JavaScript if a WebView is active, or default to window scroll.
   Future<void> _injectScroll(double deltaY, Offset cursorPosition) async {
-    if (!_isAndroidTV) return;
+    if (!_cursorEnabled) return;
     try {
       debugPrint('GlobalCursorOverlay: _injectScroll deltaY=$deltaY at=$cursorPosition');
       final callback = GlobalCursorOverlay._webViewScrollCallback;
@@ -319,7 +315,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
 
   @override
   Widget build(BuildContext context) {
-    if (!_isAndroidTV) return widget.child;
+    if (!_cursorEnabled) return widget.child;
     return LayoutBuilder(
       builder: (context, constraints) {
         _viewportSize = Size(constraints.maxWidth, constraints.maxHeight);

@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
 import '../services/android_saf.dart';
@@ -29,7 +28,6 @@ Future<String?> pickSingleFilePath(
     return result?.files.single.path;
   }
 
-  // Use last opened folder as initial directory if not specified
   String? resolvedInitialDirectory = initialDirectory;
   if (resolvedInitialDirectory == null || resolvedInitialDirectory.isEmpty) {
     resolvedInitialDirectory = await FolderHistoryService().getLastFolder();
@@ -43,7 +41,6 @@ Future<String?> pickSingleFilePath(
   );
 
   if (result != null) {
-    // Save parent directory to history for next time
     final parentDir = result.split(Platform.pathSeparator)..removeLast();
     if (parentDir.isNotEmpty) {
       await FolderHistoryService().saveLastFolder(parentDir.join(Platform.pathSeparator));
@@ -99,35 +96,7 @@ Future<String?> pickDirectoryPath(
     return FilePicker.platform.getDirectoryPath(dialogTitle: dialogTitle);
   }
 
-  if (AndroidSaf().isSupported) {
-    final isTv = await AndroidSaf().isAndroidTV();
-    if (isTv) {
-      return await _pickDirectoryWithBuiltInBrowser(
-        context,
-        dialogTitle: dialogTitle,
-        initialDirectory: initialDirectory,
-      );
-    }
-
-    try {
-      final result = await AndroidSaf().pickTree();
-      debugPrint('SAF folder selected: $result');
-      if (result != null && result.isNotEmpty) return result;
-      // If user cancelled (null/empty) fall through to browser fallback
-    } on PlatformException catch (e) {
-      debugPrint('SAF folder picker failed: ${e.code} ${e.message}');
-      if (e.code != 'NO_DOCUMENTS_UI' && e.code != 'CANCELLED') {
-        // Unexpected error - still fallthrough to browser fallback
-        debugPrint('SAF unexpected error, falling back to built-in browser');
-      }
-      // For NO_DOCUMENTS_UI or CANCELLED, we will present the built-in browser as fallback
-    } catch (e) {
-      debugPrint('SAF folder picker failed: $e');
-    }
-  }
-
-  // Only show built-in browser if SAF is unsupported, cancelled, or failed.
-  return await _pickDirectoryWithBuiltInBrowser(
+  return _pickDirectoryWithBuiltInBrowser(
     context,
     dialogTitle: dialogTitle,
     initialDirectory: initialDirectory,
@@ -139,13 +108,11 @@ Future<String?> _pickDirectoryWithBuiltInBrowser(
   required String dialogTitle,
   String? initialDirectory,
 }) async {
-  // Use last opened folder as initial directory if not specified
   String? resolvedInitialDirectory = initialDirectory;
   if (resolvedInitialDirectory == null || resolvedInitialDirectory.isEmpty) {
     resolvedInitialDirectory = await FolderHistoryService().getLastFolder();
   }
 
-  // Use TV file browser on all platforms for consistent UX
   final result = await Navigator.of(context).push<String>(
     MaterialPageRoute(
       fullscreenDialog: true,
@@ -159,7 +126,6 @@ Future<String?> _pickDirectoryWithBuiltInBrowser(
   );
 
   if (result != null) {
-    // Save to history
     await FolderHistoryService().saveLastFolder(result);
   }
 
@@ -182,7 +148,6 @@ class TvFileBrowser extends StatefulWidget {
     this.mode = TvFileBrowserMode.file,
   });
 
-  /// Pick a single file. Returns the file path or null if cancelled.
   static Future<String?> pickFile({
     required BuildContext context,
     required List<String> allowedExtensions,
@@ -202,7 +167,6 @@ class TvFileBrowser extends StatefulWidget {
     );
   }
 
-  /// Pick a folder. Returns the folder path or null if cancelled.
   static Future<String?> pickFolder({
     required BuildContext context,
     String title = 'Select folder',
@@ -227,8 +191,8 @@ class TvFileBrowser extends StatefulWidget {
 
 class _TvFileBrowserState extends State<TvFileBrowser> {
   late Directory _currentDir;
-  List<FileSystemEntity> _entries = const [];
   final Set<String> _selected = <String>{};
+  List<FileSystemEntity> _entries = const [];
   List<_StorageLocation> _storageLocations = const [];
   bool _loading = false;
   bool _loadingStorageLocations = false;
@@ -246,9 +210,12 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     final candidates = <String>[
       if (widget.initialDirectory != null && widget.initialDirectory!.isNotEmpty)
         widget.initialDirectory!,
-      '/storage/emulated/0',
-      '/storage/self/primary',
-      '/sdcard',
+      if (Platform.isAndroid) '/storage/emulated/0',
+      if (Platform.isAndroid) '/storage/self/primary',
+      if (Platform.isAndroid) '/sdcard',
+      if (Platform.isWindows) 'C:${Platform.pathSeparator}',
+      if (Platform.isMacOS) '/',
+      if (Platform.isLinux) '/',
     ];
 
     for (final candidate in candidates) {
@@ -281,6 +248,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
       await for (final entity in _currentDir.list(followLinks: false)) {
         all.add(entity);
       }
+
       final directories = <Directory>[];
       final files = <File>[];
 
@@ -288,10 +256,8 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
         if (entity is Directory) {
           directories.add(entity);
         } else if (widget.mode == TvFileBrowserMode.folder) {
-          // Folder mode: show all files so user can navigate to the right folder
           files.add(entity as File);
         } else if (entity is File && _isAllowedFile(entity)) {
-          // File mode: filter by allowed extensions
           files.add(entity);
         }
       }
@@ -319,28 +285,24 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
 
   Future<void> _loadStorageLocations() async {
     if (_loadingStorageLocations) return;
-    if (!Platform.isAndroid) return;
-
     _loadingStorageLocations = true;
-    try {
-      final locations = <_StorageLocation>[];
-      final deviceRoot = _resolveDeviceRoot();
-      if (deviceRoot != null) {
-        locations.add(deviceRoot);
-      }
 
-      final volumes = await AndroidSaf().getExternalVolumes();
-      for (final volume in volumes) {
-        final path = volume['path']?.trim() ?? '';
-        if (path.isEmpty) continue;
-        final label = volume['label']?.trim().isNotEmpty == true
-            ? volume['label']!.trim()
-            : 'USB Drive';
-        locations.add(_StorageLocation(
-          label: label,
-          path: path,
-          icon: Icons.usb,
-        ));
+    try {
+      final locations = _discoverStorageLocations();
+      if (Platform.isAndroid) {
+        final volumes = await AndroidSaf().getExternalVolumes();
+        for (final volume in volumes) {
+          final path = volume['path']?.trim() ?? '';
+          if (path.isEmpty) continue;
+          final label = volume['label']?.trim().isNotEmpty == true
+              ? volume['label']!.trim()
+              : 'USB Drive';
+          locations.add(_StorageLocation(
+            label: label,
+            path: path,
+            icon: Icons.usb,
+          ));
+        }
       }
 
       if (!mounted) return;
@@ -348,29 +310,81 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
         _storageLocations = locations;
       });
     } catch (_) {
-      // Best effort only; the browser still works without volume shortcuts.
+      // Best effort only.
     } finally {
       _loadingStorageLocations = false;
     }
   }
 
-  _StorageLocation? _resolveDeviceRoot() {
-    final candidates = <String>[
-      '/storage/emulated/0',
-      '/storage/self/primary',
-      '/sdcard',
-    ];
-    for (final candidate in candidates) {
-      final dir = Directory(candidate);
-      if (dir.existsSync()) {
-        return _StorageLocation(
-          label: 'Device',
-          path: dir.path,
-          icon: Icons.phone_android,
-        );
+  List<_StorageLocation> _discoverStorageLocations() {
+    final locations = <_StorageLocation>[];
+
+    if (Platform.isWindows) {
+      for (var code = 67; code <= 90; code++) {
+        final letter = String.fromCharCode(code);
+        final path = '$letter:${Platform.pathSeparator}';
+        if (Directory(path).existsSync()) {
+          locations.add(_StorageLocation(label: letter, path: path, icon: Icons.storage));
+        }
+      }
+      return locations;
+    }
+
+    if (Platform.isMacOS) {
+      locations.add(_StorageLocation(label: 'Mac', path: '/', icon: Icons.storage));
+      final volumes = Directory('/Volumes');
+      if (volumes.existsSync()) {
+        final children = volumes.listSync(followLinks: false).whereType<Directory>().toList();
+        children.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+        for (final child in children) {
+          locations.add(_StorageLocation(
+            label: _nameForPath(child.path),
+            path: child.path,
+            icon: Icons.usb,
+          ));
+        }
+      }
+      return locations;
+    }
+
+    if (Platform.isLinux) {
+      locations.add(_StorageLocation(label: 'Root', path: '/', icon: Icons.storage));
+      for (final mountRoot in ['/mnt', '/media', '/run/media']) {
+        final root = Directory(mountRoot);
+        if (!root.existsSync()) continue;
+        final children = root.listSync(followLinks: false).whereType<Directory>().toList();
+        children.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+        for (final child in children) {
+          locations.add(_StorageLocation(
+            label: _nameForPath(child.path),
+            path: child.path,
+            icon: Icons.usb,
+          ));
+        }
+      }
+      return locations;
+    }
+
+    if (Platform.isAndroid) {
+      final candidates = <String>[
+        '/storage/emulated/0',
+        '/storage/self/primary',
+        '/sdcard',
+      ];
+      for (final candidate in candidates) {
+        final dir = Directory(candidate);
+        if (dir.existsSync()) {
+          locations.add(_StorageLocation(
+            label: 'Device',
+            path: dir.path,
+            icon: Icons.phone_android,
+          ));
+          break;
+        }
       }
     }
-    return null;
+
+    return locations;
   }
 
   String _nameForPath(String path) {
@@ -381,7 +395,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
 
   Future<bool> _goBack() async {
     final parent = _currentDir.parent;
-    if (parent.path == _currentDir.path) return false; // at root
+    if (parent.path == _currentDir.path) return false;
     setState(() {
       _currentDir = parent;
       _selected.clear();
@@ -419,35 +433,26 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
 
   void _onTap(FileSystemEntity entity) {
     if (entity is Directory) {
-      // Always navigate into a directory
       _navigateTo(entity);
     } else if (widget.mode == TvFileBrowserMode.file) {
-      // File mode: tapping a file returns it immediately
       Navigator.of(context).pop(entity.path);
     }
-    // Folder mode: tapping a file does nothing (user must use the "Use this folder" button)
   }
 
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width >= 600;
-    final showStorageLocations = Platform.isAndroid && _storageLocations.isNotEmpty;
 
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop && widget.mode == TvFileBrowserMode.folder && _currentDir.parent.path != _currentDir.path) {
-          // Prevent pop if we can go back and are in folder mode
           await _goBack();
         }
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(
-            widget.title,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-          ),
+          title: Text(widget.title, overflow: TextOverflow.ellipsis, maxLines: 1),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () async {
@@ -457,21 +462,16 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
             },
           ),
           actions: [
-            // "Use this folder" button — only shown in folder mode when inside a dir
             if (widget.mode == TvFileBrowserMode.folder && _currentDir.parent.path != _currentDir.path)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: FilledButton.icon(
                   onPressed: () => Navigator.of(context).pop(_currentDir.path),
                   icon: const Icon(Icons.folder_open, size: 18),
-                  label: Text(
-                    isWide ? 'Use this folder' : 'Select',
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  label: Text(isWide ? 'Use this folder' : 'Select', overflow: TextOverflow.ellipsis),
                 ),
               ),
           ],
-          // Current path shown as subtitle — truncated on narrow screens
           bottom: _currentDir.parent.path == _currentDir.path
               ? null
               : PreferredSize(
@@ -493,7 +493,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
         body: SafeArea(
           child: Column(
             children: [
-              if (showStorageLocations)
+              if (_storageLocations.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
                   child: Align(
@@ -535,10 +535,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
                               final name = _nameForPath(entity.path);
 
                               return ListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 4,
-                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                 leading: Icon(
                                   isDir ? Icons.folder : _iconForExtension(p.extension(entity.path)),
                                   color: isDir
@@ -546,11 +543,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
                                       : Theme.of(context).colorScheme.onSurface,
                                   size: 24,
                                 ),
-                                title: Text(
-                                  name,
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
+                                title: Text(name, overflow: TextOverflow.ellipsis, maxLines: 1),
                                 subtitle: !isDir
                                     ? FutureBuilder<FileStat>(
                                         future: entity.stat(),
