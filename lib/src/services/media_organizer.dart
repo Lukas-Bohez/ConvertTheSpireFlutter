@@ -14,7 +14,7 @@ class MediaOrganizer {
     print('[MediaOrganizer] Starting moveAndDeduplicate with ${sourceDirs.length} sources, target=$target');
     final moved = <String>[];
     final deleted = <String>[];
-    final seen = <String, File>{};
+    final seen = <String, _MediaCandidate>{};
 
     final normalizedTarget = target.startsWith('content://')
         ? target
@@ -45,8 +45,10 @@ class MediaOrganizer {
       return {"moved": 0, "deleted": 0, "skipped": 0};
     }
 
-    // Collect candidate files from sources
-    final candidates = <File>[];
+    // Collect candidate files from sources.
+    // SAF sources are enumerated natively and represented by their original URIs,
+    // not by temp files, so dedupe and copy can stay URI-aware.
+    final candidates = <_MediaCandidate>[];
     for (final dirPath in filteredSources) {
       try {
         // If the source is a SAF tree URI, enumerate via native channel
@@ -56,10 +58,15 @@ class MediaOrganizer {
           for (final item in items) {
             final uri = item['uri'] ?? '';
             if (uri.isEmpty) continue;
-            // Copy content URI into a temp file so it can be processed like a File
-            final temp = await PlatformDirs.copyToTemp(uri);
-            if (temp == null || temp.isEmpty) continue;
-            candidates.add(File(temp));
+            final name = item['name'] ?? p.basename(Uri.parse(uri).path);
+            final mimeType = item['mimeType'] ?? _mimeTypeForExtension(p.extension(name).toLowerCase());
+            final size = int.tryParse(item['size'] ?? '') ?? 0;
+            candidates.add(_MediaCandidate(
+              displayName: name.isEmpty ? p.basename(Uri.parse(uri).path) : name,
+              sourceUri: uri,
+              mimeType: mimeType,
+              size: size,
+            ));
           }
           print('[MediaOrganizer] Found ${candidates.length} candidates in SAF $dirPath');
           continue;
@@ -74,7 +81,12 @@ class MediaOrganizer {
         dir.listSync(recursive: true).whereType<File>().forEach((f) {
           final ext = p.extension(f.path).toLowerCase();
           if (ext.isEmpty) return;
-          candidates.add(f);
+          candidates.add(_MediaCandidate(
+            displayName: p.basename(f.path),
+            sourcePath: f.path,
+            mimeType: _mimeTypeForExtension(ext),
+            size: f.lengthSync(),
+          ));
         });
         print('[MediaOrganizer] Found ${candidates.length} candidates in $dirPath');
       } catch (e) {
@@ -85,18 +97,18 @@ class MediaOrganizer {
     print('[MediaOrganizer] Total candidates collected: ${candidates.length}');
 
     // Group by basename
-    for (final f in candidates) {
-      final key = p.basename(f.path).toLowerCase();
+    for (final candidate in candidates) {
+      final key = p.basename(candidate.displayName).toLowerCase();
       final prev = seen[key];
       if (prev == null) {
-        seen[key] = f;
+        seen[key] = candidate;
       } else {
         // Keep largest
-        if (f.lengthSync() > prev.lengthSync()) {
-          deleted.add(prev.path);
-          seen[key] = f;
+        if (candidate.size > prev.size) {
+          deleted.add(prev.debugPath);
+          seen[key] = candidate;
         } else {
-          deleted.add(f.path);
+          deleted.add(candidate.debugPath);
         }
       }
     }
@@ -118,12 +130,14 @@ class MediaOrganizer {
     }
 
     for (final entry in seen.values) {
-      final destName = p.basename(entry.path);
+      final destName = p.basename(entry.displayName);
       try {
         if (targetIsSAF) {
-          final mime = _mimeTypeForExtension(p.extension(entry.path).toLowerCase());
-          print('[MediaOrganizer] Copying to SAF: ${entry.path} -> $destName (mime=$mime)');
-          final copied = await PlatformDirs.copyToTree(target, entry.path, destName, mime);
+          final mime = entry.mimeType;
+          print('[MediaOrganizer] Copying to SAF: ${entry.debugPath} -> $destName (mime=$mime)');
+          final copied = entry.sourceUri != null
+              ? await PlatformDirs.copyContentUriToTree(target, entry.sourceUri!, destName, mime)
+              : await PlatformDirs.copyToTree(target, entry.sourcePath!, destName, mime);
           if (copied != null) {
             moved.add(copied);
             movedCount++;
@@ -133,25 +147,35 @@ class MediaOrganizer {
           }
         } else {
           final dest = File(p.join(targetDir!.path, destName));
-          if (p.equals(entry.path, dest.path)) {
+          if (entry.sourcePath != null && p.equals(entry.sourcePath!, dest.path)) {
             print('[MediaOrganizer] Skipping (same path): $destName');
             continue;
           }
-          print('[MediaOrganizer] Copying to filesystem: ${entry.path} -> ${dest.path}');
+          print('[MediaOrganizer] Copying to filesystem: ${entry.debugPath} -> ${dest.path}');
           if (dest.existsSync()) {
             // If existing, keep larger file
-            if (entry.lengthSync() > dest.lengthSync()) {
-              entry.copySync(dest.path);
+            if (entry.size > dest.lengthSync()) {
+              if (entry.sourceUri != null) {
+                final ok = await PlatformDirs.copyContentUriToFile(entry.sourceUri!, dest.path);
+                if (!ok) throw Exception('copyContentUriToFile failed');
+              } else {
+                File(entry.sourcePath!).copySync(dest.path);
+              }
               print('[MediaOrganizer] Overwrote existing: $destName');
             }
           } else {
-            entry.copySync(dest.path);
+            if (entry.sourceUri != null) {
+              final ok = await PlatformDirs.copyContentUriToFile(entry.sourceUri!, dest.path);
+              if (!ok) throw Exception('copyContentUriToFile failed');
+            } else {
+              File(entry.sourcePath!).copySync(dest.path);
+            }
             print('[MediaOrganizer] Copied: $destName');
           }
           movedCount++;
         }
       } catch (e) {
-        print('[MediaOrganizer] Error moving ${entry.path}: $e');
+        print('[MediaOrganizer] Error moving ${entry.debugPath}: $e');
       }
     }
 
@@ -184,4 +208,22 @@ class MediaOrganizer {
     if (ext == '.mkv') return 'video/x-matroska';
     return 'application/octet-stream';
   }
+}
+
+class _MediaCandidate {
+  final String displayName;
+  final String? sourcePath;
+  final String? sourceUri;
+  final String mimeType;
+  final int size;
+
+  const _MediaCandidate({
+    required this.displayName,
+    required this.mimeType,
+    required this.size,
+    this.sourcePath,
+    this.sourceUri,
+  });
+
+  String get debugPath => sourcePath ?? sourceUri ?? displayName;
 }

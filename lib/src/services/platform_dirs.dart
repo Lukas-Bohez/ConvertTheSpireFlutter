@@ -139,6 +139,19 @@ class PlatformDirs {
     }
   }
 
+  /// Copy a `content://` URI directly to a filesystem path on Android.
+  static Future<bool> copyContentUriToFile(String sourceUri, String destinationPath) async {
+    if (kIsWeb) return false;
+    try {
+      return await _channel.invokeMethod<bool>('copyContentUriToFile', {
+            'sourceUri': sourceUri,
+            'destinationPath': destinationPath,
+          }) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Copy a local file (sourcePath) into a SAF tree target (treeUri).
   /// Returns the destination content URI string on success or null on failure.
   static Future<String?> copyToTree(String treeUri, String sourcePath, String displayName, String mimeType, {String? subdir}) async {
@@ -147,6 +160,22 @@ class PlatformDirs {
       return await _channel.invokeMethod<String>('copyToTree', {
         'treeUri': treeUri,
         'sourcePath': sourcePath,
+        'displayName': displayName,
+        'mimeType': mimeType,
+        'subdir': subdir ?? ''
+      });
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Copy a `content://` source directly into a SAF tree target (treeUri).
+  static Future<String?> copyContentUriToTree(String treeUri, String sourceUri, String displayName, String mimeType, {String? subdir}) async {
+    if (kIsWeb) return null;
+    try {
+      return await _channel.invokeMethod<String>('copyContentUriToTree', {
+        'treeUri': treeUri,
+        'sourceUri': sourceUri,
         'displayName': displayName,
         'mimeType': mimeType,
         'subdir': subdir ?? ''

@@ -120,6 +120,49 @@ class MainActivity : AudioServiceActivity() {
                             }
                         }.start()
                     }
+                    "copyContentUriToTree" -> {
+                        val treeUri = call.argument<String>("treeUri")
+                        val sourceUri = call.argument<String>("sourceUri")
+                        val displayName = call.argument<String>("displayName")
+                        val mimeType = call.argument<String>("mimeType")
+                        val subdir = call.argument<String>("subdir")
+                        if (treeUri.isNullOrBlank() || sourceUri.isNullOrBlank() || displayName.isNullOrBlank() || mimeType.isNullOrBlank()) {
+                            result.error("INVALID_ARGS", "Missing arguments", null)
+                            return@setMethodCallHandler
+                        }
+                        Thread {
+                            try {
+                                val destUri = copyContentUriToTree(treeUri, sourceUri, displayName, mimeType, subdir)
+                                runOnUiThread {
+                                    result.success(destUri?.toString())
+                                }
+                            } catch (e: Exception) {
+                                runOnUiThread {
+                                    result.error("COPY_FAILED", e.localizedMessage, null)
+                                }
+                            }
+                        }.start()
+                    }
+                    "copyContentUriToFile" -> {
+                        val sourceUri = call.argument<String>("sourceUri")
+                        val destinationPath = call.argument<String>("destinationPath")
+                        if (sourceUri.isNullOrBlank() || destinationPath.isNullOrBlank()) {
+                            result.error("INVALID_ARGS", "Missing arguments", null)
+                            return@setMethodCallHandler
+                        }
+                        Thread {
+                            try {
+                                val ok = copyContentUriToFile(sourceUri, destinationPath)
+                                runOnUiThread {
+                                    result.success(ok)
+                                }
+                            } catch (e: Exception) {
+                                runOnUiThread {
+                                    result.error("COPY_FAILED", e.localizedMessage, null)
+                                }
+                            }
+                        }.start()
+                    }
                     "testTreeWrite" -> {
                         val treeUri = call.argument<String>("treeUri")
                         if (treeUri.isNullOrBlank()) {
@@ -452,6 +495,38 @@ class MainActivity : AudioServiceActivity() {
         } ?: return null
         MediaScannerConnection.scanFile(this, arrayOf(sourcePath), null, null)
         return newFile.uri
+    }
+
+    private fun copyContentUriToTree(treeUriString: String, sourceUriString: String, displayName: String, mimeType: String, subdir: String?): Uri? {
+        val treeUri = Uri.parse(treeUriString)
+        val sourceUri = Uri.parse(sourceUriString)
+        val root = DocumentFile.fromTreeUri(this, treeUri) ?: return null
+        var targetDir = root
+        if (!subdir.isNullOrBlank()) {
+            val existing = root.findFile(subdir)
+            targetDir = existing ?: root.createDirectory(subdir) ?: root
+        }
+        val existing = targetDir.findFile(displayName)
+        existing?.delete()
+        val newFile = targetDir.createFile(mimeType, displayName) ?: return null
+        contentResolver.openInputStream(sourceUri)?.use { input ->
+            contentResolver.openOutputStream(newFile.uri)?.use { out ->
+                input.copyTo(out)
+            } ?: return null
+        } ?: return null
+        return newFile.uri
+    }
+
+    private fun copyContentUriToFile(sourceUriString: String, destinationPath: String): Boolean {
+        val sourceUri = Uri.parse(sourceUriString)
+        val destinationFile = File(destinationPath)
+        destinationFile.parentFile?.mkdirs()
+        contentResolver.openInputStream(sourceUri)?.use { input ->
+            FileOutputStream(destinationFile).use { out ->
+                input.copyTo(out)
+            }
+        } ?: return false
+        return true
     }
 
     private fun tryTestTreeWrite(treeUriString: String): Boolean {
