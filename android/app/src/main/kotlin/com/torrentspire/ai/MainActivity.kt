@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.PictureInPictureParams
 import android.content.Intent
 import android.content.ContentValues
+import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -183,6 +184,11 @@ class MainActivity : AudioServiceActivity() {
                                 runOnUiThread { result.error("GET_PATH_FAILED", e.localizedMessage, null) }
                             }
                         }.start()
+                    }
+                    "isAndroidTV" -> {
+                        val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
+                        val isTV = uiModeManager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+                        result.success(isTV)
                     }
                     else -> result.notImplemented()
                 }

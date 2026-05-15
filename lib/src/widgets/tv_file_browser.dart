@@ -10,13 +10,6 @@ import '../services/folder_history_service.dart';
 
 enum TvFileBrowserMode { file, folder }
 
-class _FolderChoice {
-  final String label;
-  final String path;
-
-  const _FolderChoice({required this.label, required this.path});
-}
-
 Future<String?> pickSingleFilePath(
   BuildContext context, {
   String dialogTitle = 'Select file',
@@ -106,52 +99,14 @@ Future<String?> pickDirectoryPath(
   }
 
   if (AndroidSaf().isSupported) {
-    final androidSaf = AndroidSaf();
-    final volumes = await androidSaf.getExternalVolumes();
-    final chosenRoot = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        final choices = <_FolderChoice>[
-          const _FolderChoice(
-            label: 'Internal storage',
-            path: '/storage/emulated/0',
-          ),
-        ];
-        if (initialDirectory != null && initialDirectory.isNotEmpty) {
-          choices.add(_FolderChoice(label: 'Last folder', path: initialDirectory));
-        }
-        for (final volume in volumes) {
-          final path = volume['path'] ?? '';
-          if (path.isEmpty) continue;
-          final labelBase = volume['label']?.isNotEmpty == true ? volume['label']! : 'USB Drive';
-          final uuid = volume['uuid']?.isNotEmpty == true ? volume['uuid']! : '';
-          choices.add(
-            _FolderChoice(
-              label: uuid.isNotEmpty ? '$labelBase ($uuid)' : labelBase,
-              path: path,
-            ),
-          );
-        }
-
-        return SimpleDialog(
-          title: Text(dialogTitle),
-          children: [
-            for (final choice in choices)
-              SimpleDialogOption(
-                onPressed: () => Navigator.of(dialogContext).pop(choice.path),
-                child: Text(choice.label),
-              ),
-          ],
-        );
-      },
-    );
-    if (chosenRoot == null || chosenRoot.isEmpty) return null;
-
-    return TvFileBrowser.pickFolder(
-      context: context,
-      title: dialogTitle,
-      initialDirectory: chosenRoot,
-    );
+    try {
+      final result = await AndroidSaf().pickTree();
+      debugPrint('SAF folder selected: $result');
+      return result;
+    } catch (e) {
+      debugPrint('SAF folder picker failed: $e');
+      return null;
+    }
   }
 
   // Use last opened folder as initial directory if not specified

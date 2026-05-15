@@ -31,6 +31,7 @@ class GlobalCursorOverlay extends StatefulWidget {
 class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
     with SingleTickerProviderStateMixin {
   static const MethodChannel _keyChannel = MethodChannel('com.yourapp/cursor_keys');
+  static const MethodChannel _platformChannel = MethodChannel('convert_the_spire/saf');
 
   Offset _position = const Offset(400, 300);
   Offset _velocity = Offset.zero;
@@ -38,6 +39,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   late Ticker _ticker;
   Size _viewportSize = Size.zero;
   Duration _lastElapsed = Duration.zero;
+  bool _isAndroidTV = false;
 
   // Auto-hide timer state
   bool _cursorVisible = true;
@@ -54,14 +56,33 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   @override
   void initState() {
     super.initState();
-    _ticker = createTicker(_onTick)..start();
-    _keyChannel.setMethodCallHandler(_onNativeKeyEvent);
+    _ticker = createTicker(_onTick);
+    _detectAndroidTV();
+  }
+
+  Future<void> _detectAndroidTV() async {
+    var isTV = false;
+    try {
+      isTV = await _platformChannel.invokeMethod<bool>('isAndroidTV') ?? false;
+    } catch (_) {
+      isTV = false;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isAndroidTV = isTV;
+    });
+    _keyChannel.setMethodCallHandler(_isAndroidTV ? _onNativeKeyEvent : null);
+    if (_isAndroidTV && !_ticker.isActive) {
+      _ticker.start();
+    }
   }
 
   @override
   void dispose() {
     _ticker.dispose();
     _hideTimer?.cancel();
+    _keyChannel.setMethodCallHandler(null);
     super.dispose();
   }
 
@@ -76,6 +97,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   }
 
   Future<dynamic> _onNativeKeyEvent(MethodCall call) async {
+    if (!_isAndroidTV) return;
     if (call.method != 'onDpadKey') return;
 
     final arguments = call.arguments;
@@ -131,6 +153,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   }
 
   void _fireTap() {
+    if (!_isAndroidTV) return;
     final position = _position;
 
     try {
@@ -165,6 +188,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   }
 
   void _onTick(Duration elapsed) {
+    if (!_isAndroidTV) return;
     final dt = _lastElapsed == Duration.zero
         ? 0.0
         : (elapsed - _lastElapsed).inMicroseconds / 1000000.0;
@@ -224,6 +248,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
 
   /// Inject scroll via JavaScript if a WebView is active, or default to window scroll.
   Future<void> _injectScroll(double deltaY, Offset cursorPosition) async {
+    if (!_isAndroidTV) return;
     try {
       debugPrint('GlobalCursorOverlay: _injectScroll deltaY=$deltaY at=$cursorPosition');
       final callback = GlobalCursorOverlay._webViewScrollCallback;
@@ -245,6 +270,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
 
   @override
   Widget build(BuildContext context) {
+    if (!_isAndroidTV) return widget.child;
     return LayoutBuilder(
       builder: (context, constraints) {
         _viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
