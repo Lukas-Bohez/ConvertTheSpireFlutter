@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
+import 'package:win32/win32.dart' as win32;
 
 import '../services/android_saf.dart';
 import '../services/folder_history_service.dart';
@@ -328,12 +329,12 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     final locations = <_StorageLocation>[];
 
     if (Platform.isWindows) {
-      for (var code = 67; code <= 90; code++) {
-        final letter = String.fromCharCode(code);
+      final driveMask = win32.GetLogicalDrives();
+      for (var code = 0; code < 26; code++) {
+        if ((driveMask & (1 << code)) == 0) continue;
+        final letter = String.fromCharCode(65 + code);
         final path = '$letter:${Platform.pathSeparator}';
-        if (Directory(path).existsSync()) {
-          locations.add(_StorageLocation(label: '$letter drive', path: path, icon: Icons.storage));
-        }
+        locations.add(_StorageLocation(label: '$letter drive', path: path, icon: Icons.storage));
       }
       return locations;
     }
