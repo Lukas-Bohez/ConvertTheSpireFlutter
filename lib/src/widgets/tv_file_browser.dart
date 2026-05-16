@@ -306,7 +306,6 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
         final volumes = await AndroidSaf().getExternalVolumes();
         for (final volume in volumes) {
           final path = volume['path']?.trim() ?? '';
-          if (path.isEmpty) continue;
           final label = volume['label']?.trim().isNotEmpty == true
               ? volume['label']!.trim()
               : 'USB Drive';
@@ -321,7 +320,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
 
       if (!mounted) return;
       setState(() {
-        _storageLocations = locations;
+        _storageLocations = _dedupeStorageLocations(locations);
       });
     } catch (_) {
       // Best effort only.
@@ -428,6 +427,18 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     }
 
     return locations;
+  }
+
+  List<_StorageLocation> _dedupeStorageLocations(List<_StorageLocation> locations) {
+    final seen = <String>{};
+    final deduped = <_StorageLocation>[];
+    for (final location in locations) {
+      final key = '${location.label.toLowerCase()}|${location.path.toLowerCase()}';
+      if (seen.add(key)) {
+        deduped.add(location);
+      }
+    }
+    return deduped;
   }
 
   String _nameForPath(String path) {

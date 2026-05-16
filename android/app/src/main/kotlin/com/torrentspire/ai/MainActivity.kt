@@ -333,7 +333,7 @@ class MainActivity : AudioServiceActivity() {
                         val storageManager = getSystemService(android.content.Context.STORAGE_SERVICE) as android.os.storage.StorageManager
                         val volumes = storageManager.storageVolumes
                         val removable = volumes
-                            .filter { it.isRemovable && it.state == Environment.MEDIA_MOUNTED }
+                            .filter { it.isRemovable && (it.state ?: "").startsWith(Environment.MEDIA_MOUNTED) }
                             .mapNotNull { vol ->
                                 val dir = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                     vol.directory?.absolutePath
@@ -343,11 +343,12 @@ class MainActivity : AudioServiceActivity() {
                                         m.invoke(vol) as? String
                                     } catch (e: Exception) { null }
                                 }
-                                if (dir != null) mapOf(
+                                mapOf(
                                     "path" to dir,
                                     "label" to (vol.getDescription(this@MainActivity) ?: "USB Drive"),
-                                    "uuid" to (vol.uuid ?: "")
-                                ) else null
+                                    "uuid" to (vol.uuid ?: ""),
+                                    "state" to (vol.state ?: "")
+                                )
                             }
                         result.success(removable)
                     }

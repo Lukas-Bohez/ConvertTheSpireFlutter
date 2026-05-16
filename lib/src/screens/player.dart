@@ -3983,76 +3983,35 @@ class _PlayerScreenState extends State<PlayerScreen>
       return Wrap(spacing: 8, runSpacing: 8, children: chips);
     }
 
-    final searchText = _searchController.text.trim();
-    final searchField = _searchEditing
-        ? TextField(
-            controller: _searchController,
-            focusNode: _searchFocusNode,
-            decoration: InputDecoration(
-              hintText: 'Search…',
-              prefixIcon: const Icon(Icons.search, size: 20),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                    )
-                  : null,
-              isDense: true,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-            ),
-            onChanged: (v) => setState(() => _searchQuery = v.trim()),
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _stopSearchEditing(),
-            onTapOutside: (_) => _stopSearchEditing(),
-          )
-: Material(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(10),
-              child: InkWell(
-                onTap: _startSearchEditing,
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  height: 44,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.35),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.search, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          searchText.isEmpty ? 'Search…' : searchText,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: searchText.isEmpty
-                                ? Theme.of(context).colorScheme.onSurfaceVariant
-                                : Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
-                      if (searchText.isNotEmpty)
-                        IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            );
+    final searchField = TextField(
+      controller: _searchController,
+      focusNode: _searchFocusNode,
+      autofocus: _searchEditing,
+      showCursor: true,
+      enableInteractiveSelection: true,
+      decoration: InputDecoration(
+        hintText: 'Search…',
+        prefixIcon: const Icon(Icons.search, size: 20),
+        suffixIcon: _searchQuery.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear, size: 18),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                  _searchFocusNode.requestFocus();
+                },
+              )
+            : null,
+        isDense: true,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      ),
+      onChanged: (v) => setState(() => _searchQuery = v.trim()),
+      textInputAction: TextInputAction.search,
+      onSubmitted: (_) => _stopSearchEditing(),
+      onTap: _startSearchEditing,
+      onTapOutside: (_) => _stopSearchEditing(),
+    );
 
     if (isWide) {
       return Container(
