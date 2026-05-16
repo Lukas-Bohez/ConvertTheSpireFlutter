@@ -88,6 +88,29 @@ Future<void> main() async {
             debugPrint('Android permission ${entry.key}: ${entry.value}');
           }
         }
+
+        // For GitHub-distributed APKs we may need to request the All Files
+        // Access permission so the app can read arbitrary external folders
+        // (USB mounts, removable storage, etc.). This is intentionally only
+        // requested for the GitHub release build variant to avoid Play Store
+        // policy problems.
+        if (kIsGithubRelease) {
+          try {
+            final manageStatus = await Permission.manageExternalStorage.status;
+            if (!manageStatus.isGranted) {
+              final req = await Permission.manageExternalStorage.request();
+              if (!req.isGranted) {
+                // If user permanently denied, open app settings so they can
+                // manually grant "All files access".
+                if (req.isPermanentlyDenied) {
+                  await openAppSettings();
+                }
+              }
+            }
+          } catch (e) {
+            debugPrint('Manage external storage request failed: $e');
+          }
+        }
       } catch (e) {
         debugPrint('Android permission request failed: $e');
       }
