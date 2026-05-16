@@ -499,7 +499,7 @@ class _MyAppState extends State<MyApp>
           );
 
           return ExcludeFocus(
-            excluding: true,
+            excluding: false,
             child: FocusTraversalGroup(
               policy: const _DeadTraversalPolicy(),
               child: MaterialApp(
