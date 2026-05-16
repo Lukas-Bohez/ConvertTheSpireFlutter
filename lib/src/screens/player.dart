@@ -1012,7 +1012,7 @@ class PlayerState with ChangeNotifier {
     // Fast pass: title + artist only, no images, batched.
     // Keep the initial work intentionally small on mobile/Android so large
     // folders can open without exhausting memory or blocking the UI.
-    final initialMetadataLimit = Platform.isAndroid ? 40 : 120;
+    final initialMetadataLimit = Platform.isAndroid ? 0 : 120;
     const batchSize = 12;
     final metadataLimit = library.length < initialMetadataLimit ? library.length : initialMetadataLimit;
     for (int start = 0; start < metadataLimit; start += batchSize) {

@@ -203,6 +203,9 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
   void initState() {
     super.initState();
     _currentDir = _resolveInitialDirectory();
+    if (Platform.isAndroid) {
+      _storageLocations = _initialAndroidStorageLocations();
+    }
     _loadEntries();
     _loadStorageLocations();
   }
@@ -296,7 +299,9 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     _loadingStorageLocations = true;
 
     try {
-      final locations = _discoverStorageLocations();
+      final locations = Platform.isAndroid
+          ? _initialAndroidStorageLocations()
+          : _discoverStorageLocations();
       if (Platform.isAndroid) {
         final volumes = await AndroidSaf().getExternalVolumes();
         for (final volume in volumes) {
@@ -312,7 +317,6 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
             preferSafFallback: true,
           ));
         }
-        locations.addAll(_discoverAndroidStorageLocations());
       }
 
       if (!mounted) return;
@@ -376,13 +380,13 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     }
 
     if (Platform.isAndroid) {
-      locations.addAll(_discoverAndroidStorageLocations());
+      locations.addAll(_initialAndroidStorageLocations());
     }
 
     return locations;
   }
 
-  List<_StorageLocation> _discoverAndroidStorageLocations() {
+  List<_StorageLocation> _initialAndroidStorageLocations() {
     final locations = <_StorageLocation>[];
     final candidates = <Map<String, Object>>[
       {'label': 'Device storage', 'path': '/storage/emulated/0', 'icon': Icons.phone_android},
@@ -392,32 +396,34 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
 
     for (final candidate in candidates) {
       final path = candidate['path'] as String;
-      final dir = Directory(path);
-      if (dir.existsSync()) {
-        locations.add(_StorageLocation(
-          label: candidate['label'] as String,
-          path: dir.path,
-          icon: candidate['icon'] as IconData,
-          preferSafFallback: false,
-        ));
-      }
+      locations.add(_StorageLocation(
+        label: candidate['label'] as String,
+        path: path,
+        icon: candidate['icon'] as IconData,
+        preferSafFallback: true,
+      ));
     }
 
     for (final rootPath in ['/storage', '/mnt/media_rw']) {
-      final root = Directory(rootPath);
-      if (!root.existsSync()) continue;
-      final children = root.listSync(followLinks: false).whereType<Directory>().toList();
-      children.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
-      for (final child in children) {
-        if (child.path == '/storage/emulated' || child.path == '/storage/self') continue;
-        final label = _nameForPath(child.path);
-        if (label.isEmpty) continue;
-        locations.add(_StorageLocation(
-          label: label,
-          path: child.path,
-          icon: Icons.usb,
-          preferSafFallback: true,
-        ));
+      try {
+        final root = Directory(rootPath);
+        if (!root.existsSync()) continue;
+        final children = root.listSync(followLinks: false).whereType<Directory>().toList();
+        children.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+        for (final child in children) {
+          if (child.path == '/storage/emulated' || child.path == '/storage/self') continue;
+          final label = _nameForPath(child.path);
+          if (label.isEmpty) continue;
+          locations.add(_StorageLocation(
+            label: label,
+            path: child.path,
+            icon: Icons.usb,
+            preferSafFallback: true,
+          ));
+        }
+      } catch (_) {
+        // Best effort only; keep the fixed device roots visible even if the
+        // mounted-volume scan fails on this Android build/device.
       }
     }
 
