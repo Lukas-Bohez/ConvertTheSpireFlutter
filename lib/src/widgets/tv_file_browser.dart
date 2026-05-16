@@ -309,6 +309,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
             label: label,
             path: path,
             icon: Icons.usb,
+            preferSafFallback: true,
           ));
         }
         locations.addAll(_discoverAndroidStorageLocations());
@@ -397,6 +398,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
           label: candidate['label'] as String,
           path: dir.path,
           icon: candidate['icon'] as IconData,
+          preferSafFallback: false,
         ));
       }
     }
@@ -414,6 +416,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
           label: label,
           path: child.path,
           icon: Icons.usb,
+          preferSafFallback: true,
         ));
       }
     }
@@ -449,6 +452,13 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
   Future<void> _openStorageLocation(_StorageLocation location) async {
     final dir = Directory(location.path);
     if (!dir.existsSync()) {
+      if (Platform.isAndroid && location.preferSafFallback) {
+        final picked = await AndroidSaf().pickTree();
+        if (picked != null && mounted) {
+          Navigator.of(context).pop(picked);
+        }
+        return;
+      }
       if (mounted) {
         setState(() {
           _error = 'Storage location not available: ${location.label}';
@@ -457,6 +467,12 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
       return;
     }
     await _navigateTo(dir);
+    if (Platform.isAndroid && location.preferSafFallback && _error != null) {
+      final picked = await AndroidSaf().pickTree();
+      if (picked != null && mounted) {
+        Navigator.of(context).pop(picked);
+      }
+    }
   }
 
   bool _isCurrentStorageLocation(_StorageLocation location) {
@@ -627,10 +643,12 @@ class _StorageLocation {
   final String label;
   final String path;
   final IconData icon;
+  final bool preferSafFallback;
 
   const _StorageLocation({
     required this.label,
     required this.path,
     required this.icon,
+    this.preferSafFallback = false,
   });
 }

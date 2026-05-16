@@ -1010,10 +1010,14 @@ class PlayerState with ChangeNotifier {
     notifyListeners();
 
     // Fast pass: title + artist only, no images, batched.
-    const batchSize = 20;
-    for (int start = 0; start < library.length; start += batchSize) {
+    // Keep the initial work intentionally small on mobile/Android so large
+    // folders can open without exhausting memory or blocking the UI.
+    final initialMetadataLimit = Platform.isAndroid ? 40 : 120;
+    const batchSize = 12;
+    final metadataLimit = library.length < initialMetadataLimit ? library.length : initialMetadataLimit;
+    for (int start = 0; start < metadataLimit; start += batchSize) {
       if (_loadVersion != version) return;
-      final end = (start + batchSize).clamp(0, library.length);
+      final end = (start + batchSize).clamp(0, metadataLimit);
       await Future.wait(
         List.generate(end - start, (j) => _enrichMetadataFast(start + j, library, version)),
       );
@@ -1053,7 +1057,7 @@ class PlayerState with ChangeNotifier {
     // load thumbnails lazily on demand when the item becomes visible.
     // For other platforms, perform a limited background scan so UI feels
     // responsive without exhausting resources.
-    if (!Platform.isWindows) {
+    if (!Platform.isWindows && !Platform.isAndroid) {
       _loadThumbnailsSequentially(version, maxItems: 30);
     }
     // Ensure the current playing item has a thumbnail request pending.
@@ -3445,12 +3449,11 @@ class _PlayerScreenState extends State<PlayerScreen>
               if (!PlayerState._mediaExtensions.contains(ext)) continue;
 
               final isVideo = {'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext);
-              final stat = await entity.stat();
               items.add(MediaItem(
                 entity.path,
                 isVideo ? MediaType.video : MediaType.audio,
                 title: p.basenameWithoutExtension(entity.path),
-                modifiedAt: stat.modified,
+                modifiedAt: null,
               ));
             }
 
