@@ -8,6 +8,7 @@ import 'package:win32/win32.dart' as win32;
 
 import '../services/android_saf.dart';
 import '../services/folder_history_service.dart';
+import '../services/platform_dirs.dart';
 
 enum TvFileBrowserMode { file, folder }
 
@@ -95,6 +96,34 @@ Future<String?> pickDirectoryPath(
 }) async {
   if (kIsWeb) {
     return FilePicker.platform.getDirectoryPath(dialogTitle: dialogTitle);
+  }
+
+  // On Android: if the user has granted MANAGE_EXTERNAL_STORAGE (All Files Access),
+  // use the regular built-in browser which can access USB drives and any folder
+  // via direct filesystem access. Otherwise, fall back to SAF for sandboxed access.
+  if (Platform.isAndroid) {
+    final hasAllFilesAccess = await PlatformDirs.hasManageExternalStoragePermission();
+    
+    if (hasAllFilesAccess) {
+      // User has All Files Access — use direct filesystem access via built-in browser
+      return _pickDirectoryWithBuiltInBrowser(
+        context,
+        dialogTitle: dialogTitle,
+        initialDirectory: initialDirectory,
+      );
+    }
+    
+    // No All Files Access — try SAF as a fallback for sandboxed folder selection
+    try {
+      final picked = await AndroidSaf().pickTree();
+      if (picked != null && picked.isNotEmpty) {
+        // Persist last folder as the tree URI so future file operations use SAF.
+        await FolderHistoryService().saveLastFolder(picked);
+        return picked;
+      }
+    } catch (_) {
+      // Fall through to built-in browser fallback below.
+    }
   }
 
   return _pickDirectoryWithBuiltInBrowser(

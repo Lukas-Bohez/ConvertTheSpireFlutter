@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart' as pp;
+import 'package:permission_handler/permission_handler.dart';
 
 /// Platform-aware directory resolver.
 ///
@@ -208,6 +209,19 @@ class PlatformDirs {
       return await pp.getDownloadsDirectory();
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Check if MANAGE_EXTERNAL_STORAGE (All Files Access) is granted on Android.
+  /// On other platforms, always returns true (no such permission needed).
+  static Future<bool> hasManageExternalStoragePermission() async {
+    if (kIsWeb) return true;
+    if (!Platform.isAndroid) return true;
+    try {
+      final status = await Permission.manageExternalStorage.status;
+      return status.isGranted;
+    } catch (_) {
+      return false;
     }
   }
 }
