@@ -41,6 +41,7 @@ import '../utils/safe_json.dart';
 
 class AppController extends ChangeNotifier {
   static const int _maxQueueCap = 1000;
+  static const String _downloadIdMapKey = 'download_id_map';
   final WebViewEnvironment? webViewEnvironment;
   final SettingsStore settingsStore;
   final YouTubeService youtube;
@@ -600,6 +601,9 @@ class AppController extends ChangeNotifier {
         );
         _updateQueue(item, updated);
         logs.add('Download complete: ${result.path}');
+        if (isYouTube) {
+          unawaited(_recordDownloadId(item.url, result.path));
+        }
         _tokens.remove(key);
         // Fire-and-forget: notification/stats failures must never
         // mask a successful download.
@@ -1151,6 +1155,62 @@ class AppController extends ChangeNotifier {
     if (success) {
       unawaited(AdService.instance.maybeShowInterstitialAfterSuccess());
     }
+  }
+
+  Future<void> _recordDownloadId(String url, String filePath) async {
+    final videoId = _extractYouTubeVideoId(url);
+    if (videoId == null || videoId.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final map = Map<String, String>.from(
+      jsonDecode(prefs.getString(_downloadIdMapKey) ?? '{}') as Map,
+    );
+    map[videoId] = filePath;
+    await prefs.setString(_downloadIdMapKey, jsonEncode(map));
+  }
+
+  Future<bool> isDownloadedById(String videoId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final map = Map<String, String>.from(
+      jsonDecode(prefs.getString(_downloadIdMapKey) ?? '{}') as Map,
+    );
+    final path = map[videoId];
+    if (path == null || path.isEmpty) return false;
+    if (path.startsWith('content://')) return true;
+    return File(path).existsSync();
+  }
+
+  Future<Set<String>> downloadedVideoIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    final map = Map<String, dynamic>.from(
+      jsonDecode(prefs.getString(_downloadIdMapKey) ?? '{}') as Map,
+    );
+    final ids = <String>{};
+    for (final entry in map.entries) {
+      final path = entry.value?.toString() ?? '';
+      if (path.isEmpty) continue;
+      if (path.startsWith('content://') || File(path).existsSync()) {
+        ids.add(entry.key);
+      }
+    }
+    return ids;
+  }
+
+  String? _extractYouTubeVideoId(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return null;
+    final host = uri.host.toLowerCase();
+    if (host.contains('youtu.be')) {
+      return uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
+    }
+    if (host.contains('youtube.com')) {
+      final id = uri.queryParameters['v'];
+      if (id != null && id.isNotEmpty) return id;
+      if (uri.pathSegments.length >= 2 && uri.pathSegments.first == 'shorts') {
+        return uri.pathSegments[1];
+      }
+    }
+    return null;
   }
 
   @override

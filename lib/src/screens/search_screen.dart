@@ -47,7 +47,9 @@ class _SearchScreenState extends State<SearchScreen>
   bool _hasSearched = false;
 
   // Tracks what files already exist in the user-selected download directory.
+  Set<String> _downloadedVideoIds = {};
   Set<String> _downloadedFileKeys = {};
+  Set<String> _downloadedFilePaths = {};
   final List<Set<String>> _downloadedFileTokens = [];
   DateTime? _lastDownloadFolderScan;
   bool _scanningDownloadFolder = false;
@@ -78,8 +80,33 @@ class _SearchScreenState extends State<SearchScreen>
     return _normalizeKey(input).split(' ').where((t) => t.isNotEmpty).toSet();
   }
 
+  bool _isDownloaded(String displayTitle, List<String> downloadedPaths) {
+    String norm(String s) => s
+        .toLowerCase()
+        .replaceAll(RegExp(r'\.\w{2,5}$'), '')
+        .replaceAll(RegExp(r'\s*\[[a-zA-Z0-9_\-]{11}\]'), '')
+        .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    final normDisplay = norm(displayTitle);
+    if (normDisplay.isEmpty) return false;
+
+    for (final path in downloadedPaths) {
+      final filename = p.basenameWithoutExtension(path);
+      final normFile = norm(filename);
+      if (normFile.isEmpty) continue;
+      if (normDisplay == normFile) return true;
+      if (normDisplay.length >= 4 && normFile.contains(normDisplay)) return true;
+      if (normFile.length >= 4 && normDisplay.contains(normFile)) return true;
+    }
+
+    return false;
+  }
+
   bool _isAlreadyDownloaded(SearchResult r) {
-    if (_downloadedFileKeys.isEmpty) return false;
+    if (_downloadedVideoIds.contains(r.id)) return true;
+    if (_downloadedFileKeys.isEmpty && _downloadedFilePaths.isEmpty) return false;
 
     final title = _normalizeKey(r.title);
     final full = _normalizeKey('${r.artist} ${r.title}');
@@ -110,15 +137,34 @@ class _SearchScreenState extends State<SearchScreen>
       }
     }
 
+    if (_downloadedFilePaths.isNotEmpty &&
+        _isDownloaded(r.title, _downloadedFilePaths.toList())) {
+      return true;
+    }
+
     return false;
   }
 
   Future<void> _refreshDownloadedFiles({bool showSnack = true}) async {
     if (!mounted) return;
-    final settings = context.read<AppController>().settings;
+    final controller = context.read<AppController>();
+    final settings = controller.settings;
+    final downloadedVideoIds = await controller.downloadedVideoIds();
     final folder = settings?.downloadDir;
-    if (folder == null || folder.isEmpty) return;
-    if (folder.startsWith('content://')) return;
+    if (folder == null || folder.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _downloadedVideoIds = downloadedVideoIds;
+      });
+      return;
+    }
+    if (folder.startsWith('content://')) {
+      if (!mounted) return;
+      setState(() {
+        _downloadedVideoIds = downloadedVideoIds;
+      });
+      return;
+    }
 
     setState(() => _scanningDownloadFolder = true);
 
@@ -127,10 +173,17 @@ class _SearchScreenState extends State<SearchScreen>
     final extWhitelist = {'.mp3', '.m4a', '.mp4'};
 
     final scanned = <String>{};
+    final scannedPaths = <String>{};
     final scannedTokens = <Set<String>>[];
     try {
       final dir = Directory(folder);
-      if (!await dir.exists()) return;
+      if (!await dir.exists()) {
+        if (!mounted) return;
+        setState(() {
+          _downloadedVideoIds = downloadedVideoIds;
+        });
+        return;
+      }
       await for (final entity
           in dir.list(recursive: true, followLinks: false)) {
         if (entity is! File) continue;
@@ -139,6 +192,7 @@ class _SearchScreenState extends State<SearchScreen>
         final base = p.basenameWithoutExtension(entity.path);
         final key = _normalizeKey(base);
         scanned.add(key);
+        scannedPaths.add(entity.path);
         scannedTokens.add(_tokenize(base));
       }
     } catch (e) {
@@ -148,7 +202,9 @@ class _SearchScreenState extends State<SearchScreen>
 
     if (!mounted) return;
     setState(() {
+      _downloadedVideoIds = downloadedVideoIds;
       _downloadedFileKeys = scanned;
+      _downloadedFilePaths = scannedPaths;
       _downloadedFileTokens
         ..clear()
         ..addAll(scannedTokens);

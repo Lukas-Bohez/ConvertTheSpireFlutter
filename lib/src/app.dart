@@ -5,6 +5,7 @@ import 'package:window_manager/window_manager.dart';
 import 'services/tray_service.dart';
 import 'dart:io' show Platform, Process;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
@@ -76,6 +77,7 @@ class _MyAppState extends State<MyApp>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initController();
+    HardwareKeyboard.instance.addHandler(_handleGlobalKey);
 
     // Only add the window-manager listener on supported desktop platforms.
     if (!kIsWeb && Platform.isWindows) {
@@ -140,6 +142,7 @@ class _MyAppState extends State<MyApp>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    HardwareKeyboard.instance.removeHandler(_handleGlobalKey);
     if (!kIsWeb && Platform.isWindows) {
       try {
         windowManager.removeListener(this);
@@ -167,6 +170,20 @@ class _MyAppState extends State<MyApp>
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
     debugPrint('MyApp: memory pressure, cleared image cache');
+  }
+
+  bool _handleGlobalKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    if (event.logicalKey != LogicalKeyboardKey.f11) return false;
+    if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      return false;
+    }
+    unawaited(
+      windowManager.isFullScreen().then((isFs) {
+        return windowManager.setFullScreen(!isFs);
+      }),
+    );
+    return true;
   }
 
   Future<void> _initController() async {

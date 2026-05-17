@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
+import 'package:path/path.dart' as p;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:characters/characters.dart';
 
@@ -501,6 +502,15 @@ class DownloadService {
         if (!await File(outputPath).exists()) {
           throw Exception(
               'FFmpeg completed but output file was not created for format: $formatLower');
+        }
+
+        if (Platform.isAndroid || Platform.isIOS) {
+          await _tagAudioMetadata(
+            filePath: outputPath,
+            title: video.title,
+            artist: video.author,
+            ffmpegPath: ffmpegPath,
+          );
         }
       } else {
         // -- MP4: keep as video ----------------------------------------
@@ -1252,6 +1262,38 @@ class DownloadService {
         : cropped;
     final encoded = img.encodeJpg(resized, quality: 90);
     return Uint8List.fromList(encoded);
+  }
+
+  Future<void> _tagAudioMetadata({
+    required String filePath,
+    required String title,
+    required String artist,
+    required String? ffmpegPath,
+  }) async {
+    final inputFile = File(filePath);
+    if (!await inputFile.exists()) return;
+
+    final parent = inputFile.parent.path;
+    final extension = p.extension(filePath);
+    final baseName = p.basenameWithoutExtension(filePath);
+    final taggedPath = '$parent${Platform.pathSeparator}$baseName.tagged$extension';
+
+    await ffmpeg.run([
+      '-i',
+      filePath,
+      '-metadata',
+      'artist=$artist',
+      '-metadata',
+      'title=$title',
+      '-codec',
+      'copy',
+      taggedPath,
+    ], ffmpegPath: ffmpegPath);
+
+    final taggedFile = File(taggedPath);
+    if (!await taggedFile.exists()) return;
+    await inputFile.delete();
+    await taggedFile.rename(filePath);
   }
 
   img.Image _trimBlackBars(img.Image image) {
