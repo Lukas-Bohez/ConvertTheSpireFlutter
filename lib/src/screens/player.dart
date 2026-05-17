@@ -4316,14 +4316,28 @@ class _NowPlayingThumbnailSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<PlayerState>();
-    final item = state.currentItem;
-    if (item == null) return const SizedBox.shrink();
-    return _TrackThumbnail(
-      data: item.thumbnailData,
-      isVideo: item.type == MediaType.video,
-      size: 52,
-      radius: 10,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final fallbackWidth = MediaQuery.sizeOf(context).width;
+        final availableWidth = constraints.hasBoundedWidth && constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : fallbackWidth;
+        final size = (availableWidth * 0.38).clamp(72.0, 180.0);
+
+        final state = context.watch<PlayerState>();
+        final item = state.currentItem;
+        if (item == null) return const SizedBox.shrink();
+        return SizedBox(
+          width: size,
+          height: size,
+          child: _TrackThumbnail(
+            data: item.thumbnailData,
+            isVideo: item.type == MediaType.video,
+            size: size,
+            radius: 10,
+          ),
+        );
+      },
     );
   }
 }

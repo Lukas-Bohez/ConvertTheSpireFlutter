@@ -339,6 +339,8 @@ class PlaylistService {
   /// common noise like "(Official Audio)", brackets, punctuation.
   static String _normalise(String input) {
     var s = input.toLowerCase();
+    s = s.replaceAll(RegExp(r'\.[a-z0-9]{2,5}$', caseSensitive: false), '');
+    s = s.replaceAll(RegExp(r'\s*\[[a-zA-Z0-9_\-]{11}\]'), '');
     // Remove bracketed/parenthesised noise
     s = s.replaceAll(RegExp(r'\(.*?\)'), '');
     s = s.replaceAll(RegExp(r'\[.*?\]'), '');
@@ -349,8 +351,8 @@ class PlaylistService {
     s = s.replaceAll(RegExp(r'lyrics?\s*video', caseSensitive: false), '');
     s = s.replaceAll(RegExp(r'visuali[sz]er', caseSensitive: false), '');
     s = s.replaceAll(RegExp(r'hd|hq|4k|1080p', caseSensitive: false), '');
-    // Strip non-alphanumeric (keep spaces)
-    s = s.replaceAll(RegExp(r'[^a-z0-9\s]'), '');
+    // Keep Unicode letters and digits so non-English titles still match.
+    s = s.replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '');
     // Collapse whitespace
     s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
     return s;
