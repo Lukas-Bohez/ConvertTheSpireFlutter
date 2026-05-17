@@ -140,6 +140,18 @@ Future<String?> _pickDirectoryWithBuiltInBrowser(
   );
 
   if (result != null) {
+    if (Platform.isAndroid && !result.startsWith('content://')) {
+      try {
+        final treeUri = await AndroidSaf().pathToTreeUri(result);
+        if (treeUri != null && treeUri.isNotEmpty) {
+          await FolderHistoryService().saveLastFolder(treeUri);
+          return treeUri;
+        }
+      } catch (_) {
+        // Fall back to raw path if URI conversion fails.
+      }
+    }
+
     await FolderHistoryService().saveLastFolder(result);
   }
 

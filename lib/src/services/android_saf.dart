@@ -22,6 +22,13 @@ class AndroidSaf {
     return _channel.invokeMethod<String>('pickTree');
   }
 
+  /// Build a tree URI for the app's own DocumentsProvider from a filesystem
+  /// path selected in the in-app browser fallback.
+  Future<String?> pathToTreeUri(String path) async {
+    if (!isSupported || path.trim().isEmpty) return null;
+    return _channel.invokeMethod<String>('pathToTreeUri', {'path': path});
+  }
+
   Future<String?> copyToTree({
     required String treeUri,
     required String sourcePath,

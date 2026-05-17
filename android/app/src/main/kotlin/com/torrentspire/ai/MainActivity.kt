@@ -9,6 +9,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.os.Environment
 import android.media.MediaScannerConnection
@@ -215,6 +216,23 @@ class MainActivity : AudioServiceActivity() {
                                 runOnUiThread { result.error("COPY_TEMP_FAILED", e.localizedMessage, null) }
                             }
                         }.start()
+                    }
+                    "pathToTreeUri" -> {
+                        val path = call.argument<String>("path")
+                        if (path.isNullOrBlank()) {
+                            result.success(null)
+                            return@setMethodCallHandler
+                        }
+                        try {
+                            val normalized = File(path).canonicalPath
+                            val tree = DocumentsContract.buildTreeDocumentUri(
+                                StorageDocumentsProvider.AUTHORITY,
+                                normalized
+                            )
+                            result.success(tree.toString())
+                        } catch (e: Exception) {
+                            result.error("TREE_URI_FAILED", e.localizedMessage, null)
+                        }
                     }
                     "listTree" -> {
                         val treeUri = call.argument<String>("treeUri")
@@ -467,9 +485,12 @@ class MainActivity : AudioServiceActivity() {
             }
             val treeUri = data.data!!
             try {
+                val grantedFlags = data.flags and
+                    (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 contentResolver.takePersistableUriPermission(
                     treeUri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    if (grantedFlags != 0) grantedFlags
+                    else Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 )
             } catch (_: SecurityException) {
             }
