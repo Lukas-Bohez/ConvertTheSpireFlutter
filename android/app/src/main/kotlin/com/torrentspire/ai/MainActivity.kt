@@ -26,7 +26,6 @@ import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodCall
-import androidx.core.content.ContextCompat
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -37,6 +36,7 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.ArrayList
+
 
 class MainActivity : AudioServiceActivity() {
     private val channelName = "convert_the_spire/saf"

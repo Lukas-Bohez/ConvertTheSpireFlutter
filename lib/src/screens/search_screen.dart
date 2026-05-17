@@ -370,7 +370,12 @@ class _SearchScreenState extends State<SearchScreen>
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(6),
                             child: Image.network(r.thumbnailUrl,
-                                width: 56, height: 56, fit: BoxFit.cover),
+                                width: 56,
+                                height: 56,
+                                cacheWidth: 112,
+                                cacheHeight: 112,
+                                filterQuality: FilterQuality.low,
+                                fit: BoxFit.cover),
                           )
                         : Container(
                             width: 56,

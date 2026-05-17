@@ -161,6 +161,14 @@ class _MyAppState extends State<MyApp>
     } catch (_) {}
   }
 
+  @override
+  void didHaveMemoryPressure() {
+    super.didHaveMemoryPressure();
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+    debugPrint('MyApp: memory pressure, cleared image cache');
+  }
+
   Future<void> _initController() async {
     if (kDebugMode) debugPrint('MyApp: starting controller initialization');
     try {

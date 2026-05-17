@@ -62,6 +62,11 @@ Future<void> main() async {
     // This avoids `Zone mismatch` errors from Flutter.
     WidgetsFlutterBinding.ensureInitialized();
 
+    // Keep the global image cache conservative so TV devices don't retain too
+    // many full-resolution thumbnails at once.
+    PaintingBinding.instance.imageCache.maximumSize = 80;
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 40 << 20;
+
     // Initialize the runtime flavor detection so kPlayStoreBuild is valid.
     await initAppFlavor();
     // Propagate into build_flags runtime flag.
@@ -69,7 +74,7 @@ Future<void> main() async {
 
     startupErrorLogFile = await _prepareStartupErrorLogFile();
 
-    // Request storage permission on Android (if needed).
+    // Request storage/media permissions on Android (if needed).
     Future<void> _requestAndroidPermissions() async {
       if (kIsWeb) return;
       if (!Platform.isAndroid) return;
@@ -89,28 +94,6 @@ Future<void> main() async {
           }
         }
 
-        // For GitHub-distributed APKs we may need to request the All Files
-        // Access permission so the app can read arbitrary external folders
-        // (USB mounts, removable storage, etc.). This is intentionally only
-        // requested for the GitHub release build variant to avoid Play Store
-        // policy problems.
-        if (kIsGithubRelease) {
-          try {
-            final manageStatus = await Permission.manageExternalStorage.status;
-            if (!manageStatus.isGranted) {
-              final req = await Permission.manageExternalStorage.request();
-              if (!req.isGranted) {
-                // If user permanently denied, open app settings so they can
-                // manually grant "All files access".
-                if (req.isPermanentlyDenied) {
-                  await openAppSettings();
-                }
-              }
-            }
-          } catch (e) {
-            debugPrint('Manage external storage request failed: $e');
-          }
-        }
       } catch (e) {
         debugPrint('Android permission request failed: $e');
       }

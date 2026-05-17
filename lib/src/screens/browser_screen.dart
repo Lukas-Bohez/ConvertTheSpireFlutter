@@ -1653,6 +1653,9 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                                                         .getScreenshotBytes(
                                                             tab.id) ??
                                                     tab.screenshotPath),
+                                                cacheWidth: 640,
+                                                cacheHeight: 360,
+                                                filterQuality: FilterQuality.low,
                                                 fit: BoxFit.cover,
                                                 width: double.infinity,
                                               );
@@ -1661,6 +1664,9 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                                               return Image.file(
                                                 File(tab.screenshotPath!),
                                                 key: ValueKey(tab.screenshotPath),
+                                                cacheWidth: 640,
+                                                cacheHeight: 360,
+                                                filterQuality: FilterQuality.low,
                                                 fit: BoxFit.cover,
                                                 width: double.infinity,
                                               );

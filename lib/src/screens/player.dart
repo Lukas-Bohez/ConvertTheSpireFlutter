@@ -627,12 +627,21 @@ class PlayerState with ChangeNotifier {
     final data = item.thumbnailData;
     if (data == null) return null;
     if (expand) {
-      return Image.memory(data, fit: BoxFit.cover);
+      return Image.memory(
+        data,
+        cacheWidth: 512,
+        cacheHeight: 512,
+        filterQuality: FilterQuality.low,
+        fit: BoxFit.cover,
+      );
     }
     return Image.memory(
       data,
       width: size.toDouble(),
       height: size.toDouble(),
+      cacheWidth: (size * 2).round(),
+      cacheHeight: (size * 2).round(),
+      filterQuality: FilterQuality.low,
       fit: BoxFit.cover,
     );
   }
@@ -4240,6 +4249,9 @@ class _TrackThumbnail extends StatelessWidget {
           data!,
           width: size,
           height: size,
+          cacheWidth: (size * 2).round(),
+          cacheHeight: (size * 2).round(),
+          filterQuality: FilterQuality.low,
           fit: BoxFit.cover,
         ),
       );

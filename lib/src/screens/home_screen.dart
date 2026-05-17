@@ -1862,6 +1862,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   item.thumbnailUrl!,
                                   width: 80,
                                   height: 60,
+                                    cacheWidth: 160,
+                                    cacheHeight: 120,
+                                    filterQuality: FilterQuality.low,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) =>
                                       _thumbnailPlaceholder(),

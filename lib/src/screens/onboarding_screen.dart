@@ -686,14 +686,6 @@ class _KeepAlivePageState extends State<_KeepAlivePage>
   }
 }
 
-class _OnboardingNextIntent extends Intent {
-  const _OnboardingNextIntent();
-}
-
-class _OnboardingBackIntent extends Intent {
-  const _OnboardingBackIntent();
-}
-
 // --─ Preview widgets --------------------------------------------------------
 
 /// Welcome page - shows a brief feature overview.

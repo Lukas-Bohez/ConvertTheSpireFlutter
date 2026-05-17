@@ -796,6 +796,9 @@ class _BrowserShellState extends State<BrowserShell> {
       child: artwork != null && artwork.isNotEmpty
           ? Image.memory(
               artwork,
+              cacheWidth: (size * 2).round(),
+              cacheHeight: (size * 2).round(),
+              filterQuality: FilterQuality.low,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Icon(
                 fallbackIcon,

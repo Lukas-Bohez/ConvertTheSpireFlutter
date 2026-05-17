@@ -398,7 +398,12 @@ class _PlaylistChecklistSheetState extends State<_PlaylistChecklistSheet> {
                   subtitle: Text(track.artist),
                   secondary: track.thumbnailUrl.isNotEmpty
                       ? CircleAvatar(
-                          backgroundImage: NetworkImage(track.thumbnailUrl))
+                          backgroundImage: ResizeImage(
+                            NetworkImage(track.thumbnailUrl),
+                            width: 96,
+                            height: 96,
+                          ),
+                        )
                       : null,
                 );
               },
@@ -516,7 +521,11 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
               CircleAvatar(
                 radius: 26,
                 backgroundImage: widget.result.thumbnailUrl.isNotEmpty
-                    ? NetworkImage(widget.result.thumbnailUrl)
+                    ? ResizeImage(
+                        NetworkImage(widget.result.thumbnailUrl),
+                        width: 128,
+                        height: 128,
+                      )
                     : null,
                 child: widget.result.thumbnailUrl.isEmpty
                     ? const Icon(Icons.photo, size: 28)
