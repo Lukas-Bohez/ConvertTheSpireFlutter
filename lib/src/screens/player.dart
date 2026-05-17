@@ -260,6 +260,7 @@ class PlayerState with ChangeNotifier {
   Set<String> _favourites = {};
   Set<String> _disliked = {};
   Map<String, MediaItem> _favouriteCache = {};
+  final Map<String, DateTime?> _modifiedAtCache = {};
   int _folderItemCount = 0;
 
   // BUG 1 FIX: generation counter - each _loadCurrent call captures generation
@@ -993,12 +994,13 @@ class PlayerState with ChangeNotifier {
 
   Future<void> setLibrary(List<MediaItem> items) async {
     final version = ++_loadVersion;
-    isLoading = true;
+    isLoading = false;
     _folderItemCount = 0;
     _thumbInFlight.clear();
     _playHistory.clear();
     _recentlyPlayed.clear();
     _historyCursor = -1;
+    _modifiedAtCache.clear();
 
     if (_audio != null) {
       try { await _safeStopAudio(); } catch (_) {}
@@ -1011,7 +1013,10 @@ class PlayerState with ChangeNotifier {
     }
     await _disposeAndroidController();
 
-    library = List.from(items);
+    final hydratedItems = await _hydrateModifiedAt(items);
+    if (_loadVersion != version) return;
+
+    library = List.from(hydratedItems);
     _applyStatsToLibrary();
     currentIndex = 0;
     position = Duration.zero;
@@ -1208,11 +1213,12 @@ class PlayerState with ChangeNotifier {
       final metaPath = await _resolveLocalPath(item.path);
       final tag = await readMetadata(File(metaPath), getImage: false);
       if (_loadVersion != version) return;
+      final modifiedAt = item.modifiedAt ?? await _modifiedAtForPath(item.path);
       lib[i] = item.copyWith(
         title: tag.title?.trim().isNotEmpty == true ? tag.title!.trim() : item.title,
         artist: tag.artist?.trim().isNotEmpty == true ? tag.artist!.trim() : item.artist,
         genre: _extractGenre(tag) ?? item.genre,
-        modifiedAt: item.modifiedAt ?? _modifiedAtForPath(item.path),
+        modifiedAt: modifiedAt,
       );
       if (i == currentIndex) {
         _updateMediaNotification(lib[i]);
@@ -2281,12 +2287,52 @@ class PlayerState with ChangeNotifier {
     }
   }
 
-  DateTime? _modifiedAtForPath(String path) {
+  Future<DateTime?> _modifiedAtForPath(String path) async {
+    if (_modifiedAtCache.containsKey(path)) {
+      return _modifiedAtCache[path];
+    }
     try {
-      return File(path).statSync().modified;
+      final modified = await File(path).lastModified();
+      _modifiedAtCache[path] = modified;
+      return modified;
     } catch (_) {
+      _modifiedAtCache[path] = null;
       return null;
     }
+  }
+
+  Future<List<MediaItem>> _hydrateModifiedAt(List<MediaItem> items) async {
+    final missingPaths = <String>{};
+    for (final item in items) {
+      if (item.modifiedAt != null) continue;
+      if (item.path.startsWith('content://')) continue;
+      if (_modifiedAtCache.containsKey(item.path)) continue;
+      missingPaths.add(item.path);
+    }
+
+    if (missingPaths.isNotEmpty) {
+      final results = await Future.wait<MapEntry<String, DateTime?>>(
+        missingPaths.map((path) async {
+          try {
+            final modified = await File(path).lastModified();
+            _modifiedAtCache[path] = modified;
+            return MapEntry<String, DateTime?>(path, modified);
+          } catch (_) {
+            _modifiedAtCache[path] = null;
+            return MapEntry<String, DateTime?>(path, null);
+          }
+        }),
+      );
+      for (final entry in results) {
+        _modifiedAtCache[entry.key] = entry.value;
+      }
+    }
+
+    return items.map((item) {
+      if (item.modifiedAt != null) return item;
+      if (!_modifiedAtCache.containsKey(item.path)) return item;
+      return item.copyWith(modifiedAt: _modifiedAtCache[item.path]);
+    }).toList();
   }
 
   bool hasPlayedPath(String path) {
@@ -2512,7 +2558,7 @@ class PlayerState with ChangeNotifier {
             entity.path,
             isVideo ? MediaType.video : MediaType.audio,
             title: p.basenameWithoutExtension(entity.path),
-            modifiedAt: _modifiedAtForPath(entity.path),
+            modifiedAt: null,
           ),
         );
       }
@@ -4096,12 +4142,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             child: Row(
               children: [
                 // Thumbnail
-                _TrackThumbnail(
-                  data: item.thumbnailData,
-                  isVideo: item.type == MediaType.video,
-                  size: 52,
-                  radius: 10,
-                ),
+                const _NowPlayingThumbnailSlot(),
                 const SizedBox(width: 12),
                 // Title / artist / type badge
                 Expanded(
@@ -4266,6 +4307,23 @@ class _TrackThumbnail extends StatelessWidget {
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
       ),
       child: Icon(icon, size: size * 0.55, color: Theme.of(context).colorScheme.onSurface.withAlpha(153)),
+    );
+  }
+}
+
+class _NowPlayingThumbnailSlot extends StatelessWidget {
+  const _NowPlayingThumbnailSlot();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<PlayerState>();
+    final item = state.currentItem;
+    if (item == null) return const SizedBox.shrink();
+    return _TrackThumbnail(
+      data: item.thumbnailData,
+      isVideo: item.type == MediaType.video,
+      size: 52,
+      radius: 10,
     );
   }
 }

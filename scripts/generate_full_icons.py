@@ -7,6 +7,9 @@ def main() -> None:
     root = Path(__file__).resolve().parents[1]
     src = root / "assets" / "icons" / "app_icon.ico"
     img = Image.open(src).convert("RGBA")
+    alpha_bbox = img.getchannel("A").getbbox()
+    if alpha_bbox is not None:
+        img = img.crop(alpha_bbox)
 
     legacy_sizes = {
         "mipmap-ldpi": 36,
@@ -41,7 +44,7 @@ def main() -> None:
         out_dir = full_res / bucket
         out_dir.mkdir(parents=True, exist_ok=True)
         canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-        icon_size = int(size * 0.88)
+        icon_size = int(size * 0.94)
         icon = img.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
         x = (size - icon_size) // 2
         y = (size - icon_size) // 2

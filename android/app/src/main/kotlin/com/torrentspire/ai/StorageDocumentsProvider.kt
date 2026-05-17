@@ -116,6 +116,10 @@ class StorageDocumentsProvider : DocumentsProvider() {
 
     override fun openDocument(documentId: String, mode: String, signal: CancellationSignal?): ParcelFileDescriptor {
         val file = File(documentId)
+        if (!file.exists() && mode.contains("w")) {
+            file.parentFile?.mkdirs()
+            file.createNewFile()
+        }
         if (file.isDirectory) {
             throw FileNotFoundException("Cannot open directory: $documentId")
         }
@@ -168,9 +172,12 @@ class StorageDocumentsProvider : DocumentsProvider() {
             DocumentsContract.Document.FLAG_DIR_SUPPORTS_CREATE or
                 DocumentsContract.Document.FLAG_SUPPORTS_DELETE or
                 DocumentsContract.Document.FLAG_SUPPORTS_RENAME
-        } else {
+        } else if (file.canWrite()) {
             DocumentsContract.Document.FLAG_SUPPORTS_WRITE or
                 DocumentsContract.Document.FLAG_SUPPORTS_DELETE or
+                DocumentsContract.Document.FLAG_SUPPORTS_RENAME
+        } else {
+            DocumentsContract.Document.FLAG_SUPPORTS_DELETE or
                 DocumentsContract.Document.FLAG_SUPPORTS_RENAME
         }
 

@@ -67,8 +67,8 @@ class _SearchScreenState extends State<SearchScreen>
     s = s.replaceAll('&', ' and ');
     // Remove bracketed info (e.g. (remix), [live], {explicit})
     s = s.replaceAll(RegExp(r'[\[\(\{].*?[\]\)\}]'), '');
-    // Keep only alphanumeric + spaces
-    s = s.replaceAll(RegExp(r'[^a-z0-9 ]+'), ' ');
+    // Keep Unicode word characters + spaces so non-English titles still match.
+    s = s.replaceAll(RegExp(r'[^\w\s]+', unicode: true), ' ');
     // Collapse whitespace
     s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
     return s;

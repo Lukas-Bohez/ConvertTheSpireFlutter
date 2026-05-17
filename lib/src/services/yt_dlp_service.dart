@@ -33,6 +33,10 @@ class YtDlpService {
       bool forceGenericExtractor = false,
     }) async {
       final args = <String>['--dump-json'];
+      args.addAll([
+        '--no-mtime',
+        '--extractor-args', 'youtube:lang=en',
+      ]);
       final height = _qualityToHeight(videoQuality);
       args.addAll([
         '-f',
@@ -394,6 +398,8 @@ class YtDlpService {
 
     // Common options
     args.addAll([
+      '--no-mtime',
+      '--extractor-args', 'youtube:lang=en',
       '--embed-thumbnail', // embed cover art
       '--add-metadata', // include title/artist/date tags
       '--no-playlist', // single video only
