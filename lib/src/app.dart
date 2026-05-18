@@ -76,6 +76,8 @@ class _MyAppState extends State<MyApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    PaintingBinding.instance.imageCache.maximumSize = 80;
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 40 << 20;
     _initController();
     HardwareKeyboard.instance.addHandler(_handleGlobalKey);
 

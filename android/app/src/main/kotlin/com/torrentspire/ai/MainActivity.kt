@@ -121,6 +121,77 @@ class MainActivity : AudioServiceActivity() {
                             }
                         }.start()
                     }
+                    "createSafFile" -> {
+                        val treeUri = call.argument<String>("treeUri")
+                        val fileName = call.argument<String>("fileName")
+                        val mimeType = call.argument<String>("mimeType") ?: "audio/mpeg"
+                        if (treeUri.isNullOrBlank() || fileName.isNullOrBlank()) {
+                            result.error("INVALID_ARGS", "Missing arguments", null)
+                            return@setMethodCallHandler
+                        }
+                        try {
+                            val docUri = DocumentFile.fromTreeUri(this, Uri.parse(treeUri))
+                                ?.createFile(mimeType, fileName)?.uri
+                            result.success(docUri?.toString())
+                        } catch (e: Exception) {
+                            result.error("CREATE_FAILED", e.localizedMessage, null)
+                        }
+                    }
+                    "copyToSafUri" -> {
+                        val sourcePath = call.argument<String>("sourcePath")
+                        val destUri = call.argument<String>("destUri")
+                        if (sourcePath.isNullOrBlank() || destUri.isNullOrBlank()) {
+                            result.error("INVALID_ARGS", "Missing arguments", null)
+                            return@setMethodCallHandler
+                        }
+                        Thread {
+                            try {
+                                val sourceFile = File(sourcePath)
+                                contentResolver.openOutputStream(Uri.parse(destUri), "wt")?.use { out ->
+                                    FileInputStream(sourceFile).use { input ->
+                                        input.copyTo(out)
+                                    }
+                                } ?: throw Exception("Failed to open output stream for $destUri")
+                                sourceFile.delete()
+                                runOnUiThread { result.success(null) }
+                            } catch (e: Exception) {
+                                runOnUiThread { result.error("COPY_FAILED", e.localizedMessage, null) }
+                            }
+                        }.start()
+                    }
+                    "copyFromSafUri" -> {
+                        val uriString = call.argument<String>("uri")
+                        val destPath = call.argument<String>("destPath")
+                        if (uriString.isNullOrBlank() || destPath.isNullOrBlank()) {
+                            result.error("INVALID_ARGS", "Missing arguments", null)
+                            return@setMethodCallHandler
+                        }
+                        Thread {
+                            try {
+                                contentResolver.openInputStream(Uri.parse(uriString))?.use { input ->
+                                    FileOutputStream(File(destPath)).use { output ->
+                                        input.copyTo(output)
+                                    }
+                                } ?: throw Exception("Failed to open input stream for $uriString")
+                                runOnUiThread { result.success(null) }
+                            } catch (e: Exception) {
+                                runOnUiThread { result.error("COPY_FAILED", e.localizedMessage, null) }
+                            }
+                        }.start()
+                    }
+                    "deleteSafUri" -> {
+                        val uriString = call.argument<String>("uri")
+                        if (uriString.isNullOrBlank()) {
+                            result.error("INVALID_ARGS", "Missing arguments", null)
+                            return@setMethodCallHandler
+                        }
+                        try {
+                            val deleted = DocumentFile.fromSingleUri(this, Uri.parse(uriString))?.delete() ?: false
+                            result.success(deleted)
+                        } catch (e: Exception) {
+                            result.error("DELETE_FAILED", e.localizedMessage, null)
+                        }
+                    }
                     "copyContentUriToTree" -> {
                         val treeUri = call.argument<String>("treeUri")
                         val sourceUri = call.argument<String>("sourceUri")

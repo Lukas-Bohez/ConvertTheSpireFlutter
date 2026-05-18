@@ -161,6 +161,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
+  build_cli_annotations:
+    dependency: transitive
+    description:
+      name: build_cli_annotations
+      sha256: e563c2e01de8974566a1998410d3f6f03521788160a02503b0b1f1a46c7b3d95
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.1"
   characters:
     dependency: transitive
     description:
@@ -550,6 +558,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.33"
+  flutter_rust_bridge:
+    dependency: transitive
+    description:
+      name: flutter_rust_bridge
+      sha256: e87d6b9ee934dcd24a128ccb2bd91905d2d5fe5c06245d6a8f5477d4907a437a
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.12.0"
   flutter_secure_storage:
     dependency: "direct main"
     description:
@@ -896,6 +912,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.17.0"
+  metadata_god:
+    dependency: "direct main"
+    description:
+      name: metadata_god
+      sha256: "2b19b7e88cf5ab7016fe8d1f868bb35a193aaef06fd96cfc7de4ec3eacc16eb0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.0"
   mime:
     dependency: "direct main"
     description:

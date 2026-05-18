@@ -12,6 +12,7 @@ import 'package:flutter/services.dart' show MissingPluginException, DeviceOrient
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+import 'package:metadata_god/metadata_god.dart';
 import 'package:audio_service/audio_service.dart' as audio_svc;
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -23,6 +24,7 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:video_player/video_player.dart';
 import 'package:window_manager/window_manager.dart';
 import '../services/platform_dirs.dart';
+import '../services/android_saf.dart';
 import '../services/audio_handler.dart';
 import '../services/background_media_update_guard.dart';
 import '../services/ffmpeg_service.dart';
@@ -2583,6 +2585,115 @@ class PlayerState with ChangeNotifier {
     }
   }
 
+  void _replaceLibraryItem(MediaItem updated) {
+    final index = library.indexWhere((item) => item.path == updated.path);
+    if (index < 0) return;
+    library[index] = updated;
+    if (_favourites.contains(updated.path)) {
+      _favouriteCache[updated.path] = updated;
+    }
+    if (index == currentIndex) {
+      _updateMediaNotification(updated);
+    }
+    notifyListeners();
+  }
+
+  String _displayNameForMetadata(String path) {
+    return p.basenameWithoutExtension(path)
+        .replaceAll(RegExp(r'\s*\[[a-zA-Z0-9_\-]{11}\]'), '')
+        .trim();
+  }
+
+  bool _supportsMetadataRewrite(String path) {
+    const supported = {'.mp3', '.m4a', '.ogg', '.flac'};
+    return supported.contains(p.extension(path).toLowerCase());
+  }
+
+  Future<bool> fixSongMetadata(MediaItem item) async {
+    if (_disposed) return false;
+    if (!_supportsMetadataRewrite(item.path)) return false;
+
+    await MetadataGod.initialize();
+
+    final resolvedPath = await _resolveLocalPath(item.path);
+    if (resolvedPath.trim().isEmpty) return false;
+
+    final existing = await MetadataGod.readMetadata(file: resolvedPath);
+    final displayName = _displayNameForMetadata(item.path);
+    final existingArtist = existing.artist?.trim() ?? '';
+    final existingTitle = existing.title?.trim() ?? '';
+
+    String title = existingTitle.isNotEmpty
+        ? existingTitle
+        : (item.title?.trim().isNotEmpty == true ? item.title!.trim() : displayName);
+    String artist = existingArtist;
+    if (artist.isEmpty) {
+      if (displayName.contains(' - ')) {
+        final parts = displayName.split(' - ');
+        if (parts.length >= 2) {
+          artist = parts.first.trim();
+          final inferredTitle = parts.sublist(1).join(' - ').trim();
+          if (inferredTitle.isNotEmpty) {
+            title = inferredTitle;
+          }
+        }
+      }
+    }
+    artist = artist.isEmpty ? 'Unknown' : artist;
+
+    final updatedMetadata = Metadata(
+      title: title,
+      artist: artist,
+      albumArtist: artist,
+      album: existing.album,
+      genre: existing.genre,
+      picture: existing.picture,
+      trackNumber: existing.trackNumber,
+      trackTotal: existing.trackTotal,
+      discNumber: existing.discNumber,
+      discTotal: existing.discTotal,
+      year: existing.year,
+      durationMs: existing.durationMs,
+      fileSize: existing.fileSize,
+    );
+
+    await MetadataGod.writeMetadata(file: resolvedPath, metadata: updatedMetadata);
+
+    if (item.path.startsWith('content://') && resolvedPath != item.path) {
+      final saf = AndroidSaf();
+      await saf.copyToSafUri(sourcePath: resolvedPath, destUri: item.path);
+    }
+
+    final index = library.indexWhere((entry) => entry.path == item.path);
+    if (index >= 0) {
+      final updatedItem = library[index].copyWith(
+        title: title,
+        artist: artist,
+        genre: existing.genre ?? library[index].genre,
+      );
+      _replaceLibraryItem(updatedItem);
+    }
+    return true;
+  }
+
+  Future<int> fixAllMissingArtistMetadata({
+    void Function(int done, int total)? onProgress,
+  }) async {
+    final targets = library
+        .where((item) =>
+            item.type == MediaType.audio &&
+            (item.artist == null || item.artist!.trim().isEmpty))
+        .toList();
+    var done = 0;
+    for (final item in targets) {
+      if (_disposed) break;
+      await fixSongMetadata(item);
+      done++;
+      if (onProgress != null) onProgress(done, targets.length);
+    }
+    return targets.length;
+  }
+
   // --- Video thumbnail generation -------------------------------------------
 
   Future<Uint8List?> _generateVideoThumbnail(String filePath) async {
@@ -3369,6 +3480,63 @@ class _PlayerScreenState extends State<PlayerScreen>
     prefs.setStringList('player_filter_genres', _activeGenres.toList()..sort());
   }
 
+  Future<void> _showFixAllMetadataDialog() async {
+    final state = context.read<PlayerState>();
+    final targets = state.library
+        .where((item) =>
+            item.type == MediaType.audio &&
+            (item.artist == null || item.artist!.trim().isEmpty))
+        .toList();
+    if (targets.isEmpty) {
+      Snack.show(context, 'No songs need metadata fixes', level: SnackLevel.info);
+      return;
+    }
+
+    final progress = ValueNotifier<int>(0);
+    final dialogFuture = showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Fixing metadata'),
+          content: ValueListenableBuilder<int>(
+            valueListenable: progress,
+            builder: (context, done, _) {
+              final total = targets.length;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LinearProgressIndicator(
+                    value: total == 0 ? null : done / total,
+                  ),
+                  const SizedBox(height: 12),
+                  Text('$done of $total songs processed'),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+
+    await Future<void>.delayed(Duration.zero);
+    try {
+      await state.fixAllMissingArtistMetadata(onProgress: (done, total) {
+        progress.value = done;
+      });
+    } finally {
+      progress.dispose();
+      if (mounted && Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+    await dialogFuture;
+    if (mounted) {
+      Snack.show(context, 'Metadata fixes complete', level: SnackLevel.info);
+    }
+  }
+
   Future<void> _pickFolder() async {
     if (kIsWeb) return;
     String? dirPath;
@@ -3737,6 +3905,12 @@ class _PlayerScreenState extends State<PlayerScreen>
                   color: Theme.of(context).colorScheme.onSurface),
               tooltip: 'Organize media',
               onPressed: () => _showOrganizeDialog(),
+            ),
+            IconButton(
+              icon: Icon(Icons.auto_fix_high_rounded,
+                  color: Theme.of(context).colorScheme.onSurface),
+              tooltip: 'Fix missing metadata',
+              onPressed: _showFixAllMetadataDialog,
             ),
             PopupMenuButton<String>(
               tooltip: 'Queue actions',
@@ -4535,7 +4709,7 @@ class _PlayPauseButton extends StatelessWidget {
   }
 }
 
-enum _TrackMenuAction { queue, favourite, dislike, delete }
+enum _TrackMenuAction { queue, favourite, dislike, fixMetadata, delete }
 
 class _TrackMenuButton extends StatelessWidget {
   final PlayerState state;
@@ -4563,6 +4737,16 @@ class _TrackMenuButton extends StatelessWidget {
             break;
           case _TrackMenuAction.dislike:
             state.toggleDislike(item.path);
+            break;
+          case _TrackMenuAction.fixMetadata:
+            final ok = await state.fixSongMetadata(item);
+            if (context.mounted) {
+              Snack.show(
+                context,
+                ok ? 'Metadata fixed' : 'Could not fix metadata',
+                level: ok ? SnackLevel.info : SnackLevel.error,
+              );
+            }
             break;
           case _TrackMenuAction.delete:
             final confirmed = await showDialog<bool>(
@@ -4622,6 +4806,14 @@ class _TrackMenuButton extends StatelessWidget {
           child: ListTile(
             leading: Icon(isDisliked ? Icons.thumb_down_alt_rounded : Icons.thumb_down_alt_outlined),
             title: Text(isDisliked ? 'Undo dislike' : 'Dislike'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        const PopupMenuItem(
+          value: _TrackMenuAction.fixMetadata,
+          child: ListTile(
+            leading: Icon(Icons.auto_fix_high_rounded),
+            title: Text('Fix Metadata'),
             contentPadding: EdgeInsets.zero,
           ),
         ),

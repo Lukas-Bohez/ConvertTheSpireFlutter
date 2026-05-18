@@ -46,6 +46,46 @@ class AndroidSaf {
     });
   }
 
+  Future<String?> createSafFile({
+    required String treeUri,
+    required String fileName,
+    required String mimeType,
+  }) async {
+    if (!isSupported) return null;
+    return _channel.invokeMethod<String>('createSafFile', {
+      'treeUri': treeUri,
+      'fileName': fileName,
+      'mimeType': mimeType,
+    });
+  }
+
+  Future<void> copyToSafUri({
+    required String sourcePath,
+    required String destUri,
+  }) async {
+    if (!isSupported) return;
+    await _channel.invokeMethod<void>('copyToSafUri', {
+      'sourcePath': sourcePath,
+      'destUri': destUri,
+    });
+  }
+
+  Future<void> copyFromSafUri({
+    required String uri,
+    required String destPath,
+  }) async {
+    if (!isSupported) return;
+    await _channel.invokeMethod<void>('copyFromSafUri', {
+      'uri': uri,
+      'destPath': destPath,
+    });
+  }
+
+  Future<bool> deleteSafUri({required String uri}) async {
+    if (!isSupported) return false;
+    return await _channel.invokeMethod<bool>('deleteSafUri', {'uri': uri}) ?? false;
+  }
+
   /// Tests whether we can write to the given SAF tree URI.
   ///
   /// Returns true if a small temporary file can be created and deleted.
