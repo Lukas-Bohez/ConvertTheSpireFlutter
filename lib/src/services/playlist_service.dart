@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:metadata_god/metadata_god.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
 
@@ -192,11 +193,17 @@ class PlaylistService {
         if (!audioExtensions.contains(ext)) continue;
 
         final fileName = _fileNameWithoutExt(path);
+        final metadataLabels = await _labelsFromMetadata(path, ext);
+        final labels = <String>{fileName, ...metadataLabels}.toList();
         localFiles.add(_LocalFile(
           path: path,
           baseName: fileName,
+          labels: labels,
           normalised: _normalise(fileName),
-          tokens: _tokenise(fileName),
+          tokens: {
+            ..._tokenise(fileName),
+            ...labels.expand(_tokenise),
+          },
         ));
       }
     }
@@ -261,62 +268,67 @@ class PlaylistService {
     for (var i = 0; i < files.length; i++) {
       if (usedIndices.contains(i)) continue;
       final f = files[i];
+      final labels = f.labels.isEmpty ? [f.baseName] : f.labels;
 
-      // Strategy 1 - exact normalised match
-      if (f.normalised == trackFull || f.normalised == trackTitle) {
-        return TrackMatch(
-          track: track,
-          filePath: f.path,
-          fileName: f.baseName,
-          confidence: 1.0,
-          method: MatchMethod.exact,
-          fileIndex: i,
-        );
-      }
+      for (final label in labels) {
+        final normalisedLabel = _normalise(label);
 
-      // Strategy 2 - normalised containment (either direction)
-      if (f.normalised.contains(trackTitle) ||
-          trackTitle.contains(f.normalised)) {
-        final score = 0.90;
-        if (score > bestScore) {
-          bestScore = score;
-          bestIndex = i;
-          bestMethod = MatchMethod.contains;
+        // Strategy 1 - exact normalised match
+        if (normalisedLabel == trackFull || normalisedLabel == trackTitle) {
+          return TrackMatch(
+            track: track,
+            filePath: f.path,
+            fileName: f.baseName,
+            confidence: 1.0,
+            method: MatchMethod.exact,
+            fileIndex: i,
+          );
         }
-        continue;
-      }
 
-      // Strategy 3 - artist-title both found somewhere in filename
-      if (trackArtist.isNotEmpty &&
-          f.normalised.contains(trackArtist) &&
-          f.normalised.contains(trackTitle)) {
-        final score = 0.92;
-        if (score > bestScore) {
-          bestScore = score;
-          bestIndex = i;
-          bestMethod = MatchMethod.artistTitle;
+        // Strategy 2 - normalised containment (either direction)
+        if (normalisedLabel.contains(trackTitle) ||
+            trackTitle.contains(normalisedLabel)) {
+          final score = 0.90;
+          if (score > bestScore) {
+            bestScore = score;
+            bestIndex = i;
+            bestMethod = MatchMethod.contains;
+          }
+          continue;
         }
-        continue;
-      }
 
-      // Strategy 4 - token overlap (Jaccard similarity)
-      if (trackTokens.isNotEmpty && f.tokens.isNotEmpty) {
-        final intersection = trackTokens.intersection(f.tokens).length;
-        final union = trackTokens.union(f.tokens).length;
-        final jaccard = intersection / union;
-        if (jaccard > bestScore) {
-          bestScore = jaccard;
-          bestIndex = i;
-          bestMethod = MatchMethod.tokenOverlap;
+        // Strategy 3 - artist-title both found somewhere in filename/metadata
+        if (trackArtist.isNotEmpty &&
+            normalisedLabel.contains(trackArtist) &&
+            normalisedLabel.contains(trackTitle)) {
+          final score = 0.92;
+          if (score > bestScore) {
+            bestScore = score;
+            bestIndex = i;
+            bestMethod = MatchMethod.artistTitle;
+          }
+          continue;
         }
-      }
 
-      // Strategy 5 - Levenshtein-based similarity
-      final levSim = _levenshteinSimilarity(trackFull, f.normalised);
-      if (levSim > bestScore) {
-        bestScore = levSim;
-        bestIndex = i;
-        bestMethod = MatchMethod.fuzzy;
+        // Strategy 4 - token overlap (Jaccard similarity)
+        if (trackTokens.isNotEmpty && f.tokens.isNotEmpty) {
+          final intersection = trackTokens.intersection(f.tokens).length;
+          final union = trackTokens.union(f.tokens).length;
+          final jaccard = intersection / union;
+          if (jaccard > bestScore) {
+            bestScore = jaccard;
+            bestIndex = i;
+            bestMethod = MatchMethod.tokenOverlap;
+          }
+        }
+
+        // Strategy 5 - Levenshtein-based similarity
+        final levSim = _levenshteinSimilarity(trackFull, normalisedLabel);
+        if (levSim > bestScore) {
+          bestScore = levSim;
+          bestIndex = i;
+          bestMethod = MatchMethod.fuzzy;
+        }
       }
     }
 
@@ -435,15 +447,38 @@ class PlaylistService {
 class _LocalFile {
   final String path;
   final String baseName;
+  final List<String> labels;
   final String normalised;
   final Set<String> tokens;
 
   const _LocalFile({
     required this.path,
     required this.baseName,
+    required this.labels,
     required this.normalised,
     required this.tokens,
   });
+}
+
+Future<List<String>> _labelsFromMetadata(String path, String ext) async {
+  try {
+    if (!['.mp3', '.m4a', '.ogg', '.flac'].contains(ext)) {
+      return const <String>[];
+    }
+    await MetadataGod.initialize();
+    final metadata = await MetadataGod.readMetadata(file: path);
+    final labels = <String>[];
+    final title = metadata.title?.trim() ?? '';
+    final artist = metadata.artist?.trim() ?? '';
+    if (title.isNotEmpty) labels.add(title);
+    if (artist.isNotEmpty) labels.add(artist);
+    if (title.isNotEmpty && artist.isNotEmpty) {
+      labels.add('$artist - $title');
+    }
+    return labels;
+  } catch (_) {
+    return const <String>[];
+  }
 }
 
 /// How a track was matched to a local file.

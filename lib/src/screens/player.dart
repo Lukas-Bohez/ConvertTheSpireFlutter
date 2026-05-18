@@ -2641,6 +2641,11 @@ class PlayerState with ChangeNotifier {
     }
     artist = artist.isEmpty ? 'Unknown' : artist;
 
+    final metadataChanged = title != existingTitle || artist != existingArtist;
+    if (!metadataChanged) {
+      return false;
+    }
+
     final updatedMetadata = Metadata(
       title: title,
       artist: artist,
@@ -2682,16 +2687,21 @@ class PlayerState with ChangeNotifier {
     final targets = library
         .where((item) =>
             item.type == MediaType.audio &&
-            (item.artist == null || item.artist!.trim().isEmpty))
+            ((item.artist == null || item.artist!.trim().isEmpty) ||
+                (item.title == null || item.title!.trim().isEmpty)))
         .toList();
-    var done = 0;
+    var processed = 0;
+    var changedCount = 0;
     for (final item in targets) {
       if (_disposed) break;
-      await fixSongMetadata(item);
-      done++;
-      if (onProgress != null) onProgress(done, targets.length);
+      final changed = await fixSongMetadata(item);
+      if (changed) {
+        changedCount++;
+      }
+      processed++;
+      if (onProgress != null) onProgress(processed, targets.length);
     }
-    return targets.length;
+    return changedCount;
   }
 
   // --- Video thumbnail generation -------------------------------------------
