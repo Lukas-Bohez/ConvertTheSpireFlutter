@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import 'cursor_style.dart';
+
 class CursorOverlay extends StatefulWidget {
   final Widget child;
   final bool active;
@@ -227,6 +229,7 @@ class _CursorOverlayState extends State<CursorOverlay>
 
   @override
   Widget build(BuildContext context) {
+    final cursorStyle = cursorStyleFor(Theme.of(context).brightness);
     return LayoutBuilder(
       builder: (context, constraints) {
         _viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
@@ -240,7 +243,7 @@ class _CursorOverlayState extends State<CursorOverlay>
                 child: IgnorePointer(
                   child: CustomPaint(
                     size: const Size(_cursorRadius * 2, _cursorRadius * 2),
-                    painter: _CursorPainter(),
+                    painter: _CursorPainter(cursorStyle),
                   ),
                 ),
               ),
@@ -252,13 +255,17 @@ class _CursorOverlayState extends State<CursorOverlay>
 }
 
 class _CursorPainter extends CustomPainter {
+  final CursorStyle style;
+
+  _CursorPainter(this.style);
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.9)
+      ..color = style.fillColor
       ..style = PaintingStyle.fill;
     final border = Paint()
-      ..color = Colors.black.withValues(alpha: 0.5)
+      ..color = style.borderColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     final center = Offset(size.width / 2, size.height / 2);

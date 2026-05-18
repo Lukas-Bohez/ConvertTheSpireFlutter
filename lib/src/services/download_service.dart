@@ -315,6 +315,10 @@ class DownloadService {
             throw TimeoutException('Timed out fetching video info'));
 
     final downloadTitle = resolveDownloadTitle(item.title, sourceTitle: video.title);
+    final downloadArtist = resolveDownloadArtist(
+      item.uploader,
+      sourceArtist: video.author,
+    );
     final safeTitle = _sanitizeFileName(downloadTitle);
 
     // -- yt-dlp fast-path (when available)
@@ -327,6 +331,7 @@ class DownloadService {
         video: video,
         url: item.url,
         downloadTitle: downloadTitle,
+        downloadArtist: downloadArtist,
         safeTitle: safeTitle,
         format: formatLower,
         outputDir: outputDir,
@@ -494,8 +499,8 @@ class DownloadService {
           format: formatLower,
           coverPath: coverPath,
           title: downloadTitle,
-          artist: video.author,
-          album: video.author,
+          artist: downloadArtist,
+          album: downloadArtist,
           date: video.uploadDate?.toIso8601String() ?? '',
           bitrate: preferredAudioBitrate,
         );
@@ -511,7 +516,7 @@ class DownloadService {
           await _tagAudioMetadata(
             filePath: outputPath,
             title: downloadTitle,
-            artist: video.author,
+            artist: downloadArtist,
             ffmpegPath: ffmpegPath,
           );
         }
@@ -577,6 +582,7 @@ class DownloadService {
     required dynamic video, // Video from youtube_explode_dart
     required String url,
     required String downloadTitle,
+    required String downloadArtist,
     required String safeTitle,
     required String format,
     required String outputDir,
@@ -738,6 +744,19 @@ class DownloadService {
     final source = sourceTitle?.trim();
     if (source != null && source.isNotEmpty) return source;
     return 'download';
+  }
+
+  /// Prefer the artist/uploader shown in the app; only fall back to the
+  /// source metadata when the preferred value is blank.
+  static String resolveDownloadArtist(
+    String preferredArtist, {
+    String? sourceArtist,
+  }) {
+    final preferred = preferredArtist.trim();
+    if (preferred.isNotEmpty) return preferred;
+    final source = sourceArtist?.trim();
+    if (source != null && source.isNotEmpty) return source;
+    return 'Unknown';
   }
 
   /// Move the final output file to SAF / Downloads / local, cleaning up temp.

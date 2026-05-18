@@ -408,21 +408,14 @@ class YtDlpService {
       '-o', _escapeTemplate(outputPath),
     ]);
 
-    if (formatLower != 'mp4') {
-      args.addAll([
-        '--embed-metadata',
-        '--embed-thumbnail', // embed cover art
-        '--parse-metadata', '%(uploader|)s:%(meta_artist)s',
-        '--parse-metadata', '%(title)s:%(meta_title)s',
-        '--parse-metadata', '%(uploader|)s:%(meta_album_artist)s',
-        '--add-metadata', // include title/artist/date tags
-      ]);
-    } else {
-      args.addAll([
-        '--embed-thumbnail', // embed cover art
-        '--add-metadata', // include title/artist/date tags
-      ]);
-    }
+    args.addAll([
+      '--embed-metadata',
+      '--embed-thumbnail', // embed cover art
+      '--parse-metadata', '%(uploader|)s:%(meta_artist)s',
+      '--parse-metadata', '%(title)s:%(meta_title)s',
+      '--parse-metadata', '%(uploader|)s:%(meta_album_artist)s',
+      '--add-metadata', // include title/artist/date tags
+    ]);
 
     if (sponsorBlockEnabled) {
       // Use SponsorBlock to strip sponsored/intro/outro segments on download.

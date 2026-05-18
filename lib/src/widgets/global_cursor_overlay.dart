@@ -5,6 +5,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
+import 'cursor_style.dart';
+
 /// Global cursor overlay that covers the entire app.
 /// Always active, always visible, handles all D-pad input.
 /// Implements dual tap paths: Flutter gesture binding for Flutter UI,
@@ -316,6 +318,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   @override
   Widget build(BuildContext context) {
     if (!_cursorEnabled) return widget.child;
+    final cursorStyle = cursorStyleFor(Theme.of(context).brightness);
     return LayoutBuilder(
       builder: (context, constraints) {
         _viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
@@ -329,7 +332,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
                 child: IgnorePointer(
                   child: CustomPaint(
                     size: const Size(_cursorRadius * 2, _cursorRadius * 2),
-                    painter: _CursorPainter(),
+                    painter: _CursorPainter(cursorStyle),
                   ),
                 ),
               ),
@@ -341,13 +344,17 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
 }
 
 class _CursorPainter extends CustomPainter {
+  final CursorStyle style;
+
+  _CursorPainter(this.style);
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.9)
+      ..color = style.fillColor
       ..style = PaintingStyle.fill;
     final border = Paint()
-      ..color = Colors.white
+      ..color = style.borderColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
@@ -359,7 +366,7 @@ class _CursorPainter extends CustomPainter {
 
     // Draw crosshair
     final crossPaint = Paint()
-      ..color = Colors.white
+      ..color = style.accentColor
       ..strokeWidth = 0.8;
     canvas.drawLine(Offset(radius, radius - 6), Offset(radius, radius + 6), crossPaint);
     canvas.drawLine(Offset(radius - 6, radius), Offset(radius + 6, radius), crossPaint);
