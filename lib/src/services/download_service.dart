@@ -161,7 +161,8 @@ class DownloadService {
     }
     final isSafOutput = _isSafOutput(outputDir);
 
-    final safeTitle = _sanitizeFileName(item.title);
+    final downloadTitle = resolveDownloadTitle(item.title);
+    final safeTitle = _sanitizeFileName(downloadTitle);
 
     onProgress(0, DownloadStatus.downloading);
 
@@ -313,7 +314,8 @@ class DownloadService {
         onTimeout: () =>
             throw TimeoutException('Timed out fetching video info'));
 
-    final safeTitle = _sanitizeFileName(video.title);
+    final downloadTitle = resolveDownloadTitle(item.title, sourceTitle: video.title);
+    final safeTitle = _sanitizeFileName(downloadTitle);
 
     // -- yt-dlp fast-path (when available)
     // yt-dlp handles throttle-token decryption, chunked downloads, and
@@ -324,6 +326,7 @@ class DownloadService {
       return _downloadWithYtDlp(
         video: video,
         url: item.url,
+        downloadTitle: downloadTitle,
         safeTitle: safeTitle,
         format: formatLower,
         outputDir: outputDir,
@@ -490,7 +493,7 @@ class DownloadService {
           outputPath: outputPath,
           format: formatLower,
           coverPath: coverPath,
-          title: video.title,
+          title: downloadTitle,
           artist: video.author,
           album: video.author,
           date: video.uploadDate?.toIso8601String() ?? '',
@@ -507,7 +510,7 @@ class DownloadService {
         if (Platform.isAndroid || Platform.isIOS) {
           await _tagAudioMetadata(
             filePath: outputPath,
-            title: video.title,
+            title: downloadTitle,
             artist: video.author,
             ffmpegPath: ffmpegPath,
           );
@@ -573,6 +576,7 @@ class DownloadService {
   Future<DownloadResult> _downloadWithYtDlp({
     required dynamic video, // Video from youtube_explode_dart
     required String url,
+    required String downloadTitle,
     required String safeTitle,
     required String format,
     required String outputDir,
@@ -721,6 +725,19 @@ class DownloadService {
 
     args.add(outputPath);
     return args;
+  }
+
+  /// Prefer the title shown in the app; only fall back to the source title
+  /// when the preferred title is blank.
+  static String resolveDownloadTitle(
+    String preferredTitle, {
+    String? sourceTitle,
+  }) {
+    final preferred = preferredTitle.trim();
+    if (preferred.isNotEmpty) return preferred;
+    final source = sourceTitle?.trim();
+    if (source != null && source.isNotEmpty) return source;
+    return 'download';
   }
 
   /// Move the final output file to SAF / Downloads / local, cleaning up temp.
