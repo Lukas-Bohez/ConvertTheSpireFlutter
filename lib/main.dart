@@ -20,6 +20,7 @@ import 'src/services/purchase_service.dart';
 
 import 'src/app.dart';
 import 'src/services/yt_dlp_update_controller.dart';
+import 'src/services/review_service.dart';
 
 Future<File?> _prepareStartupErrorLogFile() async {
   try {
@@ -71,6 +72,9 @@ Future<void> main() async {
     await initAppFlavor();
     // Propagate into build_flags runtime flag.
     setPlayStoreBuildFlag(isPlayFlavor);
+
+    // Track launches for review prompt heuristics.
+    await ReviewService.trackLaunch();
 
     startupErrorLogFile = await _prepareStartupErrorLogFile();
 

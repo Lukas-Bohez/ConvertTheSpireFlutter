@@ -41,8 +41,8 @@ android {
         minSdk = 24
         // Target API 35 to satisfy Play Console requirements
         targetSdk = 35
-        versionCode = 1167
-        versionName = "11.6.5"
+        versionCode = 1170
+        versionName = "11.7.0"
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
         }
@@ -58,11 +58,15 @@ android {
     productFlavors {
         create("full") {
             dimension = "distribution"
-            applicationIdSuffix = ".full"
+            // Installable alongside Play Store builds by using a different
+            // applicationId suffix for GitHub/CI artifacts.
+            applicationIdSuffix = ".github"
+            versionNameSuffix = "-github"
             manifestPlaceholders["appLabel"] = "Convert the Spire Reborn Full"
         }
         create("play") {
             dimension = "distribution"
+            // Play Store uses the canonical package name; no suffix.
             manifestPlaceholders["appLabel"] = "Bitplayer"
         }
     }

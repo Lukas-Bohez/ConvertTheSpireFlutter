@@ -51,6 +51,7 @@
     <uses-feature android:name="android.hardware.wifi" android:required="false" tools:replace="android:required" />
     <application
         android:label="${appLabel}"
+        tools:replace="android:label"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"

@@ -37,6 +37,7 @@ import '../config/full_mode_access.dart';
 import '../vault/services/torrent_engine_service.dart';
 import '../vault/services/torrent_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/review_service.dart';
 import '../utils/safe_json.dart';
 
 class AppController extends ChangeNotifier {
@@ -1154,6 +1155,7 @@ class AppController extends ChangeNotifier {
     }
     if (success) {
       unawaited(AdService.instance.maybeShowInterstitialAfterSuccess());
+      unawaited(ReviewService.maybePromptReview());
     }
   }
 

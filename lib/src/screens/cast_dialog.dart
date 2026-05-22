@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../utils/snack.dart';
@@ -8,6 +9,7 @@ import '../services/dlna_control_service.dart';
 import '../services/dlna_discovery_service.dart';
 import '../services/local_media_server.dart';
 import '../services/platform_dirs.dart';
+import 'package:convert_the_spire_reborn/src/services/review_service.dart';
 
 /// A dialog that discovers DLNA devices on the network and allows the user
 /// to cast a local media file to a selected device.
@@ -176,6 +178,8 @@ class _CastDialogState extends State<CastDialog> {
           _isCasting = false;
         });
         _showCastingControls(device);
+        // Positive user action: prompt for a review later.
+        unawaited(ReviewService.maybePromptReview());
       }
     } catch (e) {
       if (mounted) {

@@ -10,6 +10,7 @@ import 'package:convert_the_spire_reborn/src/vault/constants.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/widgets/tv_file_browser.dart';
+import 'package:convert_the_spire_reborn/src/services/review_service.dart';
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
@@ -821,6 +822,15 @@ class _AboutScreenState extends State<AboutScreen>
                   title: const Text('Privacy policy'),
                   subtitle: Text(kPrivacyPolicyUrl),
                   onTap: _openPrivacyPolicy,
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.star_rate_outlined),
+                  title: const Text('Rate BitPlayer'),
+                  subtitle: const Text('Leave a rating on the Play Store'),
+                  onTap: () async {
+                    await ReviewService.openStoreListing();
+                  },
                 ),
                 LayoutBuilder(
                   builder: (context, constraints) {

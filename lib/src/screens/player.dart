@@ -23,6 +23,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:video_player/video_player.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:share_plus/share_plus.dart';
+import '../services/review_service.dart';
 import '../services/platform_dirs.dart';
 import '../services/android_saf.dart';
 import '../services/audio_handler.dart';
@@ -688,6 +690,8 @@ class PlayerState with ChangeNotifier {
       _favourites.add(path);
       final idx = library.indexWhere((item) => item.path == path);
       if (idx >= 0) _favouriteCache[path] = library[idx];
+      // Prompt for review after a positive favourite action.
+      unawaited(ReviewService.maybePromptReview());
     }
     prefs.setStringList('player_favourites', _favourites.toList());
     _saveFavouriteCache();
@@ -4363,6 +4367,17 @@ class _PlayerScreenState extends State<PlayerScreen>
                       ],
                     ],
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.share),
+                  tooltip: 'Share',
+                  onPressed: () async {
+                    try {
+                      final title = item.title ?? p.basename(item.path);
+                      final text = 'Check out $title — https://play.google.com/store/apps/details?id=com.torrentspire.ai';
+                      await Share.share(text);
+                    } catch (_) {}
+                  },
                 ),
                 // Favourite button
                 IconButton(
