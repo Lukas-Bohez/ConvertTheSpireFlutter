@@ -589,103 +589,139 @@ class YtDlpService {
     args.add(url);
 
     debugPrint('yt-dlp command: $ytDlpPath ${args.join(' ')}');
-    onProgress(0, null, null);
+    final hadCookieArgs =
+        args.contains('--cookies') || args.contains('--cookies-from-browser');
 
-    final workDir = await _getYtDlpWorkingDir();
-    final process = await Process.start(
-      ytDlpPath,
-      args,
-      workingDirectory: workDir,
-      runInShell: false,
-    );
+    Future<void> runAttempt(List<String> runArgs) async {
+      onProgress(0, null, null);
 
-    // Poll for cancellation every 500ms
-    final cancelTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      if (isCancelled?.call() ?? false) {
-        debugPrint('yt-dlp: cancellation requested, killing process');
-        process.kill();
+      final workDir = await _getYtDlpWorkingDir();
+      final process = await Process.start(
+        ytDlpPath,
+        runArgs,
+        workingDirectory: workDir,
+        runInShell: false,
+      );
+
+      // Poll for cancellation every 500ms.
+      final cancelTimer =
+          Timer.periodic(const Duration(milliseconds: 500), (_) {
+        if (isCancelled?.call() ?? false) {
+          debugPrint('yt-dlp: cancellation requested, killing process');
+          process.kill();
+        }
+      });
+
+      try {
+        final stdoutBuffer = StringBuffer();
+
+        // Parse stdout for progress while retaining full output for diagnostics.
+        final stdoutSub = process.stdout
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())
+            .listen((line) {
+          debugPrint('yt-dlp stdout: $line');
+          stdoutBuffer.writeln(line);
+          final match = _progressRegex.firstMatch(line);
+          if (match != null) {
+            final pct = double.tryParse(match.group(1)!)?.toInt() ?? 0;
+            final speed = match.group(3) ?? "";
+            final eta = match.group(4) ?? "";
+            onProgress(pct.clamp(0, 100), speed, eta);
+          }
+        });
+
+        // Capture full stderr including debug lines.
+        final stderrBuffer = StringBuffer();
+        final stderrSub = process.stderr
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())
+            .listen((line) {
+          debugPrint('yt-dlp stderr: $line');
+          stderrBuffer.writeln(line);
+        });
+
+        final exitCode = await process.exitCode;
+        await stdoutSub.cancel();
+        await stderrSub.cancel();
+
+        if (isCancelled?.call() ?? false) {
+          // Clean up partial output.
+          await _safeDelete(outputPath);
+          throw Exception('Cancelled');
+        }
+
+        if (exitCode != 0) {
+          final fullError =
+              '${stderrBuffer.toString().trim()}\n${stdoutBuffer.toString().trim()}'
+                  .trim();
+          debugPrint('yt-dlp full error output:\n$fullError');
+          throw Exception('yt-dlp failed (exit $exitCode): $fullError');
+        }
+      } finally {
+        cancelTimer.cancel();
       }
-    });
+    }
 
     try {
-      // Parse stdout for progress
-      final stdoutSub = process.stdout
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())
-          .listen((line) {
-        debugPrint('yt-dlp stdout: $line');
-        final match = _progressRegex.firstMatch(line);
-        if (match != null) {
-          final pct = double.tryParse(match.group(1)!)?.toInt() ?? 0;
-          final speed = match.group(3) ?? "";
-          final eta = match.group(4) ?? "";
-          onProgress(pct.clamp(0, 100), speed, eta);
-        }
-      });
-
-      // Capture stderr
-      final stderrBuffer = StringBuffer();
-      String? lastError;
-      final stderrSub = process.stderr
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())
-          .listen((line) {
-        debugPrint('yt-dlp stderr: $line');
-        stderrBuffer.writeln(line);
-        if (line.contains('ERROR')) {
-          lastError = line;
-        }
-      });
-
-      final exitCode = await process.exitCode;
-      await stdoutSub.cancel();
-      await stderrSub.cancel();
-
-      if (isCancelled?.call() ?? false) {
-        // Clean up partial output
-        await _safeDelete(outputPath);
-        throw Exception('Cancelled');
+      await runAttempt(args);
+    } catch (e) {
+      final message = e.toString();
+      final isFormatUnavailable =
+          message.contains('Requested format is not available') ||
+              message.contains('format is not available');
+      if (hadCookieArgs && isFormatUnavailable) {
+        debugPrint(
+            'yt-dlp failed with format unavailable while cookies were enabled; retrying once without cookies');
+        final retryArgs = _stripCookieArgs(args);
+        await runAttempt(retryArgs);
+      } else {
+        rethrow;
       }
-
-      if (exitCode != 0) {
-        final stderr = stderrBuffer.toString().trim();
-        final errorMsg = lastError ?? stderr;
-        throw Exception('yt-dlp failed (exit $exitCode): $errorMsg');
-      }
-
-      // Verify output exists (yt-dlp may adjust extension)
-      if (!await File(outputPath).exists()) {
-        // Check for common extension adjustments
-        final base = outputPath.replaceAll(RegExp(r'\.[^.]+$'), '');
-        final candidates = [
-          outputPath,
-          '$base.$formatLower',
-          '$base.mkv', // yt-dlp sometimes outputs MKV
-          '$base.webm',
-        ];
-        bool found = false;
-        for (final c in candidates) {
-          if (await File(c).exists()) {
-            if (c != outputPath) {
-              await File(c).rename(outputPath);
-            }
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          throw Exception(
-              'yt-dlp completed but the output file was not created.');
-        }
-      }
-
-      onProgress(100, null, null);
-    } finally {
-      cancelTimer.cancel();
     }
+
+    // Verify output exists (yt-dlp may adjust extension)
+    if (!await File(outputPath).exists()) {
+      // Check for common extension adjustments
+      final base = outputPath.replaceAll(RegExp(r'\.[^.]+$'), '');
+      final candidates = [
+        outputPath,
+        '$base.$formatLower',
+        '$base.mkv', // yt-dlp sometimes outputs MKV
+        '$base.webm',
+      ];
+      bool found = false;
+      for (final c in candidates) {
+        if (await File(c).exists()) {
+          if (c != outputPath) {
+            await File(c).rename(outputPath);
+          }
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        throw Exception('yt-dlp completed but the output file was not created.');
+      }
+    }
+
+    onProgress(100, null, null);
   }
 
   // --─ Helpers ----------------------------------------------------------─
+
+  static List<String> _stripCookieArgs(List<String> args) {
+    final stripped = <String>[];
+    for (var i = 0; i < args.length; i++) {
+      final arg = args[i];
+      if (arg == '--cookies' || arg == '--cookies-from-browser') {
+        if (i + 1 < args.length) i++;
+        continue;
+      }
+      stripped.add(arg);
+    }
+    return stripped;
+  }
 
   /// Path where this app stores the yt-dlp binary.
   Future<String?> _getAppBinaryPath() async {
