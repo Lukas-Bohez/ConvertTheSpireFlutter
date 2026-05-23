@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
 
 import 'platform_dirs.dart';
 import '../utils/safe_json.dart';
@@ -275,37 +276,7 @@ class YtDlpService {
   /// the versions differ. Safe no-op on mobile/web.
   Future<void> updateIfOutdated({String? configuredPath, void Function(int percent, String message)? onProgress}) async {
     if (kIsWeb || Platform.isAndroid || Platform.isIOS) return;
-    final appBin = await _getAppBinaryPath();
-    if (appBin == null) return;
-
-    // If local binary missing, ensureAvailable will install it.
-    final existing = await resolveAvailablePath(configuredPath);
-    if (existing == null) {
-      await ensureAvailable(configuredPath: configuredPath, onProgress: onProgress);
-      return;
-    }
-
-    try {
-      // Local version
-      final local = await Process.run(existing, ['--version']).timeout(const Duration(seconds: 5));
-      final localVersion = local.stdout.toString().trim().split(RegExp(r'\s+'))[0];
-
-      // Remote latest tag via GitHub API
-      final resp = await http.get(Uri.parse('https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest')).timeout(const Duration(seconds: 10));
-      if (resp.statusCode != 200) return;
-      final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      final tag = (data['tag_name'] ?? '').toString().trim();
-      if (tag.isEmpty) return;
-
-      // yt-dlp local --version typically returns a short version like '2024.03.05'
-      if (!localVersion.contains(tag) && !tag.contains(localVersion)) {
-        // Delete current binary and fetch latest
-        await _safeDelete(existing);
-        await ensureAvailable(configuredPath: configuredPath, onProgress: onProgress);
-      }
-    } catch (_) {
-      // Non-fatal - ignore network/parse errors
-    }
+    await updateYtDlp(configuredPath: configuredPath, onProgress: onProgress);
   }
 
   /// Force-update the local yt-dlp binary by re-downloading it.
@@ -315,15 +286,125 @@ class YtDlpService {
     String? configuredPath,
     void Function(int percent, String message)? onProgress,
   }) async {
-    // Delete any existing binary so ensureAvailable will fetch the latest.
-    final existing = await resolveAvailablePath(configuredPath);
-    if (existing != null) {
-      await _safeDelete(existing);
-    }
-    return ensureAvailable(
+    return updateYtDlp(
       configuredPath: configuredPath,
       onProgress: onProgress,
     );
+  }
+
+  /// Update yt-dlp by downloading the latest GitHub release asset and
+  /// replacing the local binary atomically.
+  Future<String> updateYtDlp({
+    String? configuredPath,
+    void Function(int percent, String message)? onProgress,
+  }) async {
+    if (kIsWeb || Platform.isAndroid || Platform.isIOS) {
+      throw Exception('yt-dlp updates are only supported on desktop platforms.');
+    }
+
+    try {
+      onProgress?.call(5, 'Checking latest yt-dlp release');
+      final response = await http.get(
+        Uri.parse('https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest'),
+        headers: {'Accept': 'application/vnd.github+json'},
+      );
+      if (response.statusCode != 200) {
+        throw Exception('GitHub API failed: ${response.statusCode}');
+      }
+
+      final release = jsonDecode(response.body) as Map<String, dynamic>;
+      final latestTag = (release['tag_name'] ?? '').toString().trim();
+      if (latestTag.isEmpty) {
+        throw Exception('GitHub API returned an empty release tag');
+      }
+
+      final ytDlpPath = await _getYtDlpPath(configuredPath);
+      final currentVersion = await _getCurrentYtDlpVersion(ytDlpPath);
+
+      if (currentVersion == latestTag) {
+        debugPrint('yt-dlp already up to date: $latestTag');
+        onProgress?.call(100, 'yt-dlp is already up to date');
+        return ytDlpPath;
+      }
+
+      final assets = (release['assets'] as List<dynamic>? ?? const []);
+      String assetName;
+      if (Platform.isWindows) {
+        assetName = 'yt-dlp.exe';
+      } else if (Platform.isMacOS) {
+        assetName = 'yt-dlp_macos';
+      } else {
+        assetName = 'yt-dlp_linux';
+      }
+
+      final asset = assets.cast<Map<String, dynamic>>().firstWhere(
+            (a) => (a['name'] ?? '').toString() == assetName,
+            orElse: () => throw Exception('No asset found for $assetName'),
+          );
+
+      final downloadUrl = (asset['browser_download_url'] ?? '').toString();
+      if (downloadUrl.isEmpty) {
+        throw Exception('Release asset is missing browser_download_url');
+      }
+
+      onProgress?.call(25, 'Downloading $assetName');
+      final tempPath = '$ytDlpPath.tmp';
+      final dlResponse = await http.get(Uri.parse(downloadUrl));
+      if (dlResponse.statusCode != 200) {
+        throw Exception('Download failed: HTTP ${dlResponse.statusCode}');
+      }
+
+      final targetFile = File(ytDlpPath);
+      await targetFile.parent.create(recursive: true);
+      await File(tempPath).writeAsBytes(dlResponse.bodyBytes, flush: true);
+
+      onProgress?.call(70, 'Replacing binary');
+      if (Platform.isWindows) {
+        final backupPath = '$ytDlpPath.bak';
+        if (await targetFile.exists()) {
+          await _safeDelete(backupPath);
+          await targetFile.rename(backupPath);
+        }
+        await File(tempPath).rename(ytDlpPath);
+        await _safeDelete(backupPath);
+      } else {
+        await _safeDelete(ytDlpPath);
+        await File(tempPath).rename(ytDlpPath);
+        await Process.run('chmod', ['+x', ytDlpPath]);
+      }
+
+      final installedVersion = await _getCurrentYtDlpVersion(ytDlpPath);
+      debugPrint('yt-dlp updated from $currentVersion to $installedVersion');
+      onProgress?.call(100, 'yt-dlp updated to $installedVersion');
+      return ytDlpPath;
+    } catch (e) {
+      debugPrint('yt-dlp update failed: $e');
+      rethrow;
+    }
+  }
+
+  Future<String> _getYtDlpPath(String? configuredPath) async {
+    final existing = await resolveAvailablePath(configuredPath);
+    if (existing != null) {
+      // Only return absolute file paths. For PATH-resolved values like
+      // "yt-dlp.exe" we still install to the app support directory.
+      if (p.isAbsolute(existing)) return existing;
+    }
+
+    final appPath = await _getAppBinaryPath();
+    if (appPath == null) {
+      throw Exception('Could not resolve a writable yt-dlp path');
+    }
+    return appPath;
+  }
+
+  Future<String> _getCurrentYtDlpVersion(String ytDlpPath) async {
+    try {
+      final result = await Process.run(ytDlpPath, ['--version']);
+      return result.stdout.toString().trim();
+    } catch (_) {
+      return 'unknown';
+    }
   }
 
   /// Returns the local yt-dlp binary version if available.
@@ -388,6 +469,8 @@ class YtDlpService {
     } else {
       // Audio download: extract audio in target format
       args.addAll([
+        '-f',
+        'bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio[ext=webm]/bestaudio',
         '-x',
         '--audio-format',
         formatLower,

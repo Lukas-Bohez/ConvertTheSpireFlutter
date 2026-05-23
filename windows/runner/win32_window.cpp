@@ -53,6 +53,16 @@ void EnableFullDpiSupportIfAvailable(HWND hwnd) {
   FreeLibrary(user32_module);
 }
 
+void ApplyForcedDarkTitleBar(HWND window) {
+  if (window == nullptr) return;
+  BOOL USE_DARK_MODE = TRUE;
+  DwmSetWindowAttribute(
+      window,
+      DWMWA_USE_IMMERSIVE_DARK_MODE,
+      &USE_DARK_MODE,
+      sizeof(USE_DARK_MODE));
+}
+
 }  // namespace
 
 // Manages the Win32Window's window class registration.
@@ -145,7 +155,9 @@ bool Win32Window::Create(const std::wstring& title,
     return false;
   }
 
+  ApplyForcedDarkTitleBar(window);
   UpdateTheme(window);
+  ApplyForcedDarkTitleBar(window);
 
   return OnCreate();
 }
@@ -208,14 +220,22 @@ Win32Window::MessageHandler(HWND hwnd,
       return 0;
     }
 
-    case WM_ACTIVATE:
+    case WM_ACTIVATE: {
+      BOOL USE_DARK_MODE = TRUE;
+      DwmSetWindowAttribute(
+          hwnd,
+          DWMWA_USE_IMMERSIVE_DARK_MODE,
+          &USE_DARK_MODE,
+          sizeof(USE_DARK_MODE));
       if (child_content_ != nullptr) {
         SetFocus(child_content_);
       }
       return 0;
+    }
 
     case WM_DWMCOLORIZATIONCOLORCHANGED:
       UpdateTheme(hwnd);
+      ApplyForcedDarkTitleBar(hwnd);
       return 0;
   }
 

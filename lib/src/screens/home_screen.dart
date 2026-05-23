@@ -14,6 +14,7 @@ import '../theme/app_colors.dart';
 import '../config/build_flags.dart';
 import '../config/full_mode_access.dart';
 import '../services/ad_service.dart';
+import '../services/review_service.dart';
 
 import '../models/app_settings.dart';
 import '../models/preview_item.dart';
@@ -313,6 +314,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return QuickLinksPage(
           key: const ValueKey('quick-links-home'),
           onNavigate: (route) {
+            if (route == 'rate.app') {
+              unawaited(ReviewService.openStoreListing());
+              return;
+            }
             final idx = QuickLinksService.routeToIndex[route];
             if (idx != null) _navigateToPage(idx);
           },
@@ -2652,6 +2657,29 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
           ),
+          Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            color: Theme.of(context)
+                .colorScheme
+                .primaryContainer
+                .withValues(alpha: 0.3),
+            child: ListTile(
+              leading:
+                  const Icon(Icons.star_rounded, color: Colors.amber, size: 32),
+              title: const Text(
+                'Enjoying BitPlayer?',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle:
+                  const Text('Leave a review - it helps more than you think'),
+              trailing: ElevatedButton(
+                onPressed: () {
+                  unawaited(ReviewService.openStoreListing());
+                },
+                child: const Text('Rate'),
+              ),
+            ),
+          ),
 
           // Torrent Download Path (main setting)
           Card(
@@ -2884,6 +2912,29 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               onPressed: () => _saveAllSettings(settings),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+          ),
+          Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            color: Theme.of(context)
+                .colorScheme
+                .primaryContainer
+                .withValues(alpha: 0.3),
+            child: ListTile(
+              leading:
+                  const Icon(Icons.star_rounded, color: Colors.amber, size: 32),
+              title: const Text(
+                'Enjoying BitPlayer?',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle:
+                  const Text('Leave a review - it helps more than you think'),
+              trailing: ElevatedButton(
+                onPressed: () {
+                  unawaited(ReviewService.openStoreListing());
+                },
+                child: const Text('Rate'),
               ),
             ),
           ),

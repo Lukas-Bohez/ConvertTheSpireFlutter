@@ -19,7 +19,6 @@ import 'src/services/ad_service.dart';
 import 'src/services/purchase_service.dart';
 
 import 'src/app.dart';
-import 'src/services/yt_dlp_update_controller.dart';
 import 'src/services/review_service.dart';
 
 Future<File?> _prepareStartupErrorLogFile() async {
@@ -240,16 +239,6 @@ Future<void> main() async {
       ),
     );
 
-    try {
-      YtDlpUpdateController.start();
-    } catch (e) {
-      _logStartupError(
-        startupErrorLogFile,
-        'YT-DLP STARTUP ERROR',
-        e,
-        StackTrace.current,
-      );
-    }
   }, (error, stack) {
     _logStartupError(startupErrorLogFile, 'ZONE ERROR', error, stack);
   });

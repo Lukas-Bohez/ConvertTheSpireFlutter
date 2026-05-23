@@ -50,6 +50,7 @@ class QuickLink {
     'guide.tab': Icons.menu_book,
     'player.tab': Icons.music_note,
     'torrents.tab': Icons.download,
+    'rate.app': Icons.star_rounded,
   };
 }
 
@@ -60,6 +61,7 @@ class QuickLinksService {
     final allDefaults = _allDefaults();
     // Filter defaults by current build visibility policy.
     return allDefaults.where((link) {
+      if (link.route == 'rate.app') return true;
       final idx = routeToIndex[link.route];
       return idx != null && isTabVisibleInCurrentBuild(idx);
     }).toList();
@@ -113,6 +115,12 @@ class QuickLinksService {
       icon: Icons.volunteer_activism,
       route: 'support.tab',
       description: 'Support via donations',
+    ),
+    QuickLink(
+      name: 'Rate',
+      icon: Icons.star_rounded,
+      route: 'rate.app',
+      description: 'Leave a review',
     ),
     QuickLink(
       name: 'Convert',
@@ -255,6 +263,7 @@ class QuickLinksService {
           .toList();
       links.removeWhere((l) => _hiddenRoutes.contains(l.route));
       links.removeWhere((l) {
+        if (l.route == 'rate.app') return false;
         final idx = routeToIndex[l.route];
         return idx == null || !isTabVisibleInCurrentBuild(idx);
       });
