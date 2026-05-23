@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../utils/snack.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -143,6 +145,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _updateBannerDismissed = false;
   bool _checkUpdatesOnLaunch = true;
 
+  bool _ytDlpVersionChecking = false;
+  bool _ytDlpVersionCheckFailed = false;
+  bool? _ytDlpIsUpToDate;
+  String? _ytDlpCurrentVersion;
+  String? _ytDlpLatestVersion;
+  DateTime? _ytDlpLastChecked;
+
   TrayService? _trayService;
 
   String _previewPreset = '25';
@@ -185,6 +194,74 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _checkForUpdate();
     } else {
       _checkUpdatesOnLaunch = false;
+    }
+
+    if (!_isAndroid) {
+      unawaited(_checkYtDlpUpdateStatus());
+    }
+  }
+
+  Future<void> _checkYtDlpUpdateStatus() async {
+    if (_isAndroid) return;
+    if (!mounted) return;
+    setState(() {
+      _ytDlpVersionChecking = true;
+      _ytDlpVersionCheckFailed = false;
+    });
+
+    try {
+      final settings = widget.controller.settings;
+      final currentVersion =
+          await widget.controller.downloadService.ytDlp.getVersion(
+        configuredPath: settings?.ytDlpPath,
+      );
+
+      final response = await http
+          .get(
+            Uri.parse(
+              'https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest',
+            ),
+            headers: {'Accept': 'application/vnd.github+json'},
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final latestTag = (data['tag_name'] ?? '').toString();
+        final current = (currentVersion ?? 'unknown').trim();
+
+        final upToDate = current.isNotEmpty &&
+            current != 'unknown' &&
+            (current == latestTag || current.compareTo(latestTag) >= 0);
+
+        if (!mounted) return;
+        setState(() {
+          _ytDlpCurrentVersion = currentVersion;
+          _ytDlpLatestVersion = latestTag;
+          _ytDlpIsUpToDate = upToDate;
+          _ytDlpLastChecked = DateTime.now();
+          _ytDlpVersionCheckFailed = false;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() {
+          _ytDlpCurrentVersion = currentVersion;
+          _ytDlpIsUpToDate = null;
+          _ytDlpVersionCheckFailed = true;
+          _ytDlpLastChecked = DateTime.now();
+        });
+      }
+    } catch (e) {
+      debugPrint('Version check failed: $e');
+      if (!mounted) return;
+      setState(() {
+        _ytDlpIsUpToDate = null;
+        _ytDlpVersionCheckFailed = true;
+        _ytDlpLastChecked = DateTime.now();
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() => _ytDlpVersionChecking = false);
     }
   }
 
@@ -675,6 +752,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       TrayService.shouldMinimiseToTrayOnClose = _minimizeToTrayOnClose;
       _settingsInitialized = true;
     });
+
+    if (!_isAndroid) {
+      unawaited(_checkYtDlpUpdateStatus());
+    }
 
     // Only check SAF folder writability if we have a SAF URI.
     // Filesystem paths are assumed writable if they were selected via the picker.
@@ -3639,6 +3720,63 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                     const Divider(),
                     const SizedBox(height: 8),
+                    Builder(
+                      builder: (context) {
+                        final versionText = (_ytDlpCurrentVersion ?? 'unknown').trim();
+                        Color dotColor = Colors.grey;
+                        String statusText =
+                            'yt-dlp $versionText - Could not check for updates';
+
+                        if (_ytDlpVersionChecking) {
+                          dotColor = Colors.blueGrey;
+                          statusText =
+                              'yt-dlp $versionText - Checking for updates...';
+                        } else if (!_ytDlpVersionCheckFailed &&
+                            _ytDlpIsUpToDate == true) {
+                          dotColor = Colors.green;
+                          statusText = 'yt-dlp $versionText - Up to date';
+                        } else if (!_ytDlpVersionCheckFailed &&
+                            _ytDlpIsUpToDate == false) {
+                          dotColor = Colors.orange;
+                          statusText =
+                              'yt-dlp $versionText - Update available: ${_ytDlpLatestVersion ?? 'unknown'}';
+                        }
+
+                        final checkedText = _ytDlpLastChecked == null
+                            ? null
+                            : 'Last checked: ${_ytDlpLastChecked!.toLocal()}';
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      color: dotColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Text(statusText)),
+                                ],
+                              ),
+                              if (checkedText != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  checkedText,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                     Row(
                       children: [
                         Expanded(
@@ -3675,7 +3813,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           },
                         ),
                         const SizedBox(width: 8),
-                        ElevatedButton.icon(
+                        if (_ytDlpIsUpToDate == false)
+                          ElevatedButton.icon(
                           icon: const Icon(Icons.update),
                           label: const Text('Update'),
                           onPressed: () async {
@@ -3703,6 +3842,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               }
                               await widget.controller
                                   .saveSettings(s.copyWith(ytDlpPath: updated));
+                              await _checkYtDlpUpdateStatus();
                               Snack.show(context, 'yt-dlp updated successfully',
                                   level: SnackLevel.success);
                             } catch (e) {
@@ -3711,6 +3851,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   level: SnackLevel.error);
                             }
                           },
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Check'),
+                          onPressed: _ytDlpVersionChecking
+                              ? null
+                              : () => _checkYtDlpUpdateStatus(),
                         ),
                       ],
                     ),

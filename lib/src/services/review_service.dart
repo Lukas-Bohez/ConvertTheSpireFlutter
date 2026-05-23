@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,6 +21,17 @@ class ReviewService {
   /// Call this after a positive user action.
   static Future<void> maybePromptReview() async {
     try {
+      if (kIsWeb) return;
+      final platform = defaultTargetPlatform;
+      if (platform != TargetPlatform.android &&
+          platform != TargetPlatform.iOS) {
+        return;
+      }
+
+      const isPlayBuild =
+          bool.fromEnvironment('PLAY_STORE_BUILD', defaultValue: false);
+      if (platform == TargetPlatform.android && !isPlayBuild) return;
+
       final prefs = await SharedPreferences.getInstance();
 
       if (prefs.getBool(_reviewDoneKey) ?? false) return;

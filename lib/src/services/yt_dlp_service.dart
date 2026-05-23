@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import 'platform_dirs.dart';
 import '../utils/safe_json.dart';
@@ -21,6 +22,11 @@ import '../utils/safe_json.dart';
 /// On mobile/web, yt-dlp is not available - the app falls back to
 /// youtube_explode_dart for stream downloads.
 class YtDlpService {
+  Future<String> _getYtDlpWorkingDir() async {
+    final temp = await getTemporaryDirectory();
+    return temp.path;
+  }
+
     /// Fetches video metadata using yt-dlp --dump-json and returns filesize_approx in bytes (if available).
     Future<int?> fetchEstimatedSize({
       required String url,
@@ -72,7 +78,13 @@ class YtDlpService {
       }
       args.add(url);
 
-      final process = await Process.start(ytDlpPath, args, runInShell: false);
+      final workDir = await _getYtDlpWorkingDir();
+      final process = await Process.start(
+        ytDlpPath,
+        args,
+        workingDirectory: workDir,
+        runInShell: false,
+      );
       final output = await process.stdout.transform(utf8.decoder).join();
       await process.stderr.drain();
       final exitCode = await process.exitCode;
@@ -102,7 +114,13 @@ class YtDlpService {
     // 3. Check system PATH
     final exeName = Platform.isWindows ? 'yt-dlp.exe' : 'yt-dlp';
     try {
-      final result = await Process.run(exeName, ['--version'])
+      final workDir = await _getYtDlpWorkingDir();
+      final result = await Process.run(
+        exeName,
+        ['--version'],
+        workingDirectory: workDir,
+        runInShell: false,
+      )
           .timeout(const Duration(seconds: 5));
       if (result.exitCode == 0) return exeName;
     } catch (_) {}
@@ -153,7 +171,13 @@ class YtDlpService {
           onProgress?.call(5, 'Downloading yt-dlp (PowerShell)…');
           await _attemptShellDownload(url, appBin, enforceTls12: true);
           // Verify binary
-          final verify = await Process.run(appBin, ['--version'])
+          final workDir = await _getYtDlpWorkingDir();
+          final verify = await Process.run(
+            appBin,
+            ['--version'],
+            workingDirectory: workDir,
+            runInShell: false,
+          )
               .timeout(const Duration(seconds: 5));
           if (verify.exitCode == 0 &&
               verify.stdout.toString().trim().isNotEmpty) {
@@ -218,7 +242,13 @@ class YtDlpService {
 
           // Verify binary by calling `--version`.
           try {
-            final verify = await Process.run(appBin, ['--version'])
+            final workDir = await _getYtDlpWorkingDir();
+            final verify = await Process.run(
+              appBin,
+              ['--version'],
+              workingDirectory: workDir,
+              runInShell: false,
+            )
                 .timeout(const Duration(seconds: 5));
             if (verify.exitCode == 0 &&
                 verify.stdout.toString().trim().isNotEmpty) {
@@ -242,7 +272,13 @@ class YtDlpService {
                 onProgress?.call(
                     5, 'Downloading yt-dlp (PowerShell fallback)…');
                 await _attemptShellDownload(url, appBin, enforceTls12: true);
-                final verify = await Process.run(appBin, ['--version'])
+                final workDir = await _getYtDlpWorkingDir();
+                final verify = await Process.run(
+                  appBin,
+                  ['--version'],
+                  workingDirectory: workDir,
+                  runInShell: false,
+                )
                     .timeout(const Duration(seconds: 5));
                 if (verify.exitCode == 0 &&
                     verify.stdout.toString().trim().isNotEmpty) {
@@ -400,7 +436,13 @@ class YtDlpService {
 
   Future<String> _getCurrentYtDlpVersion(String ytDlpPath) async {
     try {
-      final result = await Process.run(ytDlpPath, ['--version']);
+      final workDir = await _getYtDlpWorkingDir();
+      final result = await Process.run(
+        ytDlpPath,
+        ['--version'],
+        workingDirectory: workDir,
+        runInShell: false,
+      );
       return result.stdout.toString().trim();
     } catch (_) {
       return 'unknown';
@@ -415,7 +457,13 @@ class YtDlpService {
     if (path == null) return null;
 
     try {
-      final result = await Process.run(path, ['--version'])
+      final workDir = await _getYtDlpWorkingDir();
+      final result = await Process.run(
+        path,
+        ['--version'],
+        workingDirectory: workDir,
+        runInShell: false,
+      )
           .timeout(const Duration(seconds: 5));
       if (result.exitCode == 0) {
         final out = result.stdout.toString().trim();
@@ -543,7 +591,13 @@ class YtDlpService {
     debugPrint('yt-dlp command: $ytDlpPath ${args.join(' ')}');
     onProgress(0, null, null);
 
-    final process = await Process.start(ytDlpPath, args, runInShell: false);
+    final workDir = await _getYtDlpWorkingDir();
+    final process = await Process.start(
+      ytDlpPath,
+      args,
+      workingDirectory: workDir,
+      runInShell: false,
+    );
 
     // Poll for cancellation every 500ms
     final cancelTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
