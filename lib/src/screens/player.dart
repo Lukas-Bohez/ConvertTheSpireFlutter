@@ -149,6 +149,54 @@ class MediaItem {
         totalPlayedDuration: totalPlayedDuration ?? this.totalPlayedDuration,
         lastPlayedAt: lastPlayedAt ?? this.lastPlayedAt,
       );
+
+  String get resolvedArtist {
+    final value = artist?.trim();
+    if (value != null && value.isNotEmpty) return value;
+    final fallback = _artistFromFilename(path);
+    return fallback;
+  }
+}
+
+String _artistFromFilename(String path) {
+  final filename = p.basenameWithoutExtension(path)
+      .replaceAll(RegExp(r'\s*\[[a-zA-Z0-9_\-]{11}\]'), '')
+      .trim();
+  if (!filename.contains(' - ')) return '';
+  final artist = filename.split(' - ').first.trim();
+  if (artist.isEmpty || artist.length >= 60) return '';
+  return artist;
+}
+
+String _titleFromFilename(String path) {
+  final filename = p.basenameWithoutExtension(path)
+      .replaceAll(RegExp(r'\s*\[[a-zA-Z0-9_\-]{11}\]'), '')
+      .trim();
+  if (!filename.contains(' - ')) return '';
+  final parts = filename.split(' - ');
+  if (parts.length < 2) return '';
+  return parts.sublist(1).join(' - ').trim();
+}
+
+String resolveArtist(
+  dynamic metadata,
+  String filePath, {
+  String? fallbackArtist,
+}) {
+  try {
+    final artist = metadata?.artist?.toString().trim();
+    if (artist != null && artist.isNotEmpty) return artist;
+  } catch (_) {}
+
+  try {
+    final albumArtist = metadata?.albumArtist?.toString().trim();
+    if (albumArtist != null && albumArtist.isNotEmpty) return albumArtist;
+  } catch (_) {}
+
+  final fallback = fallbackArtist?.trim();
+  if (fallback != null && fallback.isNotEmpty) return fallback;
+
+  return _artistFromFilename(filePath);
 }
 
 class PositionUiState {
@@ -883,7 +931,7 @@ class PlayerState with ChangeNotifier {
       final item = _favouriteCache[path];
       if (item != null) {
         list.add('${item.path}\t${item.type == MediaType.video ? 'v' : 'a'}'
-            '\t${item.title ?? ''}\t${item.artist ?? ''}\t${item.genre ?? ''}'
+            '\t${item.title ?? ''}\t${item.resolvedArtist}\t${item.genre ?? ''}'
             '\t${item.modifiedAt?.toIso8601String() ?? ''}');
         if (item.thumbnailData != null) _saveThumbToCache(path, item.thumbnailData!);
       }
@@ -1221,9 +1269,10 @@ class PlayerState with ChangeNotifier {
       final tag = await readMetadata(File(metaPath), getImage: false);
       if (_loadVersion != version) return;
       final modifiedAt = item.modifiedAt ?? await _modifiedAtForPath(item.path);
+      final resolvedArtist = resolveArtist(tag, item.path, fallbackArtist: item.artist);
       lib[i] = item.copyWith(
         title: tag.title?.trim().isNotEmpty == true ? tag.title!.trim() : item.title,
-        artist: tag.artist?.trim().isNotEmpty == true ? tag.artist!.trim() : item.artist,
+        artist: resolvedArtist.isNotEmpty ? resolvedArtist : item.artist,
         genre: _extractGenre(tag) ?? item.genre,
         modifiedAt: modifiedAt,
       );
@@ -2482,7 +2531,7 @@ class PlayerState with ChangeNotifier {
       audio_svc.MediaItem(
         id: item.path,
         title: item.title ?? p.basenameWithoutExtension(item.path),
-        artist: item.artist ?? '',
+        artist: item.resolvedArtist,
         duration: item.duration ?? duration,
         artUri: artUri,
       ),
@@ -2639,37 +2688,36 @@ class PlayerState with ChangeNotifier {
     }
 
     final existing = await MetadataGod.readMetadata(file: resolvedPath);
-    final displayName = _displayNameForMetadata(item.path);
     final existingArtist = existing.artist?.trim() ?? '';
+    final existingAlbumArtist = existing.albumArtist?.trim() ?? '';
     final existingTitle = existing.title?.trim() ?? '';
+    final resolvedArtist = existingArtist.isNotEmpty
+        ? existingArtist
+        : (existingAlbumArtist.isNotEmpty ? existingAlbumArtist : _artistFromFilename(resolvedPath));
+    final filenameTitle = _titleFromFilename(resolvedPath);
 
     String title = existingTitle.isNotEmpty
         ? existingTitle
-        : (item.title?.trim().isNotEmpty == true ? item.title!.trim() : displayName);
-    String artist = existingArtist;
-    if (artist.isEmpty) {
-      if (displayName.contains(' - ')) {
-        final parts = displayName.split(' - ');
-        if (parts.length >= 2) {
-          artist = parts.first.trim();
-          final inferredTitle = parts.sublist(1).join(' - ').trim();
-          if (inferredTitle.isNotEmpty) {
-            title = inferredTitle;
-          }
-        }
-      }
+        : (item.title?.trim().isNotEmpty == true ? item.title!.trim() : _displayNameForMetadata(item.path));
+    if (title == _displayNameForMetadata(item.path) && filenameTitle.isNotEmpty) {
+      title = filenameTitle;
     }
-    artist = artist.isEmpty ? 'Unknown' : artist;
 
-    final metadataChanged = title != existingTitle || artist != existingArtist;
+    if (resolvedArtist.isEmpty) {
+      return false;
+    }
+
+    final metadataChanged = title != existingTitle ||
+        resolvedArtist != existingArtist ||
+        resolvedArtist != existingAlbumArtist;
     if (!metadataChanged) {
       return false;
     }
 
     final updatedMetadata = Metadata(
       title: title,
-      artist: artist,
-      albumArtist: artist,
+      artist: resolvedArtist,
+      albumArtist: resolvedArtist,
       album: existing.album,
       genre: existing.genre,
       picture: existing.picture,
@@ -2693,7 +2741,7 @@ class PlayerState with ChangeNotifier {
     if (index >= 0) {
       final updatedItem = library[index].copyWith(
         title: title,
-        artist: artist,
+        artist: resolvedArtist,
         genre: existing.genre ?? library[index].genre,
       );
       _replaceLibraryItem(updatedItem);
@@ -2701,14 +2749,13 @@ class PlayerState with ChangeNotifier {
     return true;
   }
 
-  Future<int> fixAllMissingArtistMetadata({
+  Future<int> bulkFixArtistMetadata({
     void Function(int done, int total)? onProgress,
   }) async {
     final targets = library
         .where((item) =>
             item.type == MediaType.audio &&
-            ((item.artist == null || item.artist!.trim().isEmpty) ||
-                (item.title == null || item.title!.trim().isEmpty)))
+        item.resolvedArtist.isEmpty)
         .toList();
     var processed = 0;
     var changedCount = 0;
@@ -3441,7 +3488,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (_searchQuery.isEmpty) return true;
     final q = _searchQuery.toLowerCase();
     final title = (item.title ?? p.basenameWithoutExtension(item.path)).toLowerCase();
-    final artist = (item.artist ?? '').toLowerCase();
+    final artist = item.resolvedArtist.toLowerCase();
     return title.contains(q) || artist.contains(q);
   }
 
@@ -3526,7 +3573,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     final targets = state.library
         .where((item) =>
             item.type == MediaType.audio &&
-            (item.artist == null || item.artist!.trim().isEmpty))
+        item.resolvedArtist.isEmpty)
         .toList();
     if (targets.isEmpty) {
       Snack.show(context, 'No songs need metadata fixes', level: SnackLevel.info);
@@ -3563,7 +3610,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
     await Future<void>.delayed(Duration.zero);
     try {
-      await state.fixAllMissingArtistMetadata(onProgress: (done, total) {
+      await state.bulkFixArtistMetadata(onProgress: (done, total) {
         progress.value = done;
       });
     } finally {
@@ -4325,7 +4372,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (item == null) return const SizedBox.shrink();
 
     final title = item.title ?? p.basenameWithoutExtension(item.path);
-    final artist = item.artist ?? '';
+    final artist = item.resolvedArtist;
     final cs = Theme.of(context).colorScheme;
 
     return Container(
@@ -5069,7 +5116,7 @@ class _MediaCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          item.artist ?? '',
+                          item.resolvedArtist,
                           style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -5224,7 +5271,7 @@ class _SongTile extends StatelessWidget {
         style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       ),
       subtitle: Text(
-        item.artist ?? '',
+        item.resolvedArtist,
         style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
       trailing: state.isPlayingPath(item.path)
