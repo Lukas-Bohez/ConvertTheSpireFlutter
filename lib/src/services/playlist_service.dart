@@ -273,6 +273,18 @@ class PlaylistService {
       for (final label in labels) {
         final normalisedLabel = _normalise(label);
 
+        if (_titlesMatch(track.title, label) ||
+            _titlesMatch('${track.artist} ${track.title}', label)) {
+          return TrackMatch(
+            track: track,
+            filePath: f.path,
+            fileName: f.baseName,
+            confidence: 1.0,
+            method: MatchMethod.exact,
+            fileIndex: i,
+          );
+        }
+
         // Strategy 1 - exact normalised match
         if (normalisedLabel == trackFull || normalisedLabel == trackTitle) {
           return TrackMatch(
@@ -346,6 +358,60 @@ class PlaylistService {
   }
 
   // --─ String helpers ------------------------------------------------------─
+
+  static bool _titlesMatch(String playlistTitle, String localFilename) {
+    final a = _aggressiveNorm(playlistTitle);
+    final b = _aggressiveNorm(localFilename);
+    if (a.isNotEmpty && b.isNotEmpty && (a == b || a.contains(b) || b.contains(a))) {
+      return true;
+    }
+
+    final subtitles = <String>{
+      ..._titleSegments(playlistTitle),
+      ..._titleSegments(localFilename),
+    }.where((s) => s.length >= 4).toList();
+    for (final sa in subtitles) {
+      if (a.contains(sa) || b.contains(sa) || sa.contains(a) || sa.contains(b)) {
+        return true;
+      }
+    }
+
+    final wordsA = a.split(' ').where((w) => w.length >= 3).toSet();
+    final wordsB = b.split(' ').where((w) => w.length >= 3).toSet();
+    if (wordsA.isNotEmpty && wordsB.isNotEmpty) {
+      final overlap = wordsA.intersection(wordsB).length;
+      final minLen = wordsA.length < wordsB.length ? wordsA.length : wordsB.length;
+      if (minLen > 0 && overlap / minLen >= 0.6) return true;
+    }
+
+    return false;
+  }
+
+  static Iterable<String> _titleSegments(String input) sync* {
+    final parts = <String>[input];
+    if (input.contains('/')) {
+      parts.addAll(input.split('/'));
+    }
+    if (input.contains(' - ')) {
+      parts.addAll(input.split(' - '));
+    }
+    final paren = RegExp(r'\(([^)]+)\)').firstMatch(input)?.group(1);
+    if (paren != null && paren.isNotEmpty) {
+      parts.add(paren);
+    }
+    for (final part in parts) {
+      final norm = _aggressiveNorm(part);
+      if (norm.isNotEmpty) yield norm;
+    }
+  }
+
+  static String _aggressiveNorm(String s) => s
+      .toLowerCase()
+      .replaceAll(RegExp(r'\.\w{2,5}$'), '')
+      .replaceAll(RegExp(r'\s*\[[a-zA-Z0-9_\-]{11}\]'), '')
+      .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
 
   /// Normalise a string for comparison: lowercase, strip accents, remove
   /// common noise like "(Official Audio)", brackets, punctuation.

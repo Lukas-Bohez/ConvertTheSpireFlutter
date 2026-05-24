@@ -25,6 +25,7 @@ import 'package:video_player/video_player.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/review_service.dart';
+import '../state/app_controller.dart';
 import '../services/platform_dirs.dart';
 import '../services/android_saf.dart';
 import '../services/audio_handler.dart';
@@ -2495,7 +2496,7 @@ class PlayerState with ChangeNotifier {
     _dirWatcher = null;
     _watchedDirPath = null;
 
-    if (kIsWeb || Platform.isAndroid || Platform.isIOS || Platform.isWindows) {
+    if (kIsWeb || Platform.isAndroid || Platform.isIOS) {
       return;
     }
     if (items.isEmpty) return;
@@ -2589,6 +2590,10 @@ class PlayerState with ChangeNotifier {
     }
   }
 
+  Future<void> reloadLibraryFromDisk() {
+    return _refreshLibraryFromDisk();
+  }
+
   void _replaceLibraryItem(MediaItem updated) {
     final index = library.indexWhere((item) => item.path == updated.path);
     if (index < 0) return;
@@ -2620,7 +2625,18 @@ class PlayerState with ChangeNotifier {
     await MetadataGod.initialize();
 
     final resolvedPath = await _resolveLocalPath(item.path);
-    if (resolvedPath.trim().isEmpty) return false;
+    if (resolvedPath.trim().isEmpty) {
+      debugPrint('fixMetadata: could not resolve local path for ${item.path}');
+      return false;
+    }
+    if (resolvedPath.startsWith('content://')) {
+      debugPrint('fixMetadata: cannot write directly to content URI $resolvedPath');
+      return false;
+    }
+    if (!await File(resolvedPath).exists()) {
+      debugPrint('fixMetadata: file not found at $resolvedPath');
+      return false;
+    }
 
     final existing = await MetadataGod.readMetadata(file: resolvedPath);
     final displayName = _displayNameForMetadata(item.path);
@@ -3289,6 +3305,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _uiPrefsLoaded = false;
   bool _isFullScreen = false;
   bool _searchEditing = false;
+  AppController? _appController;
 
   bool get _usesNativeWindowFullscreen =>
       !kIsWeb &&
@@ -3311,6 +3328,15 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final controller = context.read<AppController>();
+    if (_appController != controller) {
+      _appController?.onLibraryRefreshRequested = null;
+      _appController = controller;
+      _appController?.onLibraryRefreshRequested = () async {
+        if (!mounted) return;
+        await context.read<PlayerState>().reloadLibraryFromDisk();
+      };
+    }
     if (_uiPrefsLoaded) return;
     _uiPrefsLoaded = true;
     final prefs = context.read<PlayerState>().prefs;
@@ -3334,6 +3360,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   @override
   void dispose() {
+    _appController?.onLibraryRefreshRequested = null;
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_exitFullScreen());
     _tabController.dispose();

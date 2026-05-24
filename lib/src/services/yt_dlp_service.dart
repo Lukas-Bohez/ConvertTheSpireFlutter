@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -25,6 +27,132 @@ class YtDlpService {
   Future<String> _getYtDlpWorkingDir() async {
     final temp = await getTemporaryDirectory();
     return temp.path;
+  }
+
+  Future<String> _resolveRuntimeDirectory({String? ytDlpPath}) async {
+    if (ytDlpPath != null && ytDlpPath.trim().isNotEmpty) {
+      if (p.isAbsolute(ytDlpPath)) {
+        return p.dirname(ytDlpPath);
+      }
+      final base = await _getAppBinaryPath();
+      if (base != null) return p.dirname(base);
+    }
+
+    final appBin = await _getAppBinaryPath();
+    if (appBin != null) {
+      return p.dirname(appBin);
+    }
+    return Directory.systemTemp.path;
+  }
+
+  Future<String?> _findSystemNode() async {
+    try {
+      final result = await Process.run(
+        Platform.isWindows ? 'where' : 'which',
+        ['node'],
+        runInShell: true,
+      );
+      if (result.exitCode == 0) {
+        final lines = result.stdout.toString().trim().split(RegExp(r'\r?\n'));
+        final first = lines.firstWhere((line) => line.trim().isNotEmpty,
+            orElse: () => '');
+        if (first.isNotEmpty) return first.trim();
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<String> ensureDenoInstalled({String? ytDlpPath}) async {
+    if (kIsWeb || Platform.isAndroid || Platform.isIOS) {
+      throw Exception('Deno installation is only supported on desktop platforms.');
+    }
+
+    final runtimeDir = await _resolveRuntimeDirectory(ytDlpPath: ytDlpPath);
+    final denoExe = Platform.isWindows ? 'deno.exe' : 'deno';
+    final denoPath = '$runtimeDir${Platform.pathSeparator}$denoExe';
+
+    if (await File(denoPath).exists()) {
+      debugPrint('Deno already present at $denoPath');
+      return denoPath;
+    }
+
+    debugPrint('Deno not found — downloading...');
+
+    final response = await http.get(
+      Uri.parse('https://api.github.com/repos/denoland/deno/releases/latest'),
+      headers: {'Accept': 'application/vnd.github+json'},
+    ).timeout(const Duration(seconds: 15));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch Deno release info');
+    }
+
+    final release = jsonDecode(response.body) as Map<String, dynamic>;
+    final assets = release['assets'] as List<dynamic>? ?? const [];
+
+    final assetName = Platform.isWindows
+        ? 'deno-x86_64-pc-windows-msvc.zip'
+        : Platform.isMacOS
+            ? 'deno-x86_64-apple-darwin.zip'
+            : 'deno-x86_64-unknown-linux-gnu.zip';
+
+    final asset = assets.cast<Map<String, dynamic>>().firstWhere(
+          (a) => (a['name'] ?? '').toString() == assetName,
+          orElse: () => throw Exception('No Deno asset found for $assetName'),
+        );
+
+    final zipResponse = await http.get(
+      Uri.parse((asset['browser_download_url'] ?? '').toString()),
+    );
+    if (zipResponse.statusCode != 200) {
+      throw Exception('Deno download failed');
+    }
+
+    final archive = ZipDecoder().decodeBytes(zipResponse.bodyBytes);
+    ArchiveFile? denoFile;
+    for (final file in archive) {
+      final baseName = p.basename(file.name);
+      if (baseName == denoExe || baseName == 'deno') {
+        denoFile = file;
+        break;
+      }
+    }
+    if (denoFile == null) {
+      throw Exception('Deno binary not found in archive');
+    }
+
+    final file = File(denoPath);
+    await file.parent.create(recursive: true);
+    final bytes = Uint8List.fromList(List<int>.from(denoFile.content as List));
+    await file.writeAsBytes(bytes, flush: true);
+    if (!Platform.isWindows) {
+      await Process.run('chmod', ['+x', denoPath]);
+    }
+
+    debugPrint('Deno installed at $denoPath');
+    return denoPath;
+  }
+
+  Future<String?> _resolveJsRuntimeSpec({required String ytDlpPath}) async {
+    final nodePath = await _findSystemNode();
+    if (nodePath != null && nodePath.isNotEmpty) {
+      return 'node:$nodePath';
+    }
+
+    try {
+      final denoPath = await ensureDenoInstalled(ytDlpPath: ytDlpPath);
+      return 'deno:$denoPath';
+    } catch (e) {
+      debugPrint('Failed to provision Deno runtime: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _applyJsRuntimeArgs(List<String> args,
+      {required String ytDlpPath}) async {
+    final runtimeSpec = await _resolveJsRuntimeSpec(ytDlpPath: ytDlpPath);
+    if (runtimeSpec != null && runtimeSpec.isNotEmpty) {
+      args.addAll(['--js-runtimes', runtimeSpec]);
+    }
   }
 
     /// Fetches video metadata using yt-dlp --dump-json and returns filesize_approx in bytes (if available).
@@ -76,6 +204,7 @@ class YtDlpService {
       if (forceGenericExtractor) {
         args.add('--force-generic-extractor');
       }
+      await _applyJsRuntimeArgs(args, ytDlpPath: ytDlpPath);
       args.add(url);
 
       final workDir = await _getYtDlpWorkingDir();
@@ -542,9 +671,10 @@ class YtDlpService {
     args.addAll([
       '--embed-metadata',
       '--embed-thumbnail', // embed cover art
-      '--parse-metadata', '%(uploader|)s:%(meta_artist)s',
+      '--parse-metadata', '%(artist|uploader|channel|creator)s:%(meta_artist)s',
+      '--parse-metadata', '%(artist|uploader|channel|creator)s:%(meta_album_artist)s',
       '--parse-metadata', '%(title)s:%(meta_title)s',
-      '--parse-metadata', '%(uploader|)s:%(meta_album_artist)s',
+      '--parse-metadata', '%(album|playlist_title|)s:%(meta_album)s',
       '--add-metadata', // include title/artist/date tags
     ]);
 
@@ -586,6 +716,7 @@ class YtDlpService {
       args.add('--force-generic-extractor');
     }
 
+    await _applyJsRuntimeArgs(args, ytDlpPath: ytDlpPath);
     args.add(url);
 
     debugPrint('yt-dlp command: $ytDlpPath ${args.join(' ')}');

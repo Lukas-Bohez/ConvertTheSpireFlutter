@@ -84,6 +84,7 @@ class AppController extends ChangeNotifier {
   bool _downloadAllRunning = false;
   bool _notifyPending = false;
   late final VoidCallback _fullModeListener;
+  Future<void> Function()? onLibraryRefreshRequested;
 
   void scheduleNotify() {
     if (_notifyPending) return;
@@ -224,39 +225,41 @@ class AppController extends ChangeNotifier {
     unawaited(Future(() async {
       final settings = _settings;
       if (settings == null) return;
-      final resolved =
-          await downloadService.ytDlp.resolveAvailablePath(settings.ytDlpPath);
-      if (resolved != null) {
-        if (settings.ytDlpPath != resolved) {
-          await saveSettings(settings.copyWith(ytDlpPath: resolved));
+      final ytDlpFuture = downloadService.ytDlp.ensureAvailable(
+        configuredPath: settings.ytDlpPath,
+        onProgress: (pct, message) {
+          if (pct == 0 || pct == 100) logs.add('yt-dlp $message ($pct%)');
+        },
+      );
+      final denoFuture = downloadService.ytDlp.ensureDenoInstalled(
+        ytDlpPath: settings.ytDlpPath,
+      );
+
+      try {
+        final path = await ytDlpFuture;
+        if (settings.ytDlpPath != path) {
+          await saveSettings(settings.copyWith(ytDlpPath: path));
         }
-        logs.add('yt-dlp found: $resolved');
-        // Check for updates to yt-dlp and auto-update if outdated.
+        logs.add('yt-dlp ready: $path');
         try {
           final updatedPath = await downloadService.ytDlp.updateYtDlp(
             configuredPath: settings.ytDlpPath,
             onProgress: (pct, msg) {
-            if (pct == 0 || pct == 100) logs.add('yt-dlp $msg ($pct%)');
+              if (pct == 0 || pct == 100) logs.add('yt-dlp $msg ($pct%)');
             },
           );
           if (updatedPath != settings.ytDlpPath) {
             await saveSettings(settings.copyWith(ytDlpPath: updatedPath));
           }
         } catch (_) {}
-        return;
-      }
-      // Not found - auto-download (Windows/Linux/macOS)
-      try {
-        final path = await downloadService.ytDlp.ensureAvailable(
-          configuredPath: settings.ytDlpPath,
-          onProgress: (pct, message) {
-            if (pct == 0 || pct == 100) logs.add('yt-dlp $message ($pct%)');
-          },
-        );
-        await saveSettings(settings.copyWith(ytDlpPath: path));
-        logs.add('yt-dlp installed: $path');
       } catch (e) {
         logs.add('yt-dlp auto-download skipped: $e');
+      }
+
+      try {
+        await denoFuture;
+      } catch (e) {
+        logs.add('Deno auto-download skipped: $e');
       }
     }).catchError((_) {}));
   }
@@ -612,6 +615,7 @@ class AppController extends ChangeNotifier {
           unawaited(_recordDownloadId(item.url, result.path));
         }
         _tokens.remove(key);
+        unawaited(onLibraryRefreshRequested?.call().catchError((_) {}));
         // Fire-and-forget: notification/stats failures must never
         // mask a successful download.
         unawaited(onDownloadCompleted(
