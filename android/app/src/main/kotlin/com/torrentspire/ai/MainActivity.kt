@@ -18,6 +18,7 @@ import android.graphics.Color
 import android.view.KeyEvent
 import android.view.inputmethod.InputMethodManager
 import android.os.SystemClock
+import android.os.PowerManager
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import androidx.core.view.WindowCompat
@@ -31,6 +32,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
+import android.provider.Settings
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -68,6 +70,38 @@ class MainActivity : AudioServiceActivity() {
         keyEventChannel?.setMethodCallHandler { _, result ->
             result.notImplemented()
         }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.torrentspire.ai/battery")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "requestBatteryOptimizationExemption" -> {
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                            result.success(null)
+                            return@setMethodCallHandler
+                        }
+
+                        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+                        if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                            val intent = Intent(
+                                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                Uri.parse("package:$packageName")
+                            )
+                            try {
+                                startActivity(intent)
+                            } catch (e: ActivityNotFoundException) {
+                                result.error(
+                                    "BATTERY_SETTINGS_UNAVAILABLE",
+                                    "Could not open battery optimization settings",
+                                    e.message
+                                )
+                                return@setMethodCallHandler
+                            }
+                        }
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result ->

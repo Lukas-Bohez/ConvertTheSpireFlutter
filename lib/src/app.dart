@@ -354,6 +354,7 @@ class _MyAppState extends State<MyApp>
         setState(() {
           _controller = controller;
         });
+        unawaited(_showGithubMigrationNotice());
       }
     } catch (e, st) {
       debugPrint('MyApp: initialization failed: $e\n$st');
@@ -361,6 +362,43 @@ class _MyAppState extends State<MyApp>
         setState(() {
           _initError = '$e';
         });
+      }
+    }
+  }
+
+  Future<void> _showGithubMigrationNotice() async {
+    if (kIsWeb || !Platform.isAndroid || !kIsGithubRelease) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      const key = 'github_migration_shown';
+      if (prefs.getBool(key) == true) return;
+      await prefs.setBool(key, true);
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final context = _navigatorKey.currentContext;
+        if (context == null) return;
+
+        showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('One-time setup'),
+            content: const Text(
+              'This version uses package name com.torrentspire.ai.github. If you cannot install alongside the Play Store version, uninstall the previous GitHub version first. Play Store version is unaffected.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Got it'),
+              ),
+            ],
+          ),
+        );
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Github migration notice skipped: $e');
       }
     }
   }

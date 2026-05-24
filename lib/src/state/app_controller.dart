@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../services/platform_dirs.dart';
@@ -147,6 +148,10 @@ class AppController extends ChangeNotifier {
     }
     scheduleNotify();
 
+    if (!kIsWeb && Platform.isAndroid && kIsGithubRelease) {
+      unawaited(_requestBatteryOptimizationExemption());
+    }
+
     // Restore last selected tab (if present). Only restore once during
     // controller initialization to avoid racing with manual navigation.
     try {
@@ -218,6 +223,21 @@ class AppController extends ChangeNotifier {
         _ffmpegInstall = null;
       }
     }).catchError((_) {}));
+  }
+
+  Future<void> _requestBatteryOptimizationExemption() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      const key = 'battery_optimization_exemption_requested';
+      if (prefs.getBool(key) == true) return;
+      await prefs.setBool(key, true);
+      await const MethodChannel('com.torrentspire.ai/battery')
+          .invokeMethod<void>('requestBatteryOptimizationExemption');
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[AppController] battery exemption request skipped: $e');
+      }
+    }
   }
 
   /// Fire-and-forget yt-dlp check at startup so HD downloads work immediately.

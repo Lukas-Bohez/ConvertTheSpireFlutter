@@ -27,6 +27,33 @@ enum MagnetAddOutcome { started, queued, pendingMetadata }
 
 const double displayCompleteProgressThreshold = 0.9989;
 
+const List<String> _fallbackTrackers = [
+  'udp://tracker.opentrackr.org:1337/announce',
+  'udp://tracker.torrent.eu.org:451/announce',
+  'udp://tracker.openbittorrent.com:6969/announce',
+  'udp://exodus.desync.com:6969/announce',
+  'udp://tracker.open.stealth.si:80/announce',
+];
+
+List<String> _withFallbackTrackers(List<String> trackers) {
+  final unique = <String>[];
+  final seen = <String>{};
+  for (final tracker in trackers) {
+    final cleaned = tracker.trim();
+    if (cleaned.isEmpty || !seen.add(cleaned)) continue;
+    unique.add(cleaned);
+  }
+  if (unique.length >= 2) return unique;
+
+  for (final tracker in _fallbackTrackers) {
+    if (seen.add(tracker)) {
+      unique.add(tracker);
+    }
+    if (unique.length >= 2) break;
+  }
+  return unique;
+}
+
 double normalizeTorrentProgressForDisplay(double progress) {
   final clamped = progress.clamp(0.0, 1.0);
   if (clamped >= displayCompleteProgressThreshold) return 1.0;
@@ -1358,10 +1385,11 @@ class TorrentService {
     final effectiveDestination = configuredDestination.isNotEmpty
         ? configuredDestination
         : (fallbackDestination.isNotEmpty ? fallbackDestination : file.parent.path);
+    final effectiveTrackers = _withFallbackTrackers(metadata.trackers);
     final magnetLink = createMagnetLink(
       infoHash,
       torrentName,
-      metadata.trackers,
+      effectiveTrackers,
     );
 
     final torrent = TorrentModel(
@@ -1479,8 +1507,9 @@ class TorrentService {
     String name,
     List<String> trackers,
   ) {
+    final effectiveTrackers = _withFallbackTrackers(trackers);
     final encodedName = Uri.encodeComponent(name);
-    final trackersQuery = trackers
+    final trackersQuery = effectiveTrackers
         .where((t) => t.isNotEmpty)
         .map((t) => 'tr=${Uri.encodeComponent(t)}')
         .join('&');
@@ -1608,9 +1637,9 @@ class TorrentService {
         .map((m) => m.group(1))
         .whereType<String>()
         .toList();
-    final trackerPart = trackers.isEmpty
+    final trackerPart = _withFallbackTrackers(trackers).isEmpty
         ? ''
-        : trackers.map((t) => '&tr=$t').join();
+      : _withFallbackTrackers(trackers).map((t) => '&tr=$t').join();
 
     final peers = RegExp(r'[?&]x\.pe=([^&]+)', caseSensitive: false)
         .allMatches(source)

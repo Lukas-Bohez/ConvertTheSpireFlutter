@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show MissingPluginException, DeviceOrientation, SystemChrome, SystemUiMode;
+import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
@@ -197,6 +198,77 @@ String resolveArtist(
   if (fallback != null && fallback.isNotEmpty) return fallback;
 
   return _artistFromFilename(filePath);
+}
+
+Future<String?> fetchArtistFromMusicBrainz(String title) async {
+  try {
+    final cleanedTitle = title.replaceAll(RegExp(r'\.\w{2,5}$'), '').trim();
+    if (cleanedTitle.isEmpty) return null;
+
+    final response = await http.get(
+      Uri.parse(
+        'https://musicbrainz.org/ws/2/recording/?query=${Uri.encodeComponent(cleanedTitle)}&limit=1&fmt=json',
+      ),
+      headers: {
+        'User-Agent':
+            'BitPlayer/1.0 (https://github.com/Lukas-Bohez/ConvertTheSpireFlutter)',
+      },
+    ).timeout(const Duration(seconds: 8));
+
+    if (response.statusCode != 200) return null;
+
+    final data = jsonDecode(response.body);
+    final recordings = data is Map<String, dynamic> ? data['recordings'] : null;
+    if (recordings is! List || recordings.isEmpty) return null;
+
+    final credits = recordings.first is Map<String, dynamic>
+        ? recordings.first['artist-credit']
+        : null;
+    if (credits is! List || credits.isEmpty) return null;
+
+    final parts = <String>[];
+    for (final credit in credits) {
+      if (credit is Map<String, dynamic>) {
+        final name = credit['name']?.toString().trim();
+        final artistName = credit['artist'] is Map<String, dynamic>
+            ? (credit['artist'] as Map<String, dynamic>)['name']?.toString().trim()
+            : null;
+        final candidate = (name != null && name.isNotEmpty)
+            ? name
+            : (artistName != null && artistName.isNotEmpty ? artistName : null);
+        if (candidate != null && candidate.isNotEmpty) {
+          parts.add(candidate);
+        }
+      }
+    }
+
+    final resolved = parts.join(', ').trim();
+    return resolved.isEmpty ? null : resolved;
+  } catch (e) {
+    debugPrint('MusicBrainz lookup failed: $e');
+    return null;
+  }
+}
+
+Future<String> resolveArtistAsync(dynamic metadata, String filePath) async {
+  final syncArtist = resolveArtist(metadata, filePath);
+  if (syncArtist.isNotEmpty) return syncArtist;
+
+  final queryTitle = (() {
+    try {
+      final title = metadata?.title?.toString().trim();
+      if (title != null && title.isNotEmpty) return title;
+    } catch (_) {}
+    return p.basenameWithoutExtension(filePath)
+        .replaceAll(RegExp(r'\s*\[[a-zA-Z0-9_\-]{11}\]'), '')
+        .trim();
+  })();
+
+  final musicBrainzArtist = await fetchArtistFromMusicBrainz(queryTitle);
+  if (musicBrainzArtist != null && musicBrainzArtist.isNotEmpty) {
+    return musicBrainzArtist;
+  }
+  return '';
 }
 
 class PositionUiState {
@@ -2755,15 +2827,82 @@ class PlayerState with ChangeNotifier {
     final targets = library
         .where((item) =>
             item.type == MediaType.audio &&
-        item.resolvedArtist.isEmpty)
+            item.resolvedArtist.isEmpty)
         .toList();
     var processed = 0;
     var changedCount = 0;
     for (final item in targets) {
       if (_disposed) break;
-      final changed = await fixSongMetadata(item);
-      if (changed) {
+      final resolvedPath = await _resolveLocalPath(item.path);
+      if (resolvedPath.trim().isEmpty || resolvedPath.startsWith('content://')) {
+        processed++;
+        if (onProgress != null) onProgress(processed, targets.length);
+        continue;
+      }
+      final file = File(resolvedPath);
+      if (!await file.exists()) {
+        processed++;
+        if (onProgress != null) onProgress(processed, targets.length);
+        continue;
+      }
+
+      try {
+        await MetadataGod.initialize();
+        final meta = await MetadataGod.readMetadata(file: resolvedPath);
+        final hasArtist = (meta.artist?.trim().isNotEmpty == true) ||
+            (meta.albumArtist?.trim().isNotEmpty == true);
+        if (hasArtist) {
+          processed++;
+          if (onProgress != null) onProgress(processed, targets.length);
+          continue;
+        }
+
+        final resolvedArtist = await resolveArtistAsync(meta, item.path);
+        if (resolvedArtist.isEmpty) {
+          processed++;
+          if (onProgress != null) onProgress(processed, targets.length);
+          continue;
+        }
+
+        final title = meta.title?.trim().isNotEmpty == true
+            ? meta.title!.trim()
+            : (item.title?.trim().isNotEmpty == true
+                ? item.title!.trim()
+                : _titleFromFilename(resolvedPath).isNotEmpty
+                    ? _titleFromFilename(resolvedPath)
+                    : _displayNameForMetadata(item.path));
+
+        await MetadataGod.writeMetadata(
+          file: resolvedPath,
+          metadata: Metadata(
+            title: title,
+            artist: resolvedArtist,
+            albumArtist: resolvedArtist,
+            album: meta.album,
+            genre: meta.genre,
+            picture: meta.picture,
+            trackNumber: meta.trackNumber,
+            trackTotal: meta.trackTotal,
+            discNumber: meta.discNumber,
+            discTotal: meta.discTotal,
+            year: meta.year,
+            durationMs: meta.durationMs,
+            fileSize: meta.fileSize,
+          ),
+        );
+
+        final index = library.indexWhere((entry) => entry.path == item.path);
+        if (index >= 0) {
+          final updatedItem = library[index].copyWith(
+            title: title,
+            artist: resolvedArtist,
+            genre: meta.genre ?? library[index].genre,
+          );
+          _replaceLibraryItem(updatedItem);
+        }
         changedCount++;
+      } catch (e) {
+        debugPrint('bulkFixArtist failed for ${item.path}: $e');
       }
       processed++;
       if (onProgress != null) onProgress(processed, targets.length);
