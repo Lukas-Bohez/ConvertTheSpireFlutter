@@ -331,7 +331,7 @@ class MainActivity : AudioServiceActivity() {
                         try {
                             val normalized = File(path).canonicalPath
                             val tree = DocumentsContract.buildTreeDocumentUri(
-                                StorageDocumentsProvider.AUTHORITY,
+                                "$packageName.documents",
                                 normalized
                             )
                             result.success(tree.toString())

@@ -15,8 +15,6 @@ import java.io.FileNotFoundException
 
 class StorageDocumentsProvider : DocumentsProvider() {
     companion object {
-        const val AUTHORITY = "com.torrentspire.ai.documents"
-
         private val ROOT_PROJECTION = arrayOf(
             DocumentsContract.Root.COLUMN_ROOT_ID,
             DocumentsContract.Root.COLUMN_DOCUMENT_ID,

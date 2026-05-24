@@ -179,19 +179,30 @@ String _titleFromFilename(String path) {
   return parts.sublist(1).join(' - ').trim();
 }
 
+final Map<String, String> _artistCache = <String, String>{};
+
 String resolveArtist(
   dynamic metadata,
   String filePath, {
   String? fallbackArtist,
 }) {
+  final cached = _artistCache[filePath]?.trim();
+  if (cached != null && cached.isNotEmpty) return cached;
+
   try {
     final artist = metadata?.artist?.toString().trim();
-    if (artist != null && artist.isNotEmpty) return artist;
+    if (artist != null && artist.isNotEmpty) {
+      _artistCache[filePath] = artist;
+      return artist;
+    }
   } catch (_) {}
 
   try {
     final albumArtist = metadata?.albumArtist?.toString().trim();
-    if (albumArtist != null && albumArtist.isNotEmpty) return albumArtist;
+    if (albumArtist != null && albumArtist.isNotEmpty) {
+      _artistCache[filePath] = albumArtist;
+      return albumArtist;
+    }
   } catch (_) {}
 
   final fallback = fallbackArtist?.trim();
@@ -356,6 +367,8 @@ class PlayerState with ChangeNotifier {
   // TECH-DEBT: add first-class sleep timer state/countdown exposure for all
   // player surfaces (main player + mini overlay) in a dedicated follow-up.
   final SharedPreferences prefs;
+  bool _artistEnrichmentRunning = false;
+  final Set<String> _artistLookupInFlight = <String>{};
 
   List<MediaItem> library = [];
 
@@ -1204,6 +1217,107 @@ class PlayerState with ChangeNotifier {
     // Ensure the current playing item has a thumbnail request pending.
     requestThumbnailForIndex(currentIndex);
     _startDirectoryWatcher(items);
+    unawaited(_enrichArtistsInBackground(version));
+  }
+
+  Future<void> _enrichArtistsInBackground(int version) async {
+    if (_artistEnrichmentRunning) return;
+    _artistEnrichmentRunning = true;
+    try {
+      await MetadataGod.initialize();
+      final upperBound = _folderItemCount.clamp(0, library.length);
+      for (var i = 0; i < upperBound; i++) {
+        if (_disposed || _loadVersion != version) return;
+        final item = library[i];
+        if (item.type != MediaType.audio) continue;
+        if ((item.artist?.trim().isNotEmpty ?? false)) {
+          _artistCache[item.path] = item.artist!.trim();
+          continue;
+        }
+        if (_artistCache.containsKey(item.path)) {
+          final cached = _artistCache[item.path]!.trim();
+          if (cached.isEmpty) continue;
+          library[i] = library[i].copyWith(artist: cached);
+          _replaceLibraryItem(library[i]);
+          continue;
+        }
+        if (_artistLookupInFlight.contains(item.path)) continue;
+
+        _artistLookupInFlight.add(item.path);
+        try {
+          final resolvedPath = await _resolveLocalPath(item.path);
+          if (resolvedPath.trim().isEmpty || resolvedPath.startsWith('content://')) {
+            continue;
+          }
+          final file = File(resolvedPath);
+          if (!await file.exists()) continue;
+
+          final metadata = await MetadataGod.readMetadata(file: resolvedPath);
+          final localArtist = resolveArtist(metadata, resolvedPath);
+          if (localArtist.isNotEmpty) {
+            _artistCache[item.path] = localArtist;
+            library[i] = library[i].copyWith(artist: localArtist);
+            _replaceLibraryItem(library[i]);
+            continue;
+          }
+
+          final titleForLookup = (metadata.title?.trim().isNotEmpty == true)
+              ? metadata.title!.trim()
+              : (item.title?.trim().isNotEmpty == true
+                  ? item.title!.trim()
+                  : _displayNameForMetadata(item.path));
+          final mbArtist = await fetchArtistFromMusicBrainz(titleForLookup);
+          if (mbArtist == null || mbArtist.trim().isEmpty) continue;
+
+          final resolvedArtist = mbArtist.trim();
+          _artistCache[item.path] = resolvedArtist;
+          await _writeArtistTagIfPossible(
+            resolvedPath: resolvedPath,
+            metadata: metadata,
+            artist: resolvedArtist,
+          );
+          library[i] = library[i].copyWith(artist: resolvedArtist);
+          _replaceLibraryItem(library[i]);
+          await Future.delayed(const Duration(milliseconds: 200));
+        } catch (e) {
+          debugPrint('artist enrichment failed for ${item.path}: $e');
+        } finally {
+          _artistLookupInFlight.remove(item.path);
+        }
+      }
+    } finally {
+      _artistEnrichmentRunning = false;
+    }
+  }
+
+  Future<void> _writeArtistTagIfPossible({
+    required String resolvedPath,
+    required Metadata metadata,
+    required String artist,
+  }) async {
+    if (!_supportsMetadataRewrite(resolvedPath)) return;
+    try {
+      await MetadataGod.writeMetadata(
+        file: resolvedPath,
+        metadata: Metadata(
+          title: metadata.title,
+          artist: artist,
+          albumArtist: artist,
+          album: metadata.album,
+          genre: metadata.genre,
+          picture: metadata.picture,
+          trackNumber: metadata.trackNumber,
+          trackTotal: metadata.trackTotal,
+          discNumber: metadata.discNumber,
+          discTotal: metadata.discTotal,
+          year: metadata.year,
+          durationMs: metadata.durationMs,
+          fileSize: metadata.fileSize,
+        ),
+      );
+    } catch (e) {
+      debugPrint('writeArtistTag failed for $resolvedPath: $e');
+    }
   }
 
   /// BUG 2 FIX: Single sequential thumbnail loop with throttled notify.
@@ -2811,6 +2925,7 @@ class PlayerState with ChangeNotifier {
 
     final index = library.indexWhere((entry) => entry.path == item.path);
     if (index >= 0) {
+      _artistCache[item.path] = resolvedArtist;
       final updatedItem = library[index].copyWith(
         title: title,
         artist: resolvedArtist,
@@ -2893,6 +3008,7 @@ class PlayerState with ChangeNotifier {
 
         final index = library.indexWhere((entry) => entry.path == item.path);
         if (index >= 0) {
+          _artistCache[item.path] = resolvedArtist;
           final updatedItem = library[index].copyWith(
             title: title,
             artist: resolvedArtist,

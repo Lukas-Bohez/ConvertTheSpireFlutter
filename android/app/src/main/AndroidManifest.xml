@@ -124,7 +124,7 @@
 
         <provider
             android:name=".StorageDocumentsProvider"
-            android:authorities="com.torrentspire.ai.documents"
+            android:authorities="${applicationId}.documents"
             android:exported="true"
             android:grantUriPermissions="true"
             android:permission="android.permission.MANAGE_DOCUMENTS">
