@@ -671,8 +671,8 @@ class YtDlpService {
     args.addAll([
       '--embed-metadata',
       '--embed-thumbnail', // embed cover art
-      '--parse-metadata', '%(artist|uploader|channel|creator)s:%(meta_artist)s',
-      '--parse-metadata', '%(artist|uploader|channel|creator)s:%(meta_album_artist)s',
+      '--parse-metadata', '%(uploader|)s:%(meta_artist)s',
+      '--parse-metadata', '%(uploader|)s:%(meta_album_artist)s',
       '--parse-metadata', '%(title)s:%(meta_title)s',
       '--parse-metadata', '%(album|playlist_title|)s:%(meta_album)s',
       '--add-metadata', // include title/artist/date tags
