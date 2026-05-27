@@ -264,6 +264,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       _webViewController!
           .loadUrl(urlRequest: URLRequest(url: WebUri(normalized)));
     } else {
+      debugPrint('[BROWSER] controller not ready, queueing URL: $normalized');
       _pendingUrl = normalized;
     }
   }
@@ -420,7 +421,13 @@ class _BrowserScreenState extends State<BrowserScreen>
     final urlStr = url?.toString() ?? '';
     // Ignore about:blank completions.
     if (urlStr == 'about:blank') return;
-    _addressController.text = urlStr;
+    if (mounted) {
+      setState(() {
+        _addressController.text = urlStr;
+      });
+    } else {
+      _addressController.text = urlStr;
+    }
 
     final title = await controller.getTitle() ?? '';
     _canGoBack = await controller.canGoBack();

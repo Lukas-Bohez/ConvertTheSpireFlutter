@@ -140,20 +140,13 @@ class _BrowserShellState extends State<BrowserShell> {
     if (type == UrlType.magnet ||
         type == UrlType.torrentFile ||
         type == UrlType.ipfs ||
-        _looksLikeUrl(trimmed) ||
-        trimmed.isNotEmpty) {
+        _looksLikeUrl(trimmed)) {
       widget.onOpenUrl?.call(trimmed);
       return;
     }
 
-    // Partial route/name match fallback
-    for (final entry in QuickLinksService.routeToIndex.entries) {
-      final name = entry.key.replaceAll('.tab', '');
-      if (name.startsWith(lower) || name.contains(lower)) {
-        widget.onNavigate(entry.key);
-        return;
-      }
-    }
+    widget.onNavigate('multisearch.tab');
+    return;
   }
 
   bool _looksLikeUrl(String text) {
@@ -275,11 +268,6 @@ class _BrowserShellState extends State<BrowserShell> {
   }
 
   Widget _buildNavBar(ColorScheme cs, bool isDesktop) {
-    final browserTabIndex = QuickLinksService.routeToIndex['browser.tab'];
-    if (browserTabIndex != null && widget.currentIndex == browserTabIndex) {
-      return const SizedBox.shrink();
-    }
-
     return Container(
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
@@ -965,7 +953,12 @@ class _BrowserShellState extends State<BrowserShell> {
       onSelected: (suggestion) {
         setState(() => _isEditing = false);
         widget.onUrlEditingEnd?.call();
-        _submitUrl(suggestion.route);
+        if (suggestion.route == 'search.tab' ||
+            suggestion.route == 'multisearch.tab') {
+          _submitUrl(_urlEditController.text);
+        } else {
+          _submitUrl(suggestion.route);
+        }
       },
       fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
         return Container(
