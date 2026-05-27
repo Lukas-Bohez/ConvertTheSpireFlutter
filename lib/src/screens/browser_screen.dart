@@ -1325,6 +1325,13 @@ class _BrowserScreenState extends State<BrowserScreen>
                   ),
                   filled: true,
                   fillColor: cs.surfaceContainerHighest,
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.arrow_forward, size: 18),
+                    tooltip: 'Find next',
+                    onPressed: _findNext,
+                  ),
+                  suffixIconConstraints:
+                      const BoxConstraints(minHeight: 28, minWidth: 28),
                 ),
                 onChanged: _performFind,
                 onSubmitted: (_) => _findNext(),
