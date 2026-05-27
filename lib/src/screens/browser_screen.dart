@@ -34,7 +34,13 @@ class BrowserScreen extends StatefulWidget {
   final String? initialUrl;
   final void Function(SearchResult result) onAddToQueue;
 
-  const BrowserScreen({super.key, this.initialUrl, required this.onAddToQueue});
+  BrowserScreen({
+    super.key,
+    this.initialUrl,
+    void Function(SearchResult result)? onAddToQueue,
+  }) : onAddToQueue = onAddToQueue ?? _noopOnAddToQueue;
+
+  static void _noopOnAddToQueue(SearchResult result) {}
 
   static final GlobalKey<_BrowserScreenState> browserKey = GlobalKey();
 

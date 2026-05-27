@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+import 'package:convert_the_spire_reborn/src/screens/browser_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/about_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/ai_chat_screen.dart';
-import 'package:convert_the_spire_reborn/src/vault/screens/browser_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/guide_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/torrents_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/torrentspire_ai_screen.dart';
@@ -26,7 +26,8 @@ class _VaultHubScreenState extends State<VaultHubScreen>
 
   void _openSettingsTab() {
     final entries = _buildEntries();
-    final settingsIndex = entries.indexWhere((entry) => entry.tab.label == 'Settings');
+    final settingsIndex =
+        entries.indexWhere((entry) => entry.tab.label == 'Settings');
     if (settingsIndex < 0) return;
     setState(() => _index = settingsIndex);
   }
@@ -51,9 +52,9 @@ class _VaultHubScreenState extends State<VaultHubScreen>
           tab: _VaultTab(label: 'AI Chat', icon: Icons.chat_bubble_outline),
           page: AiChatScreen(key: ValueKey('vault-hub-ai-chat')),
         ),
-      const _VaultEntry(
+      _VaultEntry(
         tab: _VaultTab(label: 'Browser', icon: Icons.language),
-        page: BrowserScreen(key: ValueKey('vault-hub-browser')),
+        page: BrowserScreen(key: const ValueKey('vault-hub-browser')),
       ),
       const _VaultEntry(
         tab: _VaultTab(label: 'Guide', icon: Icons.menu_book_outlined),

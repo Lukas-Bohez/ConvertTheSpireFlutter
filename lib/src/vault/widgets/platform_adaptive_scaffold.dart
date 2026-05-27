@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/desktop_window.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/about_screen.dart';
-import 'package:convert_the_spire_reborn/src/vault/screens/browser_screen.dart';
+import 'package:convert_the_spire_reborn/src/screens/browser_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/guide_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/torrents_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
@@ -53,9 +53,8 @@ class _AppShellState extends State<AppShell> {
       valueListenable: SettingsService.persistentSidebarListenable,
       builder: (context, persistentSidebar, _) {
         if (persistentSidebar) {
-          final sidebarWidth = MediaQuery.of(context).size.width > 1400
-              ? 256.0
-              : 220.0;
+          final sidebarWidth =
+              MediaQuery.of(context).size.width > 1400 ? 256.0 : 220.0;
           return Scaffold(
             body: Row(
               children: [
@@ -118,8 +117,8 @@ class _AppShellState extends State<AppShell> {
     final isDesktop = MediaQuery.of(context).size.width >= 800;
     final location = GoRouterState.of(context).uri.path;
     final isMobile = !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS);
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
 
     final navItems = isMobile
         ? [
@@ -191,11 +190,11 @@ class _AppShellState extends State<AppShell> {
       return _buildDesktop(context, navItems, location);
     }
 
-    final mobileScreens = const [
-      TorrentsScreen(),
-      GuideScreen(),
+    final mobileScreens = [
+      const TorrentsScreen(),
+      const GuideScreen(),
       BrowserScreen(),
-      AboutScreen(),
+      const AboutScreen(),
     ];
 
     return Scaffold(
@@ -288,7 +287,8 @@ class _Sidebar extends StatelessWidget {
                 const SizedBox(width: 10),
                 Text(
                   getAppTitle(),
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 15),
                 ),
               ],
             ),
@@ -322,7 +322,8 @@ class _Sidebar extends StatelessWidget {
           ListTile(
             dense: true,
             leading: const Icon(Icons.fullscreen),
-            title: const Text('Toggle Fullscreen', style: TextStyle(fontSize: 12)),
+            title:
+                const Text('Toggle Fullscreen', style: TextStyle(fontSize: 12)),
             onTap: () async {
               await toggleDesktopFullScreen();
             },
@@ -391,8 +392,8 @@ class _SidebarNavTileState extends State<_SidebarNavTile> {
               color: widget.isActive
                   ? cs.primary.withValues(alpha: 0.22)
                   : (_hovered
-                        ? cs.outlineVariant.withValues(alpha: 0.28)
-                        : Colors.transparent),
+                      ? cs.outlineVariant.withValues(alpha: 0.28)
+                      : Colors.transparent),
             ),
           ),
           child: ListTile(
