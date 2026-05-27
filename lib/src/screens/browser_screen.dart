@@ -155,8 +155,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   }
 
-
-
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -711,7 +709,8 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   Future<void> _blurWebViewInput() async {
     try {
-      await _webViewController?.evaluateJavascript(source: "if (document.activeElement) document.activeElement.blur();");
+      await _webViewController?.evaluateJavascript(
+          source: "if (document.activeElement) document.activeElement.blur();");
     } catch (_) {}
   }
 
@@ -761,7 +760,8 @@ class _BrowserScreenState extends State<BrowserScreen>
               Navigator.of(context).pop();
               _resumeCursor();
             },
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            child:
+                const Text('Cancel', style: TextStyle(color: Colors.white70)),
           ),
         ],
       ),
@@ -1045,142 +1045,142 @@ class _BrowserScreenState extends State<BrowserScreen>
       child: Scaffold(
         resizeToAvoidBottomInset: false,
         body: SafeArea(
-        top: false,
-        bottom: false,
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                // -- Top toolbar --
-                BrowserToolbar(
-                  addressController: _addressController,
-                  isLoading: _isLoading,
-                  isSecure: _isSecure,
-                  isIncognito: isIncognito,
-                  canGoBack: _canGoBack,
-                  canGoForward: _canGoForward,
-                  hasVideos: _videoDetector.hasVideos,
-                  castBadgeAnimation: _castBadgeController,
-                  desktopMode: _desktopMode,
-                  adBlockEnabled: _adBlock.adBlockEnabled,
-                  pageTitle: _pageTitle,
-                  onBack: _goBack,
-                  onForward: _goForward,
-                  onReload: _reload,
-                  onSubmitted: _navigateTo,
-                  onCastTap: _openCastSheet,
-                  onMenuAction: _handleMenuAction,
-                  onUrlBarTap: _showTabSwitcher,
-                  onReleaseWebViewFocus: () {
-                    FocusScope.of(context).unfocus();
-                  },
-                  onTabs: _showTabSwitcher,
-                  tabCount: _tabManager.tabCount,
+          top: false,
+          bottom: false,
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  // -- Top toolbar --
+                  BrowserToolbar(
+                    addressController: _addressController,
+                    isLoading: _isLoading,
+                    isSecure: _isSecure,
+                    isIncognito: isIncognito,
+                    canGoBack: _canGoBack,
+                    canGoForward: _canGoForward,
+                    hasVideos: _videoDetector.hasVideos,
+                    castBadgeAnimation: _castBadgeController,
+                    desktopMode: _desktopMode,
+                    adBlockEnabled: _adBlock.adBlockEnabled,
+                    pageTitle: _pageTitle,
+                    onBack: _goBack,
+                    onForward: _goForward,
+                    onReload: _reload,
+                    onSubmitted: _navigateTo,
+                    onCastTap: _openCastSheet,
+                    onMenuAction: _handleMenuAction,
+                    onUrlBarTap: _showTabSwitcher,
+                    onReleaseWebViewFocus: () {
+                      FocusScope.of(context).unfocus();
+                    },
+                    onTabs: _showTabSwitcher,
+                    tabCount: _tabManager.tabCount,
                     onDownload: _addCurrentToQueue,
                     downloadEnabled: !_showNewTabPage &&
-                      _addressController.text.trim().isNotEmpty,
-                  isKnownDifficultSite: DownloadService.isDifficultSite(
-                      _addressController.text.trim()),
-                  isFavourited: _isFavourited,
-                  onFavouriteTap: _showNewTabPage ? null : _toggleFavourite,
-                ),
-
-                // -- Progress bar --
-                if (_isLoading)
-                  LinearProgressIndicator(
-                    value: _progress > 0 ? _progress : null,
-                    minHeight: 2,
+                        _addressController.text.trim().isNotEmpty,
+                    isKnownDifficultSite: DownloadService.isDifficultSite(
+                        _addressController.text.trim()),
+                    isFavourited: _isFavourited,
+                    onFavouriteTap: _showNewTabPage ? null : _toggleFavourite,
                   ),
 
-                // -- WebView + NewTabPage (Stack: WebView persists) --
-                Expanded(
-                  child: Stack(
-                    children: [
-                      // WebView always in tree (texture-based on
-                      // Windows - no HWND overlay issues). NewTabPage
-                      // is placed on top when active.
-                      if (_webViewSupported)
-                        Positioned.fill(
-                          child: _buildWebView(),
-                        )
-                      else
-                        _buildPlatformUnavailable(),
+                  // -- Progress bar --
+                  if (_isLoading)
+                    LinearProgressIndicator(
+                      value: _progress > 0 ? _progress : null,
+                      minHeight: 2,
+                    ),
 
-                      // NewTabPage overlay.
-                      if (_showNewTabPage)
-                        Positioned.fill(
-                          child: NewTabPage(
-                            repo: _repo,
-                            onNavigate: _onNewTabPageNavigate,
+                  // -- WebView + NewTabPage (Stack: WebView persists) --
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        // WebView always in tree (texture-based on
+                        // Windows - no HWND overlay issues). NewTabPage
+                        // is placed on top when active.
+                        if (_webViewSupported)
+                          Positioned.fill(
+                            child: _buildWebView(),
+                          )
+                        else
+                          _buildPlatformUnavailable(),
+
+                        // NewTabPage overlay.
+                        if (_showNewTabPage)
+                          Positioned.fill(
+                            child: NewTabPage(
+                              repo: _repo,
+                              onNavigate: _onNewTabPageNavigate,
+                            ),
                           ),
-                        ),
 
-                      // Find-in-page bar.
-                      if (_showFindBar)
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: _buildFindBar(),
-                        ),
-                    ],
+                        // Find-in-page bar.
+                        if (_showFindBar)
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            child: _buildFindBar(),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  // -- Bottom bar --
+                  BrowserBottomBar(
+                    tabCount: _tabManager.tabCount,
+                    isFavourited: _isFavourited,
+                    onHome: _goHome,
+                    onTabs: _showTabSwitcher,
+                    onFavourite: _toggleFavourite,
+                    bottomPadding: viewPadding.bottom,
+                  ),
+                ],
+              ),
+
+              // -- Cast mini bar --
+              if (_castService.activeDevice != null)
+                Positioned(
+                  bottom: viewPadding.bottom + 56,
+                  // overflow-fix: respect horizontal safe insets for notched/curved displays.
+                  left: viewPadding.left,
+                  right: viewPadding.right,
+                  child: CastMiniBar(
+                    deviceName: _castService.activeDevice!.name,
+                    isPlaying:
+                        _castService.playbackState == CastPlaybackState.playing,
+                    onPlayPause: () {
+                      if (_castService.playbackState ==
+                          CastPlaybackState.playing) {
+                        _castService.pause();
+                      } else {
+                        _castService.resume();
+                      }
+                    },
+                    onStop: () => _castService.stop(),
                   ),
                 ),
 
-                // -- Bottom bar --
-                BrowserBottomBar(
-                  tabCount: _tabManager.tabCount,
-                  isFavourited: _isFavourited,
-                  onHome: _goHome,
-                  onTabs: _showTabSwitcher,
-                  onFavourite: _toggleFavourite,
-                  bottomPadding: viewPadding.bottom,
+              // -- Extract & Download FAB for difficult sites --
+              if (!_showNewTabPage &&
+                  DownloadService.isDifficultSite(_addressController.text))
+                Positioned(
+                  bottom: viewPadding.bottom + 72,
+                  // overflow-fix: keep floating action safely inside right display inset.
+                  right: viewPadding.right + 16,
+                  child: FloatingActionButton.extended(
+                    heroTag: 'extract_download',
+                    onPressed: _addCurrentToQueue,
+                    icon: const Icon(Icons.download_rounded),
+                    label: const Text('Extract & Download'),
+                  ),
                 ),
-              ],
-            ),
-
-            // -- Cast mini bar --
-            if (_castService.activeDevice != null)
-              Positioned(
-                bottom: viewPadding.bottom + 56,
-                // overflow-fix: respect horizontal safe insets for notched/curved displays.
-                left: viewPadding.left,
-                right: viewPadding.right,
-                child: CastMiniBar(
-                  deviceName: _castService.activeDevice!.name,
-                  isPlaying:
-                      _castService.playbackState == CastPlaybackState.playing,
-                  onPlayPause: () {
-                    if (_castService.playbackState ==
-                        CastPlaybackState.playing) {
-                      _castService.pause();
-                    } else {
-                      _castService.resume();
-                    }
-                  },
-                  onStop: () => _castService.stop(),
-                ),
-              ),
-
-            // -- Extract & Download FAB for difficult sites --
-            if (!_showNewTabPage &&
-                DownloadService.isDifficultSite(_addressController.text))
-              Positioned(
-                bottom: viewPadding.bottom + 72,
-                // overflow-fix: keep floating action safely inside right display inset.
-                right: viewPadding.right + 16,
-                child: FloatingActionButton.extended(
-                  heroTag: 'extract_download',
-                  onPressed: _addCurrentToQueue,
-                  icon: const Icon(Icons.download_rounded),
-                  label: const Text('Extract & Download'),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   Widget _buildWebView() {
@@ -1189,48 +1189,48 @@ class _BrowserScreenState extends State<BrowserScreen>
       onTap: (pos) async => await _injectTap(pos),
       onScroll: (dy, pos) async => await _injectScroll(dy, pos),
       child: InAppWebView(
-      key: const ValueKey('browser_webview'),
-      initialSettings: _buildSettings(),
-      findInteractionController: _findInteractionController,
-      onWebViewCreated: _onWebViewCreated,
-      onLoadStart: _onLoadStart,
-      onLoadStop: _onLoadStop,
-      onProgressChanged: _onProgressChanged,
-      shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
-      shouldInterceptRequest: _shouldInterceptRequest,
-      onConsoleMessage: _onConsoleMessage,
-      onReceivedError: _onReceivedError,
-      onScrollChanged: _onScrollChanged,
-      onUpdateVisitedHistory: (controller, url, androidIsReload) {
-        final urlStr = url?.toString() ?? '';
-        if (urlStr.isEmpty || urlStr == 'about:blank') return;
-        setState(() {
-          _addressController.text = urlStr;
-          _isSecure = urlStr.startsWith('https://');
-        });
-        final activeTab = _tabManager.activeTab;
-        if (activeTab != null) {
-          _tabManager.updateTab(activeTab.id, url: urlStr);
-        }
-        controller.canGoBack().then((v) {
-          if (mounted) setState(() => _canGoBack = v);
-        });
-        controller.canGoForward().then((v) {
-          if (mounted) setState(() => _canGoForward = v);
-        });
-        _checkFavouriteState();
-      },
-      onDownloadStartRequest: (controller, request) {
-        launchUrl(request.url, mode: LaunchMode.externalApplication);
-      },
-      onCreateWindow: (controller, createWindowAction) async {
-        // Open new-window requests in the same WebView.
-        final url = createWindowAction.request.url;
-        if (url != null) {
-          _navigateTo(url.toString());
-        }
-        return false;
-      },
+        key: const ValueKey('browser_webview'),
+        initialSettings: _buildSettings(),
+        findInteractionController: _findInteractionController,
+        onWebViewCreated: _onWebViewCreated,
+        onLoadStart: _onLoadStart,
+        onLoadStop: _onLoadStop,
+        onProgressChanged: _onProgressChanged,
+        shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
+        shouldInterceptRequest: _shouldInterceptRequest,
+        onConsoleMessage: _onConsoleMessage,
+        onReceivedError: _onReceivedError,
+        onScrollChanged: _onScrollChanged,
+        onUpdateVisitedHistory: (controller, url, androidIsReload) {
+          final urlStr = url?.toString() ?? '';
+          if (urlStr.isEmpty || urlStr == 'about:blank') return;
+          setState(() {
+            _addressController.text = urlStr;
+            _isSecure = urlStr.startsWith('https://');
+          });
+          final activeTab = _tabManager.activeTab;
+          if (activeTab != null) {
+            _tabManager.updateTab(activeTab.id, url: urlStr);
+          }
+          controller.canGoBack().then((v) {
+            if (mounted) setState(() => _canGoBack = v);
+          });
+          controller.canGoForward().then((v) {
+            if (mounted) setState(() => _canGoForward = v);
+          });
+          _checkFavouriteState();
+        },
+        onDownloadStartRequest: (controller, request) {
+          launchUrl(request.url, mode: LaunchMode.externalApplication);
+        },
+        onCreateWindow: (controller, createWindowAction) async {
+          // Open new-window requests in the same WebView.
+          final url = createWindowAction.request.url;
+          if (url != null) {
+            _navigateTo(url.toString());
+          }
+          return false;
+        },
       ),
     );
   }
@@ -1512,7 +1512,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     });
   }
 
-
   void _handleBackPressed() {
     // In cursor mode on web pages, back should navigate browser history,
     // not exit the screen. The cursor is always active on web pages.
@@ -1634,7 +1633,8 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: isActive ? cs.primary : cs.outlineVariant,
+                                color:
+                                    isActive ? cs.primary : cs.outlineVariant,
                                 width: isActive ? 2 : 1,
                               ),
                               color: tab.isIncognito
@@ -1653,7 +1653,8 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                                       child: AspectRatio(
                                         aspectRatio: 16 / 9,
                                         child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                           child: () {
                                             final bytes = widget.tabManager
                                                 .getScreenshotBytes(tab.id);
@@ -1667,7 +1668,8 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                                                     tab.screenshotPath),
                                                 cacheWidth: 640,
                                                 cacheHeight: 360,
-                                                filterQuality: FilterQuality.low,
+                                                filterQuality:
+                                                    FilterQuality.low,
                                                 fit: BoxFit.cover,
                                                 width: double.infinity,
                                               );
@@ -1675,10 +1677,12 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                                             if (tab.screenshotPath != null) {
                                               return Image.file(
                                                 File(tab.screenshotPath!),
-                                                key: ValueKey(tab.screenshotPath),
+                                                key: ValueKey(
+                                                    tab.screenshotPath),
                                                 cacheWidth: 640,
                                                 cacheHeight: 360,
-                                                filterQuality: FilterQuality.low,
+                                                filterQuality:
+                                                    FilterQuality.low,
                                                 fit: BoxFit.cover,
                                                 width: double.infinity,
                                               );
