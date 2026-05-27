@@ -275,6 +275,11 @@ class _BrowserShellState extends State<BrowserShell> {
   }
 
   Widget _buildNavBar(ColorScheme cs, bool isDesktop) {
+    final browserTabIndex = QuickLinksService.routeToIndex['browser.tab'];
+    if (browserTabIndex != null && widget.currentIndex == browserTabIndex) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,

@@ -98,79 +98,61 @@ class BrowserToolbar extends StatelessWidget {
           ),
           child: Row(
             children: [
-            // Back
-            IconButton(
-              icon: const Icon(Icons.arrow_back, size: 20),
-              onPressed: canGoBack ? onBack : null,
-            ),
-            // Forward
-            IconButton(
-              icon: const Icon(Icons.arrow_forward, size: 20),
-              onPressed: canGoForward ? onForward : null,
-            ),
-            // URL bar
-            Expanded(
-              child: Container(
-                height: wide ? 44 : (compact ? 34 : 38),
-                decoration: BoxDecoration(
-                  color: isIncognito
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : cs.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 10),
-                    // SSL indicator
-                    Icon(
-                      isSecure ? Icons.lock : Icons.lock_open,
-                      size: 14,
-                      color: isSecure
-                          ? Colors.green
-                          : (isIncognito ? Colors.white54 : cs.outline),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Focus(
-                        onFocusChange: (focused) {
-                          if (focused) {
-                            onReleaseWebViewFocus?.call();
-                          }
-                        },
-                        child: TextField(
-                          controller: addressController,
-                          focusNode: addressFocusNode,
-                          keyboardType: TextInputType.url,
-                          textInputAction: TextInputAction.go,
-                          maxLines: 1,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isIncognito ? Colors.white : null,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          onSubmitted: onSubmitted,
-                          onTap: () {
-                            onReleaseWebViewFocus?.call();
-                            // Select all text when the URL bar is tapped (standard browser UX)
-                            addressController.selection = TextSelection(
-                              baseOffset: 0,
-                              extentOffset: addressController.text.length,
-                            );
+              // Back
+              IconButton(
+                icon: const Icon(Icons.arrow_back, size: 20),
+                onPressed: canGoBack ? onBack : null,
+              ),
+              // Forward
+              IconButton(
+                icon: const Icon(Icons.arrow_forward, size: 20),
+                onPressed: canGoForward ? onForward : null,
+              ),
+              // URL bar
+              Expanded(
+                child: Container(
+                  height: wide ? 44 : (compact ? 34 : 38),
+                  decoration: BoxDecoration(
+                    color: isIncognito
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 10),
+                      Icon(
+                        isSecure ? Icons.lock : Icons.lock_open,
+                        size: 14,
+                        color: isSecure
+                            ? Colors.green
+                            : (isIncognito ? Colors.white54 : cs.outline),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Focus(
+                          onFocusChange: (focused) {
+                            if (focused) {
+                              onReleaseWebViewFocus?.call();
+                            }
                           },
                           child: TextField(
                             controller: addressController,
+                            focusNode: addressFocusNode,
                             keyboardType: TextInputType.url,
                             textInputAction: TextInputAction.go,
                             maxLines: 1,
+                            textAlign: TextAlign.center,
+                            textAlignVertical: TextAlignVertical.center,
                             style: TextStyle(
                               fontSize: 13,
                               color: isIncognito ? Colors.white : null,
                               overflow: TextOverflow.ellipsis,
                             ),
                             onSubmitted: onSubmitted,
+                            onEditingComplete: () => onSubmitted(addressController.text),
                             onTap: () {
                               onReleaseWebViewFocus?.call();
-                              // Select all text when the URL bar is tapped (standard browser UX)
                               addressController.selection = TextSelection(
                                 baseOffset: 0,
                                 extentOffset: addressController.text.length,
