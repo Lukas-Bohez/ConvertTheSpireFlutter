@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../screens/player.dart'
-    show PlayerState, PositionUiState, MediaItem, MediaType;
+import '../screens/player.dart' show PlayerState, PositionUiState, MediaItem, MediaType;
+import '../screens/browser_screen.dart';
 import '../state/app_controller.dart';
 import '../config/build_flags.dart';
 import '../services/url_routing_service.dart';
@@ -85,7 +85,13 @@ class _BrowserShellState extends State<BrowserShell> {
   // -- URL bar editing --
 
   void _startEditing() {
+    final browserTabIndex = QuickLinksService.routeToIndex['browser.tab'];
+    if (browserTabIndex != null && widget.currentIndex == browserTabIndex) {
+      BrowserScreen.focusAddressBar();
+      return;
+    }
     _urlEditController.text = '';
+    _urlEditController.selection = const TextSelection.collapsed(offset: 0);
     setState(() => _isEditing = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {

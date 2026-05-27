@@ -48,6 +48,8 @@ class BrowserScreen extends StatefulWidget {
     browserKey.currentState?._navigateTo(url);
   }
 
+  static void focusAddressBar() => browserKey.currentState?._focusAddressBar();
+
   // Public hooks for external widgets (e.g. BrowserShell) to pause/resume
   // cursor mode on this screen.
   static void pauseCursor() => browserKey.currentState?._pauseCursor();
@@ -74,6 +76,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   FindInteractionController? _findInteractionController;
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _findController = TextEditingController();
+  final FocusNode _addressFocusNode = FocusNode();
 
   bool _isLoading = false;
   double _progress = 0;
@@ -193,6 +196,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     _castService.removeListener(_onCastChanged);
     _castService.stopDiscovery();
     _addressController.dispose();
+    _addressFocusNode.dispose();
     _findController.dispose();
     _castService.dispose();
     _videoDetector.dispose();
@@ -722,10 +726,14 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _showTextInputOverlay({String currentValue = ''}) {
     final controller = TextEditingController(text: currentValue);
+    controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: currentValue.length,
+    );
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.black87,
         content: TextField(
           controller: controller,
@@ -740,7 +748,7 @@ class _BrowserScreenState extends State<BrowserScreen>
             try {
               await _webviewInputChannel.invokeMethod('dismissIME');
             } catch (_) {}
-            Navigator.of(context).pop();
+            Navigator.of(dialogContext).pop();
             _resumeCursor();
           },
         ),
@@ -763,7 +771,7 @@ class _BrowserScreenState extends State<BrowserScreen>
               try {
                 await _webviewInputChannel.invokeMethod('dismissIME');
               } catch (_) {}
-              Navigator.of(context).pop();
+              Navigator.of(dialogContext).pop();
               _resumeCursor();
             },
             child:
@@ -771,7 +779,23 @@ class _BrowserScreenState extends State<BrowserScreen>
           ),
         ],
       ),
-    );
+    ).then((_) => controller.dispose());
+  }
+
+  void _focusAddressBar() {
+    if (!mounted) return;
+    setState(() {
+      _showNewTabPage = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final text = _addressController.text;
+      _addressController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: text.length,
+      );
+      FocusScope.of(context).requestFocus(_addressFocusNode);
+    });
   }
 
   // -- Actions --
@@ -1060,6 +1084,7 @@ class _BrowserScreenState extends State<BrowserScreen>
                   // -- Top toolbar --
                   BrowserToolbar(
                     addressController: _addressController,
+                    addressFocusNode: _addressFocusNode,
                     isLoading: _isLoading,
                     isSecure: _isSecure,
                     isIncognito: isIncognito,
