@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../browser/adblock/adblock_service.dart';
 import '../../data/browser_db.dart';
+import '../../services/ipfs_service.dart';
 
 /// Browser settings screen: search engine, ad-block, privacy, display.
 class BrowserSettingsScreen extends StatefulWidget {
@@ -25,6 +26,7 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
   bool _desktopMode = false;
   bool _blockPopups = true;
   bool _doNotTrack = true;
+  String _ipfsGateway = '';
 
   @override
   void initState() {
@@ -39,6 +41,7 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
       _desktopMode = prefs.getBool('browser_desktop_mode') ?? false;
       _blockPopups = prefs.getBool('browser_block_popups') ?? true;
       _doNotTrack = prefs.getBool('browser_dnt') ?? true;
+      _ipfsGateway = prefs.getString('browser_ipfs_gateway') ?? '';
     });
   }
 
@@ -75,8 +78,9 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
             SwitchListTile(
               secondary: const Icon(Icons.block),
               title: const Text('Ad Blocker'),
-              subtitle: Text(
-                  widget.adBlockService.adBlockEnabled ? 'Enabled' : 'Disabled'),
+              subtitle: Text(widget.adBlockService.adBlockEnabled
+                  ? 'Enabled'
+                  : 'Disabled'),
               value: widget.adBlockService.adBlockEnabled,
               onChanged: (v) {
                 widget.adBlockService.setEnabled(v);
@@ -119,6 +123,15 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
               onTap: _showClearDataDialog,
             ),
 
+            ListTile(
+              leading: const Icon(Icons.cloud_outlined),
+              title: const Text('IPFS Gateway'),
+              subtitle: Text(
+                _ipfsGateway.isEmpty ? 'Default gateway chain' : _ipfsGateway,
+              ),
+              onTap: _editIpfsGateway,
+            ),
+
             // -- Display --
             _SectionHeader(title: 'Display'),
             SwitchListTile(
@@ -135,6 +148,63 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _editIpfsGateway() async {
+    final controller = TextEditingController(text: _ipfsGateway);
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('IPFS Gateway'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Custom gateway URL',
+              helperText: 'Leave empty to use the built-in public gateways.',
+            ),
+            keyboardType: TextInputType.url,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                controller.clear();
+                Navigator.pop(ctx, true);
+              },
+              child: const Text('Reset'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (saved != true || !mounted) return;
+
+    final gateway = controller.text.trim();
+    final prefs = await SharedPreferences.getInstance();
+    if (gateway.isEmpty) {
+      await prefs.remove('browser_ipfs_gateway');
+      await IpfsService.setCustomGateway(null);
+    } else {
+      await prefs.setString('browser_ipfs_gateway', gateway);
+      await IpfsService.setCustomGateway(gateway);
+    }
+
+    setState(() {
+      _ipfsGateway = gateway;
+    });
+
+    if (mounted) {
+      Snack.show(context, 'IPFS gateway updated', level: SnackLevel.info);
+    }
   }
 
   void _pickSearchEngine() {

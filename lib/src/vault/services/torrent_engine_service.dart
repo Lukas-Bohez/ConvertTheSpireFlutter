@@ -14,10 +14,11 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart'
-  as vault_bencode;
+    as vault_bencode;
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/torrent_file.dart';
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/magnet_link.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
+import 'package:convert_the_spire_reborn/src/services/network_proxy_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/notification_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
@@ -207,7 +208,8 @@ class TorrentEngineService {
     _dhtNodesSinceLastLog++;
     final now = DateTime.now();
     if (now.difference(_lastDhtLogTime).inSeconds >= 10) {
-      _debugLog('[TorrentDht] $_dhtNodesSinceLastLog node event(s) in last 10s');
+      _debugLog(
+          '[TorrentDht] $_dhtNodesSinceLastLog node event(s) in last 10s');
       _dhtNodesSinceLastLog = 0;
       _lastDhtLogTime = now;
     }
@@ -215,8 +217,7 @@ class TorrentEngineService {
 
   void _logProgressThrottled(String torrentId, dt.TorrentTask task) {
     final now = DateTime.now();
-    final last =
-        _lastProgressLogTimes[torrentId] ??
+    final last = _lastProgressLogTimes[torrentId] ??
         DateTime.fromMillisecondsSinceEpoch(0);
     if (now.difference(last).inSeconds >= 5) {
       _lastProgressLogTimes[torrentId] = now;
@@ -239,9 +240,8 @@ class TorrentEngineService {
       final stateUploaded = task.stateFile?.uploaded;
       if (stateUploaded != null && stateUploaded >= 0) {
         final prev = _uploadedBytesByTorrent[torrentId] ?? 0;
-        _uploadedBytesByTorrent[torrentId] = stateUploaded >= prev
-            ? stateUploaded
-            : prev;
+        _uploadedBytesByTorrent[torrentId] =
+            stateUploaded >= prev ? stateUploaded : prev;
       }
 
       final dynamic taskUploaded = (task as dynamic).uploaded;
@@ -261,7 +261,8 @@ class TorrentEngineService {
     return List.unmodifiable(_connectionLogs[torrentId] ?? []);
   }
 
-  DateTime? lastAnnounceAt(String torrentId) => _lastAnnounceAtByTorrent[torrentId];
+  DateTime? lastAnnounceAt(String torrentId) =>
+      _lastAnnounceAtByTorrent[torrentId];
 
   void clearLogs(String torrentId) {
     _connectionLogs[torrentId]?.clear();
@@ -271,9 +272,20 @@ class TorrentEngineService {
     await _ensureRuntimePubspecForDtorrent();
     // dtorrent_task_v2 enables DHT/tracker/PEX through internal defaults.
     // CLI-level calls are not available in this API surface.
+    await _applyProxyConfig(task);
     await _mapPorts(task);
     if (SettingsService.instance.useDht) {
       _addDhtBootstrapNodes(task);
+    }
+  }
+
+  Future<void> _applyProxyConfig(dt.TorrentTask task) async {
+    try {
+      final proxy = await NetworkProxyService.torrentProxyConfig();
+      if (proxy == null) return;
+      (task as dynamic).setProxyConfig(proxy);
+    } catch (e) {
+      _debugLog('Proxy configuration skipped for torrent task: $e');
     }
   }
 
@@ -294,7 +306,8 @@ class TorrentEngineService {
         'Created runtime pubspec.yaml for dtorrent_task_v2 at ${pubspecFile.path}',
       );
     } catch (e) {
-      debugPrint('Failed to create runtime pubspec.yaml for dtorrent_task_v2: $e');
+      debugPrint(
+          'Failed to create runtime pubspec.yaml for dtorrent_task_v2: $e');
     }
   }
 
@@ -383,7 +396,8 @@ class TorrentEngineService {
     );
   }
 
-  void _announceTrackers(String torrentId, dt.TorrentTask task, {bool force = false}) {
+  void _announceTrackers(String torrentId, dt.TorrentTask task,
+      {bool force = false}) {
     // Run tracker announcements in background without blocking UI
     unawaited(
       Future(() async {
@@ -429,18 +443,17 @@ class TorrentEngineService {
           // Announce to all trackers in parallel, ignore individual failures
           await Future.wait(
             trackers.map(
-              (trackerUri) =>
-                  _announceUrlWithRetry(
-                    task,
-                    trackerUri,
-                    infoHashBytes,
-                    torrentId: torrentId,
-                  ).catchError((e) {
-                    _log(
-                      torrentId,
-                      'Tracker announce failed for $trackerUri: $e',
-                    );
-                  }),
+              (trackerUri) => _announceUrlWithRetry(
+                task,
+                trackerUri,
+                infoHashBytes,
+                torrentId: torrentId,
+              ).catchError((e) {
+                _log(
+                  torrentId,
+                  'Tracker announce failed for $trackerUri: $e',
+                );
+              }),
             ),
           );
         } catch (e) {
@@ -458,9 +471,8 @@ class TorrentEngineService {
     int retries = 3,
     Duration delay = const Duration(seconds: 2),
   }) async {
-    final effectiveTorrentId = (torrentId?.isNotEmpty == true)
-        ? torrentId!
-        : taskIdFromTask(task);
+    final effectiveTorrentId =
+        (torrentId?.isNotEmpty == true) ? torrentId! : taskIdFromTask(task);
     for (var attempt = 1; attempt <= retries; attempt++) {
       try {
         await (task as dynamic).startAnnounceUrl(url, infoHash);
@@ -725,7 +737,8 @@ class TorrentEngineService {
     _stagnantDownloadIntervals[torrentId] = 0;
     _lastDownloadedByTorrent[torrentId] = task.downloaded ?? 0;
 
-    _healthCheckTimers[torrentId] = Timer.periodic(const Duration(seconds: 30), (
+    _healthCheckTimers[torrentId] =
+        Timer.periodic(const Duration(seconds: 30), (
       timer,
     ) async {
       try {
@@ -858,8 +871,7 @@ class TorrentEngineService {
         }
 
         if (!_isTaskComplete(task) && currentProgress >= 0.95) {
-          final lastChange =
-              _lastProgressChangeAtByTorrent[torrentId] ??
+          final lastChange = _lastProgressChangeAtByTorrent[torrentId] ??
               DateTime.fromMillisecondsSinceEpoch(0);
           final stalledFor = DateTime.now().difference(lastChange);
           if (stalledFor >= const Duration(seconds: 90)) {
@@ -1024,7 +1036,8 @@ class TorrentEngineService {
 
   bool isRunning(String torrentId) => _tasks.containsKey(torrentId);
 
-  Future<void> cacheTorrentSource(String torrentId, List<int> torrentBytes) async {
+  Future<void> cacheTorrentSource(
+      String torrentId, List<int> torrentBytes) async {
     if (torrentId.trim().isEmpty || torrentBytes.isEmpty) return;
     try {
       final normalized = _normalizeTorrentSourceBytes(torrentBytes);
@@ -1196,9 +1209,8 @@ class TorrentEngineService {
               ? dtModel.lastPieceLength
               : dtModel.pieceLength;
           final hashBytes = metaPieces[i];
-          final hashString = hashBytes
-              .map((b) => b.toRadixString(16).padLeft(2, '0'))
-              .join();
+          final hashString =
+              hashBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
           pieces.add(dt_piece.Piece(hashString, i, byteLength, offset));
           offset += byteLength;
         }
@@ -1381,7 +1393,8 @@ class TorrentEngineService {
     final sourcePath = sourceTorrentPath.trim();
     final sourceFile = File(sourcePath);
     if (!await sourceFile.exists()) {
-      throw FileSystemException('Torrent source file does not exist', sourcePath);
+      throw FileSystemException(
+          'Torrent source file does not exist', sourcePath);
     }
 
     if (_isTorrentFilePath(sourcePath)) {
@@ -1389,7 +1402,8 @@ class TorrentEngineService {
         final bytes = await sourceFile.readAsBytes();
         await cacheTorrentSource(torrent.id, bytes);
       } catch (e) {
-        debugPrint('Managed torrent source cache write failed for ${torrent.id}: $e');
+        debugPrint(
+            'Managed torrent source cache write failed for ${torrent.id}: $e');
       }
     }
 
@@ -1462,9 +1476,8 @@ class TorrentEngineService {
     _tasks[torrent.id] = task;
     _wireEvents(torrent.id, task);
     await _configureTask(task);
-    _torrentTrackers[torrent.id] = dtModel.announces
-        .map<Uri>((u) => Uri.parse(u.toString()))
-        .toList();
+    _torrentTrackers[torrent.id] =
+        dtModel.announces.map<Uri>((u) => Uri.parse(u.toString())).toList();
     _startHealthCheckTimer(torrent.id, task);
 
     // Attach DHT listeners BEFORE starting task to capture all events
@@ -1564,14 +1577,13 @@ class TorrentEngineService {
     await Future.wait(
       announceUrls.map(
         (uri) => _announceUrlWithRetry(
-              task,
-              uri,
-              dtModel.infoHashBuffer,
-              torrentId: torrent.id,
-            )
-            .catchError((e) {
-              debugPrint('Tracker announce failed for $uri: $e');
-            }),
+          task,
+          uri,
+          dtModel.infoHashBuffer,
+          torrentId: torrent.id,
+        ).catchError((e) {
+          debugPrint('Tracker announce failed for $uri: $e');
+        }),
       ),
     );
 
@@ -1612,8 +1624,7 @@ class TorrentEngineService {
     }
     final parserMagnet = _canonicalMagnetForDtParser(sourceMagnet, torrent.id);
     final effectiveMagnet = _augmentMagnetWithFallbackTrackers(parserMagnet);
-    final magnet =
-        dt.MagnetParser.parse(parserMagnet) ??
+    final magnet = dt.MagnetParser.parse(parserMagnet) ??
         dt.MagnetParser.parse(effectiveMagnet);
     if (magnet == null) {
       String clip(String input) =>
@@ -1711,13 +1722,13 @@ class TorrentEngineService {
       );
     }
 
-    if (downloadedMetadataBytes != null && downloadedMetadataBytes!.isNotEmpty) {
+    if (downloadedMetadataBytes != null &&
+        downloadedMetadataBytes!.isNotEmpty) {
       await cacheTorrentSource(torrent.id, downloadedMetadataBytes!);
     }
 
     final resolvedName = dtModel.name.trim();
-    final updatedName =
-        resolvedName.isNotEmpty &&
+    final updatedName = resolvedName.isNotEmpty &&
             !resolvedName.toLowerCase().startsWith('magnet:')
         ? resolvedName
         : torrent.name;
@@ -1819,7 +1830,8 @@ class TorrentEngineService {
         torrent.id,
         'task.start() failed: $e\n${st.toString().split('\n').take(5).join('\n')}',
       );
-      debugPrint('[TorrentEngine] startFromMagnet failed for ${torrent.id}: $e');
+      debugPrint(
+          '[TorrentEngine] startFromMagnet failed for ${torrent.id}: $e');
       _cleanup(torrent.id);
       await TorrentService.instance.updateTorrentStatus(
         torrent.id,
@@ -1946,7 +1958,8 @@ class TorrentEngineService {
         : Map<String, dynamic>.from(normalizedRoot);
 
     if (infoMap.isEmpty) {
-      throw FormatException('Invalid torrent metadata: info dictionary is empty');
+      throw FormatException(
+          'Invalid torrent metadata: info dictionary is empty');
     }
 
     _ensureInfoNameIsString(infoMap);
@@ -2183,12 +2196,12 @@ class TorrentEngineService {
             for (final file in files) {
               try {
                 await (file as dynamic).releaseWriteHandle();
-              } catch (_) {
-              }
+              } catch (_) {}
             }
           }
         } catch (e) {
-          debugPrint('TaskCompleted: write handle release failed (non-fatal): $e');
+          debugPrint(
+              'TaskCompleted: write handle release failed (non-fatal): $e');
         }
 
         final hasOutput = await _verifyOutputExists(torrentId, task);
@@ -2248,7 +2261,8 @@ class TorrentEngineService {
       );
 
       if (_tasks[torrentId] == task && _hasAllPiecesComplete(task)) {
-        _log(torrentId, 'Verification finished: all pieces complete, entering seeding mode.');
+        _log(torrentId,
+            'Verification finished: all pieces complete, entering seeding mode.');
         await TorrentService.instance.updateTorrentStatus(torrentId, 'seeding');
       } else if (_tasks[torrentId] == task) {
         _log(
@@ -2257,7 +2271,8 @@ class TorrentEngineService {
         );
         _requestMissingPieces(task);
         _ensureTaskRunningMode(torrentId, task);
-        await TorrentService.instance.updateTorrentStatus(torrentId, 'downloading');
+        await TorrentService.instance
+            .updateTorrentStatus(torrentId, 'downloading');
       }
 
       _log(torrentId, 'Deferred verification complete.');
@@ -2417,28 +2432,27 @@ class TorrentEngineService {
 
     final seededRatio = totalLength > 0 ? (uploaded / totalLength) : 0.0;
     final seededPct = (seededRatio * 100).clamp(0.0, double.infinity);
-    final stalledNearCompletion =
-        progress >= 0.95 &&
+    final stalledNearCompletion = progress >= 0.95 &&
         ((_lastProgressChangeAtByTorrent[torrentId] == null)
             ? false
             : DateTime.now()
-                          .difference(
-                            _lastProgressChangeAtByTorrent[torrentId]!,
-                          )
-                          .inSeconds >=
-                      90 &&
-                  state != 'seeding');
+                        .difference(
+                          _lastProgressChangeAtByTorrent[torrentId]!,
+                        )
+                        .inSeconds >=
+                    90 &&
+                state != 'seeding');
     final msg = state == 'paused'
         ? 'Paused • ${(progress * 100).toStringAsFixed(1)}%'
         : state == 'seeding'
-        ? 'Seeding • ${(seededPct).toStringAsFixed(1)}% shared back (${_formatByteCount(uploaded)}/${_formatByteCount(totalLength)}) • $peers peer${peers == 1 ? '' : 's'} connected'
-        : peers == 0
-        ? 'Searching for peers...'
-        : stalledNearCompletion
-        ? 'Stalled near completion • ${(progress * 100).toStringAsFixed(1)}% • $peers peer${peers == 1 ? '' : 's'}'
-        : downloaded == 0
-        ? 'Connected to $peers peer${peers == 1 ? '' : 's'}, waiting for pieces...'
-        : '${(progress * 100).toStringAsFixed(1)}% - $peers peer${peers == 1 ? '' : 's'}';
+            ? 'Seeding • ${(seededPct).toStringAsFixed(1)}% shared back (${_formatByteCount(uploaded)}/${_formatByteCount(totalLength)}) • $peers peer${peers == 1 ? '' : 's'} connected'
+            : peers == 0
+                ? 'Searching for peers...'
+                : stalledNearCompletion
+                    ? 'Stalled near completion • ${(progress * 100).toStringAsFixed(1)}% • $peers peer${peers == 1 ? '' : 's'}'
+                    : downloaded == 0
+                        ? 'Connected to $peers peer${peers == 1 ? '' : 's'}, waiting for pieces...'
+                        : '${(progress * 100).toStringAsFixed(1)}% - $peers peer${peers == 1 ? '' : 's'}';
 
     int dhtNodes = 0;
     int trackers = 0;
@@ -2455,7 +2469,7 @@ class TorrentEngineService {
       // ignore if unavailable
     }
 
-        if (peers > 0) {
+    if (peers > 0) {
       connectionMsg =
           'Connected to $peers peers (DHT: $dhtNodes, Trackers: $trackers)';
     } else if (dhtNodes == 0) {
@@ -2641,7 +2655,8 @@ class TorrentEngineService {
         _fastHealthCheckTimers.remove(torrentId)?.cancel();
       } else if (total > 0) {
         final missing = total - completed;
-        _log(torrentId, '$missing pieces still missing  -  continuing download.');
+        _log(torrentId,
+            '$missing pieces still missing  -  continuing download.');
 
         var requeued = 0;
         try {
@@ -2667,11 +2682,13 @@ class TorrentEngineService {
         }
 
         if (requeued > 0) {
-          _log(torrentId, 'Explicitly re-queued $requeued missing piece(s) for download.');
+          _log(torrentId,
+              'Explicitly re-queued $requeued missing piece(s) for download.');
         }
 
         if (missing > 0 && missing <= 3) {
-          _log(torrentId, 'Last $missing piece(s) missing  -  force-announcing all trackers.');
+          _log(torrentId,
+              'Last $missing piece(s) missing  -  force-announcing all trackers.');
           _announceTrackers(torrentId, task, force: true);
           try {
             task.requestPeersFromDHT();
@@ -2750,9 +2767,8 @@ class TorrentEngineService {
       await stopTorrent(torrentId);
       await Future.delayed(const Duration(seconds: 1));
 
-      final storedDownloadDir = torrent == null
-          ? null
-          : _storedDownloadDirForResume(torrent);
+      final storedDownloadDir =
+          torrent == null ? null : _storedDownloadDirForResume(torrent);
       final configured = SettingsService.instance.downloadDestination.trim();
       await startTorrent(
         torrentId,
@@ -2788,8 +2804,7 @@ class TorrentEngineService {
       if (!isStateFile && !isStateBackup) continue;
 
       if (normalizedId != null && normalizedId.isNotEmpty) {
-        final belongsToTorrent =
-            name == '$normalizedId.bt.state' ||
+        final belongsToTorrent = name == '$normalizedId.bt.state' ||
             name.startsWith('$normalizedId.bt.state.backup.') ||
             name.startsWith('$normalizedId.bt.state.bak');
         if (!belongsToTorrent) continue;
@@ -3020,8 +3035,8 @@ class TorrentEngineService {
       final preferredPath = configuredDir.isNotEmpty
           ? configuredDir
           : (filePath.isNotEmpty && !_isTorrentFilePath(filePath)
-                ? filePath
-                : null);
+              ? filePath
+              : null);
       final saveDir = await _resolveWritableDownloadDir(preferredPath);
 
       final relativePaths = <String>{};
@@ -3181,13 +3196,10 @@ class TorrentEngineService {
       _ensureTaskRunningMode(torrentId, task);
       _emitStats(torrentId, task);
     }
-    final status = task != null && _isTaskComplete(task)
-        ? 'seeding'
-        : 'downloading';
+    final status =
+        task != null && _isTaskComplete(task) ? 'seeding' : 'downloading';
     unawaited(
-      TorrentService.instance
-          .updateTorrentStatus(torrentId, status)
-          .catchError(
+      TorrentService.instance.updateTorrentStatus(torrentId, status).catchError(
             (Object e) => debugPrint('resumeTorrent status write failed: $e'),
           ),
     );
@@ -3438,13 +3450,12 @@ class TorrentEngineService {
     final existing = RegExp(r'[?&]tr=([^&]+)', caseSensitive: false)
         .allMatches(magnetLink)
         .map((m) {
-          try {
-            return Uri.decodeComponent(m.group(1)!);
-          } catch (_) {
-            return m.group(1)!;
-          }
-        })
-        .toSet();
+      try {
+        return Uri.decodeComponent(m.group(1)!);
+      } catch (_) {
+        return m.group(1)!;
+      }
+    }).toSet();
 
     final additions = <String>[];
     for (final tracker in _fallbackTrackers) {
@@ -3466,8 +3477,7 @@ class TorrentEngineService {
 
     // Recovery path for legacy/dirty DB entries: extract btih from either the
     // torrent id or the stored magnet text and rebuild a canonical magnet URI.
-    final candidate =
-        _extractInfoHashCandidate(torrent.id) ??
+    final candidate = _extractInfoHashCandidate(torrent.id) ??
         _extractInfoHashCandidate(normalizedStored) ??
         _extractInfoHashCandidate(torrent.magnetLink ?? '');
     if (candidate != null) {
@@ -3478,21 +3488,20 @@ class TorrentEngineService {
       final xt = isBtmh
           ? 'xt=urn:btmh:1220${candidate.toLowerCase()}'
           : 'xt=urn:btih:$candidate';
-      final fallback =
-          'magnet:?$xt${dn.isEmpty ? '' : '&dn=$dn'}';
+      final fallback = 'magnet:?$xt${dn.isEmpty ? '' : '&dn=$dn'}';
       return fallback;
     }
     return '';
   }
 
   String _canonicalMagnetForDtParser(String sourceMagnet, String fallbackId) {
-    final btih =
-        _extractBtihCandidate(sourceMagnet) ?? _extractBtihCandidate(fallbackId);
+    final btih = _extractBtihCandidate(sourceMagnet) ??
+        _extractBtihCandidate(fallbackId);
     if (btih != null) {
       return 'magnet:?xt=urn:btih:$btih';
     }
-    final btmh =
-        _extractBtmhCandidate(sourceMagnet) ?? _extractBtmhCandidate(fallbackId);
+    final btmh = _extractBtmhCandidate(sourceMagnet) ??
+        _extractBtmhCandidate(fallbackId);
     if (btmh != null) {
       return 'magnet:?xt=urn:btmh:1220$btmh';
     }

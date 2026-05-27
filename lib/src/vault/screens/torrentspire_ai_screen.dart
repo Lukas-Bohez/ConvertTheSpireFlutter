@@ -25,7 +25,7 @@ class TorrentSpireAiScreen extends StatefulWidget {
 }
 
 class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
-  with WidgetsBindingObserver {
+    with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _magnetController = TextEditingController();
   final TextEditingController _chatController = TextEditingController();
@@ -85,15 +85,15 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
         );
       }
     });
-    _torrentStatesSubscription = TorrentService.instance.torrentStatesStream
-        .listen((states) {
-          _torrentStates = states;
-          _torrents = states.map((s) => s.model).toList();
-          _contextService.updateTorrents(_torrents);
-          if (mounted) {
-            setState(() {});
-          }
-        });
+    _torrentStatesSubscription =
+        TorrentService.instance.torrentStatesStream.listen((states) {
+      _torrentStates = states;
+      _torrents = states.map((s) => s.model).toList();
+      _contextService.updateTorrents(_torrents);
+      if (mounted) {
+        setState(() {});
+      }
+    });
     unawaited(TorrentService.instance.refreshTorrentStates());
     _checkAiReadiness();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -125,8 +125,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content:
-                  Text('Download folder "$folder" no longer exists.'),
+              content: Text('Download folder "$folder" no longer exists.'),
               action: SnackBarAction(
                 label: 'Change',
                 onPressed: _showSetDownloadFolderDialog,
@@ -301,7 +300,8 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
     if (!await _validateDownloadFolder()) return;
     final text = _magnetController.text.trim();
     if (text.isEmpty) return;
-    final outcome = await TorrentService.instance.addTorrentFromMagnetLink(text);
+    final outcome =
+        await TorrentService.instance.addTorrentFromMagnetLink(text);
     if (outcome == MagnetAddOutcome.pendingMetadata && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -363,9 +363,9 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
     }
 
     final runtime = _torrentStates
-      .where((s) => s.id == result.torrentId)
-      .cast<TorrentViewState?>()
-      .firstWhere((s) => s != null, orElse: () => null);
+        .where((s) => s.id == result.torrentId)
+        .cast<TorrentViewState?>()
+        .firstWhere((s) => s != null, orElse: () => null);
     final seeders = (runtime?.seeders ?? result.seeders) ?? 0;
     final leechers = (runtime?.leechers ?? result.leechers) ?? 0;
     final peers = runtime?.peers;
@@ -377,8 +377,12 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
     if (uploaded != null && uploaded > 0) {
       swarmParts.add('uploadedBytes=$uploaded');
     }
-    final swarmSummary = swarmParts.isEmpty ? 'no positive swarm stats yet' : swarmParts.join(', ');
-    final ageText = (result.ageYears ?? 0) > 0 ? 'ageYears=${result.ageYears}' : 'ageYears=unknown';
+    final swarmSummary = swarmParts.isEmpty
+        ? 'no positive swarm stats yet'
+        : swarmParts.join(', ');
+    final ageText = (result.ageYears ?? 0) > 0
+        ? 'ageYears=${result.ageYears}'
+        : 'ageYears=unknown';
 
     final trust = _computeTrustSignal(
       result,
@@ -393,24 +397,25 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
 
     final liveContext = _contextService.getContext();
     final prompt =
-      'Give a concise 2-3 sentence description for this torrent candidate: '
-      'title=${result.name}, size=${result.size ?? 0} bytes, category=$_category, '
-      '$ageText, '
-      'source=${result.source.isEmpty ? result.responderId : result.source}. '
-      'Include likely file structure and notable quality hints. '
-      'Do not call it dangerous or suspicious unless there is direct evidence. '
-      'Treat zero or missing seeders, leechers, or age as unknown signal, not a warning. '
-      'If evidence is weak, say that confidence is limited instead of raising a red flag. '
-      'Current positive swarm stats: $swarmSummary. '
-      'Use this live app context for accuracy:\n$liveContext';
+        'Give a concise 2-3 sentence description for this torrent candidate: '
+        'title=${result.name}, size=${result.size ?? 0} bytes, category=$_category, '
+        '$ageText, '
+        'source=${result.source.isEmpty ? result.responderId : result.source}. '
+        'Include likely file structure and notable quality hints. '
+        'Do not call it dangerous or suspicious unless there is direct evidence. '
+        'Treat zero or missing seeders, leechers, or age as unknown signal, not a warning. '
+        'If evidence is weak, say that confidence is limited instead of raising a red flag. '
+        'Current positive swarm stats: $swarmSummary. '
+        'Use this live app context for accuracy:\n$liveContext';
 
     if (!mounted) return;
-    
+
     if (!_aiReady) {
       setState(() {
         _infoCardLoading = false;
         _trustSignal = 'Neutral';
-        _infoCardText = 'AI not connected. Check Settings > AI Settings and verify Ollama is running.';
+        _infoCardText =
+            'AI not connected. Check Settings > AI Settings and verify Ollama is running.';
       });
       return;
     }
@@ -422,7 +427,8 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
       setState(() {
         _infoCardLoading = false;
         _trustSignal = 'Neutral';
-        _infoCardText = 'Model "$_activeModel" not found. Download it in Settings > Local AI Chat.';
+        _infoCardText =
+            'Model "$_activeModel" not found. Download it in Settings > Local AI Chat.';
       });
       return;
     }
@@ -668,8 +674,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
     final payload = <Map<String, dynamic>>[
       {
         'role': 'system',
-        'content':
-        'You are Vault The Spire AI, an in-app torrent copilot. '
+        'content': 'You are Vault The Spire AI, an in-app torrent copilot. '
             'Always use the provided app context and reference live torrent state.',
       },
       {'role': 'system', 'content': contextBlock},
@@ -835,8 +840,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                   behavior: HitTestBehavior.translucent,
                   onHorizontalDragUpdate: (details) {
                     setState(() {
-                      _splitRatio =
-                          ((_splitRatio * constraints.maxWidth) +
+                      _splitRatio = ((_splitRatio * constraints.maxWidth) +
                               details.delta.dx) /
                           constraints.maxWidth;
                       _splitRatio = _splitRatio.clamp(0.3, 0.75);
@@ -921,19 +925,18 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                     value: _category,
                     isDense: true,
                     dropdownColor: cs.surfaceContainerHighest,
-                    items:
-                        const [
-                              'All',
-                              'Movies',
-                              'TV',
-                              'Music',
-                              'Software',
-                              'Books',
-                            ]
-                            .map(
-                              (e) => DropdownMenuItem(value: e, child: Text(e)),
-                            )
-                            .toList(),
+                    items: const [
+                      'All',
+                      'Movies',
+                      'TV',
+                      'Music',
+                      'Software',
+                      'Books',
+                    ]
+                        .map(
+                          (e) => DropdownMenuItem(value: e, child: Text(e)),
+                        )
+                        .toList(),
                     onChanged: (value) {
                       if (value == null) return;
                       setState(() {
@@ -961,13 +964,27 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        TextField(
-                          controller: _searchController,
-                          decoration: const InputDecoration(
-                            labelText: 'Search torrents',
-                            prefixIcon: Icon(Icons.search),
-                          ),
-                          onSubmitted: _performSearch,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Search torrents',
+                                  prefixIcon: Icon(Icons.search),
+                                ),
+                                onSubmitted: _performSearch,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton.tonalIcon(
+                              onPressed: () => _performSearch(
+                                _searchController.text,
+                              ),
+                              icon: const Icon(Icons.search),
+                              label: const Text('Search'),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 8),
                         Wrap(
@@ -995,6 +1012,14 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                           ),
                           onSubmitted: _performSearch,
                         ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.tonalIcon(
+                        onPressed: () => _performSearch(
+                          _searchController.text,
+                        ),
+                        icon: const Icon(Icons.search),
+                        label: const Text('Search'),
                       ),
                       const SizedBox(width: 8),
                       categoryPicker,
@@ -1194,8 +1219,8 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                       final age = item.ageYears == null
                           ? ' - '
                           : (item.ageYears == 0
-                                ? 'this year'
-                                : '${item.ageYears} years ago');
+                              ? 'this year'
+                              : '${item.ageYears} years ago');
                       final source = item.source.isEmpty ? ' - ' : item.source;
                       return Card(
                         color: selected
@@ -1322,8 +1347,8 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
               _aiReady
                   ? 'AI Ready'
                   : aiEnabled
-                  ? 'AI copilot offline  -  check your Ollama connection in Settings'
-                  : 'AI Copilot disabled in Settings',
+                      ? 'AI copilot offline  -  check your Ollama connection in Settings'
+                      : 'AI Copilot disabled in Settings',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 color: _aiReady ? cs.onTertiaryContainer : cs.onErrorContainer,
@@ -1339,9 +1364,8 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                 final msg = _messages[index];
                 final isUser = msg.role == 'user';
                 return Align(
-                  alignment: isUser
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
+                  alignment:
+                      isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 6),
                     padding: const EdgeInsets.all(10),
@@ -1389,19 +1413,18 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                           data: msg.content.isEmpty && msg.isStreaming
                               ? '...'
                               : msg.content,
-                          styleSheet:
-                              MarkdownStyleSheet.fromTheme(
-                                Theme.of(context),
-                              ).copyWith(
-                                p: TextStyle(color: cs.onSurface),
-                                code: const TextStyle(
-                                  fontFamily: 'monospace',
-                                ),
-                                codeblockDecoration: BoxDecoration(
-                                  color: cs.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
+                          styleSheet: MarkdownStyleSheet.fromTheme(
+                            Theme.of(context),
+                          ).copyWith(
+                            p: TextStyle(color: cs.onSurface),
+                            code: const TextStyle(
+                              fontFamily: 'monospace',
+                            ),
+                            codeblockDecoration: BoxDecoration(
+                              color: cs.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
                         ),
                       ],
                     ),

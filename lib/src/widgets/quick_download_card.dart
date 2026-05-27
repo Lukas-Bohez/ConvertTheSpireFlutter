@@ -170,24 +170,36 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
             Text('Quick Download',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 10),
-            TextField(
-              controller: _controller,
-              decoration: InputDecoration(
-                labelText: 'Paste URL',
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.link),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.content_paste),
-                  tooltip: 'Paste from clipboard',
-                  onPressed: () async {
-                    final clip = await Clipboard.getData('text/plain');
-                    if (clip?.text != null) {
-                      setState(() => _controller.text = clip!.text!);
-                    }
-                  },
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: InputDecoration(
+                      labelText: 'Paste URL',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.link),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.content_paste),
+                        tooltip: 'Paste from clipboard',
+                        onPressed: () async {
+                          final clip = await Clipboard.getData('text/plain');
+                          if (clip?.text != null) {
+                            setState(() => _controller.text = clip!.text!);
+                          }
+                        },
+                      ),
+                    ),
+                    onSubmitted: (_) => _doDownload(),
+                  ),
                 ),
-              ),
-              onSubmitted: (_) => _doDownload(),
+                const SizedBox(width: 8),
+                FilledButton.tonalIcon(
+                  onPressed: _doDownload,
+                  icon: const Icon(Icons.download, size: 20),
+                  label: const Text('Download'),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             isNarrow

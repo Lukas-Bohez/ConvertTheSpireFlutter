@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'platform_dirs.dart';
+import 'network_proxy_service.dart';
 import '../utils/safe_json.dart';
 
 /// Service for downloading media using yt-dlp, the industry-standard
@@ -64,7 +65,8 @@ class YtDlpService {
 
   Future<String> ensureDenoInstalled({String? ytDlpPath}) async {
     if (kIsWeb || Platform.isAndroid || Platform.isIOS) {
-      throw Exception('Deno installation is only supported on desktop platforms.');
+      throw Exception(
+          'Deno installation is only supported on desktop platforms.');
     }
 
     final runtimeDir = await _resolveRuntimeDirectory(ytDlpPath: ytDlpPath);
@@ -155,76 +157,86 @@ class YtDlpService {
     }
   }
 
-    /// Fetches video metadata using yt-dlp --dump-json and returns filesize_approx in bytes (if available).
-    Future<int?> fetchEstimatedSize({
-      required String url,
-      required String ytDlpPath,
-      String? ffmpegPath,
-      String videoQuality = 'best',
-      Map<String, String>? extraHeaders,
-      String? cookiesFile,
-      String? cookiesFromBrowser,
-      bool sponsorBlockEnabled = false,
-      bool forceGenericExtractor = false,
-    }) async {
-      final args = <String>['--dump-json'];
-      args.addAll([
-        '--no-mtime',
-        '--extractor-args', 'youtube:lang=en',
-      ]);
-      final height = _qualityToHeight(videoQuality);
-      args.addAll([
-        '-f',
-        'bestvideo[height<=$height]+bestaudio/best[height<=$height]'
-      ]);
-      if (sponsorBlockEnabled) {
-        args.addAll(['--sponsorblock-remove', 'all']);
-      }
-      if (ffmpegPath != null &&
-          ffmpegPath.trim().isNotEmpty &&
-          ffmpegPath.trim() != 'ffmpeg') {
-        args.addAll(['--ffmpeg-location', ffmpegPath]);
-      }
-      if (extraHeaders != null) {
-        for (final entry in extraHeaders.entries) {
-          if (entry.key.toLowerCase() == 'user-agent') {
-            args.addAll(['--user-agent', entry.value]);
-          } else if (entry.key.toLowerCase() == 'referer') {
-            args.addAll(['--referer', entry.value]);
-          } else {
-            args.addAll(['--add-header', '${entry.key}:${entry.value}']);
-          }
+  Future<void> _applyProxyArg(List<String> args) async {
+    final proxy = await NetworkProxyService.ytDlpProxyUrl();
+    if (proxy != null && proxy.isNotEmpty) {
+      args.addAll(['--proxy', proxy]);
+    }
+  }
+
+  /// Fetches video metadata using yt-dlp --dump-json and returns filesize_approx in bytes (if available).
+  Future<int?> fetchEstimatedSize({
+    required String url,
+    required String ytDlpPath,
+    String? ffmpegPath,
+    String videoQuality = 'best',
+    Map<String, String>? extraHeaders,
+    String? cookiesFile,
+    String? cookiesFromBrowser,
+    bool sponsorBlockEnabled = false,
+    bool forceGenericExtractor = false,
+  }) async {
+    final args = <String>['--dump-json'];
+    args.addAll([
+      '--no-mtime',
+      '--extractor-args',
+      'youtube:lang=en',
+    ]);
+    final height = _qualityToHeight(videoQuality);
+    args.addAll(
+        ['-f', 'bestvideo[height<=$height]+bestaudio/best[height<=$height]']);
+    if (sponsorBlockEnabled) {
+      args.addAll(['--sponsorblock-remove', 'all']);
+    }
+    if (ffmpegPath != null &&
+        ffmpegPath.trim().isNotEmpty &&
+        ffmpegPath.trim() != 'ffmpeg') {
+      args.addAll(['--ffmpeg-location', ffmpegPath]);
+    }
+    if (extraHeaders != null) {
+      for (final entry in extraHeaders.entries) {
+        if (entry.key.toLowerCase() == 'user-agent') {
+          args.addAll(['--user-agent', entry.value]);
+        } else if (entry.key.toLowerCase() == 'referer') {
+          args.addAll(['--referer', entry.value]);
+        } else {
+          args.addAll(['--add-header', '${entry.key}:${entry.value}']);
         }
       }
-      if (cookiesFile != null && cookiesFile.trim().isNotEmpty) {
-        args.addAll(['--cookies', cookiesFile]);
-      } else if (cookiesFromBrowser != null && cookiesFromBrowser.trim().isNotEmpty) {
-        args.addAll(['--cookies-from-browser', cookiesFromBrowser]);
-      }
-      if (forceGenericExtractor) {
-        args.add('--force-generic-extractor');
-      }
-      await _applyJsRuntimeArgs(args, ytDlpPath: ytDlpPath);
-      args.add(url);
-
-      final workDir = await _getYtDlpWorkingDir();
-      final process = await Process.start(
-        ytDlpPath,
-        args,
-        workingDirectory: workDir,
-        runInShell: false,
-      );
-      final output = await process.stdout.transform(utf8.decoder).join();
-      await process.stderr.drain();
-      final exitCode = await process.exitCode;
-      if (exitCode != 0) return null;
-      final json = safeJsonDecode<Map<String, dynamic>>(output);
-      if (json != null && json.containsKey('filesize_approx')) {
-        return json['filesize_approx'] as int?;
-      }
-      return null;
     }
-  static final _progressRegex = RegExp(r'\[download\]\s+(\d+\.?\d*)%.*?of.*?(\d+\.?\d*\s*\w+B).*?at\s*([\d\.]+\s*\w+/s).*?ETA\s*(\d+:\d+)');
+    if (cookiesFile != null && cookiesFile.trim().isNotEmpty) {
+      args.addAll(['--cookies', cookiesFile]);
+    } else if (cookiesFromBrowser != null &&
+        cookiesFromBrowser.trim().isNotEmpty) {
+      args.addAll(['--cookies-from-browser', cookiesFromBrowser]);
+    }
+    if (forceGenericExtractor) {
+      args.add('--force-generic-extractor');
+    }
+    await _applyJsRuntimeArgs(args, ytDlpPath: ytDlpPath);
+    await _applyProxyArg(args);
+    args.add(url);
+
+    final workDir = await _getYtDlpWorkingDir();
+    final process = await Process.start(
+      ytDlpPath,
+      args,
+      workingDirectory: workDir,
+      runInShell: false,
+    );
+    final output = await process.stdout.transform(utf8.decoder).join();
+    await process.stderr.drain();
+    final exitCode = await process.exitCode;
+    if (exitCode != 0) return null;
+    final json = safeJsonDecode<Map<String, dynamic>>(output);
+    if (json != null && json.containsKey('filesize_approx')) {
+      return json['filesize_approx'] as int?;
+    }
+    return null;
+  }
+
+  static final _progressRegex = RegExp(
+      r'\[download\]\s+(\d+\.?\d*)%.*?of.*?(\d+\.?\d*\s*\w+B).*?at\s*([\d\.]+\s*\w+/s).*?ETA\s*(\d+:\d+)');
 
   /// Resolve yt-dlp executable path.
   /// Checks: configured path → app data dir → system PATH → null.
@@ -249,8 +261,7 @@ class YtDlpService {
         ['--version'],
         workingDirectory: workDir,
         runInShell: false,
-      )
-          .timeout(const Duration(seconds: 5));
+      ).timeout(const Duration(seconds: 5));
       if (result.exitCode == 0) return exeName;
     } catch (_) {}
 
@@ -306,8 +317,7 @@ class YtDlpService {
             ['--version'],
             workingDirectory: workDir,
             runInShell: false,
-          )
-              .timeout(const Duration(seconds: 5));
+          ).timeout(const Duration(seconds: 5));
           if (verify.exitCode == 0 &&
               verify.stdout.toString().trim().isNotEmpty) {
             onProgress?.call(100, 'yt-dlp installed');
@@ -377,8 +387,7 @@ class YtDlpService {
               ['--version'],
               workingDirectory: workDir,
               runInShell: false,
-            )
-                .timeout(const Duration(seconds: 5));
+            ).timeout(const Duration(seconds: 5));
             if (verify.exitCode == 0 &&
                 verify.stdout.toString().trim().isNotEmpty) {
               onProgress?.call(100, 'yt-dlp installed');
@@ -407,8 +416,7 @@ class YtDlpService {
                   ['--version'],
                   workingDirectory: workDir,
                   runInShell: false,
-                )
-                    .timeout(const Duration(seconds: 5));
+                ).timeout(const Duration(seconds: 5));
                 if (verify.exitCode == 0 &&
                     verify.stdout.toString().trim().isNotEmpty) {
                   onProgress?.call(100, 'yt-dlp installed');
@@ -439,7 +447,9 @@ class YtDlpService {
 
   /// Checks remote yt-dlp latest release and updates the local binary if
   /// the versions differ. Safe no-op on mobile/web.
-  Future<void> updateIfOutdated({String? configuredPath, void Function(int percent, String message)? onProgress}) async {
+  Future<void> updateIfOutdated(
+      {String? configuredPath,
+      void Function(int percent, String message)? onProgress}) async {
     if (kIsWeb || Platform.isAndroid || Platform.isIOS) return;
     await updateYtDlp(configuredPath: configuredPath, onProgress: onProgress);
   }
@@ -464,7 +474,8 @@ class YtDlpService {
     void Function(int percent, String message)? onProgress,
   }) async {
     if (kIsWeb || Platform.isAndroid || Platform.isIOS) {
-      throw Exception('yt-dlp updates are only supported on desktop platforms.');
+      throw Exception(
+          'yt-dlp updates are only supported on desktop platforms.');
     }
 
     try {
@@ -592,8 +603,7 @@ class YtDlpService {
         ['--version'],
         workingDirectory: workDir,
         runInShell: false,
-      )
-          .timeout(const Duration(seconds: 5));
+      ).timeout(const Duration(seconds: 5));
       if (result.exitCode == 0) {
         final out = result.stdout.toString().trim();
         if (out.isNotEmpty) return out.split('\n').first.trim();
@@ -717,6 +727,7 @@ class YtDlpService {
     }
 
     await _applyJsRuntimeArgs(args, ytDlpPath: ytDlpPath);
+    await _applyProxyArg(args);
     args.add(url);
 
     debugPrint('yt-dlp command: $ytDlpPath ${args.join(' ')}');
@@ -832,7 +843,8 @@ class YtDlpService {
         }
       }
       if (!found) {
-        throw Exception('yt-dlp completed but the output file was not created.');
+        throw Exception(
+            'yt-dlp completed but the output file was not created.');
       }
     }
 

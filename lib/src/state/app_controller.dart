@@ -26,6 +26,7 @@ import '../services/metadata_service.dart';
 import '../services/multi_source_search_service.dart';
 import '../services/notification_service.dart';
 import '../services/playlist_service.dart';
+import '../services/play_store_update_service.dart';
 import '../services/preview_player_service.dart';
 import '../services/android_saf.dart';
 import '../services/settings_store.dart';
@@ -74,6 +75,7 @@ class AppController extends ChangeNotifier {
   bool onboardingChecked = false;
   bool needsOnboarding = false;
   String? currentAppVersion;
+  Timer? _playStoreUpdateTimer;
 
   bool previewLoading = false;
   List<PreviewItem> previewItems = <PreviewItem>[];
@@ -185,6 +187,13 @@ class AppController extends ChangeNotifier {
 
     // Start periodic watched playlist checks while app is alive.
     watchedPlaylistService.startAutoCheck(interval: const Duration(hours: 4));
+
+    if (!kIsWeb && Platform.isAndroid && kPlayStoreBuild) {
+      _playStoreUpdateTimer?.cancel();
+      _playStoreUpdateTimer = Timer(const Duration(seconds: 5), () {
+        unawaited(PlayStoreUpdateService.checkForUpdate());
+      });
+    }
   }
 
   /// Programmatic tab switch. Persists preference and updates the active index.
@@ -192,7 +201,8 @@ class AppController extends ChangeNotifier {
     if (index < 0 || index > 14) return;
     if (index == _activeTabIndex) return;
     if (kDebugMode)
-      debugPrint('[AppController] switchToTab requested: $_activeTabIndex -> $index');
+      debugPrint(
+          '[AppController] switchToTab requested: $_activeTabIndex -> $index');
     _activeTabIndex = index;
     // Persist asynchronously; don't await here.
     SharedPreferences.getInstance()
@@ -298,7 +308,8 @@ class AppController extends ChangeNotifier {
 
   Future<void> pullVaultSettingsIntoHost() async {
     if (_settings == null) return;
-    final merged = await VaultSettingsBridge.pullVaultSettingsIntoHost(_settings!);
+    final merged =
+        await VaultSettingsBridge.pullVaultSettingsIntoHost(_settings!);
     if (merged.downloadDirTorrents == _settings!.downloadDirTorrents) return;
     _settings = merged;
     await settingsStore.save(merged);
@@ -515,10 +526,9 @@ class AppController extends ChangeNotifier {
     final downloadFolder = perFormatFolder?.isNotEmpty == true
         ? perFormatFolder!
         : settings.downloadDir.trim();
-    final createFormatSubfolders =
-        (perFormatFolder?.isNotEmpty == true)
-            ? false
-            : settings.createFormatSubfolders;
+    final createFormatSubfolders = (perFormatFolder?.isNotEmpty == true)
+        ? false
+        : settings.createFormatSubfolders;
 
     // Preflight disk space check (200MB buffer)
     final hasSpace = await downloadService.hasEnoughDiskSpace(downloadFolder,
@@ -553,11 +563,11 @@ class AppController extends ChangeNotifier {
 
     final maxAttempts = (_settings?.retryCount ?? 2).clamp(1, 5);
     final cookiesFile = settings.youtubeAuthEnabled
-      ? settings.youtubeCookiesFile?.trim()
-      : null;
+        ? settings.youtubeCookiesFile?.trim()
+        : null;
     final cookiesFromBrowser = settings.youtubeAuthEnabled
-      ? settings.youtubeCookiesFromBrowser?.trim()
-      : null;
+        ? settings.youtubeCookiesFromBrowser?.trim()
+        : null;
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
       if (token.cancelled) break;
       try {
@@ -582,12 +592,13 @@ class AppController extends ChangeNotifier {
             ytDlpPath: settings.ytDlpPath,
             sponsorBlockEnabled: settings.sponsorBlockEnabled,
             createFormatSubfolders: createFormatSubfolders,
-            cookiesFile:
-              (cookiesFile != null && cookiesFile.isNotEmpty) ? cookiesFile : null,
-            cookiesFromBrowser: (cookiesFromBrowser != null &&
-                cookiesFromBrowser.isNotEmpty)
-              ? cookiesFromBrowser
-              : null,
+            cookiesFile: (cookiesFile != null && cookiesFile.isNotEmpty)
+                ? cookiesFile
+                : null,
+            cookiesFromBrowser:
+                (cookiesFromBrowser != null && cookiesFromBrowser.isNotEmpty)
+                    ? cookiesFromBrowser
+                    : null,
             onProgress: (pct, status, {String? speed, String? eta}) {
               final updated = item.copyWith(
                   progress: pct, status: status, speed: speed, eta: eta);
@@ -608,12 +619,13 @@ class AppController extends ChangeNotifier {
             ytDlpPath: settings.ytDlpPath,
             sponsorBlockEnabled: settings.sponsorBlockEnabled,
             createFormatSubfolders: createFormatSubfolders,
-            cookiesFile:
-              (cookiesFile != null && cookiesFile.isNotEmpty) ? cookiesFile : null,
-            cookiesFromBrowser: (cookiesFromBrowser != null &&
-                cookiesFromBrowser.isNotEmpty)
-              ? cookiesFromBrowser
-              : null,
+            cookiesFile: (cookiesFile != null && cookiesFile.isNotEmpty)
+                ? cookiesFile
+                : null,
+            cookiesFromBrowser:
+                (cookiesFromBrowser != null && cookiesFromBrowser.isNotEmpty)
+                    ? cookiesFromBrowser
+                    : null,
             onProgress: (pct, status, {String? speed, String? eta}) {
               final updated = item.copyWith(
                   progress: pct, status: status, speed: speed, eta: eta);
@@ -1081,7 +1093,7 @@ class AppController extends ChangeNotifier {
   Future<List<models.SearchResult>> multiSearch(String query) async {
     try {
       final results = await searchService.searchAll(query);
-        final filtered = isYouTubeConversionEnabledInCurrentBuild
+      final filtered = isYouTubeConversionEnabledInCurrentBuild
           ? results
           : results.where((r) => r.source.toLowerCase() != 'youtube').toList();
       logs.add('Search found ${filtered.length} results for "$query"');
@@ -1141,7 +1153,8 @@ class AppController extends ChangeNotifier {
   /// Bulk import: parses queries and adds each best match to the queue.
   Future<void> processBulkImport(List<String> queries, {String? format}) async {
     if (!isYouTubeConversionEnabledInCurrentBuild) {
-      logs.add('Bulk import disabled: YouTube conversion is off in this build.');
+      logs.add(
+          'Bulk import disabled: YouTube conversion is off in this build.');
       return;
     }
 
@@ -1247,6 +1260,7 @@ class AppController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _playStoreUpdateTimer?.cancel();
     FullModeAccess.instance.removeListener(_fullModeListener);
     watchedPlaylistService.dispose();
     previewPlayer.dispose();

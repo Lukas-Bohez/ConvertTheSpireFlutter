@@ -80,7 +80,8 @@ class _NewTabPageState extends State<NewTabPage> {
             decoration: BoxDecoration(
               color: cs.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
+              border:
+                  Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
             ),
             child: Row(
               children: [
@@ -120,6 +121,20 @@ class _NewTabPageState extends State<NewTabPage> {
           borderSide: BorderSide.none,
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 14),
+        suffixIcon: IconButton(
+          tooltip: 'Go',
+          icon: const Icon(Icons.arrow_forward, size: 18),
+          onPressed: () {
+            final trimmed = _searchController.text.trim();
+            if (trimmed.isNotEmpty) {
+              widget.onNavigate(trimmed);
+              _searchController.clear();
+            }
+            _stopSearchEditing();
+          },
+        ),
+        suffixIconConstraints:
+            const BoxConstraints(minHeight: 28, minWidth: 28),
       ),
       textInputAction: TextInputAction.go,
       onSubmitted: (val) {
@@ -292,7 +307,8 @@ class _NewTabPageState extends State<NewTabPage> {
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             itemCount: _favourites.length,
-                            separatorBuilder: (_, __) => const SizedBox(width: 8),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 8),
                             itemBuilder: (context, index) {
                               final fav = _favourites[index];
                               final url = fav['url'] as String;
@@ -306,7 +322,8 @@ class _NewTabPageState extends State<NewTabPage> {
                               return ActionChip(
                                 avatar: const Icon(Icons.star, size: 16),
                                 label: ConstrainedBox(
-                                  constraints: const BoxConstraints(maxWidth: 240),
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 240),
                                   child: Text(
                                     title,
                                     overflow: TextOverflow.ellipsis,
@@ -338,7 +355,8 @@ class _NewTabPageState extends State<NewTabPage> {
                           return ActionChip(
                             avatar: const Icon(Icons.star, size: 16),
                             label: ConstrainedBox(
-                              constraints: BoxConstraints(maxWidth: width * 0.33),
+                              constraints:
+                                  BoxConstraints(maxWidth: width * 0.33),
                               child: Text(
                                 title,
                                 overflow: TextOverflow.ellipsis,

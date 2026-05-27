@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 
@@ -9,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:convert_the_spire_reborn/src/vault/constants.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+import 'package:convert_the_spire_reborn/src/services/network_proxy_service.dart';
 import 'package:convert_the_spire_reborn/src/widgets/tv_file_browser.dart';
 import 'package:convert_the_spire_reborn/src/services/review_service.dart';
 
@@ -35,6 +37,10 @@ class _AboutScreenState extends State<AboutScreen>
   late final TextEditingController _maxActiveController;
   late final TextEditingController _downloadRateController;
   late final TextEditingController _uploadRateController;
+  late final TextEditingController _proxyHostController;
+  late final TextEditingController _proxyPortController;
+  late final TextEditingController _proxyUsernameController;
+  late final TextEditingController _proxyPasswordController;
   late AiCopilotService _aiService;
 
   List<String> _availableModels = <String>[];
@@ -45,6 +51,9 @@ class _AboutScreenState extends State<AboutScreen>
   bool _savingNetwork = false;
   bool _pickerBusy = false;
   String _appVersionLabel = 'Loading...';
+  bool _proxyEnabled = false;
+  bool _proxyForTrackers = true;
+  bool _proxyForPeers = true;
 
   String? _androidDocumentsUriForPath(String directoryPath) {
     final normalized = directoryPath.replaceAll('\\', '/');
@@ -114,11 +123,16 @@ class _AboutScreenState extends State<AboutScreen>
     _uploadRateController = TextEditingController(
       text: '${_settings.uploadRateLimitKib}',
     );
+    _proxyHostController = TextEditingController();
+    _proxyPortController = TextEditingController(text: '1080');
+    _proxyUsernameController = TextEditingController();
+    _proxyPasswordController = TextEditingController();
     _selectedModel = _settings.aiDefaultModel;
     if (!_androidTorrentOnly) {
       _aiService = AiCopilotService(baseUrl: _settings.aiOllamaUrl);
       _fetchAvailableModels();
     }
+    unawaited(_loadProxySettings());
     _loadAppVersion();
   }
 
@@ -147,7 +161,25 @@ class _AboutScreenState extends State<AboutScreen>
     _maxActiveController.dispose();
     _downloadRateController.dispose();
     _uploadRateController.dispose();
+    _proxyHostController.dispose();
+    _proxyPortController.dispose();
+    _proxyUsernameController.dispose();
+    _proxyPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadProxySettings() async {
+    final proxy = await NetworkProxyService.load();
+    if (!mounted) return;
+    setState(() {
+      _proxyEnabled = proxy.enabled;
+      _proxyForTrackers = proxy.useForTrackers;
+      _proxyForPeers = proxy.useForPeers;
+      _proxyHostController.text = proxy.host;
+      _proxyPortController.text = '${proxy.port}';
+      _proxyUsernameController.text = proxy.username;
+      _proxyPasswordController.text = proxy.password;
+    });
   }
 
   Future<void> _fetchAvailableModels() async {
@@ -320,13 +352,27 @@ class _AboutScreenState extends State<AboutScreen>
       final maxActive = int.tryParse(_maxActiveController.text) ?? 3;
       final down = int.tryParse(_downloadRateController.text) ?? 0;
       final up = int.tryParse(_uploadRateController.text) ?? 0;
+      final proxyPort = int.tryParse(_proxyPortController.text) ?? 1080;
 
-      await _settings.setListenPort(listenPort);
-      await _settings.setMaxConnectionsGlobal(maxGlobal);
-      await _settings.setMaxConnectionsPerTorrent(maxPerTorrent);
-      await _settings.setMaxActiveDownloads(maxActive);
-      await _settings.setDownloadRateLimitKib(down);
-      await _settings.setUploadRateLimitKib(up);
+      await Future.wait([
+        _settings.setListenPort(listenPort),
+        _settings.setMaxConnectionsGlobal(maxGlobal),
+        _settings.setMaxConnectionsPerTorrent(maxPerTorrent),
+        _settings.setMaxActiveDownloads(maxActive),
+        _settings.setDownloadRateLimitKib(down),
+        _settings.setUploadRateLimitKib(up),
+        NetworkProxyService.save(
+          ProxySettings(
+            enabled: _proxyEnabled,
+            host: _proxyHostController.text.trim(),
+            port: proxyPort,
+            username: _proxyUsernameController.text.trim(),
+            password: _proxyPasswordController.text,
+            useForTrackers: _proxyForTrackers,
+            useForPeers: _proxyForPeers,
+          ),
+        ),
+      ]);
 
       _listenPortController.text = '${_settings.listenPort}';
       _maxGlobalController.text = '${_settings.maxConnectionsGlobal}';
@@ -375,8 +421,10 @@ class _AboutScreenState extends State<AboutScreen>
       path = await FilePicker.platform.saveFile(fileName: fileName);
     }
 
-    if ((path == null || path.isEmpty) && _settings.downloadDestination.isNotEmpty) {
-      path = '${_settings.downloadDestination}${Platform.pathSeparator}$fileName';
+    if ((path == null || path.isEmpty) &&
+        _settings.downloadDestination.isNotEmpty) {
+      path =
+          '${_settings.downloadDestination}${Platform.pathSeparator}$fileName';
     }
 
     if (path == null || path.isEmpty) {
@@ -467,424 +515,536 @@ class _AboutScreenState extends State<AboutScreen>
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: maxContentWidth),
           child: Padding(
-            padding: EdgeInsets.fromLTRB(width > 1200 ? 24 : 16, 16, width > 1200 ? 24 : 16, 16),
+            padding: EdgeInsets.fromLTRB(
+                width > 1200 ? 24 : 16, 16, width > 1200 ? 24 : 16, 16),
             child: ListView(
               children: [
-            _sectionCard(
-              title: 'Downloads',
-              children: [
-                TextField(
-                  controller: _downloadDirController,
-                  decoration: const InputDecoration(
-                    labelText: 'Default download folder',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                _sectionCard(
+                  title: 'Downloads',
                   children: [
-                    ElevatedButton.icon(
-                      onPressed: _openDownloadFolder,
-                      icon: const Icon(Icons.folder_open),
-                      label: const Text('Browse'),
+                    TextField(
+                      controller: _downloadDirController,
+                      decoration: const InputDecoration(
+                        labelText: 'Default download folder',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
-                    if (Platform.isAndroid)
-                      FilledButton.icon(
-                        onPressed: () async {
-                          if (_pickerBusy) return;
-                          _pickerBusy = true;
-                          try {
-                            final result = await pickDirectoryPath(
-                              context,
-                              dialogTitle: 'Select download folder',
-                            );
-                            if (result != null) {
-                              _downloadDirController.text = result;
-                              await _settings.setDownloadDestination(result);
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _openDownloadFolder,
+                          icon: const Icon(Icons.folder_open),
+                          label: const Text('Browse'),
+                        ),
+                        if (Platform.isAndroid)
+                          FilledButton.icon(
+                            onPressed: () async {
+                              if (_pickerBusy) return;
+                              _pickerBusy = true;
+                              try {
+                                final result = await pickDirectoryPath(
+                                  context,
+                                  dialogTitle: 'Select download folder',
+                                );
+                                if (result != null) {
+                                  _downloadDirController.text = result;
+                                  await _settings
+                                      .setDownloadDestination(result);
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content:
+                                          Text('Download folder set: $result'),
+                                    ),
+                                  );
+                                  setState(() {});
+                                }
+                              } finally {
+                                _pickerBusy = false;
+                              }
+                            },
+                            icon: const Icon(Icons.folder_open),
+                            label: const Text('Choose download folder'),
+                          ),
+                        OutlinedButton(
+                          onPressed: _saveDownloadDestination,
+                          child: const Text('Save Folder'),
+                        ),
+                      ],
+                    ),
+                    SwitchListTile(
+                      title: const Text('Auto-start when added'),
+                      contentPadding: EdgeInsets.zero,
+                      value: _settings.autoStartOnAdd,
+                      onChanged: (v) async {
+                        await _settings.setAutoStartOnAdd(v);
+                        if (!mounted) return;
+                        setState(() {});
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                _sectionCard(
+                  title: 'Connection',
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        SizedBox(
+                          width: 220,
+                          child: TextField(
+                            controller: _listenPortController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Listen port',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 220,
+                          child: TextField(
+                            controller: _maxGlobalController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Max global connections',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 220,
+                          child: TextField(
+                            controller: _maxPerTorrentController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Max connections per torrent',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 220,
+                          child: TextField(
+                            controller: _maxActiveController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Max active downloads',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 220,
+                          child: TextField(
+                            controller: _downloadRateController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText:
+                                  'Download rate limit (KiB/s, 0 = unlimited)',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 220,
+                          child: TextField(
+                            controller: _uploadRateController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText:
+                                  'Upload rate limit (KiB/s, 0 = unlimited)',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SwitchListTile(
+                      title: const Text('Enable DHT'),
+                      contentPadding: EdgeInsets.zero,
+                      value: _settings.useDht,
+                      onChanged: (v) async {
+                        await _settings.setUseDht(v);
+                        if (!mounted) return;
+                        setState(() {});
+                      },
+                    ),
+                    SwitchListTile(
+                      title: const Text('Enable Peer Exchange (PEX)'),
+                      contentPadding: EdgeInsets.zero,
+                      value: _settings.usePex,
+                      onChanged: (v) async {
+                        await _settings.setUsePex(v);
+                        if (!mounted) return;
+                        setState(() {});
+                      },
+                    ),
+                    SwitchListTile(
+                      title: const Text('Enable Local Peer Discovery (LPD)'),
+                      contentPadding: EdgeInsets.zero,
+                      value: _settings.useLpd,
+                      onChanged: (v) async {
+                        await _settings.setUseLpd(v);
+                        if (!mounted) return;
+                        setState(() {});
+                      },
+                    ),
+                    const Divider(height: 20),
+                    SwitchListTile(
+                      title: const Text('Enable proxy'),
+                      contentPadding: EdgeInsets.zero,
+                      value: _proxyEnabled,
+                      onChanged: (v) => setState(() => _proxyEnabled = v),
+                    ),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        SizedBox(
+                          width: 220,
+                          child: TextField(
+                            controller: _proxyHostController,
+                            decoration: const InputDecoration(
+                              labelText: 'Proxy host',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 140,
+                          child: TextField(
+                            controller: _proxyPortController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Proxy port',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 220,
+                          child: TextField(
+                            controller: _proxyUsernameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Proxy username',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 220,
+                          child: TextField(
+                            controller: _proxyPasswordController,
+                            obscureText: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Proxy password',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SwitchListTile(
+                      title: const Text('Use proxy for trackers'),
+                      contentPadding: EdgeInsets.zero,
+                      value: _proxyForTrackers,
+                      onChanged: (v) => setState(() => _proxyForTrackers = v),
+                    ),
+                    SwitchListTile(
+                      title: const Text('Use proxy for peers'),
+                      contentPadding: EdgeInsets.zero,
+                      value: _proxyForPeers,
+                      onChanged: (v) => setState(() => _proxyForPeers = v),
+                    ),
+                    Row(
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            try {
+                              final ok = await NetworkProxyService
+                                  .testSocks5Connection();
                               if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Download folder set: $result'),
+                                  content: Text(
+                                    ok
+                                        ? 'Proxy connection successful'
+                                        : 'Proxy test failed',
+                                  ),
                                 ),
                               );
-                              setState(() {});
+                            } catch (e) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text('Proxy test failed: $e')),
+                              );
                             }
-                          } finally {
-                            _pickerBusy = false;
-                          }
-                        },
-                        icon: const Icon(Icons.folder_open),
-                        label: const Text('Choose download folder'),
-                      ),
-                    OutlinedButton(
-                      onPressed: _saveDownloadDestination,
-                      child: const Text('Save Folder'),
-                    ),
-                  ],
-                ),
-                SwitchListTile(
-                  title: const Text('Auto-start when added'),
-                  contentPadding: EdgeInsets.zero,
-                  value: _settings.autoStartOnAdd,
-                  onChanged: (v) async {
-                    await _settings.setAutoStartOnAdd(v);
-                    if (!mounted) return;
-                    setState(() {});
-                  },
-                ),
-
-              ],
-            ),
-            const SizedBox(height: 10),
-            _sectionCard(
-              title: 'Connection',
-              children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    SizedBox(
-                      width: 220,
-                      child: TextField(
-                        controller: _listenPortController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Listen port',
-                          border: OutlineInputBorder(),
+                          },
+                          icon: const Icon(Icons.network_check),
+                          label: const Text('Test proxy'),
                         ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 220,
-                      child: TextField(
-                        controller: _maxGlobalController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Max global connections',
-                          border: OutlineInputBorder(),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'SOCKS5 proxy settings are shared by torrent tasks and yt-dlp downloads.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                    SizedBox(
-                      width: 220,
-                      child: TextField(
-                        controller: _maxPerTorrentController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Max connections per torrent',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 220,
-                      child: TextField(
-                        controller: _maxActiveController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Max active downloads',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 220,
-                      child: TextField(
-                        controller: _downloadRateController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText:
-                              'Download rate limit (KiB/s, 0 = unlimited)',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 220,
-                      child: TextField(
-                        controller: _uploadRateController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Upload rate limit (KiB/s, 0 = unlimited)',
-                          border: OutlineInputBorder(),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton(
+                        onPressed: _savingNetwork ? null : _saveNetworkSettings,
+                        child: Text(
+                          _savingNetwork
+                              ? 'Saving...'
+                              : 'Save Connection Settings',
                         ),
                       ),
                     ),
                   ],
                 ),
-                SwitchListTile(
-                  title: const Text('Enable DHT'),
-                  contentPadding: EdgeInsets.zero,
-                  value: _settings.useDht,
-                  onChanged: (v) async {
-                    await _settings.setUseDht(v);
-                    if (!mounted) return;
-                    setState(() {});
-                  },
-                ),
-                SwitchListTile(
-                  title: const Text('Enable Peer Exchange (PEX)'),
-                  contentPadding: EdgeInsets.zero,
-                  value: _settings.usePex,
-                  onChanged: (v) async {
-                    await _settings.setUsePex(v);
-                    if (!mounted) return;
-                    setState(() {});
-                  },
-                ),
-                SwitchListTile(
-                  title: const Text('Enable Local Peer Discovery (LPD)'),
-                  contentPadding: EdgeInsets.zero,
-                  value: _settings.useLpd,
-                  onChanged: (v) async {
-                    await _settings.setUseLpd(v);
-                    if (!mounted) return;
-                    setState(() {});
-                  },
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: ElevatedButton(
-                    onPressed: _savingNetwork ? null : _saveNetworkSettings,
-                    child: Text(
-                      _savingNetwork ? 'Saving...' : 'Save Connection Settings',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            if (!_androidTorrentOnly)
-              _sectionCard(
-                title: 'AI',
-                children: [
-                  SwitchListTile(
-                    title: const Text('Enable AI Copilot'),
-                    contentPadding: EdgeInsets.zero,
-                    value: _settings.enableAiCopilot,
-                    onChanged: (v) async {
-                      await _settings.setEnableAiCopilot(v);
-                      if (!mounted) return;
-                      setState(() {});
-                    },
-                  ),
-                  SwitchListTile(
-                    title: const Text('Enable smart suggestions'),
-                    contentPadding: EdgeInsets.zero,
-                    value: _settings.enableSmartSuggestions,
-                    onChanged: (v) async {
-                      await _settings.setEnableSmartSuggestions(v);
-                      if (!mounted) return;
-                      setState(() {});
-                    },
-                  ),
-                  TextField(
-                    controller: _ollamaUrlController,
-                    onChanged: (_) => _onUrlChanged(),
-                    decoration: InputDecoration(
-                      labelText: 'Ollama Host URL',
-                      hintText: _settings.aiOllamaUrl,
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
+                const SizedBox(height: 10),
+                if (!_androidTorrentOnly)
+                  _sectionCard(
+                    title: 'AI',
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Theme.of(context).dividerColor,
-                                ),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                'Recommended model: $kDefaultAiModel\n'
-                                'Detected local models: ${_availableModels.length}',
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            DropdownButtonFormField<String>(
-                              initialValue:
-                                  _availableModels.contains(_selectedModel)
-                                  ? _selectedModel
-                                  : null,
-                              decoration: const InputDecoration(
-                                labelText: 'Model to use',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: _availableModels
-                                  .map(
-                                    (m) => DropdownMenuItem<String>(
-                                      value: m,
-                                      child: Text(m),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: _availableModels.isEmpty
-                                  ? null
-                                  : (value) {
-                                      if (value == null) return;
-                                      setState(() {
-                                        _selectedModel = value;
-                                      });
-                                    },
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _modelStatus,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: _modelStatus.contains('Failed')
-                                        ? Theme.of(context).colorScheme.error
-                                        : Theme.of(
-                                            context,
-                                          ).colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: _loadingModels
-                            ? null
-                            : _fetchAvailableModels,
-                        icon: const Icon(Icons.refresh),
-                        tooltip: 'Refresh available models',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: FilledButton.icon(
-                      onPressed: _downloadingRecommended
-                          ? null
-                          : _downloadRecommendedModel,
-                      icon: const Icon(Icons.download_for_offline_outlined),
-                      label: Text(
-                        _downloadingRecommended
-                            ? 'Downloading recommended model...'
-                            : 'Download Recommended Model',
-                      ),
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: ElevatedButton(
-                      onPressed: _saveAiSettings,
-                      child: const Text('Save AI Settings'),
-                    ),
-                  ),
-                ],
-              ),
-            if (!_androidTorrentOnly) const SizedBox(height: 10),
-            _sectionCard(
-              title: 'General Settings',
-              children: [
-                const Text(
-                  'General app settings are centralized in the main app Settings tab. '
-                  'This screen now contains torrent-specific configuration only.',
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            _sectionCard(
-              title: 'About and Diagnostics',
-              children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.info_outline),
-                  title: const Text('Vault The Spire'),
-                  subtitle: Text(
-                    _androidTorrentOnly
-                        ? 'Torrent manager for Android'
-                        : 'Torrent manager with built-in AI copilot',
-                  ),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.calendar_month),
-                  title: const Text('App version'),
-                  subtitle: Text(_appVersionLabel),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.security),
-                  title: const Text('Privacy policy'),
-                  subtitle: Text(kPrivacyPolicyUrl),
-                  onTap: _openPrivacyPolicy,
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.star_rate_outlined),
-                  title: const Text('Rate BitPlayer'),
-                  subtitle: const Text('Leave a rating on the Play Store'),
-                  onTap: () async {
-                    await ReviewService.openStoreListing();
-                  },
-                ),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final narrow = constraints.maxWidth < 640;
-                    final actions = <Widget>[
-                      OutlinedButton.icon(
-                        onPressed: _exportDiagnostics,
-                        icon: const Icon(Icons.bug_report_outlined),
-                        label: const Text('Export Diagnostics'),
-                      ),
-                      OutlinedButton(
-                        onPressed: () async {
-                          await _settings.clearBrowserHistory();
+                      SwitchListTile(
+                        title: const Text('Enable AI Copilot'),
+                        contentPadding: EdgeInsets.zero,
+                        value: _settings.enableAiCopilot,
+                        onChanged: (v) async {
+                          await _settings.setEnableAiCopilot(v);
                           if (!mounted) return;
                           setState(() {});
                         },
-                        child: const Text('Clear Browser History'),
                       ),
-                    ];
-
-                    if (narrow) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                      SwitchListTile(
+                        title: const Text('Enable smart suggestions'),
+                        contentPadding: EdgeInsets.zero,
+                        value: _settings.enableSmartSuggestions,
+                        onChanged: (v) async {
+                          await _settings.setEnableSmartSuggestions(v);
+                          if (!mounted) return;
+                          setState(() {});
+                        },
+                      ),
+                      TextField(
+                        controller: _ollamaUrlController,
+                        onChanged: (_) => _onUrlChanged(),
+                        decoration: InputDecoration(
+                          labelText: 'Ollama Host URL',
+                          hintText: _settings.aiOllamaUrl,
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
                         children: [
-                          actions[0],
-                          const SizedBox(height: 8),
-                          actions[1],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Theme.of(context).dividerColor,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    'Recommended model: $kDefaultAiModel\n'
+                                    'Detected local models: ${_availableModels.length}',
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                DropdownButtonFormField<String>(
+                                  initialValue:
+                                      _availableModels.contains(_selectedModel)
+                                          ? _selectedModel
+                                          : null,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Model to use',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: _availableModels
+                                      .map(
+                                        (m) => DropdownMenuItem<String>(
+                                          value: m,
+                                          child: Text(m),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: _availableModels.isEmpty
+                                      ? null
+                                      : (value) {
+                                          if (value == null) return;
+                                          setState(() {
+                                            _selectedModel = value;
+                                          });
+                                        },
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _modelStatus,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: _modelStatus.contains('Failed')
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .error
+                                            : Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed:
+                                _loadingModels ? null : _fetchAvailableModels,
+                            icon: const Icon(Icons.refresh),
+                            tooltip: 'Refresh available models',
+                          ),
                         ],
-                      );
-                    }
-
-                    return Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: actions,
-                    );
-                  },
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _settings.lastDiagnosticsExport.isEmpty
-                      ? 'Last diagnostics export: never'
-                      : 'Last diagnostics export: ${_settings.lastDiagnosticsExport}',
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: FilledButton.icon(
+                          onPressed: _downloadingRecommended
+                              ? null
+                              : _downloadRecommendedModel,
+                          icon: const Icon(Icons.download_for_offline_outlined),
+                          label: Text(
+                            _downloadingRecommended
+                                ? 'Downloading recommended model...'
+                                : 'Download Recommended Model',
+                          ),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: ElevatedButton(
+                          onPressed: _saveAiSettings,
+                          child: const Text('Save AI Settings'),
+                        ),
+                      ),
+                    ],
+                  ),
+                if (!_androidTorrentOnly) const SizedBox(height: 10),
+                _sectionCard(
+                  title: 'General Settings',
+                  children: [
+                    const Text(
+                      'General app settings are centralized in the main app Settings tab. '
+                      'This screen now contains torrent-specific configuration only.',
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
-                const Text(
-                  'Data Safety:\n'
-                  '- No personal data collection\n'
-                  '- No location data\n'
-                  '- No identifiers shared\n'
-                  '- No advertising or analytics',
+                _sectionCard(
+                  title: 'About and Diagnostics',
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.info_outline),
+                      title: const Text('Vault The Spire'),
+                      subtitle: Text(
+                        _androidTorrentOnly
+                            ? 'Torrent manager for Android'
+                            : 'Torrent manager with built-in AI copilot',
+                      ),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.calendar_month),
+                      title: const Text('App version'),
+                      subtitle: Text(_appVersionLabel),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.security),
+                      title: const Text('Privacy policy'),
+                      subtitle: Text(kPrivacyPolicyUrl),
+                      onTap: _openPrivacyPolicy,
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.star_rate_outlined),
+                      title: const Text('Rate BitPlayer'),
+                      subtitle: const Text('Leave a rating on the Play Store'),
+                      onTap: () async {
+                        await ReviewService.openStoreListing();
+                      },
+                    ),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final narrow = constraints.maxWidth < 640;
+                        final actions = <Widget>[
+                          OutlinedButton.icon(
+                            onPressed: _exportDiagnostics,
+                            icon: const Icon(Icons.bug_report_outlined),
+                            label: const Text('Export Diagnostics'),
+                          ),
+                          OutlinedButton(
+                            onPressed: () async {
+                              await _settings.clearBrowserHistory();
+                              if (!mounted) return;
+                              setState(() {});
+                            },
+                            child: const Text('Clear Browser History'),
+                          ),
+                        ];
+
+                        if (narrow) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              actions[0],
+                              const SizedBox(height: 8),
+                              actions[1],
+                            ],
+                          );
+                        }
+
+                        return Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: actions,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _settings.lastDiagnosticsExport.isEmpty
+                          ? 'Last diagnostics export: never'
+                          : 'Last diagnostics export: ${_settings.lastDiagnosticsExport}',
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Data Safety:\n'
+                      '- No personal data collection\n'
+                      '- No location data\n'
+                      '- No identifiers shared\n'
+                      '- No advertising or analytics',
+                    ),
+                  ],
                 ),
-              ],
-            ),
               ],
             ),
           ),

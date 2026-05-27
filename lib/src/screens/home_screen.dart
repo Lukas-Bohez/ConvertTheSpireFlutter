@@ -25,6 +25,8 @@ import '../services/android_saf.dart';
 import '../services/folder_access_service.dart';
 import '../services/shortcut_service.dart';
 import '../services/tray_service.dart';
+import '../services/ipfs_service.dart';
+import '../services/url_routing_service.dart';
 import '../state/app_controller.dart';
 import 'bulk_import_screen.dart';
 import 'playlist_screen.dart';
@@ -36,6 +38,7 @@ import 'browser_screen.dart';
 import 'support_screen.dart';
 import 'player.dart' show PlayerPage, PlayerState, MediaType;
 import '../vault/vault_hub_screen.dart';
+import '../vault/services/torrent_service.dart';
 import '../widgets/browser_shell.dart';
 import '../widgets/onboarding_tooltip_service.dart';
 import '../widgets/quick_links_page.dart';
@@ -97,9 +100,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   static final Uri _websiteUri = Uri.parse('https://quizthespire.com/');
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _downloadDirController = TextEditingController();
-  final TextEditingController _downloadDirMp3Controller = TextEditingController();
-  final TextEditingController _downloadDirM4aController = TextEditingController();
-  final TextEditingController _downloadDirMp4Controller = TextEditingController();
+  final TextEditingController _downloadDirMp3Controller =
+      TextEditingController();
+  final TextEditingController _downloadDirM4aController =
+      TextEditingController();
+  final TextEditingController _downloadDirMp4Controller =
+      TextEditingController();
   final TextEditingController _downloadDirTorrentsController =
       TextEditingController();
   final TextEditingController _workersController = TextEditingController();
@@ -107,7 +113,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final TextEditingController _retryBackoffController = TextEditingController();
   final TextEditingController _ffmpegPathController = TextEditingController();
   final TextEditingController _ytDlpPathController = TextEditingController();
-  final TextEditingController _ytCookiesFileController = TextEditingController();
+  final TextEditingController _ytCookiesFileController =
+      TextEditingController();
   final TextEditingController _rangeFromController = TextEditingController();
   final TextEditingController _rangeToController = TextEditingController();
   final AndroidSaf _androidSaf = AndroidSaf();
@@ -216,14 +223,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         configuredPath: settings?.ytDlpPath,
       );
 
-      final response = await http
-          .get(
-            Uri.parse(
-              'https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest',
-            ),
-            headers: {'Accept': 'application/vnd.github+json'},
-          )
-          .timeout(const Duration(seconds: 10));
+      final response = await http.get(
+        Uri.parse(
+          'https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest',
+        ),
+        headers: {'Accept': 'application/vnd.github+json'},
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -745,8 +750,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _downloadDirMp4Controller.text = settings.downloadDirMp4 ?? '';
       _downloadDirTorrentsController.text = settings.downloadDirTorrents ?? '';
       _sponsorBlockEnabled = settings.sponsorBlockEnabled;
-        _youtubeAuthEnabled = settings.youtubeAuthEnabled;
-        _youtubeCookiesFromBrowser = settings.youtubeCookiesFromBrowser?.trim() ??
+      _youtubeAuthEnabled = settings.youtubeAuthEnabled;
+      _youtubeCookiesFromBrowser = settings.youtubeCookiesFromBrowser?.trim() ??
           _defaultCookiesFromBrowser();
       _minimizeToTrayOnClose = settings.minimizeToTrayOnClose;
       TrayService.shouldMinimiseToTrayOnClose = _minimizeToTrayOnClose;
@@ -831,8 +836,93 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void openBrowserWith(String url) {
-    _navigateToPage(2);
-    BrowserScreen.navigate(url);
+    unawaited(_openBrowserRequest(url));
+  }
+
+  Future<void> _openBrowserRequest(String url) async {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return;
+
+    switch (UrlRoutingService.detectUrlType(trimmed)) {
+      case UrlType.magnet:
+      case UrlType.torrentFile:
+        await _openTorrentLink(trimmed);
+        if (!mounted) return;
+        _navigateToPage(14);
+        return;
+      case UrlType.ipfs:
+        final resolved = await IpfsService.resolveUrl(trimmed);
+        if (!mounted) return;
+        _navigateToPage(2);
+        BrowserScreen.navigate(resolved);
+        return;
+      case UrlType.web:
+        _navigateToPage(2);
+        BrowserScreen.navigate(trimmed);
+        return;
+    }
+  }
+
+  Future<void> _openTorrentLink(String url) async {
+    final lower = url.toLowerCase();
+    try {
+      if (lower.startsWith('magnet:')) {
+        await TorrentService.instance.addTorrentFromMagnetLink(url);
+        if (mounted) {
+          Snack.show(context, 'Magnet link added to torrents',
+              level: SnackLevel.info);
+        }
+        return;
+      }
+
+      String localPath = url;
+      if (lower.startsWith('file://')) {
+        localPath = Uri.parse(url).toFilePath();
+      }
+      final localFile = File(localPath);
+      if (await localFile.exists()) {
+        await TorrentService.instance.addTorrentFromTorrentFile(localPath);
+        if (mounted) {
+          Snack.show(context, 'Torrent file added', level: SnackLevel.info);
+        }
+        return;
+      }
+
+      final uri = Uri.tryParse(url);
+      if (uri != null && (uri.isScheme('http') || uri.isScheme('https'))) {
+        final response = await http.get(uri);
+        if (response.statusCode != 200) {
+          throw HttpException('HTTP ${response.statusCode}', uri: uri);
+        }
+        final fileName = uri.pathSegments.isNotEmpty
+            ? uri.pathSegments.last
+            : 'downloaded.torrent';
+        final tempFile = File(
+          '${Directory.systemTemp.path}${Platform.pathSeparator}vts_${DateTime.now().millisecondsSinceEpoch}_$fileName',
+        );
+        await tempFile.writeAsBytes(response.bodyBytes, flush: true);
+        await TorrentService.instance.addTorrentFromTorrentFile(tempFile.path);
+        if (mounted) {
+          Snack.show(context, 'Torrent link added', level: SnackLevel.info);
+        }
+        return;
+      }
+
+      if (mounted) {
+        Snack.show(context, 'Unsupported torrent link',
+            level: SnackLevel.warning);
+      }
+    } on TorrentAlreadyExistsException catch (e) {
+      if (mounted) {
+        Snack.show(context, 'Torrent already exists: ${e.torrentId}',
+            level: SnackLevel.info);
+      }
+    } catch (e) {
+      if (mounted) {
+        Snack.show(context, 'Failed to add torrent: $e',
+            level: SnackLevel.error);
+      }
+    }
   }
 
   String _defaultCookiesFromBrowser() {
@@ -911,7 +1001,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _androidDownloadUri = chosen;
       _downloadDirController.text = _formatAndroidFolderLabel(chosen);
     });
-    await widget.controller.saveSettings(settings.copyWith(downloadDir: chosen));
+    await widget.controller
+        .saveSettings(settings.copyWith(downloadDir: chosen));
     if (mounted) {
       Snack.show(context, 'Download folder updated', level: SnackLevel.info);
     }
@@ -972,8 +1063,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ? null
             : _downloadDirMp4Controller.text.trim(),
         downloadDirTorrents: _downloadDirTorrentsController.text.trim().isEmpty
-          ? null
-          : _downloadDirTorrentsController.text.trim(),
+            ? null
+            : _downloadDirTorrentsController.text.trim(),
       ),
     );
     if (mounted) {
@@ -1024,8 +1115,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         icon: const Icon(Icons.clear),
                         onPressed: youtubeEnabled
                             ? () {
-                          setState(() => _urlController.clear());
-                        }
+                                setState(() => _urlController.clear());
+                              }
                             : null,
                         tooltip: 'Clear URL',
                       )
@@ -1040,12 +1131,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             icon: const Icon(Icons.content_paste),
             onPressed: youtubeEnabled
                 ? () async {
-              final clipboardData = await Clipboard.getData('text/plain');
-              if (!mounted) return;
-              if (clipboardData?.text != null) {
-                setState(() => _urlController.text = clipboardData!.text!);
-              }
-            }
+                    final clipboardData = await Clipboard.getData('text/plain');
+                    if (!mounted) return;
+                    if (clipboardData?.text != null) {
+                      setState(
+                          () => _urlController.text = clipboardData!.text!);
+                    }
+                  }
                 : null,
             tooltip: 'Paste from clipboard',
           ),
@@ -1080,15 +1172,17 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       child: Row(
                         children: [
                           Icon(Icons.block,
-                              color:
-                                  Theme.of(context).colorScheme.onErrorContainer),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onErrorContainer),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'YouTube conversion is disabled in this build.',
                               style: TextStyle(
-                                color:
-                                    Theme.of(context).colorScheme.onErrorContainer,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onErrorContainer,
                               ),
                             ),
                           ),
@@ -1467,8 +1561,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           icon: const Icon(Icons.search),
                           label: const Text('Search / Preview'),
                           onPressed: settings == null ||
-                              _urlController.text.trim().isEmpty ||
-                              !youtubeEnabled
+                                  _urlController.text.trim().isEmpty ||
+                                  !youtubeEnabled
                               ? null
                               : _onSearch,
                           style: ElevatedButton.styleFrom(
@@ -1483,8 +1577,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           icon: const Icon(Icons.download),
                           label: const Text('Download'),
                           onPressed: settings == null ||
-                              _urlController.text.trim().isEmpty ||
-                              !youtubeEnabled
+                                  _urlController.text.trim().isEmpty ||
+                                  !youtubeEnabled
                               ? null
                               : () => _downloadUrl(settings),
                           style: OutlinedButton.styleFrom(
@@ -1502,8 +1596,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           icon: const Icon(Icons.search),
                           label: const Text('Search / Preview'),
                           onPressed: settings == null ||
-                              _urlController.text.trim().isEmpty ||
-                              !youtubeEnabled
+                                  _urlController.text.trim().isEmpty ||
+                                  !youtubeEnabled
                               ? null
                               : _onSearch,
                           style: ElevatedButton.styleFrom(
@@ -1517,8 +1611,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           icon: const Icon(Icons.download),
                           label: const Text('Download'),
                           onPressed: settings == null ||
-                              _urlController.text.trim().isEmpty ||
-                              !youtubeEnabled
+                                  _urlController.text.trim().isEmpty ||
+                                  !youtubeEnabled
                               ? null
                               : () => _downloadUrl(settings),
                           style: OutlinedButton.styleFrom(
@@ -1948,9 +2042,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   item.thumbnailUrl!,
                                   width: 80,
                                   height: 60,
-                                    cacheWidth: 160,
-                                    cacheHeight: 120,
-                                    filterQuality: FilterQuality.low,
+                                  cacheWidth: 160,
+                                  cacheHeight: 120,
+                                  filterQuality: FilterQuality.low,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) =>
                                       _thumbnailPlaceholder(),
@@ -2210,7 +2304,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: ChoiceChip(
                       selected: showUpNext,
                       label: const Text('Up next'),
-                      onSelected: (_) => setState(() => _playQueueViewIndex = 0),
+                      onSelected: (_) =>
+                          setState(() => _playQueueViewIndex = 0),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -2218,7 +2313,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: ChoiceChip(
                       selected: !showUpNext,
                       label: const Text('Previously'),
-                      onSelected: (_) => setState(() => _playQueueViewIndex = 1),
+                      onSelected: (_) =>
+                          setState(() => _playQueueViewIndex = 1),
                     ),
                   ),
                 ],
@@ -2271,13 +2367,15 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, i) {
                     final mediaIndex = selected[i];
-                    if (mediaIndex < 0 || mediaIndex >= playerState.library.length) {
+                    if (mediaIndex < 0 ||
+                        mediaIndex >= playerState.library.length) {
                       return const SizedBox.shrink();
                     }
                     final media = playerState.library[mediaIndex];
-                    final title = (media.title == null || media.title!.trim().isEmpty)
-                        ? media.path.split(RegExp(r'[\\/]')).last
-                        : media.title!;
+                    final title =
+                        (media.title == null || media.title!.trim().isEmpty)
+                            ? media.path.split(RegExp(r'[\\/]')).last
+                            : media.title!;
                     return RepaintBoundary(
                       child: Card(
                         margin: EdgeInsets.zero,
@@ -2401,7 +2499,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 title: const Text('Clear Queue'),
                                 // overflow-fix: keep confirmation text scroll-safe.
                                 content: const SingleChildScrollView(
-                                  child: Text('Remove all items from the queue?'),
+                                  child:
+                                      Text('Remove all items from the queue?'),
                                 ),
                                 actions: [
                                   TextButton(
@@ -2454,178 +2553,181 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            Row(
-              children: [
-                Icon(statusIcon, color: statusColor, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    item.title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: isCompact ? 12 : 14,
+              Row(
+                children: [
+                  Icon(statusIcon, color: statusColor, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: isCompact ? 12 : 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      item.status.name.toUpperCase(),
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                    ),
+                  ),
+                  Text('${item.progress}%',
+                      style:
+                          TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+                  SizedBox(
+                    height: 24,
+                    child: DropdownButton<String>(
+                      value: item.format,
+                      isDense: true,
+                      underline: const SizedBox.shrink(),
+                      style: TextStyle(fontSize: 11, color: cs.onSurface),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'mp3',
+                            child: Text('MP3', style: TextStyle(fontSize: 11))),
+                        DropdownMenuItem(
+                            value: 'm4a',
+                            child: Text('M4A', style: TextStyle(fontSize: 11))),
+                        DropdownMenuItem(
+                            value: 'mp4',
+                            child: Text('MP4', style: TextStyle(fontSize: 11))),
+                      ],
+                      onChanged: item.status == DownloadStatus.downloading ||
+                              item.status == DownloadStatus.converting ||
+                              item.status == DownloadStatus.completed
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                widget.controller
+                                    .changeQueueItemFormat(item, value);
+                              }
+                            },
+                    ),
+                  ),
+                ],
+              ),
+              if (item.progress > 0 && item.progress < 100) ...[
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: LinearProgressIndicator(
+                    value: item.progress / 100,
+                    minHeight: 4,
+                    backgroundColor: cs.surfaceContainerHighest,
+                    valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                  ),
+                ),
+                if (item.speed != null || item.eta != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      children: [
+                        if (item.speed != null)
+                          Text('Speed: ${item.speed}',
+                              style: TextStyle(
+                                  fontSize: 11, color: cs.onSurfaceVariant)),
+                        if (item.eta != null) ...[
+                          const SizedBox(width: 12),
+                          Text('ETA: ${item.eta}',
+                              style: TextStyle(
+                                  fontSize: 11, color: cs.onSurfaceVariant)),
+                        ],
+                      ],
+                    ),
+                  ),
+              ],
+              const SizedBox(height: 6),
+              Wrap(
+                alignment: WrapAlignment.end,
+                children: [
+                  if (item.status == DownloadStatus.queued ||
+                      item.status == DownloadStatus.failed ||
+                      item.status == DownloadStatus.cancelled)
+                    _queueAction(Icons.download_rounded, 'Download',
+                        Theme.of(context).colorScheme.primary, () {
+                      final s = widget.controller.settings;
+                      if (s != null && !_ensureDownloadFolder(s)) return;
+                      widget.controller.downloadSingle(item);
+                    }),
+                  if (item.status == DownloadStatus.downloading ||
+                      item.status == DownloadStatus.converting)
+                    _queueAction(Icons.stop_rounded, 'Cancel', context.warning,
+                        () => widget.controller.cancelDownload(item)),
+                  if (item.status == DownloadStatus.cancelled ||
+                      item.status == DownloadStatus.failed)
+                    _queueAction(
+                        Icons.play_arrow_rounded, 'Resume', context.success,
+                        () {
+                      final s = widget.controller.settings;
+                      if (s != null && !_ensureDownloadFolder(s)) return;
+                      widget.controller.resumeDownload(item);
+                    }),
+                  if (item.status == DownloadStatus.completed &&
+                      item.outputPath != null &&
+                      !kIsWeb)
+                    _queueAction(
+                        Icons.folder_open_rounded,
+                        'Folder',
+                        Theme.of(context).colorScheme.primary,
+                        () => _showInFolder(item.outputPath!)),
+                  if (item.status == DownloadStatus.completed &&
+                      item.outputPath != null &&
+                      !kIsWeb &&
+                      Platform.isAndroid)
+                    _queueAction(
+                        Icons.share_rounded,
+                        'Share',
+                        Theme.of(context).colorScheme.primary,
+                        () => _shareFile(item.outputPath!, item.title)),
+                  if (item.status != DownloadStatus.downloading &&
+                      item.status != DownloadStatus.converting)
+                    _queueAction(
+                        Icons.delete_outline_rounded,
+                        'Remove',
+                        context.danger,
+                        () => widget.controller.removeFromQueue(item)),
+                ],
+              ),
+              if (item.error != null &&
+                  item.status == DownloadStatus.failed) ...[
+                const SizedBox(height: 4),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: context.danger.withAlpha((0.08 * 255).round()),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    item.error!,
+                    style: TextStyle(color: context.danger, fontSize: 11),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    item.status.name.toUpperCase(),
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                  ),
-                ),
-                Text('${item.progress}%',
-                    style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
-                SizedBox(
-                  height: 24,
-                  child: DropdownButton<String>(
-                    value: item.format,
-                    isDense: true,
-                    underline: const SizedBox.shrink(),
-                    style: TextStyle(fontSize: 11, color: cs.onSurface),
-                    items: const [
-                      DropdownMenuItem(
-                          value: 'mp3',
-                          child: Text('MP3', style: TextStyle(fontSize: 11))),
-                      DropdownMenuItem(
-                          value: 'm4a',
-                          child: Text('M4A', style: TextStyle(fontSize: 11))),
-                      DropdownMenuItem(
-                          value: 'mp4',
-                          child: Text('MP4', style: TextStyle(fontSize: 11))),
-                    ],
-                    onChanged: item.status == DownloadStatus.downloading ||
-                            item.status == DownloadStatus.converting ||
-                            item.status == DownloadStatus.completed
-                        ? null
-                        : (value) {
-                            if (value != null) {
-                              widget.controller
-                                  .changeQueueItemFormat(item, value);
-                            }
-                          },
-                  ),
-                ),
-              ],
-            ),
-            if (item.progress > 0 && item.progress < 100) ...[
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: item.progress / 100,
-                  minHeight: 4,
-                  backgroundColor: cs.surfaceContainerHighest,
-                  valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                ),
-              ),
-              if (item.speed != null || item.eta != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Row(
-                    children: [
-                      if (item.speed != null)
-                        Text('Speed: ${item.speed}',
-                            style: TextStyle(
-                                fontSize: 11, color: cs.onSurfaceVariant)),
-                      if (item.eta != null) ...[
-                        const SizedBox(width: 12),
-                        Text('ETA: ${item.eta}',
-                            style: TextStyle(
-                                fontSize: 11, color: cs.onSurfaceVariant)),
-                      ],
-                    ],
-                  ),
-                ),
-            ],
-            const SizedBox(height: 6),
-            Wrap(
-              alignment: WrapAlignment.end,
-              children: [
-                if (item.status == DownloadStatus.queued ||
-                    item.status == DownloadStatus.failed ||
-                    item.status == DownloadStatus.cancelled)
-                  _queueAction(Icons.download_rounded, 'Download',
-                      Theme.of(context).colorScheme.primary, () {
-                    final s = widget.controller.settings;
-                    if (s != null && !_ensureDownloadFolder(s)) return;
-                    widget.controller.downloadSingle(item);
-                  }),
-                if (item.status == DownloadStatus.downloading ||
-                    item.status == DownloadStatus.converting)
-                  _queueAction(Icons.stop_rounded, 'Cancel', context.warning,
-                      () => widget.controller.cancelDownload(item)),
-                if (item.status == DownloadStatus.cancelled ||
-                    item.status == DownloadStatus.failed)
-                  _queueAction(
-                      Icons.play_arrow_rounded, 'Resume', context.success, () {
-                    final s = widget.controller.settings;
-                    if (s != null && !_ensureDownloadFolder(s)) return;
-                    widget.controller.resumeDownload(item);
-                  }),
-                if (item.status == DownloadStatus.completed &&
-                    item.outputPath != null &&
-                    !kIsWeb)
-                  _queueAction(
-                      Icons.folder_open_rounded,
-                      'Folder',
-                      Theme.of(context).colorScheme.primary,
-                      () => _showInFolder(item.outputPath!)),
-                if (item.status == DownloadStatus.completed &&
-                    item.outputPath != null &&
-                    !kIsWeb &&
-                    Platform.isAndroid)
-                  _queueAction(
-                      Icons.share_rounded,
-                      'Share',
-                      Theme.of(context).colorScheme.primary,
-                      () => _shareFile(item.outputPath!, item.title)),
-                if (item.status != DownloadStatus.downloading &&
-                    item.status != DownloadStatus.converting)
-                  _queueAction(
-                      Icons.delete_outline_rounded,
-                      'Remove',
-                      context.danger,
-                      () => widget.controller.removeFromQueue(item)),
-              ],
-            ),
-            if (item.error != null && item.status == DownloadStatus.failed) ...[
-              const SizedBox(height: 4),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: context.danger.withAlpha((0.08 * 255).round()),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  item.error!,
-                  style: TextStyle(color: context.danger, fontSize: 11),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
             ],
           ),
         ),
@@ -2789,8 +2891,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             prefixIcon: const Icon(Icons.folder),
                             suffixIcon: IconButton(
                               icon: const Icon(Icons.folder_open),
-                              onPressed: () =>
-                                  _pickFormatDownloadFolder(settings, 'torrent'),
+                              onPressed: () => _pickFormatDownloadFolder(
+                                  settings, 'torrent'),
                             ),
                           ),
                           readOnly: true,
@@ -2819,11 +2921,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   icon: const Icon(Icons.folder_open),
                                   label: const Text('Browse'),
                                   onPressed: () async {
-                                    final result =
-                                        await pickDirectoryPath(
-                                          context,
-                                          dialogTitle: 'Select torrent folder',
-                                        );
+                                    final result = await pickDirectoryPath(
+                                      context,
+                                      dialogTitle: 'Select torrent folder',
+                                    );
                                     if (result != null && mounted) {
                                       setState(() =>
                                           _downloadDirTorrentsController.text =
@@ -2856,11 +2957,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 icon: const Icon(Icons.folder_open),
                                 label: const Text('Browse'),
                                 onPressed: () async {
-                                  final result =
-                                      await pickDirectoryPath(
-                                        context,
-                                        dialogTitle: 'Select torrent folder',
-                                      );
+                                  final result = await pickDirectoryPath(
+                                    context,
+                                    dialogTitle: 'Select torrent folder',
+                                  );
                                   if (result != null && mounted) {
                                     setState(() =>
                                         _downloadDirTorrentsController.text =
@@ -3132,7 +3232,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.folder),
                         helperText:
-                          'Pick a folder using the in-app file browser. If not set, files go to Downloads/${getDefaultDownloadFolderName()}.',
+                            'Pick a folder using the in-app file browser. If not set, files go to Downloads/${getDefaultDownloadFolderName()}.',
                         helperMaxLines: 3,
                       ),
                       readOnly: true,
@@ -3176,7 +3276,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ?.copyWith(color: context.warning),
                         ),
                       ),
-
                     const SizedBox(height: 12),
                     CheckboxListTile(
                       title: const Text('Use per-format sub-folders'),
@@ -3199,7 +3298,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         prefixIcon: const Icon(Icons.folder),
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.folder_open),
-                          onPressed: () => _pickFormatDownloadFolder(settings, 'mp3'),
+                          onPressed: () =>
+                              _pickFormatDownloadFolder(settings, 'mp3'),
                         ),
                       ),
                       readOnly: true,
@@ -3213,7 +3313,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         prefixIcon: const Icon(Icons.folder),
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.folder_open),
-                          onPressed: () => _pickFormatDownloadFolder(settings, 'm4a'),
+                          onPressed: () =>
+                              _pickFormatDownloadFolder(settings, 'm4a'),
                         ),
                       ),
                       readOnly: true,
@@ -3227,7 +3328,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         prefixIcon: const Icon(Icons.folder),
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.folder_open),
-                          onPressed: () => _pickFormatDownloadFolder(settings, 'mp4'),
+                          onPressed: () =>
+                              _pickFormatDownloadFolder(settings, 'mp4'),
                         ),
                       ),
                       readOnly: true,
@@ -3301,11 +3403,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             icon: const Icon(Icons.folder_open),
                             label: const Text('Browse'),
                             onPressed: () async {
-                              final result =
-                                  await pickDirectoryPath(
-                                    context,
-                                    dialogTitle: 'Select download folder',
-                                  );
+                              final result = await pickDirectoryPath(
+                                context,
+                                dialogTitle: 'Select download folder',
+                              );
                               if (result != null && mounted) {
                                 setState(
                                     () => _downloadDirController.text = result);
@@ -3316,7 +3417,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                         ],
                       ),
-
                     const SizedBox(height: 12),
                     CheckboxListTile(
                       title: const Text('Use per-format sub-folders'),
@@ -3330,7 +3430,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             settings.copyWith(createFormatSubfolders: value));
                       },
                     ),
-
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -3669,11 +3768,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               dialogTitle: 'Select FFmpeg executable',
                             );
                             if (selectedPath != null && mounted) {
-                              setState(() => _ffmpegPathController.text = selectedPath);
+                              setState(() =>
+                                  _ffmpegPathController.text = selectedPath);
                               final s = widget.controller.settings;
                               if (s != null) {
-                                widget.controller
-                                    .saveSettings(s.copyWith(ffmpegPath: selectedPath));
+                                widget.controller.saveSettings(
+                                    s.copyWith(ffmpegPath: selectedPath));
                               }
                             }
                           },
@@ -3722,7 +3822,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 8),
                     Builder(
                       builder: (context) {
-                        final versionText = (_ytDlpCurrentVersion ?? 'unknown').trim();
+                        final versionText =
+                            (_ytDlpCurrentVersion ?? 'unknown').trim();
                         Color dotColor = Colors.grey;
                         String statusText =
                             'yt-dlp $versionText - Could not check for updates';
@@ -3803,11 +3904,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               dialogTitle: 'Select yt-dlp executable',
                             );
                             if (selectedPath != null && mounted) {
-                              setState(() => _ytDlpPathController.text = selectedPath);
+                              setState(() =>
+                                  _ytDlpPathController.text = selectedPath);
                               final s = widget.controller.settings;
                               if (s != null) {
-                                widget.controller
-                                    .saveSettings(s.copyWith(ytDlpPath: selectedPath));
+                                widget.controller.saveSettings(
+                                    s.copyWith(ytDlpPath: selectedPath));
                               }
                             }
                           },
@@ -3815,43 +3917,45 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         const SizedBox(width: 8),
                         if (_ytDlpIsUpToDate == false)
                           ElevatedButton.icon(
-                          icon: const Icon(Icons.update),
-                          label: const Text('Update'),
-                          onPressed: () async {
-                            final s = widget.controller.settings;
-                            if (s == null) return;
-                            final current = s.ytDlpPath;
-                            Snack.show(context, 'Updating yt-dlp...',
-                                level: SnackLevel.info);
-                            try {
-                              final updated = await widget
-                                  .controller.downloadService.ytDlp
-                                  .update(
-                                configuredPath: current,
-                                onProgress: (pct, msg) {
-                                  if (pct % 25 == 0 || pct == 100) {
-                                    Snack.show(context, 'yt-dlp: $msg ($pct%)',
-                                        level: SnackLevel.info);
-                                  }
-                                },
-                              );
-                              if (mounted) {
-                                setState(() {
-                                  _ytDlpPathController.text = updated;
-                                });
+                            icon: const Icon(Icons.update),
+                            label: const Text('Update'),
+                            onPressed: () async {
+                              final s = widget.controller.settings;
+                              if (s == null) return;
+                              final current = s.ytDlpPath;
+                              Snack.show(context, 'Updating yt-dlp...',
+                                  level: SnackLevel.info);
+                              try {
+                                final updated = await widget
+                                    .controller.downloadService.ytDlp
+                                    .update(
+                                  configuredPath: current,
+                                  onProgress: (pct, msg) {
+                                    if (pct % 25 == 0 || pct == 100) {
+                                      Snack.show(
+                                          context, 'yt-dlp: $msg ($pct%)',
+                                          level: SnackLevel.info);
+                                    }
+                                  },
+                                );
+                                if (mounted) {
+                                  setState(() {
+                                    _ytDlpPathController.text = updated;
+                                  });
+                                }
+                                await widget.controller.saveSettings(
+                                    s.copyWith(ytDlpPath: updated));
+                                await _checkYtDlpUpdateStatus();
+                                Snack.show(
+                                    context, 'yt-dlp updated successfully',
+                                    level: SnackLevel.success);
+                              } catch (e) {
+                                Snack.show(context,
+                                    'Failed to update yt-dlp: ${e.toString()}',
+                                    level: SnackLevel.error);
                               }
-                              await widget.controller
-                                  .saveSettings(s.copyWith(ytDlpPath: updated));
-                              await _checkYtDlpUpdateStatus();
-                              Snack.show(context, 'yt-dlp updated successfully',
-                                  level: SnackLevel.success);
-                            } catch (e) {
-                              Snack.show(context,
-                                  'Failed to update yt-dlp: ${e.toString()}',
-                                  level: SnackLevel.error);
-                            }
-                          },
-                        ),
+                            },
+                          ),
                         const SizedBox(width: 8),
                         OutlinedButton.icon(
                           icon: const Icon(Icons.refresh),
@@ -4325,7 +4429,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       downloadDirMp4: _downloadDirMp4Controller.text.trim().isEmpty
           ? null
           : _downloadDirMp4Controller.text.trim(),
-        downloadDirTorrents: _downloadDirTorrentsController.text.trim().isEmpty
+      downloadDirTorrents: _downloadDirTorrentsController.text.trim().isEmpty
           ? null
           : _downloadDirTorrentsController.text.trim(),
       createFormatSubfolders: _useFormatSubfolders,
@@ -4471,7 +4575,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     onPressed: kIsWeb
                         ? null
                         : () async {
-                        AdService.instance.registerInteraction();
+                            AdService.instance.registerInteraction();
                             final result =
                                 await FilePicker.platform.pickFiles();
                             if (result == null || result.files.isEmpty) return;

@@ -96,293 +96,304 @@ class BrowserToolbar extends StatelessWidget {
           ),
           child: Row(
             children: [
-            // Back
-            IconButton(
-              icon: const Icon(Icons.arrow_back, size: 20),
-              onPressed: canGoBack ? onBack : null,
-            ),
-            // Forward
-            IconButton(
-              icon: const Icon(Icons.arrow_forward, size: 20),
-              onPressed: canGoForward ? onForward : null,
-            ),
-            // URL bar
-            Expanded(
-              child: Container(
-                height: wide ? 44 : (compact ? 34 : 38),
-                decoration: BoxDecoration(
-                  color: isIncognito
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : cs.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 10),
-                    // SSL indicator
-                    Icon(
-                      isSecure ? Icons.lock : Icons.lock_open,
-                      size: 14,
-                      color: isSecure
-                          ? Colors.green
-                          : (isIncognito ? Colors.white54 : cs.outline),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Focus(
-                        onFocusChange: (focused) {
-                          if (focused) {
-                            onReleaseWebViewFocus?.call();
-                          }
-                        },
-                        child: TextField(
-                          controller: addressController,
-                          keyboardType: TextInputType.url,
-                          textInputAction: TextInputAction.go,
-                          maxLines: 1,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isIncognito ? Colors.white : null,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          onSubmitted: onSubmitted,
-                          onTap: () {
-                            onReleaseWebViewFocus?.call();
-                            // Select all text when the URL bar is tapped (standard browser UX)
-                            addressController.selection = TextSelection(
-                              baseOffset: 0,
-                              extentOffset: addressController.text.length,
-                            );
+              // Back
+              IconButton(
+                icon: const Icon(Icons.arrow_back, size: 20),
+                onPressed: canGoBack ? onBack : null,
+              ),
+              // Forward
+              IconButton(
+                icon: const Icon(Icons.arrow_forward, size: 20),
+                onPressed: canGoForward ? onForward : null,
+              ),
+              // URL bar
+              Expanded(
+                child: Container(
+                  height: wide ? 44 : (compact ? 34 : 38),
+                  decoration: BoxDecoration(
+                    color: isIncognito
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 10),
+                      // SSL indicator
+                      Icon(
+                        isSecure ? Icons.lock : Icons.lock_open,
+                        size: 14,
+                        color: isSecure
+                            ? Colors.green
+                            : (isIncognito ? Colors.white54 : cs.outline),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Focus(
+                          onFocusChange: (focused) {
+                            if (focused) {
+                              onReleaseWebViewFocus?.call();
+                            }
                           },
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(
-                                vertical: 8, horizontal: 8),
-                            hintText: pageTitle.isNotEmpty
-                                ? pageTitle
-                                : 'Search or enter URL',
-                            hintStyle: TextStyle(
+                          child: TextField(
+                            controller: addressController,
+                            keyboardType: TextInputType.url,
+                            textInputAction: TextInputAction.go,
+                            maxLines: 1,
+                            style: TextStyle(
                               fontSize: 13,
-                              color: isIncognito
-                                  ? Colors.white54
-                                  : cs.onSurface.withValues(alpha: 0.6),
+                              color: isIncognito ? Colors.white : null,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            onSubmitted: onSubmitted,
+                            onTap: () {
+                              onReleaseWebViewFocus?.call();
+                              // Select all text when the URL bar is tapped (standard browser UX)
+                              addressController.selection = TextSelection(
+                                baseOffset: 0,
+                                extentOffset: addressController.text.length,
+                              );
+                            },
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 8),
+                              hintText: pageTitle.isNotEmpty
+                                  ? pageTitle
+                                  : 'Search or enter URL',
+                              hintStyle: TextStyle(
+                                fontSize: 13,
+                                color: isIncognito
+                                    ? Colors.white54
+                                    : cs.onSurface.withValues(alpha: 0.6),
+                              ),
+                              suffixIcon: IconButton(
+                                tooltip: 'Go',
+                                icon: const Icon(Icons.arrow_forward, size: 18),
+                                onPressed: () =>
+                                    onSubmitted(addressController.text),
+                              ),
+                              suffixIconConstraints: const BoxConstraints(
+                                minHeight: 28,
+                                minWidth: 28,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    // Tabs button
-                    Tooltip(
-                      message: 'Tabs',
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        alignment: Alignment.center,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.tab_rounded, size: 20),
-                            onPressed: () {
-                              onReleaseWebViewFocus?.call();
-                              onTabs();
-                            },
-                          ),
-                          if (tabCount > 1)
-                            Positioned(
-                              right: 4,
-                              top: 4,
-                              child: Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                constraints: const BoxConstraints(
-                                  minWidth: 14,
-                                  minHeight: 14,
-                                ),
-                                child: Text(
-                                  '$tabCount',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
+                      const SizedBox(width: 6),
+                      // Tabs button
+                      Tooltip(
+                        message: 'Tabs',
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.center,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.tab_rounded, size: 20),
+                              onPressed: () {
+                                onReleaseWebViewFocus?.call();
+                                onTabs();
+                              },
+                            ),
+                            if (tabCount > 1)
+                              Positioned(
+                                right: 4,
+                                top: 4,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    borderRadius: BorderRadius.circular(6),
                                   ),
-                                  textAlign: TextAlign.center,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 14,
+                                    minHeight: 14,
+                                  ),
+                                  child: Text(
+                                    '$tabCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
 
-                    // Reload
-                    IconButton(
-                      icon: const Icon(Icons.refresh, size: 20),
-                      onPressed: onReload,
-                    ),
-                    // Favourite
-                    IconButton(
-                      icon: Icon(
-                        isFavourited
-                            ? Icons.star_rounded
-                            : Icons.star_border_rounded,
-                        size: 20,
-                        color: isFavourited ? Colors.amber : null,
+                      // Reload
+                      IconButton(
+                        icon: const Icon(Icons.refresh, size: 20),
+                        onPressed: onReload,
                       ),
-                      tooltip: isFavourited
-                          ? 'Remove from favourites'
-                          : 'Add to favourites',
-                      onPressed: onFavouriteTap,
-                    ),
-                    // Download (primary action)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: onDownload == null
-                          ? const SizedBox.shrink()
-                          : (isDownloading
-                              ? const SizedBox(
-                                  width: 28,
-                                  height: 28,
-                                  child: Center(
-                                    child: SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2),
+                      // Favourite
+                      IconButton(
+                        icon: Icon(
+                          isFavourited
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          size: 20,
+                          color: isFavourited ? Colors.amber : null,
+                        ),
+                        tooltip: isFavourited
+                            ? 'Remove from favourites'
+                            : 'Add to favourites',
+                        onPressed: onFavouriteTap,
+                      ),
+                      // Download (primary action)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: onDownload == null
+                            ? const SizedBox.shrink()
+                            : (isDownloading
+                                ? const SizedBox(
+                                    width: 28,
+                                    height: 28,
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
+                                      ),
                                     ),
-                                  ),
-                                )
+                                  )
                                 : IconButton(
-                                  icon: const Icon(Icons.download_rounded,
-                                      size: 20),
-                                  onPressed: downloadEnabled
-                                      ? () {
-                                          onReleaseWebViewFocus?.call();
-                                          onDownload?.call();
-                                        }
-                                      : null,
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Theme.of(context)
-                                        .colorScheme
-                                        .primaryContainer,
-                                    foregroundColor: Theme.of(context)
-                                        .colorScheme
-                                        .onPrimaryContainer,
-                                  ),
-                                )),
-                    ),
+                                    icon: const Icon(Icons.download_rounded,
+                                        size: 20),
+                                    onPressed: downloadEnabled
+                                        ? () {
+                                            onReleaseWebViewFocus?.call();
+                                            onDownload?.call();
+                                          }
+                                        : null,
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Theme.of(context)
+                                          .colorScheme
+                                          .primaryContainer,
+                                      foregroundColor: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimaryContainer,
+                                    ),
+                                  )),
+                      ),
 
-                    // Overflow menu (More) - use explicit showMenu so we can
-                    // release WebView focus on Windows before the native
-                    // WebView2 consumes the click. Uses onMenuAction via
-                    // onSelected to remain safe for navigation.
-                    Builder(builder: (buttonContext) {
-                      return IconButton(
-                        icon: const Icon(Icons.more_vert),
-                        tooltip: 'More options',
-                        onPressed: () async {
-                          onReleaseWebViewFocus?.call();
-                          // Ask the parent to refresh tab preview before opening menu.
-                          try {
-                            onMenuAction('menu_open');
-                          } catch (_) {}
+                      // Overflow menu (More) - use explicit showMenu so we can
+                      // release WebView focus on Windows before the native
+                      // WebView2 consumes the click. Uses onMenuAction via
+                      // onSelected to remain safe for navigation.
+                      Builder(builder: (buttonContext) {
+                        return IconButton(
+                          icon: const Icon(Icons.more_vert),
+                          tooltip: 'More options',
+                          onPressed: () async {
+                            onReleaseWebViewFocus?.call();
+                            // Ask the parent to refresh tab preview before opening menu.
+                            try {
+                              onMenuAction('menu_open');
+                            } catch (_) {}
 
-                          // Compute a sensible position for the menu using this
-                          // button's RenderBox so the menu is anchored to it.
-                          final RenderBox button =
-                              buttonContext.findRenderObject() as RenderBox;
-                          final Offset buttonPos =
-                              button.localToGlobal(Offset.zero);
-                          final Size buttonSize = button.size;
-                          final RenderBox overlay = Overlay.of(buttonContext)
-                              .context
-                              .findRenderObject() as RenderBox;
+                            // Compute a sensible position for the menu using this
+                            // button's RenderBox so the menu is anchored to it.
+                            final RenderBox button =
+                                buttonContext.findRenderObject() as RenderBox;
+                            final Offset buttonPos =
+                                button.localToGlobal(Offset.zero);
+                            final Size buttonSize = button.size;
+                            final RenderBox overlay = Overlay.of(buttonContext)
+                                .context
+                                .findRenderObject() as RenderBox;
 
-                          final selection = await showMenu<String>(
-                            context: buttonContext,
-                            color: Theme.of(buttonContext)
-                                .colorScheme
-                                .surfaceContainerHigh,
-                            elevation: 8,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            position: RelativeRect.fromRect(
-                              buttonPos & buttonSize,
-                              Offset.zero & overlay.size,
-                            ),
-                            items: [
+                            final selection = await showMenu<String>(
+                              context: buttonContext,
+                              color: Theme.of(buttonContext)
+                                  .colorScheme
+                                  .surfaceContainerHigh,
+                              elevation: 8,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              position: RelativeRect.fromRect(
+                                buttonPos & buttonSize,
+                                Offset.zero & overlay.size,
+                              ),
+                              items: [
                                 if (!kPlayStoreBuild)
+                                  PopupMenuItem(
+                                      value: 'cast',
+                                      child: Row(children: [
+                                        Icon(Icons.cast,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface),
+                                        const SizedBox(width: 12),
+                                        const Text('Cast to device'),
+                                        const Spacer(),
+                                        if (isCastConnected)
+                                          Icon(Icons.circle,
+                                              size: 8,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary),
+                                      ])),
                                 PopupMenuItem(
-                                  value: 'cast',
-                                  child: Row(children: [
-                                    Icon(Icons.cast,
-                                      color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface),
-                                    const SizedBox(width: 12),
-                                    const Text('Cast to device'),
-                                    const Spacer(),
-                                    if (isCastConnected)
-                                    Icon(Icons.circle,
-                                      size: 8,
-                                      color: Theme.of(context)
-                                        .colorScheme
-                                        .primary),
-                                  ])),
-                              PopupMenuItem(
-                                  value: 'openExternal',
-                                  child: Row(children: [
-                                    Icon(Icons.open_in_browser,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface),
-                                    const SizedBox(width: 12),
-                                    const Text('Open in browser'),
-                                  ])),
-                              PopupMenuItem(
-                                  value: 'copyLink',
-                                  child: Row(children: [
-                                    Icon(Icons.copy,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface),
-                                    const SizedBox(width: 12),
-                                    const Text('Copy link'),
-                                  ])),
-                              PopupMenuItem(
-                                  value: 'share',
-                                  child: Row(children: [
-                                    Icon(Icons.share,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface),
-                                    const SizedBox(width: 12),
-                                    const Text('Share'),
-                                  ])),
-                              PopupMenuItem(
-                                  value: 'addCookies',
-                                  child: Row(children: [
-                                    Icon(Icons.cookie_outlined,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface),
-                                    const SizedBox(width: 12),
-                                    const Text('Add cookies (for downloads)'),
-                                  ])),
-                            ],
-                          );
-                          if (selection != null) onMenuAction(selection);
-                        },
-                      );
-                    }),
-                  ],
+                                    value: 'openExternal',
+                                    child: Row(children: [
+                                      Icon(Icons.open_in_browser,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface),
+                                      const SizedBox(width: 12),
+                                      const Text('Open in browser'),
+                                    ])),
+                                PopupMenuItem(
+                                    value: 'copyLink',
+                                    child: Row(children: [
+                                      Icon(Icons.copy,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface),
+                                      const SizedBox(width: 12),
+                                      const Text('Copy link'),
+                                    ])),
+                                PopupMenuItem(
+                                    value: 'share',
+                                    child: Row(children: [
+                                      Icon(Icons.share,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface),
+                                      const SizedBox(width: 12),
+                                      const Text('Share'),
+                                    ])),
+                                PopupMenuItem(
+                                    value: 'addCookies',
+                                    child: Row(children: [
+                                      Icon(Icons.cookie_outlined,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface),
+                                      const SizedBox(width: 12),
+                                      const Text('Add cookies (for downloads)'),
+                                    ])),
+                              ],
+                            );
+                            if (selection != null) onMenuAction(selection);
+                          },
+                        );
+                      }),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

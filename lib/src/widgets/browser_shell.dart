@@ -3,9 +3,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../screens/player.dart' show PlayerState, PositionUiState, MediaItem, MediaType;
+import '../screens/player.dart'
+    show PlayerState, PositionUiState, MediaItem, MediaType;
 import '../state/app_controller.dart';
 import '../config/build_flags.dart';
+import '../services/url_routing_service.dart';
 import 'quick_links_service.dart';
 
 /// Persistent browser-like shell that wraps all app content.
@@ -128,10 +130,13 @@ class _BrowserShellState extends State<BrowserShell> {
       }
     }
 
-    // Web URL detection - open in browser tab
-    if (_looksLikeUrl(trimmed)) {
-      final url = trimmed.startsWith('http') ? trimmed : 'https://$trimmed';
-      widget.onOpenUrl?.call(url);
+    final type = UrlRoutingService.detectUrlType(trimmed);
+    if (type == UrlType.magnet ||
+        type == UrlType.torrentFile ||
+        type == UrlType.ipfs ||
+        _looksLikeUrl(trimmed) ||
+        trimmed.isNotEmpty) {
+      widget.onOpenUrl?.call(trimmed);
       return;
     }
 
@@ -194,8 +199,10 @@ class _BrowserShellState extends State<BrowserShell> {
     final cs = Theme.of(context).colorScheme;
 
     // Only listen to the fields that actually affect the shell layout.
-    final currentItem = context.select<PlayerState, MediaItem?>((state) => state.currentItem);
-    final isPlaying = context.select<PlayerState, bool>((state) => state.isPlaying);
+    final currentItem =
+        context.select<PlayerState, MediaItem?>((state) => state.currentItem);
+    final isPlaying =
+        context.select<PlayerState, bool>((state) => state.isPlaying);
     final playerState = context.read<PlayerState>();
     final showPlayerOverlay = currentItem != null;
 
@@ -237,8 +244,9 @@ class _BrowserShellState extends State<BrowserShell> {
           ],
         ),
       ),
-        bottomNavigationBar: showPlayerOverlay
-          ? _buildPlayerOverlay(playerState, currentItem, isPlaying, cs, overlayHeight)
+      bottomNavigationBar: showPlayerOverlay
+          ? _buildPlayerOverlay(
+              playerState, currentItem, isPlaying, cs, overlayHeight)
           : null,
     );
   }
@@ -314,12 +322,12 @@ class _BrowserShellState extends State<BrowserShell> {
   }
 
   Widget _navButton(
-      IconData icon,
-      String tooltip,
-      VoidCallback? onPressed,
-      ColorScheme cs, {
-      bool selected = false,
-    }) {
+    IconData icon,
+    String tooltip,
+    VoidCallback? onPressed,
+    ColorScheme cs, {
+    bool selected = false,
+  }) {
     return SizedBox(
       width: 34,
       height: 34,
@@ -399,8 +407,8 @@ class _BrowserShellState extends State<BrowserShell> {
     );
   }
 
-  Widget _buildPlayerOverlay(
-      PlayerState state, MediaItem? currentItem, bool isPlaying, ColorScheme cs, double overlayHeight) {
+  Widget _buildPlayerOverlay(PlayerState state, MediaItem? currentItem,
+      bool isPlaying, ColorScheme cs, double overlayHeight) {
     final item = currentItem;
     if (item == null) return const SizedBox.shrink();
 
@@ -428,135 +436,165 @@ class _BrowserShellState extends State<BrowserShell> {
                 isSeeking: false,
               ),
               builder: (context, snapshot) {
-              final ui = snapshot.data ??
-                  PositionUiState(
-                    position: state.position,
-                    duration: state.duration ?? Duration.zero,
-                    isSeeking: false,
-                  );
-              final position = ui.position;
-              final duration = ui.duration;
+                final ui = snapshot.data ??
+                    PositionUiState(
+                      position: state.position,
+                      duration: state.duration ?? Duration.zero,
+                      isSeeking: false,
+                    );
+                final position = ui.position;
+                final duration = ui.duration;
                 final buffered = state.bufferedPosition;
-              final progress = duration.inMilliseconds > 0
-                  ? (position.inMilliseconds / duration.inMilliseconds)
-                      .clamp(0.0, 1.0)
-                  : 0.0;
+                final progress = duration.inMilliseconds > 0
+                    ? (position.inMilliseconds / duration.inMilliseconds)
+                        .clamp(0.0, 1.0)
+                    : 0.0;
                 final bufferedProgress = duration.inMilliseconds > 0
-                  ? (buffered.inMilliseconds / duration.inMilliseconds)
-                    .clamp(0.0, 1.0)
-                  : 0.0;
+                    ? (buffered.inMilliseconds / duration.inMilliseconds)
+                        .clamp(0.0, 1.0)
+                    : 0.0;
                 final width = MediaQuery.of(context).size.width;
                 final compactOverlay = width < 360;
                 final wideOverlay = width >= 1200;
                 final suppressLiveSemantics = Platform.isWindows;
 
-              return Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      cs.surfaceContainerHighest,
-                      cs.surfaceContainer,
-                    ],
+                return Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        cs.surfaceContainerHighest,
+                        cs.surfaceContainer,
+                      ],
+                    ),
+                    border: Border(
+                      top: BorderSide(
+                          color: cs.outlineVariant.withValues(alpha: 0.22)),
+                    ),
                   ),
-                  border: Border(
-                    top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.22)),
-                  ),
-                ),
-                child: Padding(
-                  padding: collapsed
-                      ? const EdgeInsets.fromLTRB(10, 6, 10, 6)
-                      : const EdgeInsets.fromLTRB(12, 8, 12, 10),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onVerticalDragEnd: (details) {
-                          final velocity = details.primaryVelocity ?? 0;
-                          if (velocity < -250) {
-                            setState(() => _playerCollapsed = false);
-                          } else if (velocity > 250) {
-                            setState(() => _playerCollapsed = true);
-                          }
-                        },
-                        child: Row(
-                          children: [
-                            _buildArtwork(
-                              artwork,
-                              cs,
-                              isVideo,
-                              size: collapsed ? 34 : 44,
-                            ),
-                            SizedBox(width: collapsed ? 8 : 10),
-                            Expanded(
-                              child: InkWell(
-                                onTap: () => widget.onNavigate('player.tab'),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: collapsed
-                                            ? 13
-                                            : (wideOverlay ? 16 : 14),
-                                        color: cs.onSurface,
-                                      ),
-                                    ),
-                                    if (artist.isNotEmpty)
+                  child: Padding(
+                    padding: collapsed
+                        ? const EdgeInsets.fromLTRB(10, 6, 10, 6)
+                        : const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onVerticalDragEnd: (details) {
+                            final velocity = details.primaryVelocity ?? 0;
+                            if (velocity < -250) {
+                              setState(() => _playerCollapsed = false);
+                            } else if (velocity > 250) {
+                              setState(() => _playerCollapsed = true);
+                            }
+                          },
+                          child: Row(
+                            children: [
+                              _buildArtwork(
+                                artwork,
+                                cs,
+                                isVideo,
+                                size: collapsed ? 34 : 44,
+                              ),
+                              SizedBox(width: collapsed ? 8 : 10),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => widget.onNavigate('player.tab'),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
                                       Text(
-                                        artist,
+                                        title,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
+                                          fontWeight: FontWeight.w700,
                                           fontSize: collapsed
-                                              ? 11
-                                              : (wideOverlay ? 13 : 12),
-                                          color: cs.onSurfaceVariant,
+                                              ? 13
+                                              : (wideOverlay ? 16 : 14),
+                                          color: cs.onSurface,
                                         ),
                                       ),
-                                  ],
+                                      if (artist.isNotEmpty)
+                                        Text(
+                                          artist,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: collapsed
+                                                ? 11
+                                                : (wideOverlay ? 13 : 12),
+                                            color: cs.onSurfaceVariant,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                            if (collapsed) ...[
-                              IconButton(
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                  minWidth: 34,
-                                  minHeight: 34,
-                                ),
-                                visualDensity: VisualDensity.compact,
-                                style: IconButton.styleFrom(
-                                  backgroundColor: cs.primary.withValues(alpha: 0.12),
-                                  foregroundColor: cs.primary,
-                                ),
-                                onPressed: state.togglePlay,
-                                icon: Icon(
-                                  isPlaying
-                                      ? Icons.pause_rounded
-                                      : Icons.play_arrow_rounded,
-                                  size: 20,
-                                ),
-                                tooltip: isPlaying ? 'Pause' : 'Play',
-                                splashRadius: 18,
-                              ),
-                              const SizedBox(width: 4),
-                              SizedBox(
-                                width: 34,
-                                height: 34,
-                                child: IconButton(
+                              if (collapsed) ...[
+                                IconButton(
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
                                     minWidth: 34,
                                     minHeight: 34,
                                   ),
                                   visualDensity: VisualDensity.compact,
+                                  style: IconButton.styleFrom(
+                                    backgroundColor:
+                                        cs.primary.withValues(alpha: 0.12),
+                                    foregroundColor: cs.primary,
+                                  ),
+                                  onPressed: state.togglePlay,
+                                  icon: Icon(
+                                    isPlaying
+                                        ? Icons.pause_rounded
+                                        : Icons.play_arrow_rounded,
+                                    size: 20,
+                                  ),
+                                  tooltip: isPlaying ? 'Pause' : 'Play',
+                                  splashRadius: 18,
+                                ),
+                                const SizedBox(width: 4),
+                                SizedBox(
+                                  width: 34,
+                                  height: 34,
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 34,
+                                      minHeight: 34,
+                                    ),
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: () => setState(
+                                      () =>
+                                          _playerCollapsed = !_playerCollapsed,
+                                    ),
+                                    icon: Icon(
+                                      collapsed
+                                          ? Icons.keyboard_arrow_up_rounded
+                                          : Icons.keyboard_arrow_down_rounded,
+                                      size: 20,
+                                    ),
+                                    tooltip: collapsed
+                                        ? 'Expand player'
+                                        : 'Collapse player',
+                                    splashRadius: 18,
+                                  ),
+                                ),
+                              ] else ...[
+                                _buildTransportButton(
+                                  icon: isPlaying
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                  onPressed: state.togglePlay,
+                                  tooltip: isPlaying ? 'Pause' : 'Play',
+                                  cs: cs,
+                                  emphasize: true,
+                                ),
+                                IconButton(
                                   onPressed: () => setState(
                                     () => _playerCollapsed = !_playerCollapsed,
                                   ),
@@ -564,213 +602,210 @@ class _BrowserShellState extends State<BrowserShell> {
                                     collapsed
                                         ? Icons.keyboard_arrow_up_rounded
                                         : Icons.keyboard_arrow_down_rounded,
-                                    size: 20,
+                                    size: 24,
                                   ),
                                   tooltip: collapsed
                                       ? 'Expand player'
                                       : 'Collapse player',
-                                  splashRadius: 18,
+                                  splashRadius: 20,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if (!collapsed) ...[
+                          const SizedBox(height: 4),
+                          SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              trackHeight: 4,
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 6,
+                              ),
+                              overlayShape: const RoundSliderOverlayShape(
+                                overlayRadius: 14,
+                              ),
+                            ),
+                            child: Slider(
+                              value: progress,
+                              secondaryTrackValue: bufferedProgress > progress
+                                  ? bufferedProgress
+                                  : progress,
+                              activeColor: cs.primary,
+                              inactiveColor:
+                                  cs.onSurface.withValues(alpha: 0.18),
+                              onChanged: duration.inMilliseconds > 0
+                                  ? (v) => state.seek(Duration(
+                                      milliseconds:
+                                          (v * duration.inMilliseconds)
+                                              .round()))
+                                  : null,
+                            ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              ExcludeSemantics(
+                                excluding: suppressLiveSemantics,
+                                child: Text(
+                                  _formatDuration(position),
+                                  style: TextStyle(
+                                      fontSize: 10, color: cs.onSurfaceVariant),
                                 ),
                               ),
-                            ] else ...[
-                              _buildTransportButton(
-                                icon: isPlaying
-                                    ? Icons.pause_rounded
-                                    : Icons.play_arrow_rounded,
-                                onPressed: state.togglePlay,
-                                tooltip: isPlaying ? 'Pause' : 'Play',
-                                cs: cs,
-                                emphasize: true,
+                              Text(
+                                isVideo ? 'VIDEO' : 'AUDIO',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: cs.primary,
+                                  letterSpacing: 0.6,
+                                ),
                               ),
-                              IconButton(
-                                onPressed: () => setState(
-                                  () => _playerCollapsed = !_playerCollapsed,
+                              ExcludeSemantics(
+                                excluding: suppressLiveSemantics,
+                                child: Text(
+                                  _formatDuration(duration),
+                                  style: TextStyle(
+                                      fontSize: 10, color: cs.onSurfaceVariant),
                                 ),
-                                icon: Icon(
-                                  collapsed
-                                      ? Icons.keyboard_arrow_up_rounded
-                                      : Icons.keyboard_arrow_down_rounded,
-                                  size: 24,
-                                ),
-                                tooltip: collapsed
-                                    ? 'Expand player'
-                                    : 'Collapse player',
-                                splashRadius: 20,
                               ),
                             ],
-                          ],
-                        ),
-                      ),
-                      if (!collapsed) ...[
-                        const SizedBox(height: 4),
-                        SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            trackHeight: 4,
-                            thumbShape: const RoundSliderThumbShape(
-                              enabledThumbRadius: 6,
-                            ),
-                            overlayShape: const RoundSliderOverlayShape(
-                              overlayRadius: 14,
-                            ),
                           ),
-                          child: Slider(
-                            value: progress,
-                            secondaryTrackValue: bufferedProgress > progress
-                                ? bufferedProgress
-                                : progress,
-                            activeColor: cs.primary,
-                            inactiveColor: cs.onSurface.withValues(alpha: 0.18),
-                            onChanged: duration.inMilliseconds > 0
-                                ? (v) => state.seek(Duration(
-                                    milliseconds: (v * duration.inMilliseconds)
-                                        .round()))
-                                : null,
-                          ),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            ExcludeSemantics(
-                              excluding: suppressLiveSemantics,
-                              child: Text(
-                                _formatDuration(position),
-                                style: TextStyle(
-                                    fontSize: 10, color: cs.onSurfaceVariant),
-                              ),
-                            ),
-                            Text(
-                              isVideo ? 'VIDEO' : 'AUDIO',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: cs.primary,
-                                letterSpacing: 0.6,
-                              ),
-                            ),
-                            ExcludeSemantics(
-                              excluding: suppressLiveSemantics,
-                              child: Text(
-                                _formatDuration(duration),
-                                style: TextStyle(
-                                    fontSize: 10, color: cs.onSurfaceVariant),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        // TECH-DEBT: mini player still lacks explicit sleep timer and
-                        // playback-speed controls; those remain full-player features.
-                        compactOverlay
-                            ? Wrap(
-                                alignment: WrapAlignment.center,
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  _buildTransportButton(
-                                    icon: Icons.skip_previous_rounded,
-                                    onPressed: () =>
-                                        state.previous(only: state.activeTabFilter),
-                                    tooltip: 'Previous',
-                                    cs: cs,
-                                  ),
-                                  _buildTransportButton(
-                                    icon: Icons.replay_10_rounded,
-                                    onPressed: duration.inMilliseconds > 0
-                                        ? () {
-                                            final nextMs = position.inMilliseconds - 10000;
-                                            state.seek(Duration(milliseconds: nextMs < 0 ? 0 : nextMs));
-                                          }
-                                        : null,
-                                    tooltip: 'Back 10s',
-                                    cs: cs,
-                                  ),
-                                  _buildTransportButton(
-                                    icon: isPlaying
-                                        ? Icons.pause_rounded
-                                        : Icons.play_arrow_rounded,
-                                    onPressed: state.togglePlay,
-                                    tooltip: isPlaying ? 'Pause' : 'Play',
-                                    cs: cs,
-                                    emphasize: true,
-                                  ),
-                                  _buildTransportButton(
-                                    icon: Icons.forward_10_rounded,
-                                    onPressed: duration.inMilliseconds > 0
-                                        ? () {
-                                            final maxMs = duration.inMilliseconds;
-                                            final nextMs = position.inMilliseconds + 10000;
-                                            state.seek(Duration(milliseconds: nextMs > maxMs ? maxMs : nextMs));
-                                          }
-                                        : null,
-                                    tooltip: 'Forward 10s',
-                                    cs: cs,
-                                  ),
-                                  _buildTransportButton(
-                                    icon: Icons.skip_next_rounded,
-                                    onPressed: () =>
-                                        state.next(only: state.activeTabFilter),
-                                    tooltip: 'Next',
-                                    cs: cs,
-                                  ),
-                                ],
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _buildTransportButton(
-                                    icon: Icons.skip_previous_rounded,
-                                    onPressed: () =>
-                                        state.previous(only: state.activeTabFilter),
-                                    tooltip: 'Previous',
-                                    cs: cs,
-                                  ),
-                                  _buildTransportButton(
-                                    icon: Icons.replay_10_rounded,
-                                    onPressed: duration.inMilliseconds > 0
-                                        ? () {
-                                            final nextMs = position.inMilliseconds - 10000;
-                                            state.seek(Duration(milliseconds: nextMs < 0 ? 0 : nextMs));
-                                          }
-                                        : null,
-                                    tooltip: 'Back 10s',
-                                    cs: cs,
-                                  ),
-                                  _buildTransportButton(
-                                    icon: isPlaying
-                                        ? Icons.pause_rounded
-                                        : Icons.play_arrow_rounded,
-                                    onPressed: state.togglePlay,
-                                    tooltip: isPlaying ? 'Pause' : 'Play',
-                                    cs: cs,
-                                    emphasize: true,
-                                  ),
-                                  _buildTransportButton(
-                                    icon: Icons.forward_10_rounded,
-                                    onPressed: duration.inMilliseconds > 0
-                                        ? () {
-                                            final maxMs = duration.inMilliseconds;
-                                            final nextMs = position.inMilliseconds + 10000;
-                                            state.seek(Duration(milliseconds: nextMs > maxMs ? maxMs : nextMs));
-                                          }
-                                        : null,
-                                    tooltip: 'Forward 10s',
-                                    cs: cs,
-                                  ),
-                                  _buildTransportButton(
-                                    icon: Icons.skip_next_rounded,
-                                    onPressed: () =>
-                                        state.next(only: state.activeTabFilter),
-                                    tooltip: 'Next',
-                                    cs: cs,
-                                  ),
-                                ],
-                              ),
+                          const SizedBox(height: 4),
+                          // TECH-DEBT: mini player still lacks explicit sleep timer and
+                          // playback-speed controls; those remain full-player features.
+                          compactOverlay
+                              ? Wrap(
+                                  alignment: WrapAlignment.center,
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    _buildTransportButton(
+                                      icon: Icons.skip_previous_rounded,
+                                      onPressed: () => state.previous(
+                                          only: state.activeTabFilter),
+                                      tooltip: 'Previous',
+                                      cs: cs,
+                                    ),
+                                    _buildTransportButton(
+                                      icon: Icons.replay_10_rounded,
+                                      onPressed: duration.inMilliseconds > 0
+                                          ? () {
+                                              final nextMs =
+                                                  position.inMilliseconds -
+                                                      10000;
+                                              state.seek(Duration(
+                                                  milliseconds:
+                                                      nextMs < 0 ? 0 : nextMs));
+                                            }
+                                          : null,
+                                      tooltip: 'Back 10s',
+                                      cs: cs,
+                                    ),
+                                    _buildTransportButton(
+                                      icon: isPlaying
+                                          ? Icons.pause_rounded
+                                          : Icons.play_arrow_rounded,
+                                      onPressed: state.togglePlay,
+                                      tooltip: isPlaying ? 'Pause' : 'Play',
+                                      cs: cs,
+                                      emphasize: true,
+                                    ),
+                                    _buildTransportButton(
+                                      icon: Icons.forward_10_rounded,
+                                      onPressed: duration.inMilliseconds > 0
+                                          ? () {
+                                              final maxMs =
+                                                  duration.inMilliseconds;
+                                              final nextMs =
+                                                  position.inMilliseconds +
+                                                      10000;
+                                              state.seek(Duration(
+                                                  milliseconds: nextMs > maxMs
+                                                      ? maxMs
+                                                      : nextMs));
+                                            }
+                                          : null,
+                                      tooltip: 'Forward 10s',
+                                      cs: cs,
+                                    ),
+                                    _buildTransportButton(
+                                      icon: Icons.skip_next_rounded,
+                                      onPressed: () => state.next(
+                                          only: state.activeTabFilter),
+                                      tooltip: 'Next',
+                                      cs: cs,
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    _buildTransportButton(
+                                      icon: Icons.skip_previous_rounded,
+                                      onPressed: () => state.previous(
+                                          only: state.activeTabFilter),
+                                      tooltip: 'Previous',
+                                      cs: cs,
+                                    ),
+                                    _buildTransportButton(
+                                      icon: Icons.replay_10_rounded,
+                                      onPressed: duration.inMilliseconds > 0
+                                          ? () {
+                                              final nextMs =
+                                                  position.inMilliseconds -
+                                                      10000;
+                                              state.seek(Duration(
+                                                  milliseconds:
+                                                      nextMs < 0 ? 0 : nextMs));
+                                            }
+                                          : null,
+                                      tooltip: 'Back 10s',
+                                      cs: cs,
+                                    ),
+                                    _buildTransportButton(
+                                      icon: isPlaying
+                                          ? Icons.pause_rounded
+                                          : Icons.play_arrow_rounded,
+                                      onPressed: state.togglePlay,
+                                      tooltip: isPlaying ? 'Pause' : 'Play',
+                                      cs: cs,
+                                      emphasize: true,
+                                    ),
+                                    _buildTransportButton(
+                                      icon: Icons.forward_10_rounded,
+                                      onPressed: duration.inMilliseconds > 0
+                                          ? () {
+                                              final maxMs =
+                                                  duration.inMilliseconds;
+                                              final nextMs =
+                                                  position.inMilliseconds +
+                                                      10000;
+                                              state.seek(Duration(
+                                                  milliseconds: nextMs > maxMs
+                                                      ? maxMs
+                                                      : nextMs));
+                                            }
+                                          : null,
+                                      tooltip: 'Forward 10s',
+                                      cs: cs,
+                                    ),
+                                    _buildTransportButton(
+                                      icon: Icons.skip_next_rounded,
+                                      onPressed: () => state.next(
+                                          only: state.activeTabFilter),
+                                      tooltip: 'Next',
+                                      cs: cs,
+                                    ),
+                                  ],
+                                ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
             ),
           ),
         ),
@@ -784,7 +819,8 @@ class _BrowserShellState extends State<BrowserShell> {
     bool isVideo, {
     double size = 44,
   }) {
-    final fallbackIcon = isVideo ? Icons.movie_rounded : Icons.music_note_rounded;
+    final fallbackIcon =
+        isVideo ? Icons.movie_rounded : Icons.music_note_rounded;
     return Container(
       width: size,
       height: size,
@@ -942,6 +978,19 @@ class _BrowserShellState extends State<BrowserShell> {
                   color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              suffixIcon: IconButton(
+                tooltip: 'Open',
+                icon: const Icon(Icons.arrow_forward, size: 18),
+                onPressed: () {
+                  final value = controller.text.trim();
+                  if (value.isEmpty) return;
+                  setState(() => _isEditing = false);
+                  widget.onUrlEditingEnd?.call();
+                  _submitUrl(value);
+                },
+              ),
+              suffixIconConstraints:
+                  const BoxConstraints(minHeight: 28, minWidth: 28),
             ),
             onSubmitted: (v) {
               setState(() => _isEditing = false);

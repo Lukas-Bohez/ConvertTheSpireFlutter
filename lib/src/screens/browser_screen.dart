@@ -740,6 +740,18 @@ class _BrowserScreenState extends State<BrowserScreen>
           },
         ),
         actions: [
+          ElevatedButton.icon(
+            onPressed: () async {
+              await _injectTextAndBlur(controller.text);
+              try {
+                await _webviewInputChannel.invokeMethod('dismissIME');
+              } catch (_) {}
+              Navigator.of(context).pop();
+              _resumeCursor();
+            },
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('Submit'),
+          ),
           TextButton(
             onPressed: () async {
               await _blurWebViewInput();
