@@ -346,7 +346,7 @@ class _MainAppState extends State<MainApp> {
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: themeService.themeMode,
       builder: (context, child) {
-        // TECH-DEBT: evaluate route-level overscan overrides for immersive pages.
+        // TODO(next): add route-level overscan overrides for immersive pages.
         return AdaptiveUiFrame(child: child ?? const SizedBox.shrink());
       },
       routerConfig: appRouter,

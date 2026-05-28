@@ -96,7 +96,7 @@ class AdaptiveUiFrame extends StatelessWidget {
     if (!tvLike) return content;
 
     return Padding(
-      // TECH-DEBT: apply per-screen overscan opt-outs where full-bleed video is preferred.
+      // TODO(next): add per-screen overscan opt-outs for full-bleed video pages.
       padding: const EdgeInsets.all(24),
       child: content,
     );

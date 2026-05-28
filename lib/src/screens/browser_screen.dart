@@ -49,6 +49,8 @@ class BrowserScreen extends StatefulWidget {
   static void navigate(String url) {
     pendingUrl = url;
     browserKey.currentState?._consumePendingUrl();
+    // If the screen is not mounted yet, pendingUrl stays set and the
+    // addPostFrameCallback in initState will consume it once the state exists.
   }
 
   static void focusAddressBar() => browserKey.currentState?._focusAddressBar();
@@ -126,6 +128,8 @@ class _BrowserScreenState extends State<BrowserScreen>
       duration: const Duration(milliseconds: 600),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Consume a pending URL after the first frame so pre-mount navigation
+      // requests still land once the browser state is ready.
       if (mounted) _consumePendingUrl();
     });
   }
@@ -207,6 +211,15 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (pending == null || pending.trim().isEmpty) return;
     BrowserScreen.pendingUrl = null;
     _navigateTo(pending);
+  }
+
+  Future<Uint8List?> _takeScreenshot() async {
+    try {
+      final bytes = await (_webViewController as dynamic).takeScreenshot();
+      return bytes is Uint8List && bytes.isNotEmpty ? bytes : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -388,9 +401,8 @@ class _BrowserScreenState extends State<BrowserScreen>
                       return;
                     }
                     try {
-                      final bytes = await (_webViewController as dynamic)
-                          .takeScreenshot();
-                      if (bytes is Uint8List && bytes.isNotEmpty) {
+                      final bytes = await _takeScreenshot();
+                      if (bytes != null) {
                         await _tabManager.setScreenshot(activeTab.id, bytes);
                       }
                     } catch (e) {
@@ -524,8 +536,8 @@ class _BrowserScreenState extends State<BrowserScreen>
       final activeTab2 = _tabManager.activeTab;
       if (activeTab2 != null) {
         try {
-          final bytes = await (controller as dynamic).takeScreenshot();
-          if (bytes is Uint8List && bytes.isNotEmpty) {
+          final bytes = await _takeScreenshot();
+          if (bytes != null) {
             await _tabManager.setScreenshot(activeTab2.id, bytes);
           }
         } catch (e) {
@@ -821,55 +833,55 @@ class _BrowserScreenState extends State<BrowserScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.black87,
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: 'Type here...',
-            hintStyle: TextStyle(color: Colors.white38),
+      builder: (dialogContext) {
+        Future<void> submitInput(String value) async {
+          await _injectTextAndBlur(value);
+          try {
+            await _webviewInputChannel.invokeMethod('dismissIME');
+          } catch (_) {}
+          _typingOverlayVisible = false;
+          Navigator.of(dialogContext).pop();
+          _resumeCursor();
+        }
+
+        return AlertDialog(
+          backgroundColor: Colors.black87,
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Type here...',
+              hintStyle: const TextStyle(color: Colors.white38),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.arrow_forward, size: 18),
+                onPressed: () => submitInput(controller.text),
+              ),
+            ),
+            onSubmitted: submitInput,
           ),
-          onSubmitted: (value) async {
-            await _injectTextAndBlur(value);
-            try {
-              await _webviewInputChannel.invokeMethod('dismissIME');
-            } catch (_) {}
-            _typingOverlayVisible = false;
-            Navigator.of(dialogContext).pop();
-            _resumeCursor();
-          },
-        ),
-        actions: [
-          ElevatedButton.icon(
-            onPressed: () async {
-              await _injectTextAndBlur(controller.text);
-              try {
-                await _webviewInputChannel.invokeMethod('dismissIME');
-              } catch (_) {}
-              _typingOverlayVisible = false;
-              Navigator.of(context).pop();
-              _resumeCursor();
-            },
-            icon: const Icon(Icons.arrow_forward),
-            label: const Text('Submit'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await _blurWebViewInput();
-              try {
-                await _webviewInputChannel.invokeMethod('dismissIME');
-              } catch (_) {}
-              _typingOverlayVisible = false;
-              Navigator.of(dialogContext).pop();
-              _resumeCursor();
-            },
-            child:
-                const Text('Cancel', style: TextStyle(color: Colors.white70)),
-          ),
-        ],
-      ),
+          actions: [
+            ElevatedButton.icon(
+              onPressed: () async => submitInput(controller.text),
+              icon: const Icon(Icons.arrow_forward),
+              label: const Text('Submit'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await _blurWebViewInput();
+                try {
+                  await _webviewInputChannel.invokeMethod('dismissIME');
+                } catch (_) {}
+                _typingOverlayVisible = false;
+                Navigator.of(dialogContext).pop();
+                _resumeCursor();
+              },
+              child: const Text('Cancel',
+                  style: TextStyle(color: Colors.white70)),
+            ),
+          ],
+        );
+      },
     ).then((_) => controller.dispose());
   }
 
@@ -1550,8 +1562,8 @@ class _BrowserScreenState extends State<BrowserScreen>
       try {
         final activeTab = _tabManager.activeTab;
         if (activeTab != null && _webViewController != null) {
-          final bytes = await (_webViewController as dynamic).takeScreenshot();
-          if (bytes is Uint8List && bytes.isNotEmpty) {
+          final bytes = await _takeScreenshot();
+          if (bytes != null) {
             await _tabManager.setScreenshot(activeTab.id, bytes);
           }
         }
@@ -1572,8 +1584,8 @@ class _BrowserScreenState extends State<BrowserScreen>
       final activeTab = _tabManager.activeTab;
       if (activeTab == null || _webViewController == null) return;
       try {
-        final bytes = await (_webViewController as dynamic).takeScreenshot();
-        if (bytes is Uint8List && bytes.isNotEmpty) {
+        final bytes = await _takeScreenshot();
+        if (bytes != null) {
           await _tabManager.setScreenshot(activeTab.id, bytes);
         }
       } catch (e) {
@@ -1585,17 +1597,13 @@ class _BrowserScreenState extends State<BrowserScreen>
     try {
       final activeTab = _tabManager.activeTab;
       if (activeTab != null && _webViewController != null) {
-        try {
-          (_webViewController as dynamic).takeScreenshot().then((bytes) async {
-            if (bytes is Uint8List && bytes.isNotEmpty) {
-              await _tabManager.setScreenshot(activeTab.id, bytes);
-            }
-          }).catchError((e) {
-            debugPrint('[BROWSER] pre-sheet screenshot failed: $e');
-          });
-        } catch (e) {
-          debugPrint('[BROWSER] pre-sheet screenshot error: $e');
-        }
+        _takeScreenshot().then((bytes) async {
+          if (bytes != null) {
+            await _tabManager.setScreenshot(activeTab.id, bytes);
+          }
+        }).catchError((e) {
+          debugPrint('[BROWSER] pre-sheet screenshot failed: $e');
+        });
       }
     } catch (_) {}
 

@@ -7,8 +7,15 @@ import '../screens/player.dart'
     show PlayerState, PositionUiState, MediaItem, MediaType;
 import '../screens/browser_screen.dart';
 import '../vault/services/torrent_service.dart';
-import '../utils/browser_submission.dart';
-import 'quick_links_service.dart';
+
+const _kRoutes = {
+  'player': (index: 0, icon: Icons.music_note, label: 'Player'),
+  'search': (index: 1, icon: Icons.search, label: 'Search'),
+  'browser': (index: 2, icon: Icons.language, label: 'Browser'),
+  'downloads': (index: 3, icon: Icons.download, label: 'Downloads'),
+  'settings': (index: 4, icon: Icons.settings, label: 'Settings'),
+  'files': (index: 5, icon: Icons.folder, label: 'Files'),
+};
 
 /// Persistent browser-like shell that wraps all app content.
 class BrowserShell extends StatefulWidget {
@@ -76,10 +83,19 @@ class _BrowserShellState extends State<BrowserShell> {
   }
 
   String get _currentTitle =>
-      QuickLinksService.titleForIndex(widget.currentIndex);
+      _currentRouteData?.label ?? 'Browser';
 
   IconData get _currentFavicon =>
-      QuickLinksService.indexToIcon[widget.currentIndex] ?? Icons.search;
+      _currentRouteData?.icon ?? Icons.search;
+
+  ({int index, IconData icon, String label})? get _currentRouteData {
+    for (final entry in _kRoutes.entries) {
+      if (entry.value.index == widget.currentIndex) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
 
   // -- URL bar editing --
 
@@ -102,19 +118,7 @@ class _BrowserShellState extends State<BrowserShell> {
       return;
     }
 
-    final aliasRoute = _browserRouteAliases[trimmed.toLowerCase()];
-    if (aliasRoute != null) {
-      _finishEditing();
-      widget.onNavigate(aliasRoute);
-      return;
-    }
-
-    final decision = resolveBrowserSubmission(
-      trimmed,
-      routeToIndex: QuickLinksService.routeToIndex,
-      indexToRoute: QuickLinksService.indexToRoute,
-      indexToTitle: QuickLinksService.indexToTitle,
-    );
+    final decision = _resolveBrowserSubmission(trimmed);
 
     switch (decision.kind) {
       case BrowserSubmissionKind.internalRoute:
@@ -657,8 +661,7 @@ class _BrowserShellState extends State<BrowserShell> {
                             ],
                           ),
                           const SizedBox(height: 4),
-                          // TECH-DEBT: mini player still lacks explicit sleep timer and
-                          // playback-speed controls; those remain full-player features.
+                          // TODO(next): add sleep timer and playback-speed controls to the mini player.
                           compactOverlay
                               ? Wrap(
                                   alignment: WrapAlignment.center,
@@ -1026,11 +1029,14 @@ class _BrowserShellState extends State<BrowserShell> {
     final lower = trimmed.toLowerCase();
 
     final internal = <_BrowserSuggestion>[];
+    // Regression check: when the browser tab itself is focused, empty input
+    // must still show these internal chips because _startEditing() no longer
+    // short-circuits on browser.tab.
     for (final destination in _browserDestinations) {
       if (lower.isEmpty ||
           destination.keyword.startsWith(lower) ||
           destination.label.toLowerCase().startsWith(lower) ||
-          destination.aliases.any((alias) => alias.startsWith(lower))) {
+          destination.value.toLowerCase().startsWith(lower)) {
         internal.add(destination);
       }
     }
@@ -1041,19 +1047,28 @@ class _BrowserShellState extends State<BrowserShell> {
         final normalized =
             trimmed.startsWith('http') ? trimmed : 'https://$trimmed';
         external.add(
-          _BrowserSuggestion.url(
+          _BrowserSuggestion(
+            kind: _BrowserSuggestionKind.url,
             label: 'Open $normalized',
             value: normalized,
             subtitle: 'Navigate directly to the site',
+            icon: Icons.language,
+            keyword: normalized,
+            aliases: const [],
           ),
         );
       }
       external.add(
-        _BrowserSuggestion.search(
+        _BrowserSuggestion(
+          kind: _BrowserSuggestionKind.search,
           label: 'Search Google for "$trimmed"',
           value:
               'https://www.google.com/search?q=${Uri.encodeComponent(trimmed)}',
           subtitle: 'Plain text falls back to search',
+          icon: Icons.search,
+          keyword:
+              'https://www.google.com/search?q=${Uri.encodeComponent(trimmed)}',
+          aliases: const [],
         ),
       );
     }
@@ -1074,14 +1089,73 @@ class _BrowserShellState extends State<BrowserShell> {
   }
 }
 
-const Map<String, String> _browserRouteAliases = {
-  'player': 'player.tab',
-  'search': 'search.tab',
-  'browser': 'browser.tab',
-  'downloads': 'torrents.tab',
-  'settings': 'settings.tab',
-  'files': 'bulkimport.tab',
-};
+BrowserSubmissionDecision _resolveBrowserSubmission(String input) {
+  final trimmed = input.trim();
+  final lower = trimmed.toLowerCase();
+
+  for (final entry in _kRoutes.entries) {
+    final route = _routeForKey(entry.key);
+    if (lower == entry.key || lower == entry.value.label.toLowerCase() ||
+        lower == route) {
+      return BrowserSubmissionDecision(
+        BrowserSubmissionKind.internalRoute,
+        route,
+      );
+    }
+  }
+
+  if (lower.startsWith('magnet:')) {
+    return BrowserSubmissionDecision(BrowserSubmissionKind.magnet, trimmed);
+  }
+
+  if (lower.startsWith('ipfs://') || lower.startsWith('ipns://')) {
+    return BrowserSubmissionDecision(BrowserSubmissionKind.openUrl, trimmed);
+  }
+
+  if (lower.startsWith('http://') || lower.startsWith('https://')) {
+    return BrowserSubmissionDecision(BrowserSubmissionKind.openUrl, trimmed);
+  }
+
+  final directUrlPattern = RegExp(
+    r'^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#].*)?$',
+  );
+  if (!trimmed.contains(' ') && directUrlPattern.hasMatch(lower)) {
+    return BrowserSubmissionDecision(
+      BrowserSubmissionKind.openUrl,
+      'https://$trimmed',
+    );
+  }
+
+  return BrowserSubmissionDecision(
+    BrowserSubmissionKind.openUrl,
+    'https://www.google.com/search?q=${Uri.encodeComponent(trimmed)}',
+  );
+}
+
+String _routeForKey(String key) {
+  return switch (key) {
+    'player' => 'player.tab',
+    'search' => 'search.tab',
+    'browser' => 'browser.tab',
+    'downloads' => 'torrents.tab',
+    'settings' => 'settings.tab',
+    'files' => 'bulkimport.tab',
+    _ => key,
+  };
+}
+
+enum BrowserSubmissionKind {
+  internalRoute,
+  openUrl,
+  magnet,
+}
+
+class BrowserSubmissionDecision {
+  final BrowserSubmissionKind kind;
+  final String value;
+
+  const BrowserSubmissionDecision(this.kind, this.value);
+}
 
 enum _BrowserSuggestionKind {
   internal,
@@ -1098,75 +1172,26 @@ class _BrowserSuggestion {
   final String keyword;
   final List<String> aliases;
 
-  _BrowserSuggestion.internal({
-    required String label,
-    required String value,
-    required IconData icon,
-    List<String> aliases = const [],
-  })  : kind = _BrowserSuggestionKind.internal,
-        label = label,
-        value = value,
-        subtitle = value,
-        icon = icon,
-        keyword = value,
-        aliases = aliases;
-
-  _BrowserSuggestion.url({
-    required String label,
-    required String value,
-    required String subtitle,
-  })  : kind = _BrowserSuggestionKind.url,
-        label = label,
-        value = value,
-        subtitle = subtitle,
-        icon = Icons.language,
-        keyword = value,
-        aliases = const [];
-
-  _BrowserSuggestion.search({
-    required String label,
-    required String value,
-    required String subtitle,
-  })  : kind = _BrowserSuggestionKind.search,
-        label = label,
-        value = value,
-        subtitle = subtitle,
-        icon = Icons.search,
-        keyword = value,
-        aliases = const [];
+  const _BrowserSuggestion({
+    required this.kind,
+    required this.label,
+    required this.value,
+    required this.subtitle,
+    required this.icon,
+    required this.keyword,
+    required this.aliases,
+  });
 }
 
 final List<_BrowserSuggestion> _browserDestinations = [
-  _BrowserSuggestion.internal(
-    label: 'Player',
-    value: 'player.tab',
-    icon: Icons.music_note,
-  ),
-  _BrowserSuggestion.internal(
-    label: 'Search',
-    value: 'search.tab',
-    icon: Icons.search,
-  ),
-  _BrowserSuggestion.internal(
-    label: 'Browser',
-    value: 'browser.tab',
-    icon: Icons.language,
-  ),
-  _BrowserSuggestion.internal(
-    label: 'Downloads',
-    value: 'torrents.tab',
-    icon: Icons.download,
-    aliases: ['downloads'],
-  ),
-  _BrowserSuggestion.internal(
-    label: 'Settings',
-    value: 'settings.tab',
-    icon: Icons.settings,
-  ),
-  _BrowserSuggestion.internal(
-    label: 'Files',
-    value: 'bulkimport.tab',
-    icon: Icons.folder,
-    aliases: ['files'],
-  ),
+  for (final entry in _kRoutes.entries)
+    _BrowserSuggestion(
+      kind: _BrowserSuggestionKind.internal,
+      label: entry.value.label,
+      value: _routeForKey(entry.key),
+      subtitle: entry.value.label,
+      icon: entry.value.icon,
+      keyword: entry.key,
+      aliases: const [],
+    ),
 ];

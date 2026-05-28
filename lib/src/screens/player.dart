@@ -405,8 +405,7 @@ img.Image? _decodeByMagic(Uint8List raw) {
 
 class PlayerState with ChangeNotifier {
   static const String _playStatsPrefsKey = 'player_play_stats';
-  // TECH-DEBT: add first-class sleep timer state/countdown exposure for all
-  // player surfaces (main player + mini overlay) in a dedicated follow-up.
+  // TODO(next): add first-class sleep timer state and countdown exposure for all player surfaces.
   final SharedPreferences prefs;
   bool _artistEnrichmentRunning = false;
   final Set<String> _artistLookupInFlight = <String>{};
