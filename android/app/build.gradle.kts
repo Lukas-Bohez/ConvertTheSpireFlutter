@@ -41,8 +41,8 @@ android {
         minSdk = 24
         // Target API 35 to satisfy Play Console requirements
         targetSdk = 35
-        versionCode = 1183
-        versionName = "11.8.4"
+        versionCode = 1184
+        versionName = "11.8.5"
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
         }

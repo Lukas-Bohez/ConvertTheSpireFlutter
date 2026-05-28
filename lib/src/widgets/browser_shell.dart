@@ -3,11 +3,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../screens/player.dart' show PlayerState, PositionUiState, MediaItem, MediaType;
+import '../screens/player.dart'
+    show PlayerState, PositionUiState, MediaItem, MediaType;
 import '../screens/browser_screen.dart';
-import '../state/app_controller.dart';
 import '../config/build_flags.dart';
-import '../services/url_routing_service.dart';
+import '../vault/services/torrent_service.dart';
 import 'quick_links_service.dart';
 
 /// Persistent browser-like shell that wraps all app content.
@@ -109,54 +109,51 @@ class _BrowserShellState extends State<BrowserShell> {
 
     final lower = trimmed.toLowerCase();
 
-    // Prefer exact route matches first (e.g. "queue.tab") so suggestions
-    // that use route strings navigate the app instead of being treated as URLs.
-    if (QuickLinksService.routeToIndex.containsKey(lower)) {
-      final idx = QuickLinksService.routeToIndex[lower];
-      if (idx != null) {
-        try {
-          final app = Provider.of<AppController>(context, listen: false);
-          app.switchToTab(idx);
-          return;
-        } catch (_) {}
-      }
-      widget.onNavigate(lower);
+    final internalRoute = _resolveInternalRoute(lower);
+    if (internalRoute != null) {
+      widget.onNavigate(internalRoute);
       return;
     }
 
-    // Title exact match (case-insensitive)
-    for (final entry in QuickLinksService.indexToTitle.entries) {
-      final displayTitle = QuickLinksService.titleForIndex(entry.key);
-      if (displayTitle.toLowerCase() == lower) {
-        final route = QuickLinksService.indexToRoute[entry.key];
-        if (route != null) {
-          widget.onNavigate(route);
-          return;
-        }
-      }
-    }
-
-    final type = UrlRoutingService.detectUrlType(trimmed);
-    if (type == UrlType.magnet ||
-        type == UrlType.torrentFile ||
-        type == UrlType.ipfs ||
-        _looksLikeUrl(trimmed)) {
-      widget.onOpenUrl?.call(trimmed);
+    if (lower.startsWith('magnet:')) {
+      await TorrentService.instance.addTorrentFromMagnetLink(trimmed);
+      widget.onNavigate('torrents.tab');
       return;
     }
 
-    widget.onNavigate('multisearch.tab');
-    return;
+    if (lower.startsWith('ipfs://') || lower.startsWith('ipns://')) {
+      final cid = trimmed.replaceFirst(RegExp(r'^ipfs://|^ipns://'), '');
+      _loadInBrowser('https://ipfs.io/ipfs/$cid');
+      return;
+    }
+
+    final looksLikeUrl = lower.startsWith('http') ||
+        (trimmed.contains('.') && !trimmed.contains(' ') && trimmed.length > 4);
+
+    if (looksLikeUrl) {
+      final url = trimmed.startsWith('http') ? trimmed : 'https://$trimmed';
+      _loadInBrowser(url);
+      return;
+    }
+
+    _loadInBrowser(
+      'https://www.google.com/search?q=${Uri.encodeComponent(trimmed)}',
+    );
   }
 
-  bool _looksLikeUrl(String text) {
-    final lower = text.toLowerCase();
-    return lower.startsWith('http://') ||
-        lower.startsWith('https://') ||
-        lower.startsWith('www.') ||
-        (lower.contains('.') &&
-            !lower.contains(' ') &&
-            RegExp(r'\.[a-z]{2,}$', caseSensitive: false).hasMatch(lower));
+  String? _resolveInternalRoute(String lower) {
+    if (QuickLinksService.routeToIndex.containsKey(lower)) return lower;
+    for (final entry in QuickLinksService.indexToRoute.entries) {
+      final title = QuickLinksService.titleForIndex(entry.key).toLowerCase();
+      if (title == lower) return entry.value;
+    }
+    return null;
+  }
+
+  void _loadInBrowser(String url) {
+    BrowserScreen.pendingUrl = url;
+    widget.onNavigate('browser.tab');
+    BrowserScreen.navigate(url);
   }
 
   void _cancelEditing() {

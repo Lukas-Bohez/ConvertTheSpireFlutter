@@ -26,7 +26,6 @@ import '../services/folder_access_service.dart';
 import '../services/shortcut_service.dart';
 import '../services/tray_service.dart';
 import '../services/ipfs_service.dart';
-import '../services/url_routing_service.dart';
 import '../state/app_controller.dart';
 import 'bulk_import_screen.dart';
 import 'playlist_screen.dart';
@@ -835,32 +834,28 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     } catch (_) {}
   }
 
-  void openBrowserWith(String url) {
-    unawaited(_openBrowserRequest(url));
-  }
-
-  Future<void> _openBrowserRequest(String url) async {
+  Future<void> openBrowserWith(String url) async {
     final trimmed = url.trim();
     if (trimmed.isEmpty) return;
 
-    switch (UrlRoutingService.detectUrlType(trimmed)) {
-      case UrlType.magnet:
-      case UrlType.torrentFile:
-        await _openTorrentLink(trimmed);
-        if (!mounted) return;
-        _navigateToPage(14);
-        return;
-      case UrlType.ipfs:
-        final resolved = await IpfsService.resolveUrl(trimmed);
-        if (!mounted) return;
-        _navigateToPage(2);
-        BrowserScreen.navigate(resolved);
-        return;
-      case UrlType.web:
-        _navigateToPage(2);
-        BrowserScreen.navigate(trimmed);
-        return;
+    final lower = trimmed.toLowerCase();
+
+    if (lower.startsWith('magnet:')) {
+      unawaited(_openTorrentLink(trimmed));
+      _navigateToPage(14);
+      return;
     }
+
+    if (lower.startsWith('ipfs://') || lower.startsWith('ipns://')) {
+      final resolved = await IpfsService.resolveUrl(trimmed);
+      if (!mounted) return;
+      _navigateToPage(2);
+      BrowserScreen.navigate(resolved);
+      return;
+    }
+
+    _navigateToPage(2);
+    BrowserScreen.navigate(trimmed);
   }
 
   Future<void> _openTorrentLink(String url) async {

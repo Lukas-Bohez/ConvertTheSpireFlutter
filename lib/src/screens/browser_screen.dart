@@ -43,9 +43,11 @@ class BrowserScreen extends StatefulWidget {
   static void _noopOnAddToQueue(SearchResult result) {}
 
   static final GlobalKey<_BrowserScreenState> browserKey = GlobalKey();
+  static String? pendingUrl;
 
   static void navigate(String url) {
-    browserKey.currentState?._navigateTo(url);
+    pendingUrl = url;
+    browserKey.currentState?._consumePendingUrl();
   }
 
   static void focusAddressBar() => browserKey.currentState?._focusAddressBar();
@@ -120,6 +122,15 @@ class _BrowserScreenState extends State<BrowserScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _consumePendingUrl();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant BrowserScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _consumePendingUrl();
   }
 
   @override
@@ -186,6 +197,13 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _onCastChanged() {
     if (mounted) setState(() {});
+  }
+
+  void _consumePendingUrl() {
+    final pending = BrowserScreen.pendingUrl;
+    if (pending == null || pending.trim().isEmpty) return;
+    BrowserScreen.pendingUrl = null;
+    _navigateTo(pending);
   }
 
   @override
