@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../screens/player.dart'
     show PlayerState, PositionUiState, MediaItem, MediaType;
 import '../screens/browser_screen.dart';
-import '../config/build_flags.dart';
 import '../vault/services/torrent_service.dart';
 import '../utils/browser_submission.dart';
 import 'quick_links_service.dart';
@@ -62,7 +61,6 @@ class _BrowserShellState extends State<BrowserShell> {
   bool _playerCollapsed = true;
   late final TextEditingController _urlEditController;
   final FocusNode _urlFocusNode = FocusNode();
-  // overlay/old suggestion machinery removed in favor of RawAutocomplete
 
   @override
   void initState() {
@@ -102,11 +100,19 @@ class _BrowserShellState extends State<BrowserShell> {
     });
   }
 
-  Future<void> _submitUrl(String value) async {
-    setState(() => _isEditing = false);
-    widget.onUrlEditingEnd?.call();
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) return;
+  Future<void> _handleSubmit(String input) async {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) {
+      _finishEditing();
+      return;
+    }
+
+    final aliasRoute = _browserRouteAliases[trimmed.toLowerCase()];
+    if (aliasRoute != null) {
+      _finishEditing();
+      widget.onNavigate(aliasRoute);
+      return;
+    }
 
     final decision = resolveBrowserSubmission(
       trimmed,
@@ -117,13 +123,16 @@ class _BrowserShellState extends State<BrowserShell> {
 
     switch (decision.kind) {
       case BrowserSubmissionKind.internalRoute:
+        _finishEditing();
         widget.onNavigate(decision.value);
         return;
       case BrowserSubmissionKind.magnet:
+        _finishEditing();
         await TorrentService.instance.addTorrentFromMagnetLink(trimmed);
         widget.onNavigate('torrents.tab');
         return;
       case BrowserSubmissionKind.openUrl:
+        _finishEditing();
         _loadInBrowser(decision.value);
         return;
     }
@@ -135,12 +144,18 @@ class _BrowserShellState extends State<BrowserShell> {
     BrowserScreen.navigate(url);
   }
 
+  void _finishEditing() {
+    if (!mounted) return;
+    setState(() => _isEditing = false);
+    widget.onUrlEditingEnd?.call();
+    FocusScope.of(context).unfocus();
+  }
+
   void _cancelEditing() {
     setState(() => _isEditing = false);
     widget.onUrlEditingEnd?.call();
+    FocusScope.of(context).unfocus();
   }
-
-  // Suggestions are handled by RawAutocomplete in the URL bar.
 
   // -- Queue toggle --
 
@@ -897,47 +912,13 @@ class _BrowserShellState extends State<BrowserShell> {
       );
     }
 
-    // Build suggestion list from QuickLinksService
-    final allPages = <_PageSuggestion>[];
-    for (final entry in QuickLinksService.indexToTitle.entries) {
-      // Filter out tabs hidden by the active build policy.
-      if (!isTabVisibleInCurrentBuild(entry.key)) {
-        continue;
-      }
-      final route = QuickLinksService.indexToRoute[entry.key];
-      if (route == null) continue;
-      final icon = QuickLinksService.indexToIcon[entry.key] ?? Icons.link;
-      allPages.add(
-        _PageSuggestion(
-          title: QuickLinksService.titleForIndex(entry.key),
-          route: route,
-          icon: icon,
-        ),
-      );
-    }
+    final suggestions = _buildSuggestions(_urlEditController.text);
 
-    return RawAutocomplete<_PageSuggestion>(
-      textEditingController: _urlEditController,
-      focusNode: _urlFocusNode,
-      optionsBuilder: (textEditingValue) {
-        final q = textEditingValue.text.trim().toLowerCase();
-        if (q.isEmpty) return allPages;
-        return allPages.where((p) =>
-            p.title.toLowerCase().contains(q) ||
-            p.route.toLowerCase().contains(q));
-      },
-      onSelected: (suggestion) {
-        setState(() => _isEditing = false);
-        widget.onUrlEditingEnd?.call();
-        if (suggestion.route == 'search.tab' ||
-            suggestion.route == 'multisearch.tab') {
-          _submitUrl(_urlEditController.text);
-        } else {
-          _submitUrl(suggestion.route);
-        }
-      },
-      fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
-        return Container(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
           height: 34,
           decoration: BoxDecoration(
             color: cs.surfaceContainerHighest,
@@ -946,8 +927,9 @@ class _BrowserShellState extends State<BrowserShell> {
                 color: cs.primary.withValues(alpha: 0.6), width: 1.5),
           ),
           child: TextField(
-            controller: controller,
-            focusNode: focusNode,
+            controller: _urlEditController,
+            focusNode: _urlFocusNode,
+            autofocus: true,
             style: TextStyle(fontSize: 13, color: cs.onSurface),
             decoration: InputDecoration(
               isDense: true,
@@ -961,104 +943,235 @@ class _BrowserShellState extends State<BrowserShell> {
               suffixIcon: IconButton(
                 tooltip: 'Open',
                 icon: const Icon(Icons.arrow_forward, size: 18),
-                onPressed: () {
-                  final value = controller.text.trim();
-                  if (value.isEmpty) return;
-                  setState(() => _isEditing = false);
-                  widget.onUrlEditingEnd?.call();
-                  _submitUrl(value);
-                },
+                onPressed: () => _handleSubmit(_urlEditController.text),
               ),
               suffixIconConstraints:
                   const BoxConstraints(minHeight: 28, minWidth: 28),
             ),
-            onSubmitted: (v) {
-              setState(() => _isEditing = false);
-              widget.onUrlEditingEnd?.call();
-              _submitUrl(v);
-            },
+            onChanged: (_) => setState(() {}),
+            onSubmitted: _handleSubmit,
             onTapOutside: (_) => _cancelEditing(),
           ),
-        );
-      },
-      optionsViewBuilder: (context, onSelected, options) {
-        final cs = Theme.of(context).colorScheme;
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            elevation: 8,
-            borderRadius: BorderRadius.circular(12),
-            color: cs.surfaceContainerHigh,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480, maxHeight: 320),
-              child: ListView.separated(
-                shrinkWrap: true,
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                itemCount: options.length,
-                separatorBuilder: (_, __) => Divider(
-                  height: 1,
-                  indent: 44,
-                  color: cs.outlineVariant.withValues(alpha: 0.3),
-                ),
-                itemBuilder: (context, index) {
-                  final p = options.elementAt(index);
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () => onSelected(p),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 30,
-                            height: 30,
-                            decoration: BoxDecoration(
-                              color: cs.primaryContainer,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(p.icon,
-                                size: 16, color: cs.onPrimaryContainer),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              p.title,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: cs.onSurface,
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          child: suggestions.isEmpty
+              ? const SizedBox.shrink()
+              : Container(
+                  margin: const EdgeInsets.only(top: 6),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: cs.outlineVariant.withValues(alpha: 0.25),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: suggestions
+                            .where((s) =>
+                                s.kind == _BrowserSuggestionKind.internal)
+                            .map(
+                              (suggestion) => ActionChip(
+                                avatar: Icon(suggestion.icon, size: 18),
+                                label: Text(suggestion.label),
+                                onPressed: () =>
+                                    _handleSubmit(suggestion.value),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                      if (suggestions.any((s) =>
+                          s.kind != _BrowserSuggestionKind.internal)) ...[
+                        const SizedBox(height: 10),
+                        ...suggestions
+                            .where((s) =>
+                                s.kind != _BrowserSuggestionKind.internal)
+                            .map(
+                              (suggestion) => ListTile(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                leading: CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: cs.primaryContainer,
+                                  foregroundColor: cs.onPrimaryContainer,
+                                  child: Icon(suggestion.icon, size: 16),
+                                ),
+                                title: Text(suggestion.label),
+                                subtitle: suggestion.subtitle.isEmpty
+                                    ? null
+                                    : Text(suggestion.subtitle),
+                                onTap: () => _handleSubmit(suggestion.value),
                               ),
                             ),
-                          ),
-                          Text(
-                            p.route.replaceAll('.tab', ''),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: cs.onSurfaceVariant.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+                      ],
+                    ],
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  List<_BrowserSuggestion> _buildSuggestions(String query) {
+    final trimmed = query.trim();
+    final lower = trimmed.toLowerCase();
+
+    final internal = <_BrowserSuggestion>[];
+    for (final destination in _browserDestinations) {
+      if (lower.isEmpty ||
+          destination.keyword.startsWith(lower) ||
+          destination.label.toLowerCase().startsWith(lower) ||
+          destination.aliases.any((alias) => alias.startsWith(lower))) {
+        internal.add(destination);
+      }
+    }
+
+    final external = <_BrowserSuggestion>[];
+    if (lower.isNotEmpty) {
+      if (_looksLikeBrowserUrl(trimmed)) {
+        final normalized =
+            trimmed.startsWith('http') ? trimmed : 'https://$trimmed';
+        external.add(
+          _BrowserSuggestion.url(
+            label: 'Open $normalized',
+            value: normalized,
+            subtitle: 'Navigate directly to the site',
           ),
         );
-      },
-    );
+      }
+      external.add(
+        _BrowserSuggestion.search(
+          label: 'Search Google for "$trimmed"',
+          value:
+              'https://www.google.com/search?q=${Uri.encodeComponent(trimmed)}',
+          subtitle: 'Plain text falls back to search',
+        ),
+      );
+    }
+
+    return [...internal, ...external];
+  }
+
+  bool _looksLikeBrowserUrl(String text) {
+    final lower = text.toLowerCase();
+    final hasScheme =
+        lower.startsWith('http://') || lower.startsWith('https://');
+    if (hasScheme) return true;
+    if (lower.contains(' ')) return false;
+    if (!lower.contains('.')) return false;
+    return RegExp(r'^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#].*)?$',
+            caseSensitive: false)
+        .hasMatch(lower);
   }
 }
 
-class _PageSuggestion {
-  final String title;
-  final String route;
-  final IconData icon;
-  const _PageSuggestion({
-    required this.title,
-    required this.route,
-    required this.icon,
-  });
+const Map<String, String> _browserRouteAliases = {
+  'player': 'player.tab',
+  'search': 'search.tab',
+  'browser': 'browser.tab',
+  'downloads': 'torrents.tab',
+  'settings': 'settings.tab',
+  'files': 'bulkimport.tab',
+};
+
+enum _BrowserSuggestionKind {
+  internal,
+  url,
+  search,
 }
+
+class _BrowserSuggestion {
+  final _BrowserSuggestionKind kind;
+  final String label;
+  final String value;
+  final String subtitle;
+  final IconData icon;
+  final String keyword;
+  final List<String> aliases;
+
+  _BrowserSuggestion.internal({
+    required String label,
+    required String value,
+    required IconData icon,
+    List<String> aliases = const [],
+  })  : kind = _BrowserSuggestionKind.internal,
+        label = label,
+        value = value,
+        subtitle = value,
+        icon = icon,
+        keyword = value,
+        aliases = aliases;
+
+  _BrowserSuggestion.url({
+    required String label,
+    required String value,
+    required String subtitle,
+  })  : kind = _BrowserSuggestionKind.url,
+        label = label,
+        value = value,
+        subtitle = subtitle,
+        icon = Icons.language,
+        keyword = value,
+        aliases = const [];
+
+  _BrowserSuggestion.search({
+    required String label,
+    required String value,
+    required String subtitle,
+  })  : kind = _BrowserSuggestionKind.search,
+        label = label,
+        value = value,
+        subtitle = subtitle,
+        icon = Icons.search,
+        keyword = value,
+        aliases = const [];
+}
+
+final List<_BrowserSuggestion> _browserDestinations = [
+  _BrowserSuggestion.internal(
+    label: 'Player',
+    value: 'player.tab',
+    icon: Icons.music_note,
+  ),
+  _BrowserSuggestion.internal(
+    label: 'Search',
+    value: 'search.tab',
+    icon: Icons.search,
+  ),
+  _BrowserSuggestion.internal(
+    label: 'Browser',
+    value: 'browser.tab',
+    icon: Icons.language,
+  ),
+  _BrowserSuggestion.internal(
+    label: 'Downloads',
+    value: 'torrents.tab',
+    icon: Icons.download,
+    aliases: ['downloads'],
+  ),
+  _BrowserSuggestion.internal(
+    label: 'Settings',
+    value: 'settings.tab',
+    icon: Icons.settings,
+  ),
+  _BrowserSuggestion.internal(
+    label: 'Files',
+    value: 'bulkimport.tab',
+    icon: Icons.folder,
+    aliases: ['files'],
+  ),
+];

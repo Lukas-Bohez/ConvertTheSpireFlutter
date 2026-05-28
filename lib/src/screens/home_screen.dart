@@ -556,14 +556,25 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               return;
             }
 
-            var idx = QuickLinksService.routeToIndex[route];
+            const routeAliases = <String, String>{
+              'player': 'player.tab',
+              'search': 'search.tab',
+              'browser': 'browser.tab',
+              'downloads': 'torrents.tab',
+              'settings': 'settings.tab',
+              'files': 'bulkimport.tab',
+            };
 
-            if (idx == null && !route.endsWith('.tab')) {
-              idx = QuickLinksService.routeToIndex['$route.tab'];
+            final normalizedRoute = routeAliases[route.toLowerCase()] ?? route;
+
+            var idx = QuickLinksService.routeToIndex[normalizedRoute];
+
+            if (idx == null && !normalizedRoute.endsWith('.tab')) {
+              idx = QuickLinksService.routeToIndex['$normalizedRoute.tab'];
             }
 
             if (idx == null) {
-              final lower = route.toLowerCase();
+              final lower = normalizedRoute.toLowerCase();
               for (final entry in QuickLinksService.indexToTitle.entries) {
                 if (entry.value.toLowerCase() == lower) {
                   idx = entry.key;
@@ -573,11 +584,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             }
 
             if (idx != null) {
-              if (kDebugMode) debugPrint('[NAV] resolved "$route" -> $idx');
+              if (kDebugMode) {
+                debugPrint('[NAV] resolved "$normalizedRoute" -> $idx');
+              }
               _navigateToPage(idx);
             } else {
               if (kDebugMode) {
-                debugPrint('[NAV] WARNING: no index for route "$route"');
+                debugPrint(
+                    '[NAV] WARNING: no index for route "$normalizedRoute"');
               }
             }
           },
