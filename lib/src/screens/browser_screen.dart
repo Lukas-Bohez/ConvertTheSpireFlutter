@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'dart:convert';
 // 'dart:typed_data' is not required; Uint8List is available via flutter services import
 
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
@@ -95,6 +96,8 @@ class _BrowserScreenState extends State<BrowserScreen>
   bool _showFindBar = false;
   int _findMatchCount = 0;
   int _findActiveIndex = 0;
+
+  bool _typingOverlayVisible = false;
 
   // Pending URL - loaded once the WebView controller is ready.
   String? _pendingUrl;
@@ -346,10 +349,11 @@ class _BrowserScreenState extends State<BrowserScreen>
       callback: (args) {
         final msg = args.isNotEmpty ? args[0].toString() : '';
         if (msg == '__blur__') {
+          if (_typingOverlayVisible) return;
           _resumeCursor();
         } else {
           _pauseCursor();
-          _showTextInputOverlay(currentValue: msg);
+          _handleInputFocusMessage(msg);
         }
       },
     );
@@ -607,10 +611,20 @@ class _BrowserScreenState extends State<BrowserScreen>
         document.addEventListener('focusin', function(e) {
           try {
             var tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+            var kind = 'input';
             if (tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable)) {
-              var val = e.target.value || '';
+              if (tag === 'textarea') {
+                kind = 'textarea';
+              } else if (e.target && e.target.isContentEditable) {
+                kind = 'contenteditable';
+              }
+              window.__flutterFocusedInput = e.target;
+              window.__flutterFocusedInputKind = kind;
+              var val = tag === 'textarea'
+                ? (e.target.value || '')
+                : (e.target.isContentEditable ? (e.target.innerText || '') : (e.target.value || ''));
               if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
-                window.flutter_inappwebview.callHandler('InputFocusChannel', val);
+                window.flutter_inappwebview.callHandler('InputFocusChannel', JSON.stringify({ value: val, kind: kind }));
               }
             }
           } catch(ex){}
@@ -687,7 +701,13 @@ class _BrowserScreenState extends State<BrowserScreen>
           // Special handling for inputs
           var tag = target.tagName.toLowerCase();
           if (tag === 'input' || tag === 'textarea' || target.isContentEditable) {
-            window.flutter_inappwebview.callHandler('InputFocusChannel', target.value || '');
+            var kind = target.isContentEditable ? 'contenteditable' : (tag === 'textarea' ? 'textarea' : 'input');
+            window.__flutterFocusedInput = target;
+            window.__flutterFocusedInputKind = kind;
+            var value = tag === 'textarea'
+              ? (target.value || '')
+              : (target.isContentEditable ? (target.innerText || '') : (target.value || ''));
+            window.flutter_inappwebview.callHandler('InputFocusChannel', JSON.stringify({ value: value, kind: kind }));
           }
         })();
       """);
@@ -721,18 +741,38 @@ class _BrowserScreenState extends State<BrowserScreen>
     try {
       await _webViewController?.evaluateJavascript(source: """
         (function(){
-          var el = document.activeElement;
+          var el = window.__flutterFocusedInput || document.activeElement;
           if (el) {
             try {
-              var nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-              if (nativeInputSetter) {
-                nativeInputSetter.call(el, '$escaped');
+              var value = '$escaped';
+              var tag = el.tagName ? el.tagName.toLowerCase() : '';
+              if (el.isContentEditable) {
+                el.textContent = value;
+                el.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'insertText', data: value}));
+              } else if (tag === 'textarea') {
+                var nativeTextAreaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+                if (nativeTextAreaSetter) {
+                  nativeTextAreaSetter.call(el, value);
+                } else {
+                  el.value = value;
+                }
+                el.dispatchEvent(new Event('input', {bubbles: true}));
+                el.dispatchEvent(new Event('change', {bubbles: true}));
+              } else if (tag === 'input') {
+                var nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+                if (nativeInputSetter) {
+                  nativeInputSetter.call(el, value);
+                } else {
+                  el.value = value;
+                }
                 el.dispatchEvent(new Event('input', {bubbles: true}));
                 el.dispatchEvent(new Event('change', {bubbles: true}));
               } else {
-                el.value = '$escaped';
+                el.value = value;
               }
               el.blur();
+              window.__flutterFocusedInput = null;
+              window.__flutterFocusedInputKind = null;
             } catch(e){}
           }
         })();
@@ -749,7 +789,30 @@ class _BrowserScreenState extends State<BrowserScreen>
     } catch (_) {}
   }
 
-  void _showTextInputOverlay({String currentValue = ''}) {
+  void _handleInputFocusMessage(String message) {
+    String currentValue = message;
+    var kind = _FocusedElementKind.input;
+    try {
+      final decoded = jsonDecode(message);
+      if (decoded is Map) {
+        currentValue = decoded['value']?.toString() ?? '';
+        final kindValue = decoded['kind']?.toString() ?? 'input';
+        kind = switch (kindValue) {
+          'textarea' => _FocusedElementKind.textarea,
+          'contenteditable' => _FocusedElementKind.contentEditable,
+          _ => _FocusedElementKind.input,
+        };
+      }
+    } catch (_) {}
+    _showTextInputOverlay(currentValue: currentValue, kind: kind);
+  }
+
+  void _showTextInputOverlay({
+    String currentValue = '',
+    _FocusedElementKind kind = _FocusedElementKind.input,
+  }) {
+    if (_typingOverlayVisible) return;
+    _typingOverlayVisible = true;
     final controller = TextEditingController(text: currentValue);
     controller.selection = TextSelection(
       baseOffset: 0,
@@ -773,6 +836,7 @@ class _BrowserScreenState extends State<BrowserScreen>
             try {
               await _webviewInputChannel.invokeMethod('dismissIME');
             } catch (_) {}
+            _typingOverlayVisible = false;
             Navigator.of(dialogContext).pop();
             _resumeCursor();
           },
@@ -784,6 +848,7 @@ class _BrowserScreenState extends State<BrowserScreen>
               try {
                 await _webviewInputChannel.invokeMethod('dismissIME');
               } catch (_) {}
+              _typingOverlayVisible = false;
               Navigator.of(context).pop();
               _resumeCursor();
             },
@@ -796,6 +861,7 @@ class _BrowserScreenState extends State<BrowserScreen>
               try {
                 await _webviewInputChannel.invokeMethod('dismissIME');
               } catch (_) {}
+              _typingOverlayVisible = false;
               Navigator.of(dialogContext).pop();
               _resumeCursor();
             },
@@ -1582,6 +1648,12 @@ class _BrowserScreenState extends State<BrowserScreen>
       _webViewController!.goBack();
     }
   }
+}
+
+enum _FocusedElementKind {
+  input,
+  textarea,
+  contentEditable,
 }
 
 // -- Tab Switcher Sheet --

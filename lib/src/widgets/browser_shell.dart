@@ -8,6 +8,7 @@ import '../screens/player.dart'
 import '../screens/browser_screen.dart';
 import '../config/build_flags.dart';
 import '../vault/services/torrent_service.dart';
+import '../utils/browser_submission.dart';
 import 'quick_links_service.dart';
 
 /// Persistent browser-like shell that wraps all app content.
@@ -107,47 +108,25 @@ class _BrowserShellState extends State<BrowserShell> {
     final trimmed = value.trim();
     if (trimmed.isEmpty) return;
 
-    final lower = trimmed.toLowerCase();
-
-    final internalRoute = _resolveInternalRoute(lower);
-    if (internalRoute != null) {
-      widget.onNavigate(internalRoute);
-      return;
-    }
-
-    if (lower.startsWith('magnet:')) {
-      await TorrentService.instance.addTorrentFromMagnetLink(trimmed);
-      widget.onNavigate('torrents.tab');
-      return;
-    }
-
-    if (lower.startsWith('ipfs://') || lower.startsWith('ipns://')) {
-      final cid = trimmed.replaceFirst(RegExp(r'^ipfs://|^ipns://'), '');
-      _loadInBrowser('https://ipfs.io/ipfs/$cid');
-      return;
-    }
-
-    final looksLikeUrl = lower.startsWith('http') ||
-        (trimmed.contains('.') && !trimmed.contains(' ') && trimmed.length > 4);
-
-    if (looksLikeUrl) {
-      final url = trimmed.startsWith('http') ? trimmed : 'https://$trimmed';
-      _loadInBrowser(url);
-      return;
-    }
-
-    _loadInBrowser(
-      'https://www.google.com/search?q=${Uri.encodeComponent(trimmed)}',
+    final decision = resolveBrowserSubmission(
+      trimmed,
+      routeToIndex: QuickLinksService.routeToIndex,
+      indexToRoute: QuickLinksService.indexToRoute,
+      indexToTitle: QuickLinksService.indexToTitle,
     );
-  }
 
-  String? _resolveInternalRoute(String lower) {
-    if (QuickLinksService.routeToIndex.containsKey(lower)) return lower;
-    for (final entry in QuickLinksService.indexToRoute.entries) {
-      final title = QuickLinksService.titleForIndex(entry.key).toLowerCase();
-      if (title == lower) return entry.value;
+    switch (decision.kind) {
+      case BrowserSubmissionKind.internalRoute:
+        widget.onNavigate(decision.value);
+        return;
+      case BrowserSubmissionKind.magnet:
+        await TorrentService.instance.addTorrentFromMagnetLink(trimmed);
+        widget.onNavigate('torrents.tab');
+        return;
+      case BrowserSubmissionKind.openUrl:
+        _loadInBrowser(decision.value);
+        return;
     }
-    return null;
   }
 
   void _loadInBrowser(String url) {
