@@ -43,11 +43,15 @@ BrowserSubmissionDecision resolveBrowserSubmission(
     return BrowserSubmissionDecision(BrowserSubmissionKind.openUrl, trimmed);
   }
 
-  final looksLikeUrl = lower.startsWith('http') ||
-      (trimmed.contains('.') && !trimmed.contains(' ') && trimmed.length > 4);
-  if (looksLikeUrl) {
-    final normalized =
-        trimmed.startsWith('http') ? trimmed : 'https://$trimmed';
+  if (lower.startsWith('http://') || lower.startsWith('https://')) {
+    return BrowserSubmissionDecision(BrowserSubmissionKind.openUrl, trimmed);
+  }
+
+  final directUrlPattern = RegExp(
+    r'^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#].*)?$',
+  );
+  if (!trimmed.contains(' ') && directUrlPattern.hasMatch(lower)) {
+    final normalized = 'https://$trimmed';
     return BrowserSubmissionDecision(BrowserSubmissionKind.openUrl, normalized);
   }
 

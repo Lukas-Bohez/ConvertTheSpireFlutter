@@ -84,11 +84,6 @@ class _BrowserShellState extends State<BrowserShell> {
   // -- URL bar editing --
 
   void _startEditing() {
-    final browserTabIndex = QuickLinksService.routeToIndex['browser.tab'];
-    if (browserTabIndex != null && widget.currentIndex == browserTabIndex) {
-      BrowserScreen.focusAddressBar();
-      return;
-    }
     _urlEditController.text = '';
     _urlEditController.selection = const TextSelection.collapsed(offset: 0);
     setState(() => _isEditing = true);
@@ -140,8 +135,8 @@ class _BrowserShellState extends State<BrowserShell> {
 
   void _loadInBrowser(String url) {
     BrowserScreen.pendingUrl = url;
-    widget.onNavigate('browser.tab');
     BrowserScreen.navigate(url);
+    widget.onNavigate('browser.tab');
   }
 
   void _finishEditing() {
