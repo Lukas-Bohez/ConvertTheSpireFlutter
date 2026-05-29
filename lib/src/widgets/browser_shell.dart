@@ -873,48 +873,60 @@ class _BrowserShellState extends State<BrowserShell> {
 
   Widget _buildUrlBar(ColorScheme cs) {
     if (!_isEditing) {
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _startEditing,
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            height: 34,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
-              border: Border.all(
-                color: cs.outlineVariant.withValues(alpha: 0.35),
-              ),
+      return ValueListenableBuilder<BrowserLocationState?>(
+        valueListenable: BrowserScreen.currentLocation,
+        builder: (context, browserLocation, _) {
+          final isBrowserTab = widget.currentIndex == _kRoutes['browser']!.index;
+          final label = isBrowserTab && browserLocation != null
+              ? browserLocation.displayLabel
+              : _currentTitle;
+          final icon = isBrowserTab && browserLocation != null
+              ? Icons.language
+              : _currentFavicon;
+
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _startEditing,
               borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(_currentFavicon, size: 15, color: cs.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _currentTitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: cs.onSurface,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+              child: Container(
+                height: 34,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+                  border: Border.all(
+                    color: cs.outlineVariant.withValues(alpha: 0.35),
                   ),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ],
+                child: Row(
+                  children: [
+                    Icon(icon, size: 15, color: cs.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: cs.onSurface,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        },
       );
     }
 
     final suggestions = _buildSuggestions(_urlEditController.text);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Stack(
+      clipBehavior: Clip.none,
       children: [
         Container(
           height: 34,
@@ -922,7 +934,9 @@ class _BrowserShellState extends State<BrowserShell> {
             color: cs.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-                color: cs.primary.withValues(alpha: 0.6), width: 1.5),
+              color: cs.primary.withValues(alpha: 0.6),
+              width: 1.5,
+            ),
           ),
           child: TextField(
             controller: _urlEditController,
@@ -934,8 +948,9 @@ class _BrowserShellState extends State<BrowserShell> {
               border: InputBorder.none,
               hintText: 'Search pages or enter web address...',
               hintStyle: TextStyle(
-                  fontSize: 13,
-                  color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
+                fontSize: 13,
+                color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+              ),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               suffixIcon: IconButton(
@@ -951,13 +966,17 @@ class _BrowserShellState extends State<BrowserShell> {
             onTapOutside: (_) => _cancelEditing(),
           ),
         ),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          child: suggestions.isEmpty
-              ? const SizedBox.shrink()
-              : Container(
-                  margin: const EdgeInsets.only(top: 6),
+        if (suggestions.isNotEmpty)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 40,
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: cs.surfaceContainerHigh,
@@ -1019,7 +1038,9 @@ class _BrowserShellState extends State<BrowserShell> {
                     ],
                   ),
                 ),
-        ),
+              ),
+            ),
+          ),
       ],
     );
   }

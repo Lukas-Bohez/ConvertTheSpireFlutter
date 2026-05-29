@@ -111,6 +111,7 @@ class TorrentEngineService {
   final Map<String, int> _zeroProgressCounters = {};
   final Map<String, int> _stallRecoveryCycles = {};
   final Set<String> _hardRecoveryInFlight = <String>{};
+  final Set<String> _startingTorrentIds = <String>{};
   final Map<String, int> _hardRestartCounts = {};
   final Map<String, DateTime> _nextAllowedHardRestart = {};
   final Map<String, List<Uri>> _torrentTrackers = {};
@@ -270,8 +271,9 @@ class TorrentEngineService {
 
   Future<void> _configureTask(dt.TorrentTask task) async {
     await _ensureRuntimePubspecForDtorrent();
-    // dtorrent_task_v2 enables DHT/tracker/PEX through internal defaults.
-    // CLI-level calls are not available in this API surface.
+    // dtorrent_task_v2 applies the SOCKS5 proxy at the task layer, so the
+    // configured peer/tracker sockets share the same transport settings.
+    // CLI-level DHT/PEX mutators are not exposed in this API surface.
     await _applyProxyConfig(task);
     await _mapPorts(task);
     if (SettingsService.instance.useDht) {
@@ -1251,59 +1253,65 @@ class TorrentEngineService {
   Future<void> startTorrent(String torrentId, {String? destinationPath}) async {
     // If already running, do nothing
     if (isRunning(torrentId)) return;
+    if (_startingTorrentIds.contains(torrentId)) return;
 
-    _pausedTorrentIds.remove(torrentId);
+    _startingTorrentIds.add(torrentId);
+    try {
+      _pausedTorrentIds.remove(torrentId);
 
-    final torrent = await TorrentService.instance.getTorrentById(torrentId);
-    if (torrent == null) throw StateError('Torrent not found: $torrentId');
+      final torrent = await TorrentService.instance.getTorrentById(torrentId);
+      if (torrent == null) throw StateError('Torrent not found: $torrentId');
 
-    final sourceTorrentPath = _sourceTorrentPath(torrent);
-    final hasTorrentFileSource =
-        torrent.type == 'torrent_file' && sourceTorrentPath != null;
-    final managedSourceFile = await _tryGetManagedTorrentSource(torrent.id);
-    final hasMagnetSource = torrent.magnetLink?.trim().isNotEmpty == true;
+      final sourceTorrentPath = _sourceTorrentPath(torrent);
+      final hasTorrentFileSource =
+          torrent.type == 'torrent_file' && sourceTorrentPath != null;
+      final managedSourceFile = await _tryGetManagedTorrentSource(torrent.id);
+      final hasMagnetSource = torrent.magnetLink?.trim().isNotEmpty == true;
 
-    if (hasTorrentFileSource) {
-      try {
-        await _startFromFile(
-          torrent,
-          sourceTorrentPath: sourceTorrentPath,
-          destinationPath: destinationPath,
-        );
-        return;
-      } catch (e) {
-        final missingSource = _isMissingTorrentSourceError(e);
-        _log(
-          torrent.id,
-          'Primary torrent file source failed${missingSource ? ' (missing file)' : ''}: $e',
-        );
+      if (hasTorrentFileSource) {
+        try {
+          await _startFromFile(
+            torrent,
+            sourceTorrentPath: sourceTorrentPath,
+            destinationPath: destinationPath,
+          );
+          return;
+        } catch (e) {
+          final missingSource = _isMissingTorrentSourceError(e);
+          _log(
+            torrent.id,
+            'Primary torrent file source failed${missingSource ? ' (missing file)' : ''}: $e',
+          );
+        }
       }
-    }
 
-    if (managedSourceFile != null) {
-      try {
-        await _startFromFile(
-          torrent,
-          sourceTorrentPath: managedSourceFile.path,
-          destinationPath: destinationPath,
-        );
-        return;
-      } catch (e) {
-        // Managed source can be stale/corrupt after app upgrades.
-        // Delete it and fall back to magnet discovery instead of hard-failing resume.
-        debugPrint(
-          'Managed torrent source failed for $torrentId, falling back to magnet: $e',
-        );
-        await removeCachedTorrentSource(torrent.id);
+      if (managedSourceFile != null) {
+        try {
+          await _startFromFile(
+            torrent,
+            sourceTorrentPath: managedSourceFile.path,
+            destinationPath: destinationPath,
+          );
+          return;
+        } catch (e) {
+          // Managed source can be stale/corrupt after app upgrades.
+          // Delete it and fall back to magnet discovery instead of hard-failing resume.
+          debugPrint(
+            'Managed torrent source failed for $torrentId, falling back to magnet: $e',
+          );
+          await removeCachedTorrentSource(torrent.id);
+        }
       }
-    }
 
-    if (hasMagnetSource) {
-      await _startFromMagnet(torrent, destinationPath: destinationPath);
-      return;
-    }
+      if (hasMagnetSource) {
+        await _startFromMagnet(torrent, destinationPath: destinationPath);
+        return;
+      }
 
-    throw StateError('Torrent has no usable source');
+      throw StateError('Torrent has no usable source');
+    } finally {
+      _startingTorrentIds.remove(torrentId);
+    }
   }
 
   /// Attach DHT event listeners to a task BEFORE task.start() is called
@@ -3097,6 +3105,7 @@ class TorrentEngineService {
   }
 
   void _cleanup(String torrentId) {
+    _startingTorrentIds.remove(torrentId);
     _pollTimers.remove(torrentId)?.cancel();
     _scrapeTimers.remove(torrentId)?.cancel();
     _healthCheckTimers.remove(torrentId)?.cancel();

@@ -31,6 +31,22 @@ import 'browser/favourites_screen.dart';
 import 'browser/browser_settings_screen.dart';
 
 /// Full-featured browser screen with ad-blocking, video detection, and casting.
+class BrowserLocationState {
+  final String url;
+  final String title;
+
+  const BrowserLocationState({
+    required this.url,
+    required this.title,
+  });
+
+  String get displayLabel {
+    final trimmedTitle = title.trim();
+    if (trimmedTitle.isNotEmpty) return trimmedTitle;
+    return url.trim();
+  }
+}
+
 class BrowserScreen extends StatefulWidget {
   final String? initialUrl;
   final void Function(SearchResult result) onAddToQueue;
@@ -45,6 +61,8 @@ class BrowserScreen extends StatefulWidget {
 
   static final GlobalKey<_BrowserScreenState> browserKey = GlobalKey();
   static String? pendingUrl;
+  static final ValueNotifier<BrowserLocationState?> currentLocation =
+      ValueNotifier<BrowserLocationState?>(null);
 
   static void navigate(String url) {
     pendingUrl = url;
@@ -180,6 +198,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       _showNewTabPage = false;
       _pendingUrl = widget.initialUrl;
     }
+    _publishBrowserLocation();
   }
 
   Future<void> _loadPrefs() async {
@@ -213,6 +232,18 @@ class _BrowserScreenState extends State<BrowserScreen>
     _navigateTo(pending);
   }
 
+  void _publishBrowserLocation() {
+    final url = _addressController.text.trim();
+    if (_showNewTabPage || url.isEmpty || url == 'about:blank') {
+      BrowserScreen.currentLocation.value = null;
+      return;
+    }
+    BrowserScreen.currentLocation.value = BrowserLocationState(
+      url: url,
+      title: _pageTitle,
+    );
+  }
+
   Future<Uint8List?> _takeScreenshot() async {
     try {
       final bytes = await (_webViewController as dynamic).takeScreenshot();
@@ -234,6 +265,9 @@ class _BrowserScreenState extends State<BrowserScreen>
     _findController.dispose();
     _castService.dispose();
     _videoDetector.dispose();
+    if (BrowserScreen.currentLocation.value != null) {
+      BrowserScreen.currentLocation.value = null;
+    }
     super.dispose();
   }
 
@@ -293,6 +327,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       _isFavourited = false;
     });
     _addressController.text = normalized;
+    _publishBrowserLocation();
 
     if (_webViewController != null) {
       _webViewController!
@@ -443,7 +478,9 @@ class _BrowserScreenState extends State<BrowserScreen>
       _addressController.text = urlStr;
       _isSecure = urlStr.startsWith('https://');
       _isFavourited = false;
+      _pageTitle = '';
     });
+    _publishBrowserLocation();
     final activeTab = _tabManager.activeTab;
     if (activeTab != null) {
       _tabManager.updateTab(activeTab.id, url: urlStr, isLoading: true);
@@ -462,6 +499,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     } else {
       _addressController.text = urlStr;
     }
+    _publishBrowserLocation();
 
     final title = await controller.getTitle() ?? '';
     _canGoBack = await controller.canGoBack();
@@ -471,6 +509,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       _isLoading = false;
       _pageTitle = title;
     });
+    _publishBrowserLocation();
 
     final activeTab = _tabManager.activeTab;
     if (activeTab != null) {
@@ -890,6 +929,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     setState(() {
       _showNewTabPage = false;
     });
+    _publishBrowserLocation();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final text = _addressController.text;
@@ -953,6 +993,7 @@ class _BrowserScreenState extends State<BrowserScreen>
         _addressController.clear();
       }
     });
+    _publishBrowserLocation();
   }
 
   void _toggleIncognito() {
@@ -960,6 +1001,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (tab == null) return;
     _tabManager.addTab(incognito: !tab.isIncognito);
     setState(() => _showNewTabPage = true);
+    _publishBrowserLocation();
   }
 
   void _toggleFavourite() async {
@@ -1469,6 +1511,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (action == 'new_tab') {
       _tabManager.addTab();
       setState(() => _showNewTabPage = true);
+      _publishBrowserLocation();
       return;
     }
     if (action == 'incognito') {
@@ -1617,6 +1660,7 @@ class _BrowserScreenState extends State<BrowserScreen>
           final tab = _tabManager.activeTab;
           final showNew = tab?.url.isEmpty ?? true;
           setState(() => _showNewTabPage = showNew);
+          _publishBrowserLocation();
           if (!showNew && tab != null && tab.url.isNotEmpty) {
             _webViewController?.loadUrl(
                 urlRequest: URLRequest(url: WebUri(tab.url)));
@@ -1628,6 +1672,7 @@ class _BrowserScreenState extends State<BrowserScreen>
           final tab = _tabManager.activeTab;
           final showNew = tab?.url.isEmpty ?? true;
           setState(() => _showNewTabPage = showNew);
+          _publishBrowserLocation();
           if (!showNew && tab != null && tab.url.isNotEmpty) {
             _webViewController?.loadUrl(
                 urlRequest: URLRequest(url: WebUri(tab.url)));
@@ -1636,6 +1681,7 @@ class _BrowserScreenState extends State<BrowserScreen>
         onNewTab: () {
           _tabManager.addTab();
           setState(() => _showNewTabPage = true);
+          _publishBrowserLocation();
           Navigator.pop(context);
         },
       ),

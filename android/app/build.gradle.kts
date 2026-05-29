@@ -15,6 +15,20 @@ val keystoreProperties = Properties().apply {
     }
 }
 
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        load(FileInputStream(localPropertiesFile))
+    }
+}
+
+val flutterVersionCode = (localProperties.getProperty("flutter.versionCode")
+    ?.toIntOrNull() ?: 1)
+val flutterVersionName = localProperties.getProperty("flutter.versionName")
+    ?.trim()
+    .orEmpty()
+    .ifEmpty { "1.0" }
+
 android {
     namespace = "com.torrentspire.ai"
     // Use a fixed SDK to ensure proper native library loading on newer Android versions
@@ -41,8 +55,8 @@ android {
         minSdk = 24
         // Target API 35 to satisfy Play Console requirements
         targetSdk = 35
-        versionCode = 1200
-        versionName = "12.0.0"
+        versionCode = flutterVersionCode
+        versionName = flutterVersionName
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
         }
