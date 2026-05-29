@@ -46,9 +46,14 @@ void main() {
       access.resetForTesting();
       await access.load();
 
-      expect(getAppTitle(), 'BitPlayer');
-      expect(getAppSubtitle(), 'BitPlayer — media & torrents');
-      expect(getDefaultDownloadFolderName(), 'BitPlayer');
+      final expectedTitle = kPlayStoreBuild ? 'BitPlayer' : 'Convert The Spire Reborn';
+      final expectedSubtitle =
+          kPlayStoreBuild ? 'BitPlayer — media & torrents' : 'Convert The Spire Reborn — media & torrents';
+      final expectedFolderName = kPlayStoreBuild ? 'BitPlayer' : 'ConvertTheSpireReborn';
+
+      expect(getAppTitle(), expectedTitle);
+      expect(getAppSubtitle(), expectedSubtitle);
+      expect(getDefaultDownloadFolderName(), expectedFolderName);
     });
   });
 }
