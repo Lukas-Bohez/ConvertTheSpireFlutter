@@ -41,6 +41,8 @@ class SettingsService {
   static const _kMaxActiveDownloads = 'max_active_downloads';
   static const _kDownloadRateLimitKib = 'download_rate_limit_kib';
   static const _kUploadRateLimitKib = 'upload_rate_limit_kib';
+  static const _kAllowSeedingAfterComplete = 'allow_seeding_after_complete';
+  static const _kMaxSeedingRatio = 'max_seeding_ratio';
   static const _kEnableAiCopilot = 'enable_ai_copilot';
   static const _kEnableSmartSuggestions = 'enable_smart_suggestions';
   static const _kCompactTorrentRows = 'compact_torrent_rows';
@@ -82,6 +84,8 @@ class SettingsService {
   int maxActiveDownloads = 3;
   int downloadRateLimitKib = 0;
   int uploadRateLimitKib = 0;
+  bool allowSeedingAfterComplete = true;
+  double maxSeedingRatio = 1.5;
   bool enableAiCopilot = true;
   bool enableSmartSuggestions = true;
   bool compactTorrentRows = false;
@@ -121,6 +125,9 @@ class SettingsService {
       maxActiveDownloads = prefs.getInt(_kMaxActiveDownloads) ?? 3;
       downloadRateLimitKib = prefs.getInt(_kDownloadRateLimitKib) ?? 0;
       uploadRateLimitKib = prefs.getInt(_kUploadRateLimitKib) ?? 0;
+        allowSeedingAfterComplete =
+          prefs.getBool(_kAllowSeedingAfterComplete) ?? true;
+        maxSeedingRatio = prefs.getDouble(_kMaxSeedingRatio) ?? 1.5;
       enableAiCopilot = prefs.getBool(_kEnableAiCopilot) ?? true;
       enableSmartSuggestions = prefs.getBool(_kEnableSmartSuggestions) ?? true;
       compactTorrentRows = prefs.getBool(_kCompactTorrentRows) ?? false;
@@ -286,6 +293,18 @@ class SettingsService {
     uploadRateLimitKib = value < 0 ? 0 : value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_kUploadRateLimitKib, uploadRateLimitKib);
+  }
+
+  Future<void> setAllowSeedingAfterComplete(bool value) async {
+    allowSeedingAfterComplete = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kAllowSeedingAfterComplete, value);
+  }
+
+  Future<void> setMaxSeedingRatio(double value) async {
+    maxSeedingRatio = value <= 0 ? 0 : value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_kMaxSeedingRatio, maxSeedingRatio);
   }
 
   Future<void> setEnableAiCopilot(bool value) async {

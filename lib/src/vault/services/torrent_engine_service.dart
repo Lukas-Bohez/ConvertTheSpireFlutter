@@ -2439,6 +2439,11 @@ class TorrentEngineService {
     _lastUploadedSampleByTorrent[torrentId] = now;
 
     final seededRatio = totalLength > 0 ? (uploaded / totalLength) : 0.0;
+    _enforceSeedingPolicyIfNeeded(
+      torrentId: torrentId,
+      seededRatio: seededRatio,
+      isPaused: isPaused,
+    );
     final seededPct = (seededRatio * 100).clamp(0.0, double.infinity);
     final stalledNearCompletion = progress >= 0.95 &&
         ((_lastProgressChangeAtByTorrent[torrentId] == null)
@@ -2510,6 +2515,32 @@ class TorrentEngineService {
         connectionMessage: connectionMsg,
       ),
     );
+  }
+
+  void _enforceSeedingPolicyIfNeeded({
+    required String torrentId,
+    required double seededRatio,
+    required bool isPaused,
+  }) {
+    if (isPaused) return;
+    final settings = SettingsService.instance;
+    if (!settings.allowSeedingAfterComplete) {
+      _log(
+        torrentId,
+        'Auto-pausing seeding: seeding is disabled in settings.',
+      );
+      pauseTorrent(torrentId);
+      return;
+    }
+
+    final cap = settings.maxSeedingRatio;
+    if (cap > 0 && seededRatio >= cap) {
+      _log(
+        torrentId,
+        'Auto-pausing seeding at ratio ${seededRatio.toStringAsFixed(2)} (cap ${cap.toStringAsFixed(2)}).',
+      );
+      pauseTorrent(torrentId);
+    }
   }
 
   String _formatByteCount(int bytes) {

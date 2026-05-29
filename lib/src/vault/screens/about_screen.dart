@@ -37,6 +37,7 @@ class _AboutScreenState extends State<AboutScreen>
   late final TextEditingController _maxActiveController;
   late final TextEditingController _downloadRateController;
   late final TextEditingController _uploadRateController;
+  late final TextEditingController _seedingRatioController;
   late final TextEditingController _proxyHostController;
   late final TextEditingController _proxyPortController;
   late final TextEditingController _proxyUsernameController;
@@ -123,6 +124,9 @@ class _AboutScreenState extends State<AboutScreen>
     _uploadRateController = TextEditingController(
       text: '${_settings.uploadRateLimitKib}',
     );
+    _seedingRatioController = TextEditingController(
+      text: _settings.maxSeedingRatio.toStringAsFixed(2),
+    );
     _proxyHostController = TextEditingController();
     _proxyPortController = TextEditingController(text: '1080');
     _proxyUsernameController = TextEditingController();
@@ -161,6 +165,7 @@ class _AboutScreenState extends State<AboutScreen>
     _maxActiveController.dispose();
     _downloadRateController.dispose();
     _uploadRateController.dispose();
+    _seedingRatioController.dispose();
     _proxyHostController.dispose();
     _proxyPortController.dispose();
     _proxyUsernameController.dispose();
@@ -352,6 +357,8 @@ class _AboutScreenState extends State<AboutScreen>
       final maxActive = int.tryParse(_maxActiveController.text) ?? 3;
       final down = int.tryParse(_downloadRateController.text) ?? 0;
       final up = int.tryParse(_uploadRateController.text) ?? 0;
+        final seedingRatio =
+          double.tryParse(_seedingRatioController.text.trim()) ?? 1.5;
       final proxyPort = int.tryParse(_proxyPortController.text) ?? 1080;
 
       await Future.wait([
@@ -361,6 +368,7 @@ class _AboutScreenState extends State<AboutScreen>
         _settings.setMaxActiveDownloads(maxActive),
         _settings.setDownloadRateLimitKib(down),
         _settings.setUploadRateLimitKib(up),
+        _settings.setMaxSeedingRatio(seedingRatio),
         NetworkProxyService.save(
           ProxySettings(
             enabled: _proxyEnabled,
@@ -380,6 +388,8 @@ class _AboutScreenState extends State<AboutScreen>
       _maxActiveController.text = '${_settings.maxActiveDownloads}';
       _downloadRateController.text = '${_settings.downloadRateLimitKib}';
       _uploadRateController.text = '${_settings.uploadRateLimitKib}';
+        _seedingRatioController.text =
+          _settings.maxSeedingRatio.toStringAsFixed(2);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -454,6 +464,8 @@ class _AboutScreenState extends State<AboutScreen>
         'maxActiveDownloads': _settings.maxActiveDownloads,
         'downloadRateLimitKib': _settings.downloadRateLimitKib,
         'uploadRateLimitKib': _settings.uploadRateLimitKib,
+        'allowSeedingAfterComplete': _settings.allowSeedingAfterComplete,
+        'maxSeedingRatio': _settings.maxSeedingRatio,
         'enableAiCopilot': _settings.enableAiCopilot,
         'aiDefaultModel': _settings.aiDefaultModel,
       },
@@ -663,7 +675,33 @@ class _AboutScreenState extends State<AboutScreen>
                             ),
                           ),
                         ),
+                        SizedBox(
+                          width: 260,
+                          child: TextField(
+                            controller: _seedingRatioController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            decoration: const InputDecoration(
+                              labelText:
+                                  'Seeding ratio cap (e.g. 1.50, 0 = unlimited)',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
                       ],
+                    ),
+                    SwitchListTile(
+                      title: const Text('Allow seeding after completion'),
+                      subtitle: const Text(
+                        'Disable to auto-pause torrents as soon as download completes.',
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                      value: _settings.allowSeedingAfterComplete,
+                      onChanged: (v) async {
+                        await _settings.setAllowSeedingAfterComplete(v);
+                        if (!mounted) return;
+                        setState(() {});
+                      },
                     ),
                     SwitchListTile(
                       title: const Text('Enable DHT'),

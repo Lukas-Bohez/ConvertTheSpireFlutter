@@ -789,11 +789,12 @@ class YtDlpService {
 
         if (isCancelled?.call() ?? false) {
           // Clean up partial output.
-          await _safeDelete(outputPath);
+          await _cleanupFailedDownloadArtifacts(outputPath);
           throw Exception('Cancelled');
         }
 
         if (exitCode != 0) {
+          await _cleanupFailedDownloadArtifacts(outputPath);
           final fullError =
               '${stderrBuffer.toString().trim()}\n${stdoutBuffer.toString().trim()}'
                   .trim();
@@ -843,6 +844,7 @@ class YtDlpService {
         }
       }
       if (!found) {
+        await _cleanupFailedDownloadArtifacts(outputPath);
         throw Exception(
             'yt-dlp completed but the output file was not created.');
       }
@@ -905,6 +907,30 @@ class YtDlpService {
       final file = File(path);
       if (await file.exists()) await file.delete();
     } catch (_) {}
+  }
+
+  static Future<void> _cleanupFailedDownloadArtifacts(String outputPath) async {
+    final base = outputPath.replaceAll(RegExp(r'\.[^.]+$'), '');
+    final candidates = <String>{
+      outputPath,
+      '$outputPath.part',
+      '$outputPath.ytdl',
+      '$outputPath.temp',
+      '$outputPath.tmp',
+      '$base.part',
+      '$base.ytdl',
+      '$base.temp',
+      '$base.tmp',
+    };
+    for (final ext in <String>['mp4', 'mkv', 'webm', 'mp3', 'm4a', 'opus']) {
+      candidates.add('$base.$ext.part');
+      candidates.add('$base.$ext.ytdl');
+      candidates.add('$base.$ext.temp');
+      candidates.add('$base.$ext.tmp');
+    }
+    for (final path in candidates) {
+      await _safeDelete(path);
+    }
   }
 
   /// Fallback downloader that uses OS tooling when the Dart HTTP stack
