@@ -46,9 +46,9 @@ void main() {
       access.resetForTesting();
       await access.load();
 
-      expect(getAppTitle(), 'Convert the Spire Reborn');
-      expect(getAppSubtitle(), 'Torrent manager & media toolkit');
-      expect(getDefaultDownloadFolderName(), 'ConvertTheSpireReborn');
+      expect(getAppTitle(), 'BitPlayer');
+      expect(getAppSubtitle(), 'BitPlayer — media & torrents');
+      expect(getDefaultDownloadFolderName(), 'BitPlayer');
     });
   });
 }

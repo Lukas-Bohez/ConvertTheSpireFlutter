@@ -6,13 +6,9 @@ void main() {
   testWidgets(
       'BrowserToolbar shows download and favourite buttons when enabled',
       (WidgetTester tester) async {
-    final addressController =
-        TextEditingController(text: 'https://example.com');
-
     await tester.pumpWidget(MaterialApp(
       home: Material(
         child: BrowserToolbar(
-          addressController: addressController,
           isLoading: false,
           isSecure: true,
           isIncognito: false,
@@ -24,10 +20,10 @@ void main() {
           desktopMode: false,
           adBlockEnabled: false,
           pageTitle: 'Example',
+          currentUrl: 'https://example.com',
           onBack: () {},
           onForward: () {},
           onReload: () {},
-          onSubmitted: (_) {},
           onCastTap: () {},
           onDownload: () {},
           downloadEnabled: true,
