@@ -15,7 +15,9 @@ const bool kIsGithubRelease =
 /// calling `initAppFlavor()` so that synchronous calls to `kPlayStoreBuild`
 /// reflect the actual app branding at runtime.
 /// If PLAY_STORE_BUILD dart-define is provided, it overrides runtime detection.
-bool get kPlayStoreBuild => _kPlayStoreBuild;
+// Prefer an explicit compile-time dart-define override. If not provided,
+// fall back to the runtime-detected flavor set from `initAppFlavor()`.
+bool get kPlayStoreBuild => kIsPlayStoreBuildDefine || _kPlayStoreBuild;
 bool _kPlayStoreBuild = false;
 
 bool get isYouTubeConversionEnabledInCurrentBuild {

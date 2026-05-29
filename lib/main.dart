@@ -69,8 +69,11 @@ Future<void> main() async {
 
     // Initialize the runtime flavor detection so kPlayStoreBuild is valid.
     await initAppFlavor();
-    // Propagate into build_flags runtime flag.
-    setPlayStoreBuildFlag(isPlayFlavor);
+    // Propagate into build_flags runtime flag. Only treat the runtime-detected
+    // Play flavor as authoritative on Android; otherwise desktop app names
+    // that contain the branding string should not enable Play-store-only
+    // behaviors. Allow an explicit dart-define to override everything.
+    setPlayStoreBuildFlag(kIsPlayStoreBuildDefine || (!kIsWeb && Platform.isAndroid && isPlayFlavor));
 
     // Track launches for review prompt heuristics.
     await ReviewService.trackLaunch();
