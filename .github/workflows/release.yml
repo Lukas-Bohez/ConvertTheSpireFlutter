@@ -40,7 +40,10 @@ env:
   APP_NAME: convert_the_spire_reborn
   OUTPUT_NAME: ConvertTheSpireReborn
   ANDROID_APK_NAME: ConvertTheSpireReborn.apk
-  ANDROID_AAB_NAME: zaab.aab
+  # NOTE: The AAB is built and stored as an artifact for Play Store submission
+  # but is intentionally NOT included in the GitHub Release. Only the APK
+  # (built with PLAY_STORE_BUILD=false, GITHUB_RELEASE=true) is published.
+  ANDROID_AAB_NAME: app-play-release.aab
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 # ---------------------------------------------------------------------------
@@ -256,7 +259,7 @@ jobs:
           retention-days: 7
 
   # =========================================================================
-  # 5. Android (full APK + Play AAB)
+  # 5. Android (GitHub APK + Play Store AAB)
   # =========================================================================
   build-android:
     name: Build Android
@@ -279,22 +282,36 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK (full feature)
+      - name: Build APK (GitHub release flavor)
         run: flutter build apk --flavor full --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
 
-      - name: Build Play AAB (store flavor)
-        run: flutter build appbundle --flavor play --release --dart-define=PLAY_STORE_BUILD=true
+      - name: Build Play AAB (Play Store flavor)
+        run: flutter build appbundle --flavor play --release --dart-define=PLAY_STORE_BUILD=true --dart-define=GITHUB_RELEASE=false
 
       - name: Collect Android artifacts
         run: |
           mkdir -p android-builds
-          cp build/app/outputs/flutter-apk/app-full-release.apk android-builds/${{ env.ANDROID_APK_NAME }}
-          cp build/app/outputs/bundle/playRelease/app-play-release.aab android-builds/${{ env.ANDROID_AAB_NAME }}
+          # APK goes to GitHub Release
+          cp build/app/outputs/flutter-apk/app-full-release.apk \
+            android-builds/${{ env.ANDROID_APK_NAME }}
+          # AAB is stored as a CI artifact ONLY - for manual Play Store upload.
+          # It must NOT be included in the GitHub Release (it's built with
+          # PLAY_STORE_BUILD=true and users would get the store version).
+          mkdir -p android-aab
+          cp build/app/outputs/bundle/playRelease/${{ env.ANDROID_AAB_NAME }} \
+            android-aab/${{ env.ANDROID_AAB_NAME }}
 
       - uses: actions/upload-artifact@v5
         with:
-          name: android-builds
+          name: android-apk
           path: android-builds/
+          retention-days: 7
+
+      # AAB stored separately so the release job cannot accidentally pick it up
+      - uses: actions/upload-artifact@v5
+        with:
+          name: android-aab-play-store-only
+          path: android-aab/
           retention-days: 7
 
   # =========================================================================
@@ -316,12 +333,14 @@ jobs:
       - name: List downloaded artifacts
         run: find artifacts -type f | sort
 
-      # Verify that every expected platform produced at least one file
+      # Verify that every expected platform produced at least one file.
+      # Note: android-aab-play-store-only is intentionally excluded from this
+      # check and from the release — it is for Play Store submission only.
       - name: Verify artifact completeness
         run: |
           set -euo pipefail
           missing=0
-          for dir in windows-x64 linux-x64 macos-x64 android-builds; do
+          for dir in windows-x64 linux-x64 macos-x64 android-apk; do
             count=$(find "artifacts/$dir" -type f 2>/dev/null | wc -l)
             if [ "$count" -eq 0 ]; then
               echo "ERROR: No files found in artifacts/$dir"
@@ -332,13 +351,15 @@ jobs:
           done
           [ "$missing" -eq 0 ] || exit 1
 
-      # Generate a SHA-256 manifest so users can verify downloads
+      # Generate a SHA-256 manifest so users can verify downloads.
+      # Explicitly excludes the AAB and coverage report.
       - name: Generate SHA-256 checksums
         run: |
           cd artifacts
           find . -type f \
             ! -name "*.sha256" \
             ! -path "*/coverage-report/*" \
+            ! -path "*/android-aab-play-store-only/*" \
           | sort | xargs sha256sum > ../SHA256SUMS.txt
           cat ../SHA256SUMS.txt
 
@@ -356,6 +377,5 @@ jobs:
             artifacts/windows-x64/*.zip
             artifacts/linux-x64/*
             artifacts/macos-x64/*.zip
-            artifacts/android-builds/${{ env.ANDROID_APK_NAME }}
-            artifacts/android-builds/${{ env.ANDROID_AAB_NAME }}
+            artifacts/android-apk/${{ env.ANDROID_APK_NAME }}
             SHA256SUMS.txt
