@@ -546,6 +546,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _visitedPages.add(_selectedPageIndex);
 
         final shell = BrowserShell(
+          key: BrowserShell.shellKey,
           scaffoldKey: _shellScaffoldKey,
           currentIndex: _selectedPageIndex,
           queueWidget: _buildQueueTab(),

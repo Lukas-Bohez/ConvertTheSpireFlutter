@@ -26,9 +26,9 @@ bool get isYouTubeConversionEnabledInCurrentBuild {
 bool get kYouTubeConversionEnabled => isYouTubeConversionEnabledInCurrentBuild;
 
 // App branding — adapt to the detected flavor
-String getAppTitle() => kPlayStoreBuild ? 'Bitplayer' : 'Convert the Spire Reborn';
-String getAppSubtitle() => kPlayStoreBuild ? 'Bitplayer — media & torrents' : 'Torrent manager & media toolkit';
-String getDefaultDownloadFolderName() => kPlayStoreBuild ? 'Bitplayer' : 'ConvertTheSpireReborn';
+String getAppTitle() => 'BitPlayer';
+String getAppSubtitle() => 'BitPlayer — media & torrents';
+String getDefaultDownloadFolderName() => 'BitPlayer';
 
 // Tab visibility — hide/modify tabs for Play builds
 bool isTabVisibleInCurrentBuild(int tabIndex) {

@@ -29,6 +29,7 @@ import 'browser/new_tab_page.dart';
 import 'browser/history_screen.dart';
 import 'browser/favourites_screen.dart';
 import 'browser/browser_settings_screen.dart';
+import '../widgets/browser_shell.dart';
 
 /// Full-featured browser screen with ad-blocking, video detection, and casting.
 class BrowserLocationState {
@@ -71,7 +72,7 @@ class BrowserScreen extends StatefulWidget {
     // addPostFrameCallback in initState will consume it once the state exists.
   }
 
-  static void focusAddressBar() => browserKey.currentState?._focusAddressBar();
+  static void focusAddressBar() => BrowserShell.requestAddressBarFocus();
 
   // Public hooks for external widgets (e.g. BrowserShell) to pause/resume
   // cursor mode on this screen.
@@ -99,7 +100,6 @@ class _BrowserScreenState extends State<BrowserScreen>
   FindInteractionController? _findInteractionController;
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _findController = TextEditingController();
-  final FocusNode _addressFocusNode = FocusNode();
 
   bool _isLoading = false;
   double _progress = 0;
@@ -261,7 +261,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     _castService.removeListener(_onCastChanged);
     _castService.stopDiscovery();
     _addressController.dispose();
-    _addressFocusNode.dispose();
     _findController.dispose();
     _castService.dispose();
     _videoDetector.dispose();
@@ -924,23 +923,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     ).then((_) => controller.dispose());
   }
 
-  void _focusAddressBar() {
-    if (!mounted) return;
-    setState(() {
-      _showNewTabPage = false;
-    });
-    _publishBrowserLocation();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final text = _addressController.text;
-      _addressController.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: text.length,
-      );
-      FocusScope.of(context).requestFocus(_addressFocusNode);
-    });
-  }
-
   // -- Actions --
 
   void _goBack() async {
@@ -1228,8 +1210,6 @@ class _BrowserScreenState extends State<BrowserScreen>
                 children: [
                   // -- Top toolbar --
                   BrowserToolbar(
-                    addressController: _addressController,
-                    addressFocusNode: _addressFocusNode,
                     isLoading: _isLoading,
                     isSecure: _isSecure,
                     isIncognito: isIncognito,
@@ -1240,13 +1220,12 @@ class _BrowserScreenState extends State<BrowserScreen>
                     desktopMode: _desktopMode,
                     adBlockEnabled: _adBlock.adBlockEnabled,
                     pageTitle: _pageTitle,
+                    currentUrl: _addressController.text.trim(),
                     onBack: _goBack,
                     onForward: _goForward,
                     onReload: _reload,
-                    onSubmitted: _navigateTo,
                     onCastTap: _openCastSheet,
                     onMenuAction: _handleMenuAction,
-                    onUrlBarTap: _showTabSwitcher,
                     onReleaseWebViewFocus: () {
                       FocusScope.of(context).unfocus();
                     },

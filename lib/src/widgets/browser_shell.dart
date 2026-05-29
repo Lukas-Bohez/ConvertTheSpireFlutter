@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../screens/player.dart'
     show PlayerState, PositionUiState, MediaItem, MediaType;
 import '../screens/browser_screen.dart';
+import '../widgets/quick_links_service.dart';
 import '../vault/services/torrent_service.dart';
 
 const _kRoutes = {
@@ -19,6 +20,13 @@ const _kRoutes = {
 
 /// Persistent browser-like shell that wraps all app content.
 class BrowserShell extends StatefulWidget {
+  static final GlobalKey<_BrowserShellState> shellKey =
+      GlobalKey<_BrowserShellState>();
+
+  static void requestAddressBarFocus() {
+    shellKey.currentState?._startEditing();
+  }
+
   final int currentIndex;
   final Widget queueWidget;
   final ValueChanged<String> onNavigate;
@@ -68,34 +76,29 @@ class _BrowserShellState extends State<BrowserShell> {
   bool _playerCollapsed = true;
   late final TextEditingController _urlEditController;
   final FocusNode _urlFocusNode = FocusNode();
+  final LayerLink _urlBarLink = LayerLink();
+  OverlayEntry? _suggestionOverlayEntry;
 
   @override
   void initState() {
     super.initState();
     _urlEditController = TextEditingController();
+    _urlFocusNode.addListener(_handleUrlFocusChange);
   }
 
   @override
   void dispose() {
+    _hideSuggestionOverlay();
+    _urlFocusNode.removeListener(_handleUrlFocusChange);
     _urlEditController.dispose();
     _urlFocusNode.dispose();
     super.dispose();
   }
 
-  String get _currentTitle =>
-      _currentRouteData?.label ?? 'Browser';
+  String get _currentTitle => QuickLinksService.titleForIndex(widget.currentIndex);
 
   IconData get _currentFavicon =>
-      _currentRouteData?.icon ?? Icons.search;
-
-  ({int index, IconData icon, String label})? get _currentRouteData {
-    for (final entry in _kRoutes.entries) {
-      if (entry.value.index == widget.currentIndex) {
-        return entry.value;
-      }
-    }
-    return null;
-  }
+      QuickLinksService.indexToIcon[widget.currentIndex] ?? Icons.search;
 
   // -- URL bar editing --
 
@@ -106,9 +109,129 @@ class _BrowserShellState extends State<BrowserShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _urlFocusNode.requestFocus();
+        _showSuggestionOverlay();
         widget.onUrlEditingStart?.call();
       }
     });
+  }
+
+  void _showSuggestionOverlay() {
+    if (!mounted || !_isEditing) return;
+    if (_suggestionOverlayEntry != null) {
+      _suggestionOverlayEntry!.markNeedsBuild();
+      return;
+    }
+
+    final overlay = Overlay.of(context, rootOverlay: true);
+
+    _suggestionOverlayEntry = OverlayEntry(
+      builder: (overlayContext) => CompositedTransformFollower(
+        link: _urlBarLink,
+        showWhenUnlinked: false,
+        targetAnchor: Alignment.bottomLeft,
+        followerAnchor: Alignment.topLeft,
+        offset: const Offset(0, 8),
+        child: AnimatedBuilder(
+          animation: _urlEditController,
+          builder: (context, _) {
+            final suggestions = _buildSuggestions(_urlEditController.text);
+            final cs = Theme.of(context).colorScheme;
+            final width = MediaQuery.sizeOf(context).width;
+
+            return Align(
+              alignment: Alignment.topLeft,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: width - 12),
+                child: Material(
+                  color: Colors.transparent,
+                  child: IntrinsicWidth(
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: cs.outlineVariant.withValues(alpha: 0.25),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: suggestions
+                                .where((s) =>
+                                    s.kind == _BrowserSuggestionKind.internal)
+                                .map(
+                                  (suggestion) => ActionChip(
+                                    avatar: Icon(suggestion.icon, size: 18),
+                                    label: Text(suggestion.label),
+                                    onPressed: () =>
+                                        _handleSubmit(suggestion.value),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                          if (suggestions.any((s) =>
+                              s.kind != _BrowserSuggestionKind.internal)) ...[
+                            const SizedBox(height: 10),
+                            ...suggestions
+                                .where((s) =>
+                                    s.kind != _BrowserSuggestionKind.internal)
+                                .map(
+                                  (suggestion) => ListTile(
+                                    dense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: CircleAvatar(
+                                      radius: 16,
+                                      backgroundColor: cs.primaryContainer,
+                                      foregroundColor: cs.onPrimaryContainer,
+                                      child: Icon(suggestion.icon, size: 16),
+                                    ),
+                                    title: Text(suggestion.label),
+                                    subtitle: suggestion.subtitle.isEmpty
+                                        ? null
+                                        : Text(suggestion.subtitle),
+                                    onTap: () =>
+                                        _handleSubmit(suggestion.value),
+                                  ),
+                                ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    overlay.insert(_suggestionOverlayEntry!);
+  }
+
+  void _handleUrlFocusChange() {
+    if (_urlFocusNode.hasFocus || !_isEditing) return;
+    if (!mounted) return;
+    setState(() => _isEditing = false);
+    _hideSuggestionOverlay();
+    widget.onUrlEditingEnd?.call();
+  }
+
+  void _hideSuggestionOverlay() {
+    _suggestionOverlayEntry?.remove();
+    _suggestionOverlayEntry = null;
   }
 
   Future<void> _handleSubmit(String input) async {
@@ -146,12 +269,14 @@ class _BrowserShellState extends State<BrowserShell> {
   void _finishEditing() {
     if (!mounted) return;
     setState(() => _isEditing = false);
+    _hideSuggestionOverlay();
     widget.onUrlEditingEnd?.call();
     FocusScope.of(context).unfocus();
   }
 
   void _cancelEditing() {
     setState(() => _isEditing = false);
+    _hideSuggestionOverlay();
     widget.onUrlEditingEnd?.call();
     FocusScope.of(context).unfocus();
   }
@@ -872,19 +997,67 @@ class _BrowserShellState extends State<BrowserShell> {
   }
 
   Widget _buildUrlBar(ColorScheme cs) {
-    if (!_isEditing) {
-      return ValueListenableBuilder<BrowserLocationState?>(
-        valueListenable: BrowserScreen.currentLocation,
-        builder: (context, browserLocation, _) {
-          final isBrowserTab = widget.currentIndex == _kRoutes['browser']!.index;
-          final label = isBrowserTab && browserLocation != null
-              ? browserLocation.displayLabel
-              : _currentTitle;
-          final icon = isBrowserTab && browserLocation != null
-              ? Icons.language
-              : _currentFavicon;
+    final isBrowserTab = widget.currentIndex == _kRoutes['browser']!.index;
 
-          return Material(
+    if (_isEditing) {
+      return CompositedTransformTarget(
+        link: _urlBarLink,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            height: 34,
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: cs.primary.withValues(alpha: 0.6),
+                width: 1.5,
+              ),
+            ),
+            child: TextField(
+              controller: _urlEditController,
+              focusNode: _urlFocusNode,
+              autofocus: true,
+              style: TextStyle(fontSize: 13, color: cs.onSurface),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: 'Search pages or enter web address...',
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                suffixIcon: IconButton(
+                  tooltip: 'Open',
+                  icon: const Icon(Icons.arrow_forward, size: 18),
+                  onPressed: () => _handleSubmit(_urlEditController.text),
+                ),
+                suffixIconConstraints:
+                    const BoxConstraints(minHeight: 28, minWidth: 28),
+              ),
+              onSubmitted: _handleSubmit,
+              onTapOutside: (_) => _cancelEditing(),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return ValueListenableBuilder<BrowserLocationState?>(
+      valueListenable: BrowserScreen.currentLocation,
+      builder: (context, browserLocation, _) {
+        final label = isBrowserTab && browserLocation != null
+            ? browserLocation.displayLabel
+            : _currentTitle;
+        final icon = isBrowserTab && browserLocation != null
+            ? Icons.language
+            : _currentFavicon;
+
+        return CompositedTransformTarget(
+          link: _urlBarLink,
+          child: Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: _startEditing,
@@ -918,130 +1091,9 @@ class _BrowserShellState extends State<BrowserShell> {
                 ),
               ),
             ),
-          );
-        },
-      );
-    }
-
-    final suggestions = _buildSuggestions(_urlEditController.text);
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          height: 34,
-          decoration: BoxDecoration(
-            color: cs.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: cs.primary.withValues(alpha: 0.6),
-              width: 1.5,
-            ),
           ),
-          child: TextField(
-            controller: _urlEditController,
-            focusNode: _urlFocusNode,
-            autofocus: true,
-            style: TextStyle(fontSize: 13, color: cs.onSurface),
-            decoration: InputDecoration(
-              isDense: true,
-              border: InputBorder.none,
-              hintText: 'Search pages or enter web address...',
-              hintStyle: TextStyle(
-                fontSize: 13,
-                color: cs.onSurfaceVariant.withValues(alpha: 0.5),
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              suffixIcon: IconButton(
-                tooltip: 'Open',
-                icon: const Icon(Icons.arrow_forward, size: 18),
-                onPressed: () => _handleSubmit(_urlEditController.text),
-              ),
-              suffixIconConstraints:
-                  const BoxConstraints(minHeight: 28, minWidth: 28),
-            ),
-            onChanged: (_) => setState(() {}),
-            onSubmitted: _handleSubmit,
-            onTapOutside: (_) => _cancelEditing(),
-          ),
-        ),
-        if (suggestions.isNotEmpty)
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 40,
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOut,
-              child: Material(
-                color: Colors.transparent,
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: cs.outlineVariant.withValues(alpha: 0.25),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: suggestions
-                            .where((s) =>
-                                s.kind == _BrowserSuggestionKind.internal)
-                            .map(
-                              (suggestion) => ActionChip(
-                                avatar: Icon(suggestion.icon, size: 18),
-                                label: Text(suggestion.label),
-                                onPressed: () =>
-                                    _handleSubmit(suggestion.value),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                      if (suggestions.any((s) =>
-                          s.kind != _BrowserSuggestionKind.internal)) ...[
-                        const SizedBox(height: 10),
-                        ...suggestions
-                            .where((s) =>
-                                s.kind != _BrowserSuggestionKind.internal)
-                            .map(
-                              (suggestion) => ListTile(
-                                dense: true,
-                                contentPadding: EdgeInsets.zero,
-                                leading: CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: cs.primaryContainer,
-                                  foregroundColor: cs.onPrimaryContainer,
-                                  child: Icon(suggestion.icon, size: 16),
-                                ),
-                                title: Text(suggestion.label),
-                                subtitle: suggestion.subtitle.isEmpty
-                                    ? null
-                                    : Text(suggestion.subtitle),
-                                onTap: () => _handleSubmit(suggestion.value),
-                              ),
-                            ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
+        );
+      },
     );
   }
 

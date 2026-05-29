@@ -4836,26 +4836,25 @@ class _PlayerScreenState extends State<PlayerScreen>
       decoration: InputDecoration(
         hintText: 'Search…',
         prefixIcon: const Icon(Icons.search, size: 20),
-        suffixIcon: _searchQuery.isNotEmpty
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() => _searchQuery = '');
-                      _searchFocusNode.requestFocus();
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_forward, size: 18),
-                    tooltip: 'Done',
-                    onPressed: _stopSearchEditing,
-                  ),
-                ],
-              )
-            : null,
+        suffixIcon: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_searchQuery.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.clear, size: 18),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                  _searchFocusNode.requestFocus();
+                },
+              ),
+            IconButton(
+              icon: const Icon(Icons.arrow_forward, size: 18),
+              tooltip: 'Done',
+              onPressed: _stopSearchEditing,
+            ),
+          ],
+        ),
         suffixIconConstraints:
             const BoxConstraints(minHeight: 28, minWidth: 56),
         isDense: true,
