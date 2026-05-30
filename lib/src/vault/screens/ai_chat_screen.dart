@@ -200,9 +200,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
         final status = (event['status'] ?? '').toString();
         final total = (event['total'] as num?)?.toDouble() ?? 0;
         final completed = (event['completed'] as num?)?.toDouble() ?? 0;
-        final progress = total > 0
-            ? (completed / total * 100).clamp(0, 100)
-            : 0;
+        final progress =
+            total > 0 ? (completed / total * 100).clamp(0, 100) : 0;
 
         if (!mounted) return;
         setState(() {
@@ -210,9 +209,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
             _status =
                 '$status (${progress.toStringAsFixed(1)}%) for $kDefaultAiModel';
           } else {
-            _status = status.isEmpty
-                ? 'Downloading $kDefaultAiModel ...'
-                : status;
+            _status =
+                status.isEmpty ? 'Downloading $kDefaultAiModel ...' : status;
           }
         });
       }
@@ -272,15 +270,18 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     try {
       if (Platform.isWindows) {
-        final result = await Process.run('winget', const [
-          'install',
-          '--id',
-          'Ollama.Ollama',
-          '-e',
-          '--silent',
-          '--accept-package-agreements',
-          '--accept-source-agreements',
-        ], runInShell: true);
+        final result = await Process.run(
+            'winget',
+            const [
+              'install',
+              '--id',
+              'Ollama.Ollama',
+              '-e',
+              '--silent',
+              '--accept-package-agreements',
+              '--accept-source-agreements',
+            ],
+            runInShell: true);
         if (result.exitCode != 0) {
           await launchUrl(Uri.parse('https://ollama.com/download/windows'));
         }
@@ -293,9 +294,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
         await launchUrl(Uri.parse('https://ollama.com/download/linux'));
       }
     } catch (_) {
-      final suffix = Platform.isWindows
-          ? 'windows'
-          : (Platform.isMacOS ? 'mac' : 'linux');
+      final suffix =
+          Platform.isWindows ? 'windows' : (Platform.isMacOS ? 'mac' : 'linux');
       await launchUrl(Uri.parse('https://ollama.com/download/$suffix'));
     }
 
@@ -503,9 +503,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
               if (_models.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  initialValue: _models.contains(_activeModel)
-                      ? _activeModel
-                      : null,
+                  initialValue:
+                      _models.contains(_activeModel) ? _activeModel : null,
                   decoration: const InputDecoration(
                     labelText: 'Select model to use',
                     border: OutlineInputBorder(),
@@ -555,9 +554,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     final message = _messages[index];
                     final isUser = message.role == 'user';
                     return Align(
-                      alignment: isUser
-                          ? Alignment.centerRight
-                          : Alignment.centerLeft,
+                      alignment:
+                          isUser ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
                         constraints: const BoxConstraints(maxWidth: 680),
                         margin: const EdgeInsets.symmetric(vertical: 6),

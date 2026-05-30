@@ -47,11 +47,11 @@ class Identity {
   }
 
   Map<String, dynamic> toJson() => {
-    'publicKeyBase64': publicKeyBase64,
-    'privateKeyBase64': privateKeyBase64,
-    'nodeId': nodeId,
-    'displayName': displayName,
-  };
+        'publicKeyBase64': publicKeyBase64,
+        'privateKeyBase64': privateKeyBase64,
+        'nodeId': nodeId,
+        'displayName': displayName,
+      };
 
   factory Identity.fromJson(Map<String, dynamic> json) {
     return Identity(

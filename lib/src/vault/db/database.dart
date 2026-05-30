@@ -44,7 +44,8 @@ class AppDatabase {
               ? cipherRows.first.values.first?.toString() ?? ''
               : '';
           if (cipherVersion.isEmpty) {
-            throw StateError('SQLCipher not loaded  -  check your dependencies!');
+            throw StateError(
+                'SQLCipher not loaded  -  check your dependencies!');
           }
         }
       },

@@ -199,8 +199,7 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
       );
 
       if (!mounted) return;
-      final addToDownloads =
-          await showDialog<bool>(
+      final addToDownloads = await showDialog<bool>(
             context: context,
             builder: (context) {
               return AlertDialog(
@@ -302,8 +301,8 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
                     onPressed: _isCreating
                         ? null
                         : () => setState(() {
-                            _files.remove(f);
-                          }),
+                              _files.remove(f);
+                            }),
                   ),
                 ),
               ),
@@ -318,8 +317,8 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
                     onPressed: _isCreating
                         ? null
                         : () => setState(() {
-                            _folders.remove(d);
-                          }),
+                              _folders.remove(d);
+                            }),
                   ),
                 ),
               ),

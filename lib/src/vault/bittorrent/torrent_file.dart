@@ -72,12 +72,10 @@ class TorrentFileParser {
           final length = _getInt(file, 'length');
           final pathList = file['path'];
           if (pathList is List) {
-            final pathSegments = pathList
-                .map((segment) {
-                  if (segment is Uint8List) return utf8.decode(segment);
-                  throw FormatException('Invalid path segment');
-                })
-                .join('/');
+            final pathSegments = pathList.map((segment) {
+              if (segment is Uint8List) return utf8.decode(segment);
+              throw FormatException('Invalid path segment');
+            }).join('/');
             files.add(TorrentFileEntry(length: length, path: pathSegments));
           }
         }

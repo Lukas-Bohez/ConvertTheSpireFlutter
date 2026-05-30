@@ -21,19 +21,17 @@ Future<void> captureWindowsMiniDump(String reason, String logPath) async {
     );
     if (hFile == INVALID_HANDLE_VALUE) return;
     final dbghelp = DynamicLibrary.open('Dbghelp.dll');
-    final miniDumpWriteDump = dbghelp
-        .lookupFunction<
-          Int32 Function(
-            IntPtr,
-            Uint32,
-            IntPtr,
-            Uint32,
-            IntPtr,
-            IntPtr,
-            IntPtr,
-          ),
-          int Function(int, int, int, int, int, int, int)
-        >('MiniDumpWriteDump');
+    final miniDumpWriteDump = dbghelp.lookupFunction<
+        Int32 Function(
+          IntPtr,
+          Uint32,
+          IntPtr,
+          Uint32,
+          IntPtr,
+          IntPtr,
+          IntPtr,
+        ),
+        int Function(int, int, int, int, int, int, int)>('MiniDumpWriteDump');
     miniDumpWriteDump(
       GetCurrentProcess(),
       GetCurrentProcessId(),

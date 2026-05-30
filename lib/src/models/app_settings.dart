@@ -19,7 +19,8 @@ class AppSettings {
   final int convertMaxAgeHours;
 
   final String themeMode; // 'system', 'light', 'dark'
-  final bool minimizeToTrayOnClose; // keep running when window is closed (desktop)
+  final bool
+      minimizeToTrayOnClose; // keep running when window is closed (desktop)
 
   // -- New feature settings ---------------------------------------------
   final String defaultAudioFormat; // mp3, m4a
@@ -165,7 +166,7 @@ class AppSettings {
       downloadDirMp3: downloadDirMp3 ?? this.downloadDirMp3,
       downloadDirM4a: downloadDirM4a ?? this.downloadDirM4a,
       downloadDirMp4: downloadDirMp4 ?? this.downloadDirMp4,
-        downloadDirTorrents: downloadDirTorrents ?? this.downloadDirTorrents,
+      downloadDirTorrents: downloadDirTorrents ?? this.downloadDirTorrents,
       createFormatSubfolders:
           createFormatSubfolders ?? this.createFormatSubfolders,
       minimizeToTrayOnClose:
@@ -227,9 +228,8 @@ class AppSettings {
       downloadDirMp3: (json['download_dir_mp3'] as String?)?.trim(),
       downloadDirM4a: (json['download_dir_m4a'] as String?)?.trim(),
       downloadDirMp4: (json['download_dir_mp4'] as String?)?.trim(),
-        downloadDirTorrents: (json['download_dir_torrents'] as String?)?.trim(),
-      createFormatSubfolders:
-          json['create_format_subfolders'] as bool? ?? true,
+      downloadDirTorrents: (json['download_dir_torrents'] as String?)?.trim(),
+      createFormatSubfolders: json['create_format_subfolders'] as bool? ?? true,
     );
   }
 

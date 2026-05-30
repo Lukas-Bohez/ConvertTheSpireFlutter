@@ -179,8 +179,7 @@ _DiskScanResult _runDiskScanSync(_DiskScanInput input) {
       if (entity is! File) continue;
       final lowerPath = entity.path.toLowerCase();
       final isStateFile = lowerPath.endsWith('.bt.state');
-      final isStateBackup =
-          lowerPath.contains('.bt.state.backup.') ||
+      final isStateBackup = lowerPath.contains('.bt.state.backup.') ||
           lowerPath.contains('.bt.state.bak');
       if (isStateFile || isStateBackup || lowerPath.endsWith('.torrent')) {
         continue;
@@ -196,8 +195,7 @@ _DiskScanResult _runDiskScanSync(_DiskScanInput input) {
       final fullPath = p.join(baseDir, rel);
       final lowerPath = fullPath.toLowerCase();
       final isStateFile = lowerPath.endsWith('.bt.state');
-      final isStateBackup =
-          lowerPath.contains('.bt.state.backup.') ||
+      final isStateBackup = lowerPath.contains('.bt.state.backup.') ||
           lowerPath.contains('.bt.state.bak');
       if (isStateFile || isStateBackup || lowerPath.endsWith('.torrent')) {
         continue;
@@ -241,7 +239,8 @@ _DiskScanResult _runDiskScanSync(_DiskScanInput input) {
       final root = Directory(input.outputPath);
 
       if (input.knownRelativePaths.isNotEmpty) {
-        bytes = sumTargetedFilePaths(input.outputPath, input.knownRelativePaths);
+        bytes =
+            sumTargetedFilePaths(input.outputPath, input.knownRelativePaths);
       } else if (nameToken.isNotEmpty) {
         final nameCandidate = input.torrentName.trim();
         final directDir = Directory(p.join(root.path, nameCandidate));
@@ -252,8 +251,7 @@ _DiskScanResult _runDiskScanSync(_DiskScanInput input) {
         } else if (directFile.existsSync()) {
           final lowerPath = directFile.path.toLowerCase();
           final isStateFile = lowerPath.endsWith('.bt.state');
-          final isStateBackup =
-              lowerPath.contains('.bt.state.backup.') ||
+          final isStateBackup = lowerPath.contains('.bt.state.backup.') ||
               lowerPath.contains('.bt.state.bak');
           if (!isStateFile &&
               !isStateBackup &&
@@ -269,15 +267,13 @@ _DiskScanResult _runDiskScanSync(_DiskScanInput input) {
           )) {
             final base = p.basename(entity.path).toLowerCase();
             final isExactDirName = entity is Directory && base == nameToken;
-            final isLikelyExactFile =
-                entity is File &&
+            final isLikelyExactFile = entity is File &&
                 (base == nameToken || base.startsWith('$nameToken.'));
             if (!isExactDirName && !isLikelyExactFile) continue;
             if (entity is File) {
               final lowerPath = entity.path.toLowerCase();
               final isStateFile = lowerPath.endsWith('.bt.state');
-              final isStateBackup =
-                  lowerPath.contains('.bt.state.backup.') ||
+              final isStateBackup = lowerPath.contains('.bt.state.backup.') ||
                   lowerPath.contains('.bt.state.bak');
               if (!isStateFile &&
                   !isStateBackup &&
@@ -296,8 +292,7 @@ _DiskScanResult _runDiskScanSync(_DiskScanInput input) {
     } else if (type == FileSystemEntityType.file) {
       final lowerPath = input.outputPath.toLowerCase();
       final isStateFile = lowerPath.endsWith('.bt.state');
-      final isStateBackup =
-          lowerPath.contains('.bt.state.backup.') ||
+      final isStateBackup = lowerPath.contains('.bt.state.backup.') ||
           lowerPath.contains('.bt.state.bak');
       if (!isStateFile && !isStateBackup && !lowerPath.endsWith('.torrent')) {
         bytes = File(input.outputPath).statSync().size;
@@ -340,12 +335,15 @@ class TorrentService {
   DateTime _lastRefreshTrigger = DateTime.fromMillisecondsSinceEpoch(0);
   bool _snapshotInProgress = false;
   bool _snapshotPending = false;
-    final Duration _snapshotInterval =
-      Platform.isWindows ? const Duration(seconds: 5) : const Duration(seconds: 3);
-    final Duration _minRefreshInterval =
-      Platform.isWindows ? const Duration(seconds: 2) : const Duration(seconds: 1);
-    final Duration _diskReconcileInterval =
-      Platform.isWindows ? const Duration(minutes: 10) : const Duration(seconds: 90);
+  final Duration _snapshotInterval = Platform.isWindows
+      ? const Duration(seconds: 5)
+      : const Duration(seconds: 3);
+  final Duration _minRefreshInterval = Platform.isWindows
+      ? const Duration(seconds: 2)
+      : const Duration(seconds: 1);
+  final Duration _diskReconcileInterval = Platform.isWindows
+      ? const Duration(minutes: 10)
+      : const Duration(seconds: 90);
 
   Stream<List<TorrentViewState>> get torrentStatesStream {
     _ensureStateSyncStarted();
@@ -444,20 +442,19 @@ class TorrentService {
         final diskBytes = diskSnapshot?.bytesOnDisk ?? torrent.bytesDown;
         final diskComplete = diskSnapshot?.isComplete ?? false;
         final runtimeState = runtime?.state.toLowerCase() ?? '';
-        final activeDownloadState =
-            runtimeState.contains('download') ||
+        final activeDownloadState = runtimeState.contains('download') ||
             persistedState.contains('downloading');
         final explicitlyResetToZero =
-            persistedState == 'downloading' &&
-          torrent.bytesDown == 0;
+            persistedState == 'downloading' && torrent.bytesDown == 0;
         final distrustDiskDuringActiveDownload =
-          persistedState.contains('downloading') &&
-          runtimeState.contains('download');
-        final effectiveDiskComplete = explicitlyResetToZero ? false : diskComplete;
+            persistedState.contains('downloading') &&
+                runtimeState.contains('download');
+        final effectiveDiskComplete =
+            explicitlyResetToZero ? false : diskComplete;
         final effectiveDiskBytes =
-          explicitlyResetToZero || distrustDiskDuringActiveDownload
-          ? 0
-          : diskBytes;
+            explicitlyResetToZero || distrustDiskDuringActiveDownload
+                ? 0
+                : diskBytes;
         final pathMissing = diskSnapshot?.pathMissing ?? false;
         final hasDiskSnapshot = diskSnapshot != null;
 
@@ -468,8 +465,7 @@ class TorrentService {
         ].reduce(math.max);
 
         final totalSize = torrent.totalSize ?? 0;
-        final runtimeFarAheadOfDisk =
-            hasDiskSnapshot &&
+        final runtimeFarAheadOfDisk = hasDiskSnapshot &&
             runtime != null &&
             runtime.state.toLowerCase().contains('download') &&
             runtime.downloaded > effectiveDiskBytes + (64 * 1024 * 1024) &&
@@ -482,8 +478,7 @@ class TorrentService {
           downloaded = math.max(runtime?.downloaded ?? 0, torrent.bytesDown);
         }
 
-        final missingOnDisk =
-            hasDiskSnapshot &&
+        final missingOnDisk = hasDiskSnapshot &&
             pathMissing &&
             runtime == null &&
             !persistedState.contains('pending_metadata');
@@ -493,31 +488,27 @@ class TorrentService {
 
         final runtimeLooksComplete =
             runtime != null && runtimeState.contains('seed');
-        final diskContradictsCompletion =
-            hasDiskSnapshot &&
+        final diskContradictsCompletion = hasDiskSnapshot &&
             totalSize > 0 &&
-          !effectiveDiskComplete &&
-          effectiveDiskBytes < (totalSize * 0.98).round();
+            !effectiveDiskComplete &&
+            effectiveDiskBytes < (totalSize * 0.98).round();
         final runtimeComplete =
             runtimeLooksComplete && !diskContradictsCompletion;
-        final downloadedImpliesComplete =
-            !missingOnDisk &&
+        final downloadedImpliesComplete = !missingOnDisk &&
             totalSize > 0 &&
             downloaded >= totalSize &&
-            (
-              (hasDiskSnapshot &&
-                  effectiveDiskBytes >= (totalSize * 0.995).round()) ||
-              ((runtime?.progress ?? 0.0) >= 0.999)
-            );
-        final diskCompleteTrusted =
-          effectiveDiskComplete &&
+            ((hasDiskSnapshot &&
+                    effectiveDiskBytes >= (totalSize * 0.995).round()) ||
+                ((runtime?.progress ?? 0.0) >= 0.999));
+        final diskCompleteTrusted = effectiveDiskComplete &&
             (runtime == null ||
                 runtimeState.contains('seed') ||
                 runtimeState.contains('pause') ||
                 runtimeState.contains('stop'));
-        final isComplete =
-            !missingOnDisk &&
-            (diskCompleteTrusted || runtimeComplete || downloadedImpliesComplete);
+        final isComplete = !missingOnDisk &&
+            (diskCompleteTrusted ||
+                runtimeComplete ||
+                downloadedImpliesComplete);
 
         if (diskContradictsCompletion) {
           downloaded = effectiveDiskBytes;
@@ -537,7 +528,8 @@ class TorrentService {
           _lastDownloadActivityByTorrentId[torrent.id] = now;
         }
         final lastActive = _lastDownloadActivityByTorrentId[torrent.id];
-        final _ = lastActive != null && now.difference(lastActive).inSeconds < 10;
+        final _ =
+            lastActive != null && now.difference(lastActive).inSeconds < 10;
         final state = _deriveState(
           persistedState,
           runtimeState,
@@ -547,14 +539,13 @@ class TorrentService {
         );
 
         final hasKnownTotal = totalSize > 0;
-        final downloadedClamped = hasKnownTotal
-            ? downloaded.clamp(0, totalSize)
-            : downloaded;
+        final downloadedClamped =
+            hasKnownTotal ? downloaded.clamp(0, totalSize) : downloaded;
         var progress = state == 'seeding'
             ? 1.0
             : (hasKnownTotal && totalSize > 0
-                  ? (downloadedClamped / totalSize).clamp(0.0, 0.9999)
-                  : ((runtime?.progress ?? torrent.progress).clamp(0.0, 0.9999)));
+                ? (downloadedClamped / totalSize).clamp(0.0, 0.9999)
+                : ((runtime?.progress ?? torrent.progress).clamp(0.0, 0.9999)));
 
         _progressHighWaterByTorrentId[torrent.id] = progress;
         _downloadedHighWaterByTorrentId[torrent.id] = downloaded;
@@ -580,8 +571,7 @@ class TorrentService {
           progress: progress,
           state: state,
           statusLabel: resolvedStatusLabel,
-          statusMessage:
-              runtime?.statusMessage ??
+          statusMessage: runtime?.statusMessage ??
               _fallbackStatusMessage(
                 state,
                 resolvedStatusLabel,
@@ -632,8 +622,7 @@ class TorrentService {
         : existing.completedAt;
 
     final bytesDelta = (view.downloaded - existing.bytesDown).abs();
-    final shouldUpdate =
-        bytesDelta > 512 * 1024 ||
+    final shouldUpdate = bytesDelta > 512 * 1024 ||
         (existing.status ?? '') != updatedStatus ||
         existing.seeders != view.seeders ||
         existing.leechers != view.leechers ||
@@ -655,7 +644,8 @@ class TorrentService {
 
   Future<void> _reconcileDiskState({bool force = false}) async {
     final torrents = await TorrentsDao.instance.getAllTorrents();
-    final maxScansPerPass = force ? torrents.length : (Platform.isWindows ? 1 : 4);
+    final maxScansPerPass =
+        force ? torrents.length : (Platform.isWindows ? 1 : 4);
     var scansCompleted = 0;
 
     for (final torrent in torrents) {
@@ -665,8 +655,7 @@ class TorrentService {
 
       final cached = _diskSnapshots[torrent.id];
       final status = (torrent.status ?? '').toLowerCase();
-      final activeByPersistedState =
-          status.contains('download') ||
+      final activeByPersistedState = status.contains('download') ||
           status.contains('rechecking') ||
           status.contains('pending_metadata');
       final activeByRuntime = TorrentEngineService.instance.isRunning(
@@ -1032,8 +1021,8 @@ class TorrentService {
     await _deletePathWithRetry(candidatePath);
     final parent =
         FileSystemEntity.typeSync(candidatePath) == FileSystemEntityType.file
-        ? File(candidatePath).parent.path
-        : candidatePath;
+            ? File(candidatePath).parent.path
+            : candidatePath;
     final stateFile = File(p.join(parent, '.bt.state'));
     if (await stateFile.exists()) {
       await _deletePathWithRetry(stateFile.path);
@@ -1100,9 +1089,7 @@ class TorrentService {
               // Preserve previous stable state instead of forcing an error status.
               await updateTorrentStatus(
                 torrent.id,
-                torrent.status?.isNotEmpty == true
-                    ? torrent.status!
-                    : 'queued',
+                torrent.status?.isNotEmpty == true ? torrent.status! : 'queued',
               );
             }
           }
@@ -1300,20 +1287,20 @@ class TorrentService {
     subscription = TorrentEngineService.instance.statusStream
         .where((status) => status.torrentId == id)
         .listen((status) async {
-          if (status.state == 'completed') {
-            if (!completer.isCompleted) completer.complete();
-          } else if (status.state == 'error') {
-            if (!completer.isCompleted) {
-              completer.completeError(
-                StateError('Download failed for torrent $id'),
-              );
-            }
-          }
+      if (status.state == 'completed') {
+        if (!completer.isCompleted) completer.complete();
+      } else if (status.state == 'error') {
+        if (!completer.isCompleted) {
+          completer.completeError(
+            StateError('Download failed for torrent $id'),
+          );
+        }
+      }
 
-          if (status.downloaded > 0) {
-            await updateProgress(id, status.downloaded, status.uploaded);
-          }
-        });
+      if (status.downloaded > 0) {
+        await updateProgress(id, status.downloaded, status.uploaded);
+      }
+    });
 
     try {
       await completer.future.timeout(
@@ -1381,10 +1368,13 @@ class TorrentService {
       (sum, entry) => sum + entry.length,
     );
     final configuredDestination = destinationPath?.trim() ?? '';
-    final fallbackDestination = SettingsService.instance.downloadDestination.trim();
+    final fallbackDestination =
+        SettingsService.instance.downloadDestination.trim();
     final effectiveDestination = configuredDestination.isNotEmpty
         ? configuredDestination
-        : (fallbackDestination.isNotEmpty ? fallbackDestination : file.parent.path);
+        : (fallbackDestination.isNotEmpty
+            ? fallbackDestination
+            : file.parent.path);
     final effectiveTrackers = _withFallbackTrackers(metadata.trackers);
     final magnetLink = createMagnetLink(
       infoHash,
@@ -1463,7 +1453,7 @@ class TorrentService {
 
     final torrent = TorrentModel(
       id: infoHash,
-        name: (displayName == null || displayName.isEmpty)
+      name: (displayName == null || displayName.isEmpty)
           ? 'Magnet $infoHash'
           : displayName,
       type: 'magnet_link',
@@ -1602,8 +1592,7 @@ class TorrentService {
       if (decoded.length >= 2) {
         final first = decoded[0];
         final last = decoded[decoded.length - 1];
-        if ((first == '"' && last == '"') ||
-            (first == "'" && last == "'")) {
+        if ((first == '"' && last == '"') || (first == "'" && last == "'")) {
           decoded = decoded.substring(1, decoded.length - 1).trim();
         }
       }
@@ -1619,15 +1608,14 @@ class TorrentService {
     String? displayName,
   ) {
     final isBtih = RegExp(r'^[A-Fa-f0-9]{40}$').hasMatch(infoHash) ||
-      RegExp(r'^[A-Za-z2-7]{32}$').hasMatch(infoHash);
+        RegExp(r'^[A-Za-z2-7]{32}$').hasMatch(infoHash);
     final isBtmh = RegExp(r'^[A-Fa-f0-9]{62}$|^[A-Fa-f0-9]{64}$').hasMatch(
       infoHash,
     );
     final normalizedHash = RegExp(r'^[A-Fa-f0-9]+$').hasMatch(infoHash)
-      ? infoHash.toLowerCase()
-      : infoHash;
-    final dnPart =
-        (displayName == null || displayName.isEmpty)
+        ? infoHash.toLowerCase()
+        : infoHash;
+    final dnPart = (displayName == null || displayName.isEmpty)
         ? ''
         : '&dn=${Uri.encodeComponent(displayName)}';
 
@@ -1639,7 +1627,7 @@ class TorrentService {
         .toList();
     final trackerPart = _withFallbackTrackers(trackers).isEmpty
         ? ''
-      : _withFallbackTrackers(trackers).map((t) => '&tr=$t').join();
+        : _withFallbackTrackers(trackers).map((t) => '&tr=$t').join();
 
     final peers = RegExp(r'[?&]x\.pe=([^&]+)', caseSensitive: false)
         .allMatches(source)

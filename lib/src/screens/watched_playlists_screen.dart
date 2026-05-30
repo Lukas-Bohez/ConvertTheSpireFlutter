@@ -61,10 +61,14 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
   Future<void> _loadPlaylistFolders(List<String> urls) async {
     final folders = <String, PlaylistFolderConfig>{};
     for (final url in urls) {
-      final defaultFolder = await widget.watchedService.getFolderForPlaylist(url);
-      final mp3Folder = await widget.watchedService.getFolderForPlaylist(url, format: 'mp3');
-      final m4aFolder = await widget.watchedService.getFolderForPlaylist(url, format: 'm4a');
-      final mp4Folder = await widget.watchedService.getFolderForPlaylist(url, format: 'mp4');
+      final defaultFolder =
+          await widget.watchedService.getFolderForPlaylist(url);
+      final mp3Folder =
+          await widget.watchedService.getFolderForPlaylist(url, format: 'mp3');
+      final m4aFolder =
+          await widget.watchedService.getFolderForPlaylist(url, format: 'm4a');
+      final mp4Folder =
+          await widget.watchedService.getFolderForPlaylist(url, format: 'mp4');
       folders[url] = PlaylistFolderConfig(
         defaultFolder: defaultFolder,
         mp3Folder: mp3Folder,
@@ -168,8 +172,8 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
     if (choice == 'default') {
       await widget.watchedService.setFolderForPlaylist(url, directory);
     } else {
-      await widget.watchedService.setFolderForPlaylist(url, directory,
-          format: choice);
+      await widget.watchedService
+          .setFolderForPlaylist(url, directory, format: choice);
     }
 
     await _loadPlaylistFolders(_urls);
@@ -209,124 +213,127 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
     return PopScope(
       canPop: true,
       child: Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _urlController,
-                      decoration: const InputDecoration(
-                        hintText: 'Paste YouTube playlist URL',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.link),
-                        isDense: true,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _urlController,
+                        decoration: const InputDecoration(
+                          hintText: 'Paste YouTube playlist URL',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.link),
+                          isDense: true,
+                        ),
+                        onSubmitted: (_) => _addPlaylist(),
                       ),
-                      onSubmitted: (_) => _addPlaylist(),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    icon: Icon(Icons.add,
-                        color: Theme.of(context).colorScheme.onPrimary),
-                    style: IconButton.styleFrom(
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primary,
+                    const SizedBox(width: 8),
+                    IconButton.filled(
+                      icon: Icon(Icons.add,
+                          color: Theme.of(context).colorScheme.onPrimary),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                      ),
+                      tooltip: 'Add playlist',
+                      onPressed: _addPlaylist,
                     ),
-                    tooltip: 'Add playlist',
-                    onPressed: _addPlaylist,
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.outlined(
-                    icon: const Icon(Icons.refresh),
-                    tooltip: 'Check all for new tracks',
-                    onPressed: _checking ? null : _checkNow,
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    IconButton.outlined(
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Check all for new tracks',
+                      onPressed: _checking ? null : _checkNow,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        if (_checking) const LinearProgressIndicator(),
-        Expanded(
-          child: _urls.isEmpty
-              ? EmptyState(
-                  icon: Icons.playlist_add,
-                  title: 'No watched playlists yet',
-                  subtitle:
-                      'Add a YouTube playlist URL above to track new tracks',
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  separatorBuilder: (_, __) => const SizedBox(height: 4),
-                  itemCount: _urls.length,
-                  itemBuilder: (context, index) {
-                    final url = _urls[index];
-                    final folder = _playlistFolders[url];
-                    String folderLabel;
-                    if (folder == null || !folder.hasAny) {
-                      folderLabel = 'Download folder: (default)';
-                    } else if (folder.defaultFolder?.trim().isNotEmpty == true) {
-                      folderLabel =
-                          'Download folder: ${folder.defaultFolder!.split(RegExp(r'[/\\]')).last}';
-                    } else {
-                      final parts = <String>[];
-                      if (folder.mp3Folder?.trim().isNotEmpty == true) {
-                        parts.add('MP3: ${folder.mp3Folder!.split(RegExp(r'[/\\]')).last}');
+          if (_checking) const LinearProgressIndicator(),
+          Expanded(
+            child: _urls.isEmpty
+                ? EmptyState(
+                    icon: Icons.playlist_add,
+                    title: 'No watched playlists yet',
+                    subtitle:
+                        'Add a YouTube playlist URL above to track new tracks',
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    separatorBuilder: (_, __) => const SizedBox(height: 4),
+                    itemCount: _urls.length,
+                    itemBuilder: (context, index) {
+                      final url = _urls[index];
+                      final folder = _playlistFolders[url];
+                      String folderLabel;
+                      if (folder == null || !folder.hasAny) {
+                        folderLabel = 'Download folder: (default)';
+                      } else if (folder.defaultFolder?.trim().isNotEmpty ==
+                          true) {
+                        folderLabel =
+                            'Download folder: ${folder.defaultFolder!.split(RegExp(r'[/\\]')).last}';
+                      } else {
+                        final parts = <String>[];
+                        if (folder.mp3Folder?.trim().isNotEmpty == true) {
+                          parts.add(
+                              'MP3: ${folder.mp3Folder!.split(RegExp(r'[/\\]')).last}');
+                        }
+                        if (folder.m4aFolder?.trim().isNotEmpty == true) {
+                          parts.add(
+                              'M4A: ${folder.m4aFolder!.split(RegExp(r'[/\\]')).last}');
+                        }
+                        if (folder.mp4Folder?.trim().isNotEmpty == true) {
+                          parts.add(
+                              'MP4: ${folder.mp4Folder!.split(RegExp(r'[/\\]')).last}');
+                        }
+                        folderLabel = parts.join(' • ');
                       }
-                      if (folder.m4aFolder?.trim().isNotEmpty == true) {
-                        parts.add('M4A: ${folder.m4aFolder!.split(RegExp(r'[/\\]')).last}');
-                      }
-                      if (folder.mp4Folder?.trim().isNotEmpty == true) {
-                        parts.add('MP4: ${folder.mp4Folder!.split(RegExp(r'[/\\]')).last}');
-                      }
-                      folderLabel = parts.join(' • ');
-                    }
-                    return Card(
-                      child: ListTile(
-                        leading: Icon(Icons.playlist_play, color: cs.primary),
-                        title: Text(url,
-                            maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Checked periodically for new tracks'),
-                            const SizedBox(height: 2),
-                            Text(
-                              folderLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  color: cs.onSurfaceVariant, fontSize: 12),
-                            ),
-                          ],
+                      return Card(
+                        child: ListTile(
+                          leading: Icon(Icons.playlist_play, color: cs.primary),
+                          title: Text(url,
+                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Checked periodically for new tracks'),
+                              const SizedBox(height: 2),
+                              Text(
+                                folderLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: cs.onSurfaceVariant, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.folder_open),
+                                tooltip: 'Choose folder for this playlist',
+                                onPressed: () => _pickPlaylistFolder(url),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: 'Remove playlist',
+                                onPressed: () => _removePlaylist(url),
+                              ),
+                            ],
+                          ),
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.folder_open),
-                              tooltip: 'Choose folder for this playlist',
-                              onPressed: () => _pickPlaylistFolder(url),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline),
-                              tooltip: 'Remove playlist',
-                              onPressed: () => _removePlaylist(url),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    ),
-  );
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
   }
 }

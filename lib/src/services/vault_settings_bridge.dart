@@ -14,12 +14,14 @@ class VaultSettingsBridge {
     final targetDir = effectiveTorrentDownloadDir(settings);
     if (targetDir.isEmpty) return;
 
-    if (vault.SettingsService.instance.downloadDestination.trim() != targetDir) {
+    if (vault.SettingsService.instance.downloadDestination.trim() !=
+        targetDir) {
       await vault.SettingsService.instance.setDownloadDestination(targetDir);
     }
   }
 
-  static Future<AppSettings> pullVaultSettingsIntoHost(AppSettings settings) async {
+  static Future<AppSettings> pullVaultSettingsIntoHost(
+      AppSettings settings) async {
     await vault.SettingsService.instance.load();
 
     final vaultDir = vault.SettingsService.instance.downloadDestination.trim();

@@ -10,7 +10,8 @@ import 'package:media_kit/media_kit.dart';
 
 Future<void> main(List<String> args) async {
   if (args.length != 2) {
-    stderr.writeln('Usage: dart run tools/thumbnailer.dart <input_video_path> <output_png_path>');
+    stderr.writeln(
+        'Usage: dart run tools/thumbnailer.dart <input_video_path> <output_png_path>');
     exit(1);
   }
 
@@ -30,15 +31,18 @@ Future<void> main(List<String> args) async {
     await player.open(Media(Uri.file(inputPath).toString()), play: false);
 
     // Wait for the duration to become available.
-    final duration = await player.stream.duration.firstWhere((d) => d > Duration.zero,
-        orElse: () => Duration.zero).timeout(const Duration(seconds: 10));
+    final duration = await player.stream.duration
+        .firstWhere((d) => d > Duration.zero, orElse: () => Duration.zero)
+        .timeout(const Duration(seconds: 10));
 
     // Seek to 10% of the video duration, or max 15 seconds in.
     if (duration > Duration.zero) {
-      final seekPosition = Duration(milliseconds: (duration.inMilliseconds * 0.1).round().clamp(0, 15000));
+      final seekPosition = Duration(
+          milliseconds:
+              (duration.inMilliseconds * 0.1).round().clamp(0, 15000));
       await player.seek(seekPosition);
     }
-    
+
     // A short delay may be necessary for the frame to be ready after seeking.
     await Future.delayed(const Duration(milliseconds: 500));
 
@@ -59,7 +63,7 @@ Future<void> main(List<String> args) async {
     // Ensure the player is disposed to release native resources.
     await player.dispose();
   }
-  
+
   // Success
   exit(0);
 }

@@ -21,18 +21,18 @@ dependencies:
   http: ^1.6.0
   package_info_plus: ^9.0.0
   path_provider: ^2.1.2
-  file_picker: ^10.3.10
+  # file_picker: ^12.0.0-beta.5 (reverted to stable below)
   url_launcher: ^6.2.5
   youtube_explode_dart: ^3.0.0
   provider: ^6.0.5
   video_player: ^2.5.1
   archive: ^4.0.9
   image: ^4.3.0
-  shared_preferences: 2.5.4
+  shared_preferences: ^2.5.5
   in_app_review: ^2.0.9
   in_app_update: ^4.2.3
-  sqflite: 2.4.2
-  sqflite_common_ffi: 2.4.0+2
+  sqflite: ^2.4.2+1
+  sqflite_common_ffi: ^2.4.0+3
   google_mobile_ads: ^8.0.0
   in_app_purchase: ^3.2.3
   window_manager: 0.5.1
@@ -44,17 +44,17 @@ dependencies:
   media_kit_libs_linux: 1.2.1
   media_kit_native_event_loop: ^1.0.2
   flutter_inappwebview: 6.1.5
-  share_plus: 12.0.1
+  share_plus: ^12.0.1
   permission_handler: ^12.0.1
   just_audio: 0.10.5
   just_audio_windows: ^0.2.2
   audio_service: 0.18.18
-  video_thumbnail: 0.5.6
+  dtorrent_task_v2: ^0.4.8
   visibility_detector: ^0.4.0+2
   fl_chart: ^1.2.0
-  audio_metadata_reader: 1.4.2
+  audio_metadata_reader: ^1.6.0
   metadata_god: ^1.1.0
-  csv: 7.2.0
+  csv: ^8.0.0
   pdf: ^3.12.0
   multicast_dns: 0.3.3
   ffmpeg_kit_flutter_new: ^4.1.0
@@ -62,18 +62,20 @@ dependencies:
   tray_manager: 0.5.2
   # Explicitly pinned transitive dependencies to avoid future resolution breakage
   crypto: ^3.0.3
-  mime: ^2.0.0
+  win32: ^5.15.0
   ffi: ^2.1.0
   uuid: ^4.5.1
+  file_picker: ^10.3.10
   path: ^1.9.0
   b_encode_decode: ^1.0.5
   bittorrent_dht: ^0.0.15
-  dtorrent_task_v2: ^0.4.8
+  # dtorrent_task_v2: ^0.5.3 (reverted to compatible ^0.4.8 above)
   dtorrent_common: ^1.0.8
   desktop_drop: ^0.7.0
   flutter_secure_storage: ^10.0.0
   go_router: ^17.2.0
   webview_windows: ^0.4.0
+  video_thumbnail: 0.5.6
   flutter_background_service: ^5.1.0
   sqlcipher_flutter_libs: ^0.7.0+eol
   cryptography: ^2.9.0
@@ -81,7 +83,7 @@ dependencies:
   flutter_markdown_plus: ^1.0.7
   get_it: ^9.2.1
   webview_flutter: ^4.13.1
-  win32: ^5.15.0
+  # win32: ^6.3.0 (reverted to ^5.15.0 above for compatibility)
   audioplayers: ^6.6.0
 
 flutter:

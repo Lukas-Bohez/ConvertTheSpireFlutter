@@ -11,14 +11,16 @@ class ColourRevealDialog extends StatefulWidget {
   State<ColourRevealDialog> createState() => _ColourRevealDialogState();
 }
 
-class _ColourRevealDialogState extends State<ColourRevealDialog> with SingleTickerProviderStateMixin {
+class _ColourRevealDialogState extends State<ColourRevealDialog>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900));
     _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
     _ctrl.forward();
   }
@@ -54,7 +56,8 @@ class _ColourRevealDialogState extends State<ColourRevealDialog> with SingleTick
                 child: Column(children: [
                   CircleAvatar(radius: 40, backgroundColor: reward.color),
                   const SizedBox(height: 12),
-                  Text(reward.displayName, style: Theme.of(context).textTheme.titleLarge),
+                  Text(reward.displayName,
+                      style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8),
                   Chip(label: Text(reward.rarity.label)),
                 ]),
@@ -66,8 +69,10 @@ class _ColourRevealDialogState extends State<ColourRevealDialog> with SingleTick
                     child: ElevatedButton(
                       onPressed: () async {
                         AdService.instance.registerInteraction();
-                        await ColourRewardService.instance.unlockColour(reward.id);
-                        await ColourRewardService.instance.equipColour(reward.id);
+                        await ColourRewardService.instance
+                            .unlockColour(reward.id);
+                        await ColourRewardService.instance
+                            .equipColour(reward.id);
                         if (!mounted) return;
                         Navigator.of(context).pop(true);
                       },
@@ -79,7 +84,9 @@ class _ColourRevealDialogState extends State<ColourRevealDialog> with SingleTick
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       child: Text(
-                        equipped ? 'Already equipped' : 'Already in your collection',
+                        equipped
+                            ? 'Already equipped'
+                            : 'Already in your collection',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),

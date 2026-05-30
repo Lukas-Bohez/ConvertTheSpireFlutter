@@ -83,7 +83,8 @@ class AndroidSaf {
 
   Future<bool> deleteSafUri({required String uri}) async {
     if (!isSupported) return false;
-    return await _channel.invokeMethod<bool>('deleteSafUri', {'uri': uri}) ?? false;
+    return await _channel.invokeMethod<bool>('deleteSafUri', {'uri': uri}) ??
+        false;
   }
 
   /// Tests whether we can write to the given SAF tree URI.
@@ -93,7 +94,8 @@ class AndroidSaf {
     if (!isSupported) return false;
     return await _channel.invokeMethod<bool>('testTreeWrite', {
           'treeUri': treeUri,
-        }) ?? false;
+        }) ??
+        false;
   }
 
   Future<bool> openTree(String treeUri) async {
@@ -126,7 +128,8 @@ class AndroidSaf {
 
   Future<List<Map<String, String>>> getExternalVolumes() async {
     if (!isSupported) return const [];
-    final result = await _channel.invokeMethod<List<dynamic>>('getExternalVolumes');
+    final result =
+        await _channel.invokeMethod<List<dynamic>>('getExternalVolumes');
     final volumes = <Map<String, String>>[];
     for (final item in result ?? const []) {
       if (item is Map) {

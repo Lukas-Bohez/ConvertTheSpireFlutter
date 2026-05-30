@@ -3,7 +3,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 import 'cursor_style.dart';
 
@@ -15,7 +16,8 @@ class GlobalCursorOverlay extends StatefulWidget {
   final Widget child;
 
   static Future<void> Function(Offset position)? _webViewTapCallback;
-  static Future<void> Function(double deltaY, Offset position)? _webViewScrollCallback;
+  static Future<void> Function(double deltaY, Offset position)?
+      _webViewScrollCallback;
 
   static void registerWebViewCallbacks({
     Future<void> Function(Offset position)? onTap,
@@ -33,8 +35,10 @@ class GlobalCursorOverlay extends StatefulWidget {
 
 class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
     with SingleTickerProviderStateMixin {
-  static const MethodChannel _keyChannel = MethodChannel('com.yourapp/cursor_keys');
-  static const MethodChannel _platformChannel = MethodChannel('convert_the_spire/saf');
+  static const MethodChannel _keyChannel =
+      MethodChannel('com.yourapp/cursor_keys');
+  static const MethodChannel _platformChannel =
+      MethodChannel('convert_the_spire/saf');
 
   Offset _position = const Offset(400, 300);
   Offset _velocity = Offset.zero;
@@ -114,14 +118,20 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
 
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.arrowLeft) {
-      _direction = Offset(isDown ? -1 : (isUp ? 0 : _direction.dx), _direction.dy);
+      _direction =
+          Offset(isDown ? -1 : (isUp ? 0 : _direction.dx), _direction.dy);
     } else if (key == LogicalKeyboardKey.arrowRight) {
-      _direction = Offset(isDown ? 1 : (isUp ? 0 : _direction.dx), _direction.dy);
+      _direction =
+          Offset(isDown ? 1 : (isUp ? 0 : _direction.dx), _direction.dy);
     } else if (key == LogicalKeyboardKey.arrowUp) {
-      _direction = Offset(_direction.dx, isDown ? -1 : (isUp ? 0 : _direction.dy));
+      _direction =
+          Offset(_direction.dx, isDown ? -1 : (isUp ? 0 : _direction.dy));
     } else if (key == LogicalKeyboardKey.arrowDown) {
-      _direction = Offset(_direction.dx, isDown ? 1 : (isUp ? 0 : _direction.dy));
-    } else if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter || key == LogicalKeyboardKey.select) {
+      _direction =
+          Offset(_direction.dx, isDown ? 1 : (isUp ? 0 : _direction.dy));
+    } else if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.select) {
       if (_isTextFieldFocused()) {
         return false;
       }
@@ -130,10 +140,11 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
       return false;
     }
 
-    if (isDown && (key == LogicalKeyboardKey.arrowLeft ||
-        key == LogicalKeyboardKey.arrowRight ||
-        key == LogicalKeyboardKey.arrowUp ||
-        key == LogicalKeyboardKey.arrowDown)) {
+    if (isDown &&
+        (key == LogicalKeyboardKey.arrowLeft ||
+            key == LogicalKeyboardKey.arrowRight ||
+            key == LogicalKeyboardKey.arrowUp ||
+            key == LogicalKeyboardKey.arrowDown)) {
       _resetHideTimer();
     }
     return true;
@@ -178,16 +189,20 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
 
     switch (keyCode) {
       case dpadLeft:
-        _direction = Offset(isDown ? -1 : (isUp ? 0 : _direction.dx), _direction.dy);
+        _direction =
+            Offset(isDown ? -1 : (isUp ? 0 : _direction.dx), _direction.dy);
         break;
       case dpadRight:
-        _direction = Offset(isDown ? 1 : (isUp ? 0 : _direction.dx), _direction.dy);
+        _direction =
+            Offset(isDown ? 1 : (isUp ? 0 : _direction.dx), _direction.dy);
         break;
       case dpadUp:
-        _direction = Offset(_direction.dx, isDown ? -1 : (isUp ? 0 : _direction.dy));
+        _direction =
+            Offset(_direction.dx, isDown ? -1 : (isUp ? 0 : _direction.dy));
         break;
       case dpadDown:
-        _direction = Offset(_direction.dx, isDown ? 1 : (isUp ? 0 : _direction.dy));
+        _direction =
+            Offset(_direction.dx, isDown ? 1 : (isUp ? 0 : _direction.dy));
         break;
       case dpadCenter:
       case enter:
@@ -200,7 +215,11 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
         return;
     }
 
-    if (isDown && (keyCode == dpadLeft || keyCode == dpadRight || keyCode == dpadUp || keyCode == dpadDown)) {
+    if (isDown &&
+        (keyCode == dpadLeft ||
+            keyCode == dpadRight ||
+            keyCode == dpadUp ||
+            keyCode == dpadDown)) {
       _resetHideTimer();
     }
   }
@@ -309,7 +328,8 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   Future<void> _injectScroll(double deltaY, Offset cursorPosition) async {
     if (!_cursorEnabled) return;
     try {
-      debugPrint('GlobalCursorOverlay: _injectScroll deltaY=$deltaY at=$cursorPosition');
+      debugPrint(
+          'GlobalCursorOverlay: _injectScroll deltaY=$deltaY at=$cursorPosition');
       final callback = GlobalCursorOverlay._webViewScrollCallback;
       if (callback != null) {
         await callback(deltaY, cursorPosition);
@@ -380,8 +400,10 @@ class _CursorPainter extends CustomPainter {
     final crossPaint = Paint()
       ..color = style.accentColor
       ..strokeWidth = 0.8;
-    canvas.drawLine(Offset(radius, radius - 6), Offset(radius, radius + 6), crossPaint);
-    canvas.drawLine(Offset(radius - 6, radius), Offset(radius + 6, radius), crossPaint);
+    canvas.drawLine(
+        Offset(radius, radius - 6), Offset(radius, radius + 6), crossPaint);
+    canvas.drawLine(
+        Offset(radius - 6, radius), Offset(radius + 6, radius), crossPaint);
   }
 
   @override

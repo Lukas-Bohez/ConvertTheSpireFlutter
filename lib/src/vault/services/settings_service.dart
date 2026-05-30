@@ -125,9 +125,9 @@ class SettingsService {
       maxActiveDownloads = prefs.getInt(_kMaxActiveDownloads) ?? 3;
       downloadRateLimitKib = prefs.getInt(_kDownloadRateLimitKib) ?? 0;
       uploadRateLimitKib = prefs.getInt(_kUploadRateLimitKib) ?? 0;
-        allowSeedingAfterComplete =
+      allowSeedingAfterComplete =
           prefs.getBool(_kAllowSeedingAfterComplete) ?? true;
-        maxSeedingRatio = prefs.getDouble(_kMaxSeedingRatio) ?? 1.5;
+      maxSeedingRatio = prefs.getDouble(_kMaxSeedingRatio) ?? 1.5;
       enableAiCopilot = prefs.getBool(_kEnableAiCopilot) ?? true;
       enableSmartSuggestions = prefs.getBool(_kEnableSmartSuggestions) ?? true;
       compactTorrentRows = prefs.getBool(_kCompactTorrentRows) ?? false;

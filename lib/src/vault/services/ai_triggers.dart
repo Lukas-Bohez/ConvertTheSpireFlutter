@@ -24,11 +24,11 @@ class AiTriggers {
     if ((result.ageYears ?? 0) > 0) {
       stats.add('ageYears=${result.ageYears}');
     }
-    final observedStats = stats.isEmpty ? 'no positive swarm stats' : stats.join(', ');
+    final observedStats =
+        stats.isEmpty ? 'no positive swarm stats' : stats.join(', ');
     return AiTriggerEvent(
       key: 'result:${result.torrentId}',
-      prompt:
-          'The user is looking at ${result.name}. '
+      prompt: 'The user is looking at ${result.name}. '
           'Observed stats: $observedStats. '
           'Give a brief overview: what it likely is and estimated quality. '
           'Do not label it dangerous or suspicious just because seeders are 0, leechers are 0, or age is unknown. '

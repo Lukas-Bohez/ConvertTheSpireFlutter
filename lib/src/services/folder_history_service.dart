@@ -5,7 +5,8 @@ class FolderHistoryService {
   static const String _lastFolderKey = 'file_browser_last_folder';
   static const String _favoritesFoldersKey = 'file_browser_favorites';
 
-  static final FolderHistoryService _instance = FolderHistoryService._internal();
+  static final FolderHistoryService _instance =
+      FolderHistoryService._internal();
 
   factory FolderHistoryService() {
     return _instance;

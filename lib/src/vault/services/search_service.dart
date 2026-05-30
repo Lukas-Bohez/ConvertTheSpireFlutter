@@ -47,26 +47,26 @@ class SearchResult {
   });
 
   factory SearchResult.fromMap(Map<String, dynamic> map) => SearchResult(
-    torrentId: _asString(map['torrentId']),
-    name: _asString(map['name']),
-    magnetLink: _asString(map['magnetLink']),
-    responderId: _asString(map['responderId']),
-    source: _asString(map['source']).isEmpty
-        ? _asString(map['responderId'])
-        : _asString(map['source']),
-    size: map['size'] is int
-        ? map['size'] as int
-        : int.tryParse(_asString(map['size'])),
-    seeders: map['seeders'] is int
-        ? map['seeders'] as int
-        : int.tryParse(_asString(map['seeders'])),
-    leechers: map['leechers'] is int
-        ? map['leechers'] as int
-        : int.tryParse(_asString(map['leechers'])),
-    ageYears: map['ageYears'] is int
-        ? map['ageYears'] as int
-        : int.tryParse(_asString(map['ageYears'])),
-  );
+        torrentId: _asString(map['torrentId']),
+        name: _asString(map['name']),
+        magnetLink: _asString(map['magnetLink']),
+        responderId: _asString(map['responderId']),
+        source: _asString(map['source']).isEmpty
+            ? _asString(map['responderId'])
+            : _asString(map['source']),
+        size: map['size'] is int
+            ? map['size'] as int
+            : int.tryParse(_asString(map['size'])),
+        seeders: map['seeders'] is int
+            ? map['seeders'] as int
+            : int.tryParse(_asString(map['seeders'])),
+        leechers: map['leechers'] is int
+            ? map['leechers'] as int
+            : int.tryParse(_asString(map['leechers'])),
+        ageYears: map['ageYears'] is int
+            ? map['ageYears'] as int
+            : int.tryParse(_asString(map['ageYears'])),
+      );
 
   Map<String, dynamic> toMap() {
     return {

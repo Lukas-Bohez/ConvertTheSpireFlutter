@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -228,7 +228,8 @@ class _SupportScreenState extends State<SupportScreen> {
                   onPressed: () {
                     ConsentForm.showPrivacyOptionsForm((formError) {
                       if (formError != null) {
-                        debugPrint('Privacy options error: ${formError.message}');
+                        debugPrint(
+                            'Privacy options error: ${formError.message}');
                       }
                     });
                   },
@@ -272,7 +273,8 @@ class _SupportScreenState extends State<SupportScreen> {
     if (_isRunningAdAction) return;
     AdService.instance.registerInteraction();
     setState(() => _isRunningAdAction = true);
-    final rewardEarned = await AdService.instance.showRewardedAdToSupportProject();
+    final rewardEarned =
+        await AdService.instance.showRewardedAdToSupportProject();
     if (!mounted) return;
     setState(() {
       _isRunningAdAction = false;
@@ -478,9 +480,8 @@ class _SupportScreenState extends State<SupportScreen> {
                     OutlinedButton.icon(
                       icon: const Icon(Icons.restore),
                       label: const Text('Restore Purchase'),
-                      onPressed: purchase.storeAvailable
-                          ? _restorePurchases
-                          : null,
+                      onPressed:
+                          purchase.storeAvailable ? _restorePurchases : null,
                     ),
                   ],
                 ),

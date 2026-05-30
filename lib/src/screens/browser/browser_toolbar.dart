@@ -138,9 +138,8 @@ class BrowserToolbar extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: isIncognito
-                                      ? Colors.white
-                                      : cs.onSurface,
+                                  color:
+                                      isIncognito ? Colors.white : cs.onSurface,
                                 ),
                               ),
                               if (pageTitle.isNotEmpty &&
@@ -162,8 +161,7 @@ class BrowserToolbar extends StatelessWidget {
                         Tooltip(
                           message: adBlockEnabled
                               ? 'Ad blocker active'
-                              : 'Ad blocker off'
-                              ,
+                              : 'Ad blocker off',
                           child: Icon(
                             adBlockEnabled
                                 ? Icons.shield_rounded
@@ -240,9 +238,7 @@ class BrowserToolbar extends StatelessWidget {
               // Favourite
               IconButton(
                 icon: Icon(
-                  isFavourited
-                      ? Icons.star_rounded
-                      : Icons.star_border_rounded,
+                  isFavourited ? Icons.star_rounded : Icons.star_border_rounded,
                   size: 20,
                   color: isFavourited ? Colors.amber : null,
                 ),
@@ -264,14 +260,13 @@ class BrowserToolbar extends StatelessWidget {
                               child: SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               ),
                             ),
                           )
                         : IconButton(
-                            icon: const Icon(Icons.download_rounded,
-                                size: 20),
+                            icon: const Icon(Icons.download_rounded, size: 20),
                             onPressed: downloadEnabled
                                 ? () {
                                     onReleaseWebViewFocus?.call();

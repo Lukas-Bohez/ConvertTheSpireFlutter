@@ -67,7 +67,8 @@ class QueueItem {
       status: status ?? this.status,
       outputPath:
           outputPath == _unset ? this.outputPath : outputPath as String?,
-      outputFolder: outputFolder == _unset ? this.outputFolder : outputFolder as String?,
+      outputFolder:
+          outputFolder == _unset ? this.outputFolder : outputFolder as String?,
       error: error == _unset ? this.error : error as String?,
       videoQuality: videoQuality ?? this.videoQuality,
       speed: speed ?? this.speed,

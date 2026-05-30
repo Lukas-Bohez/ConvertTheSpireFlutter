@@ -224,8 +224,8 @@ class _MyAppState extends State<MyApp>
               BiliSearcher(ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath);
           rumbleSearcher =
               RumbleSearcher(ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath);
-          dailymotionSearcher = DailymotionSearcher(
-              ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath);
+          dailymotionSearcher =
+              DailymotionSearcher(ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath);
           odyseeSearcher =
               OdyseeSearcher(ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath);
         }
@@ -339,7 +339,8 @@ class _MyAppState extends State<MyApp>
         try {
           final current = controller.settings;
           if (current != null) {
-            await controller.saveSettings(current.copyWith(downloadDir: chosen));
+            await controller
+                .saveSettings(current.copyWith(downloadDir: chosen));
           }
         } catch (_) {}
 
@@ -502,90 +503,94 @@ class _MyAppState extends State<MyApp>
 
   @override
   Widget build(BuildContext context) {
-    final listenables = <Listenable>[FullModeAccess.instance, ColourRewardService.instance];
+    final listenables = <Listenable>[
+      FullModeAccess.instance,
+      ColourRewardService.instance
+    ];
     final controller = _controller;
     if (controller != null) {
       listenables.add(controller);
     }
 
     return AnimatedBuilder(
-        animation: Listenable.merge(listenables),
-        builder: (context, _) {
-          final themeMode = _resolveThemeMode(_controller?.settings?.themeMode);
-          final seed = ColourRewardService.instance.equipped.color;
-          final lightScheme = ColorScheme.fromSeed(seedColor: seed);
-          final darkScheme = ColorScheme.fromSeed(
-            seedColor: seed,
-            brightness: Brightness.dark,
-          );
+      animation: Listenable.merge(listenables),
+      builder: (context, _) {
+        final themeMode = _resolveThemeMode(_controller?.settings?.themeMode);
+        final seed = ColourRewardService.instance.equipped.color;
+        final lightScheme = ColorScheme.fromSeed(seedColor: seed);
+        final darkScheme = ColorScheme.fromSeed(
+          seedColor: seed,
+          brightness: Brightness.dark,
+        );
 
-          final lightTheme = ThemeData.from(
-            colorScheme: lightScheme,
-            useMaterial3: true,
-          ).copyWith(
-            iconTheme: IconThemeData(size: 20, color: lightScheme.onSurface),
-            appBarTheme: AppBarTheme(
-              backgroundColor: lightScheme.surface,
-              foregroundColor: lightScheme.onSurface,
-              iconTheme: IconThemeData(color: lightScheme.onSurface),
-              titleTextStyle: TextStyle(
-                color: lightScheme.onSurface,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
+        final lightTheme = ThemeData.from(
+          colorScheme: lightScheme,
+          useMaterial3: true,
+        ).copyWith(
+          iconTheme: IconThemeData(size: 20, color: lightScheme.onSurface),
+          appBarTheme: AppBarTheme(
+            backgroundColor: lightScheme.surface,
+            foregroundColor: lightScheme.onSurface,
+            iconTheme: IconThemeData(color: lightScheme.onSurface),
+            titleTextStyle: TextStyle(
+              color: lightScheme.onSurface,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
             ),
-            bottomNavigationBarTheme: BottomNavigationBarThemeData(
-              backgroundColor: lightScheme.surface,
-              selectedItemColor: lightScheme.primary,
-              unselectedItemColor: lightScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          );
+          ),
+          bottomNavigationBarTheme: BottomNavigationBarThemeData(
+            backgroundColor: lightScheme.surface,
+            selectedItemColor: lightScheme.primary,
+            unselectedItemColor: lightScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        );
 
-          final darkTheme = ThemeData.from(
-            colorScheme: darkScheme,
-            useMaterial3: true,
-          ).copyWith(
-            iconTheme: IconThemeData(size: 20, color: darkScheme.onSurface),
-            appBarTheme: AppBarTheme(
-              backgroundColor: darkScheme.surface,
-              foregroundColor: darkScheme.onSurface,
-              iconTheme: IconThemeData(color: darkScheme.onSurface),
-              titleTextStyle: TextStyle(
-                color: darkScheme.onSurface,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
+        final darkTheme = ThemeData.from(
+          colorScheme: darkScheme,
+          useMaterial3: true,
+        ).copyWith(
+          iconTheme: IconThemeData(size: 20, color: darkScheme.onSurface),
+          appBarTheme: AppBarTheme(
+            backgroundColor: darkScheme.surface,
+            foregroundColor: darkScheme.onSurface,
+            iconTheme: IconThemeData(color: darkScheme.onSurface),
+            titleTextStyle: TextStyle(
+              color: darkScheme.onSurface,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
             ),
-            bottomNavigationBarTheme: BottomNavigationBarThemeData(
-              backgroundColor: darkScheme.surface,
-              selectedItemColor: darkScheme.primary,
-              unselectedItemColor: darkScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          );
+          ),
+          bottomNavigationBarTheme: BottomNavigationBarThemeData(
+            backgroundColor: darkScheme.surface,
+            selectedItemColor: darkScheme.primary,
+            unselectedItemColor: darkScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        );
 
-          return ExcludeFocus(
-            excluding: false,
-            child: FocusTraversalGroup(
-              policy: const _DeadTraversalPolicy(),
-              child: MaterialApp(
-                navigatorKey: _navigatorKey,
-                title: getAppTitle(),
-                shortcuts: const <ShortcutActivator, Intent>{},
-                actions: const <Type, Action<Intent>>{},
-                theme: lightTheme,
-                darkTheme: darkTheme,
-                themeMode: themeMode,
-                builder: (context, child) {
-                  return GlobalCursorOverlay(
-                    child: AdaptiveUiFrame(child: child ?? const SizedBox.shrink()),
-                  );
-                },
-                home: _buildHome(),
-              ),
+        return ExcludeFocus(
+          excluding: false,
+          child: FocusTraversalGroup(
+            policy: const _DeadTraversalPolicy(),
+            child: MaterialApp(
+              navigatorKey: _navigatorKey,
+              title: getAppTitle(),
+              shortcuts: const <ShortcutActivator, Intent>{},
+              actions: const <Type, Action<Intent>>{},
+              theme: lightTheme,
+              darkTheme: darkTheme,
+              themeMode: themeMode,
+              builder: (context, child) {
+                return GlobalCursorOverlay(
+                  child:
+                      AdaptiveUiFrame(child: child ?? const SizedBox.shrink()),
+                );
+              },
+              home: _buildHome(),
             ),
-          );
-        },
-      );
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildHome() {

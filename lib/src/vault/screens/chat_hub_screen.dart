@@ -177,8 +177,8 @@ class _ChatHubScreenState extends State<ChatHubScreen> {
               final filtered = _query.isEmpty
                   ? entries
                   : entries.where((entry) {
-                      final combined = '${entry.title} ${entry.subtitle}'
-                          .toLowerCase();
+                      final combined =
+                          '${entry.title} ${entry.subtitle}'.toLowerCase();
                       return combined.contains(_query);
                     }).toList();
               if (filtered.isEmpty) {

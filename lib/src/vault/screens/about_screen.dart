@@ -357,7 +357,7 @@ class _AboutScreenState extends State<AboutScreen>
       final maxActive = int.tryParse(_maxActiveController.text) ?? 3;
       final down = int.tryParse(_downloadRateController.text) ?? 0;
       final up = int.tryParse(_uploadRateController.text) ?? 0;
-        final seedingRatio =
+      final seedingRatio =
           double.tryParse(_seedingRatioController.text.trim()) ?? 1.5;
       final proxyPort = int.tryParse(_proxyPortController.text) ?? 1080;
 
@@ -388,7 +388,7 @@ class _AboutScreenState extends State<AboutScreen>
       _maxActiveController.text = '${_settings.maxActiveDownloads}';
       _downloadRateController.text = '${_settings.downloadRateLimitKib}';
       _uploadRateController.text = '${_settings.uploadRateLimitKib}';
-        _seedingRatioController.text =
+      _seedingRatioController.text =
           _settings.maxSeedingRatio.toStringAsFixed(2);
 
       if (!mounted) return;

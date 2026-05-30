@@ -22,7 +22,11 @@ class FileResolver {
     }
     if (path.startsWith('file://')) return path;
     // If it's an absolute filesystem path on Android or desktop, return as-is
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS || Platform.isAndroid || Platform.isIOS) {
+    if (Platform.isWindows ||
+        Platform.isLinux ||
+        Platform.isMacOS ||
+        Platform.isAndroid ||
+        Platform.isIOS) {
       return path;
     }
     return path;

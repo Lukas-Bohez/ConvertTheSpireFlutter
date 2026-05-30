@@ -29,12 +29,18 @@ class ShimmerGrid extends StatelessWidget {
             baseColor: theme.colorScheme.surfaceContainerHighest,
             highlightColor: theme.colorScheme.surface,
             child: Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(child: Container(color: theme.colorScheme.surfaceContainerHighest)),
-                  Container(height: 16, margin: const EdgeInsets.all(8), color: theme.colorScheme.surfaceContainerHighest),
+                  Expanded(
+                      child: Container(
+                          color: theme.colorScheme.surfaceContainerHighest)),
+                  Container(
+                      height: 16,
+                      margin: const EdgeInsets.all(8),
+                      color: theme.colorScheme.surfaceContainerHighest),
                 ],
               ),
             ),

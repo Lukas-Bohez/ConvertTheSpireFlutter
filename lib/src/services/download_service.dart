@@ -314,7 +314,8 @@ class DownloadService {
         onTimeout: () =>
             throw TimeoutException('Timed out fetching video info'));
 
-    final downloadTitle = resolveDownloadTitle(item.title, sourceTitle: video.title);
+    final downloadTitle =
+        resolveDownloadTitle(item.title, sourceTitle: video.title);
     final downloadArtist = resolveDownloadArtist(
       item.uploader,
       sourceArtist: video.author,
@@ -1312,7 +1313,8 @@ class DownloadService {
     final parent = inputFile.parent.path;
     final extension = p.extension(filePath);
     final baseName = p.basenameWithoutExtension(filePath);
-    final taggedPath = '$parent${Platform.pathSeparator}$baseName.tagged$extension';
+    final taggedPath =
+        '$parent${Platform.pathSeparator}$baseName.tagged$extension';
 
     await ffmpeg.run([
       '-i',

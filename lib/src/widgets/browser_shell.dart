@@ -11,34 +11,85 @@ import '../widgets/quick_links_service.dart';
 import '../vault/services/torrent_service.dart';
 
 const _kRoutes = {
-  'search':
-    (index: 0, icon: Icons.search, label: 'Search', route: 'search.tab'),
-  'multisearch':
-    (index: 1, icon: Icons.travel_explore, label: 'Search+', route: 'multisearch.tab'),
-  'browser':
-    (index: 2, icon: Icons.language, label: 'Browser', route: 'browser.tab'),
-  'queue':
-    (index: 3, icon: Icons.queue_music, label: 'Queue', route: 'queue.tab'),
-  'playlists':
-    (index: 4, icon: Icons.playlist_play, label: 'Playlists', route: 'playlists.tab'),
-  'files':
-    (index: 5, icon: Icons.folder, label: 'Files', route: 'bulkimport.tab'),
-  'stats':
-    (index: 6, icon: Icons.bar_chart, label: 'Stats', route: 'stats.tab'),
-  'settings':
-    (index: 7, icon: Icons.settings, label: 'Settings', route: 'settings.tab'),
-  'support':
-    (index: 8, icon: Icons.volunteer_activism, label: 'Support', route: 'support.tab'),
-  'convert':
-    (index: 9, icon: Icons.transform, label: 'Convert', route: 'convert.tab'),
-  'logs':
-    (index: 10, icon: Icons.list_alt, label: 'Logs', route: 'logs.tab'),
-  'guide':
-    (index: 11, icon: Icons.menu_book, label: 'Guide', route: 'guide.tab'),
-  'player':
-    (index: 12, icon: Icons.music_note, label: 'Player', route: 'player.tab'),
-  'torrents':
-    (index: 14, icon: Icons.download, label: 'Torrents', route: 'torrents.tab'),
+  'search': (
+    index: 0,
+    icon: Icons.search,
+    label: 'Search',
+    route: 'search.tab'
+  ),
+  'multisearch': (
+    index: 1,
+    icon: Icons.travel_explore,
+    label: 'Search+',
+    route: 'multisearch.tab'
+  ),
+  'browser': (
+    index: 2,
+    icon: Icons.language,
+    label: 'Browser',
+    route: 'browser.tab'
+  ),
+  'queue': (
+    index: 3,
+    icon: Icons.queue_music,
+    label: 'Queue',
+    route: 'queue.tab'
+  ),
+  'playlists': (
+    index: 4,
+    icon: Icons.playlist_play,
+    label: 'Playlists',
+    route: 'playlists.tab'
+  ),
+  'files': (
+    index: 5,
+    icon: Icons.folder,
+    label: 'Files',
+    route: 'bulkimport.tab'
+  ),
+  'stats': (
+    index: 6,
+    icon: Icons.bar_chart,
+    label: 'Stats',
+    route: 'stats.tab'
+  ),
+  'settings': (
+    index: 7,
+    icon: Icons.settings,
+    label: 'Settings',
+    route: 'settings.tab'
+  ),
+  'support': (
+    index: 8,
+    icon: Icons.volunteer_activism,
+    label: 'Support',
+    route: 'support.tab'
+  ),
+  'convert': (
+    index: 9,
+    icon: Icons.transform,
+    label: 'Convert',
+    route: 'convert.tab'
+  ),
+  'logs': (index: 10, icon: Icons.list_alt, label: 'Logs', route: 'logs.tab'),
+  'guide': (
+    index: 11,
+    icon: Icons.menu_book,
+    label: 'Guide',
+    route: 'guide.tab'
+  ),
+  'player': (
+    index: 12,
+    icon: Icons.music_note,
+    label: 'Player',
+    route: 'player.tab'
+  ),
+  'torrents': (
+    index: 14,
+    icon: Icons.download,
+    label: 'Torrents',
+    route: 'torrents.tab'
+  ),
 };
 
 /// Persistent browser-like shell that wraps all app content.
@@ -118,7 +169,8 @@ class _BrowserShellState extends State<BrowserShell> {
     super.dispose();
   }
 
-  String get _currentTitle => QuickLinksService.titleForIndex(widget.currentIndex);
+  String get _currentTitle =>
+      QuickLinksService.titleForIndex(widget.currentIndex);
 
   IconData get _currentFavicon =>
       QuickLinksService.indexToIcon[widget.currentIndex] ?? Icons.search;
@@ -162,7 +214,8 @@ class _BrowserShellState extends State<BrowserShell> {
             final media = MediaQuery.sizeOf(context);
             final width = media.width;
             final maxWidth = (width - 12).clamp(260.0, 680.0).toDouble();
-            final maxHeight = (media.height * 0.55).clamp(180.0, 460.0).toDouble();
+            final maxHeight =
+                (media.height * 0.55).clamp(180.0, 460.0).toDouble();
 
             return Align(
               alignment: Alignment.topLeft,
@@ -200,7 +253,8 @@ class _BrowserShellState extends State<BrowserShell> {
                                 runSpacing: 8,
                                 children: suggestions
                                     .where((s) =>
-                                        s.kind == _BrowserSuggestionKind.internal)
+                                        s.kind ==
+                                        _BrowserSuggestionKind.internal)
                                     .map(
                                       (suggestion) => ActionChip(
                                         avatar: Icon(suggestion.icon, size: 18),
@@ -212,11 +266,13 @@ class _BrowserShellState extends State<BrowserShell> {
                                     .toList(),
                               ),
                               if (suggestions.any((s) =>
-                                  s.kind != _BrowserSuggestionKind.internal)) ...[
+                                  s.kind !=
+                                  _BrowserSuggestionKind.internal)) ...[
                                 const SizedBox(height: 10),
                                 ...suggestions
                                     .where((s) =>
-                                        s.kind != _BrowserSuggestionKind.internal)
+                                        s.kind !=
+                                        _BrowserSuggestionKind.internal)
                                     .map(
                                       (suggestion) => ListTile(
                                         dense: true,
@@ -224,8 +280,10 @@ class _BrowserShellState extends State<BrowserShell> {
                                         leading: CircleAvatar(
                                           radius: 16,
                                           backgroundColor: cs.primaryContainer,
-                                          foregroundColor: cs.onPrimaryContainer,
-                                          child: Icon(suggestion.icon, size: 16),
+                                          foregroundColor:
+                                              cs.onPrimaryContainer,
+                                          child:
+                                              Icon(suggestion.icon, size: 16),
                                         ),
                                         title: Text(suggestion.label),
                                         subtitle: suggestion.subtitle.isEmpty

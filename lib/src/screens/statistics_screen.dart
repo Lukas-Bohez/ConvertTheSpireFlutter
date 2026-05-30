@@ -289,8 +289,8 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                       return Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(short,
-                            style: TextStyle(
-                                fontSize: 10, color: cs.onSurface)),
+                            style:
+                                TextStyle(fontSize: 10, color: cs.onSurface)),
                       );
                     },
                   ),
@@ -304,8 +304,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                         return const SizedBox.shrink();
                       }
                       return Text('${value.toInt()}',
-                          style: TextStyle(
-                              fontSize: 10, color: cs.onSurface));
+                          style: TextStyle(fontSize: 10, color: cs.onSurface));
                     },
                   ),
                 ),

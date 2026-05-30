@@ -119,7 +119,8 @@ class PlatformDirs {
   static Future<String?> getPathFromTreeUri(String treeUri) async {
     if (kIsWeb) return null;
     try {
-      return await _channel.invokeMethod<String>('getPathFromTreeUri', {'treeUri': treeUri});
+      return await _channel
+          .invokeMethod<String>('getPathFromTreeUri', {'treeUri': treeUri});
     } catch (_) {
       return null;
     }
@@ -140,13 +141,15 @@ class PlatformDirs {
   }
 
   /// Copy a `content://` URI directly to a filesystem path on Android.
-  static Future<bool> copyContentUriToFile(String sourceUri, String destinationPath) async {
+  static Future<bool> copyContentUriToFile(
+      String sourceUri, String destinationPath) async {
     if (kIsWeb) return false;
     try {
       return await _channel.invokeMethod<bool>('copyContentUriToFile', {
             'sourceUri': sourceUri,
             'destinationPath': destinationPath,
-          }) ?? false;
+          }) ??
+          false;
     } catch (_) {
       return false;
     }
@@ -154,7 +157,9 @@ class PlatformDirs {
 
   /// Copy a local file (sourcePath) into a SAF tree target (treeUri).
   /// Returns the destination content URI string on success or null on failure.
-  static Future<String?> copyToTree(String treeUri, String sourcePath, String displayName, String mimeType, {String? subdir}) async {
+  static Future<String?> copyToTree(
+      String treeUri, String sourcePath, String displayName, String mimeType,
+      {String? subdir}) async {
     if (kIsWeb) return null;
     try {
       return await _channel.invokeMethod<String>('copyToTree', {
@@ -170,7 +175,9 @@ class PlatformDirs {
   }
 
   /// Copy a `content://` source directly into a SAF tree target (treeUri).
-  static Future<String?> copyContentUriToTree(String treeUri, String sourceUri, String displayName, String mimeType, {String? subdir}) async {
+  static Future<String?> copyContentUriToTree(
+      String treeUri, String sourceUri, String displayName, String mimeType,
+      {String? subdir}) async {
     if (kIsWeb) return null;
     try {
       return await _channel.invokeMethod<String>('copyContentUriToTree', {
@@ -210,5 +217,4 @@ class PlatformDirs {
       return null;
     }
   }
-
 }

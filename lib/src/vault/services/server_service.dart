@@ -71,10 +71,10 @@ class ServerService {
   }
 
   String reformatInvite(ServerModel server) => jsonEncode({
-    'id': server.id,
-    'name': server.name,
-    'description': server.description,
-  });
+        'id': server.id,
+        'name': server.name,
+        'description': server.description,
+      });
 
   String encodeInvite(ServerModel server) {
     return base64Url.encode(utf8.encode(reformatInvite(server)));

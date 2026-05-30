@@ -38,7 +38,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   List<_OnboardingPage> get _pages {
     final allPages = _OnboardingScreenState._allPages();
     if (!kPlayStoreBuild) return allPages;
-    
+
     // For Play Store build, only show essential pages:
     // 0: Welcome, 4: Browser, 8: Settings, 11: Guide, 12: Player, 13: Support
     return [
@@ -53,148 +53,150 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   // All onboarding pages
   static List<_OnboardingPage> _allPages() => <_OnboardingPage>[
-    // Welcome
-    _OnboardingPage(
-      icon: Icons.download_rounded,
-      title: 'Welcome',
-        detail: kPlayStoreBuild
-            ? 'Vault the Spire is a torrent vault and media hub. '
-              'Add magnet links and .torrent files, manage downloads, '
-              'and keep everything organized from one app.'
-            : 'Convert Spire Reborn is a cross-platform torrent and '
-              'media toolkit. Add magnet links and .torrent files, manage '
-              'downloads, convert formats, cast to your TV, and more - all from '
-              'one app.',
-      color: Color(0xFF00897B),
-      preview: _WelcomePreview(),
-    ),
+        // Welcome
+        _OnboardingPage(
+          icon: Icons.download_rounded,
+          title: 'Welcome',
+          detail: kPlayStoreBuild
+              ? 'Vault the Spire is a torrent vault and media hub. '
+                  'Add magnet links and .torrent files, manage downloads, '
+                  'and keep everything organized from one app.'
+              : 'Convert Spire Reborn is a cross-platform torrent and '
+                  'media toolkit. Add magnet links and .torrent files, manage '
+                  'downloads, convert formats, cast to your TV, and more - all from '
+                  'one app.',
+          color: Color(0xFF00897B),
+          preview: _WelcomePreview(),
+        ),
 
-    // Supported Platforms
-    _OnboardingPage(
-      icon: Icons.language_rounded,
-        title: 'Supported Sources',
-        detail: 'Not just torrents. The app can work with magnet links, '
-          '.torrent files, browser links, local files, and other supported '
-          'sources in the host shell.',
-      color: Color(0xFFFF6D00),
-      preview: _PlatformsPreview(),
-    ),
+        // Supported Platforms
+        _OnboardingPage(
+          icon: Icons.language_rounded,
+          title: 'Supported Sources',
+          detail: 'Not just torrents. The app can work with magnet links, '
+              '.torrent files, browser links, local files, and other supported '
+              'sources in the host shell.',
+          color: Color(0xFFFF6D00),
+          preview: _PlatformsPreview(),
+        ),
 
-    // Search
-    _OnboardingPage(
-      icon: Icons.search_rounded,
-      title: 'Search',
-        detail: 'Look up a title by keyword or paste a magnet / torrent link. '
-          'Preview the result and pick a destination before downloading.',
-      color: Color(0xFF6C63FF),
-      preview: _SearchPreview(),
-    ),
+        // Search
+        _OnboardingPage(
+          icon: Icons.search_rounded,
+          title: 'Search',
+          detail:
+              'Look up a title by keyword or paste a magnet / torrent link. '
+              'Preview the result and pick a destination before downloading.',
+          color: Color(0xFF6C63FF),
+          preview: _SearchPreview(),
+        ),
 
-    // Multi-Search
-    _OnboardingPage(
-      icon: Icons.travel_explore_rounded,
-      title: 'Multi-Search',
-        detail: 'Search multiple sources at once and compare results side by '
-          'side. Tap a row to inspect details before adding it to the queue.',
-      color: Color(0xFF43CFBB),
-    ),
+        // Multi-Search
+        _OnboardingPage(
+          icon: Icons.travel_explore_rounded,
+          title: 'Multi-Search',
+          detail: 'Search multiple sources at once and compare results side by '
+              'side. Tap a row to inspect details before adding it to the queue.',
+          color: Color(0xFF43CFBB),
+        ),
 
-    // Browser
-    _OnboardingPage(
-      icon: Icons.open_in_browser_rounded,
-      title: 'Browser',
-        detail: 'Browse the web in the built-in view and open magnet or '
-          'torrent links directly without leaving the app.',
-      color: Color(0xFF4A90D9),
-    ),
+        // Browser
+        _OnboardingPage(
+          icon: Icons.open_in_browser_rounded,
+          title: 'Browser',
+          detail: 'Browse the web in the built-in view and open magnet or '
+              'torrent links directly without leaving the app.',
+          color: Color(0xFF4A90D9),
+        ),
 
-    // Queue
-    _OnboardingPage(
-      icon: Icons.queue_music_rounded,
-      title: 'Queue',
-      detail: kPlayStoreBuild
-          ? 'Manage your downloads. Start all, cancel, retry failures, '
-            'or show completed files in your file manager.'
-          : 'Manage your downloads. Start all, cancel, retry failures, '
-            'cast to your TV, or show completed files in your file manager.',
-      color: Color(0xFFE07B54),
-      preview: _QueuePreview(),
-    ),
+        // Queue
+        _OnboardingPage(
+          icon: Icons.queue_music_rounded,
+          title: 'Queue',
+          detail: kPlayStoreBuild
+              ? 'Manage your downloads. Start all, cancel, retry failures, '
+                  'or show completed files in your file manager.'
+              : 'Manage your downloads. Start all, cancel, retry failures, '
+                  'cast to your TV, or show completed files in your file manager.',
+          color: Color(0xFFE07B54),
+          preview: _QueuePreview(),
+        ),
 
-    // Bulk Import
-    _OnboardingPage(
-      icon: Icons.upload_file_rounded,
-      title: 'Bulk Import',
-        detail: 'Paste a list of links or import a text/CSV file to enqueue '
-          'many items at once.',
-      color: Color(0xFF5BA85A),
-    ),
+        // Bulk Import
+        _OnboardingPage(
+          icon: Icons.upload_file_rounded,
+          title: 'Bulk Import',
+          detail: 'Paste a list of links or import a text/CSV file to enqueue '
+              'many items at once.',
+          color: Color(0xFF5BA85A),
+        ),
 
-    // Stats
-    _OnboardingPage(
-      icon: Icons.bar_chart_rounded,
-      title: 'Stats',
-        detail: 'See download totals, success rate, format breakdown, top '
-          'sources, and trends over time.',
-      color: Color(0xFFD4A017),
-    ),
+        // Stats
+        _OnboardingPage(
+          icon: Icons.bar_chart_rounded,
+          title: 'Stats',
+          detail: 'See download totals, success rate, format breakdown, top '
+              'sources, and trends over time.',
+          color: Color(0xFFD4A017),
+        ),
 
-    // Settings
-    _OnboardingPage(
-      icon: Icons.settings_rounded,
-      title: 'Settings',
-        detail: 'Choose download folders, format defaults, FFmpeg options, '
-          'retry behaviour, and appearance.',
-      color: Color(0xFF607D8B),
-    ),
+        // Settings
+        _OnboardingPage(
+          icon: Icons.settings_rounded,
+          title: 'Settings',
+          detail: 'Choose download folders, format defaults, FFmpeg options, '
+              'retry behaviour, and appearance.',
+          color: Color(0xFF607D8B),
+        ),
 
-    // Convert
-    _OnboardingPage(
-      icon: Icons.transform_rounded,
-      title: 'Convert',
-      detail: 'Convert any local audio/video file between popular formats '
-          'using FFmpeg.',
-      color: Color(0xFFE57373),
-    ),
+        // Convert
+        _OnboardingPage(
+          icon: Icons.transform_rounded,
+          title: 'Convert',
+          detail: 'Convert any local audio/video file between popular formats '
+              'using FFmpeg.',
+          color: Color(0xFFE57373),
+        ),
 
-    // Logs
-    _OnboardingPage(
-      icon: Icons.list_alt_rounded,
-      title: 'Logs',
-      detail:
-          'Inspect the internal application log. Copy or clear at any time.',
-      color: Color(0xFF78909C),
-    ),
+        // Logs
+        _OnboardingPage(
+          icon: Icons.list_alt_rounded,
+          title: 'Logs',
+          detail:
+              'Inspect the internal application log. Copy or clear at any time.',
+          color: Color(0xFF78909C),
+        ),
 
-    // Guide
-    _OnboardingPage(
-      icon: Icons.menu_book_rounded,
-      title: 'Guide',
-      detail: kPlayStoreBuild
-          ? 'A help screen you can revisit from the Guide tab for Browser, Player, Torrents, and Settings.'
-          : 'A help screen you can revisit from the Guide tab.',
-      color: Color(0xFF26A69A),
-    ),
+        // Guide
+        _OnboardingPage(
+          icon: Icons.menu_book_rounded,
+          title: 'Guide',
+          detail: kPlayStoreBuild
+              ? 'A help screen you can revisit from the Guide tab for Browser, Player, Torrents, and Settings.'
+              : 'A help screen you can revisit from the Guide tab.',
+          color: Color(0xFF26A69A),
+        ),
 
-    // Player
-    _OnboardingPage(
-      icon: Icons.music_note_rounded,
-      title: 'Player',
-      detail: 'Built-in media player for your files. Playback, shuffle, '
-          'repeat, and a simple library.',
-      color: Color(0xFF7E57C2),
-    ),
+        // Player
+        _OnboardingPage(
+          icon: Icons.music_note_rounded,
+          title: 'Player',
+          detail: 'Built-in media player for your files. Playback, shuffle, '
+              'repeat, and a simple library.',
+          color: Color(0xFF7E57C2),
+        ),
 
-    // Support CTA (last page)
-    _OnboardingPage(
-      icon: Icons.favorite_rounded,
-      title: 'Support Us',
-      detail: 'Help keep this app open-source and ad-free by supporting the project. '
-          'You can donate via Buy Me a Coffee or GitHub Sponsors.',
-      color: Color(0xFFE91E63),
-      preview: _SupportPreview(),
-    ),
-  ];
+        // Support CTA (last page)
+        _OnboardingPage(
+          icon: Icons.favorite_rounded,
+          title: 'Support Us',
+          detail:
+              'Help keep this app open-source and ad-free by supporting the project. '
+              'You can donate via Buy Me a Coffee or GitHub Sponsors.',
+          color: Color(0xFFE91E63),
+          preview: _SupportPreview(),
+        ),
+      ];
 
   // --─ Lifecycle ----------------------------------------------------------─
 
@@ -230,8 +232,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     // Use a subtle fade (0.92 -> 1.0) instead of full fade-from-black to
     // avoid transient black flashes on slower mobile devices when pages are
     // rebuilt during fast swipes.
-    _fadeAnim = Tween<double>(begin: 0.92, end: 1.0)
-        .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    _fadeAnim = Tween<double>(begin: 0.92, end: 1.0).animate(
+        CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     _slideAnim = Tween<Offset>(
       begin: const Offset(0, 0.04),
       end: Offset.zero,
@@ -585,7 +587,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: p.color.withValues(alpha: 0.15),
+                                          color:
+                                              p.color.withValues(alpha: 0.15),
                                           blurRadius: 28,
                                           offset: const Offset(0, 8),
                                         ),
@@ -604,7 +607,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                   const SizedBox(height: 28),
                                   Text(
                                     p.title,
-                                    style: theme.textTheme.headlineMedium?.copyWith(
+                                    style: theme.textTheme.headlineMedium
+                                        ?.copyWith(
                                       fontWeight: FontWeight.bold,
                                       color: p.color,
                                       letterSpacing: -0.5,
@@ -633,7 +637,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
               _buildDots(theme),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
                 child: _buildControls(theme),
               ),
               const SizedBox(height: 12),
@@ -772,9 +777,7 @@ class _PlatformsPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = const Color(0xFFFF6D00);
-    final platforms = kPlayStoreBuild
-      ? _platforms
-        : _platforms;
+    final platforms = kPlayStoreBuild ? _platforms : _platforms;
 
     return Wrap(
       spacing: 6,

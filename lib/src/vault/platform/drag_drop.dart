@@ -35,8 +35,7 @@ class _TorrentDragDropState extends State<TorrentDragDrop> {
           }
         }
       },
-      child:
-          widget.child ??
+      child: widget.child ??
           Container(
             height: 120,
             margin: const EdgeInsets.all(16),

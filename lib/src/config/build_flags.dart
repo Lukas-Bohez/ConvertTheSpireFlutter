@@ -43,7 +43,9 @@ String getDefaultDownloadFolderName() {
 // Tab visibility — hide/modify tabs for Play builds
 bool isTabVisibleInCurrentBuild(int tabIndex) {
   // Convert tab (tabIndex 9) is disabled on Android per platform limitations
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android && tabIndex == 9) {
+  if (!kIsWeb &&
+      defaultTargetPlatform == TargetPlatform.android &&
+      tabIndex == 9) {
     return false;
   }
   // In Play builds hide Search, Multi-Search, Playlists, Bulk Import, Stats, and Logs.

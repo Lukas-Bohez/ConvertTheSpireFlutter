@@ -73,7 +73,8 @@ Future<void> main() async {
     // Play flavor as authoritative on Android; otherwise desktop app names
     // that contain the branding string should not enable Play-store-only
     // behaviors. Allow an explicit dart-define to override everything.
-    setPlayStoreBuildFlag(kIsPlayStoreBuildDefine || (!kIsWeb && Platform.isAndroid && isPlayFlavor));
+    setPlayStoreBuildFlag(kIsPlayStoreBuildDefine ||
+        (!kIsWeb && Platform.isAndroid && isPlayFlavor));
 
     // Track launches for review prompt heuristics.
     await ReviewService.trackLaunch();
@@ -99,7 +100,6 @@ Future<void> main() async {
             debugPrint('Android permission ${entry.key}: ${entry.value}');
           }
         }
-
       } catch (e) {
         debugPrint('Android permission request failed: $e');
       }
@@ -138,7 +138,8 @@ Future<void> main() async {
     // any raw MobileAds.instance.initialize() calls.
     if (!kIsWeb && Platform.isAndroid && kPlayStoreBuild) {
       if (kDebugMode) {
-        debugPrint('main: starting UMP consent flow via AdService.initAdsWithConsent()');
+        debugPrint(
+            'main: starting UMP consent flow via AdService.initAdsWithConsent()');
       }
       await AdService.instance.initAdsWithConsent();
       if (kDebugMode) {
@@ -241,7 +242,6 @@ Future<void> main() async {
         ),
       ),
     );
-
   }, (error, stack) {
     _logStartupError(startupErrorLogFile, 'ZONE ERROR', error, stack);
   });

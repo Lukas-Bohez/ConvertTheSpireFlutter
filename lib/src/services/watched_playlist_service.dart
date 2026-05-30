@@ -13,7 +13,8 @@ import 'log_service.dart';
 /// but for desktop / MVP this works via an in-process periodic timer.
 class WatchedPlaylistService {
   final Future<List<SearchResult>> Function(String url) fetchPlaylistTracks;
-  final Future<void> Function(String playlistUrl, SearchResult track) onNewTrack;
+  final Future<void> Function(String playlistUrl, SearchResult track)
+      onNewTrack;
   final LogService? logs;
 
   WatchedPlaylistService({

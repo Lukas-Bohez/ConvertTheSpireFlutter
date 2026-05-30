@@ -10,7 +10,8 @@ class ColourRewardSessionDialog extends StatefulWidget {
   final List<ColourReward> rewards;
 
   @override
-  State<ColourRewardSessionDialog> createState() => _ColourRewardSessionDialogState();
+  State<ColourRewardSessionDialog> createState() =>
+      _ColourRewardSessionDialogState();
 }
 
 class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
@@ -94,7 +95,8 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
         decoration: BoxDecoration(
           color: cs.surface,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: reward.rarity.glowColor.withValues(alpha: 0.5)),
+          border:
+              Border.all(color: reward.rarity.glowColor.withValues(alpha: 0.5)),
           boxShadow: [
             BoxShadow(
               color: reward.rarity.glowColor.withValues(alpha: 0.24),
@@ -103,14 +105,17 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
             ),
           ],
         ),
-        child: _showSummary ? _buildSummary(context) : _buildReveal(context, reward),
+        child: _showSummary
+            ? _buildSummary(context)
+            : _buildReveal(context, reward),
       ),
     );
   }
 
   Widget _buildReveal(BuildContext context, ColourReward reward) {
     final cs = Theme.of(context).colorScheme;
-    final stage = _showFinalReveal ? reward.rarity : _previewTiers[_previewStep];
+    final stage =
+        _showFinalReveal ? reward.rarity : _previewTiers[_previewStep];
     final stageColor = stage.glowColor;
     final progressText = _showFinalReveal
         ? 'Revealed ${_rewardIndex + 1} of ${widget.rewards.length}'
@@ -124,7 +129,10 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
             Expanded(
               child: Text(
                 'Colour pull session',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w800),
               ),
             ),
             Chip(
@@ -202,7 +210,10 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
           const SizedBox(height: 12),
           Text(
             label,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
           Text(
@@ -223,7 +234,8 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
       decoration: BoxDecoration(
         color: reward.color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: stageColor.withValues(alpha: 0.8), width: 2.5),
+        border:
+            Border.all(color: stageColor.withValues(alpha: 0.8), width: 2.5),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -247,7 +259,10 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
           const SizedBox(height: 14),
           Text(
             reward.displayName,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(fontWeight: FontWeight.w900),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
@@ -271,7 +286,10 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
         children: [
           Text(
             'All colours pulled',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 6),
           Text(
@@ -332,7 +350,8 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
       decoration: BoxDecoration(
         color: reward.color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: reward.rarity.glowColor.withValues(alpha: 0.7)),
+        border:
+            Border.all(color: reward.rarity.glowColor.withValues(alpha: 0.7)),
       ),
       padding: const EdgeInsets.all(12),
       child: Row(

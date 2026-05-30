@@ -98,6 +98,7 @@ class AdService with WidgetsBindingObserver {
     final remaining = until.difference(DateTime.now());
     return remaining.isNegative ? Duration.zero : remaining;
   }
+
   bool get isInForeground => _isInForeground;
   bool get adsAvailable => _isSupportedPlatform && !_adsSuppressed;
   bool get adsRemoved => PurchaseService.instance.isAdFree;
@@ -114,8 +115,8 @@ class AdService with WidgetsBindingObserver {
   String get nativeAdUnitId =>
       kDebugMode ? _debugNativeAdUnitId : _releaseNativeAdUnitId;
 
-    bool get _adsDisabled => PurchaseService.instance.isAdFree;
-    bool get _adsSuppressed => _adsDisabled || hasTemporaryAdBreak;
+  bool get _adsDisabled => PurchaseService.instance.isAdFree;
+  bool get _adsSuppressed => _adsDisabled || hasTemporaryAdBreak;
   bool get _supportsPlatform =>
       kPlayStoreBuild && !kIsWeb && Platform.isAndroid;
 
@@ -290,8 +291,7 @@ class AdService with WidgetsBindingObserver {
     await RewardedInterstitialAd.load(
       adUnitId: rewardedInterstitialAdUnitId,
       request: const AdRequest(),
-      rewardedInterstitialAdLoadCallback:
-          RewardedInterstitialAdLoadCallback(
+      rewardedInterstitialAdLoadCallback: RewardedInterstitialAdLoadCallback(
         onAdLoaded: (ad) {
           ad.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
@@ -377,7 +377,8 @@ class AdService with WidgetsBindingObserver {
     if (!_isSupportedPlatform || _adsSuppressed) return;
     if (!isInForeground) return;
     final last = _lastInterstitialShownAt;
-    if (last != null && DateTime.now().difference(last) < _fullScreenAdCooldown) {
+    if (last != null &&
+        DateTime.now().difference(last) < _fullScreenAdCooldown) {
       return;
     }
     if (!_adFrequencyGate.shouldShowAd()) return;
@@ -435,7 +436,8 @@ class AdService with WidgetsBindingObserver {
 
   Future<void> _grantTemporaryAdBreak(Duration duration) async {
     final until = DateTime.now().add(duration);
-    if (_temporaryAdBreakUntil != null && _temporaryAdBreakUntil!.isAfter(until)) {
+    if (_temporaryAdBreakUntil != null &&
+        _temporaryAdBreakUntil!.isAfter(until)) {
       return;
     }
     _temporaryAdBreakUntil = until;
@@ -570,7 +572,8 @@ class AdService with WidgetsBindingObserver {
 
   /// Shows a rewarded ad and runs a custom reward action when the user
   /// earns the reward. Returns true when reward was granted.
-  Future<bool> showRewardedWithCustomReward(Future<void> Function() onRewardEarned) async {
+  Future<bool> showRewardedWithCustomReward(
+      Future<void> Function() onRewardEarned) async {
     return _showRewardedAdWithRewardAction(onRewardEarned);
   }
 

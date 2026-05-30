@@ -230,97 +230,97 @@ class _CastDialogState extends State<CastDialog> {
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
         return AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.cast_connected, color: cs.tertiary),
-            const SizedBox(width: 8),
-            // overflow-fix: dynamic device names can overflow dialog title row.
-            Expanded(
-              child: Text(
-                'Casting to ${device.name}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+          title: Row(
+            children: [
+              Icon(Icons.cast_connected, color: cs.tertiary),
+              const SizedBox(width: 8),
+              // overflow-fix: dynamic device names can overflow dialog title row.
+              Expanded(
+                child: Text(
+                  'Casting to ${device.name}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(widget.title),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.pause_circle, size: 40),
-                  onPressed: () async {
-                    try {
-                      await _control.pause(device);
-                    } catch (e) {
-                      if (ctx.mounted) {
-                        Snack.show(ctx, 'Pause failed: $e',
-                            level: SnackLevel.error);
-                      }
-                    }
-                  },
-                ),
-                const SizedBox(width: 16),
-                IconButton(
-                  icon: const Icon(Icons.play_circle, size: 40),
-                  onPressed: () async {
-                    try {
-                      await _control.play(device);
-                    } catch (e) {
-                      if (ctx.mounted) {
-                        Snack.show(ctx, 'Play failed: $e',
-                            level: SnackLevel.error);
-                      }
-                    }
-                  },
-                ),
-                const SizedBox(width: 16),
-                IconButton(
-                  icon: const Icon(Icons.stop_circle, size: 40),
-                  onPressed: () async {
-                    try {
-                      await _control.stop(device);
-                      await _server.stop();
-                      if (_tempServedPath != null) {
-                        try {
-                          final f = File(_tempServedPath!);
-                          if (await f.exists()) await f.delete();
-                        } catch (_) {}
-                        _tempServedPath = null;
-                      }
-                    } catch (_) {}
-                    if (ctx.mounted) Navigator.pop(ctx);
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              try {
-                await _control.stop(device);
-                await _server.stop();
-                if (_tempServedPath != null) {
-                  try {
-                    final f = File(_tempServedPath!);
-                    if (await f.exists()) await f.delete();
-                  } catch (_) {}
-                  _tempServedPath = null;
-                }
-              } catch (_) {}
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text('Disconnect'),
+            ],
           ),
-        ],
-      );
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(widget.title),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.pause_circle, size: 40),
+                    onPressed: () async {
+                      try {
+                        await _control.pause(device);
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          Snack.show(ctx, 'Pause failed: $e',
+                              level: SnackLevel.error);
+                        }
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 16),
+                  IconButton(
+                    icon: const Icon(Icons.play_circle, size: 40),
+                    onPressed: () async {
+                      try {
+                        await _control.play(device);
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          Snack.show(ctx, 'Play failed: $e',
+                              level: SnackLevel.error);
+                        }
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 16),
+                  IconButton(
+                    icon: const Icon(Icons.stop_circle, size: 40),
+                    onPressed: () async {
+                      try {
+                        await _control.stop(device);
+                        await _server.stop();
+                        if (_tempServedPath != null) {
+                          try {
+                            final f = File(_tempServedPath!);
+                            if (await f.exists()) await f.delete();
+                          } catch (_) {}
+                          _tempServedPath = null;
+                        }
+                      } catch (_) {}
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                try {
+                  await _control.stop(device);
+                  await _server.stop();
+                  if (_tempServedPath != null) {
+                    try {
+                      final f = File(_tempServedPath!);
+                      if (await f.exists()) await f.delete();
+                    } catch (_) {}
+                    _tempServedPath = null;
+                  }
+                } catch (_) {}
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: const Text('Disconnect'),
+            ),
+          ],
+        );
       },
     );
   }

@@ -92,126 +92,127 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return PopScope(
       canPop: true,
       child: Scaffold(
-      appBar: AppBar(
-        title: const Text('History'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_sweep_rounded),
-            tooltip: 'Clear all history',
-            onPressed: _items.isEmpty
-                ? null
-                : () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: const Text('Clear history?'),
-                        // overflow-fix: make dialog content scroll-safe on very small screens.
-                        content: const SingleChildScrollView(
-                          child: Text('All browsing history will be deleted.'),
+        appBar: AppBar(
+          title: const Text('History'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.delete_sweep_rounded),
+              tooltip: 'Clear all history',
+              onPressed: _items.isEmpty
+                  ? null
+                  : () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: const Text('Clear history?'),
+                          // overflow-fix: make dialog content scroll-safe on very small screens.
+                          content: const SingleChildScrollView(
+                            child:
+                                Text('All browsing history will be deleted.'),
+                          ),
+                          actions: [
+                            TextButton(
+                                onPressed: () => Navigator.pop(_, false),
+                                child: const Text('Cancel')),
+                            FilledButton(
+                                onPressed: () => Navigator.pop(_, true),
+                                child: const Text('Clear')),
+                          ],
                         ),
-                        actions: [
-                          TextButton(
-                              onPressed: () => Navigator.pop(_, false),
-                              child: const Text('Cancel')),
-                          FilledButton(
-                              onPressed: () => Navigator.pop(_, true),
-                              child: const Text('Clear')),
-                        ],
-                      ),
-                    );
-                    if (confirm == true) {
-                      await widget.repo.clearHistory();
-                      _refresh();
-                    }
-                  },
-          ),
-          PopupMenuButton<String>(
-            onSelected: _handleClearAction,
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'hour', child: Text('Last hour')),
-              PopupMenuItem(value: 'day', child: Text('Last 24 hours')),
-              PopupMenuItem(value: 'week', child: Text('Last 7 days')),
-              PopupMenuItem(value: 'all', child: Text('All time')),
-            ],
-            icon: const Icon(Icons.more_vert),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // -- Search --
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TextField(
-              controller: _historySearchController,
-              decoration: InputDecoration(
-                hintText: 'Search history…',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _search.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _historySearchController.clear();
-                          setState(() => _search = '');
-                          _items.clear();
-                          _hasMore = true;
-                          _loadMore();
-                        },
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                      )
-                    : null,
-                isDense: true,
-                filled: true,
-                fillColor: cs.surfaceContainerHighest,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              onChanged: _onSearchChanged,
-            ),
-          ),
-
-          // -- List --
-          Expanded(
-            child: _items.isEmpty && !_loading
-                ? EmptyState(
-                    icon: Icons.history,
-                    title: 'No history',
-                    subtitle: 'Your browsing history will appear here',
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.only(bottom: 24),
-                    itemCount: grouped.length + (_hasMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index >= grouped.length) {
-                        return const Center(
-                            child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: CircularProgressIndicator(),
-                        ));
-                      }
-                      final entry = grouped[index];
-                      if (entry is String) {
-                        return _DateHeader(label: entry);
-                      }
-                      final item = entry as Map<String, dynamic>;
-                      return _HistoryTile(
-                        item: item,
-                        onTap: () {
-                          widget.onNavigate(item['url'] as String);
-                          Navigator.pop(context);
-                        },
-                        onDismissed: () =>
-                            widget.repo.deleteHistoryItem(item['id'] as int),
                       );
+                      if (confirm == true) {
+                        await widget.repo.clearHistory();
+                        _refresh();
+                      }
                     },
+            ),
+            PopupMenuButton<String>(
+              onSelected: _handleClearAction,
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'hour', child: Text('Last hour')),
+                PopupMenuItem(value: 'day', child: Text('Last 24 hours')),
+                PopupMenuItem(value: 'week', child: Text('Last 7 days')),
+                PopupMenuItem(value: 'all', child: Text('All time')),
+              ],
+              icon: const Icon(Icons.more_vert),
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // -- Search --
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: TextField(
+                controller: _historySearchController,
+                decoration: InputDecoration(
+                  hintText: 'Search history…',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  suffixIcon: _search.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            _historySearchController.clear();
+                            setState(() => _search = '');
+                            _items.clear();
+                            _hasMore = true;
+                            _loadMore();
+                          },
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        )
+                      : null,
+                  isDense: true,
+                  filled: true,
+                  fillColor: cs.surfaceContainerHighest,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
                   ),
-          ),
-        ],
-      ),
+                ),
+                onChanged: _onSearchChanged,
+              ),
+            ),
+
+            // -- List --
+            Expanded(
+              child: _items.isEmpty && !_loading
+                  ? EmptyState(
+                      icon: Icons.history,
+                      title: 'No history',
+                      subtitle: 'Your browsing history will appear here',
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.only(bottom: 24),
+                      itemCount: grouped.length + (_hasMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index >= grouped.length) {
+                          return const Center(
+                              child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: CircularProgressIndicator(),
+                          ));
+                        }
+                        final entry = grouped[index];
+                        if (entry is String) {
+                          return _DateHeader(label: entry);
+                        }
+                        final item = entry as Map<String, dynamic>;
+                        return _HistoryTile(
+                          item: item,
+                          onTap: () {
+                            widget.onNavigate(item['url'] as String);
+                            Navigator.pop(context);
+                          },
+                          onDismissed: () =>
+                              widget.repo.deleteHistoryItem(item['id'] as int),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

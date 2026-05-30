@@ -788,15 +788,17 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                       horizontalPad,
                       bottomPad,
                     ),
-                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
                       maxCrossAxisExtent: 430,
                       mainAxisExtent: 182,
                       mainAxisSpacing: 10,
                       crossAxisSpacing: 10,
                     ),
                     itemCount: torrents.length,
-                    itemBuilder: (context, index) =>
-                        _buildTorrentCard(context, torrents[index], isGridCard: true),
+                    itemBuilder: (context, index) => _buildTorrentCard(
+                        context, torrents[index],
+                        isGridCard: true),
                   );
                 }
 
@@ -914,9 +916,8 @@ class _TorrentsScreenState extends State<TorrentsScreen>
   }
 
   Widget _buildEmptyState() {
-    final hasFolder = SettingsService.instance.downloadDestination
-        .trim()
-        .isNotEmpty;
+    final hasFolder =
+        SettingsService.instance.downloadDestination.trim().isNotEmpty;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -934,22 +935,22 @@ class _TorrentsScreenState extends State<TorrentsScreen>
             Text(
               hasFolder ? 'No torrents yet' : 'Set Download Folder First',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               hasFolder
                   ? (Platform.isAndroid
-                        ? 'Tap + to add or create torrents'
-                        : Platform.isIOS
-                        ? 'Tap + to add or create torrents'
-                        : 'Use + in the top bar to add or create torrents\nYou can also drag and drop files')
+                      ? 'Tap + to add or create torrents'
+                      : Platform.isIOS
+                          ? 'Tap + to add or create torrents'
+                          : 'Use + in the top bar to add or create torrents\nYou can also drag and drop files')
                   : 'Go to Settings > Download Location and choose a folder on external storage to prevent file corruption from inaccessible app storage.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
             const SizedBox(height: 24),
             if (hasFolder)
@@ -1011,8 +1012,8 @@ class _TorrentsScreenState extends State<TorrentsScreen>
           Text(
             'No results for "$_searchQuery"',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
           ),
           const SizedBox(height: 8),
           TextButton(
@@ -1039,9 +1040,8 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     final totalSize = torrent.totalSize ?? 0;
     final progress = ts.progress.clamp(0.0, 1.0);
     final progressPercent = (progress * 100).toStringAsFixed(1);
-    final remainingBytes = totalSize > 0
-        ? (totalSize - ts.downloaded).clamp(0, totalSize)
-        : 0;
+    final remainingBytes =
+        totalSize > 0 ? (totalSize - ts.downloaded).clamp(0, totalSize) : 0;
     final etaText = ts.downloadSpeed > 512 && remainingBytes > 0
         ? _fmtEta(remainingBytes / ts.downloadSpeed)
         : null;
@@ -1164,74 +1164,74 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_vert, size: 20),
                         splashRadius: 18,
-                tooltip: 'More',
-                onSelected: (v) {
-                  switch (v) {
-                    case 'toggle':
-                      _toggleTorrent(ts);
-                      break;
-                    case 'folder':
-                      _openTorrentFolder(torrent);
-                      break;
-                    case 'copy':
-                      copyMagnetLink();
-                      break;
-                    case 'redownload':
-                      _redownloadTorrent(ts);
-                      break;
-                    case 'delete':
-                      _deleteTorrent(ts);
-                      break;
-                  }
-                },
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'toggle',
-                    child: ListTile(
-                      dense: true,
-                      leading: Icon(
-                        ts.isActive
-                            ? Icons.pause_circle_outline
-                            : Icons.play_circle_outline,
+                        tooltip: 'More',
+                        onSelected: (v) {
+                          switch (v) {
+                            case 'toggle':
+                              _toggleTorrent(ts);
+                              break;
+                            case 'folder':
+                              _openTorrentFolder(torrent);
+                              break;
+                            case 'copy':
+                              copyMagnetLink();
+                              break;
+                            case 'redownload':
+                              _redownloadTorrent(ts);
+                              break;
+                            case 'delete':
+                              _deleteTorrent(ts);
+                              break;
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            value: 'toggle',
+                            child: ListTile(
+                              dense: true,
+                              leading: Icon(
+                                ts.isActive
+                                    ? Icons.pause_circle_outline
+                                    : Icons.play_circle_outline,
+                              ),
+                              title: Text(ts.isActive ? 'Pause' : 'Resume'),
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'folder',
+                            child: ListTile(
+                              dense: true,
+                              leading: Icon(Icons.folder_open),
+                              title: Text('Open folder'),
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'copy',
+                            child: ListTile(
+                              dense: true,
+                              leading: Icon(Icons.link),
+                              title: Text('Copy magnet link'),
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'redownload',
+                            child: ListTile(
+                              dense: true,
+                              leading: Icon(Icons.replay),
+                              title: Text('Redownload from scratch'),
+                            ),
+                          ),
+                          const PopupMenuDivider(),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: ListTile(
+                              dense: true,
+                              leading: Icon(Icons.delete_outline),
+                              title: Text('Remove'),
+                            ),
+                          ),
+                        ],
                       ),
-                      title: Text(ts.isActive ? 'Pause' : 'Resume'),
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'folder',
-                    child: ListTile(
-                      dense: true,
-                      leading: Icon(Icons.folder_open),
-                      title: Text('Open folder'),
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'copy',
-                    child: ListTile(
-                      dense: true,
-                      leading: Icon(Icons.link),
-                      title: Text('Copy magnet link'),
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'redownload',
-                    child: ListTile(
-                      dense: true,
-                      leading: Icon(Icons.replay),
-                      title: Text('Redownload from scratch'),
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: ListTile(
-                      dense: true,
-                      leading: Icon(Icons.delete_outline),
-                      title: Text('Remove'),
-                    ),
-                  ),
-                ],
-              ),
                     ],
                   ),
                   SizedBox(height: denseDesktop ? 7 : 10),
@@ -1295,11 +1295,15 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.arrow_downward, size: denseDesktop ? 11 : 12, color: cs.primary),
+                            Icon(Icons.arrow_downward,
+                                size: denseDesktop ? 11 : 12,
+                                color: cs.primary),
                             const SizedBox(width: 2),
                             Text(
                               _fmtSpeed(ts.downloadSpeed),
-                              style: TextStyle(fontSize: denseDesktop ? 10.5 : 11, color: cs.primary),
+                              style: TextStyle(
+                                  fontSize: denseDesktop ? 10.5 : 11,
+                                  color: cs.primary),
                             ),
                           ],
                         ),
@@ -1307,11 +1311,15 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.arrow_upward, size: denseDesktop ? 11 : 12, color: cs.tertiary),
+                            Icon(Icons.arrow_upward,
+                                size: denseDesktop ? 11 : 12,
+                                color: cs.tertiary),
                             const SizedBox(width: 2),
                             Text(
                               _fmtSpeed(ts.uploadSpeed),
-                              style: TextStyle(fontSize: denseDesktop ? 10.5 : 11, color: cs.tertiary),
+                              style: TextStyle(
+                                  fontSize: denseDesktop ? 10.5 : 11,
+                                  color: cs.tertiary),
                             ),
                           ],
                         ),
@@ -1327,7 +1335,9 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.people_outline, size: denseDesktop ? 11 : 12, color: cs.onSurfaceVariant),
+                            Icon(Icons.people_outline,
+                                size: denseDesktop ? 11 : 12,
+                                color: cs.onSurfaceVariant),
                             const SizedBox(width: 2),
                             Text(
                               '${ts.peers}',

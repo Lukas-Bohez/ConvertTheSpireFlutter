@@ -53,8 +53,8 @@ class ChatMessage {
       replyToMessageId: map['reply_to'] as String?,
       reactions: map['reactions'] != null
           ? (safeJsonDecode<Map<String, dynamic>>(map['reactions'] as String) ??
-          const <String, dynamic>{})
-          .map((k, v) => MapEntry(k, v as int))
+                  const <String, dynamic>{})
+              .map((k, v) => MapEntry(k, v as int))
           : {},
     );
   }

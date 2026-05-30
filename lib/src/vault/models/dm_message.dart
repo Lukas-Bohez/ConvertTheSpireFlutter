@@ -34,13 +34,13 @@ class DmMessage {
   }
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'conversation_id': conversationId,
-    'sender_id': senderId,
-    'content': content,
-    'timestamp': timestamp.millisecondsSinceEpoch,
-    'is_read': isRead ? 1 : 0,
-  };
+        'id': id,
+        'conversation_id': conversationId,
+        'sender_id': senderId,
+        'content': content,
+        'timestamp': timestamp.millisecondsSinceEpoch,
+        'is_read': isRead ? 1 : 0,
+      };
 
   factory DmMessage.fromMap(Map<String, dynamic> m) {
     return DmMessage(

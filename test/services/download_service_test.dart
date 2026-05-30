@@ -13,7 +13,8 @@ void main() {
       );
     });
 
-    test('falls back to the source title when the preferred title is blank', () {
+    test('falls back to the source title when the preferred title is blank',
+        () {
       expect(
         DownloadService.resolveDownloadTitle(
           '   ',
@@ -42,7 +43,8 @@ void main() {
       );
     });
 
-    test('falls back to the source artist when the preferred artist is blank', () {
+    test('falls back to the source artist when the preferred artist is blank',
+        () {
       expect(
         DownloadService.resolveDownloadArtist(
           '   ',

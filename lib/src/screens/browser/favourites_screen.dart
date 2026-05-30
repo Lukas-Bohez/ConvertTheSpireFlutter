@@ -68,90 +68,90 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
     return PopScope(
       canPop: true,
       child: Scaffold(
-      appBar: AppBar(
-        title: const Text('Favourites'),
-        actions: [
-          IconButton(
-            icon: Icon(_gridView ? Icons.list : Icons.grid_view),
-            onPressed: () => setState(() => _gridView = !_gridView),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // -- Search bar --
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search favourites',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                isDense: true,
-                filled: true,
-                fillColor: cs.surfaceContainerHighest,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+        appBar: AppBar(
+          title: const Text('Favourites'),
+          actions: [
+            IconButton(
+              icon: Icon(_gridView ? Icons.list : Icons.grid_view),
+              onPressed: () => setState(() => _gridView = !_gridView),
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // -- Search bar --
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search favourites',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  isDense: true,
+                  filled: true,
+                  fillColor: cs.surfaceContainerHighest,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onChanged: (v) => setState(() => _search = v),
+              ),
+            ),
+
+            // -- Folder chips --
+            if (_folders.length > 1)
+              SizedBox(
+                height: 42,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: FilterChip(
+                        label: const Text('All'),
+                        selected: _activeFolder == null,
+                        onSelected: (_) {
+                          setState(() => _activeFolder = null);
+                          _load();
+                        },
+                      ),
+                    ),
+                    ..._folders.map((f) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: FilterChip(
+                            label: Text(f),
+                            selected: _activeFolder == f,
+                            onSelected: (_) {
+                              setState(() => _activeFolder =
+                                  _activeFolder == f ? null : f);
+                              _load();
+                            },
+                          ),
+                        )),
+                  ],
                 ),
               ),
-              onChanged: (v) => setState(() => _search = v),
-            ),
-          ),
 
-          // -- Folder chips --
-          if (_folders.length > 1)
-            SizedBox(
-              height: 42,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: FilterChip(
-                      label: const Text('All'),
-                      selected: _activeFolder == null,
-                      onSelected: (_) {
-                        setState(() => _activeFolder = null);
-                        _load();
-                      },
-                    ),
-                  ),
-                  ..._folders.map((f) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: FilterChip(
-                          label: Text(f),
-                          selected: _activeFolder == f,
-                          onSelected: (_) {
-                            setState(() =>
-                                _activeFolder = _activeFolder == f ? null : f);
-                            _load();
-                          },
-                        ),
-                      )),
-                ],
-              ),
+            // -- List / Grid --
+            Expanded(
+              child: items.isEmpty
+                  ? EmptyState(
+                      icon: Icons.star_border,
+                      title: 'No favourites yet',
+                      subtitle:
+                          'Add pages to your favourites using the star icon',
+                    )
+                  : _gridView
+                      ? _buildGrid(items)
+                      : _buildList(items),
             ),
-
-          // -- List / Grid --
-          Expanded(
-            child: items.isEmpty
-                ? EmptyState(
-                    icon: Icons.star_border,
-                    title: 'No favourites yet',
-                    subtitle:
-                        'Add pages to your favourites using the star icon',
-                  )
-                : _gridView
-                    ? _buildGrid(items)
-                    : _buildList(items),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddDialog(),
-        child: const Icon(Icons.add),
-      ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _showAddDialog(),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
@@ -287,7 +287,8 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
               const SizedBox(height: 8),
               TextField(
                 controller: titleC,
-                decoration: const InputDecoration(labelText: 'Title (optional)'),
+                decoration:
+                    const InputDecoration(labelText: 'Title (optional)'),
               ),
             ],
           ),

@@ -64,7 +64,8 @@ class TorrentCreatorService {
     for (final directoryPath in directoryPaths) {
       final root = Directory(directoryPath);
       if (!await root.exists()) continue;
-      await for (final entity in root.list(recursive: true, followLinks: false)) {
+      await for (final entity
+          in root.list(recursive: true, followLinks: false)) {
         if (entity is! File) continue;
         final stat = await entity.stat();
         entries.add({
@@ -135,7 +136,8 @@ class TorrentCreatorService {
           receivePort.close();
         }
         if (type == 'error') {
-          completer.completeError(StateError((message['error'] as String?) ?? 'Unknown error'));
+          completer.completeError(
+              StateError((message['error'] as String?) ?? 'Unknown error'));
           receivePort.close();
         }
       }
@@ -152,7 +154,8 @@ class TorrentCreatorService {
     });
 
     final result = await completer.future;
-    final bytes = (result['bytes'] as TransferableTypedData).materialize().asUint8List();
+    final bytes =
+        (result['bytes'] as TransferableTypedData).materialize().asUint8List();
     final pieceCount = result['pieceCount'] as int;
 
     final outputPath = p.join(
@@ -188,7 +191,8 @@ Future<void> _createTorrentIsolateEntry(Map<String, Object> args) async {
     final isPrivate = args['isPrivate']! as bool;
     final comment = args['comment']! as String;
 
-    final totalBytes = entries.fold<int>(0, (sum, e) => sum + (e['length'] as int));
+    final totalBytes =
+        entries.fold<int>(0, (sum, e) => sum + (e['length'] as int));
     var processed = 0;
 
     final pieceHashes = BytesBuilder();
@@ -259,10 +263,8 @@ Future<void> _createTorrentIsolateEntry(Map<String, Object> args) async {
       info['private'] = 1;
     }
 
-    final cleanedTrackers = trackers
-        .map((t) => t.trim())
-        .where((t) => t.isNotEmpty)
-        .toList();
+    final cleanedTrackers =
+        trackers.map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
 
     final metadict = <String, Object>{
       'info': info,

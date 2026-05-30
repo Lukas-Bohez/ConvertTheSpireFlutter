@@ -4,7 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('Onboarding advances with right arrow and goes back with left arrow',
+  testWidgets(
+      'Onboarding advances with right arrow and goes back with left arrow',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(

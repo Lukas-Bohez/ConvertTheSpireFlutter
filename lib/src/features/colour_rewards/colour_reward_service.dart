@@ -51,13 +51,15 @@ class ColourRewardService extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<ColourReward> get ownedRewards => kAllColours.where((c) => _owned.contains(c.id)).toList();
+  List<ColourReward> get ownedRewards =>
+      kAllColours.where((c) => _owned.contains(c.id)).toList();
 
   bool isOwned(String id) => _owned.contains(id);
 
   String get equippedId => _equipped;
 
-  ColourReward get equipped => kAllColours.firstWhere((c) => c.id == _equipped, orElse: () => kAllColours.first);
+  ColourReward get equipped => kAllColours.firstWhere((c) => c.id == _equipped,
+      orElse: () => kAllColours.first);
 
   Future<void> unlockColour(String id) async {
     if (_owned.add(id)) {

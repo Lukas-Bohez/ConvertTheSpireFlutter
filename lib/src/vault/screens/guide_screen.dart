@@ -87,16 +87,17 @@ class _GuideScreenState extends State<GuideScreen>
             icon: Icons.gavel_outlined,
             color: cs.error,
             title: 'Legal Use Only',
-            body: 'Vault The Spire is designed exclusively for legal downloading. '
+            body:
+                'Vault The Spire is designed exclusively for legal downloading. '
                 'This includes:\n\n'
                 '- Open-source software (Linux distros, development tools, games released freely)\n'
                 '- Creative Commons licensed music, video, and books\n'
                 '- Public domain content (old films, historical recordings, classic literature)\n'
                 '- Files you own and have backed up yourself\n'
                 '- Content explicitly shared by creators for free distribution\n\n'
-                    'Downloading or sharing copyrighted material without permission '
-                    'is illegal in most countries. The developers of this app do not '
-                    'condone or support unauthorized copyright violations.',
+                'Downloading or sharing copyrighted material without permission '
+                'is illegal in most countries. The developers of this app do not '
+                'condone or support unauthorized copyright violations.',
           ),
           const SizedBox(height: 10),
           _Section(
@@ -122,7 +123,8 @@ class _GuideScreenState extends State<GuideScreen>
             icon: Icons.bar_chart_outlined,
             color: cs.tertiary,
             title: 'Understanding Download Progress',
-            body: 'Downloading: Pieces are being received from peers across the '
+            body:
+                'Downloading: Pieces are being received from peers across the '
                 'internet. Larger torrents (10 GB+) can take hours on a typical '
                 'home connection.\n\n'
                 'Stalled / Searching for peers: The app is looking for other '

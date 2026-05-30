@@ -43,8 +43,7 @@ class _StatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(20),
@@ -55,9 +54,7 @@ class _StatPill extends StatelessWidget {
           const SizedBox(width: 4),
           Text(value,
               style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: color)),
+                  fontSize: 11, fontWeight: FontWeight.w600, color: color)),
         ]),
       );
 }
@@ -69,8 +66,7 @@ class _InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Column(children: children),
         ),
       );
@@ -96,9 +92,7 @@ class _InfoRow extends StatelessWidget {
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurfaceVariant)),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
             ),
             Expanded(
               child: SelectableText(
@@ -120,31 +114,27 @@ class TorrentDetailScreen extends StatefulWidget {
   const TorrentDetailScreen({super.key, required this.torrent});
 
   @override
-  State<TorrentDetailScreen> createState() =>
-      _TorrentDetailScreenState();
+  State<TorrentDetailScreen> createState() => _TorrentDetailScreenState();
 }
 
 class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<TorrentViewState?>(
-      stream: TorrentService.instance
-          .torrentStateStream(widget.torrent.id),
+      stream: TorrentService.instance.torrentStateStream(widget.torrent.id),
       builder: (context, snapshot) {
         final view = snapshot.data;
         final torrent = view?.model ?? widget.torrent;
-        final statusLabel =
-            view?.statusLabel ?? (torrent.status ?? 'Unknown');
+        final statusLabel = view?.statusLabel ?? (torrent.status ?? 'Unknown');
         final retryCountdown =
-          TorrentService.instance.metadataRetryRemaining(torrent.id);
+            TorrentService.instance.metadataRetryRemaining(torrent.id);
         final lastAnnounce =
-          TorrentEngineService.instance.lastAnnounceAt(torrent.id);
+            TorrentEngineService.instance.lastAnnounceAt(torrent.id);
         final cs = Theme.of(context).colorScheme;
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(torrent.name,
-                overflow: TextOverflow.ellipsis),
+            title: Text(torrent.name, overflow: TextOverflow.ellipsis),
             actions: [
               if (torrent.magnetLink != null)
                 IconButton(
@@ -155,15 +145,14 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                         ClipboardData(text: torrent.magnetLink!));
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Magnet link copied')));
+                        const SnackBar(content: Text('Magnet link copied')));
                   },
                 ),
             ],
           ),
           body: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(16, 16, 16,
-                Platform.isAndroid ? 32 : 16),
+            padding:
+                EdgeInsets.fromLTRB(16, 16, 16, Platform.isAndroid ? 32 : 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -173,16 +162,14 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                     padding: const EdgeInsets.all(16),
                     child: Column(children: [
                       Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: cs.primaryContainer,
-                              borderRadius:
-                                  BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(statusLabel,
                                 style: TextStyle(
@@ -196,9 +183,7 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                       if (view?.isSeeding == true)
                         Text(
                           'Shared: ${_fmtBytes(view!.uploaded)}',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall,
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                     ]),
                   ),
@@ -249,9 +234,8 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                             .forceRefresh(torrent.id);
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  'Connection refresh triggered')));
+                            const SnackBar(
+                                content: Text('Connection refresh triggered')));
                       },
                     ),
                     OutlinedButton.icon(
@@ -297,10 +281,11 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                       },
                     ),
                     if ((torrent.status ?? '').toLowerCase().contains(
-                      'pending_metadata',
-                    ))
+                          'pending_metadata',
+                        ))
                       OutlinedButton.icon(
-                        icon: const Icon(Icons.replay_circle_filled_outlined, size: 16),
+                        icon: const Icon(Icons.replay_circle_filled_outlined,
+                            size: 16),
                         label: const Text('Retry metadata now'),
                         onPressed: () async {
                           await TorrentService.instance.retryMetadataNow(
@@ -324,19 +309,17 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                       onPressed: () => _confirmRedownload(torrent),
                     ),
                     OutlinedButton.icon(
-                      icon:
-                          const Icon(Icons.content_copy, size: 16),
+                      icon: const Icon(Icons.content_copy, size: 16),
                       label: const Text('Copy logs'),
                       onPressed: () async {
-                        final logs = TorrentEngineService.instance
-                            .getLogs(torrent.id);
+                        final logs =
+                            TorrentEngineService.instance.getLogs(torrent.id);
                         await Clipboard.setData(
                             ClipboardData(text: logs.join('\n')));
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content:
-                                  Text('Logs copied to clipboard')));
+                            const SnackBar(
+                                content: Text('Logs copied to clipboard')));
                       },
                     ),
                     OutlinedButton.icon(
@@ -355,8 +338,8 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                               content: Text('Verification complete.')));
                         } catch (e) {
                           if (!mounted) return;
-                          messenger.showSnackBar(SnackBar(
-                              content: Text('Verify failed: $e')));
+                          messenger.showSnackBar(
+                              SnackBar(content: Text('Verify failed: $e')));
                         }
                       },
                     ),
@@ -373,14 +356,12 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                         ? 'Magnet link'
                         : 'Torrent file',
                   ),
-                  _InfoRow('Total size',
-                      _fmtBytes(torrent.totalSize ?? 0)),
+                  _InfoRow('Total size', _fmtBytes(torrent.totalSize ?? 0)),
                   _InfoRow(
                     'Uploaded',
                     _fmtBytes(view?.uploaded ?? torrent.bytesUp),
                   ),
-                  if (torrent.totalPieces != null &&
-                      torrent.totalPieces! > 0)
+                  if (torrent.totalPieces != null && torrent.totalPieces! > 0)
                     _InfoRow(
                       'Pieces',
                       '${torrent.havePieces} / ${torrent.totalPieces}',
@@ -394,8 +375,7 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                     ),
                     _InfoRow('Leechers', '${view.leechers}'),
                     if (view.connectionMessage.isNotEmpty)
-                      _InfoRow(
-                          'Connection', view.connectionMessage),
+                      _InfoRow('Connection', view.connectionMessage),
                     _InfoRow('Last announce', _fmtLastEvent(lastAnnounce)),
                     _InfoRow(
                       'Metadata retry',
@@ -404,11 +384,9 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                           : _fmtDuration(retryCountdown),
                     ),
                   ],
-                  if (torrent.filePath != null &&
-                      torrent.filePath!.isNotEmpty)
+                  if (torrent.filePath != null && torrent.filePath!.isNotEmpty)
                     _InfoRow('Save path', torrent.filePath!),
-                  _InfoRow('Info hash', torrent.id,
-                      mono: true, small: true),
+                  _InfoRow('Info hash', torrent.id, mono: true, small: true),
                 ]),
               ],
             ),
@@ -442,11 +420,10 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
     );
     if (ok != true || !mounted) return;
     try {
-      await TorrentEngineService.instance
-          .forceRedownload(torrent.id);
+      await TorrentEngineService.instance.forceRedownload(torrent.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Redownload started')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Redownload started')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)

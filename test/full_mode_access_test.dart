@@ -15,9 +15,12 @@ void main() {
       await access.load();
       expect(access.isUnlocked, isTrue);
 
-      expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
-      expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
-      expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
+      expect(
+          await access.submitUnlockAttempt('full'), FullModeToggleState.none);
+      expect(
+          await access.submitUnlockAttempt('full'), FullModeToggleState.none);
+      expect(
+          await access.submitUnlockAttempt('full'), FullModeToggleState.none);
       expect(access.isUnlocked, isTrue);
     });
 
@@ -27,16 +30,23 @@ void main() {
       access.resetForTesting();
       await access.load();
 
-      expect(isYouTubeConversionEnabledInCurrentBuild, equals(!kPlayStoreBuild));
+      expect(
+          isYouTubeConversionEnabledInCurrentBuild, equals(!kPlayStoreBuild));
       expect(isTabVisibleInCurrentBuild(9), isFalse);
 
-      expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
-      expect(await access.submitUnlockAttempt('notfull'), FullModeToggleState.none);
-      expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
-      expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
-      expect(await access.submitUnlockAttempt('full'), FullModeToggleState.none);
+      expect(
+          await access.submitUnlockAttempt('full'), FullModeToggleState.none);
+      expect(await access.submitUnlockAttempt('notfull'),
+          FullModeToggleState.none);
+      expect(
+          await access.submitUnlockAttempt('full'), FullModeToggleState.none);
+      expect(
+          await access.submitUnlockAttempt('full'), FullModeToggleState.none);
+      expect(
+          await access.submitUnlockAttempt('full'), FullModeToggleState.none);
       expect(access.isUnlocked, isTrue);
-      expect(isYouTubeConversionEnabledInCurrentBuild, equals(!kPlayStoreBuild));
+      expect(
+          isYouTubeConversionEnabledInCurrentBuild, equals(!kPlayStoreBuild));
       expect(isTabVisibleInCurrentBuild(9), isFalse);
     });
 
@@ -46,9 +56,9 @@ void main() {
       access.resetForTesting();
       await access.load();
 
-        const expectedTitle = 'Convert The Spire Reborn';
-        const expectedSubtitle = 'Convert The Spire Reborn — media & torrents';
-        const expectedFolderName = 'ConvertTheSpireReborn';
+      const expectedTitle = 'Convert The Spire Reborn';
+      const expectedSubtitle = 'Convert The Spire Reborn — media & torrents';
+      const expectedFolderName = 'ConvertTheSpireReborn';
 
       expect(getAppTitle(), expectedTitle);
       expect(getAppSubtitle(), expectedSubtitle);

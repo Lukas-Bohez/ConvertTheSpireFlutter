@@ -29,98 +29,97 @@ class HomeScreen extends StatelessWidget {
             ),
             child: ListView(
               children: [
-            const SizedBox(height: 8),
-            const Text(
-              'Vault The Spire',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 2),
-            const Text(
-              'What goes into the Vault, stays in the Vault.',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 18),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final crossAxisCount = constraints.maxWidth > 1200
-                    ? 4
-                    : constraints.maxWidth > 800
-                    ? 3
-                    : 2;
-                final childAspectRatio = constraints.maxWidth > 1200
-                    ? 1.55
-                    : 1.35;
-                return GridView.count(
-                  crossAxisCount: crossAxisCount,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: childAspectRatio,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _QuickActionCard(
-                      icon: Icons.chat_bubble_outline,
-                      title: 'Local AI Chat',
-                      subtitle: 'Chat with your local Ollama model',
-                      onTap: () => context.go('/ai_chat'),
-                    ),
-                    _QuickActionCard(
-                      icon: Icons.download_outlined,
-                      title: 'Add Torrent',
-                      subtitle: 'Share or download files',
-                      onTap: () => context.go('/torrents'),
-                    ),
-                    _QuickActionCard(
-                      icon: Icons.campaign_outlined,
-                      title: 'Browse Channels',
-                      subtitle: 'Join public or private channels',
-                      onTap: () => context.go('/browser'),
-                    ),
-                    _QuickActionCard(
-                      icon: Icons.settings_outlined,
-                      title: 'Settings',
-                      subtitle: 'Manage preferences',
-                      onTap: () => context.go('/about'),
-                    ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              elevation: 0,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: cs.tertiary,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'Identity ready',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        'Fingerprint: ${fingerprint.length > 16 ? fingerprint.substring(0, 16) : fingerprint}',
-                        style: const TextStyle(fontSize: 13),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 8),
+                const Text(
+                  'Vault The Spire',
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800),
                 ),
-              ),
-            ),
+                const SizedBox(height: 2),
+                const Text(
+                  'What goes into the Vault, stays in the Vault.',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 18),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final crossAxisCount = constraints.maxWidth > 1200
+                        ? 4
+                        : constraints.maxWidth > 800
+                            ? 3
+                            : 2;
+                    final childAspectRatio =
+                        constraints.maxWidth > 1200 ? 1.55 : 1.35;
+                    return GridView.count(
+                      crossAxisCount: crossAxisCount,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: childAspectRatio,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        _QuickActionCard(
+                          icon: Icons.chat_bubble_outline,
+                          title: 'Local AI Chat',
+                          subtitle: 'Chat with your local Ollama model',
+                          onTap: () => context.go('/ai_chat'),
+                        ),
+                        _QuickActionCard(
+                          icon: Icons.download_outlined,
+                          title: 'Add Torrent',
+                          subtitle: 'Share or download files',
+                          onTap: () => context.go('/torrents'),
+                        ),
+                        _QuickActionCard(
+                          icon: Icons.campaign_outlined,
+                          title: 'Browse Channels',
+                          subtitle: 'Join public or private channels',
+                          onTap: () => context.go('/browser'),
+                        ),
+                        _QuickActionCard(
+                          icon: Icons.settings_outlined,
+                          title: 'Settings',
+                          subtitle: 'Manage preferences',
+                          onTap: () => context.go('/about'),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: cs.tertiary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'Identity ready',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            'Fingerprint: ${fingerprint.length > 16 ? fingerprint.substring(0, 16) : fingerprint}',
+                            style: const TextStyle(fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -158,10 +157,13 @@ class _QuickActionCardState extends State<_QuickActionCard> {
       borderRadius: BorderRadius.circular(12),
       child: Ink(
         decoration: BoxDecoration(
-          color: _hovered ? cs.surfaceContainerHigh : cs.surfaceContainerHighest,
+          color:
+              _hovered ? cs.surfaceContainerHigh : cs.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: _hovered ? cs.primary.withValues(alpha: 0.35) : cs.outlineVariant.withValues(alpha: 0.2),
+            color: _hovered
+                ? cs.primary.withValues(alpha: 0.35)
+                : cs.outlineVariant.withValues(alpha: 0.2),
           ),
         ),
         child: AnimatedScale(
@@ -197,7 +199,7 @@ class _QuickActionCardState extends State<_QuickActionCard> {
             ),
           ),
         ),
-              ),
+      ),
     );
   }
 }

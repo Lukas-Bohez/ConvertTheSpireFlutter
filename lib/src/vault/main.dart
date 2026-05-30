@@ -4,7 +4,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart'
-  show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
+    show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -59,9 +59,10 @@ Future<void> _initializeMetadataCache() async {
       } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
         appCacheDir = await getApplicationSupportDirectory();
       }
-      
+
       if (appCacheDir != null) {
-        final metadataCacheDir = Directory('${appCacheDir.path}/torrent_metadata_cache');
+        final metadataCacheDir =
+            Directory('${appCacheDir.path}/torrent_metadata_cache');
         if (!await metadataCacheDir.exists()) {
           await metadataCacheDir.create(recursive: true);
         }
@@ -96,7 +97,8 @@ Future<void> main() async {
               'Flutter Error:\n\n'
               '${details.exceptionAsString()}\n\n'
               '${details.stack?.toString().split('\n').take(8).join('\n') ?? ''}',
-              style: TextStyle(color: errorScheme.onErrorContainer, fontSize: 16),
+              style:
+                  TextStyle(color: errorScheme.onErrorContainer, fontSize: 16),
             ),
           ),
         ),
@@ -129,7 +131,8 @@ Future<void> main() async {
       await ThemeService.instance.load();
       await SettingsService.instance.load();
 
-      if (!kIsWeb && Platform.isAndroid &&
+      if (!kIsWeb &&
+          Platform.isAndroid &&
           SettingsService.instance.downloadDestination.isEmpty) {
         try {
           final externalDir = await getExternalStorageDirectory();

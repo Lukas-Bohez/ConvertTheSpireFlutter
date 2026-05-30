@@ -156,11 +156,12 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                     width: double.infinity,
                     child: Text(
                       getAppTitle(),
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.3,
-                            color: cs.onSurface,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.3,
+                                color: cs.onSurface,
+                              ),
                       textAlign: TextAlign.center,
                     ),
                   ),

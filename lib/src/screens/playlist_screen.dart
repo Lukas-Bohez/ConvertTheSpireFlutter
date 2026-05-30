@@ -211,29 +211,29 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     return PopScope(
       canPop: true,
       child: Column(
-      children: [
-        // -- Top bar: URL + folder inputs --------------------------------
-        _buildInputSection(theme, cs),
-        if (_loading) _buildLoadingBar(),
-        if (_error != null) _buildErrorBar(),
-        // -- Main content ------------------------------------------------
-        if (_tracks != null) ...[
-          _buildTabBar(cs),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildOverviewTab(theme, cs),
-                _buildMatchedTab(theme),
-                _buildMissingTab(theme),
-                _buildExtrasTab(theme),
-              ],
+        children: [
+          // -- Top bar: URL + folder inputs --------------------------------
+          _buildInputSection(theme, cs),
+          if (_loading) _buildLoadingBar(),
+          if (_error != null) _buildErrorBar(),
+          // -- Main content ------------------------------------------------
+          if (_tracks != null) ...[
+            _buildTabBar(cs),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildOverviewTab(theme, cs),
+                  _buildMatchedTab(theme),
+                  _buildMissingTab(theme),
+                  _buildExtrasTab(theme),
+                ],
+              ),
             ),
-          ),
+          ],
         ],
-      ],
-    ),
-  );
+      ),
+    );
   }
 
   // --─ Input Section --------------------------------------------------------
@@ -413,122 +413,123 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         return false;
       },
       child: ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Playlist info card
-        if (_playlistInfo != null)
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.queue_music, size: 36),
-              title: Text(_playlistInfo!.title,
-                  style: theme.textTheme.titleMedium),
-              subtitle: Text(
-                '${_playlistInfo!.author}  •  ${_tracks!.length} tracks  •  '
-                '${_formatTotalDuration(_tracks!)}',
-              ),
-              trailing: PopupMenuButton<String>(
-                onSelected: (v) {
-                  if (v == 'm3u') _exportM3U();
-                  if (v == 'missing') _exportMissing();
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                      value: 'm3u', child: Text('Export as M3U')),
-                  if (_comparison != null && _comparison!.missing.isNotEmpty)
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Playlist info card
+          if (_playlistInfo != null)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.queue_music, size: 36),
+                title: Text(_playlistInfo!.title,
+                    style: theme.textTheme.titleMedium),
+                subtitle: Text(
+                  '${_playlistInfo!.author}  •  ${_tracks!.length} tracks  •  '
+                  '${_formatTotalDuration(_tracks!)}',
+                ),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (v) {
+                    if (v == 'm3u') _exportM3U();
+                    if (v == 'missing') _exportMissing();
+                  },
+                  itemBuilder: (_) => [
                     const PopupMenuItem(
-                        value: 'missing', child: Text('Export missing list')),
-                ],
-                icon: const Icon(Icons.more_vert),
+                        value: 'm3u', child: Text('Export as M3U')),
+                    if (_comparison != null && _comparison!.missing.isNotEmpty)
+                      const PopupMenuItem(
+                          value: 'missing', child: Text('Export missing list')),
+                  ],
+                  icon: const Icon(Icons.more_vert),
+                ),
               ),
             ),
-          ),
 
-        if (_playlistDiagnostics != null) ...[
-          const SizedBox(height: 12),
-          Card(
-            color: Colors.amber.withValues(alpha: 0.15),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, color: Colors.amber),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text(_playlistDiagnostics!)),
-                ],
-              ),
-            ),
-          ),
-        ],
-
-        const SizedBox(height: 16),
-
-        // Comparison summary
-        if (_comparison != null) ...[
-          _buildSummaryCards(theme, cs),
-          const SizedBox(height: 16),
-          // Completion bar
-          _buildCompletionBar(theme),
-          const SizedBox(height: 16),
-          // Uncertain matches warning
-          if (_comparison!.uncertainMatches().isNotEmpty)
+          if (_playlistDiagnostics != null) ...[
+            const SizedBox(height: 12),
             Card(
               color: Colors.amber.withValues(alpha: 0.15),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning_amber, color: Colors.amber),
+                    const Icon(Icons.info_outline, color: Colors.amber),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        '${_comparison!.uncertainMatches().length} tracks matched with '
-                        'low confidence - review them in the Matched tab.',
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => _tabController.animateTo(1),
-                      child: const Text('Review'),
-                    ),
+                    Expanded(child: Text(_playlistDiagnostics!)),
                   ],
                 ),
               ),
             ),
-          const SizedBox(height: 12),
-          // Quick actions
-          if (_comparison!.missing.isNotEmpty)
-            FilledButton.icon(
-              onPressed: () => widget.onDownloadMissing(
-                  _comparison!.missing, _selectedFormat),
-              icon: const Icon(Icons.download),
-              label: Text(
-                  'Download All ${_comparison!.missingCount} Missing Tracks'),
+          ],
+
+          const SizedBox(height: 16),
+
+          // Comparison summary
+          if (_comparison != null) ...[
+            _buildSummaryCards(theme, cs),
+            const SizedBox(height: 16),
+            // Completion bar
+            _buildCompletionBar(theme),
+            const SizedBox(height: 16),
+            // Uncertain matches warning
+            if (_comparison!.uncertainMatches().isNotEmpty)
+              Card(
+                color: Colors.amber.withValues(alpha: 0.15),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber, color: Colors.amber),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          '${_comparison!.uncertainMatches().length} tracks matched with '
+                          'low confidence - review them in the Matched tab.',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => _tabController.animateTo(1),
+                        child: const Text('Review'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(height: 12),
+            // Quick actions
+            if (_comparison!.missing.isNotEmpty)
+              FilledButton.icon(
+                onPressed: () => widget.onDownloadMissing(
+                    _comparison!.missing, _selectedFormat),
+                icon: const Icon(Icons.download),
+                label: Text(
+                    'Download All ${_comparison!.missingCount} Missing Tracks'),
+              ),
+          ] else ...[
+            // No comparison yet - show track list
+            const SizedBox(height: 8),
+            Text(
+                '${_tracks!.length} tracks loaded. Select a folder above to compare.',
+                style:
+                    theme.textTheme.bodyMedium?.copyWith(color: Colors.grey)),
+            const SizedBox(height: 12),
+            ...List.generate(
+              _tracks!.length,
+              (i) {
+                final t = _tracks![i];
+                return ListTile(
+                  dense: true,
+                  leading: Text('${i + 1}', style: theme.textTheme.bodySmall),
+                  title: Text(t.title,
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  subtitle: Text(t.artist),
+                  trailing: Text(_formatDuration(t.duration),
+                      style: theme.textTheme.bodySmall),
+                );
+              },
             ),
-        ] else ...[
-          // No comparison yet - show track list
-          const SizedBox(height: 8),
-          Text(
-              '${_tracks!.length} tracks loaded. Select a folder above to compare.',
-              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey)),
-          const SizedBox(height: 12),
-          ...List.generate(
-            _tracks!.length,
-            (i) {
-              final t = _tracks![i];
-              return ListTile(
-                dense: true,
-                leading: Text('${i + 1}', style: theme.textTheme.bodySmall),
-                title:
-                    Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text(t.artist),
-                trailing: Text(_formatDuration(t.duration),
-                    style: theme.textTheme.bodySmall),
-              );
-            },
-          ),
+          ],
         ],
-      ],
-    ),
+      ),
     );
   }
 
@@ -682,12 +683,12 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                     return false;
                   },
                   child: ListView.builder(
-                  itemCount: matches.length,
-                  itemBuilder: (context, i) {
-                    final m = matches[i];
-                    return _MatchedTile(match: m);
-                  },
-                ),
+                    itemCount: matches.length,
+                    itemBuilder: (context, i) {
+                      final m = matches[i];
+                      return _MatchedTile(match: m);
+                    },
+                  ),
                 ),
         ),
       ],
@@ -745,10 +746,10 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                   });
                 },
                 icon: const Icon(Icons.check_box, size: 18),
-                label: Text(_missingSelection.length ==
-                        _comparison!.missingCount
-                    ? 'Clear Selection'
-                    : 'Select All'),
+                label: Text(
+                    _missingSelection.length == _comparison!.missingCount
+                        ? 'Clear Selection'
+                        : 'Select All'),
               ),
               const SizedBox(width: 8),
               OutlinedButton.icon(
@@ -766,27 +767,27 @@ class _PlaylistScreenState extends State<PlaylistScreen>
               return false;
             },
             child: ListView.builder(
-            itemCount: _comparison!.missing.length,
-            itemBuilder: (context, i) {
-              final t = _comparison!.missing[i];
-              final selected = _missingSelection.contains(t);
-              return ListTile(
-                dense: true,
-                onLongPress: () {
-                  setState(() {
-                    _lastMissingSelectedIndex = i;
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text(
-                      'Range select started. Tap another item to select a range.',
-                    ),
-                    duration: Duration(seconds: 2),
-                  ));
-                },
-                leading: Checkbox(
-                  value: selected,
-                  onChanged: (value) {
+              itemCount: _comparison!.missing.length,
+              itemBuilder: (context, i) {
+                final t = _comparison!.missing[i];
+                final selected = _missingSelection.contains(t);
+                return ListTile(
+                  dense: true,
+                  onLongPress: () {
                     setState(() {
+                      _lastMissingSelectedIndex = i;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text(
+                        'Range select started. Tap another item to select a range.',
+                      ),
+                      duration: Duration(seconds: 2),
+                    ));
+                  },
+                  leading: Checkbox(
+                    value: selected,
+                    onChanged: (value) {
+                      setState(() {
                         if (value == null) return;
 
                         // Range selection (shift-click style): long-press to set a
@@ -818,8 +819,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                       });
                     },
                   ),
-                  title:
-                      Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  title: Text(t.title,
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle:
                       Text('${t.artist}  •  ${_formatDuration(t.duration)}'),
                   trailing: IconButton(
@@ -828,11 +829,11 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                     onPressed: () =>
                         widget.onDownloadMissing([t], _selectedFormat),
                   ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
-      ),
       ],
     );
   }

@@ -8,16 +8,23 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('creates and parses a small torrent', () async {
-    final tempRoot = await Directory.systemTemp.createTemp('torrent_creator_smoke_');
+    final tempRoot =
+        await Directory.systemTemp.createTemp('torrent_creator_smoke_');
     addTearDown(() async {
       await tempRoot.delete(recursive: true);
     });
 
-    final sourceDir = Directory('${tempRoot.path}${Platform.pathSeparator}source')..createSync();
-    File('${sourceDir.path}${Platform.pathSeparator}くうに.txt').writeAsStringSync('hello');
-    File('${sourceDir.path}${Platform.pathSeparator}みく.txt').writeAsStringSync('world!');
+    final sourceDir =
+        Directory('${tempRoot.path}${Platform.pathSeparator}source')
+          ..createSync();
+    File('${sourceDir.path}${Platform.pathSeparator}くうに.txt')
+        .writeAsStringSync('hello');
+    File('${sourceDir.path}${Platform.pathSeparator}みく.txt')
+        .writeAsStringSync('world!');
 
-    final outputDir = Directory('${tempRoot.path}${Platform.pathSeparator}output')..createSync();
+    final outputDir =
+        Directory('${tempRoot.path}${Platform.pathSeparator}output')
+          ..createSync();
 
     final entries = await TorrentCreatorService.instance.collectEntries(
       filePaths: const [],
@@ -40,7 +47,8 @@ void main() {
     expect(await File(result.torrentPath).exists(), isTrue);
     expect(metadata.name, '『くうになる』 _ feat. 初音ミク & 可不');
     expect(metadata.files.length, 2);
-    expect(metadata.trackers, contains('udp://tracker.opentrackr.org:1337/announce'));
+    expect(metadata.trackers,
+        contains('udp://tracker.opentrackr.org:1337/announce'));
     expect(metadata.pieceLength, 16);
     expect(metadata.pieceHashes, isNotEmpty);
   });

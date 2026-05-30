@@ -17,8 +17,8 @@ class PieceManager {
     this.pieceHashes = const [],
     required Directory appDirectory,
   }) : baseDir = Directory(
-         path.join(appDirectory.path, 'torrent_pieces', infoHash),
-       );
+          path.join(appDirectory.path, 'torrent_pieces', infoHash),
+        );
 
   Future<void> initialize() async {
     if (!await baseDir.exists()) {

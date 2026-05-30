@@ -44,7 +44,8 @@ class PlaylistService {
           if (cap != null && videosById.length >= cap) break;
         }
         final reachedCap = cap != null && videosById.length >= cap;
-        final reachedExpected = expectedCount > 0 && videosById.length >= expectedCount;
+        final reachedExpected =
+            expectedCount > 0 && videosById.length >= expectedCount;
         if (reachedCap || reachedExpected) break;
         if (videosById.length == before) break;
       }
@@ -362,7 +363,9 @@ class PlaylistService {
   static bool _titlesMatch(String playlistTitle, String localFilename) {
     final a = _aggressiveNorm(playlistTitle);
     final b = _aggressiveNorm(localFilename);
-    if (a.isNotEmpty && b.isNotEmpty && (a == b || a.contains(b) || b.contains(a))) {
+    if (a.isNotEmpty &&
+        b.isNotEmpty &&
+        (a == b || a.contains(b) || b.contains(a))) {
       return true;
     }
 
@@ -371,7 +374,10 @@ class PlaylistService {
       ..._titleSegments(localFilename),
     }.where((s) => s.length >= 4).toList();
     for (final sa in subtitles) {
-      if (a.contains(sa) || b.contains(sa) || sa.contains(a) || sa.contains(b)) {
+      if (a.contains(sa) ||
+          b.contains(sa) ||
+          sa.contains(a) ||
+          sa.contains(b)) {
         return true;
       }
     }
@@ -380,7 +386,8 @@ class PlaylistService {
     final wordsB = b.split(' ').where((w) => w.length >= 3).toSet();
     if (wordsA.isNotEmpty && wordsB.isNotEmpty) {
       final overlap = wordsA.intersection(wordsB).length;
-      final minLen = wordsA.length < wordsB.length ? wordsA.length : wordsB.length;
+      final minLen =
+          wordsA.length < wordsB.length ? wordsA.length : wordsB.length;
       if (minLen > 0 && overlap / minLen >= 0.6) return true;
     }
 

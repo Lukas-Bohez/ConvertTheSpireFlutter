@@ -47,7 +47,8 @@ class _WatchAdCardState extends State<WatchAdCard> {
   Future<void> _showAdAndReward() async {
     AdService.instance.registerInteraction();
     setState(() => _loading = true);
-    final granted = await AdService.instance.showRewardedWithCustomReward(() async {
+    final granted =
+        await AdService.instance.showRewardedWithCustomReward(() async {
       final rewards = await _rollBatch(10);
       await _showRewardSession(rewards);
     });
@@ -109,9 +110,11 @@ class _WatchAdCardState extends State<WatchAdCard> {
                     ),
                   ),
                   Expanded(
-                    child: ColourCollectionGrid(scrollController: scrollController),
+                    child: ColourCollectionGrid(
+                        scrollController: scrollController),
                   ),
-                  SizedBox(height: MediaQuery.of(sheetContext).padding.bottom + 8),
+                  SizedBox(
+                      height: MediaQuery.of(sheetContext).padding.bottom + 8),
                 ],
               ),
             );
@@ -157,7 +160,10 @@ class _WatchAdCardState extends State<WatchAdCard> {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+                color: Theme.of(context)
+                    .colorScheme
+                    .surface
+                    .withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.green.withValues(alpha: 0.45)),
               ),
@@ -186,12 +192,16 @@ class _WatchAdCardState extends State<WatchAdCard> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.80),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surface
+                        .withValues(alpha: 0.80),
                     borderRadius: BorderRadius.circular(11),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.auto_awesome, size: 22, color: Color(0xFFB8860B)),
+                      const Icon(Icons.auto_awesome,
+                          size: 22, color: Color(0xFFB8860B)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -211,7 +221,9 @@ class _WatchAdCardState extends State<WatchAdCard> {
                               'One-time purchase · No ads needed',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -223,7 +235,9 @@ class _WatchAdCardState extends State<WatchAdCard> {
                                   : 'See price in store',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -252,7 +266,9 @@ class _WatchAdCardState extends State<WatchAdCard> {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Icon(kIsGithubRelease ? Icons.auto_awesome : Icons.ondemand_video),
+                    : Icon(kIsGithubRelease
+                        ? Icons.auto_awesome
+                        : Icons.ondemand_video),
                 label: Text(kIsGithubRelease ? 'Spin for Colour' : 'Watch Ad'),
                 onPressed: _loading
                     ? null
@@ -265,6 +281,7 @@ class _WatchAdCardState extends State<WatchAdCard> {
     );
   }
 
-  Widget _oddsPill(String label, String pct, Color c) =>
-      Chip(backgroundColor: c.withValues(alpha: 0.12), label: Text('$label • $pct%'));
+  Widget _oddsPill(String label, String pct, Color c) => Chip(
+      backgroundColor: c.withValues(alpha: 0.12),
+      label: Text('$label • $pct%'));
 }

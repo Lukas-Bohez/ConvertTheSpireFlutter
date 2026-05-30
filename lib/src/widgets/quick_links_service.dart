@@ -68,91 +68,91 @@ class QuickLinksService {
   }
 
   static List<QuickLink> _allDefaults() => [
-    QuickLink(
-      name: 'Search',
-      icon: Icons.search,
-      route: 'search.tab',
-      description: 'Download from YouTube URL',
-    ),
-    QuickLink(
-      name: 'Multi-Search',
-      icon: Icons.travel_explore,
-      route: 'multisearch.tab',
-      description: 'Search YouTube & SoundCloud',
-    ),
-    QuickLink(
-      name: 'Browser',
-      icon: Icons.language,
-      route: 'browser.tab',
-      description: 'In-app web browser',
-    ),
-    QuickLink(
-      name: 'Playlists',
-      icon: Icons.playlist_play,
-      route: 'playlists.tab',
-      description: 'YouTube playlists & folders',
-    ),
-    QuickLink(
-      name: 'Bulk Import',
-      icon: Icons.upload_file,
-      route: 'bulkimport.tab',
-      description: 'Import track lists',
-    ),
-    QuickLink(
-      name: 'Stats',
-      icon: Icons.bar_chart,
-      route: 'stats.tab',
-      description: 'Download statistics',
-    ),
-    QuickLink(
-      name: 'Settings',
-      icon: Icons.settings,
-      route: 'settings.tab',
-      description: 'App configuration',
-    ),
-    QuickLink(
-      name: 'Support',
-      icon: Icons.volunteer_activism,
-      route: 'support.tab',
-      description: 'Support via donations',
-    ),
-    QuickLink(
-      name: 'Rate',
-      icon: Icons.star_rounded,
-      route: 'rate.app',
-      description: 'Leave a review',
-    ),
-    QuickLink(
-      name: 'Convert',
-      icon: Icons.transform,
-      route: 'convert.tab',
-      description: 'Convert audio/video files',
-    ),
-    QuickLink(
-      name: 'Logs',
-      icon: Icons.list_alt,
-      route: 'logs.tab',
-      description: 'Activity log viewer',
-    ),
-    QuickLink(
-      name: 'Guide',
-      icon: Icons.menu_book,
-      route: 'guide.tab',
-      description: 'Help & documentation',
-    ),
-    QuickLink(
-      name: 'Player',
-      icon: Icons.music_note,
-      route: 'player.tab',
-      description: 'Media player & library',
-    ),
-    QuickLink(
-      name: 'Torrents',
-      icon: Icons.download,
-      route: 'torrents.tab',
-      description: 'Vault torrent manager',
-    ),
-  ];
+        QuickLink(
+          name: 'Search',
+          icon: Icons.search,
+          route: 'search.tab',
+          description: 'Download from YouTube URL',
+        ),
+        QuickLink(
+          name: 'Multi-Search',
+          icon: Icons.travel_explore,
+          route: 'multisearch.tab',
+          description: 'Search YouTube & SoundCloud',
+        ),
+        QuickLink(
+          name: 'Browser',
+          icon: Icons.language,
+          route: 'browser.tab',
+          description: 'In-app web browser',
+        ),
+        QuickLink(
+          name: 'Playlists',
+          icon: Icons.playlist_play,
+          route: 'playlists.tab',
+          description: 'YouTube playlists & folders',
+        ),
+        QuickLink(
+          name: 'Bulk Import',
+          icon: Icons.upload_file,
+          route: 'bulkimport.tab',
+          description: 'Import track lists',
+        ),
+        QuickLink(
+          name: 'Stats',
+          icon: Icons.bar_chart,
+          route: 'stats.tab',
+          description: 'Download statistics',
+        ),
+        QuickLink(
+          name: 'Settings',
+          icon: Icons.settings,
+          route: 'settings.tab',
+          description: 'App configuration',
+        ),
+        QuickLink(
+          name: 'Support',
+          icon: Icons.volunteer_activism,
+          route: 'support.tab',
+          description: 'Support via donations',
+        ),
+        QuickLink(
+          name: 'Rate',
+          icon: Icons.star_rounded,
+          route: 'rate.app',
+          description: 'Leave a review',
+        ),
+        QuickLink(
+          name: 'Convert',
+          icon: Icons.transform,
+          route: 'convert.tab',
+          description: 'Convert audio/video files',
+        ),
+        QuickLink(
+          name: 'Logs',
+          icon: Icons.list_alt,
+          route: 'logs.tab',
+          description: 'Activity log viewer',
+        ),
+        QuickLink(
+          name: 'Guide',
+          icon: Icons.menu_book,
+          route: 'guide.tab',
+          description: 'Help & documentation',
+        ),
+        QuickLink(
+          name: 'Player',
+          icon: Icons.music_note,
+          route: 'player.tab',
+          description: 'Media player & library',
+        ),
+        QuickLink(
+          name: 'Torrents',
+          icon: Icons.download,
+          route: 'torrents.tab',
+          description: 'Vault torrent manager',
+        ),
+      ];
 
   /// Route string → tab index mapping.
   static const Map<String, int> routeToIndex = {

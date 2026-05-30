@@ -95,7 +95,8 @@ class _CursorOverlayState extends State<CursorOverlay>
     if (_nativeKeyChannelInstalled) return;
     _nativeKeyChannelInstalled = true;
     _nativeKeyChannel.setMethodCallHandler((call) async {
-      final handler = _activeKeyHandlers.isNotEmpty ? _activeKeyHandlers.last : null;
+      final handler =
+          _activeKeyHandlers.isNotEmpty ? _activeKeyHandlers.last : null;
       if (handler == null || !handler.mounted || !handler.widget.active) {
         return;
       }
@@ -143,16 +144,20 @@ class _CursorOverlayState extends State<CursorOverlay>
 
     switch (keyCode) {
       case dpadLeft:
-        _direction = Offset(isDown ? -1 : (isUp ? 0 : _direction.dx), _direction.dy);
+        _direction =
+            Offset(isDown ? -1 : (isUp ? 0 : _direction.dx), _direction.dy);
         break;
       case dpadRight:
-        _direction = Offset(isDown ? 1 : (isUp ? 0 : _direction.dx), _direction.dy);
+        _direction =
+            Offset(isDown ? 1 : (isUp ? 0 : _direction.dx), _direction.dy);
         break;
       case dpadUp:
-        _direction = Offset(_direction.dx, isDown ? -1 : (isUp ? 0 : _direction.dy));
+        _direction =
+            Offset(_direction.dx, isDown ? -1 : (isUp ? 0 : _direction.dy));
         break;
       case dpadDown:
-        _direction = Offset(_direction.dx, isDown ? 1 : (isUp ? 0 : _direction.dy));
+        _direction =
+            Offset(_direction.dx, isDown ? 1 : (isUp ? 0 : _direction.dy));
         break;
       case dpadCenter:
       case enter:
@@ -165,7 +170,11 @@ class _CursorOverlayState extends State<CursorOverlay>
         return;
     }
 
-    if (isDown && (keyCode == dpadLeft || keyCode == dpadRight || keyCode == dpadUp || keyCode == dpadDown)) {
+    if (isDown &&
+        (keyCode == dpadLeft ||
+            keyCode == dpadRight ||
+            keyCode == dpadUp ||
+            keyCode == dpadDown)) {
       _resetHideTimer();
     }
   }

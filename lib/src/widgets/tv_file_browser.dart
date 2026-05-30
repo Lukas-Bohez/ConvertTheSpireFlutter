@@ -44,7 +44,8 @@ Future<String?> pickSingleFilePath(
   if (result != null) {
     final parentDir = result.split(Platform.pathSeparator)..removeLast();
     if (parentDir.isNotEmpty) {
-      await FolderHistoryService().saveLastFolder(parentDir.join(Platform.pathSeparator));
+      await FolderHistoryService()
+          .saveLastFolder(parentDir.join(Platform.pathSeparator));
     }
   }
 
@@ -237,7 +238,8 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
 
   Directory _resolveInitialDirectory() {
     final candidates = <String>[
-      if (widget.initialDirectory != null && widget.initialDirectory!.isNotEmpty)
+      if (widget.initialDirectory != null &&
+          widget.initialDirectory!.isNotEmpty)
         widget.initialDirectory!,
       if (Platform.isAndroid) '/storage/emulated/0',
       if (Platform.isAndroid) '/storage/self/primary',
@@ -289,8 +291,10 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
 
         scanned++;
         if (scanned % 200 == 0 && mounted) {
-          directories.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
-          files.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+          directories.sort(
+              (a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+          files.sort(
+              (a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
           setState(() {
             _entries = <FileSystemEntity>[...directories, ...files];
           });
@@ -298,8 +302,10 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
         }
       }
 
-      directories.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
-      files.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+      directories
+          .sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+      files
+          .sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
 
       if (!mounted) return;
       setState(() {
@@ -363,17 +369,23 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
         if ((driveMask & (1 << code)) == 0) continue;
         final letter = String.fromCharCode(65 + code);
         final path = '$letter:${Platform.pathSeparator}';
-        locations.add(_StorageLocation(label: '$letter drive', path: path, icon: Icons.storage));
+        locations.add(_StorageLocation(
+            label: '$letter drive', path: path, icon: Icons.storage));
       }
       return locations;
     }
 
     if (Platform.isMacOS) {
-      locations.add(_StorageLocation(label: 'Mac', path: '/', icon: Icons.storage));
+      locations
+          .add(_StorageLocation(label: 'Mac', path: '/', icon: Icons.storage));
       final volumes = Directory('/Volumes');
       if (volumes.existsSync()) {
-        final children = volumes.listSync(followLinks: false).whereType<Directory>().toList();
-        children.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+        final children = volumes
+            .listSync(followLinks: false)
+            .whereType<Directory>()
+            .toList();
+        children.sort(
+            (a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
         for (final child in children) {
           locations.add(_StorageLocation(
             label: _nameForPath(child.path),
@@ -386,12 +398,15 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     }
 
     if (Platform.isLinux) {
-      locations.add(_StorageLocation(label: 'Root', path: '/', icon: Icons.storage));
+      locations
+          .add(_StorageLocation(label: 'Root', path: '/', icon: Icons.storage));
       for (final mountRoot in ['/mnt', '/media', '/run/media']) {
         final root = Directory(mountRoot);
         if (!root.existsSync()) continue;
-        final children = root.listSync(followLinks: false).whereType<Directory>().toList();
-        children.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+        final children =
+            root.listSync(followLinks: false).whereType<Directory>().toList();
+        children.sort(
+            (a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
         for (final child in children) {
           locations.add(_StorageLocation(
             label: _nameForPath(child.path),
@@ -413,8 +428,16 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
   List<_StorageLocation> _initialAndroidStorageLocations() {
     final locations = <_StorageLocation>[];
     final candidates = <Map<String, Object>>[
-      {'label': 'Device storage', 'path': '/storage/emulated/0', 'icon': Icons.phone_android},
-      {'label': 'Primary storage', 'path': '/storage/self/primary', 'icon': Icons.phone_android},
+      {
+        'label': 'Device storage',
+        'path': '/storage/emulated/0',
+        'icon': Icons.phone_android
+      },
+      {
+        'label': 'Primary storage',
+        'path': '/storage/self/primary',
+        'icon': Icons.phone_android
+      },
       {'label': 'SD card', 'path': '/sdcard', 'icon': Icons.sd_storage},
     ];
 
@@ -432,10 +455,13 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
       try {
         final root = Directory(rootPath);
         if (!root.existsSync()) continue;
-        final children = root.listSync(followLinks: false).whereType<Directory>().toList();
-        children.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+        final children =
+            root.listSync(followLinks: false).whereType<Directory>().toList();
+        children.sort(
+            (a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
         for (final child in children) {
-          if (child.path == '/storage/emulated' || child.path == '/storage/self') continue;
+          if (child.path == '/storage/emulated' ||
+              child.path == '/storage/self') continue;
           final label = _nameForPath(child.path);
           if (label.isEmpty) continue;
           locations.add(_StorageLocation(
@@ -454,11 +480,13 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     return locations;
   }
 
-  List<_StorageLocation> _dedupeStorageLocations(List<_StorageLocation> locations) {
+  List<_StorageLocation> _dedupeStorageLocations(
+      List<_StorageLocation> locations) {
     final seen = <String>{};
     final deduped = <_StorageLocation>[];
     for (final location in locations) {
-      final key = '${location.label.toLowerCase()}|${location.path.toLowerCase()}';
+      final key =
+          '${location.label.toLowerCase()}|${location.path.toLowerCase()}';
       if (seen.add(key)) {
         deduped.add(location);
       }
@@ -469,7 +497,9 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
   String _nameForPath(String path) {
     final pieces = path.split(Platform.pathSeparator);
     if (pieces.isEmpty) return path;
-    return pieces.last.isEmpty && pieces.length > 1 ? pieces[pieces.length - 2] : pieces.last;
+    return pieces.last.isEmpty && pieces.length > 1
+        ? pieces[pieces.length - 2]
+        : pieces.last;
   }
 
   Future<bool> _goBack() async {
@@ -520,7 +550,8 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
   bool _isCurrentStorageLocation(_StorageLocation location) {
     final current = _currentDir.path.toLowerCase();
     final root = location.path.toLowerCase();
-    return current == root || current.startsWith('$root${Platform.pathSeparator}');
+    return current == root ||
+        current.startsWith('$root${Platform.pathSeparator}');
   }
 
   void _onTap(FileSystemEntity entity) {
@@ -538,13 +569,16 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, _) async {
-        if (didPop && widget.mode == TvFileBrowserMode.folder && _currentDir.parent.path != _currentDir.path) {
+        if (didPop &&
+            widget.mode == TvFileBrowserMode.folder &&
+            _currentDir.parent.path != _currentDir.path) {
           await _goBack();
         }
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.title, overflow: TextOverflow.ellipsis, maxLines: 1),
+          title:
+              Text(widget.title, overflow: TextOverflow.ellipsis, maxLines: 1),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () async {
@@ -554,13 +588,15 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
             },
           ),
           actions: [
-            if (widget.mode == TvFileBrowserMode.folder && _currentDir.parent.path != _currentDir.path)
+            if (widget.mode == TvFileBrowserMode.folder &&
+                _currentDir.parent.path != _currentDir.path)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: FilledButton.icon(
                   onPressed: () => Navigator.of(context).pop(_currentDir.path),
                   icon: const Icon(Icons.folder_open, size: 18),
-                  label: Text(isWide ? 'Use this folder' : 'Select', overflow: TextOverflow.ellipsis),
+                  label: Text(isWide ? 'Use this folder' : 'Select',
+                      overflow: TextOverflow.ellipsis),
                 ),
               ),
           ],
@@ -571,7 +607,8 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 2),
                       child: Text(
                         _currentDir.path,
                         style: Theme.of(context).textTheme.bodySmall,
@@ -607,7 +644,8 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
                                   ],
                                 ),
                                 selected: _isCurrentStorageLocation(location),
-                                onSelected: (_) => _openStorageLocation(location),
+                                onSelected: (_) =>
+                                    _openStorageLocation(location),
                               ),
                             ),
                         ],
@@ -634,24 +672,32 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
                           final name = _nameForPath(entity.path);
 
                           return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 4),
                             leading: Icon(
-                              isDir ? Icons.folder : _iconForExtension(p.extension(entity.path)),
+                              isDir
+                                  ? Icons.folder
+                                  : _iconForExtension(p.extension(entity.path)),
                               color: isDir
                                   ? Theme.of(context).colorScheme.primary
                                   : Theme.of(context).colorScheme.onSurface,
                               size: 24,
                             ),
-                            title: Text(name, overflow: TextOverflow.ellipsis, maxLines: 1),
+                            title: Text(name,
+                                overflow: TextOverflow.ellipsis, maxLines: 1),
                             subtitle: !isDir
                                 ? FutureBuilder<FileStat>(
                                     future: entity.stat(),
                                     builder: (_, snap) {
-                                      if (!snap.hasData) return const SizedBox.shrink();
-                                      final mb = snap.data!.size / (1024 * 1024);
+                                      if (!snap.hasData)
+                                        return const SizedBox.shrink();
+                                      final mb =
+                                          snap.data!.size / (1024 * 1024);
                                       return Text(
                                         '${mb.toStringAsFixed(1)} MB',
-                                        style: Theme.of(context).textTheme.bodySmall,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall,
                                         overflow: TextOverflow.ellipsis,
                                       );
                                     },
@@ -671,10 +717,12 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
 
   IconData _iconForExtension(String ext) {
     ext = ext.toLowerCase();
-    if ({'.mp3', '.m4a', '.flac', '.wav', '.ogg', '.opus', '.aac', '.wma'}.contains(ext)) {
+    if ({'.mp3', '.m4a', '.flac', '.wav', '.ogg', '.opus', '.aac', '.wma'}
+        .contains(ext)) {
       return Icons.music_note;
     }
-    if ({'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}.contains(ext)) {
+    if ({'.mp4', '.mkv', '.avi', '.webm', '.mov', '.wmv', '.flv', '.m4v'}
+        .contains(ext)) {
       return Icons.videocam;
     }
     return Icons.insert_drive_file;

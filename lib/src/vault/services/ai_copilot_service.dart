@@ -13,15 +13,14 @@ class AiChatChunk {
 
 class AiCopilotService {
   AiCopilotService({Dio? dio, String? baseUrl})
-    : _dio =
-          dio ??
-          Dio(
-            BaseOptions(
-              baseUrl: baseUrl ?? 'http://localhost:11434',
-              connectTimeout: const Duration(seconds: 20),
-              receiveTimeout: const Duration(seconds: 120),
-            ),
-          );
+      : _dio = dio ??
+            Dio(
+              BaseOptions(
+                baseUrl: baseUrl ?? 'http://localhost:11434',
+                connectTimeout: const Duration(seconds: 20),
+                receiveTimeout: const Duration(seconds: 120),
+              ),
+            );
 
   final Dio _dio;
 
@@ -100,15 +99,15 @@ class AiCopilotService {
         .transform(const LineSplitter())
         .where((line) => line.trim().isNotEmpty)
         .map((line) {
-          final map = safeJsonDecode<Map<String, dynamic>>(line);
-          if (map is Map<String, dynamic>) {
-            final done = map['done'] == true;
-            final message = map['message'] as Map<String, dynamic>?;
-            final content = (message?['content'] as String?) ?? '';
-            return AiChatChunk(content: content, done: done);
-          }
-          return const AiChatChunk(content: '', done: false);
-        });
+      final map = safeJsonDecode<Map<String, dynamic>>(line);
+      if (map is Map<String, dynamic>) {
+        final done = map['done'] == true;
+        final message = map['message'] as Map<String, dynamic>?;
+        final content = (message?['content'] as String?) ?? '';
+        return AiChatChunk(content: content, done: done);
+      }
+      return const AiChatChunk(content: '', done: false);
+    });
   }
 
   Future<Stream<String>> chatStream({
@@ -126,14 +125,13 @@ class AiCopilotService {
         .transform(const LineSplitter())
         .where((line) => line.trim().isNotEmpty)
         .map((line) {
-          final map = safeJsonDecode<Map<String, dynamic>>(line);
-          if (map is Map<String, dynamic>) {
-            final message = map['message'] as Map<String, dynamic>?;
-            return (message?['content'] as String?) ?? '';
-          }
-          return '';
-        })
-        .where((content) => content.isNotEmpty);
+      final map = safeJsonDecode<Map<String, dynamic>>(line);
+      if (map is Map<String, dynamic>) {
+        final message = map['message'] as Map<String, dynamic>?;
+        return (message?['content'] as String?) ?? '';
+      }
+      return '';
+    }).where((content) => content.isNotEmpty);
   }
 
   Future<bool> verifyTorrentIntent({
@@ -141,23 +139,21 @@ class AiCopilotService {
     required String userMessage,
     Duration timeout = const Duration(seconds: 2),
   }) async {
-    final response = await _dio
-        .post<Map<String, dynamic>>(
-          '/api/chat',
-          data: {
-            'model': model,
-            'stream': false,
-            'messages': [
-              {
-                'role': 'system',
-                'content':
-                    'Is this message a torrent app command? Reply only YES or NO.',
-              },
-              {'role': 'user', 'content': userMessage},
-            ],
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/api/chat',
+      data: {
+        'model': model,
+        'stream': false,
+        'messages': [
+          {
+            'role': 'system',
+            'content':
+                'Is this message a torrent app command? Reply only YES or NO.',
           },
-        )
-        .timeout(timeout);
+          {'role': 'user', 'content': userMessage},
+        ],
+      },
+    ).timeout(timeout);
 
     final content = ((response.data?['message'] as Map?)?['content'] ?? '')
         .toString()

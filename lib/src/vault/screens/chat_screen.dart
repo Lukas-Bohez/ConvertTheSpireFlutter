@@ -123,72 +123,82 @@ class _ChatScreenState extends State<ChatScreen> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _messages.isEmpty
-                ? const Center(child: Text('No messages yet.'))
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      final m = _messages[index];
-                      final isMe = m.author.toLowerCase() == 'you';
-                      final ts = m.timestamp;
-                      return Align(
-                        alignment: isMe
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
-                        child: Container(
-                          constraints: const BoxConstraints(maxWidth: 520),
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isMe
-                                ? Theme.of(context).colorScheme.primaryContainer
-                                : Theme.of(
+                    ? const Center(child: Text('No messages yet.'))
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final m = _messages[index];
+                          final isMe = m.author.toLowerCase() == 'you';
+                          final ts = m.timestamp;
+                          return Align(
+                            alignment: isMe
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Container(
+                              constraints: const BoxConstraints(maxWidth: 520),
+                              margin: const EdgeInsets.symmetric(vertical: 4),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isMe
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer
+                                    : Theme.of(
+                                        context,
+                                      ).colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(12),
+                                  topRight: const Radius.circular(12),
+                                  bottomLeft: Radius.circular(isMe ? 12 : 2),
+                                  bottomRight: Radius.circular(isMe ? 2 : 12),
+                                ),
+                                border: Border.all(
+                                  color: Theme.of(
                                     context,
-                                  ).colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.only(
-                              topLeft: const Radius.circular(12),
-                              topRight: const Radius.circular(12),
-                              bottomLeft: Radius.circular(isMe ? 12 : 2),
-                              bottomRight: Radius.circular(isMe ? 2 : 12),
+                                  )
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.15),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    m.author,
+                                    // overflow-fix: constrain dynamic author names in narrow chat bubbles.
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  // overflow-fix: keep message text bounded in very narrow layouts.
+                                  SelectableText(
+                                    m.text,
+                                    maxLines: 12,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    '${ts.hour.toString().padLeft(2, '0')}:${ts.minute.toString().padLeft(2, '0')}',
+                                    style: Theme.of(
+                                      context,
+                                    )
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(fontSize: 10),
+                                  ),
+                                ],
+                              ),
                             ),
-                            border: Border.all(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.15),
-                              width: 1,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                m.author,
-                                // overflow-fix: constrain dynamic author names in narrow chat bubbles.
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 4),
-                              // overflow-fix: keep message text bounded in very narrow layouts.
-                              SelectableText(
-                                m.text,
-                                maxLines: 12,
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                '${ts.hour.toString().padLeft(2, '0')}:${ts.minute.toString().padLeft(2, '0')}',
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.bodySmall?.copyWith(fontSize: 10),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
           ),
           SafeArea(
             child: Padding(
@@ -206,30 +216,30 @@ class _ChatScreenState extends State<ChatScreen> {
                   actions: <Type, Action<Intent>>{
                     _ChatSendMessageIntent:
                         CallbackAction<_ChatSendMessageIntent>(
-                          onInvoke: (intent) async {
-                            await _send();
-                            return null;
-                          },
-                        ),
+                      onInvoke: (intent) async {
+                        await _send();
+                        return null;
+                      },
+                    ),
                     _ChatInsertNewlineIntent:
                         CallbackAction<_ChatInsertNewlineIntent>(
-                          onInvoke: (intent) {
-                            final selection = _controller.selection;
-                            final text = _controller.text;
-                            final newText = text.replaceRange(
-                              selection.start,
-                              selection.end,
-                              '\n',
-                            );
-                            _controller.value = TextEditingValue(
-                              text: newText,
-                              selection: TextSelection.collapsed(
-                                offset: selection.start + 1,
-                              ),
-                            );
-                            return null;
-                          },
-                        ),
+                      onInvoke: (intent) {
+                        final selection = _controller.selection;
+                        final text = _controller.text;
+                        final newText = text.replaceRange(
+                          selection.start,
+                          selection.end,
+                          '\n',
+                        );
+                        _controller.value = TextEditingValue(
+                          text: newText,
+                          selection: TextSelection.collapsed(
+                            offset: selection.start + 1,
+                          ),
+                        );
+                        return null;
+                      },
+                    ),
                   },
                   child: Row(
                     children: [

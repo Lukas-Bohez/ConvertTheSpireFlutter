@@ -14,14 +14,15 @@ class AdaptiveUiFrame extends StatelessWidget {
     final width = mq.size.width;
     final wide = width >= 840;
     // Keep overscan-style framing only for Android TV-style directional UIs.
-    final tvLike =
-        !kIsWeb &&
+    final tvLike = !kIsWeb &&
         defaultTargetPlatform == TargetPlatform.android &&
         width > 1200 &&
         mq.navigationMode == NavigationMode.directional;
 
     final targetSize = wide ? const Size(56, 56) : const Size(48, 48);
-    final scale = width > 1200 ? math.max(1.15, mq.textScaler.scale(1.0)) : mq.textScaler.scale(1.0);
+    final scale = width > 1200
+        ? math.max(1.15, mq.textScaler.scale(1.0))
+        : mq.textScaler.scale(1.0);
 
     final theme = Theme.of(context);
     final cs = theme.colorScheme;

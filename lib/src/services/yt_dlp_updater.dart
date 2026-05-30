@@ -15,7 +15,8 @@ import '../utils/safe_json.dart';
 /// - Optional SHA256 verification.
 /// - Replace the existing binary atomically (with a .bak fallback).
 class YtDlpUpdater {
-  static const _githubLatest = 'https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest';
+  static const _githubLatest =
+      'https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest';
 
   /// Fetch the latest release metadata from GitHub.
   /// Returns a map with keys `tag_name` and `assets` (raw JSON) on success.
@@ -52,7 +53,10 @@ class YtDlpUpdater {
         chosen = a as Map<String, dynamic>;
         break;
       }
-      if (isLinux && (lname.contains('linux') || lname.contains('manylinux') || lname.endsWith('.xz'))) {
+      if (isLinux &&
+          (lname.contains('linux') ||
+              lname.contains('manylinux') ||
+              lname.endsWith('.xz'))) {
         chosen = a as Map<String, dynamic>;
         break;
       }
@@ -67,7 +71,10 @@ class YtDlpUpdater {
       (a) {
         final n = (a['name'] ?? '') as String;
         final ln = n.toLowerCase();
-        return ln.contains('yt-dlp') || ln.endsWith('.exe') || ln.endsWith('.xz') || ln.endsWith('.zip');
+        return ln.contains('yt-dlp') ||
+            ln.endsWith('.exe') ||
+            ln.endsWith('.xz') ||
+            ln.endsWith('.zip');
       },
       orElse: () => assets.first as Map<String, dynamic>,
     );
@@ -78,7 +85,8 @@ class YtDlpUpdater {
   /// Download the asset at [url] and replace the target file named [filename]
   /// inside the application's support directory. If [expectedSha256] is provided
   /// the downloaded bytes will be verified.
-  static Future<bool> downloadAndReplace(String url, String filename, {String? expectedSha256}) async {
+  static Future<bool> downloadAndReplace(String url, String filename,
+      {String? expectedSha256}) async {
     final client = http.Client();
     try {
       final resp = await client.send(http.Request('GET', Uri.parse(url)));

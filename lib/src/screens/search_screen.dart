@@ -97,7 +97,8 @@ class _SearchScreenState extends State<SearchScreen>
       final normFile = norm(filename);
       if (normFile.isEmpty) continue;
       if (normDisplay == normFile) return true;
-      if (normDisplay.length >= 4 && normFile.contains(normDisplay)) return true;
+      if (normDisplay.length >= 4 && normFile.contains(normDisplay))
+        return true;
       if (normFile.length >= 4 && normDisplay.contains(normFile)) return true;
     }
 
@@ -106,7 +107,8 @@ class _SearchScreenState extends State<SearchScreen>
 
   bool _isAlreadyDownloaded(SearchResult r) {
     if (_downloadedVideoIds.contains(r.id)) return true;
-    if (_downloadedFileKeys.isEmpty && _downloadedFilePaths.isEmpty) return false;
+    if (_downloadedFileKeys.isEmpty && _downloadedFilePaths.isEmpty)
+      return false;
 
     final title = _normalizeKey(r.title);
     final full = _normalizeKey('${r.artist} ${r.title}');
@@ -304,228 +306,231 @@ class _SearchScreenState extends State<SearchScreen>
                 final refreshButton = IconButton(
                   icon: _scanningDownloadFolder
                       ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.refresh),
-                tooltip: _scanningDownloadFolder
-                    ? 'Scanning download folder…'
-                    : 'Refresh downloaded file status',
-                onPressed: _scanningDownloadFolder
-                    ? null
-                    : () => _refreshDownloadedFiles(),
-              );
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh),
+                  tooltip: _scanningDownloadFolder
+                      ? 'Scanning download folder…'
+                      : 'Refresh downloaded file status',
+                  onPressed: _scanningDownloadFolder
+                      ? null
+                      : () => _refreshDownloadedFiles(),
+                );
 
-              if (narrow) {
-                return Column(
+                if (narrow) {
+                  return Column(
+                    children: [
+                      Row(children: [searchField, refreshButton]),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          formatDropdown,
+                          const Spacer(),
+                          searchButton,
+                        ],
+                      ),
+                    ],
+                  );
+                }
+
+                return Row(
                   children: [
-                    Row(children: [searchField, refreshButton]),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        formatDropdown,
-                        const Spacer(),
-                        searchButton,
-                      ],
-                    ),
+                    searchField,
+                    const SizedBox(width: 8),
+                    refreshButton,
+                    const SizedBox(width: 8),
+                    formatDropdown,
+                    const SizedBox(width: 8),
+                    searchButton,
                   ],
                 );
-              }
-
-              return Row(
-                children: [
-                  searchField,
-                  const SizedBox(width: 8),
-                  refreshButton,
-                  const SizedBox(width: 8),
-                  formatDropdown,
-                  const SizedBox(width: 8),
-                  searchButton,
-                ],
-              );
-            },
-          ),
-        ),
-        if (_loading) const LinearProgressIndicator(),
-        if (_loading)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Text('Searching across all sources\u2026',
-                style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          ),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text(_error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          ),
-        if (_lastDownloadFolderScan != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Text(
-              'Last scan: ${TimeOfDay.fromDateTime(_lastDownloadFolderScan!).format(context)}',
-              style: TextStyle(
-                fontSize: 11,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+              },
             ),
           ),
-        Expanded(
-          child: _results.isEmpty && !_loading && _error == null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _hasSearched ? Icons.search_off : Icons.search,
-                          size: 64,
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _hasSearched
-                              ? 'No results found'
-                              : 'Search for music across sources',
-                          style: Theme.of(context).textTheme.titleMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _hasSearched
-                              ? 'Try a different artist, title, or source.'
-                              : 'Enter a query above to start searching.',
-                          style: TextStyle(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : ListView.builder(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  itemCount: _results.length + (_results.length ~/ 5),
-                  itemBuilder: (context, index) {
-                    if (index > 0 && (index + 1) % 6 == 0) {
-                      return const AdNativeSlot();
-                    }
-
-                    final resultIndex = index - ((index + 1) ~/ 6);
-                    final r = _results[resultIndex];
-                    final cs = Theme.of(context).colorScheme;
-                    final alreadyDownloaded = _isAlreadyDownloaded(r);
-                    final leadingWidget = r.thumbnailUrl.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: Image.network(r.thumbnailUrl,
-                                width: 56,
-                                height: 56,
-                                cacheWidth: 112,
-                                cacheHeight: 112,
-                                filterQuality: FilterQuality.low,
-                                fit: BoxFit.cover),
-                          )
-                        : Container(
-                            width: 56,
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: cs.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Icon(Icons.music_note,
-                                size: 28, color: cs.onSurfaceVariant),
-                          );
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Card(
-                        margin: EdgeInsets.zero,
-                        color: alreadyDownloaded
-                            ? cs.surfaceContainerHighest.withValues(alpha: 0.65)
-                            : null,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () => widget.onDownload(r, _selectedFormat),
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Row(
-                              children: [
-                                leadingWidget,
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(r.title,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500)),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        '${r.artist}  \u2022  ${_formatDuration(r.duration)}',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: cs.onSurfaceVariant),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 6, vertical: 1),
-                                        decoration: BoxDecoration(
-                                          color: cs.primaryContainer
-                                              .withValues(alpha: 0.5),
-                                          borderRadius:
-                                              BorderRadius.circular(4),
-                                        ),
-                                        child: Text(r.source,
-                                            style: TextStyle(
-                                                fontSize: 10,
-                                                color: cs.onPrimaryContainer)),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (alreadyDownloaded) ...[
-                                  Icon(Icons.check_circle,
-                                      size: 18, color: cs.primary),
-                                  const SizedBox(width: 8),
-                                ],
-                                IconButton(
-                                  icon: const Icon(Icons.play_arrow),
-                                  tooltip: 'Preview in browser',
-                                  onPressed: () => _launchPreview(r.id),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.download),
-                                  tooltip: 'Download',
-                                  onPressed: () =>
-                                      widget.onDownload(r, _selectedFormat),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+          if (_loading) const LinearProgressIndicator(),
+          if (_loading)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Text('Searching across all sources\u2026',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text(_error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ),
+          if (_lastDownloadFolderScan != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Text(
+                'Last scan: ${TimeOfDay.fromDateTime(_lastDownloadFolderScan!).format(context)}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
-        ),
+              ),
+            ),
+          Expanded(
+            child: _results.isEmpty && !_loading && _error == null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _hasSearched ? Icons.search_off : Icons.search,
+                            size: 64,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _hasSearched
+                                ? 'No results found'
+                                : 'Search for music across sources',
+                            style: Theme.of(context).textTheme.titleMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _hasSearched
+                                ? 'Try a different artist, title, or source.'
+                                : 'Enter a query above to start searching.',
+                            style: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    itemCount: _results.length + (_results.length ~/ 5),
+                    itemBuilder: (context, index) {
+                      if (index > 0 && (index + 1) % 6 == 0) {
+                        return const AdNativeSlot();
+                      }
+
+                      final resultIndex = index - ((index + 1) ~/ 6);
+                      final r = _results[resultIndex];
+                      final cs = Theme.of(context).colorScheme;
+                      final alreadyDownloaded = _isAlreadyDownloaded(r);
+                      final leadingWidget = r.thumbnailUrl.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Image.network(r.thumbnailUrl,
+                                  width: 56,
+                                  height: 56,
+                                  cacheWidth: 112,
+                                  cacheHeight: 112,
+                                  filterQuality: FilterQuality.low,
+                                  fit: BoxFit.cover),
+                            )
+                          : Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: cs.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Icon(Icons.music_note,
+                                  size: 28, color: cs.onSurfaceVariant),
+                            );
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Card(
+                          margin: EdgeInsets.zero,
+                          color: alreadyDownloaded
+                              ? cs.surfaceContainerHighest
+                                  .withValues(alpha: 0.65)
+                              : null,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () => widget.onDownload(r, _selectedFormat),
+                            child: Padding(
+                              padding: const EdgeInsets.all(10),
+                              child: Row(
+                                children: [
+                                  leadingWidget,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(r.title,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500)),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          '${r.artist}  \u2022  ${_formatDuration(r.duration)}',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              color: cs.onSurfaceVariant),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 1),
+                                          decoration: BoxDecoration(
+                                            color: cs.primaryContainer
+                                                .withValues(alpha: 0.5),
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
+                                          child: Text(r.source,
+                                              style: TextStyle(
+                                                  fontSize: 10,
+                                                  color:
+                                                      cs.onPrimaryContainer)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (alreadyDownloaded) ...[
+                                    Icon(Icons.check_circle,
+                                        size: 18, color: cs.primary),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  IconButton(
+                                    icon: const Icon(Icons.play_arrow),
+                                    tooltip: 'Preview in browser',
+                                    onPressed: () => _launchPreview(r.id),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.download),
+                                    tooltip: 'Download',
+                                    onPressed: () =>
+                                        widget.onDownload(r, _selectedFormat),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
         ],
-        ),
-      );
+      ),
+    );
   }
 
   String _formatDuration(Duration d) {

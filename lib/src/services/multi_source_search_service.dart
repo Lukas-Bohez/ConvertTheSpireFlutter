@@ -144,8 +144,8 @@ class MultiSourceSearchService {
     }
 
     // Run all searches in parallel
-    final results = await Future.wait(futures)
-        .timeout(global, onTimeout: () => List.filled(futures.length, <SearchResult>[]));
+    final results = await Future.wait(futures).timeout(global,
+        onTimeout: () => List.filled(futures.length, <SearchResult>[]));
 
     final combined = results.expand((list) => list).toList();
 
@@ -222,7 +222,8 @@ class YtDlpSearcher {
       final exitCode = await process.exitCode;
 
       if (exitCode != 0 || output.isEmpty) {
-        debugPrint('YtDlpSearcher($_platformName): yt-dlp exited with $exitCode');
+        debugPrint(
+            'YtDlpSearcher($_platformName): yt-dlp exited with $exitCode');
         return [];
       }
 
@@ -234,16 +235,14 @@ class YtDlpSearcher {
         if (results.length >= limit) break;
 
         try {
-          final json =
-              safeJsonDecode<Map<String, dynamic>>(line.trim());
+          final json = safeJsonDecode<Map<String, dynamic>>(line.trim());
           if (json == null) continue;
 
           final id = json['id'] as String? ?? '';
           final title = json['title'] as String? ?? 'Unknown';
           final artist = json['uploader'] as String? ?? _platformName;
           final durationSec = json['duration'] as int? ?? 0;
-          final thumbnailUrl =
-              json['thumbnail'] as String? ?? '';
+          final thumbnailUrl = json['thumbnail'] as String? ?? '';
 
           results.add(SearchResult(
             id: id,
@@ -261,8 +260,7 @@ class YtDlpSearcher {
 
       return results;
     } catch (e) {
-      debugPrint(
-          'YtDlpSearcher($_platformName): search failed: $e');
+      debugPrint('YtDlpSearcher($_platformName): search failed: $e');
       return [];
     }
   }

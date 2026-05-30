@@ -96,7 +96,8 @@ class DlnaDiscoveryService {
 
     if (!forceRefresh) {
       final now = DateTime.now();
-      if (_lastDiscoveryAt != null && now.difference(_lastDiscoveryAt!) < effectiveThrottle) {
+      if (_lastDiscoveryAt != null &&
+          now.difference(_lastDiscoveryAt!) < effectiveThrottle) {
         // Return cached devices immediately
         return _cachedDevices;
       }

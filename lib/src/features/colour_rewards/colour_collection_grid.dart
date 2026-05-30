@@ -73,7 +73,8 @@ class _ColourCollectionGridState extends State<ColourCollectionGrid> {
                     onTap: isOwned
                         ? () async {
                             AdService.instance.registerInteraction();
-                            await ColourRewardService.instance.equipColour(c.id);
+                            await ColourRewardService.instance
+                                .equipColour(c.id);
                             if (mounted) setState(() {});
                           }
                         : null,
@@ -99,7 +100,8 @@ class _ColourCollectionGridState extends State<ColourCollectionGrid> {
                               child: Container(
                                 color: Colors.black.withValues(alpha: 0.45),
                                 child: const Center(
-                                  child: Icon(Icons.lock, color: Colors.white70),
+                                  child:
+                                      Icon(Icons.lock, color: Colors.white70),
                                 ),
                               ),
                             ),

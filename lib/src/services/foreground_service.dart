@@ -1,7 +1,8 @@
 import 'package:flutter/services.dart';
 
 class ForegroundService {
-  static const MethodChannel _channel = MethodChannel('convert_the_spire/foreground');
+  static const MethodChannel _channel =
+      MethodChannel('convert_the_spire/foreground');
 
   /// Start the platform foreground service. Returns true on success.
   static Future<bool> start() async {

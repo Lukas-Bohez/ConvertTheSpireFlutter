@@ -13,8 +13,8 @@ class MagnetLink {
     this.displayName,
     List<String>? trackers,
     List<String>? peers,
-  }) : trackers = trackers ?? [],
-       peers = peers ?? [];
+  })  : trackers = trackers ?? [],
+        peers = peers ?? [];
 
   factory MagnetLink.parse(String uri) {
     final raw = uri.trim();

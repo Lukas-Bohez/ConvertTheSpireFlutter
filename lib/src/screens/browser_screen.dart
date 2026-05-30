@@ -941,8 +941,8 @@ class _BrowserScreenState extends State<BrowserScreen>
                 Navigator.of(dialogContext).pop();
                 _resumeCursor();
               },
-              child: const Text('Cancel',
-                  style: TextStyle(color: Colors.white70)),
+              child:
+                  const Text('Cancel', style: TextStyle(color: Colors.white70)),
             ),
           ],
         );

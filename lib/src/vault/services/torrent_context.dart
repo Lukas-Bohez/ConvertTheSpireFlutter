@@ -67,9 +67,9 @@ class TorrentContextService extends ChangeNotifier {
     final selectedTorrent = selected == null
         ? null
         : activeDownloads.cast<TorrentModel?>().firstWhere(
-            (t) => t?.id == selected.torrentId,
-            orElse: () => null,
-          );
+              (t) => t?.id == selected.torrentId,
+              orElse: () => null,
+            );
     final selectedSeeders = selectedRuntime?.seeders ??
         selectedTorrent?.seeders ??
         selected?.seeders;
@@ -88,44 +88,47 @@ class TorrentContextService extends ChangeNotifier {
         : selectedStats.join(' | ');
     final selectedText = selected == null
         ? 'No torrent selected.'
-      : '${selected.name} | size: ${selected.size ?? 0} bytes | '
-          '$selectedStatsText | '
-          'source: ${selected.source.isEmpty ? selected.responderId : selected.source} | '
-          'category: $category';
+        : '${selected.name} | size: ${selected.size ?? 0} bytes | '
+            '$selectedStatsText | '
+            'source: ${selected.source.isEmpty ? selected.responderId : selected.source} | '
+            'category: $category';
 
     final active = activeDownloads.isEmpty
         ? 'No active downloads.'
-      : activeDownloads.map((t) {
-        final runtime = _runtimeStatusById[t.id];
-        final progress = runtime == null
-          ? '${_pct(t)}%'
-          : runtime.state.toLowerCase().contains('seed')
-          ? '${(runtime.seedingProgress * 100).toStringAsFixed(1)}% seeded-back'
-          : '${(runtime.progress * 100).toStringAsFixed(1)}%';
-        final peers = runtime?.peers ?? 0;
-        final seeders = [runtime?.seeders ?? 0, t.seeders].reduce((a, b) => a > b ? a : b);
-        final leechers = [runtime?.leechers ?? 0, t.leechers].reduce((a, b) => a > b ? a : b);
-        final uploaded = runtime?.uploaded ?? t.bytesUp;
-        final state = runtime?.state ?? t.status ?? 'unknown';
-        final stats = <String>[];
-        if (peers > 0) stats.add('peers: $peers');
-        if (seeders > 0) stats.add('seeders: $seeders');
-        if (leechers > 0) stats.add('leechers: $leechers');
-        if (uploaded > 0) stats.add('uploaded: $uploaded B');
-        final statsText = stats.isEmpty ? 'no positive swarm stats' : stats.join(' | ');
-        return '${t.name} [$state] $progress | $statsText';
-        }).join(', ');
+        : activeDownloads.map((t) {
+            final runtime = _runtimeStatusById[t.id];
+            final progress = runtime == null
+                ? '${_pct(t)}%'
+                : runtime.state.toLowerCase().contains('seed')
+                    ? '${(runtime.seedingProgress * 100).toStringAsFixed(1)}% seeded-back'
+                    : '${(runtime.progress * 100).toStringAsFixed(1)}%';
+            final peers = runtime?.peers ?? 0;
+            final seeders = [runtime?.seeders ?? 0, t.seeders]
+                .reduce((a, b) => a > b ? a : b);
+            final leechers = [runtime?.leechers ?? 0, t.leechers]
+                .reduce((a, b) => a > b ? a : b);
+            final uploaded = runtime?.uploaded ?? t.bytesUp;
+            final state = runtime?.state ?? t.status ?? 'unknown';
+            final stats = <String>[];
+            if (peers > 0) stats.add('peers: $peers');
+            if (seeders > 0) stats.add('seeders: $seeders');
+            if (leechers > 0) stats.add('leechers: $leechers');
+            if (uploaded > 0) stats.add('uploaded: $uploaded B');
+            final statsText =
+                stats.isEmpty ? 'no positive swarm stats' : stats.join(' | ');
+            return '${t.name} [$state] $progress | $statsText';
+          }).join(', ');
 
-      final liveSeeders = _runtimeStatusById.values
+    final liveSeeders = _runtimeStatusById.values
         .map((s) => s.seeders)
         .fold<int>(0, (a, b) => a + b);
-      final liveLeechers = _runtimeStatusById.values
+    final liveLeechers = _runtimeStatusById.values
         .map((s) => s.leechers)
         .fold<int>(0, (a, b) => a + b);
-      final livePeers = _runtimeStatusById.values
+    final livePeers = _runtimeStatusById.values
         .map((s) => s.peers)
         .fold<int>(0, (a, b) => a + b);
-      final liveUploadBytes = _runtimeStatusById.values
+    final liveUploadBytes = _runtimeStatusById.values
         .map((s) => s.uploaded)
         .fold<int>(0, (a, b) => a + b);
 
@@ -140,11 +143,12 @@ class TorrentContextService extends ChangeNotifier {
     if (liveSeeders > 0) liveStats.add('seeders=$liveSeeders');
     if (liveLeechers > 0) liveStats.add('leechers=$liveLeechers');
     if (liveUploadBytes > 0) liveStats.add('uploaded=$liveUploadBytes bytes');
-    final liveText = liveStats.isEmpty ? 'no positive swarm stats' : liveStats.join(', ');
+    final liveText =
+        liveStats.isEmpty ? 'no positive swarm stats' : liveStats.join(', ');
 
     return 'Current torrent search query: $queryText\n'
         'Selected torrent: $selectedText\n'
-      'Live swarm snapshot: $liveText\n'
+        'Live swarm snapshot: $liveText\n'
         'Active downloads: $active\n'
         'Library contents: $completed';
   }
