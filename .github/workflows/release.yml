@@ -287,10 +287,14 @@ jobs:
           set -euo pipefail
           version_line=$(grep -E '^version:' pubspec.yaml | head -n 1)
           version_value=${version_line#version: }
-          expected_tag="v${version_value}"
+          # version_value may include build metadata (+<code>), accept tags
+          # both with and without that suffix: v12.1.7+1217 and v12.1.7
+          version_name=${version_value%%+*}
+          expected_tag_full="v${version_value}"
+          expected_tag_name="v${version_name}"
 
-          if [ "${{ inputs.release_tag }}" != "$expected_tag" ]; then
-            echo "Expected release tag $expected_tag but got ${{ inputs.release_tag }}"
+          if [ "${{ inputs.release_tag }}" != "$expected_tag_full" ] && [ "${{ inputs.release_tag }}" != "$expected_tag_name" ]; then
+            echo "Expected release tag $expected_tag_full or $expected_tag_name but got ${{ inputs.release_tag }}"
             exit 1
           fi
 
