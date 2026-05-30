@@ -45,7 +45,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   bool _isAndroidTV = false;
 
   // Auto-hide timer state
-  bool _cursorVisible = true;
+  bool _cursorVisible = false;
   Timer? _hideTimer;
 
   static const double _maxSpeed = 1200.0;
@@ -122,12 +122,18 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
     } else if (key == LogicalKeyboardKey.arrowDown) {
       _direction = Offset(_direction.dx, isDown ? 1 : (isUp ? 0 : _direction.dy));
     } else if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter || key == LogicalKeyboardKey.select) {
+      if (_isTextFieldFocused()) {
+        return false;
+      }
       if (isDown) _fireTap();
     } else {
       return false;
     }
 
-    if (isDown) {
+    if (isDown && (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown)) {
       _resetHideTimer();
     }
     return true;
@@ -194,7 +200,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
         return;
     }
 
-    if (isDown) {
+    if (isDown && (keyCode == dpadLeft || keyCode == dpadRight || keyCode == dpadUp || keyCode == dpadDown)) {
       _resetHideTimer();
     }
   }
@@ -232,6 +238,12 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
 
     // Also dispatch the WebView JS tap path (logical coordinates)
     unawaited(GlobalCursorOverlay._webViewTapCallback?.call(_position));
+  }
+
+  bool _isTextFieldFocused() {
+    final focused = FocusManager.instance.primaryFocus;
+    final widget = focused?.context?.widget;
+    return widget is EditableText;
   }
 
   void _onTick(Duration elapsed) {

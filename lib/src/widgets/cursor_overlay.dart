@@ -40,7 +40,7 @@ class _CursorOverlayState extends State<CursorOverlay>
   Duration _lastElapsed = Duration.zero;
 
   // Auto-hide timer state
-  bool _cursorVisible = true;
+  bool _cursorVisible = false;
   Timer? _hideTimer;
 
   static const double _maxSpeed = 1200.0;
@@ -67,7 +67,6 @@ class _CursorOverlayState extends State<CursorOverlay>
     if (widget.active && !oldWidget.active) {
       _registerAsActiveKeyHandler();
       _lastElapsed = Duration.zero;
-      _resetHideTimer();
       // Reset cursor position to center of viewport (or fallback)
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -166,7 +165,7 @@ class _CursorOverlayState extends State<CursorOverlay>
         return;
     }
 
-    if (isDown) {
+    if (isDown && (keyCode == dpadLeft || keyCode == dpadRight || keyCode == dpadUp || keyCode == dpadDown)) {
       _resetHideTimer();
     }
   }
