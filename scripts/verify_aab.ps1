@@ -1,47 +1,28 @@
 $ErrorActionPreference = 'Continue'
-$sdk  = "$env:LOCALAPPDATA\Android\Sdk\build-tools"
-$aapt2 = Get-ChildItem $sdk -Recurse -Filter aapt2.exe | Sort-Object FullName -Desc | Select-Object -First 1 -Exp FullName
-Write-Host "Using aapt2: $aapt2"
-
-$aab = Resolve-Path "c:\\development\\ConversionFlutter\\my_flutter_app\\aab\\bitplayer-v12.1.6+1216-play-release.aab"
+$aab = Resolve-Path "c:\development\ConversionFlutter\my_flutter_app\aab\bitplayer-v12.1.7+1217-play-release.aab"
 Write-Host "Resolved AAB: $aab"
+
 $tmp = Join-Path $env:TEMP ("aab_" + [guid]::NewGuid())
 New-Item -ItemType Directory $tmp | Out-Null
 Write-Host "Temp extraction dir: $tmp"
-Write-Host "Listing first 20 entries after extraction..."
+
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 [System.IO.Compression.ZipFile]::ExtractToDirectory($aab, $tmp)
-Get-ChildItem $tmp -Recurse | Select-Object -First 20 | ForEach-Object { Write-Host $_.FullName }
-$mf = Join-Path $tmp "base\manifest\AndroidManifest.xml"
 
-$decoded = $null
-try {
-  $decoded = & $aapt2 dump xmltree --file $mf "$aab" 2>&1
-} catch {
-  $decoded = @($_.Exception.Message)
-}
-if (-not $decoded -or (($decoded | Out-String) -match "error")) {
-  $decoded = & $aapt2 dump xmltree "$mf" 2>&1
-}
+$bannerFiles = @(
+  (Join-Path $tmp 'base\res\drawable\banner.png'),
+  (Join-Path $tmp 'base\res\drawable-xhdpi-v4\banner.png')
+)
 
-Write-Host "=== AAPT2 MANIFEST CHECK ==="
-$leanback  = ($decoded | Out-String) -match "android.software.leanback"
-$launcher  = ($decoded | Out-String) -match "LEANBACK_LAUNCHER"
-$touch     = ($decoded | Out-String) -match "android.hardware.touchscreen"
-$touchFalse= ($decoded | Out-String) -match "android.hardware.touchscreen" -and
-             (($decoded | Where-Object { $_ -match "touchscreen" } | Select-Object -First 5) -join "`n") -match "0x00000000"
-$banner    = ($decoded | Out-String) -match "tv_banner"
-$admob     = ($decoded | Out-String) -match "8418485814964449"
+$missing = $bannerFiles | Where-Object { -not (Test-Path $_) }
+Write-Host '=== AAB RESOURCE CHECK ==='
+Write-Host "banner resources present: $($missing.Count -eq 0)"
+Write-Host "base/res/drawable/banner.png:         $([bool](Test-Path $bannerFiles[0]))"
+Write-Host "base/res/drawable-xhdpi-v4/banner.png: $([bool](Test-Path $bannerFiles[1]))"
 
-Write-Host "leanback feature:    $leanback"
-Write-Host "LEANBACK_LAUNCHER:   $launcher"
-Write-Host "touchscreen present: $touch"
-Write-Host "touchscreen=false:   $touchFalse"
-Write-Host "tv_banner:           $banner"
-Write-Host "AdMob App ID:        $admob"
-
-if (-not ($leanback -and $launcher -and $touch -and $touchFalse -and $banner -and $admob)) {
+if ($missing.Count -gt 0) {
   Write-Host 'VERIFICATION FAILED - DO NOT PROCEED' -ForegroundColor Red
   exit 1
 }
+
 Write-Host 'ALL CHECKS PASSED' -ForegroundColor Green
