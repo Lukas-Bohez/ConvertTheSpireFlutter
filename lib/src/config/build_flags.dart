@@ -27,22 +27,16 @@ bool get isYouTubeConversionEnabledInCurrentBuild {
 
 bool get kYouTubeConversionEnabled => isYouTubeConversionEnabledInCurrentBuild;
 
-// App branding — adapt to the detected flavor. The Play Store branded
-// build is `BitPlayer`; GitHub releases and other non-Play builds use
-// "Convert The Spire Reborn".
+// App branding — unified across all flavors.
 String getAppTitle() {
-  if (kIsPlayStoreBuildDefine || kPlayStoreBuild) return 'BitPlayer';
-  if (kIsGithubRelease) return 'Convert The Spire Reborn';
   return 'Convert The Spire Reborn';
 }
 
 String getAppSubtitle() {
-  if (kIsPlayStoreBuildDefine || kPlayStoreBuild) return 'BitPlayer — media & torrents';
   return 'Convert The Spire Reborn — media & torrents';
 }
 
 String getDefaultDownloadFolderName() {
-  if (kIsPlayStoreBuildDefine || kPlayStoreBuild) return 'BitPlayer';
   return 'ConvertTheSpireReborn';
 }
 

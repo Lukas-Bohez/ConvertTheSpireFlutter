@@ -4,7 +4,7 @@
 
 * **[Latest GitHub Release (v10.8.1)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v10.8.1)**: Get the full-featured app for Windows, Linux, macOS, and Android (APK). The GitHub APK builds are ad-free and unlock all colours by default.
 * **[Official Website (quizthespire.com)](https://quizthespire.com/)**: An additional place to download the app and learn more.
-* **[Google Play Store (BitPlayer: Torrent and Media)](https://play.google.com/store/apps/details?id=com.torrentspire.ai)**: The limited, App Store-compatible version featuring only the torrenting and media player functionality to comply with Play policies.
+* **[Google Play Store (Convert The Spire Reborn)](https://play.google.com/store/apps/details?id=com.torrentspire.ai)**: The limited, App Store-compatible version featuring only the torrenting and media player functionality to comply with Play policies.
 
 ---
 

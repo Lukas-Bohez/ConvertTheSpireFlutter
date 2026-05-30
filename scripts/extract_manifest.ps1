@@ -1,5 +1,5 @@
 $ErrorActionPreference='Stop'
-$aab='c:\development\ConversionFlutter\my_flutter_app\aab\bitplayer-v10.5.4+1054-play-release.aab'
+$aab='c:\development\ConversionFlutter\my_flutter_app\aab\convert-the-spire-reborn-v12.1.4+1214-play-release.aab'
 $dest='c:\development\ConversionFlutter\my_flutter_app\build\aab_extracted'
 if (-not (Test-Path $aab)) { Write-Host 'AAB_MISSING'; exit 2 }
 Remove-Item $dest -Recurse -Force -ErrorAction SilentlyContinue

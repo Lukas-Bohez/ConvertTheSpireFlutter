@@ -15,7 +15,7 @@ for i in range(0, 1280, 8):
 if icon:
     icon2 = icon.resize((320, 320))
     banner.paste(icon2, (70, 200), icon2)
-d.text((430, 240), 'BitPlayer', fill=(230, 245, 255))
+d.text((430, 240), 'Convert The Spire Reborn', fill=(230, 245, 255))
 d.text((430, 310), 'Torrent & Media for Android TV', fill=(170, 220, 255))
 banner.save(out / 'tv_banner_1280x720.png')
 
@@ -28,7 +28,7 @@ for idx, title in enumerate(['Search, Download, and Play', 'Background Audio + T
     if icon:
         icon3 = icon.resize((380, 380))
         img.paste(icon3, (130, 350), icon3)
-    draw.text((620, 390), 'BitPlayer', fill=(240, 250, 255))
+    draw.text((620, 390), 'Convert The Spire Reborn', fill=(240, 250, 255))
     draw.text((620, 470), title, fill=(170, 220, 255))
     draw.text((620, 540), 'Optimized for TV playback and torrent media workflows', fill=(160, 200, 230))
     img.save(out / f'tv_screenshot_{idx+1}_1920x1080.png')

@@ -2860,7 +2860,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               leading:
                   const Icon(Icons.star_rounded, color: Colors.amber, size: 32),
               title: const Text(
-                'Enjoying BitPlayer?',
+                'Enjoying Convert The Spire Reborn?',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle:
@@ -3116,7 +3116,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               leading:
                   const Icon(Icons.star_rounded, color: Colors.amber, size: 32),
               title: const Text(
-                'Enjoying BitPlayer?',
+                'Enjoying Convert The Spire Reborn?',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle:

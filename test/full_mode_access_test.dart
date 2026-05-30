@@ -46,10 +46,9 @@ void main() {
       access.resetForTesting();
       await access.load();
 
-      final expectedTitle = kPlayStoreBuild ? 'BitPlayer' : 'Convert The Spire Reborn';
-      final expectedSubtitle =
-          kPlayStoreBuild ? 'BitPlayer — media & torrents' : 'Convert The Spire Reborn — media & torrents';
-      final expectedFolderName = kPlayStoreBuild ? 'BitPlayer' : 'ConvertTheSpireReborn';
+        const expectedTitle = 'Convert The Spire Reborn';
+        const expectedSubtitle = 'Convert The Spire Reborn — media & torrents';
+        const expectedFolderName = 'ConvertTheSpireReborn';
 
       expect(getAppTitle(), expectedTitle);
       expect(getAppSubtitle(), expectedSubtitle);

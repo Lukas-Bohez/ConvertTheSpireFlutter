@@ -7,7 +7,6 @@ import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
 import '../bittorrent/bencode.dart';
-import '../../config/build_flags.dart';
 
 class TorrentCreationResult {
   final String torrentPath;
@@ -267,9 +266,7 @@ Future<void> _createTorrentIsolateEntry(Map<String, Object> args) async {
 
     final metadict = <String, Object>{
       'info': info,
-      'created by': kPlayStoreBuild
-          ? 'Bitplayer 1.0'
-          : 'Convert the Spire Reborn 1.0',
+      'created by': 'Convert The Spire Reborn 1.0',
       'creation date': DateTime.now().millisecondsSinceEpoch ~/ 1000,
     };
 

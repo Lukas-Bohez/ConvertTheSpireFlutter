@@ -6,16 +6,39 @@ import 'package:provider/provider.dart';
 import '../screens/player.dart'
     show PlayerState, PositionUiState, MediaItem, MediaType;
 import '../screens/browser_screen.dart';
+import '../config/build_flags.dart';
 import '../widgets/quick_links_service.dart';
 import '../vault/services/torrent_service.dart';
 
 const _kRoutes = {
-  'player': (index: 0, icon: Icons.music_note, label: 'Player'),
-  'search': (index: 1, icon: Icons.search, label: 'Search'),
-  'browser': (index: 2, icon: Icons.language, label: 'Browser'),
-  'downloads': (index: 3, icon: Icons.download, label: 'Downloads'),
-  'settings': (index: 4, icon: Icons.settings, label: 'Settings'),
-  'files': (index: 5, icon: Icons.folder, label: 'Files'),
+  'search':
+    (index: 0, icon: Icons.search, label: 'Search', route: 'search.tab'),
+  'multisearch':
+    (index: 1, icon: Icons.travel_explore, label: 'Search+', route: 'multisearch.tab'),
+  'browser':
+    (index: 2, icon: Icons.language, label: 'Browser', route: 'browser.tab'),
+  'queue':
+    (index: 3, icon: Icons.queue_music, label: 'Queue', route: 'queue.tab'),
+  'playlists':
+    (index: 4, icon: Icons.playlist_play, label: 'Playlists', route: 'playlists.tab'),
+  'files':
+    (index: 5, icon: Icons.folder, label: 'Files', route: 'bulkimport.tab'),
+  'stats':
+    (index: 6, icon: Icons.bar_chart, label: 'Stats', route: 'stats.tab'),
+  'settings':
+    (index: 7, icon: Icons.settings, label: 'Settings', route: 'settings.tab'),
+  'support':
+    (index: 8, icon: Icons.volunteer_activism, label: 'Support', route: 'support.tab'),
+  'convert':
+    (index: 9, icon: Icons.transform, label: 'Convert', route: 'convert.tab'),
+  'logs':
+    (index: 10, icon: Icons.list_alt, label: 'Logs', route: 'logs.tab'),
+  'guide':
+    (index: 11, icon: Icons.menu_book, label: 'Guide', route: 'guide.tab'),
+  'player':
+    (index: 12, icon: Icons.music_note, label: 'Player', route: 'player.tab'),
+  'torrents':
+    (index: 14, icon: Icons.download, label: 'Torrents', route: 'torrents.tab'),
 };
 
 /// Persistent browser-like shell that wraps all app content.
@@ -136,15 +159,19 @@ class _BrowserShellState extends State<BrowserShell> {
           builder: (context, _) {
             final suggestions = _buildSuggestions(_urlEditController.text);
             final cs = Theme.of(context).colorScheme;
-            final width = MediaQuery.sizeOf(context).width;
+            final media = MediaQuery.sizeOf(context);
+            final width = media.width;
+            final maxWidth = (width - 12).clamp(260.0, 680.0).toDouble();
+            final maxHeight = (media.height * 0.55).clamp(180.0, 460.0).toDouble();
 
             return Align(
               alignment: Alignment.topLeft,
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: width - 12),
+                constraints: BoxConstraints(maxWidth: maxWidth),
                 child: Material(
                   color: Colors.transparent,
-                  child: IntrinsicWidth(
+                  child: SizedBox(
+                    width: maxWidth,
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
@@ -161,52 +188,57 @@ class _BrowserShellState extends State<BrowserShell> {
                           ),
                         ],
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: suggestions
-                                .where((s) =>
-                                    s.kind == _BrowserSuggestionKind.internal)
-                                .map(
-                                  (suggestion) => ActionChip(
-                                    avatar: Icon(suggestion.icon, size: 18),
-                                    label: Text(suggestion.label),
-                                    onPressed: () =>
-                                        _handleSubmit(suggestion.value),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                          if (suggestions.any((s) =>
-                              s.kind != _BrowserSuggestionKind.internal)) ...[
-                            const SizedBox(height: 10),
-                            ...suggestions
-                                .where((s) =>
-                                    s.kind != _BrowserSuggestionKind.internal)
-                                .map(
-                                  (suggestion) => ListTile(
-                                    dense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                    leading: CircleAvatar(
-                                      radius: 16,
-                                      backgroundColor: cs.primaryContainer,
-                                      foregroundColor: cs.onPrimaryContainer,
-                                      child: Icon(suggestion.icon, size: 16),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxHeight: maxHeight),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: suggestions
+                                    .where((s) =>
+                                        s.kind == _BrowserSuggestionKind.internal)
+                                    .map(
+                                      (suggestion) => ActionChip(
+                                        avatar: Icon(suggestion.icon, size: 18),
+                                        label: Text(suggestion.label),
+                                        onPressed: () =>
+                                            _handleSubmit(suggestion.value),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                              if (suggestions.any((s) =>
+                                  s.kind != _BrowserSuggestionKind.internal)) ...[
+                                const SizedBox(height: 10),
+                                ...suggestions
+                                    .where((s) =>
+                                        s.kind != _BrowserSuggestionKind.internal)
+                                    .map(
+                                      (suggestion) => ListTile(
+                                        dense: true,
+                                        contentPadding: EdgeInsets.zero,
+                                        leading: CircleAvatar(
+                                          radius: 16,
+                                          backgroundColor: cs.primaryContainer,
+                                          foregroundColor: cs.onPrimaryContainer,
+                                          child: Icon(suggestion.icon, size: 16),
+                                        ),
+                                        title: Text(suggestion.label),
+                                        subtitle: suggestion.subtitle.isEmpty
+                                            ? null
+                                            : Text(suggestion.subtitle),
+                                        onTap: () =>
+                                            _handleSubmit(suggestion.value),
+                                      ),
                                     ),
-                                    title: Text(suggestion.label),
-                                    subtitle: suggestion.subtitle.isEmpty
-                                        ? null
-                                        : Text(suggestion.subtitle),
-                                    onTap: () =>
-                                        _handleSubmit(suggestion.value),
-                                  ),
-                                ),
-                          ],
-                        ],
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -268,13 +300,6 @@ class _BrowserShellState extends State<BrowserShell> {
 
   void _finishEditing() {
     if (!mounted) return;
-    setState(() => _isEditing = false);
-    _hideSuggestionOverlay();
-    widget.onUrlEditingEnd?.call();
-    FocusScope.of(context).unfocus();
-  }
-
-  void _cancelEditing() {
     setState(() => _isEditing = false);
     _hideSuggestionOverlay();
     widget.onUrlEditingEnd?.call();
@@ -1038,7 +1063,6 @@ class _BrowserShellState extends State<BrowserShell> {
                     const BoxConstraints(minHeight: 28, minWidth: 28),
               ),
               onSubmitted: _handleSubmit,
-              onTapOutside: (_) => _cancelEditing(),
             ),
           ),
         ),
@@ -1167,14 +1191,29 @@ BrowserSubmissionDecision _resolveBrowserSubmission(String input) {
   final lower = trimmed.toLowerCase();
 
   for (final entry in _kRoutes.entries) {
-    final route = _routeForKey(entry.key);
-    if (lower == entry.key || lower == entry.value.label.toLowerCase() ||
+    final route = entry.value.route;
+    if (lower == entry.key ||
+        lower == entry.value.label.toLowerCase() ||
         lower == route) {
       return BrowserSubmissionDecision(
         BrowserSubmissionKind.internalRoute,
         route,
       );
     }
+  }
+
+  // Legacy aliases kept for compatibility with old input habits.
+  const legacyAliases = <String, String>{
+    'downloads': 'torrents.tab',
+    'import': 'bulkimport.tab',
+    'search+': 'multisearch.tab',
+  };
+  final aliasedRoute = legacyAliases[lower];
+  if (aliasedRoute != null) {
+    return BrowserSubmissionDecision(
+      BrowserSubmissionKind.internalRoute,
+      aliasedRoute,
+    );
   }
 
   if (lower.startsWith('magnet:')) {
@@ -1203,18 +1242,6 @@ BrowserSubmissionDecision _resolveBrowserSubmission(String input) {
     BrowserSubmissionKind.openUrl,
     'https://www.google.com/search?q=${Uri.encodeComponent(trimmed)}',
   );
-}
-
-String _routeForKey(String key) {
-  return switch (key) {
-    'player' => 'player.tab',
-    'search' => 'search.tab',
-    'browser' => 'browser.tab',
-    'downloads' => 'torrents.tab',
-    'settings' => 'settings.tab',
-    'files' => 'bulkimport.tab',
-    _ => key,
-  };
 }
 
 enum BrowserSubmissionKind {
@@ -1258,13 +1285,14 @@ class _BrowserSuggestion {
 
 final List<_BrowserSuggestion> _browserDestinations = [
   for (final entry in _kRoutes.entries)
-    _BrowserSuggestion(
-      kind: _BrowserSuggestionKind.internal,
-      label: entry.value.label,
-      value: _routeForKey(entry.key),
-      subtitle: entry.value.label,
-      icon: entry.value.icon,
-      keyword: entry.key,
-      aliases: const [],
-    ),
+    if (isTabVisibleInCurrentBuild(entry.value.index))
+      _BrowserSuggestion(
+        kind: _BrowserSuggestionKind.internal,
+        label: entry.value.label,
+        value: entry.value.route,
+        subtitle: entry.value.label,
+        icon: entry.value.icon,
+        keyword: entry.key,
+        aliases: const [],
+      ),
 ];

@@ -786,49 +786,76 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   }
 
-  Future<void> _injectTextAndBlur(String value) async {
+  Future<void> _injectTextAndSubmit(String value) async {
     final escaped = value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
     try {
       await _webViewController?.evaluateJavascript(source: """
         (function(){
           var el = window.__flutterFocusedInput || document.activeElement;
-          if (el) {
-            try {
-              var value = '$escaped';
-              var tag = el.tagName ? el.tagName.toLowerCase() : '';
-              if (el.isContentEditable) {
-                el.textContent = value;
-                el.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'insertText', data: value}));
-              } else if (tag === 'textarea') {
-                var nativeTextAreaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
-                if (nativeTextAreaSetter) {
-                  nativeTextAreaSetter.call(el, value);
-                } else {
-                  el.value = value;
-                }
-                el.dispatchEvent(new Event('input', {bubbles: true}));
-                el.dispatchEvent(new Event('change', {bubbles: true}));
-              } else if (tag === 'input') {
-                var nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-                if (nativeInputSetter) {
-                  nativeInputSetter.call(el, value);
-                } else {
-                  el.value = value;
-                }
-                el.dispatchEvent(new Event('input', {bubbles: true}));
-                el.dispatchEvent(new Event('change', {bubbles: true}));
+          if (!el) return;
+          try {
+            var value = '$escaped';
+            var tag = el.tagName ? el.tagName.toLowerCase() : '';
+            if (el.isContentEditable) {
+              el.textContent = value;
+              el.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'insertText', data: value}));
+            } else if (tag === 'textarea') {
+              var nativeTextAreaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+              if (nativeTextAreaSetter) {
+                nativeTextAreaSetter.call(el, value);
               } else {
                 el.value = value;
               }
-              el.blur();
-              window.__flutterFocusedInput = null;
-              window.__flutterFocusedInputKind = null;
-            } catch(e){}
-          }
+              el.dispatchEvent(new Event('input', {bubbles: true}));
+              el.dispatchEvent(new Event('change', {bubbles: true}));
+            } else if (tag === 'input') {
+              var nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+              if (nativeInputSetter) {
+                nativeInputSetter.call(el, value);
+              } else {
+                el.value = value;
+              }
+              el.dispatchEvent(new Event('input', {bubbles: true}));
+              el.dispatchEvent(new Event('change', {bubbles: true}));
+            } else {
+              el.value = value;
+            }
+
+            ['keydown','keypress','keyup'].forEach(function(type) {
+              try {
+                var ev = new KeyboardEvent(type, {
+                  key: 'Enter',
+                  code: 'Enter',
+                  keyCode: 13,
+                  which: 13,
+                  bubbles: true,
+                  cancelable: true,
+                });
+                el.dispatchEvent(ev);
+              } catch(_) {}
+            });
+
+            var form = (el.form && typeof el.form === 'object') ? el.form : (el.closest ? el.closest('form') : null);
+            if (form) {
+              if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+              } else {
+                var submitEvent = new Event('submit', {bubbles: true, cancelable: true});
+                var notCancelled = form.dispatchEvent(submitEvent);
+                if (notCancelled && typeof form.submit === 'function') {
+                  form.submit();
+                }
+              }
+            }
+
+            el.blur();
+            window.__flutterFocusedInput = null;
+            window.__flutterFocusedInputKind = null;
+          } catch(e){}
         })();
       """);
     } catch (e) {
-      debugPrint('injectTextAndBlur failed: $e');
+      debugPrint('injectTextAndSubmit failed: $e');
     }
   }
 
@@ -873,7 +900,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       barrierDismissible: false,
       builder: (dialogContext) {
         Future<void> submitInput(String value) async {
-          await _injectTextAndBlur(value);
+          await _injectTextAndSubmit(value);
           try {
             await _webviewInputChannel.invokeMethod('dismissIME');
           } catch (_) {}

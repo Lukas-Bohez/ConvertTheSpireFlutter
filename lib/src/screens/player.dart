@@ -241,7 +241,7 @@ Future<String?> fetchArtistFromMusicBrainz(String title) async {
       ),
       headers: {
         'User-Agent':
-            'BitPlayer/1.0 (https://github.com/Lukas-Bohez/ConvertTheSpireFlutter)',
+        'ConvertTheSpireReborn/1.0 (https://github.com/Lukas-Bohez/ConvertTheSpireFlutter)',
       },
     ).timeout(const Duration(seconds: 8));
 

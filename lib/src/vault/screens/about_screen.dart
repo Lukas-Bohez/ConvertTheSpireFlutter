@@ -1024,7 +1024,7 @@ class _AboutScreenState extends State<AboutScreen>
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.star_rate_outlined),
-                      title: const Text('Rate BitPlayer'),
+                      title: const Text('Rate Convert The Spire Reborn'),
                       subtitle: const Text('Leave a rating on the Play Store'),
                       onTap: () async {
                         await ReviewService.openStoreListing();

@@ -14,7 +14,7 @@ draw.rectangle([(0, 0), (320, 4)], fill=(100, 180, 255))
 # Add text
 try:
     font = ImageFont.load_default()
-    draw.text((10, 80), "BitPlayer", fill=(200, 200, 200), font=font)
+    draw.text((10, 80), "Convert The Spire Reborn", fill=(200, 200, 200), font=font)
     draw.text((10, 100), "Android TV", fill=(100, 180, 255), font=font)
 except:
     pass

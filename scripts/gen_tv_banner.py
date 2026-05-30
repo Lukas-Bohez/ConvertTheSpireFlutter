@@ -20,7 +20,7 @@ try:
     f = ImageFont.load_default()
 except Exception:
     f = None
-d.text((12, 75), 'BitPlayer', fill=(220,220,220), font=f)
+d.text((12, 75), 'Convert The Spire Reborn', fill=(220,220,220), font=f)
 d.text((12, 95), 'Torrent & Media', fill=(80,160,255), font=f)
 img.save(out_path)
 print("created", out_path)
