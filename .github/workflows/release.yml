@@ -40,10 +40,6 @@ env:
   APP_NAME: convert_the_spire_reborn
   OUTPUT_NAME: ConvertTheSpireReborn
   ANDROID_APK_NAME: ConvertTheSpireReborn.apk
-  # NOTE: The AAB is built and stored as an artifact for Play Store submission
-  # but is intentionally NOT included in the GitHub Release. Only the APK
-  # (built with PLAY_STORE_BUILD=false, GITHUB_RELEASE=true) is published.
-  ANDROID_AAB_NAME: bitplayer-v12.1.6+1216-play-release.aab
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 # ---------------------------------------------------------------------------
@@ -285,30 +281,16 @@ jobs:
       - name: Build APK (GitHub release flavor)
         run: flutter build apk --flavor full --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
 
-      - name: Build Play AAB (Play Store flavor)
-        run: flutter build appbundle --flavor play --release --dart-define=PLAY_STORE_BUILD=true --dart-define=GITHUB_RELEASE=false
-
-      - name: Verify Play AAB filename and versionCode
+      - name: Verify release tag matches pubspec version
         shell: bash
         run: |
           set -euo pipefail
-          version_name=$(grep -E '^version:' pubspec.yaml | sed -E 's/^version:\s*([0-9.]+)\+([0-9]+)$/\1/')
-          version_code=$(grep -E '^version:' pubspec.yaml | sed -E 's/^version:\s*([0-9.]+)\+([0-9]+)$/\2/')
-          expected_tag="v${version_name}"
-          expected_aab="bitplayer-${version_name}+${version_code}-play-release.aab"
+          version_line=$(grep -E '^version:' pubspec.yaml | head -n 1)
+          version_value=${version_line#version: }
+          expected_tag="v${version_value}"
 
           if [ "${{ inputs.release_tag }}" != "$expected_tag" ]; then
             echo "Expected release tag $expected_tag but got ${{ inputs.release_tag }}"
-            exit 1
-          fi
-
-          if [ ! -f "build/app/outputs/bundle/playRelease/app-play-release.aab" ]; then
-            echo "Built Play AAB missing"
-            exit 1
-          fi
-
-          if [ "${{ env.ANDROID_AAB_NAME }}" != "$expected_aab" ]; then
-            echo "Expected ANDROID_AAB_NAME=$expected_aab but got ${{ env.ANDROID_AAB_NAME }}"
             exit 1
           fi
 
@@ -318,24 +300,11 @@ jobs:
           # APK goes to GitHub Release
           cp build/app/outputs/flutter-apk/app-full-release.apk \
             android-builds/${{ env.ANDROID_APK_NAME }}
-          # AAB is stored as a CI artifact ONLY - for manual Play Store upload.
-          # It must NOT be included in the GitHub Release (it's built with
-          # PLAY_STORE_BUILD=true and users would get the store version).
-          mkdir -p android-aab
-          cp build/app/outputs/bundle/playRelease/${{ env.ANDROID_AAB_NAME }} \
-            android-aab/${{ env.ANDROID_AAB_NAME }}
 
       - uses: actions/upload-artifact@v5
         with:
           name: android-apk
           path: android-builds/
-          retention-days: 7
-
-      # AAB stored separately so the release job cannot accidentally pick it up
-      - uses: actions/upload-artifact@v5
-        with:
-          name: android-aab-play-store-only
-          path: android-aab/
           retention-days: 7
 
   # =========================================================================
@@ -358,8 +327,6 @@ jobs:
         run: find artifacts -type f | sort
 
       # Verify that every expected platform produced at least one file.
-      # Note: android-aab-play-store-only is intentionally excluded from this
-      # check and from the release — it is for Play Store submission only.
       - name: Verify artifact completeness
         run: |
           set -euo pipefail
@@ -376,14 +343,13 @@ jobs:
           [ "$missing" -eq 0 ] || exit 1
 
       # Generate a SHA-256 manifest so users can verify downloads.
-      # Explicitly excludes the AAB and coverage report.
+      # Explicitly excludes coverage report and other non-release artifacts.
       - name: Generate SHA-256 checksums
         run: |
           cd artifacts
           find . -type f \
             ! -name "*.sha256" \
             ! -path "*/coverage-report/*" \
-            ! -path "*/android-aab-play-store-only/*" \
           | sort | xargs sha256sum > ../SHA256SUMS.txt
           cat ../SHA256SUMS.txt
 
