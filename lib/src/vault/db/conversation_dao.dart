@@ -1,6 +1,6 @@
-import 'package:sqflite/sqflite.dart';
 import 'package:convert_the_spire_reborn/src/vault/db/database.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/conversation.dart';
+import 'package:sqflite/sqflite.dart';
 
 class ConversationDao {
   ConversationDao._();

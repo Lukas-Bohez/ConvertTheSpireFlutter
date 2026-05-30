@@ -30,7 +30,7 @@ class NotificationService {
       defaultActionName: 'Open',
     );
 
-    final initSettings = InitializationSettings(
+    final initSettings = const InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
       linux: linuxSettings,
@@ -73,7 +73,7 @@ class NotificationService {
     const iosDetails = DarwinNotificationDetails();
     const linuxDetails = LinuxNotificationDetails();
 
-    final details = NotificationDetails(
+    final details = const NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
       linux: linuxDetails,

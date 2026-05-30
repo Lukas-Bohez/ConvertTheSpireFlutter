@@ -12,7 +12,7 @@ class MediaOrganizer {
   /// Returns a map with counts: {"moved": int, "skipped": int, "deleted": int}
   static Future<Map<String, int>> moveAndDeduplicate(
       List<String> sourceDirs, String target) async {
-    print(
+      stdout.writeln(
         '[MediaOrganizer] Starting moveAndDeduplicate with ${sourceDirs.length} sources, target=$target');
     final moved = <String>[];
     final deleted = <String>[];
@@ -34,7 +34,7 @@ class MediaOrganizer {
           p.isWithin(normalizedSource, normalizedTarget) ||
           p.isWithin(normalizedTarget, normalizedSource);
       if (overlapsTarget) {
-        print(
+        stdout.writeln(
             '[MediaOrganizer] Skipping overlapping source/target path: $source');
         continue;
       }
@@ -44,9 +44,9 @@ class MediaOrganizer {
     }
 
     if (filteredSources.isEmpty) {
-      print(
+        stdout.writeln(
           '[MediaOrganizer] No valid source directories after filtering overlaps.');
-      return {"moved": 0, "deleted": 0, "skipped": 0};
+      return {'moved': 0, 'deleted': 0, 'skipped': 0};
     }
 
     // Collect candidate files from sources.
@@ -57,7 +57,7 @@ class MediaOrganizer {
       try {
         // If the source is a SAF tree URI, enumerate via native channel
         if (dirPath.startsWith('content://')) {
-          print('[MediaOrganizer] Enumerating SAF tree: $dirPath');
+          stdout.writeln('[MediaOrganizer] Enumerating SAF tree: $dirPath');
           final items = await PlatformDirs.listTree(dirPath);
           for (final item in items) {
             final uri = item['uri'] ?? '';
@@ -74,17 +74,17 @@ class MediaOrganizer {
               size: size,
             ));
           }
-          print(
+            stdout.writeln(
               '[MediaOrganizer] Found ${candidates.length} candidates in SAF $dirPath');
           continue;
         }
 
         final dir = Directory(dirPath);
         if (!dir.existsSync()) {
-          print('[MediaOrganizer] Source dir does not exist: $dirPath');
+          stdout.writeln('[MediaOrganizer] Source dir does not exist: $dirPath');
           continue;
         }
-        print('[MediaOrganizer] Scanning source: $dirPath');
+        stdout.writeln('[MediaOrganizer] Scanning source: $dirPath');
         dir.listSync(recursive: true).whereType<File>().forEach((f) {
           final ext = p.extension(f.path).toLowerCase();
           if (ext.isEmpty) return;
@@ -95,14 +95,14 @@ class MediaOrganizer {
             size: f.lengthSync(),
           ));
         });
-        print(
+        stdout.writeln(
             '[MediaOrganizer] Found ${candidates.length} candidates in $dirPath');
       } catch (e) {
-        print('[MediaOrganizer] Error scanning source $dirPath: $e');
+        stdout.writeln('[MediaOrganizer] Error scanning source $dirPath: $e');
       }
     }
 
-    print('[MediaOrganizer] Total candidates collected: ${candidates.length}');
+    stdout.writeln('[MediaOrganizer] Total candidates collected: ${candidates.length}');
 
     // Group by basename
     for (final candidate in candidates) {
@@ -121,19 +121,19 @@ class MediaOrganizer {
       }
     }
 
-    print(
+    stdout.writeln(
         '[MediaOrganizer] After dedup: ${seen.length} unique files, ${deleted.length} duplicates to delete');
 
     var movedCount = 0;
     var deletedCount = 0;
     // Ensure target when filesystem path
     final targetIsSAF = target.startsWith('content://');
-    print('[MediaOrganizer] Target is SAF: $targetIsSAF');
+    stdout.writeln('[MediaOrganizer] Target is SAF: $targetIsSAF');
     Directory? targetDir;
     if (!targetIsSAF) {
       targetDir = Directory(target);
       if (!targetDir.existsSync()) {
-        print('[MediaOrganizer] Creating target directory: $target');
+        stdout.writeln('[MediaOrganizer] Creating target directory: $target');
         targetDir.createSync(recursive: true);
       }
     }
@@ -143,7 +143,7 @@ class MediaOrganizer {
       try {
         if (targetIsSAF) {
           final mime = entry.mimeType;
-          print(
+            stdout.writeln(
               '[MediaOrganizer] Copying to SAF: ${entry.debugPath} -> $destName (mime=$mime)');
           final copied = entry.sourceUri != null
               ? await PlatformDirs.copyContentUriToTree(
@@ -153,18 +153,18 @@ class MediaOrganizer {
           if (copied != null) {
             moved.add(copied);
             movedCount++;
-            print('[MediaOrganizer] Successfully copied: $destName');
+            stdout.writeln('[MediaOrganizer] Successfully copied: $destName');
           } else {
-            print('[MediaOrganizer] Failed to copy: $destName');
+            stdout.writeln('[MediaOrganizer] Failed to copy: $destName');
           }
         } else {
           final dest = File(p.join(targetDir!.path, destName));
           if (entry.sourcePath != null &&
               p.equals(entry.sourcePath!, dest.path)) {
-            print('[MediaOrganizer] Skipping (same path): $destName');
+            stdout.writeln('[MediaOrganizer] Skipping (same path): $destName');
             continue;
           }
-          print(
+          stdout.writeln(
               '[MediaOrganizer] Copying to filesystem: ${entry.debugPath} -> ${dest.path}');
           if (dest.existsSync()) {
             // If existing, keep larger file
@@ -176,7 +176,7 @@ class MediaOrganizer {
               } else {
                 File(entry.sourcePath!).copySync(dest.path);
               }
-              print('[MediaOrganizer] Overwrote existing: $destName');
+              stdout.writeln('[MediaOrganizer] Overwrote existing: $destName');
             }
           } else {
             if (entry.sourceUri != null) {
@@ -186,12 +186,12 @@ class MediaOrganizer {
             } else {
               File(entry.sourcePath!).copySync(dest.path);
             }
-            print('[MediaOrganizer] Copied: $destName');
+            stdout.writeln('[MediaOrganizer] Copied: $destName');
           }
           movedCount++;
         }
       } catch (e) {
-        print('[MediaOrganizer] Error moving ${entry.debugPath}: $e');
+        stdout.writeln('[MediaOrganizer] Error moving ${entry.debugPath}: $e');
       }
     }
 
@@ -202,20 +202,20 @@ class MediaOrganizer {
         if (f.existsSync()) {
           f.deleteSync();
           deletedCount++;
-          print('[MediaOrganizer] Deleted duplicate: $path');
+          stdout.writeln('[MediaOrganizer] Deleted duplicate: $path');
         }
       } catch (e) {
-        print('[MediaOrganizer] Error deleting $path: $e');
+        stdout.writeln('[MediaOrganizer] Error deleting $path: $e');
       }
     }
 
     final skipped = candidates.length - movedCount - deletedCount;
     final result = {
-      "moved": movedCount,
-      "deleted": deletedCount,
-      "skipped": skipped
+      'moved': movedCount,
+      'deleted': deletedCount,
+      'skipped': skipped
     };
-    print('[MediaOrganizer] Final result: $result');
+    stdout.writeln('[MediaOrganizer] Final result: $result');
     return result;
   }
 

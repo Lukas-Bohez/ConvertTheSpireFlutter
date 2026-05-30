@@ -1,16 +1,16 @@
 import 'dart:async';
 
-import 'package:uuid/uuid.dart';
 import 'package:convert_the_spire_reborn/src/vault/db/chat_dao.dart';
 import 'package:convert_the_spire_reborn/src/vault/db/conversation_dao.dart';
 import 'package:convert_the_spire_reborn/src/vault/db/dm_messages_dao.dart';
 import 'package:convert_the_spire_reborn/src/vault/db/users_dao.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/chat_hub_entry.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/chat_message.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/server_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/chat_user.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/conversation.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/dm_message.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/server_service.dart';
+import 'package:uuid/uuid.dart';
 
 class ChatService {
   ChatService._();
@@ -334,7 +334,7 @@ class ChatService {
   String _sanitize(String text) {
     return text
         .trim()
-        .replaceAll(RegExp(r"[\x00-\x1F]"), '')
+        .replaceAll(RegExp(r'[\x00-\x1F]'), '')
         .replaceAll(RegExp(r'<[^>]*>'), '');
   }
 }

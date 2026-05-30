@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:characters/characters.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
-import 'package:characters/characters.dart';
 
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
@@ -1442,7 +1442,7 @@ class DownloadService {
         final result = await Process.run('wmic', [
           'logicaldisk',
           'where',
-          'Caption=${drive}',
+          'Caption=$drive',
           'get',
           'FreeSpace',
           '/value'
@@ -1457,7 +1457,7 @@ class DownloadService {
         final result = await Process.run('df', ['-k', outputDir]);
         final lines = (result.stdout as String).split('\n');
         if (lines.length > 1) {
-          final parts = lines[1].trim().split(RegExp('\s+'));
+          final parts = lines[1].trim().split(RegExp('s+'));
           if (parts.length > 3) {
             final freeKb = int.tryParse(parts[3]) ?? 0;
             return (freeKb * 1024) > requiredBytes;

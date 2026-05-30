@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Directory, File, FileMode, Platform;
 import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart'
     show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
@@ -8,17 +9,16 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:provider/provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'src/app.dart';
 import 'src/config/build_flags.dart';
 import 'src/config/flavor.dart';
 import 'src/config/full_mode_access.dart';
 import 'src/services/ad_service.dart';
 import 'src/services/purchase_service.dart';
-
-import 'src/app.dart';
 import 'src/services/review_service.dart';
 
 Future<File?> _prepareStartupErrorLogFile() async {
@@ -82,7 +82,7 @@ Future<void> main() async {
     startupErrorLogFile = await _prepareStartupErrorLogFile();
 
     // Request storage/media permissions on Android (if needed).
-    Future<void> _requestAndroidPermissions() async {
+    Future<void> requestAndroidPermissions() async {
       if (kIsWeb) return;
       if (!Platform.isAndroid) return;
 
@@ -120,7 +120,7 @@ Future<void> main() async {
       return true;
     };
 
-    await _requestAndroidPermissions();
+    await requestAndroidPermissions();
 
     // Initialize purchase service only on Play Store Android builds.
     // The `in_app_purchase` plugin is not available on desktop builds and
@@ -173,11 +173,13 @@ Future<void> main() async {
             settings:
                 WebViewEnvironmentSettings(userDataFolder: webViewDataDir),
           );
-          if (kDebugMode)
+          if (kDebugMode) {
             debugPrint('[WebView] created environment at $webViewDataDir');
+          }
         } else {
-          if (kDebugMode)
+          if (kDebugMode) {
             debugPrint('[WebView] WebView2 runtime not available');
+          }
         }
       } catch (e) {
         if (kDebugMode) debugPrint('[WebView] environment init failed: $e');
@@ -212,8 +214,8 @@ Future<void> main() async {
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       await windowManager.ensureInitialized();
       final windowOptions = WindowOptions(
-        size: ui.Size(1100, 750),
-        minimumSize: ui.Size(480, 600),
+        size: const ui.Size(1100, 750),
+        minimumSize: const ui.Size(480, 600),
         center: true,
         title: getAppTitle(),
         backgroundColor: const Color(0xFF17110B),

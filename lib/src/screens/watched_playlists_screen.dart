@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+
+import '../services/watched_playlist_service.dart';
 import '../utils/snack.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/tv_file_browser.dart';
-
-import '../services/watched_playlist_service.dart';
 
 class PlaylistFolderConfig {
   final String? defaultFolder;
@@ -257,7 +257,7 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
           if (_checking) const LinearProgressIndicator(),
           Expanded(
             child: _urls.isEmpty
-                ? EmptyState(
+                ? const EmptyState(
                     icon: Icons.playlist_add,
                     title: 'No watched playlists yet',
                     subtitle:

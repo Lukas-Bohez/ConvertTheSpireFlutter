@@ -44,7 +44,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
         // Playlist detected
         final yt = YoutubeExplode();
         final playlistService = PlaylistService(yt: yt);
-        List<SearchResult> tracks =
+        final List<SearchResult> tracks =
             await playlistService.getYouTubePlaylistTracks(url);
         yt.close();
         if (!mounted) return;
@@ -224,8 +224,9 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                                     value: 'mp4', child: Text('MP4')),
                               ],
                               onChanged: (value) {
-                                if (value != null)
+                                if (value != null) {
                                   setState(() => _format = value);
+                                }
                               },
                             ),
                           ),
@@ -256,8 +257,9 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                                     value: 'best', child: Text('Best')),
                               ],
                               onChanged: (value) {
-                                if (value != null)
+                                if (value != null) {
                                   setState(() => _quality = value);
+                                }
                               },
                             ),
                           ),

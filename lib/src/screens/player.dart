@@ -6,6 +6,8 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+import 'package:audio_service/audio_service.dart' as audio_svc;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
@@ -13,31 +15,30 @@ import 'package:flutter/services.dart'
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
-import 'package:audio_metadata_reader/audio_metadata_reader.dart';
-import 'package:metadata_god/metadata_god.dart';
-import 'package:audio_service/audio_service.dart' as audio_svc;
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:metadata_god/metadata_god.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
-import 'package:video_player/video_player.dart';
-import 'package:window_manager/window_manager.dart';
 import 'package:share_plus/share_plus.dart';
-import '../services/review_service.dart';
-import '../state/app_controller.dart';
-import '../services/platform_dirs.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:video_player/video_player.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:window_manager/window_manager.dart';
+
 import '../services/android_saf.dart';
 import '../services/audio_handler.dart';
 import '../services/background_media_update_guard.dart';
 import '../services/ffmpeg_service.dart';
-import '../utils/snack.dart';
+import '../services/media_organizer.dart';
+import '../services/platform_dirs.dart';
+import '../services/review_service.dart';
+import '../state/app_controller.dart';
 import '../utils/lock.dart';
+import '../utils/snack.dart';
 import '../vault/platform/desktop_window.dart';
 import '../widgets/tv_file_browser.dart';
-import '../services/media_organizer.dart';
 
 // --- Public entry point -------------------------------------------------------
 
@@ -325,18 +326,19 @@ Future<Uint8List?> _transcodeToSafePng(Uint8List raw,
     img.Image? decoded;
     if (mimeType != null) {
       final mt = mimeType.toLowerCase().trim();
-      if (mt.contains('jpeg') || mt.contains('jpg'))
+      if (mt.contains('jpeg') || mt.contains('jpg')) {
         decoded = img.decodeJpg(raw);
-      else if (mt.contains('png'))
+      } else if (mt.contains('png')) {
         decoded = img.decodePng(raw);
-      else if (mt.contains('webp'))
+      } else if (mt.contains('webp')) {
         decoded = img.decodeWebP(raw);
-      else if (mt.contains('bmp'))
+      } else if (mt.contains('bmp')) {
         decoded = img.decodeBmp(raw);
-      else if (mt.contains('gif'))
+      } else if (mt.contains('gif')) {
         decoded = img.decodeGif(raw);
-      else if (mt.contains('tiff') || mt.contains('tif'))
+      } else if (mt.contains('tiff') || mt.contains('tif')) {
         decoded = img.decodeTiff(raw);
+      }
     }
     decoded ??= _decodeByMagic(raw);
     decoded ??= img.decodeImage(raw);
@@ -351,12 +353,15 @@ Future<Uint8List?> _transcodeToSafePng(Uint8List raw,
 
 img.Image? _decodeByMagic(Uint8List raw) {
   if (raw.length < 4) return null;
-  if (raw[0] == 0xFF && raw[1] == 0xD8 && raw[2] == 0xFF)
+  if (raw[0] == 0xFF && raw[1] == 0xD8 && raw[2] == 0xFF) {
     return img.decodeJpg(raw);
-  if (raw[0] == 0x89 && raw[1] == 0x50 && raw[2] == 0x4E && raw[3] == 0x47)
+  }
+  if (raw[0] == 0x89 && raw[1] == 0x50 && raw[2] == 0x4E && raw[3] == 0x47) {
     return img.decodePng(raw);
-  if (raw[0] == 0x47 && raw[1] == 0x49 && raw[2] == 0x46 && raw[3] == 0x38)
+  }
+  if (raw[0] == 0x47 && raw[1] == 0x49 && raw[2] == 0x46 && raw[3] == 0x38) {
     return img.decodeGif(raw);
+  }
   if (raw[0] == 0x42 && raw[1] == 0x4D) return img.decodeBmp(raw);
   if (raw.length >= 12 &&
       raw[0] == 0x52 &&
@@ -366,10 +371,13 @@ img.Image? _decodeByMagic(Uint8List raw) {
       raw[8] == 0x57 &&
       raw[9] == 0x45 &&
       raw[10] == 0x42 &&
-      raw[11] == 0x50) return img.decodeWebP(raw);
+      raw[11] == 0x50) {
+    return img.decodeWebP(raw);
+  }
   if ((raw[0] == 0x49 && raw[1] == 0x49 && raw[2] == 0x2A && raw[3] == 0x00) ||
-      (raw[0] == 0x4D && raw[1] == 0x4D && raw[2] == 0x00 && raw[3] == 0x2A))
+      (raw[0] == 0x4D && raw[1] == 0x4D && raw[2] == 0x00 && raw[3] == 0x2A)) {
     return img.decodeTiff(raw);
+  }
   return null;
 }
 
@@ -606,8 +614,9 @@ class PlayerState with ChangeNotifier {
       // Attach media_kit streams to a dedicated list so they can be
       // cancelled when the underlying Player is recreated.
       _attachMkPlayerStreams(_mkPlayer);
-      if (_audioMkPlayer != null)
+      if (_audioMkPlayer != null) {
         _attachMkPlayerStreams(_audioMkPlayer, isAudio: true);
+      }
       notifyListeners();
     } catch (e) {
       debugPrint('InitMkPlayers outer error: $e');
@@ -661,8 +670,9 @@ class PlayerState with ChangeNotifier {
         });
         // Reattach streams to the new player and any auxiliary audio player.
         _attachMkPlayerStreams(_mkPlayer);
-        if (_audioMkPlayer != null)
+        if (_audioMkPlayer != null) {
           _attachMkPlayerStreams(_audioMkPlayer, isAudio: true);
+        }
         if (pos > Duration.zero) {
           try {
             await _mkPlayer!.seek(pos);
@@ -1096,8 +1106,9 @@ class PlayerState with ChangeNotifier {
         list.add('${item.path}\t${item.type == MediaType.video ? 'v' : 'a'}'
             '\t${item.title ?? ''}\t${item.resolvedArtist}\t${item.genre ?? ''}'
             '\t${item.modifiedAt?.toIso8601String() ?? ''}');
-        if (item.thumbnailData != null)
+        if (item.thumbnailData != null) {
           _saveThumbToCache(path, item.thumbnailData!);
+        }
       }
     }
     prefs.setStringList('player_favourites_cache', list);
@@ -1188,8 +1199,9 @@ class PlayerState with ChangeNotifier {
     final appDir = await getApplicationSupportDirectory();
     _thumbCacheDir =
         Directory('${appDir.path}${Platform.pathSeparator}thumb_cache');
-    if (!_thumbCacheDir!.existsSync())
+    if (!_thumbCacheDir!.existsSync()) {
       _thumbCacheDir!.createSync(recursive: true);
+    }
     return _thumbCacheDir!;
   }
 
@@ -1289,8 +1301,9 @@ class PlayerState with ChangeNotifier {
       }
     }
     for (int i = 0; i < _folderItemCount; i++) {
-      if (_favourites.contains(library[i].path))
+      if (_favourites.contains(library[i].path)) {
         _favouriteCache[library[i].path] = library[i];
+      }
     }
     _applyStatsToLibrary();
     _saveFavouriteCache();
@@ -1450,7 +1463,7 @@ class PlayerState with ChangeNotifier {
       if (thumb == null) {
         try {
           final metaPath = await _resolveLocalPath(path);
-          final tag = await readMetadata(File(metaPath), getImage: true);
+          final tag = readMetadata(File(metaPath), getImage: true);
           if (_loadVersion != version) return;
           dur = tag.duration;
           for (final pic in tag.pictures) {
@@ -1514,7 +1527,7 @@ class PlayerState with ChangeNotifier {
       if (thumb == null) {
         try {
           final metaPath = await _resolveLocalPath(path);
-          final tag = await readMetadata(File(metaPath), getImage: true);
+          final tag = readMetadata(File(metaPath), getImage: true);
           dur = tag.duration;
           for (final pic in tag.pictures) {
             if (pic.bytes.isEmpty) continue;
@@ -1542,8 +1555,9 @@ class PlayerState with ChangeNotifier {
             thumbnailData: thumb ?? library[index].thumbnailData,
             duration: dur,
           );
-          if (_favourites.contains(path))
+          if (_favourites.contains(path)) {
             _favouriteCache[path] = library[index];
+          }
           if (index == currentIndex) {
             _updateMediaNotification(library[index]);
           }
@@ -1561,7 +1575,7 @@ class PlayerState with ChangeNotifier {
     final item = lib[i];
     try {
       final metaPath = await _resolveLocalPath(item.path);
-      final tag = await readMetadata(File(metaPath), getImage: false);
+      final tag = readMetadata(File(metaPath), getImage: false);
       if (_loadVersion != version) return;
       final modifiedAt = item.modifiedAt ?? await _modifiedAtForPath(item.path);
       final resolvedArtist =
@@ -2469,10 +2483,12 @@ class PlayerState with ChangeNotifier {
       if (_audio != null) _runOnMainThread(() => _audio!.setVolume(volume));
     }
     if (_useMediaKit) {
-      if (_mkPlayer != null)
+      if (_mkPlayer != null) {
         _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
-      if (_audioMkPlayer != null)
+      }
+      if (_audioMkPlayer != null) {
         _audioMkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+      }
     }
     if (_androidController != null) {
       _androidController!
@@ -2756,12 +2772,14 @@ class PlayerState with ChangeNotifier {
           if (_favourites.contains(item.path)) candidates.add(i);
           break;
         case QueueScope.favSongs:
-          if (_favourites.contains(item.path) && item.type == MediaType.audio)
+          if (_favourites.contains(item.path) && item.type == MediaType.audio) {
             candidates.add(i);
+          }
           break;
         case QueueScope.favVideos:
-          if (_favourites.contains(item.path) && item.type == MediaType.video)
+          if (_favourites.contains(item.path) && item.type == MediaType.video) {
             candidates.add(i);
+          }
           break;
       }
       if (candidates.length >= maxQueueSize) break;
@@ -3315,9 +3333,12 @@ class PlayerState with ChangeNotifier {
   String _toUri(String path) {
     if (path.startsWith('file://') ||
         path.startsWith('http') ||
-        path.startsWith('content://')) return path;
-    if (!kIsWeb && Platform.isWindows)
+        path.startsWith('content://')) {
+      return path;
+    }
+    if (!kIsWeb && Platform.isWindows) {
       return Uri.file(path, windows: true).toString();
+    }
     return Uri.file(path).toString();
   }
 
@@ -3519,9 +3540,9 @@ class PlayerState with ChangeNotifier {
     // Decide audio vs video using library entry if available, otherwise use
     // extension heuristic.
     MediaType type = MediaType.audio;
-    if (idx >= 0)
+    if (idx >= 0) {
       type = library[idx].type;
-    else {
+    } else {
       final ext = p.extension(path).toLowerCase();
       final videoExts = {
         '.mp4',
@@ -3662,8 +3683,7 @@ class _VideoPane extends StatefulWidget {
     required this.onTap,
     required this.isFullScreen,
     required this.onToggleFullScreen,
-    Key? key,
-  }) : super(key: key);
+  });
 
   @override
   State<_VideoPane> createState() => _VideoPaneState();
@@ -3958,8 +3978,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     final filtered = source.where((entry) {
       final item = entry.value;
       if (!_matchesSearch(item)) return false;
-      if (_activeMediaType != null && item.type != _activeMediaType)
+      if (_activeMediaType != null && item.type != _activeMediaType) {
         return false;
+      }
       if (_activeGenres.isNotEmpty) {
         final genres = (item.genre ?? '')
             .split(',')
@@ -3989,8 +4010,9 @@ class _PlayerScreenState extends State<PlayerScreen>
         case MediaSortOrder.leastPlayed:
           return a.value.playCount.compareTo(b.value.playCount);
         case MediaSortOrder.recentlyPlayed:
-          if (a.value.lastPlayedAt == null && b.value.lastPlayedAt == null)
+          if (a.value.lastPlayedAt == null && b.value.lastPlayedAt == null) {
             return 0;
+          }
           if (a.value.lastPlayedAt == null) return 1;
           if (b.value.lastPlayedAt == null) return -1;
           return b.value.lastPlayedAt!.compareTo(a.value.lastPlayedAt!);
@@ -4108,9 +4130,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Scanning folder'),
-        content: const Column(
+      builder: (ctx) => const AlertDialog(
+        title: Text('Scanning folder'),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             CircularProgressIndicator(),
@@ -4348,8 +4370,8 @@ class _PlayerScreenState extends State<PlayerScreen>
               if (!(isMobile && showVideoPane))
                 SliverToBoxAdapter(child: _buildNowPlaying(state)),
               if (state.isLoading)
-                SliverToBoxAdapter(
-                  child: const LinearProgressIndicator(
+                const SliverToBoxAdapter(
+                  child: LinearProgressIndicator(
                     color: _PlayerTheme.accent,
                     minHeight: 2,
                   ),
@@ -4808,7 +4830,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       // Media type filters are handled elsewhere in the UI; only show
       // genre chips here to avoid duplication and visual clutter.
       final chips = <Widget>[];
-      for (final genre in genres)
+      for (final genre in genres) {
         chips.add(FilterChip(
           label: Text(genre),
           selected: _activeGenres.contains(genre),
@@ -4823,6 +4845,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             _saveUiPrefs(state);
           },
         ));
+      }
       if (chips.isEmpty) return const SizedBox.shrink();
       return Wrap(spacing: 8, runSpacing: 8, children: chips);
     }
@@ -5239,8 +5262,8 @@ class _PositionWidget extends StatelessWidget {
                 ),
               ),
               if (ui.isSeeking)
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
+                const Padding(
+                  padding: EdgeInsets.only(right: 6),
                   child: SizedBox(
                     width: 12,
                     height: 12,
@@ -5628,8 +5651,9 @@ class _MediaCard extends StatelessWidget {
     final item = entry.value;
     final idx = entry.key;
     final cs = Theme.of(context).colorScheme;
-    if (item.thumbnailData == null)
+    if (item.thumbnailData == null) {
       Future.microtask(() => state.requestThumbnailForIndex(idx));
+    }
     return Card(
       clipBehavior: Clip.hardEdge,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

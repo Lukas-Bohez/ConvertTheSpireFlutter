@@ -5,6 +5,15 @@ import 'dart:math' as math;
 
 import 'package:b_encode_decode/b_encode_decode.dart';
 import 'package:bittorrent_dht/bittorrent_dht.dart';
+import 'package:convert_the_spire_reborn/src/services/network_proxy_service.dart';
+import 'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart'
+    as vault_bencode;
+import 'package:convert_the_spire_reborn/src/vault/bittorrent/magnet_link.dart';
+import 'package:convert_the_spire_reborn/src/vault/bittorrent/torrent_file.dart';
+import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/notification_service.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
 import 'package:dtorrent_common/dtorrent_common.dart';
 import 'package:dtorrent_task_v2/dtorrent_task_v2.dart' as dt;
 import 'package:dtorrent_task_v2/src/piece/piece.dart' as dt_piece;
@@ -12,16 +21,6 @@ import 'package:dtorrent_task_v2/src/piece/sequential_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-
-import 'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart'
-    as vault_bencode;
-import 'package:convert_the_spire_reborn/src/vault/bittorrent/torrent_file.dart';
-import 'package:convert_the_spire_reborn/src/vault/bittorrent/magnet_link.dart';
-import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
-import 'package:convert_the_spire_reborn/src/services/network_proxy_service.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/notification_service.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
 
 class TorrentEngineStatus {
   final String torrentId;
@@ -622,7 +621,7 @@ class TorrentEngineService {
   }
 
   String _bytesToHex(Uint8List bytes) {
-    StringBuffer buf = StringBuffer();
+    final StringBuffer buf = StringBuffer();
     for (int i = 0; i < bytes.length; i++) {
       final b = bytes[i];
       buf.write((b < 16 ? '0' : '') + b.toRadixString(16));
@@ -1173,8 +1172,9 @@ class TorrentEngineService {
     final savePath = (torrent.filePath?.trim().isNotEmpty == true)
         ? torrent.filePath!.trim()
         : SettingsService.instance.downloadDestination.trim();
-    if (savePath.isEmpty)
+    if (savePath.isEmpty) {
       throw StateError('No save path for torrent $torrentId');
+    }
 
     final task = _tasks[torrentId];
     final wasRunning = task != null;
@@ -1195,8 +1195,9 @@ class TorrentEngineService {
           dtModel = await dt.TorrentModel.parse(torrent.filePath!);
         }
       }
-      if (dtModel == null)
+      if (dtModel == null) {
         throw StateError('No torrent metadata available to recheck');
+      }
 
       // Build pieces list either from running task or construct from model
       List<dt_piece.Piece> pieces = [];
@@ -1622,7 +1623,7 @@ class TorrentEngineService {
   }) async {
     final sourceMagnet = _resolveMagnetLinkForStart(torrent);
     if (sourceMagnet.isEmpty) {
-      throw FormatException('Invalid magnet link');
+      throw const FormatException('Invalid magnet link');
     }
     if ((torrent.magnetLink?.trim() ?? '') != sourceMagnet) {
       // Self-heal malformed persisted magnet links for future resumes.
@@ -1952,12 +1953,12 @@ class TorrentEngineService {
     dynamic rawMetadata,
   ) async {
     if (rawMetadata is! Map) {
-      throw FormatException('Invalid metadata: expected bencoded dictionary');
+      throw const FormatException('Invalid metadata: expected bencoded dictionary');
     }
 
     final normalizedRoot = _normalizeBencodeMap(rawMetadata);
     if (normalizedRoot is! Map<String, dynamic>) {
-      throw FormatException('Invalid metadata after normalization');
+      throw const FormatException('Invalid metadata after normalization');
     }
 
     final dynamic nestedInfo = normalizedRoot['info'];
@@ -1966,7 +1967,7 @@ class TorrentEngineService {
         : Map<String, dynamic>.from(normalizedRoot);
 
     if (infoMap.isEmpty) {
-      throw FormatException(
+      throw const FormatException(
           'Invalid torrent metadata: info dictionary is empty');
     }
 
@@ -2247,7 +2248,7 @@ class TorrentEngineService {
       }
 
       // Defer this 2 seconds to let file writes complete and handles to close
-      await Future.delayed(Duration(seconds: 2));
+      await Future.delayed(const Duration(seconds: 2));
 
       // Double-check task still exists
       if (!_tasks.containsKey(torrentId) || _tasks[torrentId] != task) {
@@ -2265,7 +2266,7 @@ class TorrentEngineService {
       await _forceStateRecoveryWithTimeout(
         torrentId,
         task,
-        Duration(seconds: 45),
+        const Duration(seconds: 45),
       );
 
       if (_tasks[torrentId] == task && _hasAllPiecesComplete(task)) {
@@ -3395,10 +3396,10 @@ class TorrentEngineService {
     int totalTrackers = 0;
     double totalDownloadSpeed = 0.0;
     double totalUploadSpeed = 0.0;
-    int taskCount = _tasks.length;
+    final int taskCount = _tasks.length;
 
     String title = '';
-    String state = 'downloading';
+    final String state = 'downloading';
 
     for (final entry in _tasks.entries) {
       final torrentId = entry.key;

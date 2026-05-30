@@ -1,14 +1,15 @@
-import 'dart:typed_data';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../config/build_flags.dart';
+import '../screens/browser_screen.dart';
 import '../screens/player.dart'
     show PlayerState, PositionUiState, MediaItem, MediaType;
-import '../screens/browser_screen.dart';
-import '../config/build_flags.dart';
-import '../widgets/quick_links_service.dart';
 import '../vault/services/torrent_service.dart';
+import '../widgets/quick_links_service.dart';
 
 const _kRoutes = {
   'search': (

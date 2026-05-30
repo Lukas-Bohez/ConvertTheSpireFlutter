@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
-import 'onboarding_screen.dart';
 import '../config/build_flags.dart';
+import 'onboarding_screen.dart';
 
 /// In-app guide covering usage instructions, supported platforms,
 /// and feature explanations.
@@ -83,7 +83,7 @@ class GuideScreen extends StatelessWidget {
               icon: Icons.devices,
               title: 'Supported Platforms',
               cs: cs,
-              child: Column(
+              child: const Column(
                 children: [
                   _PlatformRow(
                     icon: Icons.desktop_windows,
@@ -93,7 +93,7 @@ class GuideScreen extends StatelessWidget {
                         'Downloads, conversion, notifications, file converter',
                     supported: true,
                   ),
-                  const Divider(height: 1),
+                  Divider(height: 1),
                   _PlatformRow(
                     icon: Icons.android,
                     name: 'Android',
@@ -102,7 +102,7 @@ class GuideScreen extends StatelessWidget {
                         'Downloads, conversion, notifications, SAF folder picker',
                     supported: true,
                   ),
-                  const Divider(height: 1),
+                  Divider(height: 1),
                   _PlatformRow(
                     icon: Icons.desktop_mac,
                     name: 'Linux',
@@ -111,7 +111,7 @@ class GuideScreen extends StatelessWidget {
                         'Downloads, conversion, notifications. Video playback requires the system libmpv runtime (install mpv/libmpv via your package manager).',
                     supported: true,
                   ),
-                  const Divider(height: 1),
+                  Divider(height: 1),
                   _PlatformRow(
                     icon: Icons.apple,
                     name: 'macOS / iOS',
@@ -119,7 +119,7 @@ class GuideScreen extends StatelessWidget {
                     detail: 'May work but not officially supported',
                     supported: false,
                   ),
-                  const Divider(height: 1),
+                  Divider(height: 1),
                   _PlatformRow(
                     icon: Icons.web,
                     name: 'Web',
@@ -147,13 +147,13 @@ class GuideScreen extends StatelessWidget {
                           'Required for audio conversion. On Windows it is installed automatically on first launch. On Linux, install via your package manager (e.g. sudo apt install ffmpeg).',
                     ),
                   if (!kPlayStoreBuild) const SizedBox(height: 8),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   const _RequirementRow(
                     text: 'Internet connection',
                     detail:
                         'Needed to fetch torrent metadata and download sources.',
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   const _RequirementRow(
                     text: 'Storage space',
                     detail:
@@ -328,9 +328,9 @@ class GuideScreen extends StatelessWidget {
                 icon: Icons.lightbulb_outline,
                 title: 'Tips & Troubleshooting',
                 cs: cs,
-                child: Column(
+                child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     _TipRow(
                       title: 'Downloads fail at 0%',
                       detail:
@@ -383,9 +383,9 @@ class GuideScreen extends StatelessWidget {
                 icon: Icons.audio_file,
                 title: 'Supported Formats',
                 cs: cs,
-                child: Column(
+                child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     _FormatRow(
                         format: 'MP3',
                         detail:

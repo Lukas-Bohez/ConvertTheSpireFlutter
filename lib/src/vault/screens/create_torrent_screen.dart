@@ -1,11 +1,11 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-import 'package:path/path.dart' as p;
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_creator_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
 import 'package:convert_the_spire_reborn/src/widgets/tv_file_browser.dart';
+import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 
 class CreateTorrentScreen extends StatefulWidget {
   const CreateTorrentScreen({super.key});

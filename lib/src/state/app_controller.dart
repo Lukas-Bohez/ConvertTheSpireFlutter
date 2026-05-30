@@ -6,18 +6,21 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import '../services/platform_dirs.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/build_flags.dart';
+import '../config/full_mode_access.dart';
 import '../models/app_settings.dart';
 import '../models/convert_result.dart';
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
 import '../models/search_result.dart' as models;
+import '../services/ad_service.dart';
+import '../services/android_saf.dart';
 import '../services/bulk_import_service.dart';
 import '../services/convert_service.dart';
-import '../services/ad_service.dart';
 import '../services/download_service.dart';
 import '../services/file_organization_service.dart';
 import '../services/installer_service.dart';
@@ -25,22 +28,19 @@ import '../services/log_service.dart';
 import '../services/metadata_service.dart';
 import '../services/multi_source_search_service.dart';
 import '../services/notification_service.dart';
-import '../services/playlist_service.dart';
+import '../services/platform_dirs.dart';
 import '../services/play_store_update_service.dart';
+import '../services/playlist_service.dart';
 import '../services/preview_player_service.dart';
-import '../services/android_saf.dart';
+import '../services/review_service.dart';
 import '../services/settings_store.dart';
 import '../services/statistics_service.dart';
+import '../services/vault_settings_bridge.dart';
 import '../services/watched_playlist_service.dart';
 import '../services/youtube_service.dart';
-import '../services/vault_settings_bridge.dart';
-import '../config/build_flags.dart';
-import '../config/full_mode_access.dart';
+import '../utils/safe_json.dart';
 import '../vault/services/torrent_engine_service.dart';
 import '../vault/services/torrent_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../services/review_service.dart';
-import '../utils/safe_json.dart';
 
 class AppController extends ChangeNotifier {
   static const int _maxQueueCap = 1000;
@@ -145,8 +145,9 @@ class AppController extends ChangeNotifier {
       await notificationService.initialize();
     } catch (e, st) {
       logs.add('NotificationService failed to initialize: $e');
-      if (kDebugMode)
+      if (kDebugMode) {
         debugPrint('NotificationService.initialize error: $e\n$st');
+      }
     }
     scheduleNotify();
 
@@ -163,8 +164,9 @@ class AppController extends ChangeNotifier {
         var selected = saved;
         if (selected == 2) selected = 13; // never restore directly into browser
         _activeTabIndex = selected;
-        if (kDebugMode)
+        if (kDebugMode) {
           debugPrint('[AppController] restored last_tab -> $_activeTabIndex');
+        }
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[AppController] prefs restore failed: $e');
@@ -200,9 +202,10 @@ class AppController extends ChangeNotifier {
   void switchToTab(int index) {
     if (index < 0 || index > 14) return;
     if (index == _activeTabIndex) return;
-    if (kDebugMode)
+    if (kDebugMode) {
       debugPrint(
           '[AppController] switchToTab requested: $_activeTabIndex -> $index');
+    }
     _activeTabIndex = index;
     // Persist asynchronously; don't await here.
     SharedPreferences.getInstance()
@@ -706,8 +709,9 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> downloadAll() async {
-    if (_downloadAllRunning)
+    if (_downloadAllRunning) {
       return; // already processing; new items picked up by the loop below
+    }
     _downloadAllRunning = true;
     try {
       while (true) {

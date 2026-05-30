@@ -1,16 +1,21 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
-
-import 'package:window_manager/window_manager.dart';
-import 'services/tray_service.dart';
 import 'dart:io' show Platform, Process;
+
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
 
+import 'config/build_flags.dart';
+import 'config/full_mode_access.dart';
+import 'data/browser_db.dart';
+import 'features/colour_rewards/colour_reward_service.dart';
+import 'screens/browser_screen.dart';
 // Use explicit show clauses to avoid ambiguous_import errors:
 // home_screen.dart imports PlayerState from player.dart internally.
 // Importing player.dart here with its own show clause would expose
@@ -18,10 +23,8 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart'
 // The show clauses are kept non-overlapping: HomeScreen only from
 // home_screen.dart, PlayerState only from player.dart.
 import 'screens/home_screen.dart' show HomeScreen;
-import 'screens/player.dart' show PlayerState;
-
 import 'screens/onboarding_screen.dart';
-import 'screens/browser_screen.dart';
+import 'screens/player.dart' show PlayerState;
 import 'services/bulk_import_service.dart';
 import 'services/convert_service.dart';
 import 'services/download_service.dart';
@@ -34,23 +37,18 @@ import 'services/multi_source_search_service.dart';
 import 'services/notification_service.dart';
 import 'services/playlist_service.dart';
 import 'services/preview_player_service.dart';
+import 'services/purchase_service.dart';
 import 'services/settings_store.dart';
 import 'services/statistics_service.dart';
+import 'services/tray_service.dart';
 import 'services/watched_playlist_service.dart';
 import 'services/youtube_service.dart';
 import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
+import 'vault/vault_bootstrap.dart';
 import 'widgets/adaptive_ui_frame.dart';
 import 'widgets/global_cursor_overlay.dart';
 import 'widgets/tv_file_browser.dart';
-import 'vault/vault_bootstrap.dart';
-
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'data/browser_db.dart';
-import 'config/build_flags.dart';
-import 'config/full_mode_access.dart';
-import 'features/colour_rewards/colour_reward_service.dart';
-import 'services/purchase_service.dart';
 
 class MyApp extends StatefulWidget {
   final String? mediaKitInitError;
@@ -478,8 +476,9 @@ class _MyAppState extends State<MyApp>
                 '[App] taskkill msedgewebview2 exit=${r.exitCode} stderr=${r.stderr}');
           }
         } catch (e) {
-          if (kDebugMode)
+          if (kDebugMode) {
             debugPrint('[App] taskkill msedgewebview2 failed: $e');
+          }
         }
       }
     }

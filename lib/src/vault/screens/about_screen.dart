@@ -1,18 +1,18 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:convert_the_spire_reborn/src/services/network_proxy_service.dart';
+import 'package:convert_the_spire_reborn/src/services/review_service.dart';
+import 'package:convert_the_spire_reborn/src/vault/constants.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+import 'package:convert_the_spire_reborn/src/widgets/tv_file_browser.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:convert_the_spire_reborn/src/vault/constants.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
-import 'package:convert_the_spire_reborn/src/services/network_proxy_service.dart';
-import 'package:convert_the_spire_reborn/src/widgets/tv_file_browser.dart';
-import 'package:convert_the_spire_reborn/src/services/review_service.dart';
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
@@ -881,7 +881,7 @@ class _AboutScreenState extends State<AboutScreen>
                         decoration: InputDecoration(
                           labelText: 'Ollama Host URL',
                           hintText: _settings.aiOllamaUrl,
-                          border: OutlineInputBorder(),
+                          border: const OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -1000,7 +1000,7 @@ class _AboutScreenState extends State<AboutScreen>
                   children: [
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.info_outline),
+                      leading: const Icon(Icons.info_outline),
                       title: const Text('Vault The Spire'),
                       subtitle: Text(
                         _androidTorrentOnly
@@ -1010,7 +1010,7 @@ class _AboutScreenState extends State<AboutScreen>
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.calendar_month),
+                      leading: const Icon(Icons.calendar_month),
                       title: const Text('App version'),
                       subtitle: Text(_appVersionLabel),
                     ),
@@ -1018,7 +1018,7 @@ class _AboutScreenState extends State<AboutScreen>
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.security),
                       title: const Text('Privacy policy'),
-                      subtitle: Text(kPrivacyPolicyUrl),
+                      subtitle: const Text(kPrivacyPolicyUrl),
                       onTap: _openPrivacyPolicy,
                     ),
                     ListTile(

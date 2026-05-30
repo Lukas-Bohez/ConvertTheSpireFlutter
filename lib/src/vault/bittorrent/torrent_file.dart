@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart';
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart';
+import 'package:crypto/crypto.dart';
 
 class TorrentMetadata {
   final String infoHashV1;
@@ -37,12 +37,12 @@ class TorrentFileParser {
   static TorrentMetadata parse(Uint8List data) {
     final decoded = bdecode(data);
     if (decoded is! Map<String, dynamic>) {
-      throw FormatException('Torrent file is not a bencoded dictionary');
+      throw const FormatException('Torrent file is not a bencoded dictionary');
     }
 
     final infoObj = decoded['info'];
     if (infoObj == null || infoObj is! Map<String, dynamic>) {
-      throw FormatException('Invalid torrent metadata: info dict missing');
+      throw const FormatException('Invalid torrent metadata: info dict missing');
     }
 
     final infoBencoded = bencode(infoObj);
@@ -57,7 +57,7 @@ class TorrentFileParser {
     final pieceHashes = <String>[];
     if (pieces is Uint8List) {
       if (pieces.length % 20 != 0) {
-        throw FormatException('Invalid pieces length for v1 torrent');
+        throw const FormatException('Invalid pieces length for v1 torrent');
       }
       for (var i = 0; i < pieces.length; i += 20) {
         pieceHashes.add(_hex(pieces.sublist(i, i + 20)));
@@ -74,7 +74,7 @@ class TorrentFileParser {
           if (pathList is List) {
             final pathSegments = pathList.map((segment) {
               if (segment is Uint8List) return utf8.decode(segment);
-              throw FormatException('Invalid path segment');
+              throw const FormatException('Invalid path segment');
             }).join('/');
             files.add(TorrentFileEntry(length: length, path: pathSegments));
           }

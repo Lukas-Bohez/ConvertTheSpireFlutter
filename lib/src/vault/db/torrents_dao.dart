@@ -1,6 +1,6 @@
-import 'package:sqflite/sqflite.dart';
 import 'package:convert_the_spire_reborn/src/vault/db/database.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
+import 'package:sqflite/sqflite.dart';
 
 class TorrentsDao {
   TorrentsDao._();

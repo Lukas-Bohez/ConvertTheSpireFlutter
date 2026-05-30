@@ -65,12 +65,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   'media toolkit. Add magnet links and .torrent files, manage '
                   'downloads, convert formats, cast to your TV, and more - all from '
                   'one app.',
-          color: Color(0xFF00897B),
-          preview: _WelcomePreview(),
+          color: const Color(0xFF00897B),
+          preview: const _WelcomePreview(),
         ),
 
         // Supported Platforms
-        _OnboardingPage(
+        const _OnboardingPage(
           icon: Icons.language_rounded,
           title: 'Supported Sources',
           detail: 'Not just torrents. The app can work with magnet links, '
@@ -81,7 +81,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ),
 
         // Search
-        _OnboardingPage(
+        const _OnboardingPage(
           icon: Icons.search_rounded,
           title: 'Search',
           detail:
@@ -92,7 +92,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ),
 
         // Multi-Search
-        _OnboardingPage(
+        const _OnboardingPage(
           icon: Icons.travel_explore_rounded,
           title: 'Multi-Search',
           detail: 'Search multiple sources at once and compare results side by '
@@ -101,7 +101,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ),
 
         // Browser
-        _OnboardingPage(
+        const _OnboardingPage(
           icon: Icons.open_in_browser_rounded,
           title: 'Browser',
           detail: 'Browse the web in the built-in view and open magnet or '
@@ -118,12 +118,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   'or show completed files in your file manager.'
               : 'Manage your downloads. Start all, cancel, retry failures, '
                   'cast to your TV, or show completed files in your file manager.',
-          color: Color(0xFFE07B54),
-          preview: _QueuePreview(),
+          color: const Color(0xFFE07B54),
+          preview: const _QueuePreview(),
         ),
 
         // Bulk Import
-        _OnboardingPage(
+        const _OnboardingPage(
           icon: Icons.upload_file_rounded,
           title: 'Bulk Import',
           detail: 'Paste a list of links or import a text/CSV file to enqueue '
@@ -132,7 +132,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ),
 
         // Stats
-        _OnboardingPage(
+        const _OnboardingPage(
           icon: Icons.bar_chart_rounded,
           title: 'Stats',
           detail: 'See download totals, success rate, format breakdown, top '
@@ -141,7 +141,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ),
 
         // Settings
-        _OnboardingPage(
+        const _OnboardingPage(
           icon: Icons.settings_rounded,
           title: 'Settings',
           detail: 'Choose download folders, format defaults, FFmpeg options, '
@@ -150,7 +150,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ),
 
         // Convert
-        _OnboardingPage(
+        const _OnboardingPage(
           icon: Icons.transform_rounded,
           title: 'Convert',
           detail: 'Convert any local audio/video file between popular formats '
@@ -159,7 +159,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ),
 
         // Logs
-        _OnboardingPage(
+        const _OnboardingPage(
           icon: Icons.list_alt_rounded,
           title: 'Logs',
           detail:
@@ -174,11 +174,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           detail: kPlayStoreBuild
               ? 'A help screen you can revisit from the Guide tab for Browser, Player, Torrents, and Settings.'
               : 'A help screen you can revisit from the Guide tab.',
-          color: Color(0xFF26A69A),
+          color: const Color(0xFF26A69A),
         ),
 
         // Player
-        _OnboardingPage(
+        const _OnboardingPage(
           icon: Icons.music_note_rounded,
           title: 'Player',
           detail: 'Built-in media player for your files. Playback, shuffle, '
@@ -187,7 +187,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ),
 
         // Support CTA (last page)
-        _OnboardingPage(
+        const _OnboardingPage(
           icon: Icons.favorite_rounded,
           title: 'Support Us',
           detail:
@@ -671,7 +671,7 @@ class _OnboardingPage {
 /// Keeps a page alive once it has been built, preventing transient black
 /// flashes when the user rapidly swipes between pages.
 class _KeepAlivePage extends StatefulWidget {
-  const _KeepAlivePage({required this.child, Key? key}) : super(key: key);
+  const _KeepAlivePage({required this.child, super.key});
 
   final Widget child;
 

@@ -162,7 +162,7 @@ class AdBlockService extends ChangeNotifier {
       // Network timeout to avoid hanging on slow responses.
       final response = await http
           .get(Uri.parse(_easyListUrl))
-          .timeout(Duration(seconds: 15));
+          .timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) return [];
 
       final domains = <String>[];

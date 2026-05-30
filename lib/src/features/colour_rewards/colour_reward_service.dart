@@ -100,7 +100,9 @@ class ColourRewardService extends ChangeNotifier {
         RarityTier.legendary => 3,
         RarityTier.mythic => 1,
       };
-      for (int i = 0; i < weight; i++) pool.add(c);
+      for (int i = 0; i < weight; i++) {
+        pool.add(c);
+      }
     }
     pool.shuffle();
     return pool.first;

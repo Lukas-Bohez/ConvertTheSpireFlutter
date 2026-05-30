@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/chat_message.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/server.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/chat_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/sound_service.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class _ChatSendMessageIntent extends Intent {
   const _ChatSendMessageIntent();

@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../features/colour_rewards/colour_reward_service.dart';
 import '../config/build_flags.dart';
+import '../features/colour_rewards/colour_reward_service.dart';
 
 /// Centralizes the one-time Remove Ads unlock and its cached state.
 class PurchaseService extends ChangeNotifier {

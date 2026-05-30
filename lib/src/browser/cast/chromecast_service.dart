@@ -45,8 +45,4 @@ class ChromecastCastService extends CastService {
   @override
   Future<void> seek(Duration position) async {}
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }

@@ -1,16 +1,15 @@
-import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+
 // 'dart:typed_data' is not required; Uint8List is available via flutter services import
 
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import '../widgets/cursor_overlay.dart';
-import '../utils/screenshot_helper.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../browser/adblock/adblock_service.dart';
@@ -19,17 +18,19 @@ import '../browser/cast/unified_cast_service.dart';
 import '../browser/tabs/tab_manager.dart';
 import '../browser/video/video_detector_service.dart';
 import '../data/browser_db.dart';
-import '../services/download_service.dart';
 import '../models/search_result.dart';
+import '../services/download_service.dart';
+import '../utils/screenshot_helper.dart';
+import '../widgets/browser_shell.dart';
+import '../widgets/cursor_overlay.dart';
 import 'browser/browser_bottom_bar.dart';
+import 'browser/browser_settings_screen.dart';
 import 'browser/browser_toolbar.dart';
 import 'browser/cast/cast_picker_sheet.dart';
 import 'browser/cast_mini_bar.dart';
-import 'browser/new_tab_page.dart';
-import 'browser/history_screen.dart';
 import 'browser/favourites_screen.dart';
-import 'browser/browser_settings_screen.dart';
-import '../widgets/browser_shell.dart';
+import 'browser/history_screen.dart';
+import 'browser/new_tab_page.dart';
 
 /// Full-featured browser screen with ad-blocking, video detection, and casting.
 class BrowserLocationState {
@@ -52,7 +53,7 @@ class BrowserScreen extends StatefulWidget {
   final String? initialUrl;
   final void Function(SearchResult result) onAddToQueue;
 
-  BrowserScreen({
+  const BrowserScreen({
     super.key,
     this.initialUrl,
     void Function(SearchResult result)? onAddToQueue,
@@ -93,7 +94,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   final AdBlockService _adBlock = AdBlockService();
   final UnifiedCastService _castService = UnifiedCastService();
   final TabManager _tabManager = TabManager();
-  VideoDetectorService _videoDetector = VideoDetectorService();
+  final VideoDetectorService _videoDetector = VideoDetectorService();
 
   InAppWebViewController? _webViewController;
   bool _cursorActive = false;
@@ -187,8 +188,9 @@ class _BrowserScreenState extends State<BrowserScreen>
         },
       );
     } catch (e) {
-      if (kDebugMode)
+      if (kDebugMode) {
         debugPrint('[BROWSER] FindInteractionController not supported: $e');
+      }
       _findInteractionController = null;
     }
     _videoDetector.addListener(_onVideoDetectorChanged);
@@ -787,7 +789,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   Future<void> _injectTextAndSubmit(String value) async {
-    final escaped = value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
+    final escaped = value.replaceAll('\\', '\\\\').replaceAll("'", "\\'");
     try {
       await _webViewController?.evaluateJavascript(source: """
         (function(){
@@ -862,7 +864,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   Future<void> _blurWebViewInput() async {
     try {
       await _webViewController?.evaluateJavascript(
-          source: "if (document.activeElement) document.activeElement.blur();");
+          source: 'if (document.activeElement) document.activeElement.blur();');
     } catch (_) {}
   }
 
@@ -1541,10 +1543,11 @@ class _BrowserScreenState extends State<BrowserScreen>
             if (existing?.text != url) {
               await Clipboard.setData(ClipboardData(text: url));
             }
-            if (mounted)
+            if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Link copied to clipboard')),
               );
+            }
           } catch (_) {}
         }
       }
@@ -1572,10 +1575,11 @@ class _BrowserScreenState extends State<BrowserScreen>
       if (url.isNotEmpty) {
         try {
           await Clipboard.setData(ClipboardData(text: url));
-          if (mounted)
+          if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Link copied to clipboard')),
             );
+          }
         } catch (_) {}
       }
       return;

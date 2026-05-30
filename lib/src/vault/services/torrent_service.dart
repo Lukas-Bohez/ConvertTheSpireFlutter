@@ -3,10 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
 
-import 'package:crypto/crypto.dart';
-import 'package:path/path.dart' as p;
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart';
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/magnet_link.dart';
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/torrent_file.dart';
@@ -14,6 +11,9 @@ import 'package:convert_the_spire_reborn/src/vault/db/torrents_dao.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
+import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 
 class TorrentAlreadyExistsException implements Exception {
   final String torrentId;
@@ -541,7 +541,7 @@ class TorrentService {
         final hasKnownTotal = totalSize > 0;
         final downloadedClamped =
             hasKnownTotal ? downloaded.clamp(0, totalSize) : downloaded;
-        var progress = state == 'seeding'
+        final progress = state == 'seeding'
             ? 1.0
             : (hasKnownTotal && totalSize > 0
                 ? (downloadedClamped / totalSize).clamp(0.0, 0.9999)
@@ -1436,7 +1436,7 @@ class TorrentService {
       displayName = _extractDisplayNameFromMagnet(magnetUri);
     }
     if (infoHash == null || infoHash.isEmpty) {
-      throw FormatException('Magnet link must contain btih or btmh infohash');
+      throw const FormatException('Magnet link must contain btih or btmh infohash');
     }
 
     final canonicalMagnet = _canonicalMagnetForStorage(

@@ -3,7 +3,7 @@ $sdk  = "$env:LOCALAPPDATA\Android\Sdk\build-tools"
 $aapt2 = Get-ChildItem $sdk -Recurse -Filter aapt2.exe | Sort-Object FullName -Desc | Select-Object -First 1 -Exp FullName
 Write-Host "Using aapt2: $aapt2"
 
-$aab = Resolve-Path "c:\\development\\ConversionFlutter\\my_flutter_app\\aab\\bitplayer-v12.1.5+1215-play-release.aab"
+$aab = Resolve-Path "c:\\development\\ConversionFlutter\\my_flutter_app\\aab\\bitplayer-v12.1.6+1216-play-release.aab"
 Write-Host "Resolved AAB: $aab"
 $tmp = Join-Path $env:TEMP ("aab_" + [guid]::NewGuid())
 New-Item -ItemType Directory $tmp | Out-Null

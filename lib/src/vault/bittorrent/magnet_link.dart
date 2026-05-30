@@ -19,7 +19,7 @@ class MagnetLink {
   factory MagnetLink.parse(String uri) {
     final raw = uri.trim();
     if (!raw.toLowerCase().startsWith('magnet:')) {
-      throw FormatException('Not a magnet link');
+      throw const FormatException('Not a magnet link');
     }
 
     final params = <String, List<String>>{};

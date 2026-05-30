@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../../config/build_flags.dart';
 import '../../services/ad_service.dart';
 import '../../services/purchase_service.dart';
-import '../../config/build_flags.dart';
+import 'colour_collection_grid.dart';
 import 'colour_rarity.dart';
 import 'colour_reward_service.dart';
 import 'colour_reward_session_dialog.dart';
-import 'colour_collection_grid.dart';
 
 class WatchAdCard extends StatefulWidget {
-  const WatchAdCard({Key? key}) : super(key: key);
+  const WatchAdCard({super.key});
 
   @override
   State<WatchAdCard> createState() => _WatchAdCardState();
@@ -266,10 +267,10 @@ class _WatchAdCardState extends State<WatchAdCard> {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Icon(kIsGithubRelease
+                    : const Icon(kIsGithubRelease
                         ? Icons.auto_awesome
                         : Icons.ondemand_video),
-                label: Text(kIsGithubRelease ? 'Spin for Colour' : 'Watch Ad'),
+                label: const Text(kIsGithubRelease ? 'Spin for Colour' : 'Watch Ad'),
                 onPressed: _loading
                     ? null
                     : (kIsGithubRelease ? _spinDirectly : _showAdAndReward),

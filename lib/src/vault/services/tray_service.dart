@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' show Offset, Size;
 
+import 'package:convert_the_spire_reborn/src/vault/constants.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:path/path.dart' as p;
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:convert_the_spire_reborn/src/vault/constants.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 
 class TrayService with TrayListener, WindowListener {
   static bool enabled = false;

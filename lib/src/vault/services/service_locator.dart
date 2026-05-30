@@ -1,9 +1,9 @@
-import 'package:get_it/get_it.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/identity_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/theme_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/startup_service.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/theme_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/tray_service.dart';
+import 'package:get_it/get_it.dart';
 
 final GetIt sl = GetIt.instance;
 

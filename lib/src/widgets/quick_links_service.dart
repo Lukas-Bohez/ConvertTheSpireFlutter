@@ -68,85 +68,85 @@ class QuickLinksService {
   }
 
   static List<QuickLink> _allDefaults() => [
-        QuickLink(
+        const QuickLink(
           name: 'Search',
           icon: Icons.search,
           route: 'search.tab',
           description: 'Download from YouTube URL',
         ),
-        QuickLink(
+        const QuickLink(
           name: 'Multi-Search',
           icon: Icons.travel_explore,
           route: 'multisearch.tab',
           description: 'Search YouTube & SoundCloud',
         ),
-        QuickLink(
+        const QuickLink(
           name: 'Browser',
           icon: Icons.language,
           route: 'browser.tab',
           description: 'In-app web browser',
         ),
-        QuickLink(
+        const QuickLink(
           name: 'Playlists',
           icon: Icons.playlist_play,
           route: 'playlists.tab',
           description: 'YouTube playlists & folders',
         ),
-        QuickLink(
+        const QuickLink(
           name: 'Bulk Import',
           icon: Icons.upload_file,
           route: 'bulkimport.tab',
           description: 'Import track lists',
         ),
-        QuickLink(
+        const QuickLink(
           name: 'Stats',
           icon: Icons.bar_chart,
           route: 'stats.tab',
           description: 'Download statistics',
         ),
-        QuickLink(
+        const QuickLink(
           name: 'Settings',
           icon: Icons.settings,
           route: 'settings.tab',
           description: 'App configuration',
         ),
-        QuickLink(
+        const QuickLink(
           name: 'Support',
           icon: Icons.volunteer_activism,
           route: 'support.tab',
           description: 'Support via donations',
         ),
-        QuickLink(
+        const QuickLink(
           name: 'Rate',
           icon: Icons.star_rounded,
           route: 'rate.app',
           description: 'Leave a review',
         ),
-        QuickLink(
+        const QuickLink(
           name: 'Convert',
           icon: Icons.transform,
           route: 'convert.tab',
           description: 'Convert audio/video files',
         ),
-        QuickLink(
+        const QuickLink(
           name: 'Logs',
           icon: Icons.list_alt,
           route: 'logs.tab',
           description: 'Activity log viewer',
         ),
-        QuickLink(
+        const QuickLink(
           name: 'Guide',
           icon: Icons.menu_book,
           route: 'guide.tab',
           description: 'Help & documentation',
         ),
-        QuickLink(
+        const QuickLink(
           name: 'Player',
           icon: Icons.music_note,
           route: 'player.tab',
           description: 'Media player & library',
         ),
-        QuickLink(
+        const QuickLink(
           name: 'Torrents',
           icon: Icons.download,
           route: 'torrents.tab',

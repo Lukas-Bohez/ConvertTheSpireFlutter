@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../models/app_settings.dart';
-import 'platform_dirs.dart';
 import '../utils/safe_json.dart';
+import 'platform_dirs.dart';
 
 class SettingsStore {
   static const String _fileName = 'config.json';

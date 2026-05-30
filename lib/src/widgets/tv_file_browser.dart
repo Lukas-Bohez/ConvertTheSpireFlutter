@@ -377,7 +377,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
 
     if (Platform.isMacOS) {
       locations
-          .add(_StorageLocation(label: 'Mac', path: '/', icon: Icons.storage));
+          .add(const _StorageLocation(label: 'Mac', path: '/', icon: Icons.storage));
       final volumes = Directory('/Volumes');
       if (volumes.existsSync()) {
         final children = volumes
@@ -399,7 +399,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
 
     if (Platform.isLinux) {
       locations
-          .add(_StorageLocation(label: 'Root', path: '/', icon: Icons.storage));
+          .add(const _StorageLocation(label: 'Root', path: '/', icon: Icons.storage));
       for (final mountRoot in ['/mnt', '/media', '/run/media']) {
         final root = Directory(mountRoot);
         if (!root.existsSync()) continue;
@@ -461,7 +461,9 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
             (a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
         for (final child in children) {
           if (child.path == '/storage/emulated' ||
-              child.path == '/storage/self') continue;
+              child.path == '/storage/self') {
+            continue;
+          }
           final label = _nameForPath(child.path);
           if (label.isEmpty) continue;
           locations.add(_StorageLocation(
@@ -689,8 +691,9 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
                                 ? FutureBuilder<FileStat>(
                                     future: entity.stat(),
                                     builder: (_, snap) {
-                                      if (!snap.hasData)
+                                      if (!snap.hasData) {
                                         return const SizedBox.shrink();
+                                      }
                                       final mb =
                                           snap.data!.size / (1024 * 1024);
                                       return Text(

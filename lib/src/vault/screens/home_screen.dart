@@ -1,6 +1,6 @@
+import 'package:convert_the_spire_reborn/src/vault/services/identity_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/identity_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});

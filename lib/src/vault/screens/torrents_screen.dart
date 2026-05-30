@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/drag_drop.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/create_torrent_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/torrent_detail_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
-import 'package:convert_the_spire_reborn/src/widgets/tv_file_browser.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
+import 'package:convert_the_spire_reborn/src/widgets/tv_file_browser.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 enum _SortMode {
   dateAdded,

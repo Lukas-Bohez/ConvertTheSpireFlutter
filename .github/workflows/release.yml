@@ -43,7 +43,7 @@ env:
   # NOTE: The AAB is built and stored as an artifact for Play Store submission
   # but is intentionally NOT included in the GitHub Release. Only the APK
   # (built with PLAY_STORE_BUILD=false, GITHUB_RELEASE=true) is published.
-  ANDROID_AAB_NAME: app-play-release.aab
+  ANDROID_AAB_NAME: bitplayer-v12.1.6+1216-play-release.aab
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 # ---------------------------------------------------------------------------
@@ -287,6 +287,30 @@ jobs:
 
       - name: Build Play AAB (Play Store flavor)
         run: flutter build appbundle --flavor play --release --dart-define=PLAY_STORE_BUILD=true --dart-define=GITHUB_RELEASE=false
+
+      - name: Verify Play AAB filename and versionCode
+        shell: bash
+        run: |
+          set -euo pipefail
+          version_name=$(grep -E '^version:' pubspec.yaml | sed -E 's/^version:\s*([0-9.]+)\+([0-9]+)$/\1/')
+          version_code=$(grep -E '^version:' pubspec.yaml | sed -E 's/^version:\s*([0-9.]+)\+([0-9]+)$/\2/')
+          expected_tag="v${version_name}"
+          expected_aab="bitplayer-${version_name}+${version_code}-play-release.aab"
+
+          if [ "${{ inputs.release_tag }}" != "$expected_tag" ]; then
+            echo "Expected release tag $expected_tag but got ${{ inputs.release_tag }}"
+            exit 1
+          fi
+
+          if [ ! -f "build/app/outputs/bundle/playRelease/app-play-release.aab" ]; then
+            echo "Built Play AAB missing"
+            exit 1
+          fi
+
+          if [ "${{ env.ANDROID_AAB_NAME }}" != "$expected_aab" ]; then
+            echo "Expected ANDROID_AAB_NAME=$expected_aab but got ${{ env.ANDROID_AAB_NAME }}"
+            exit 1
+          fi
 
       - name: Collect Android artifacts
         run: |

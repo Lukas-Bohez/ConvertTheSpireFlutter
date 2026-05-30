@@ -1,8 +1,8 @@
 import 'dart:io' show Platform;
 
+import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:window_manager/window_manager.dart';
 
 class _CleanShutdownListener extends WindowListener {

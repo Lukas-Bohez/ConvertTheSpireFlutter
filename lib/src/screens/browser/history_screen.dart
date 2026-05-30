@@ -177,7 +177,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             // -- List --
             Expanded(
               child: _items.isEmpty && !_loading
-                  ? EmptyState(
+                  ? const EmptyState(
                       icon: Icons.history,
                       title: 'No history',
                       subtitle: 'Your browsing history will appear here',

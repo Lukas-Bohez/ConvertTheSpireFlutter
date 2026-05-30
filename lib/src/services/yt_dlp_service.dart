@@ -9,9 +9,9 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import 'platform_dirs.dart';
-import 'network_proxy_service.dart';
 import '../utils/safe_json.dart';
+import 'network_proxy_service.dart';
+import 'platform_dirs.dart';
 
 /// Service for downloading media using yt-dlp, the industry-standard
 /// YouTube/media downloader that handles throttling, rate-limiting, and
@@ -767,8 +767,8 @@ class YtDlpService {
           final match = _progressRegex.firstMatch(line);
           if (match != null) {
             final pct = double.tryParse(match.group(1)!)?.toInt() ?? 0;
-            final speed = match.group(3) ?? "";
-            final eta = match.group(4) ?? "";
+            final speed = match.group(3) ?? '';
+            final eta = match.group(4) ?? '';
             onProgress(pct.clamp(0, 100), speed, eta);
           }
         });

@@ -1,7 +1,8 @@
 import 'dart:convert';
 
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:convert_the_spire_reborn/src/vault/crypto/identity.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import '../../utils/safe_json.dart';
 
 class IdentityService {

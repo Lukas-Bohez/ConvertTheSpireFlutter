@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:convert_the_spire_reborn/src/config/full_mode_access.dart';
 import 'package:convert_the_spire_reborn/src/vault/constants.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/ai_chat_entry.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
+import 'package:convert_the_spire_reborn/src/vault/screens/create_torrent_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/ai_triggers.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/intent_parser.dart';
@@ -15,7 +13,9 @@ import 'package:convert_the_spire_reborn/src/vault/services/search_service.dart'
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_context.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
-import 'package:convert_the_spire_reborn/src/vault/screens/create_torrent_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:provider/provider.dart';
 
 class TorrentSpireAiScreen extends StatefulWidget {
   const TorrentSpireAiScreen({super.key});
@@ -1389,7 +1389,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                       children: [
                         if (msg.isAuto)
                           Padding(
-                            padding: EdgeInsets.only(bottom: 6),
+                            padding: const EdgeInsets.only(bottom: 6),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -1398,7 +1398,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                                   size: 14,
                                   color: cs.tertiary,
                                 ),
-                                SizedBox(width: 4),
+                                const SizedBox(width: 4),
                                 Text(
                                   'Auto',
                                   style: TextStyle(

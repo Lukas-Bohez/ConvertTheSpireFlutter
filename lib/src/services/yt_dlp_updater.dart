@@ -26,7 +26,7 @@ class YtDlpUpdater {
       if (r.statusCode != 200) return null;
       return safeJsonDecode<Map<String, dynamic>>(r.body);
     } catch (e) {
-      print('yt-dlp: fetchLatestRelease failed: $e');
+      stderr.writeln('yt-dlp: fetchLatestRelease failed: $e');
       return null;
     }
   }
@@ -34,10 +34,10 @@ class YtDlpUpdater {
   /// Pick the best-matching asset for the current platform from a GitHub assets list.
   /// Asset objects are the `assets` array items from the GitHub release JSON.
   static Map<String, dynamic>? pickAssetForPlatform(List assets) {
-    bool isAndroid = Platform.isAndroid;
-    bool isWindows = Platform.isWindows;
-    bool isLinux = Platform.isLinux;
-    bool isMac = Platform.isMacOS;
+    final bool isAndroid = Platform.isAndroid;
+    final bool isWindows = Platform.isWindows;
+    final bool isLinux = Platform.isLinux;
+    final bool isMac = Platform.isMacOS;
 
     Map<String, dynamic>? chosen;
 
@@ -91,7 +91,7 @@ class YtDlpUpdater {
     try {
       final resp = await client.send(http.Request('GET', Uri.parse(url)));
       if (resp.statusCode != 200) {
-        print('yt-dlp: download failed status=${resp.statusCode}');
+        stderr.writeln('yt-dlp: download failed status=${resp.statusCode}');
         return false;
       }
 
@@ -111,7 +111,7 @@ class YtDlpUpdater {
         final bytes = await tmpFile.readAsBytes();
         final sum = sha256.convert(bytes).toString();
         if (sum != expectedSha256.toLowerCase()) {
-          print('yt-dlp: sha256 mismatch (got=$sum expected=$expectedSha256)');
+          stderr.writeln('yt-dlp: sha256 mismatch (got=$sum expected=$expectedSha256)');
           try {
             await tmpFile.delete();
           } catch (_) {}
@@ -137,16 +137,18 @@ class YtDlpUpdater {
       try {
         if (!Platform.isWindows) {
           final res = await Process.run('chmod', ['+x', destPath]);
-          if (res.exitCode != 0) print('yt-dlp: chmod failed: ${res.stderr}');
+          if (res.exitCode != 0) {
+            stderr.writeln('yt-dlp: chmod failed: ${res.stderr}');
+          }
         }
       } catch (e) {
-        print('yt-dlp: chmod not available or failed: $e');
+        stderr.writeln('yt-dlp: chmod not available or failed: $e');
       }
 
-      print('yt-dlp: successfully updated $destPath');
+      stdout.writeln('yt-dlp: successfully updated $destPath');
       return true;
     } catch (e) {
-      print('yt-dlp: downloadAndReplace failed: $e');
+      stderr.writeln('yt-dlp: downloadAndReplace failed: $e');
       return false;
     } finally {
       client.close();
@@ -170,7 +172,7 @@ class YtDlpUpdater {
     if (url == null) return false;
 
     // GitHub doesn't always publish sha256; we attempt download without verify.
-    print('yt-dlp: updating to $tag using asset $name');
+    stdout.writeln('yt-dlp: updating to $tag using asset $name');
     return await downloadAndReplace(url, name);
   }
 }

@@ -1,14 +1,13 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/material.dart';
-
 import 'package:convert_the_spire_reborn/src/screens/browser_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/about_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/ai_chat_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/guide_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/torrents_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/torrentspire_ai_screen.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 
 class VaultHubScreen extends StatefulWidget {
   const VaultHubScreen({super.key});
@@ -36,9 +35,9 @@ class _VaultHubScreenState extends State<VaultHubScreen>
     final hideAi = !kIsWeb && Platform.isAndroid;
     return [
       _VaultEntry(
-        tab: _VaultTab(label: 'Torrents', icon: Icons.download_outlined),
+        tab: const _VaultTab(label: 'Torrents', icon: Icons.download_outlined),
         page: TorrentsScreen(
-          key: ValueKey('vault-hub-torrents'),
+          key: const ValueKey('vault-hub-torrents'),
           onOpenSettingsTab: _openSettingsTab,
         ),
       ),
@@ -52,9 +51,9 @@ class _VaultHubScreenState extends State<VaultHubScreen>
           tab: _VaultTab(label: 'AI Chat', icon: Icons.chat_bubble_outline),
           page: AiChatScreen(key: ValueKey('vault-hub-ai-chat')),
         ),
-      _VaultEntry(
+      const _VaultEntry(
         tab: _VaultTab(label: 'Browser', icon: Icons.language),
-        page: BrowserScreen(key: const ValueKey('vault-hub-browser')),
+        page: BrowserScreen(key: ValueKey('vault-hub-browser')),
       ),
       const _VaultEntry(
         tab: _VaultTab(label: 'Guide', icon: Icons.menu_book_outlined),

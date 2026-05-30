@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../models/search_result.dart';
-import '../services/folder_access_service.dart';
 import '../config/build_flags.dart';
 import '../config/full_mode_access.dart';
+import '../models/search_result.dart';
+import '../services/folder_access_service.dart';
 import 'quick_download_card.dart';
 import 'quick_links_service.dart';
 

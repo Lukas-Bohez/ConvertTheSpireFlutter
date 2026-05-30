@@ -1,10 +1,10 @@
 // ignore_for_file: use_build_context_synchronously
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/chat_message.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/chat_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/sound_service.dart';
+import 'package:flutter/material.dart';
 
 class DMScreen extends StatefulWidget {
   final String user;

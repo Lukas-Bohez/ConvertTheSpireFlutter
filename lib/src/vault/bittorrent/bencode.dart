@@ -47,14 +47,14 @@ dynamic bdecode(Uint8List data) {
   int index = 0;
 
   dynamic decodeNext() {
-    if (index >= data.length) throw FormatException('Unexpected end of data');
+    if (index >= data.length) throw const FormatException('Unexpected end of data');
     final byte = data[index];
 
     if (byte == 0x69) {
       // 'i'
       index++;
       final end = data.indexOf(0x65, index);
-      if (end == -1) throw FormatException('Invalid integer encoding');
+      if (end == -1) throw const FormatException('Invalid integer encoding');
       final number = int.parse(utf8.decode(data.sublist(index, end)));
       index = end + 1;
       return number;
@@ -66,7 +66,7 @@ dynamic bdecode(Uint8List data) {
       final list = <dynamic>[];
       while (true) {
         if (index >= data.length) {
-          throw FormatException('Unterminated list');
+          throw const FormatException('Unterminated list');
         }
         if (data[index] == 0x65) {
           index++;
@@ -82,7 +82,7 @@ dynamic bdecode(Uint8List data) {
       final map = <String, dynamic>{};
       while (true) {
         if (index >= data.length) {
-          throw FormatException('Unterminated dictionary');
+          throw const FormatException('Unterminated dictionary');
         }
         if (data[index] == 0x65) {
           index++;
@@ -91,7 +91,7 @@ dynamic bdecode(Uint8List data) {
 
         final keyBytes = decodeNext();
         if (keyBytes is! Uint8List) {
-          throw FormatException('Map key must be bytes');
+          throw const FormatException('Map key must be bytes');
         }
         final key = utf8.decode(keyBytes, allowMalformed: true);
         final value = decodeNext();
@@ -101,11 +101,11 @@ dynamic bdecode(Uint8List data) {
 
     if (byte >= 0x30 && byte <= 0x39) {
       final colon = data.indexOf(0x3a, index);
-      if (colon == -1) throw FormatException('Invalid string length encoding');
+      if (colon == -1) throw const FormatException('Invalid string length encoding');
       final len = int.parse(utf8.decode(data.sublist(index, colon)));
       index = colon + 1;
       if (index + len > data.length) {
-        throw FormatException('String extends past end of input');
+        throw const FormatException('String extends past end of input');
       }
       final result = data.sublist(index, index + len);
       index += len;
@@ -119,7 +119,7 @@ dynamic bdecode(Uint8List data) {
 
   final result = decodeNext();
   if (index != data.length) {
-    throw FormatException('Extra bytes after valid bencode');
+    throw const FormatException('Extra bytes after valid bencode');
   }
   return result;
 }

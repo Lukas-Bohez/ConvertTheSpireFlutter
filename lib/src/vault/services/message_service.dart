@@ -1,6 +1,6 @@
-import 'package:uuid/uuid.dart';
 import 'package:convert_the_spire_reborn/src/vault/db/messages_dao.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/message.dart';
+import 'package:uuid/uuid.dart';
 
 class MessageService {
   MessageService._();

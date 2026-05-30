@@ -318,7 +318,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                         idx >= 0 && idx < sorted.length ? sorted[idx] : '';
                     return LineTooltipItem(
                       '$date\n${s.y.toInt()} downloads',
-                      TextStyle(
+                      const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 12),

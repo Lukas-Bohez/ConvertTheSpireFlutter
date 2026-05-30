@@ -1,50 +1,49 @@
-import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../utils/snack.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../theme/app_colors.dart';
 
 import '../config/build_flags.dart';
 import '../config/full_mode_access.dart';
-import '../services/ad_service.dart';
-import '../services/review_service.dart';
-
 import '../models/app_settings.dart';
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
+import '../services/ad_service.dart';
 import '../services/android_saf.dart';
 import '../services/folder_access_service.dart';
+import '../services/ipfs_service.dart';
+import '../services/review_service.dart';
 import '../services/shortcut_service.dart';
 import '../services/tray_service.dart';
-import '../services/ipfs_service.dart';
+import '../services/update_service.dart';
 import '../state/app_controller.dart';
-import 'bulk_import_screen.dart';
-import 'playlist_screen.dart';
-import 'search_screen.dart';
-import 'guide_screen.dart';
-import 'statistics_screen.dart';
-import 'watched_playlists_screen.dart';
-import 'browser_screen.dart';
-import 'support_screen.dart';
-import 'player.dart' show PlayerPage, PlayerState, MediaType;
-import '../vault/vault_hub_screen.dart';
+import '../theme/app_colors.dart';
+import '../utils/snack.dart';
 import '../vault/services/torrent_service.dart';
+import '../vault/vault_hub_screen.dart';
 import '../widgets/browser_shell.dart';
 import '../widgets/onboarding_tooltip_service.dart';
 import '../widgets/quick_links_page.dart';
 import '../widgets/quick_links_service.dart';
 import '../widgets/tv_file_browser.dart';
-import '../services/update_service.dart';
 import '../widgets/update_banner.dart';
+import 'browser_screen.dart';
+import 'bulk_import_screen.dart';
+import 'guide_screen.dart';
+import 'player.dart' show PlayerPage, PlayerState, MediaType;
+import 'playlist_screen.dart';
+import 'search_screen.dart';
+import 'statistics_screen.dart';
+import 'support_screen.dart';
+import 'watched_playlists_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppController controller;
@@ -57,7 +56,9 @@ class HomeScreen extends StatefulWidget {
 
 /// Sliver delegate used to keep the search bar pinned at the top.
 class _SearchHeaderDelegate extends SliverPersistentHeaderDelegate {
+  @override
   final double minExtent;
+  @override
   final double maxExtent;
   final Widget child;
 
@@ -188,8 +189,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     } catch (_) {}
 
     if (kDebugMode) {
-      debugPrint('[NAV] QuickLinks routeToIndex keys: ' +
-          QuickLinksService.routeToIndex.keys.join(', '));
+      debugPrint('[NAV] QuickLinks routeToIndex keys: ${QuickLinksService.routeToIndex.keys.join(', ')}');
     }
 
     if (!kPlayStoreBuild) {
@@ -1237,8 +1237,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       value: 'mp4', child: Text('MP4 (Video)')),
                                 ],
                                 onChanged: (value) {
-                                  if (value != null)
+                                  if (value != null) {
                                     setState(() => _downloadFormat = value);
+                                  }
                                 },
                               ),
                               const SizedBox(height: 12),
@@ -1274,8 +1275,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       child: Text('Best Available')),
                                 ],
                                 onChanged: (value) {
-                                  if (value != null)
+                                  if (value != null) {
                                     setState(() => _videoQuality = value);
+                                  }
                                 },
                               ),
                               const SizedBox(height: 12),
@@ -1298,8 +1300,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       value: 320, child: Text('320 kbps')),
                                 ],
                                 onChanged: (value) {
-                                  if (value != null)
+                                  if (value != null) {
                                     setState(() => _audioBitrate = value);
+                                  }
                                 },
                               ),
                               const SizedBox(height: 12),
@@ -1340,9 +1343,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                             child: Text('MP4 (Video)')),
                                       ],
                                       onChanged: (value) {
-                                        if (value != null)
+                                        if (value != null) {
                                           setState(
                                               () => _downloadFormat = value);
+                                        }
                                       },
                                     ),
                                   ),
@@ -1372,8 +1376,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                             child: Text('Best Available')),
                                       ],
                                       onChanged: (value) {
-                                        if (value != null)
+                                        if (value != null) {
                                           setState(() => _videoQuality = value);
+                                        }
                                       },
                                     ),
                                   ),
@@ -1402,8 +1407,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                             child: Text('320 kbps')),
                                       ],
                                       onChanged: (value) {
-                                        if (value != null)
+                                        if (value != null) {
                                           setState(() => _audioBitrate = value);
+                                        }
                                       },
                                     ),
                                   ),
@@ -1476,8 +1482,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                         child: Text('Custom range...')),
                                   ],
                                   onChanged: (value) {
-                                    if (value != null)
+                                    if (value != null) {
                                       setState(() => _previewPreset = value);
+                                    }
                                   },
                                 ),
                               ),
@@ -2137,8 +2144,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             label: const Text('Download'),
                             onPressed: () {
                               final s = widget.controller.settings;
-                              if (s != null && !_ensureDownloadFolder(s))
+                              if (s != null && !_ensureDownloadFolder(s)) {
                                 return;
+                              }
                               widget.controller.addToQueue(
                                   item, _downloadFormat.toLowerCase());
                               widget.controller.downloadAll();
@@ -3239,8 +3247,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       controller: _downloadDirController,
                       decoration: InputDecoration(
                         labelText: 'Download folder',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.folder),
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.folder),
                         helperText:
                             'Pick a folder using the in-app file browser. If not set, files go to Downloads/${getDefaultDownloadFolderName()}.',
                         helperMaxLines: 3,
@@ -4366,8 +4374,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       value: _checkUpdatesOnLaunch,
                       onChanged: (value) async {
                         await UpdateService.setCheckOnLaunch(value);
-                        if (mounted)
+                        if (mounted) {
                           setState(() => _checkUpdatesOnLaunch = value);
+                        }
                       },
                       title: const Text('Check for updates on launch'),
                       secondary: const Icon(Icons.system_update_alt),

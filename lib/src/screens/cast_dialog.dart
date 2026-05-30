@@ -1,15 +1,15 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import '../utils/snack.dart';
-
 import 'dart:io' show File, Platform;
+
+import 'package:convert_the_spire_reborn/src/services/review_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 
 import '../services/dlna_control_service.dart';
 import '../services/dlna_discovery_service.dart';
 import '../services/local_media_server.dart';
 import '../services/platform_dirs.dart';
-import 'package:convert_the_spire_reborn/src/services/review_service.dart';
+import '../utils/snack.dart';
 
 /// A dialog that discovers DLNA devices on the network and allows the user
 /// to cast a local media file to a selected device.
@@ -139,8 +139,9 @@ class _CastDialogState extends State<CastDialog> {
       String servePath = widget.filePath;
       if (!kIsWeb && Platform.isAndroid && servePath.startsWith('content://')) {
         final copied = await PlatformDirs.copyToTemp(servePath);
-        if (copied == null)
+        if (copied == null) {
           throw Exception('Failed to prepare file for casting');
+        }
         servePath = copied;
         _tempServedPath = copied;
       }

@@ -17,7 +17,7 @@ class DesktopNotificationPoller {
   DesktopNotificationPoller._();
 
   void start() {
-    _timer ??= Timer.periodic(Duration(seconds: 30), (_) => _poll());
+    _timer ??= Timer.periodic(const Duration(seconds: 30), (_) => _poll());
   }
 
   void stop() {

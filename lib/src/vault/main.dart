@@ -1,34 +1,34 @@
-import 'dart:ui';
-
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 
-import 'package:flutter/foundation.dart'
-    show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:dtorrent_task_v2/dtorrent_task_v2.dart' as dt;
-import 'package:path_provider/path_provider.dart';
+import 'package:convert_the_spire_reborn/src/config/build_flags.dart';
 import 'package:convert_the_spire_reborn/src/vault/db/sqlcipher_bootstrap.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/desktop_window.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/hotkeys.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/notifications_desktop.dart';
-import 'package:convert_the_spire_reborn/src/config/build_flags.dart';
-// import './screens/home_screen.dart';
-import 'router.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/background_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/identity_service.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/service_locator.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/startup_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/theme_service.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/tray_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/background_service.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/tray_service.dart';
 import 'package:convert_the_spire_reborn/src/widgets/adaptive_ui_frame.dart';
+import 'package:dtorrent_task_v2/dtorrent_task_v2.dart' as dt;
+import 'package:flutter/foundation.dart'
+    show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
+
+// import './screens/home_screen.dart';
+import 'router.dart';
 
 Future<bool> _requestAndroidPermissions() async {
   var notificationGranted = true;

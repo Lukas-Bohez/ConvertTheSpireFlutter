@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 
 // Helper functions to shift heavy operations in the bittorrent engine off of the main UI isolate.
 // This is an initial infrastructure layer; additional workload can be moved into this isolate

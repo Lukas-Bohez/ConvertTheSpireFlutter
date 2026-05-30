@@ -4,7 +4,7 @@ import 'colour_rarity.dart';
 import 'colour_reward_service.dart';
 
 class ColourRevealDialog extends StatefulWidget {
-  const ColourRevealDialog({Key? key, required this.reward}) : super(key: key);
+  const ColourRevealDialog({super.key, required this.reward});
   final ColourReward reward;
 
   @override

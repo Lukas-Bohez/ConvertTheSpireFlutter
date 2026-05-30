@@ -1,10 +1,10 @@
 import 'dart:io';
-import 'package:flutter/widgets.dart';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+import 'package:flutter/widgets.dart';
 
 class SoundService {
   SoundService._();

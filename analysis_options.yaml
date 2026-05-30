@@ -1,9 +1,31 @@
-# This file contains configuration options for the Dart analyzer, specifying rules and guidelines for code quality.
+include: package:flutter_lints/flutter.yaml
+
 analyzer:
   errors:
-    unused_import: warning
-    dead_code: warning
+    unused_import: error
+    dead_code: error
+    unused_element: error
+    unused_local_variable: error
     missing_return: error
     unnecessary_this: warning
   exclude:
     - test/**
+    - build/**
+    - results/**
+    - .dart_tool/**
+
+linter:
+  rules:
+    avoid_print: true
+    cancel_subscriptions: true
+    directives_ordering: true
+    prefer_const_constructors: true
+    prefer_final_locals: true
+    prefer_single_quotes: true
+    sort_child_properties_last: true
+    use_key_in_widget_constructors: true
+    control_flow_in_finally: false
+    implementation_imports: false
+    library_private_types_in_public_api: false
+    no_wildcard_variable_uses: false
+    use_build_context_synchronously: false

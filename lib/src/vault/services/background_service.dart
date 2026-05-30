@@ -1,7 +1,8 @@
 import 'dart:async';
+
+import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();

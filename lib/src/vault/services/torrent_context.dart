@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/search_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
+import 'package:flutter/foundation.dart';
 
 class TorrentContextService extends ChangeNotifier {
   bool _notifyPending = false;

@@ -1,13 +1,13 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:convert_the_spire_reborn/src/config/build_flags.dart';
+import 'package:convert_the_spire_reborn/src/screens/browser_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/desktop_window.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/about_screen.dart';
-import 'package:convert_the_spire_reborn/src/screens/browser_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/guide_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/torrents_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
-import 'package:convert_the_spire_reborn/src/config/build_flags.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class AppShell extends StatefulWidget {
   final Widget child;
@@ -122,25 +122,25 @@ class _AppShellState extends State<AppShell> {
 
     final navItems = isMobile
         ? [
-            _NavItem(
+            const _NavItem(
               icon: Icons.download_outlined,
               activeIcon: Icons.download,
               label: 'Torrents',
               route: '/torrents',
             ),
-            _NavItem(
+            const _NavItem(
               icon: Icons.menu_book_outlined,
               activeIcon: Icons.menu_book,
               label: 'Guide',
               route: '/guide',
             ),
-            _NavItem(
+            const _NavItem(
               icon: Icons.campaign_outlined,
               activeIcon: Icons.campaign,
               label: 'Channels',
               route: '/browser',
             ),
-            _NavItem(
+            const _NavItem(
               icon: Icons.settings_outlined,
               activeIcon: Icons.settings,
               label: 'Settings',
@@ -148,37 +148,37 @@ class _AppShellState extends State<AppShell> {
             ),
           ]
         : [
-            _NavItem(
+            const _NavItem(
               icon: Icons.auto_awesome,
               activeIcon: Icons.auto_awesome,
               label: 'Vault AI',
               route: '/copilot',
             ),
-            _NavItem(
+            const _NavItem(
               icon: Icons.chat_bubble_outline,
               activeIcon: Icons.chat_bubble,
               label: 'Local AI',
               route: '/ai_chat',
             ),
-            _NavItem(
+            const _NavItem(
               icon: Icons.download_outlined,
               activeIcon: Icons.download,
               label: 'Torrents',
               route: '/torrents',
             ),
-            _NavItem(
+            const _NavItem(
               icon: Icons.menu_book_outlined,
               activeIcon: Icons.menu_book,
               label: 'Guide',
               route: '/guide',
             ),
-            _NavItem(
+            const _NavItem(
               icon: Icons.campaign_outlined,
               activeIcon: Icons.campaign,
               label: 'Channels',
               route: '/browser',
             ),
-            _NavItem(
+            const _NavItem(
               icon: Icons.settings_outlined,
               activeIcon: Icons.settings,
               label: 'Settings',
@@ -193,7 +193,7 @@ class _AppShellState extends State<AppShell> {
     final mobileScreens = [
       const TorrentsScreen(),
       const GuideScreen(),
-      BrowserScreen(),
+      const BrowserScreen(),
       const AboutScreen(),
     ];
 
@@ -295,7 +295,7 @@ class _Sidebar extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(

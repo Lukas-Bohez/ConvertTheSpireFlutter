@@ -6,7 +6,7 @@ import '../../utils/safe_json.dart';
 
 /// Detects video streams on web pages via JS injection and network sniffing.
 class VideoDetectorService extends ChangeNotifier {
-  final Set<String> _detectedUrls = LinkedHashSet<String>();
+  final Set<String> _detectedUrls = <String>{};
 
   Set<String> get detectedUrls => UnmodifiableSetView(_detectedUrls);
   bool get hasVideos => _detectedUrls.isNotEmpty;

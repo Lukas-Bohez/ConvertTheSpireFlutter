@@ -11,7 +11,7 @@ if (-not (Test-Path $aab)) {
 # Ensure aab directory
 Remove-Item aab\\*.aab -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force aab | Out-Null
-Copy-Item $aab -Destination "aab\\bitplayer-v12.1.5+1215-play-release.aab" -Force
-Get-Item "aab\\bitplayer-v12.1.5+1215-play-release.aab" | Select-Object Name,@{N='MB';E={[math]::Round($_.Length/1MB,2)}} | Format-List
+Copy-Item $aab -Destination "aab\\bitplayer-v12.1.6+1216-play-release.aab" -Force
+Get-Item "aab\\bitplayer-v12.1.6+1216-play-release.aab" | Select-Object Name,@{N='MB';E={[math]::Round($_.Length/1MB,2)}} | Format-List
 Write-Host "COPIED"
 exit 0

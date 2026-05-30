@@ -3,16 +3,16 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../config/build_flags.dart';
-import '../state/app_controller.dart';
+import '../features/colour_rewards/watch_ad_card.dart';
 import '../services/ad_service.dart';
 import '../services/purchase_service.dart';
+import '../state/app_controller.dart';
 import '../utils/snack.dart';
-import '../features/colour_rewards/watch_ad_card.dart';
 
 /// Support and monetization page for donations, ads, and the Remove Ads unlock.
 class SupportScreen extends StatefulWidget {

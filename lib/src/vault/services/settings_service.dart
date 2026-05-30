@@ -1,6 +1,6 @@
+import 'package:convert_the_spire_reborn/src/vault/constants.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:convert_the_spire_reborn/src/vault/constants.dart';
 
 class SettingsService {
   static final ValueNotifier<bool> persistentSidebarListenable =

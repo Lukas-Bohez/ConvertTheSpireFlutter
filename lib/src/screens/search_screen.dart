@@ -4,15 +4,15 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import '../models/search_result.dart';
 import '../config/full_mode_access.dart';
+import '../models/search_result.dart';
 import '../services/multi_source_search_service.dart';
 import '../services/preview_player_service.dart';
 import '../state/app_controller.dart';
 import '../widgets/monetization_widgets.dart';
-import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 // Fix: use an explicit show clause so the analyzer knows exactly which
 // symbol is needed.  This resolves both the unused_import warning (the
 // import IS used, just not visible without the clause) and the
@@ -97,8 +97,9 @@ class _SearchScreenState extends State<SearchScreen>
       final normFile = norm(filename);
       if (normFile.isEmpty) continue;
       if (normDisplay == normFile) return true;
-      if (normDisplay.length >= 4 && normFile.contains(normDisplay))
+      if (normDisplay.length >= 4 && normFile.contains(normDisplay)) {
         return true;
+      }
       if (normFile.length >= 4 && normDisplay.contains(normFile)) return true;
     }
 
@@ -107,8 +108,9 @@ class _SearchScreenState extends State<SearchScreen>
 
   bool _isAlreadyDownloaded(SearchResult r) {
     if (_downloadedVideoIds.contains(r.id)) return true;
-    if (_downloadedFileKeys.isEmpty && _downloadedFilePaths.isEmpty)
+    if (_downloadedFileKeys.isEmpty && _downloadedFilePaths.isEmpty) {
       return false;
+    }
 
     final title = _normalizeKey(r.title);
     final full = _normalizeKey('${r.artist} ${r.title}');

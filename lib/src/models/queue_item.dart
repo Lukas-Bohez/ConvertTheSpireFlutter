@@ -108,8 +108,9 @@ class QueueItem {
         progress: 0,
         status: () {
           final s = json['status'] as String? ?? 'queued';
-          if (s == 'downloading' || s == 'converting')
+          if (s == 'downloading' || s == 'converting') {
             return DownloadStatus.queued;
+          }
           return DownloadStatus.values.firstWhere(
             (e) => e.name == s,
             orElse: () => DownloadStatus.queued,

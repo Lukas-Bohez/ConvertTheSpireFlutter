@@ -136,7 +136,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
             // -- List / Grid --
             Expanded(
               child: items.isEmpty
-                  ? EmptyState(
+                  ? const EmptyState(
                       icon: Icons.star_border,
                       title: 'No favourites yet',
                       subtitle:

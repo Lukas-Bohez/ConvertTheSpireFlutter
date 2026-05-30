@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
-import 'package:flutter/foundation.dart' show debugPrint;
 
 import '../models/search_result.dart';
 import '../utils/safe_json.dart';

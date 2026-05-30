@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../utils/snack.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../browser/adblock/adblock_service.dart';
 import '../../data/browser_db.dart';
 import '../../services/ipfs_service.dart';
+import '../../utils/snack.dart';
 
 /// Browser settings screen: search engine, ad-block, privacy, display.
 class BrowserSettingsScreen extends StatefulWidget {
@@ -65,7 +65,7 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
         body: ListView(
           children: [
             // -- General --
-            _SectionHeader(title: 'General'),
+            const _SectionHeader(title: 'General'),
             ListTile(
               leading: const Icon(Icons.search),
               title: const Text('Search Engine'),
@@ -74,7 +74,7 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
             ),
 
             // -- Privacy --
-            _SectionHeader(title: 'Privacy'),
+            const _SectionHeader(title: 'Privacy'),
             SwitchListTile(
               secondary: const Icon(Icons.block),
               title: const Text('Ad Blocker'),
@@ -133,7 +133,7 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
             ),
 
             // -- Display --
-            _SectionHeader(title: 'Display'),
+            const _SectionHeader(title: 'Display'),
             SwitchListTile(
               secondary: const Icon(Icons.desktop_windows),
               title: const Text('Desktop Mode'),

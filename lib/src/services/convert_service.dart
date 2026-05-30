@@ -6,12 +6,12 @@ import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image/image.dart' as img;
 import 'package:mime/mime.dart';
-import 'platform_dirs.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:uuid/uuid.dart';
 
 import '../models/convert_result.dart';
 import 'ffmpeg_service.dart';
+import 'platform_dirs.dart';
 
 class ConvertService {
   final FfmpegService ffmpeg;
@@ -281,7 +281,7 @@ class ConvertService {
       buffer.writeln();
       for (final file in archive) {
         final sizeKb = (file.size / 1024).toStringAsFixed(1);
-        buffer.writeln('  ${file.name} (${sizeKb} KB)');
+        buffer.writeln('  ${file.name} ($sizeKb KB)');
       }
       return buffer.toString().trim();
     } catch (_) {

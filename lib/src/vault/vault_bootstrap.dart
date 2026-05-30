@@ -1,9 +1,8 @@
-import 'package:flutter/foundation.dart';
-
 import 'package:convert_the_spire_reborn/src/vault/db/sqlcipher_bootstrap.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/identity_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
+import 'package:flutter/foundation.dart';
 
 class VaultBootstrap {
   VaultBootstrap._();

@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/chat_hub_entry.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/server.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/chat_screen.dart';
@@ -6,6 +5,7 @@ import 'package:convert_the_spire_reborn/src/vault/screens/dm_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/chat_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/identity_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/server_service.dart';
+import 'package:flutter/material.dart';
 
 class ChatHubScreen extends StatefulWidget {
   const ChatHubScreen({super.key});

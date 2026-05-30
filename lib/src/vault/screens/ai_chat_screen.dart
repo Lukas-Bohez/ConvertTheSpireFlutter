@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:convert_the_spire_reborn/src/vault/constants.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
@@ -321,7 +321,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       _messages = <_UiMessage>[
         ..._messages,
         _UiMessage(role: 'user', content: text),
-        _UiMessage(role: 'assistant', content: ''),
+        const _UiMessage(role: 'assistant', content: ''),
       ];
     });
 
@@ -490,7 +490,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Recommended model: $kDefaultAiModel'),
+              const Text('Recommended model: $kDefaultAiModel'),
               const SizedBox(height: 6),
               Text('Active model: $_activeModel'),
               const SizedBox(height: 6),
