@@ -216,13 +216,15 @@ class _BrowserShellState extends State<BrowserShell> {
             final cs = Theme.of(context).colorScheme;
             final media = MediaQuery.sizeOf(context);
             final width = media.width;
-            var maxWidth = (width - 12).clamp(260.0, 680.0).toDouble();
+            var maxWidth = math.min(width - 12, 680.0).toDouble();
             final targetContext = _urlBarKey.currentContext;
             final targetBox = targetContext?.findRenderObject() as RenderBox?;
             if (targetBox != null && targetBox.hasSize) {
               final targetLeft = targetBox.localToGlobal(Offset.zero).dx;
-              final availableRight = math.max(260.0, width - targetLeft - 12);
-              maxWidth = math.min(maxWidth, availableRight);
+              final availableRight = width - targetLeft - 12;
+              if (availableRight.isFinite && availableRight > 0) {
+                maxWidth = math.min(maxWidth, availableRight);
+              }
             }
             final maxHeight =
                 (media.height * 0.55).clamp(180.0, 460.0).toDouble();
@@ -282,7 +284,8 @@ class _BrowserShellState extends State<BrowserShell> {
                                         s.kind !=
                                         _BrowserSuggestionKind.internal)
                                     .map((suggestion) => Padding(
-                                          padding: const EdgeInsets.only(bottom: 8),
+                                          padding:
+                                              const EdgeInsets.only(bottom: 8),
                                           child: _SuggestionTile(
                                             label: suggestion.label,
                                             subtitle: suggestion.subtitle,
@@ -1082,6 +1085,7 @@ class _BrowserShellState extends State<BrowserShell> {
 
     if (_isEditing) {
       return CompositedTransformTarget(
+        key: _urlBarKey,
         link: _urlBarLink,
         child: Material(
           color: Colors.transparent,
