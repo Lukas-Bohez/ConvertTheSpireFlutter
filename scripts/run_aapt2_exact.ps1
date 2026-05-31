@@ -3,7 +3,7 @@ $aapt2 = Get-ChildItem $sdk -Recurse -Filter aapt2.exe |
          Sort-Object FullName -Desc | Select-Object -First 1 -Exp FullName
 Write-Host "Using aapt2: $aapt2"
 
-$aab = Resolve-Path "aab\bitplayer-v12.1.7+1217-play-release.aab"
+$aab = Resolve-Path "aab\bitplayer-v12.1.8+1218-play-release.aab"
 $tmp = Join-Path $env:TEMP ("aab_" + [guid]::NewGuid())
 New-Item -ItemType Directory $tmp | Out-Null
 Add-Type -AssemblyName System.IO.Compression.FileSystem

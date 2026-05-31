@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Continue'
-$aab = Resolve-Path "c:\development\ConversionFlutter\my_flutter_app\aab\bitplayer-v12.1.7+1217-play-release.aab"
+$aab = Resolve-Path "c:\development\ConversionFlutter\my_flutter_app\aab\bitplayer-v12.1.8+1218-play-release.aab"
 Write-Host "Resolved AAB: $aab"
 
 $tmp = Join-Path $env:TEMP ("aab_" + [guid]::NewGuid())

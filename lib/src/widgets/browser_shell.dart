@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -152,6 +153,7 @@ class _BrowserShellState extends State<BrowserShell> {
   late final TextEditingController _urlEditController;
   final FocusNode _urlFocusNode = FocusNode();
   final LayerLink _urlBarLink = LayerLink();
+  final GlobalKey _urlBarKey = GlobalKey();
   OverlayEntry? _suggestionOverlayEntry;
 
   @override
@@ -214,7 +216,14 @@ class _BrowserShellState extends State<BrowserShell> {
             final cs = Theme.of(context).colorScheme;
             final media = MediaQuery.sizeOf(context);
             final width = media.width;
-            final maxWidth = (width - 12).clamp(260.0, 680.0).toDouble();
+            var maxWidth = (width - 12).clamp(260.0, 680.0).toDouble();
+            final targetContext = _urlBarKey.currentContext;
+            final targetBox = targetContext?.findRenderObject() as RenderBox?;
+            if (targetBox != null && targetBox.hasSize) {
+              final targetLeft = targetBox.localToGlobal(Offset.zero).dx;
+              final availableRight = math.max(260.0, width - targetLeft - 12);
+              maxWidth = math.min(maxWidth, availableRight);
+            }
             final maxHeight =
                 (media.height * 0.55).clamp(180.0, 460.0).toDouble();
 
@@ -256,14 +265,12 @@ class _BrowserShellState extends State<BrowserShell> {
                                     .where((s) =>
                                         s.kind ==
                                         _BrowserSuggestionKind.internal)
-                                    .map(
-                                      (suggestion) => ActionChip(
-                                        avatar: Icon(suggestion.icon, size: 18),
-                                        label: Text(suggestion.label),
-                                        onPressed: () =>
-                                            _handleSubmit(suggestion.value),
-                                      ),
-                                    )
+                                    .map((suggestion) => _SuggestionButton(
+                                          label: suggestion.label,
+                                          icon: suggestion.icon,
+                                          onSubmit: () =>
+                                              _handleSubmit(suggestion.value),
+                                        ))
                                     .toList(),
                               ),
                               if (suggestions.any((s) =>
@@ -274,26 +281,17 @@ class _BrowserShellState extends State<BrowserShell> {
                                     .where((s) =>
                                         s.kind !=
                                         _BrowserSuggestionKind.internal)
-                                    .map(
-                                      (suggestion) => ListTile(
-                                        dense: true,
-                                        contentPadding: EdgeInsets.zero,
-                                        leading: CircleAvatar(
-                                          radius: 16,
-                                          backgroundColor: cs.primaryContainer,
-                                          foregroundColor:
-                                              cs.onPrimaryContainer,
-                                          child:
-                                              Icon(suggestion.icon, size: 16),
-                                        ),
-                                        title: Text(suggestion.label),
-                                        subtitle: suggestion.subtitle.isEmpty
-                                            ? null
-                                            : Text(suggestion.subtitle),
-                                        onTap: () =>
-                                            _handleSubmit(suggestion.value),
-                                      ),
-                                    ),
+                                    .map((suggestion) => Padding(
+                                          padding: const EdgeInsets.only(
+                                              bottom: 8),
+                                          child: _SuggestionTile(
+                                            label: suggestion.label,
+                                            subtitle: suggestion.subtitle,
+                                            icon: suggestion.icon,
+                                            onSubmit: () =>
+                                                _handleSubmit(suggestion.value),
+                                          ),
+                                        )),
                               ],
                             ],
                           ),
@@ -1139,6 +1137,7 @@ class _BrowserShellState extends State<BrowserShell> {
             : _currentFavicon;
 
         return CompositedTransformTarget(
+          key: _urlBarKey,
           link: _urlBarLink,
           child: Material(
             color: Colors.transparent,
@@ -1242,6 +1241,133 @@ class _BrowserShellState extends State<BrowserShell> {
     return RegExp(r'^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#].*)?$',
             caseSensitive: false)
         .hasMatch(lower);
+  }
+}
+
+class _SuggestionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onSubmit;
+
+  const _SuggestionButton({
+    required this.label,
+    required this.icon,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (_) => onSubmit(),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: cs.outlineVariant.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: cs.primary),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SuggestionTile extends StatelessWidget {
+  final String label;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onSubmit;
+
+  const _SuggestionTile({
+    required this.label,
+    required this.subtitle,
+    required this.icon,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (_) => onSubmit(),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: cs.outlineVariant.withValues(alpha: 0.25),
+            ),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: cs.primaryContainer,
+                foregroundColor: cs.onPrimaryContainer,
+                child: Icon(icon, size: 16),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    if (subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
