@@ -282,8 +282,7 @@ class _BrowserShellState extends State<BrowserShell> {
                                         s.kind !=
                                         _BrowserSuggestionKind.internal)
                                     .map((suggestion) => Padding(
-                                          padding: const EdgeInsets.only(
-                                              bottom: 8),
+                                          padding: const EdgeInsets.only(bottom: 8),
                                           child: _SuggestionTile(
                                             label: suggestion.label,
                                             subtitle: suggestion.subtitle,
@@ -291,7 +290,7 @@ class _BrowserShellState extends State<BrowserShell> {
                                             onSubmit: () =>
                                                 _handleSubmit(suggestion.value),
                                           ),
-                                        )),
+                                        ))
                               ],
                             ],
                           ),
