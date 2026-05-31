@@ -15,4 +15,8 @@
         android:name="android.hardware.faketouch"
         android:required="false"
         tools:replace="android:required" />
+    <application
+        android:icon="@drawable/tv_icon"
+        android:roundIcon="@drawable/tv_icon"
+        tools:replace="android:icon,android:roundIcon" />
 </manifest>
