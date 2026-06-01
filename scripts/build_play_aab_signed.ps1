@@ -179,8 +179,8 @@ try {
   }
 
   New-Item -ItemType Directory -Force -Path 'aab' | Out-Null
-  Copy-Item -Force $builtAab 'aab\bitplayer-v12.2.1+1222-play-release.aab'
-  Write-Host 'SUCCESS: aab\bitplayer-v12.2.1+1222-play-release.aab is signed with the expected key.'
+  Copy-Item -Force $builtAab 'aab\bitplayer-v12.2.3+1223-play-release.aab'
+  Write-Host 'SUCCESS: aab\bitplayer-v12.2.3+1223-play-release.aab is signed with the expected key.'
 } finally {
   Pop-Location
 }
