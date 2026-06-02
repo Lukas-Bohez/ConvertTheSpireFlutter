@@ -8,7 +8,7 @@ if (-not $analyzer) {
     $analyzer = Get-ChildItem $sdk -Recurse -Filter apkanalyzer.bat -ErrorAction SilentlyContinue | Sort-Object FullName -Desc | Select-Object -First 1 -Exp FullName
 }
 Write-Host "Using: $analyzer"
-$aab = Resolve-Path "c:\\development\\ConversionFlutter\\my_flutter_app\\aab\\bitplayer-v12.2.3+1223-play-release.aab"
+$aab = Resolve-Path "c:\\development\\ConversionFlutter\\my_flutter_app\\aab\\bitplayer-v12.2.4+1224-play-release.aab"
 $outFile = "c:\\development\\ConversionFlutter\\my_flutter_app\\manifest_check.txt"
 $errFile = "c:\\development\\ConversionFlutter\\my_flutter_app\\manifest_check.err.txt"
 Start-Process -FilePath $analyzer -ArgumentList @('manifest','print',$aab) -NoNewWindow -Wait -RedirectStandardOutput $outFile -RedirectStandardError $errFile
