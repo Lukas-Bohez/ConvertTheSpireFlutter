@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -30,140 +28,6 @@ class YtDlpService {
     return temp.path;
   }
 
-  Future<String> _resolveRuntimeDirectory({String? ytDlpPath}) async {
-    if (ytDlpPath != null && ytDlpPath.trim().isNotEmpty) {
-      if (p.isAbsolute(ytDlpPath)) {
-        return p.dirname(ytDlpPath);
-      }
-      final base = await _getAppBinaryPath();
-      if (base != null) return p.dirname(base);
-    }
-
-    final appBin = await _getAppBinaryPath();
-    if (appBin != null) {
-      return p.dirname(appBin);
-    }
-    return Directory.systemTemp.path;
-  }
-
-  Future<String?> _findSystemNode() async {
-    try {
-      final result = await Process.run(
-        Platform.isWindows ? 'where' : 'which',
-        ['node'],
-        runInShell: true,
-      );
-      if (result.exitCode == 0) {
-        final lines = result.stdout.toString().trim().split(RegExp(r'\r?\n'));
-        final first = lines.firstWhere((line) => line.trim().isNotEmpty,
-            orElse: () => '');
-        if (first.isNotEmpty) return first.trim();
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  Future<String> ensureDenoInstalled({String? ytDlpPath}) async {
-    if (kIsWeb || Platform.isAndroid || Platform.isIOS) {
-      throw Exception(
-          'Deno installation is only supported on desktop platforms.');
-    }
-
-    final runtimeDir = await _resolveRuntimeDirectory(ytDlpPath: ytDlpPath);
-    final denoExe = Platform.isWindows ? 'deno.exe' : 'deno';
-    final denoPath = '$runtimeDir${Platform.pathSeparator}$denoExe';
-
-    if (await File(denoPath).exists()) {
-      debugPrint('Deno already present at $denoPath');
-      return denoPath;
-    }
-
-    debugPrint('Deno not found — downloading...');
-
-    final response = await http.get(
-      Uri.parse('https://api.github.com/repos/denoland/deno/releases/latest'),
-      headers: {'Accept': 'application/vnd.github+json'},
-    ).timeout(const Duration(seconds: 15));
-    if (response.statusCode != 200) {
-      throw Exception('Failed to fetch Deno release info');
-    }
-
-    final release = jsonDecode(response.body) as Map<String, dynamic>;
-    final assets = release['assets'] as List<dynamic>? ?? const [];
-
-    final assetName = Platform.isWindows
-        ? 'deno-x86_64-pc-windows-msvc.zip'
-        : Platform.isMacOS
-            ? 'deno-x86_64-apple-darwin.zip'
-            : 'deno-x86_64-unknown-linux-gnu.zip';
-
-    final asset = assets.cast<Map<String, dynamic>>().firstWhere(
-          (a) => (a['name'] ?? '').toString() == assetName,
-          orElse: () => throw Exception('No Deno asset found for $assetName'),
-        );
-
-    final zipResponse = await http.get(
-      Uri.parse((asset['browser_download_url'] ?? '').toString()),
-    );
-    if (zipResponse.statusCode != 200) {
-      throw Exception('Deno download failed');
-    }
-
-    final archive = ZipDecoder().decodeBytes(zipResponse.bodyBytes);
-    ArchiveFile? denoFile;
-    for (final file in archive) {
-      final baseName = p.basename(file.name);
-      if (baseName == denoExe || baseName == 'deno') {
-        denoFile = file;
-        break;
-      }
-    }
-    if (denoFile == null) {
-      throw Exception('Deno binary not found in archive');
-    }
-
-    final file = File(denoPath);
-    await file.parent.create(recursive: true);
-    final bytes = Uint8List.fromList(List<int>.from(denoFile.content as List));
-    await file.writeAsBytes(bytes, flush: true);
-    if (!Platform.isWindows) {
-      await Process.run('chmod', ['+x', denoPath]);
-    }
-
-    debugPrint('Deno installed at $denoPath');
-    return denoPath;
-  }
-
-  Future<String?> _resolveJsRuntimeSpec({required String ytDlpPath}) async {
-    final nodePath = await _findSystemNode();
-    if (nodePath != null && nodePath.isNotEmpty) {
-      return 'node:$nodePath';
-    }
-
-    try {
-      final denoPath = await ensureDenoInstalled(ytDlpPath: ytDlpPath);
-      return 'deno:$denoPath';
-    } catch (e) {
-      debugPrint('Failed to provision Deno runtime: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> _applyJsRuntimeArgs(List<String> args,
-      {required String ytDlpPath}) async {
-    final runtimeSpec = await _resolveJsRuntimeSpec(ytDlpPath: ytDlpPath);
-    if (runtimeSpec != null && runtimeSpec.isNotEmpty) {
-      args.addAll(['--js-runtimes', runtimeSpec]);
-    }
-  }
-
-  Future<void> _applyProxyArg(List<String> args) async {
-    final proxy = await NetworkProxyService.ytDlpProxyUrl();
-    if (proxy != null && proxy.isNotEmpty) {
-      args.addAll(['--proxy', proxy]);
-    }
-  }
-
   /// Fetches video metadata using yt-dlp --dump-json and returns filesize_approx in bytes (if available).
   Future<int?> fetchEstimatedSize({
     required String url,
@@ -181,6 +45,8 @@ class YtDlpService {
       '--no-mtime',
       '--extractor-args',
       'youtube:lang=en',
+      '--extractor-retries',
+      '3',
     ]);
     final height = _qualityToHeight(videoQuality);
     args.addAll(
@@ -213,7 +79,6 @@ class YtDlpService {
     if (forceGenericExtractor) {
       args.add('--force-generic-extractor');
     }
-    await _applyJsRuntimeArgs(args, ytDlpPath: ytDlpPath);
     await _applyProxyArg(args);
     args.add(url);
 
@@ -676,6 +541,8 @@ class YtDlpService {
       '--no-overwrites',
       '--no-part', // don't use .part files
       '-o', _escapeTemplate(outputPath),
+      '--extractor-retries', '3',
+      '--retries', '10',
     ]);
 
     args.addAll([
@@ -726,7 +593,6 @@ class YtDlpService {
       args.add('--force-generic-extractor');
     }
 
-    await _applyJsRuntimeArgs(args, ytDlpPath: ytDlpPath);
     await _applyProxyArg(args);
     args.add(url);
 
@@ -935,6 +801,12 @@ class YtDlpService {
 
   /// Fallback downloader that uses OS tooling when the Dart HTTP stack
   /// fails (TLS handshake / proxy issues on some Windows installs).
+  ///
+  /// Tries multiple strategies in order:
+  ///   1. PowerShell WebClient (with TLS 1.2 forced)
+  ///   2. PowerShell Invoke-WebRequest (better proxy/redirect support)
+  ///   3. curl (if available)
+  ///   4. wget (if available)
   static Future<void> _attemptShellDownload(String url, String dest,
       {bool enforceTls12 = false}) async {
     // Ensure parent exists
@@ -944,8 +816,8 @@ class YtDlpService {
     } catch (_) {}
 
     if (Platform.isWindows) {
+      // Strategy 1: PowerShell WebClient
       try {
-        // Use PowerShell's WebClient which relies on the OS networking stack.
         final safeUrl = url.replaceAll("'", "''");
         final safeDest = dest.replaceAll("'", "''");
         final cmd = StringBuffer();
@@ -963,13 +835,62 @@ class YtDlpService {
         ];
         final pr = await Process.run('powershell', args)
             .timeout(const Duration(seconds: 60));
-        if (pr.exitCode != 0) {
-          throw Exception('PowerShell download failed: ${pr.stderr}');
+        if (pr.exitCode == 0) return;
+      } catch (_) {}
+
+      // Strategy 2: PowerShell Invoke-WebRequest (better with redirects, proxies)
+      try {
+        final safeUrl = url.replaceAll("'", "''");
+        final safeDest = dest.replaceAll("'", "''");
+        final cmd = StringBuffer();
+        if (enforceTls12) {
+          cmd.write(
+              '[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; ');
         }
-        return;
-      } catch (e) {
-        throw Exception('Shell fallback download (PowerShell) failed: $e');
-      }
+        // Invoke-WebRequest handles redirects to HTTPS better on older PS versions.
+        cmd.write(
+            "try { Invoke-WebRequest -Uri '$safeUrl' -OutFile '$safeDest' -UseBasicParsing } catch { exit 1 }");
+        final pr = await Process.run('powershell', [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          cmd.toString(),
+        ]).timeout(const Duration(seconds: 90));
+        if (pr.exitCode == 0) return;
+      } catch (_) {}
+
+      // Strategy 3: BITS (Background Intelligent Transfer) — works on locked-down enterprise PCs
+      try {
+        final safeUrl = url.replaceAll("'", "''");
+        final safeDest = dest.replaceAll("'", "''");
+        final cmd =
+            "try { Start-BitsTransfer -Source '$safeUrl' -Destination '$safeDest' -Priority High } catch { exit 1 }";
+        final pr = await Process.run('powershell', [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          cmd,
+        ]).timeout(const Duration(seconds: 60));
+        if (pr.exitCode == 0) return;
+      } catch (_) {}
+
+      // Strategy 4: certutil (available on all Windows versions since XP)
+      try {
+        final safeUrl = url.replaceAll("'", "''");
+        final safeDest = dest.replaceAll("'", "''");
+        // certutil -urlcache -split -f downloads and splits large files
+        final pr = await Process.run('certutil', [
+          '-urlcache',
+          '-split',
+          '-f',
+          safeUrl,
+          safeDest,
+        ]).timeout(const Duration(seconds: 90));
+        if (pr.exitCode == 0) return;
+      } catch (_) {}
+
+      // All Windows methods failed
+      throw Exception('Shell fallback download failed on Windows');
     }
 
     // Unix-like fallback: try `curl` then `wget`.
@@ -996,6 +917,14 @@ class YtDlpService {
     } catch (_) {}
 
     throw Exception(
-        'No suitable shell downloader found (curl/wget/PowerShell)');
+        'No suitable shell downloader found (curl/wget/PowerShell/BITS)');
+  }
+
+  /// Apply proxy settings to yt-dlp arguments if configured.
+  Future<void> _applyProxyArg(List<String> args) async {
+    final proxy = await NetworkProxyService.ytDlpProxyUrl();
+    if (proxy != null && proxy.isNotEmpty) {
+      args.addAll(['--proxy', proxy]);
+    }
   }
 }

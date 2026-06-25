@@ -258,22 +258,18 @@ class AppController extends ChangeNotifier {
     unawaited(Future(() async {
       final settings = _settings;
       if (settings == null) return;
-      final ytDlpFuture = downloadService.ytDlp.ensureAvailable(
-        configuredPath: settings.ytDlpPath,
-        onProgress: (pct, message) {
-          if (pct == 0 || pct == 100) logs.add('yt-dlp $message ($pct%)');
-        },
-      );
-      final denoFuture = downloadService.ytDlp.ensureDenoInstalled(
-        ytDlpPath: settings.ytDlpPath,
-      );
-
       try {
-        final path = await ytDlpFuture;
+        final path = await downloadService.ytDlp.ensureAvailable(
+          configuredPath: settings.ytDlpPath,
+          onProgress: (pct, message) {
+            if (pct == 0 || pct == 100) logs.add('yt-dlp $message ($pct%)');
+          },
+        );
         if (settings.ytDlpPath != path) {
           await saveSettings(settings.copyWith(ytDlpPath: path));
         }
         logs.add('yt-dlp ready: $path');
+        // Attempt to update to latest version in the background
         try {
           final updatedPath = await downloadService.ytDlp.updateYtDlp(
             configuredPath: settings.ytDlpPath,
@@ -287,12 +283,6 @@ class AppController extends ChangeNotifier {
         } catch (_) {}
       } catch (e) {
         logs.add('yt-dlp auto-download skipped: $e');
-      }
-
-      try {
-        await denoFuture;
-      } catch (e) {
-        logs.add('Deno auto-download skipped: $e');
       }
     }).catchError((_) {}));
   }
