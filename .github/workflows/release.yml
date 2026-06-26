@@ -101,6 +101,38 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # Set _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS at the
+      # CMake / environment level so all plugin targets inherit it.
+      - name: Set coroutine deprecation workaround
+        shell: pwsh
+        run: |
+          echo "CXXFLAGS=-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "CMAKE_CXX_FLAGS=-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      # metadata_god's resolve_symlinks.ps1 fails on CI runners because
+      # it tries to Get-Item on C:\Users\runneradmin\AppData which doesn't
+      # exist. Patch the script to handle this gracefully.
+      - name: Patch metadata_god resolve_symlinks for CI
+        shell: pwsh
+        run: |
+          $paths = @(
+            "$env:PUB_CACHE\hosted\pub.dev\metadata_god-*\cargokit\cmake\resolve_symlinks.ps1",
+            "$env:LOCALAPPDATA\Pub\Cache\hosted\pub.dev\metadata_god-*\cargokit\cmake\resolve_symlinks.ps1",
+            "windows\flutter\ephemeral\.plugin_symlinks\metadata_god\cargokit\cmake\resolve_symlinks.ps1"
+          )
+          foreach ($pattern in $paths) {
+            $files = Get-ChildItem -Path $pattern -ErrorAction SilentlyContinue
+            foreach ($file in $files) {
+              $text = Get-Content -Raw $file.FullName
+              if ($text -match 'Get-Item \$realPath') {
+                $text = $text -replace 'Get-Item \$realPath', 'Get-Item -ErrorAction SilentlyContinue $realPath'
+                Set-Content -Path $file.FullName -Value $text -NoNewline
+                Write-Host "Patched resolve_symlinks.ps1 at $($file.FullName)"
+              }
+            }
+          }
+          Write-Host "metadata_god patch check complete"
+
       - name: Patch flutter_inappwebview Windows symbol mismatch
         shell: pwsh
         run: |
