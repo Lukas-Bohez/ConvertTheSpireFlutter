@@ -178,9 +178,18 @@ try {
     throw "Built AAB signature mismatch. Expected $expectedSha1 but got $builtSha1"
   }
 
+  # Read version from pubspec.yaml dynamically so the AAB filename always matches
+  $pubspecPath = Join-Path $PSScriptRoot '..\pubspec.yaml'
+  $versionLine = (Select-String -Path $pubspecPath -Pattern '^version:' | Select-Object -First 1).Line
+  $appVersion = ($versionLine -replace '^version:\s*', '').Trim()
+  $aabName = "bitplayer-v${appVersion}-play-release.aab"
+  $aabDest = "aab\$aabName"
+
   New-Item -ItemType Directory -Force -Path 'aab' | Out-Null
-  Copy-Item -Force $builtAab 'aab\bitplayer-v12.2.4+1224-play-release.aab'
-  Write-Host 'SUCCESS: aab\bitplayer-v12.2.4+1224-play-release.aab is signed with the expected key.'
+  # Delete any previous AABs so only the latest remains
+  Remove-Item -Path 'aab\bitplayer-*.aab' -Force -ErrorAction SilentlyContinue
+  Copy-Item -Force $builtAab $aabDest
+  Write-Host "SUCCESS: $aabDest is signed with the expected key."
 } finally {
   Pop-Location
 }

@@ -480,16 +480,6 @@ class YtDlpService {
   }
 
   /// Download media using yt-dlp.
-  ///
-  /// [url]            - Video / media URL (YouTube, SoundCloud, etc.)
-  /// [outputPath]     - Full path for the output file *including* extension.
-  /// [format]         - Target format: `mp4`, `mp3`, or `m4a`.
-  /// [ffmpegPath]     - Path to FFmpeg (needed for merging / conversion).
-  /// [onProgress]     - Progress callback (0-100).
-  /// [ytDlpPath]      - Resolved path to the yt-dlp binary.
-  /// [videoQuality]   - Target video quality string (e.g. `'720p'`).
-  /// [audioBitrate]   - Target audio bitrate in kbps.
-  /// [isCancelled]    - Polled to support external cancellation.
   Future<void> download({
     required String url,
     required String outputPath,
@@ -535,11 +525,11 @@ class YtDlpService {
     args.addAll([
       '--no-mtime',
       '--extractor-args', 'youtube:lang=en',
-      '--no-playlist', // single video only
-      '--newline', // one progress line per update
-      '--no-colors', // clean output for parsing
+      '--no-playlist',
+      '--newline',
+      '--no-colors',
       '--no-overwrites',
-      '--no-part', // don't use .part files
+      '--no-part',
       '-o', _escapeTemplate(outputPath),
       '--extractor-retries', '3',
       '--retries', '10',
@@ -547,27 +537,29 @@ class YtDlpService {
 
     args.addAll([
       '--embed-metadata',
-      '--embed-thumbnail', // embed cover art
+      '--embed-thumbnail',
       '--parse-metadata', '%(uploader|)s:%(meta_artist)s',
       '--parse-metadata', '%(uploader|)s:%(meta_album_artist)s',
       '--parse-metadata', '%(title)s:%(meta_title)s',
       '--parse-metadata', '%(album|playlist_title|)s:%(meta_album)s',
-      '--add-metadata', // include title/artist/date tags
+      '--add-metadata',
     ]);
 
     if (sponsorBlockEnabled) {
-      // Use SponsorBlock to strip sponsored/intro/outro segments on download.
       args.addAll(['--sponsorblock-remove', 'all']);
     }
 
-    // FFmpeg location - only pass when we have an explicit path (not 'ffmpeg' on PATH)
     if (ffmpegPath != null &&
         ffmpegPath.trim().isNotEmpty &&
         ffmpegPath.trim() != 'ffmpeg') {
       args.addAll(['--ffmpeg-location', ffmpegPath]);
     }
 
-    // Browser-like headers for difficult sites
+    // Conditionally pass --js-runtimes node: when Node.js is available
+    await _tryApplyNodeRuntime(args);
+    // Use android+web clients to reduce JS-runtime dependency for standard formats
+    args.addAll(['--extractor-args', 'youtube:player_client=android,web']);
+
     if (extraHeaders != null) {
       for (final entry in extraHeaders.entries) {
         if (entry.key.toLowerCase() == 'user-agent') {
@@ -580,7 +572,6 @@ class YtDlpService {
       }
     }
 
-    // Cookie support
     if (cookiesFile != null && cookiesFile.trim().isNotEmpty) {
       args.addAll(['--cookies', cookiesFile]);
     } else if (cookiesFromBrowser != null &&
@@ -588,7 +579,6 @@ class YtDlpService {
       args.addAll(['--cookies-from-browser', cookiesFromBrowser]);
     }
 
-    // Force generic extractor as fallback
     if (forceGenericExtractor) {
       args.add('--force-generic-extractor');
     }
@@ -602,7 +592,6 @@ class YtDlpService {
 
     Future<void> runAttempt(List<String> runArgs) async {
       onProgress(0, null, null);
-
       final workDir = await _getYtDlpWorkingDir();
       final process = await Process.start(
         ytDlpPath,
@@ -611,7 +600,6 @@ class YtDlpService {
         runInShell: false,
       );
 
-      // Poll for cancellation every 500ms.
       final cancelTimer =
           Timer.periodic(const Duration(milliseconds: 500), (_) {
         if (isCancelled?.call() ?? false) {
@@ -622,8 +610,6 @@ class YtDlpService {
 
       try {
         final stdoutBuffer = StringBuffer();
-
-        // Parse stdout for progress while retaining full output for diagnostics.
         final stdoutSub = process.stdout
             .transform(utf8.decoder)
             .transform(const LineSplitter())
@@ -639,7 +625,6 @@ class YtDlpService {
           }
         });
 
-        // Capture full stderr including debug lines.
         final stderrBuffer = StringBuffer();
         final stderrSub = process.stderr
             .transform(utf8.decoder)
@@ -654,7 +639,6 @@ class YtDlpService {
         await stderrSub.cancel();
 
         if (isCancelled?.call() ?? false) {
-          // Clean up partial output.
           await _cleanupFailedDownloadArtifacts(outputPath);
           throw Exception('Cancelled');
         }
@@ -689,14 +673,12 @@ class YtDlpService {
       }
     }
 
-    // Verify output exists (yt-dlp may adjust extension)
     if (!await File(outputPath).exists()) {
-      // Check for common extension adjustments
       final base = outputPath.replaceAll(RegExp(r'\.[^.]+$'), '');
       final candidates = [
         outputPath,
         '$base.$formatLower',
-        '$base.mkv', // yt-dlp sometimes outputs MKV
+        '$base.mkv',
         '$base.webm',
       ];
       bool found = false;
@@ -734,7 +716,6 @@ class YtDlpService {
     return stripped;
   }
 
-  /// Path where this app stores the yt-dlp binary.
   Future<String?> _getAppBinaryPath() async {
     final support = await PlatformDirs.getAppSupportDir();
     if (support == null) return null;
@@ -742,29 +723,19 @@ class YtDlpService {
     return '${support.path}${Platform.pathSeparator}yt-dlp${Platform.pathSeparator}$binName';
   }
 
-  /// Escape `%` in output template so yt-dlp doesn't interpret it.
   static String _escapeTemplate(String path) => path.replaceAll('%', '%%');
 
   static int _qualityToHeight(String quality) {
     switch (quality) {
-      case '360p':
-        return 360;
-      case '480p':
-        return 480;
-      case '720p':
-        return 720;
-      case '1080p':
-        return 1080;
-      case '1440p':
-        return 1440;
-      case '2160p':
-        return 2160;
-      case '4320p':
-        return 4320;
-      case 'best':
-        return 9999;
-      default:
-        return 720;
+      case '360p': return 360;
+      case '480p': return 480;
+      case '720p': return 720;
+      case '1080p': return 1080;
+      case '1440p': return 1440;
+      case '2160p': return 2160;
+      case '4320p': return 4320;
+      case 'best': return 9999;
+      default: return 720;
     }
   }
 
@@ -799,17 +770,10 @@ class YtDlpService {
     }
   }
 
-  /// Fallback downloader that uses OS tooling when the Dart HTTP stack
-  /// fails (TLS handshake / proxy issues on some Windows installs).
-  ///
-  /// Tries multiple strategies in order:
-  ///   1. PowerShell WebClient (with TLS 1.2 forced)
-  ///   2. PowerShell Invoke-WebRequest (better proxy/redirect support)
-  ///   3. curl (if available)
-  ///   4. wget (if available)
+  /// Fallback shell downloader for yt-dlp binary.
+  /// Tries: PowerShell WebClient → Invoke-WebRequest → BITS → certutil → curl/wget
   static Future<void> _attemptShellDownload(String url, String dest,
       {bool enforceTls12 = false}) async {
-    // Ensure parent exists
     try {
       final f = File(dest);
       await f.parent.create(recursive: true);
@@ -827,18 +791,13 @@ class YtDlpService {
         }
         cmd.write(
             "try { (New-Object System.Net.WebClient).DownloadFile('$safeUrl','$safeDest') } catch { exit 1 }");
-        final args = [
-          '-NoProfile',
-          '-NonInteractive',
-          '-Command',
-          cmd.toString(),
-        ];
-        final pr = await Process.run('powershell', args)
-            .timeout(const Duration(seconds: 60));
+        final pr = await Process.run('powershell', [
+          '-NoProfile', '-NonInteractive', '-Command', cmd.toString(),
+        ]).timeout(const Duration(seconds: 60));
         if (pr.exitCode == 0) return;
       } catch (_) {}
 
-      // Strategy 2: PowerShell Invoke-WebRequest (better with redirects, proxies)
+      // Strategy 2: PowerShell Invoke-WebRequest
       try {
         final safeUrl = url.replaceAll("'", "''");
         final safeDest = dest.replaceAll("'", "''");
@@ -847,53 +806,46 @@ class YtDlpService {
           cmd.write(
               '[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; ');
         }
-        // Invoke-WebRequest handles redirects to HTTPS better on older PS versions.
         cmd.write(
             "try { Invoke-WebRequest -Uri '$safeUrl' -OutFile '$safeDest' -UseBasicParsing } catch { exit 1 }");
         final pr = await Process.run('powershell', [
-          '-NoProfile',
-          '-NonInteractive',
-          '-Command',
-          cmd.toString(),
+          '-NoProfile', '-NonInteractive', '-Command', cmd.toString(),
         ]).timeout(const Duration(seconds: 90));
         if (pr.exitCode == 0) return;
       } catch (_) {}
 
-      // Strategy 3: BITS (Background Intelligent Transfer) — works on locked-down enterprise PCs
+      // Strategy 3: BITS Transfer
       try {
         final safeUrl = url.replaceAll("'", "''");
         final safeDest = dest.replaceAll("'", "''");
         final cmd =
             "try { Start-BitsTransfer -Source '$safeUrl' -Destination '$safeDest' -Priority High } catch { exit 1 }";
         final pr = await Process.run('powershell', [
-          '-NoProfile',
-          '-NonInteractive',
-          '-Command',
-          cmd,
+          '-NoProfile', '-NonInteractive', '-Command', cmd,
         ]).timeout(const Duration(seconds: 60));
         if (pr.exitCode == 0) return;
       } catch (_) {}
 
-      // Strategy 4: certutil (available on all Windows versions since XP)
+      // Strategy 4: certutil (available on all Windows versions)
+      // Cleans up .TMP file and URL cache after success.
       try {
         final safeUrl = url.replaceAll("'", "''");
         final safeDest = dest.replaceAll("'", "''");
-        // certutil -urlcache -split -f downloads and splits large files
         final pr = await Process.run('certutil', [
-          '-urlcache',
-          '-split',
-          '-f',
-          safeUrl,
-          safeDest,
+          '-urlcache', '-split', '-f', safeUrl, safeDest,
         ]).timeout(const Duration(seconds: 90));
-        if (pr.exitCode == 0) return;
+        if (pr.exitCode == 0) {
+          final tmpFile = File('$dest.TMP');
+          if (await tmpFile.exists()) await tmpFile.delete();
+          unawaited(Process.run('certutil', ['-urlcache', '-f', safeUrl]));
+          return;
+        }
       } catch (_) {}
 
-      // All Windows methods failed
       throw Exception('Shell fallback download failed on Windows');
     }
 
-    // Unix-like fallback: try `curl` then `wget`.
+    // Unix: curl → wget
     try {
       final whichCurl = await Process.run('which', ['curl'])
           .catchError((_) => ProcessResult(1, 1, '', ''));
@@ -918,6 +870,51 @@ class YtDlpService {
 
     throw Exception(
         'No suitable shell downloader found (curl/wget/PowerShell/BITS)');
+  }
+
+  /// Try to detect and apply Node.js as a JS runtime for yt-dlp.
+  /// Silences the "No supported JavaScript runtime" warning on machines
+  /// with Node installed. Never throws — failures are silently ignored.
+  Future<void> _tryApplyNodeRuntime(List<String> args) async {
+    if (kIsWeb || Platform.isAndroid || Platform.isIOS) return;
+    try {
+      const nodePaths = [
+        'C:\\Program Files\\nodejs\\node.exe',
+        'C:\\Program Files (x86)\\nodejs\\node.exe',
+        '/usr/bin/node',
+        '/usr/local/bin/node',
+        '/opt/homebrew/bin/node',
+      ];
+      String? nodePath;
+      for (final p in nodePaths) {
+        if (await File(p).exists()) {
+          nodePath = p;
+          break;
+        }
+      }
+      if (nodePath == null) {
+        final result = await Process.run(
+          Platform.isWindows ? 'where' : 'which', ['node'],
+          runInShell: true,
+        ).timeout(const Duration(seconds: 5));
+        if (result.exitCode == 0) {
+          final lines = result.stdout.toString().trim()
+              .split(RegExp(r'\r?\n'));
+          for (final l in lines) {
+            if (l.trim().isNotEmpty) {
+              nodePath = l.trim();
+              break;
+            }
+          }
+        }
+      }
+      if (nodePath != null && nodePath.isNotEmpty) {
+        args.addAll(['--js-runtimes', 'node:$nodePath']);
+        debugPrint('yt-dlp: using Node.js JS runtime at $nodePath');
+      }
+    } catch (_) {
+      // Silently ignore — yt-dlp still works without a JS runtime
+    }
   }
 
   /// Apply proxy settings to yt-dlp arguments if configured.
