@@ -75,7 +75,7 @@ function(APPLY_STANDARD_SETTINGS TARGET)
     target_compile_options(${TARGET} PRIVATE /FS)
     # VS 2022 17.14+ deprecates <experimental/coroutine> with an error C2338
     # when plugins use /await. Silence this so old plugins still compile.
-    target_compile_definitions(${TARGET} PRIVATE "_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNING")
+    target_compile_definitions(${TARGET} PRIVATE "_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS")
   endif()
 endfunction()
 
