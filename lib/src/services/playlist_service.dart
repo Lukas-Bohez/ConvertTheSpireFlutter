@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
@@ -7,17 +8,21 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
 
 import '../models/search_result.dart';
+import 'yt_dlp_service.dart' show YtDlpService;
 
 /// Handles playlist fetching, M3U generation, and smart folder comparison.
 class PlaylistService {
   final YoutubeExplode _yt;
+  final YtDlpService? _ytDlp;
+  final String? _ytDlpPath;
 
   static const Duration _playlistStreamTimeout = Duration(seconds: 25);
 
   String? _lastPlaylistDiagnostics;
   String? get lastPlaylistDiagnostics => _lastPlaylistDiagnostics;
 
-  PlaylistService({required YoutubeExplode yt}) : _yt = yt;
+  PlaylistService({required YoutubeExplode yt, YtDlpService? ytDlp, String? ytDlpPath})
+      : _yt = yt, _ytDlp = ytDlp, _ytDlpPath = ytDlpPath;
 
   // --─ YouTube playlists --------------------------------------------------─
 
@@ -33,6 +38,13 @@ class PlaylistService {
       final playlist = await _yt.playlists.get(playlistId);
       expectedCount = playlist.videoCount ?? 0;
     } catch (_) {}
+    // yt-dlp fallback if youtube_explode_dart returns 0 (YouTube page change).
+    if (expectedCount == 0 && _canUseYtDlp) {
+      try {
+        final count = await _fetchPlaylistCountViaYtDlp(playlistUrl);
+        if (count != null && count > 0) expectedCount = count;
+      } catch (_) {}
+    }
 
     try {
       for (var attempt = 0; attempt < 3; attempt++) {
@@ -52,17 +64,24 @@ class PlaylistService {
     } on TimeoutException catch (_) {
       // Stream stalled; return whatever we've collected so far.
     } catch (_) {
-      final videos = videosById.values.toList();
-      return videos.map((video) {
-        return SearchResult(
-          id: video.id.value,
-          title: video.title,
-          artist: video.author,
-          duration: video.duration ?? Duration.zero,
-          thumbnailUrl: video.thumbnails.mediumResUrl,
-          source: 'youtube',
-        );
-      }).toList();
+      // Ignore stream error; fallbacks below may still succeed.
+    }
+
+    // --- Step 3: Fallback to yt-dlp if youtube_explode_dart returned nothing ---
+    if (videosById.isEmpty && _canUseYtDlp) {
+      try {
+        final ytDlpTracks = await _fetchPlaylistTracksViaYtDlp(playlistUrl, cap: cap);
+        if (ytDlpTracks.isNotEmpty) {
+          _lastPlaylistDiagnostics = null;
+          if (expectedCount > 0 && ytDlpTracks.length < expectedCount) {
+            _lastPlaylistDiagnostics =
+                'Loaded ${ytDlpTracks.length} of reported $expectedCount playlist entries. '
+                'This mismatch usually means some videos are private, deleted, region-restricted, '
+                'or temporarily unavailable through the API.';
+          }
+          return ytDlpTracks;
+        }
+      } catch (_) {}
     }
 
     final videos = videosById.values.toList();
@@ -86,16 +105,118 @@ class PlaylistService {
     }).toList();
   }
 
-  /// Get playlist metadata (title, author, description).
+  /// Get playlist metadata (title, author, description, video count).
   Future<PlaylistInfo> getPlaylistInfo(String playlistUrl) async {
     final playlistId = PlaylistId(playlistUrl);
     final playlist = await _yt.playlists.get(playlistId);
+    var videoCount = playlist.videoCount ?? 0;
+    // yt-dlp fallback if youtube_explode_dart returns 0 (YouTube page change).
+    if (videoCount == 0 && _canUseYtDlp) {
+      try {
+        final count = await _fetchPlaylistCountViaYtDlp(playlistUrl);
+        if (count != null && count > 0) videoCount = count;
+      } catch (_) {}
+    }
     return PlaylistInfo(
       title: playlist.title,
       author: playlist.author,
       description: playlist.description,
-      videoCount: playlist.videoCount ?? 0,
+      videoCount: videoCount,
     );
+  }
+
+  /// Returns true when yt-dlp is configured and available on this platform.
+  bool get _canUseYtDlp => _ytDlp != null && _ytDlpPath != null && _ytDlpPath!.isNotEmpty;
+
+  /// Fallback: fetch playlist video count via yt-dlp --dump-json --flat-playlist.
+  /// yt-dlp is far more resilient to YouTube page structure changes than
+  /// youtube_explode_dart's HTML parser.
+  Future<int?> _fetchPlaylistCountViaYtDlp(String playlistUrl) async {
+    if (!_canUseYtDlp) return null;
+    final args = <String>[
+      '--dump-json',
+      '--flat-playlist',
+      '--playlist-end',
+      '1',
+      '--no-warnings',
+      '--no-mtime',
+      '--extractor-retries',
+      '3',
+      playlistUrl,
+    ];
+    final process = await Process.start(_ytDlpPath!, args,
+        workingDirectory: Directory.systemTemp.path,
+        runInShell: false);
+    final output = await process.stdout.transform(utf8.decoder).join();
+    await process.stderr.drain();
+    final exitCode = await process.exitCode;
+    if (exitCode != 0) return null;
+    final lines = output.trim().split('\n');
+    for (final line in lines) {
+      if (line.trim().isEmpty) continue;
+      try {
+        final json = jsonDecode(line) as Map<String, dynamic>;
+        if (json.containsKey('playlist_count')) {
+          final count = json['playlist_count'];
+          if (count is int && count > 0) return count;
+        }
+      } catch (_) {
+        continue;
+      }
+    }
+    return null;
+  }
+
+  /// Fallback: fetch full playlist tracks via yt-dlp --dump-json --flat-playlist.
+  /// Returns [SearchResult] list when successful, empty list otherwise.
+  Future<List<SearchResult>> _fetchPlaylistTracksViaYtDlp(String playlistUrl,
+      {int? cap}) async {
+    if (!_canUseYtDlp) return const [];
+    final args = <String>[
+      '--dump-json',
+      '--flat-playlist',
+      '--no-warnings',
+      '--no-mtime',
+      '--extractor-retries',
+      '3',
+    ];
+    if (cap != null) {
+      args.addAll(['--playlist-end', cap.toString()]);
+    }
+    args.add(playlistUrl);
+
+    final process = await Process.start(_ytDlpPath!, args,
+        workingDirectory: Directory.systemTemp.path,
+        runInShell: false);
+    final output = await process.stdout.transform(utf8.decoder).join();
+    await process.stderr.drain();
+    final exitCode = await process.exitCode;
+    if (exitCode != 0) return const [];
+
+    final results = <SearchResult>[];
+    final lines = output.trim().split('\n');
+    for (final line in lines) {
+      if (line.trim().isEmpty) continue;
+      try {
+        final json = jsonDecode(line) as Map<String, dynamic>;
+        final id = json['id'] as String?;
+        final title = json['title'] as String? ?? 'Unknown';
+        final artist = json['channel'] as String? ?? json['uploader'] as String? ?? 'Unknown';
+        final durationSec = json['duration'] as int? ?? 0;
+        final thumbnail = json['thumbnail'] as String? ?? '';
+        results.add(SearchResult(
+          id: id ?? '',
+          title: title,
+          artist: artist,
+          duration: Duration(seconds: durationSec),
+          thumbnailUrl: thumbnail,
+          source: 'youtube',
+        ));
+      } catch (_) {
+        continue;
+      }
+    }
+    return results;
   }
 
   /// Get the audio URL for a given YouTube video id.
@@ -151,7 +272,7 @@ class PlaylistService {
     await File(outputPath).writeAsString(buf.toString());
   }
 
-  // --─ Smart playlist ↔ folder comparison ----------------------------------
+  // --─ Smart playlist ↁEfolder comparison ----------------------------------
 
   /// Scans [folderPath] recursively and cross-references every playlist track
   /// against the files found.  Uses multi-strategy fuzzy matching so renamed,
@@ -481,7 +602,7 @@ class PlaylistService {
     return name;
   }
 
-  /// Levenshtein distance → similarity ratio in 0..1.
+  /// Levenshtein distance ↁEsimilarity ratio in 0..1.
   static double _levenshteinSimilarity(String a, String b) {
     if (a == b) return 1.0;
     if (a.isEmpty || b.isEmpty) return 0.0;
@@ -512,9 +633,9 @@ class PlaylistService {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════╁E
 // Data classes
-// ═══════════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════╁E
 
 /// Internal helper for indexing local files.
 class _LocalFile {
