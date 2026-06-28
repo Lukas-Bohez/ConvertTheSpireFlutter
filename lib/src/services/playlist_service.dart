@@ -39,7 +39,7 @@ class PlaylistService {
       expectedCount = playlist.videoCount ?? 0;
     } catch (_) {}
     // yt-dlp fallback if youtube_explode_dart returns 0 (YouTube page change).
-    if (expectedCount == 0 && _canUseYtDlp) {
+    if (expectedCount == 0 && await _resolveYtDlpAtCallTime() != null) {
       try {
         final count = await _fetchPlaylistCountViaYtDlp(playlistUrl);
         if (count != null && count > 0) expectedCount = count;
@@ -68,7 +68,7 @@ class PlaylistService {
     }
 
     // --- Step 3: Fallback to yt-dlp if youtube_explode_dart returned nothing ---
-    if (videosById.isEmpty && _canUseYtDlp) {
+    if (videosById.isEmpty && await _resolveYtDlpAtCallTime() != null) {
       try {
         final ytDlpTracks = await _fetchPlaylistTracksViaYtDlp(playlistUrl, cap: cap);
         if (ytDlpTracks.isNotEmpty) {
@@ -111,7 +111,7 @@ class PlaylistService {
     final playlist = await _yt.playlists.get(playlistId);
     var videoCount = playlist.videoCount ?? 0;
     // yt-dlp fallback if youtube_explode_dart returns 0 (YouTube page change).
-    if (videoCount == 0 && _canUseYtDlp) {
+    if (videoCount == 0 && await _resolveYtDlpAtCallTime() != null) {
       try {
         final count = await _fetchPlaylistCountViaYtDlp(playlistUrl);
         if (count != null && count > 0) videoCount = count;
@@ -125,14 +125,24 @@ class PlaylistService {
     );
   }
 
-  /// Returns true when yt-dlp is configured and available on this platform.
-  bool get _canUseYtDlp => _ytDlp != null && _ytDlpPath != null && _ytDlpPath!.isNotEmpty;
+  /// Resolve the yt-dlp path at call time so it works even when the binary
+  /// is downloaded asynchronously after construction (e.g. on first launch).
+  Future<String?> _resolveYtDlpAtCallTime() async {
+    if (_ytDlp == null) return null;
+    if (_ytDlpPath != null && _ytDlpPath!.isNotEmpty) {
+      final resolved = await _ytDlp!.resolveAvailablePath(_ytDlpPath);
+      if (resolved != null) return resolved;
+    }
+    // Retry with null path — maybe it was downloaded since construction
+    return await _ytDlp!.resolveAvailablePath(null);
+  }
 
   /// Fallback: fetch playlist video count via yt-dlp --dump-json --flat-playlist.
   /// yt-dlp is far more resilient to YouTube page structure changes than
   /// youtube_explode_dart's HTML parser.
   Future<int?> _fetchPlaylistCountViaYtDlp(String playlistUrl) async {
-    if (!_canUseYtDlp) return null;
+    final ytDlpPath = await _resolveYtDlpAtCallTime();
+    if (ytDlpPath == null) return null;
     final args = <String>[
       '--dump-json',
       '--flat-playlist',
@@ -144,7 +154,7 @@ class PlaylistService {
       '3',
       playlistUrl,
     ];
-    final process = await Process.start(_ytDlpPath!, args,
+    final process = await Process.start(ytDlpPath, args,
         workingDirectory: Directory.systemTemp.path,
         runInShell: false);
     final output = await process.stdout.transform(utf8.decoder).join();
@@ -171,7 +181,8 @@ class PlaylistService {
   /// Returns [SearchResult] list when successful, empty list otherwise.
   Future<List<SearchResult>> _fetchPlaylistTracksViaYtDlp(String playlistUrl,
       {int? cap}) async {
-    if (!_canUseYtDlp) return const [];
+    final ytDlpPath = await _resolveYtDlpAtCallTime();
+    if (ytDlpPath == null) return const [];
     final args = <String>[
       '--dump-json',
       '--flat-playlist',
@@ -185,7 +196,7 @@ class PlaylistService {
     }
     args.add(playlistUrl);
 
-    final process = await Process.start(_ytDlpPath!, args,
+    final process = await Process.start(ytDlpPath, args,
         workingDirectory: Directory.systemTemp.path,
         runInShell: false);
     final output = await process.stdout.transform(utf8.decoder).join();
