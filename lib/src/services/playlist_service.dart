@@ -185,54 +185,71 @@ class PlaylistService {
     return null;
   }
 
-  /// Fallback: fetch full playlist tracks via yt-dlp --dump-json --flat-playlist.
-  /// Returns [SearchResult] list when successful, empty list otherwise.
+  /// Fetch playlist tracks via yt-dlp --dump-json --flat-playlist.
+  /// yt-dlp's flat-playlist caps at ~101 entries per page regardless of
+  /// --playlist-end. We paginate in chunks of 100 entries to work around this.
   Future<List<SearchResult>> _fetchPlaylistTracksViaYtDlp(String playlistUrl,
       {int? cap}) async {
     final ytDlpPath = await _resolveYtDlpAtCallTime();
     if (ytDlpPath == null) return const [];
-    final args = <String>[
-      '--dump-json',
-      '--flat-playlist',
-      '--no-warnings',
-      '--no-mtime',
-      '--extractor-retries',
-      '3',
-    ];
-    if (cap != null) {
-      args.addAll(['--playlist-end', cap.toString()]);
+
+    // Determine how many entries to fetch. If no cap, fetch everything by
+    // resolving the count first, then paginate in 100-entry chunks.
+    final int totalToFetch;
+    if (cap != null && cap > 0) {
+      totalToFetch = cap;
+    } else {
+      // Resolve count first so we know how many chunks to loop
+      final count = await _fetchPlaylistCountViaYtDlp(playlistUrl);
+      if (count == null || count <= 0) return const [];
+      totalToFetch = count;
     }
-    args.add(playlistUrl);
 
-    final process = await Process.start(ytDlpPath, args,
-        workingDirectory: Directory.systemTemp.path,
-        runInShell: false);
-    final output = await process.stdout.transform(utf8.decoder).join();
-    await process.stderr.drain();
-    final exitCode = await process.exitCode;
-    if (exitCode != 0) return const [];
-
+    const int chunkSize = 100;
     final results = <SearchResult>[];
-    final lines = output.trim().split('\n');
-    for (final line in lines) {
-      if (line.trim().isEmpty) continue;
-      try {
-        final json = jsonDecode(line) as Map<String, dynamic>;
-        final id = json['id'] as String?;
-        final title = json['title'] as String? ?? 'Unknown';
-        final artist = json['channel'] as String? ?? json['uploader'] as String? ?? 'Unknown';
-        final durationSec = json['duration'] as int? ?? 0;
-        final thumbnail = json['thumbnail'] as String? ?? '';
-        results.add(SearchResult(
-          id: id ?? '',
-          title: title,
-          artist: artist,
-          duration: Duration(seconds: durationSec),
-          thumbnailUrl: thumbnail,
-          source: 'youtube',
-        ));
-      } catch (_) {
-        continue;
+
+    for (int start = 1; start <= totalToFetch; start += chunkSize) {
+      final end = (start + chunkSize - 1).clamp(1, totalToFetch);
+      final args = <String>[
+        '--dump-json',
+        '--flat-playlist',
+        '--playlist-start', start.toString(),
+        '--playlist-end', end.toString(),
+        '--no-warnings',
+        '--no-mtime',
+        '--extractor-retries', '3',
+        playlistUrl,
+      ];
+
+      final process = await Process.start(ytDlpPath, args,
+          workingDirectory: Directory.systemTemp.path,
+          runInShell: false);
+      final output = await process.stdout.transform(utf8.decoder).join();
+      await process.stderr.drain();
+      final exitCode = await process.exitCode;
+      if (exitCode != 0) break;
+
+      final lines = output.trim().split('\n');
+      for (final line in lines) {
+        if (line.trim().isEmpty) continue;
+        try {
+          final json = jsonDecode(line) as Map<String, dynamic>;
+          final id = json['id'] as String?;
+          final title = json['title'] as String? ?? 'Unknown';
+          final artist = json['channel'] as String? ?? json['uploader'] as String? ?? 'Unknown';
+          final durationSec = json['duration'] as int? ?? 0;
+          final thumbnail = json['thumbnail'] as String? ?? '';
+          results.add(SearchResult(
+            id: id ?? '',
+            title: title,
+            artist: artist,
+            duration: Duration(seconds: durationSec),
+            thumbnailUrl: thumbnail,
+            source: 'youtube',
+          ));
+        } catch (_) {
+          continue;
+        }
       }
     }
     return results;
