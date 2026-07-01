@@ -122,14 +122,27 @@ class PlaylistService {
 
   /// Resolve the yt-dlp path at call time so it works even when the binary
   /// is downloaded asynchronously after construction (e.g. on first launch).
+  /// If the binary is not found, attempts to download it on demand via
+  /// ensureAvailable() so playlist fetching never fails due to a missing binary.
   Future<String?> _resolveYtDlpAtCallTime() async {
     if (_ytDlp == null) return null;
     if (_ytDlpPath != null && _ytDlpPath!.isNotEmpty) {
       final resolved = await _ytDlp!.resolveAvailablePath(_ytDlpPath);
       if (resolved != null) return resolved;
     }
-    // Retry with null path — maybe it was downloaded since construction
-    return await _ytDlp!.resolveAvailablePath(null);
+    // Try to find it at the app support dir or PATH
+    final autoResolved = await _ytDlp!.resolveAvailablePath(null);
+    if (autoResolved != null) return autoResolved;
+    // Last resort: download yt-dlp on demand. This handles the case where
+    // the app was just installed or the binary was deleted/moved.
+    // Timeout: 90 seconds — enough to download ~15MB even on slow connections.
+    try {
+      return await _ytDlp!
+          .ensureAvailable()
+          .timeout(const Duration(seconds: 90));
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Fallback: fetch playlist video count via yt-dlp --dump-json --flat-playlist.
