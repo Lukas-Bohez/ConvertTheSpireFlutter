@@ -509,10 +509,12 @@ class YtDlpService {
         'mp4',
       ]);
     } else {
-      // Audio download: extract audio in target format
+      // Audio download: let yt-dlp pick best available format, then extract audio.
+      // Using complex format filters like bestaudio[ext=m4a] fails with YouTube's
+      // SABR-only streaming experiment. Let yt-dlp choose the best format naturally.
       args.addAll([
         '-f',
-        'bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio[ext=webm]/bestaudio',
+        'bestaudio/best',
         '-x',
         '--audio-format',
         formatLower,
@@ -541,7 +543,6 @@ class YtDlpService {
       '--parse-metadata', '%(uploader|)s:%(meta_artist)s',
       '--parse-metadata', '%(uploader|)s:%(meta_album_artist)s',
       '--parse-metadata', '%(title)s:%(meta_title)s',
-      '--parse-metadata', '%(album|playlist_title|)s:%(meta_album)s',
       '--add-metadata',
     ]);
 
@@ -557,8 +558,8 @@ class YtDlpService {
 
     // Conditionally pass --js-runtimes node: when Node.js is available
     await _tryApplyNodeRuntime(args);
-    // Use android+web clients to reduce JS-runtime dependency for standard formats
-    args.addAll(['--extractor-args', 'youtube:player_client=android,web']);
+    // Use android_vr client which doesn't trigger SABR-only streaming experiment
+    args.addAll(['--extractor-args', 'youtube:player_client=android_vr,web']);
 
     if (extraHeaders != null) {
       for (final entry in extraHeaders.entries) {

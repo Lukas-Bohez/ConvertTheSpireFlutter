@@ -32,20 +32,34 @@ class PlaylistService {
     final cap = maxVideos;
     final videosById = <String, Video>{};
     _lastPlaylistDiagnostics = null;
-
     int expectedCount = 0;
+
+    // --- Step 1: yt-dlp is the primary fetcher (handles large playlists reliably)
+    // youtube_explode_dart times out on playlists >100 videos. yt-dlp's
+    // flat-playlist mode returns all entries in seconds.
+    if (await _resolveYtDlpAtCallTime() != null) {
+      try {
+        final count = await _fetchPlaylistCountViaYtDlp(playlistUrl);
+        if (count != null && count > 0) expectedCount = count;
+        final ytDlpTracks = await _fetchPlaylistTracksViaYtDlp(playlistUrl, cap: cap);
+        if (ytDlpTracks.isNotEmpty) {
+          _lastPlaylistDiagnostics = null;
+          if (expectedCount > 0 && ytDlpTracks.length < expectedCount) {
+            _lastPlaylistDiagnostics =
+                'Loaded ${ytDlpTracks.length} of reported $expectedCount playlist entries. '
+                'This mismatch usually means some videos are private, deleted, region-restricted, '
+                'or temporarily unavailable through the API.';
+          }
+          return ytDlpTracks;
+        }
+      } catch (_) {}
+    }
+
+    // --- Step 2: Fallback to youtube_explode_dart (mobile / no yt-dlp) ---
     try {
       final playlist = await _yt.playlists.get(playlistId);
       expectedCount = playlist.videoCount ?? 0;
     } catch (_) {}
-    // yt-dlp fallback if youtube_explode_dart returns 0 (YouTube page change).
-    if (expectedCount == 0 && await _resolveYtDlpAtCallTime() != null) {
-      try {
-        final count = await _fetchPlaylistCountViaYtDlp(playlistUrl);
-        if (count != null && count > 0) expectedCount = count;
-      } catch (_) {}
-    }
-
     try {
       for (var attempt = 0; attempt < 3; attempt++) {
         final before = videosById.length;
@@ -63,26 +77,7 @@ class PlaylistService {
       }
     } on TimeoutException catch (_) {
       // Stream stalled; return whatever we've collected so far.
-    } catch (_) {
-      // Ignore stream error; fallbacks below may still succeed.
-    }
-
-    // --- Step 3: Fallback to yt-dlp if youtube_explode_dart returned nothing ---
-    if (videosById.isEmpty && await _resolveYtDlpAtCallTime() != null) {
-      try {
-        final ytDlpTracks = await _fetchPlaylistTracksViaYtDlp(playlistUrl, cap: cap);
-        if (ytDlpTracks.isNotEmpty) {
-          _lastPlaylistDiagnostics = null;
-          if (expectedCount > 0 && ytDlpTracks.length < expectedCount) {
-            _lastPlaylistDiagnostics =
-                'Loaded ${ytDlpTracks.length} of reported $expectedCount playlist entries. '
-                'This mismatch usually means some videos are private, deleted, region-restricted, '
-                'or temporarily unavailable through the API.';
-          }
-          return ytDlpTracks;
-        }
-      } catch (_) {}
-    }
+    } catch (_) {}
 
     final videos = videosById.values.toList();
 
