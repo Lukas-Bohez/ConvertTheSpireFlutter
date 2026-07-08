@@ -19,6 +19,11 @@ class AiCopilotService {
                 baseUrl: baseUrl ?? 'http://localhost:11434',
                 connectTimeout: const Duration(seconds: 20),
                 receiveTimeout: const Duration(seconds: 120),
+                headers: <String, String>{
+                  'User-Agent': 'BitPlayer/1.0 (local AI assistant)',
+                  'X-Client-Name': 'BitPlayer',
+                  'X-Client-Purpose': 'local-ai-chat',
+                },
               ),
             );
 
