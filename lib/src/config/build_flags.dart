@@ -27,20 +27,20 @@ bool get isYouTubeConversionEnabledInCurrentBuild {
 
 bool get kYouTubeConversionEnabled => isYouTubeConversionEnabledInCurrentBuild;
 
-// App branding  Eunified across all flavors.
+// App branding -- unified across all flavors.
 String getAppTitle() {
    return kPlayStoreBuild ? 'BitPlayer' : 'Convert the Spire Reborn';
 }
 
 String getAppSubtitle() {
-   return kPlayStoreBuild ? 'BitPlayer ? media & torrents' : 'Convert the Spire Reborn ? media & torrents';
+   return kPlayStoreBuild ? 'BitPlayer -- media & torrents' : 'Convert the Spire Reborn -- media & torrents';
 }
 
 String getDefaultDownloadFolderName() {
    return kPlayStoreBuild ? 'BitPlayer' : 'ConvertTheSpireReborn';
 }
 
-// Tab visibility  Ehide/modify tabs for Play builds
+// Tab visibility -- hide/modify tabs for Play builds
 bool isTabVisibleInCurrentBuild(int tabIndex) {
   // Convert tab (tabIndex 9) is disabled on Android per platform limitations
   if (!kIsWeb &&

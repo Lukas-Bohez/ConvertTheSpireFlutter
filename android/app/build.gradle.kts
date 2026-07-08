@@ -48,7 +48,7 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.torrentspire.ai"
-        manifestPlaceholders["appLabel"] = "Convert The Spire Reborn"
+        manifestPlaceholders["appLabel"] = "BitPlayer"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // Minimum supported SDK required by bundled Android plugins.
@@ -81,7 +81,7 @@ android {
         create("play") {
             dimension = "distribution"
             // Play Store uses the canonical package name; no suffix.
-            manifestPlaceholders["appLabel"] = "Convert The Spire Reborn"
+            manifestPlaceholders["appLabel"] = "BitPlayer"
         }
     }
 
