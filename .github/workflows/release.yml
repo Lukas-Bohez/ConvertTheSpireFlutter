@@ -318,7 +318,10 @@ jobs:
         run: |
           set -euo pipefail
           version_line=$(grep -E '^version:' pubspec.yaml | head -n 1)
-          version_value=${version_line#version: }
+          version_value="${version_line#version: }"
+          # Trim leading/trailing whitespace (grep output may have trailing newline)
+          version_value="${version_value#"${version_value%%[![:space:]]*}"}"
+          version_value="${version_value%"${version_value##*[![:space:]]}"}"
           # version_value may include build metadata (+<code>), accept tags
           # both with and without that suffix: v12.1.8+1218 and v12.1.8
           version_name=${version_value%%+*}
