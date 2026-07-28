@@ -42,6 +42,22 @@ import '../utils/safe_json.dart';
 import '../vault/services/torrent_engine_service.dart';
 import '../vault/services/torrent_service.dart';
 
+/// A request sent from Quick Download to the Playlist tab when a playlist URL
+/// is detected. The notifier is cleared after the request is processed.
+class PendingPlaylistRequest {
+  final String url;
+  final String folder;
+  final String format;
+  final String quality;
+
+  const PendingPlaylistRequest({
+    required this.url,
+    required this.folder,
+    this.format = 'mp3',
+    this.quality = 'best',
+  });
+}
+
 class AppController extends ChangeNotifier {
   static const int _maxQueueCap = 1000;
   static const String _downloadIdMapKey = 'download_id_map';
@@ -84,6 +100,11 @@ class AppController extends ChangeNotifier {
   final Map<String, DownloadToken> _tokens = {};
   final List<ConvertResult> convertResults = <ConvertResult>[];
   Future<String?>? _ffmpegInstall;
+
+  /// Notifier for cross-tab playlist requests from Quick Download.
+  final ValueNotifier<PendingPlaylistRequest?> pendingPlaylistRequest =
+      ValueNotifier(null);
+
   bool _downloadAllRunning = false;
   bool _notifyPending = false;
   late final VoidCallback _fullModeListener;

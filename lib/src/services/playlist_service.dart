@@ -8,6 +8,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
 
 import '../models/search_result.dart';
+import 'log_service.dart';
 import 'yt_dlp_service.dart' show YtDlpService;
 
 /// Handles playlist fetching, M3U generation, and smart folder comparison.
@@ -15,14 +16,15 @@ class PlaylistService {
   final YoutubeExplode _yt;
   final YtDlpService? _ytDlp;
   final String? _ytDlpPath;
+  final LogService? _logs;
 
   static const Duration _playlistStreamTimeout = Duration(seconds: 25);
 
   String? _lastPlaylistDiagnostics;
   String? get lastPlaylistDiagnostics => _lastPlaylistDiagnostics;
 
-  PlaylistService({required YoutubeExplode yt, YtDlpService? ytDlp, String? ytDlpPath})
-      : _yt = yt, _ytDlp = ytDlp, _ytDlpPath = ytDlpPath;
+  PlaylistService({required YoutubeExplode yt, YtDlpService? ytDlp, String? ytDlpPath, LogService? logs})
+      : _yt = yt, _ytDlp = ytDlp, _ytDlpPath = ytDlpPath, _logs = logs;
 
   // --─ YouTube playlists --------------------------------------------------─
 
@@ -44,6 +46,7 @@ class PlaylistService {
         final ytDlpTracks = await _fetchPlaylistTracksViaYtDlp(playlistUrl, cap: cap);
         if (ytDlpTracks.isNotEmpty) {
           _lastPlaylistDiagnostics = null;
+          _logs?.add('Playlist fetched via yt-dlp: ${ytDlpTracks.length} tracks');
           if (expectedCount > 0 && ytDlpTracks.length < expectedCount) {
             _lastPlaylistDiagnostics =
                 'Loaded ${ytDlpTracks.length} of reported $expectedCount playlist entries. '
@@ -52,7 +55,9 @@ class PlaylistService {
           }
           return ytDlpTracks;
         }
-      } catch (_) {}
+      } catch (e) {
+        _logs?.add('yt-dlp playlist fetch failed: $e');
+      }
     }
 
     // --- Step 2: Fallback to youtube_explode_dart (mobile / no yt-dlp) ---
@@ -75,11 +80,14 @@ class PlaylistService {
         if (reachedCap || reachedExpected) break;
         if (videosById.length == before) break;
       }
-    } on TimeoutException catch (_) {
-      // Stream stalled; return whatever we've collected so far.
-    } catch (_) {}
+    } on TimeoutException catch (e) {
+      _logs?.add('youtube_explode_dart playlist stream timed out: $e');
+    } catch (e) {
+      _logs?.add('youtube_explode_dart playlist fetch error: $e');
+    }
 
     final videos = videosById.values.toList();
+    _logs?.add('Playlist fetched via youtube_explode_dart: ${videos.length} tracks');
 
     if (expectedCount > 0 && videos.length < expectedCount) {
       _lastPlaylistDiagnostics =
@@ -166,9 +174,15 @@ class PlaylistService {
         workingDirectory: Directory.systemTemp.path,
         runInShell: false);
     final output = await process.stdout.transform(utf8.decoder).join();
-    await process.stderr.drain();
+    final stderrText = await process.stderr.transform(utf8.decoder).join();
+    if (stderrText.trim().isNotEmpty) {
+      _logs?.add('yt-dlp count stderr: $stderrText');
+    }
     final exitCode = await process.exitCode;
-    if (exitCode != 0) return null;
+    if (exitCode != 0) {
+      _logs?.add('yt-dlp count exited with code $exitCode');
+      return null;
+    }
     final lines = output.trim().split('\n');
     for (final line in lines) {
       if (line.trim().isEmpty) continue;
@@ -225,9 +239,15 @@ class PlaylistService {
           workingDirectory: Directory.systemTemp.path,
           runInShell: false);
       final output = await process.stdout.transform(utf8.decoder).join();
-      await process.stderr.drain();
+      final stderrText = await process.stderr.transform(utf8.decoder).join();
+      if (stderrText.trim().isNotEmpty) {
+        _logs?.add('yt-dlp tracks stderr (chunk $start-$end): $stderrText');
+      }
       final exitCode = await process.exitCode;
-      if (exitCode != 0) break;
+      if (exitCode != 0) {
+        _logs?.add('yt-dlp tracks chunk $start-$end exited with code $exitCode');
+        break;
+      }
 
       final lines = output.trim().split('\n');
       for (final line in lines) {

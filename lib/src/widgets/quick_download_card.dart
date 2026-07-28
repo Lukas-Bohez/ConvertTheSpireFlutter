@@ -14,8 +14,14 @@ import '../services/yt_dlp_service.dart';
 class QuickDownloadCard extends StatefulWidget {
   final Future<void> Function(
       SearchResult result, String format, String quality) onDownload;
+  final void Function(String url, String format, String quality)?
+      onPlaylistDetected;
 
-  const QuickDownloadCard({super.key, required this.onDownload});
+  const QuickDownloadCard({
+    super.key,
+    required this.onDownload,
+    this.onPlaylistDetected,
+  });
 
   @override
   State<QuickDownloadCard> createState() => _QuickDownloadCardState();
@@ -41,7 +47,16 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
       final isYouTube = url.contains('youtube.com') || url.contains('youtu.be');
       final isPlaylist = url.contains('list=');
       if (isYouTube && isPlaylist) {
-        // Playlist detected
+        // Playlist detected - redirect to Playlist Manager if callback is set
+        final cb = widget.onPlaylistDetected;
+        if (cb != null) {
+          cb(url, _format, _quality);
+          if (mounted) {
+            _controller.clear();
+          }
+          return;
+        }
+        // Fallback: legacy checklist sheet (no callback wired)
         final yt = YoutubeExplode();
         final playlistService = PlaylistService(yt: yt);
         final List<SearchResult> tracks =
@@ -192,12 +207,6 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                     ),
                     onSubmitted: (_) => _doDownload(),
                   ),
-                ),
-                const SizedBox(width: 8),
-                FilledButton.tonalIcon(
-                  onPressed: _doDownload,
-                  icon: const Icon(Icons.download, size: 20),
-                  label: const Text('Download'),
                 ),
               ],
             ),

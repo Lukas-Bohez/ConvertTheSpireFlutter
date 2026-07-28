@@ -240,7 +240,7 @@ class _MyAppState extends State<MyApp>
         odyseeSearcher: odyseeSearcher,
       );
       final previewPlayer = PreviewPlayerService();
-      final playlistService = PlaylistService(yt: ytExplode, ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath);
+      final playlistService = PlaylistService(yt: ytExplode, ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath, logs: logs);
       final bulkImportService = BulkImportService();
       final musicBrainzService = MusicBrainzService();
       final lyricsService = LyricsService();

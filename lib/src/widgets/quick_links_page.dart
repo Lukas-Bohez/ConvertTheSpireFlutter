@@ -16,6 +16,8 @@ class QuickLinksPage extends StatefulWidget {
   final ValueChanged<String> onNavigate;
   final Future<void> Function(
       SearchResult result, String format, String quality) onDownload;
+  final void Function(String url, String format, String quality)?
+      onPlaylistDetected;
   final Future<String?> Function() getYtDlpVersion;
   final String? downloadFolder;
   final Future<void> Function()? onPickDownloadFolder;
@@ -25,6 +27,7 @@ class QuickLinksPage extends StatefulWidget {
     required this.onNavigate,
     required this.onDownload,
     required this.getYtDlpVersion,
+    this.onPlaylistDetected,
     this.downloadFolder,
     this.onPickDownloadFolder,
   });
@@ -280,7 +283,10 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
               ),
               const SizedBox(height: 12),
             ],
-            QuickDownloadCard(onDownload: widget.onDownload),
+            QuickDownloadCard(
+              onDownload: widget.onDownload,
+              onPlaylistDetected: widget.onPlaylistDetected,
+            ),
             const SizedBox(height: 12),
             if (!Platform.isAndroid)
               Row(

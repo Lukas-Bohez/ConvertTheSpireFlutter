@@ -348,13 +348,18 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           key: const ValueKey('multi-search'),
           searchService: widget.controller.searchService,
           previewPlayer: widget.controller.previewPlayer,
-          onDownload: (result, format) =>
-              widget.controller.addSearchResultToQueue(result, format: format),
+          onDownload: (result, format) async {
+            widget.controller.addSearchResultToQueue(result, format: format);
+            widget.controller.downloadAll();
+          },
         );
       case 2:
         return BrowserScreen(
           key: BrowserScreen.browserKey,
-          onAddToQueue: widget.controller.addSearchResultToQueue,
+          onAddToQueue: (result) {
+            widget.controller.addSearchResultToQueue(result);
+            widget.controller.downloadAll();
+          },
         );
       case 3:
         return _buildQueueTab();
@@ -408,7 +413,20 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               format: format,
               videoQuality: quality,
             );
+            widget.controller.downloadAll();
             _navigateToPage(3); // show queue
+          },
+          onPlaylistDetected: (url, format, quality) {
+            final s = widget.controller.settings;
+            if (s != null && !_ensureDownloadFolder(s)) return;
+            widget.controller.pendingPlaylistRequest.value =
+                PendingPlaylistRequest(
+              url: url,
+              folder: s?.downloadDir ?? '',
+              format: format,
+              quality: quality,
+            );
+            _navigateToPage(4); // Playlists tab
           },
           getYtDlpVersion: () async {
             final settings = widget.controller.settings;
@@ -2821,10 +2839,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             children: [
               PlaylistScreen(
                 playlistService: widget.controller.playlistService,
+                pendingRequest: widget.controller.pendingPlaylistRequest,
                 onDownloadMissing: (tracks, format) {
                   for (final t in tracks) {
                     widget.controller.addSearchResultToQueue(t, format: format);
                   }
+                  widget.controller.downloadAll();
                 },
               ),
               WatchedPlaylistsScreen(

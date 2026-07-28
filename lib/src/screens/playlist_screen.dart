@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/search_result.dart';
 import '../services/ad_service.dart';
 import '../services/playlist_service.dart';
+import '../state/app_controller.dart';
 import '../utils/snack.dart';
 import '../widgets/tv_file_browser.dart';
 
@@ -13,11 +14,13 @@ class PlaylistScreen extends StatefulWidget {
   final PlaylistService playlistService;
   final void Function(List<SearchResult> tracks, String format)
       onDownloadMissing;
+  final ValueNotifier<PendingPlaylistRequest?>? pendingRequest;
 
   const PlaylistScreen({
     super.key,
     required this.playlistService,
     required this.onDownloadMissing,
+    this.pendingRequest,
   });
 
   @override
@@ -50,6 +53,28 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    widget.pendingRequest?.addListener(_onPendingRequest);
+    // Process any pending request that was set before initState ran
+    final pending = widget.pendingRequest?.value;
+    if (pending != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _processPendingRequest(pending));
+    }
+  }
+
+  void _onPendingRequest() {
+    final pending = widget.pendingRequest?.value;
+    if (pending == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _processPendingRequest(pending));
+  }
+
+  Future<void> _processPendingRequest(PendingPlaylistRequest request) async {
+    // Clear the pending request immediately so re-pasting the URL works
+    widget.pendingRequest?.value = null;
+
+    _urlController.text = request.url;
+    await _loadPlaylist();
+    _folderController.text = request.folder;
+    await _compareToFolder();
   }
 
   // --─ Actions --------------------------------------------------------------
