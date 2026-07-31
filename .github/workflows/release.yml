@@ -271,7 +271,7 @@ jobs:
         run: flutter pub get
 
       - name: Build macOS release
-        run: flutter build macos --release --no-tree-shake-icons
+        run: flutter build macos --release --no-tree-shake-icons --no-codesign
 
       - name: Package macOS build
         run: |
