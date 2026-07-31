@@ -202,7 +202,8 @@ jobs:
             libsecret-1-dev \
             libmpv-dev mpv libass-dev \
             fuse libfuse2 \
-            libayatana-appindicator3-dev
+            libayatana-appindicator3-dev \
+            libjson-glib-dev
 
       - uses: subosito/flutter-action@v2
         with:
