@@ -271,7 +271,9 @@ jobs:
         run: flutter pub get
 
       - name: Build macOS release
-        run: flutter build macos --release --no-tree-shake-icons --no-codesign
+        run: flutter build macos --release --no-tree-shake-icons
+        env:
+          CODE_SIGNING_ALLOWED: NO
 
       - name: Package macOS build
         run: |
