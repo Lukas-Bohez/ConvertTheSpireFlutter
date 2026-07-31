@@ -40,6 +40,7 @@ env:
   APP_NAME: convert_the_spire_reborn
   OUTPUT_NAME: ConvertTheSpireReborn
   ANDROID_APK_NAME: ConvertTheSpireReborn.apk
+  ANDROID_AAB_NAME: ConvertTheSpireReborn.aab
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 # ---------------------------------------------------------------------------
@@ -313,6 +314,9 @@ jobs:
       - name: Build APK (GitHub release flavor)
         run: flutter build apk --flavor full --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
 
+      - name: Build AAB (Play Store flavor)
+        run: flutter build appbundle --flavor play --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=true --dart-define=GITHUB_RELEASE=false
+
       - name: Verify release tag matches pubspec version
         shell: bash
         run: |
@@ -344,6 +348,18 @@ jobs:
         with:
           name: android-apk
           path: android-builds/
+          retention-days: 7
+
+      - name: Collect Play Store AAB
+        run: |
+          mkdir -p android-aab
+          cp build/app/outputs/bundle/playRelease/app-play-release.aab \
+            android-aab/${{ env.ANDROID_AAB_NAME }}
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: android-aab-play
+          path: android-aab/
           retention-days: 7
 
   # =========================================================================
