@@ -270,10 +270,21 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Ad-hoc sign ffmpeg_kit frameworks (workaround for unsigned libraries)
+        run: |
+          # ffmpeg_kit_flutter_new ships unsigned frameworks that cause
+          # xcodebuild codesign to fail. Ad-hoc sign them before the build.
+          find ~/.pub-cache -path "*/ffmpeg_kit_flutter_new*/macos/*.framework" -type d 2>/dev/null | while read fw; do
+            echo "Ad-hoc signing $fw"
+            codesign --force --sign - "$fw"
+          done
+          find ~/.pub-cache -path "*/ffmpeg_kit_flutter_new*/macos/*.dylib" -type f 2>/dev/null | while read lib; do
+            echo "Ad-hoc signing $lib"
+            codesign --force --sign - "$lib"
+          done
+
       - name: Build macOS release
         run: flutter build macos --release --no-tree-shake-icons
-        env:
-          CODE_SIGNING_ALLOWED: NO
 
       - name: Package macOS build
         run: |
