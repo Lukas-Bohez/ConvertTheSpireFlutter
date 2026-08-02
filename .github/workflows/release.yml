@@ -325,6 +325,19 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Patch video_thumbnail jcenter (CI network workaround)
+        shell: bash
+        run: |
+          set -euo pipefail
+          PLUGIN_DIR="$PUB_CACHE/hosted/pub.dev/video_thumbnail-0.5.6/android"
+          if [ -f "$PLUGIN_DIR/build.gradle" ]; then
+            sed -i 's/jcenter()/mavenCentral()/' "$PLUGIN_DIR/build.gradle"
+            echo "Patched video_thumbnail build.gradle"
+            grep -n 'repositories' -A2 "$PLUGIN_DIR/build.gradle" || true
+          else
+            echo "video_thumbnail build.gradle not found; skipping patch"
+          fi
+
       - name: Build APK (GitHub release flavor)
         run: flutter build apk --flavor full --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
 
@@ -339,7 +352,7 @@ jobs:
           version_value="${version_line#version: }"
           # Trim leading/trailing whitespace (grep output may have trailing newline)
           version_value="${version_value#"${version_value%%[![:space:]]*}"}"
-          version_value="${version_value%"${version_value##*[![:space:]]}"}"
+          version_value="${version_value%"${version_value##*[[:space:]]}"}"
           # version_value may include build metadata (+<code>), accept tags
           # both with and without that suffix: v12.1.8+1218 and v12.1.8
           version_name=${version_value%%+*}
