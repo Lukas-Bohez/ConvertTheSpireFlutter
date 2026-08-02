@@ -4,6 +4,9 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="com.android.vending.BILLING"/>
     <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
+    <!-- Required for Google Mobile Ads / AdMob to read the advertising ID.
+         This permission must be present in the merged manifest so the Play
+         Console declaration is consistent and the ad ID is not zeroed out. -->
     <!-- required for picking media files on Android 13+ -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <!-- Required on Android <=28 when writing to public external storage -->

@@ -62,6 +62,10 @@ android {
         }
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     splits {
         abi {
             isEnable = false
@@ -131,6 +135,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Enable shrinking + optimized resource reduction for smaller,
+            // faster release builds.
+            isMinifyEnabled = true
+            isShrinkResources = true
         }
     }
 }

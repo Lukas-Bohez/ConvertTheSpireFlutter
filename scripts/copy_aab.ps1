@@ -8,7 +8,7 @@ if (-not (Test-Path $src)) {
 }
 Remove-Item 'c:\development\ConversionFlutter\my_flutter_app\aab\*.aab' -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force 'c:\development\ConversionFlutter\my_flutter_app\aab' | Out-Null
-Copy-Item $src -Destination 'c:\development\ConversionFlutter\my_flutter_app\aab\bitplayer-v12.2.25+1255-play-release.aab' -Force
-$it = Get-Item 'c:\development\ConversionFlutter\my_flutter_app\aab\bitplayer-v12.2.25+1255-play-release.aab'
+Copy-Item $src -Destination 'c:\development\ConversionFlutter\my_flutter_app\aab\bitplayer-v12.2.26+1256-play-release.aab' -Force
+$it = Get-Item 'c:\development\ConversionFlutter\my_flutter_app\aab\bitplayer-v12.2.26+1256-play-release.aab'
 $mb = [math]::Round($it.Length/1MB,2)
 Write-Host "COPIED Name: $($it.Name) SizeMB: $mb"
