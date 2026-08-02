@@ -32,7 +32,18 @@ class YouTubeSearcher {
   }
 
   Future<String> getAudioUrl(String videoId) async {
-    final manifest = await _yt.videos.streamsClient.getManifest(videoId);
+    // The default androidSdkless client often fails on mobile; try fallback
+    // clients if the first manifest is empty or throws.
+    StreamManifest manifest;
+    try {
+      manifest = await _yt.videos.streamsClient.getManifest(videoId);
+      if (manifest.streams.isEmpty) throw Exception('empty manifest');
+    } catch (_) {
+      manifest = await _yt.videos.streamsClient.getManifest(
+        videoId,
+        ytClients: [YoutubeApiClient.safari, YoutubeApiClient.androidVr],
+      );
+    }
     // Prefer muxed stream (reliable), fall back to audio-only
     final stream = manifest.muxed.isNotEmpty
         ? manifest.muxed.withHighestBitrate()

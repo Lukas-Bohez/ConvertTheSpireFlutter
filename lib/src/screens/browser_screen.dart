@@ -1845,57 +1845,60 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                               child: Stack(
                                 fit: StackFit.expand,
                                 children: [
-                                  // Preview occupies most of the tile.
+                                  // Preview fills the tile; screenshot aspect
+                                  // ratios vary, so cover-fit without a fixed
+                                  // 16:9 wrapper to avoid horizontal squashing.
                                   Positioned.fill(
                                     child: Padding(
                                       padding: const EdgeInsets.all(6.0),
-                                      child: AspectRatio(
-                                        aspectRatio: 16 / 9,
-                                        child: ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          child: () {
-                                            final bytes = widget.tabManager
-                                                .getScreenshotBytes(tab.id);
-                                            if (bytes != null &&
-                                                bytes.isNotEmpty) {
-                                              return Image.memory(
-                                                bytes,
-                                                key: ValueKey(widget.tabManager
-                                                        .getScreenshotBytes(
-                                                            tab.id) ??
-                                                    tab.screenshotPath),
-                                                cacheWidth: 640,
-                                                cacheHeight: 360,
-                                                filterQuality:
-                                                    FilterQuality.low,
-                                                fit: BoxFit.cover,
-                                                width: double.infinity,
-                                              );
-                                            }
-                                            if (tab.screenshotPath != null) {
-                                              return Image.file(
-                                                File(tab.screenshotPath!),
-                                                key: ValueKey(
-                                                    tab.screenshotPath),
-                                                cacheWidth: 640,
-                                                cacheHeight: 360,
-                                                filterQuality:
-                                                    FilterQuality.low,
-                                                fit: BoxFit.cover,
-                                                width: double.infinity,
-                                              );
-                                            }
-                                            return Container(
-                                              color: cs.surfaceContainerHighest,
-                                              child: Center(
-                                                child: Icon(Icons.web,
-                                                    size: 28,
-                                                    color: cs.outlineVariant),
-                                              ),
+                                      child: ClipRRect(
+                                        borderRadius:
+                                            BorderRadius.circular(8),
+                                        child: () {
+                                          final bytes = widget.tabManager
+                                              .getScreenshotBytes(tab.id);
+                                          if (bytes != null &&
+                                              bytes.isNotEmpty) {
+                                            return Image.memory(
+                                              bytes,
+                                              key: ValueKey(widget.tabManager
+                                                      .getScreenshotBytes(
+                                                          tab.id) ??
+                                                  tab.screenshotPath),
+                                              cacheWidth: 640,
+                                              cacheHeight: 360,
+                                              filterQuality:
+                                                  FilterQuality.low,
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              height: double.infinity,
                                             );
-                                          }(),
-                                        ),
+                                          }
+                                          if (tab.screenshotPath != null) {
+                                            return Image.file(
+                                              File(tab.screenshotPath!),
+                                              key: ValueKey(
+                                                  tab.screenshotPath),
+                                              cacheWidth: 640,
+                                              cacheHeight: 360,
+                                              filterQuality:
+                                                  FilterQuality.low,
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              height: double.infinity,
+                                            );
+                                          }
+                                          return Container(
+                                            width: double.infinity,
+                                            height: double.infinity,
+                                            color: cs.surfaceContainerHighest,
+                                            child: Center(
+                                              child: Icon(Icons.web,
+                                                  size: 28,
+                                                  color: cs.outlineVariant),
+                                            ),
+                                          );
+                                        }(),
                                       ),
                                     ),
                                   ),

@@ -419,15 +419,21 @@ class _PlaylistChecklistSheetState extends State<_PlaylistChecklistSheet> {
                   },
                   title: Text(track.title),
                   subtitle: Text(track.artist),
-                  secondary: track.thumbnailUrl.isNotEmpty
-                      ? CircleAvatar(
-                          backgroundImage: ResizeImage(
-                            NetworkImage(track.thumbnailUrl),
-                            width: 96,
-                            height: 96,
+                secondary: track.thumbnailUrl.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            track.thumbnailUrl,
+                            width: 56,
+                            height: 40,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.music_video,
+                              size: 28,
+                            ),
                           ),
                         )
-                      : null,
+                      : const Icon(Icons.music_video, size: 28),
                 );
               },
             ),
@@ -541,18 +547,27 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 26,
-                backgroundImage: widget.result.thumbnailUrl.isNotEmpty
-                    ? ResizeImage(
-                        NetworkImage(widget.result.thumbnailUrl),
-                        width: 128,
-                        height: 128,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: widget.result.thumbnailUrl.isNotEmpty
+                    ? Image.network(
+                        widget.result.thumbnailUrl,
+                        width: 56,
+                        height: 40,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 56,
+                          height: 40,
+                          color: cs.surfaceContainerHighest,
+                          child: const Icon(Icons.photo, size: 28),
+                        ),
                       )
-                    : null,
-                child: widget.result.thumbnailUrl.isEmpty
-                    ? const Icon(Icons.photo, size: 28)
-                    : null,
+                    : Container(
+                        width: 56,
+                        height: 40,
+                        color: cs.surfaceContainerHighest,
+                        child: const Icon(Icons.photo, size: 28),
+                      ),
               ),
               const SizedBox(width: 12),
               Expanded(

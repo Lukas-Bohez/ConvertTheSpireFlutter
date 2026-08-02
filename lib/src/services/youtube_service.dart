@@ -44,7 +44,7 @@ class YouTubeService {
       }
     }
 
-    // Fallback to single video with a timeout to avoid hangs
+    // Fallback to single video with a timeout to avoid hangs.
     try {
       final video = await _yt.videos.get(url).timeout(_singleVideoTimeout);
       return <PreviewItem>[_toPreviewItem(video)];

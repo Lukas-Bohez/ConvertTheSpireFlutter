@@ -353,22 +353,10 @@ class DownloadService {
     // -- Fallback: youtube_explode_dart -----------------------------------
     // Used on mobile (no yt-dlp binary) or when yt-dlp isn't installed.
     // Muxed streams (360p max) are reliable; HD adaptive streams may fail.
-    // Fetch stream manifest with retry using different YouTube API clients
-    StreamManifest streams;
-    try {
-      streams = await yt.videos.streamsClient.getManifest(video.id).timeout(
-          const Duration(seconds: 30),
-          onTimeout: () =>
-              throw TimeoutException('Timed out fetching stream manifest'));
-    } catch (_) {
-      // Retry with safari + androidVr clients for broader stream availability
-      streams = await yt.videos.streamsClient.getManifest(
-        video.id,
-        ytClients: [YoutubeApiClient.safari, YoutubeApiClient.androidVr],
-      ).timeout(const Duration(seconds: 45),
-          onTimeout: () => throw TimeoutException(
-              'Timed out fetching stream manifest (retry)'));
-    }
+    // Fetch stream manifest with multiple YouTube API clients.  The default
+    // androidSdkless client often returns empty manifests on mobile; rotating
+    // through safari, androidVr and tv clients dramatically improves success.
+    final streams = await _getManifestWithFallbackClients(video.id);
 
     final needsConversion = formatLower != 'mp4';
     // Muxed streams are limited to 360p. Anything above 360p requires
@@ -1234,6 +1222,55 @@ class DownloadService {
       if (s.tag == tag) return s;
     }
     return null;
+  }
+
+  /// Try several YouTube API clients until one returns a non-empty manifest.
+  ///
+  /// youtube_explode_dart 3.1.0 defaults to [androidSdkless] which frequently
+  /// produces empty/403 manifests on mobile.  We rotate through clients that
+  /// are known to expose streams consistently, and also let the library
+  /// auto-fallback to its internal [tv] client when the first call yields
+  /// nothing.
+  Future<StreamManifest> _getManifestWithFallbackClients(dynamic videoId) async {
+    // Primary clients: mobile-focused ones that currently return streams.
+    final clientBuckets = <List<YoutubeApiClient>>[
+      [YoutubeApiClient.safari, YoutubeApiClient.androidVr],
+      [YoutubeApiClient.tv],
+      [YoutubeApiClient.ios],
+    ];
+
+    // First attempt: try the default client quickly.
+    try {
+      final manifest = await yt.videos.streamsClient
+          .getManifest(videoId)
+          .timeout(const Duration(seconds: 20));
+      if (manifest.streams.isNotEmpty) return manifest;
+      debugPrint(
+          'DownloadService: default manifest empty for $videoId, trying fallback clients');
+    } catch (e) {
+      debugPrint('DownloadService: default manifest failed: $e');
+    }
+
+    // Rotate through client buckets.
+    for (var i = 0; i < clientBuckets.length; i++) {
+      final clients = clientBuckets[i];
+      try {
+        final manifest = await yt.videos.streamsClient
+            .getManifest(videoId, ytClients: clients)
+            .timeout(const Duration(seconds: 30));
+        if (manifest.streams.isNotEmpty) {
+          debugPrint(
+              'DownloadService: manifest resolved with fallback bucket ${i + 1}');
+          return manifest;
+        }
+      } catch (e) {
+        debugPrint(
+            'DownloadService: fallback bucket ${i + 1} failed: $e');
+      }
+    }
+
+    throw Exception(
+        'Could not retrieve any playable streams for this video. It may be age-restricted, region-blocked, or YouTube is blocking the current client.');
   }
 
   Future<Uint8List?> _fetchThumbnailBytes(String? url) async {

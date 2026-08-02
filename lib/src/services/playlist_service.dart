@@ -276,8 +276,24 @@ class PlaylistService {
   }
 
   /// Get the audio URL for a given YouTube video id.
+  ///
+  /// Uses fallback API clients because the default [androidSdkless] client
+  /// frequently returns empty manifests on mobile.
   Future<String> getAudioUrl(String videoId) async {
-    final manifest = await _yt.videos.streamsClient.getManifest(videoId);
+    StreamManifest manifest;
+    try {
+      manifest = await _yt.videos.streamsClient
+          .getManifest(videoId)
+          .timeout(const Duration(seconds: 15));
+      if (manifest.streams.isEmpty) throw Exception('empty manifest');
+    } catch (_) {
+      manifest = await _yt.videos.streamsClient
+          .getManifest(videoId, ytClients: [
+        YoutubeApiClient.safari,
+        YoutubeApiClient.androidVr,
+        YoutubeApiClient.tv
+      ]).timeout(const Duration(seconds: 30));
+    }
     // Prefer audio-only (saves bandwidth), fall back to muxed
     final stream = manifest.audioOnly.isNotEmpty
         ? manifest.audioOnly.withHighestBitrate()
