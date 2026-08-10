@@ -39,10 +39,17 @@ class _CinematicViewScreenState extends State<CinematicViewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _showControls,
-        child: Stack(
+      body: Theme(
+        data: Theme.of(context).copyWith(
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+          focusColor: Colors.transparent,
+        ),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _showControls,
+          child: Stack(
           fit: StackFit.expand,
           children: [
             const AmbientScene(),
