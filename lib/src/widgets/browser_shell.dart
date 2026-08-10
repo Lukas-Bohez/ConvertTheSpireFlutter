@@ -695,6 +695,7 @@ class _BrowserShellState extends State<BrowserShell> {
                                 cs,
                                 isVideo,
                                 size: collapsed ? 34 : 44,
+                                aspectRatio: 16 / 9,
                               ),
                               SizedBox(width: collapsed ? 8 : 10),
                               Expanded(
@@ -1015,11 +1016,12 @@ class _BrowserShellState extends State<BrowserShell> {
     ColorScheme cs,
     bool isVideo, {
     double size = 44,
+    double aspectRatio = 1.0,
   }) {
     final fallbackIcon =
         isVideo ? Icons.movie_rounded : Icons.music_note_rounded;
     return Container(
-      width: size,
+      width: size * aspectRatio,
       height: size,
       decoration: BoxDecoration(
         color: cs.surfaceContainerHigh,
@@ -1029,7 +1031,7 @@ class _BrowserShellState extends State<BrowserShell> {
       child: artwork != null && artwork.isNotEmpty
           ? Image.memory(
               artwork,
-              cacheWidth: (size * 2).round(),
+              cacheWidth: (size * aspectRatio * 2).round(),
               cacheHeight: (size * 2).round(),
               filterQuality: FilterQuality.low,
               fit: BoxFit.cover,

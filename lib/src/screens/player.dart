@@ -39,6 +39,7 @@ import '../utils/lock.dart';
 import '../utils/snack.dart';
 import '../vault/platform/desktop_window.dart';
 import '../widgets/tv_file_browser.dart';
+import 'cinematic_view_screen.dart';
 
 // --- Public entry point -------------------------------------------------------
 
@@ -5074,6 +5075,17 @@ class _PlayerScreenState extends State<PlayerScreen>
                   active: state.repeatMode != RepeatMode.off,
                   onPressed: state.cycleRepeat,
                   tooltip: 'Repeat',
+                  size: 22,
+                ),
+                _ControlButton(
+                  icon: Icons.auto_awesome,
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const CinematicViewScreen()),
+                    );
+                  },
+                  tooltip: 'Cinematic view',
                   size: 22,
                 ),
               ],

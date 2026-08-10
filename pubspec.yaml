@@ -95,3 +95,5 @@ flutter:
   assets:
     - assets/icons/app_icon.ico
     - assets/icons/favicon-192x192.png
+  shaders:
+    - assets/shaders/ambient_scene.frag
