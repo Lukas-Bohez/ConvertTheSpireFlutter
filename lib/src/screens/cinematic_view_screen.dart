@@ -50,33 +50,34 @@ class _CinematicViewScreenState extends State<CinematicViewScreen> {
           behavior: HitTestBehavior.opaque,
           onTap: _showControls,
           child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const AmbientScene(),
-            AnimatedOpacity(
-              opacity: _controlsVisible ? 1 : 0,
-              duration: const Duration(milliseconds: 400),
-              child: IgnorePointer(
-                ignoring: !_controlsVisible,
-                child: SafeArea(
-                  child: Column(
-                    children: [
-                      Align(
-                        alignment: Alignment.topLeft,
-                        child: IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white),
-                          tooltip: 'Close cinematic view',
-                          onPressed: () => Navigator.of(context).pop(),
+            fit: StackFit.expand,
+            children: [
+              const AmbientScene(),
+              AnimatedOpacity(
+                opacity: _controlsVisible ? 1 : 0,
+                duration: const Duration(milliseconds: 400),
+                child: IgnorePointer(
+                  ignoring: !_controlsVisible,
+                  child: SafeArea(
+                    child: Column(
+                      children: [
+                        Align(
+                          alignment: Alignment.topLeft,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            tooltip: 'Close cinematic view',
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      _CinematicTransportOverlay(),
-                    ],
+                        const Spacer(),
+                        _CinematicTransportOverlay(),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
