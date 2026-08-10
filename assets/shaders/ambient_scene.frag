@@ -1,6 +1,8 @@
 #version 460 core
 #include <flutter/runtime_effect.glsl>
 
+precision highp float;
+
 uniform vec2 uRes;
 uniform float uTime;
 
@@ -73,6 +75,9 @@ vec3 rainPalette(float t) {
 
 void main() {
     vec2 fragCoord = FlutterFragCoord().xy;
+    // Flutter's coordinate system has Y=0 at the top; flip so the shader's
+    // "y up" logic renders correctly.
+    fragCoord.y = uRes.y - fragCoord.y;
     vec2 uv = fragCoord / uRes.xy;
     vec2 p = (fragCoord - 0.5 * uRes.xy) / uRes.y; // aspect-correct, centered, y up
 
