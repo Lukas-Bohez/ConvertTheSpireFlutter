@@ -10,6 +10,7 @@ class AmbientScenePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (size.width <= 0 || size.height <= 0) return;
     shader
       ..setFloat(0, size.width)
       ..setFloat(1, size.height)
@@ -47,7 +48,8 @@ class _AmbientSceneState extends State<AmbientScene>
   }
 
   void _onTick(Duration elapsed) {
-    if (mounted) setState(() => _time = elapsed.inMicroseconds / 1e6);
+    if (!mounted) return;
+    setState(() => _time = elapsed.inMicroseconds / 1e6);
   }
 
   Future<void> _loadShader() async {
@@ -56,7 +58,8 @@ class _AmbientSceneState extends State<AmbientScene>
         'assets/shaders/ambient_scene.frag',
       );
       if (mounted) setState(() => _shader = program.fragmentShader());
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[AMBIENT] Shader load failed: $e\n$st');
       if (mounted) setState(() => _error = e.toString());
     }
   }
@@ -64,6 +67,8 @@ class _AmbientSceneState extends State<AmbientScene>
   @override
   void dispose() {
     _ticker.dispose();
+    _shader?.dispose();
+    // FragmentProgram has no dispose(); the shader handles cleanup.
     super.dispose();
   }
 
@@ -73,18 +78,29 @@ class _AmbientSceneState extends State<AmbientScene>
       return ColoredBox(
         color: Colors.black,
         child: Center(
-          child: Text(
-            'Ambient view failed to load:\n$_error',
-            style: const TextStyle(color: Colors.white70),
-            textAlign: TextAlign.center,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Ambient view failed to load:\n$_error',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
       );
     }
-    if (_shader == null) return const ColoredBox(color: Colors.black);
-    return CustomPaint(
-      painter: AmbientScenePainter(shader: _shader!, time: _time),
-      size: Size.infinite,
+    if (_shader == null) {
+      return const ColoredBox(color: Colors.black);
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = constraints.biggest;
+        if (size.isEmpty) return const ColoredBox(color: Colors.black);
+        return CustomPaint(
+          painter: AmbientScenePainter(shader: _shader!, time: _time),
+          size: size,
+        );
+      },
     );
   }
 }

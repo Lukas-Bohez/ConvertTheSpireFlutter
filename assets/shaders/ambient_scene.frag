@@ -1,4 +1,5 @@
-#version 460 core
+#version 300 es
+
 #include <flutter/runtime_effect.glsl>
 
 precision highp float;
@@ -8,240 +9,117 @@ uniform float uTime;
 
 out vec4 fragColor;
 
-const float PI = 3.14159265359;
-const float TAU = 6.28318530718;
-
-// ---------- HASH / NOISE ----------
-float hash11(float p) {
-    p = fract(p * 0.1031);
-    p *= p + 33.33;
-    p *= p + p;
-    return fract(p);
-}
-
-float hash12(vec2 p) {
+float hash(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
     p3 += dot(p3, p3.yzx + 33.33);
     return fract((p3.x + p3.y) * p3.z);
 }
 
-float noise1(float x) {
-    float i = floor(x);
-    float f = fract(x);
-    float a = hash11(i);
-    float b = hash11(i + 1.0);
-    float u = f * f * (3.0 - 2.0 * f);
-    return mix(a, b, u);
-}
-
-float fbm1(float x) {
-    float v = 0.0;
-    v += noise1(x) * 0.6;
-    v += noise1(x * 2.13) * 0.3;
-    v += noise1(x * 4.71) * 0.1;
-    return v;
-}
-
-// ---------- SDF HELPERS ----------
-float sdCircle(vec2 p, vec2 c, float r) {
-    return length(p - c) - r;
-}
-
-float sdEllipse(vec2 p, vec2 c, vec2 r) {
-    vec2 d = (p - c) / r;
-    return (length(d) - 1.0) * min(r.x, r.y);
-}
-
-// ---------- GROUND HEIGHT (world-space x) ----------
-float groundYAt(float x, float base, float amp, float freq) {
-    float n = fbm1(x * freq);
-    return base + (n - 0.5) * amp;
-}
-
-// ---------- CYCLIC 4-STOP RAIN PALETTE ----------
-vec3 rainPalette(float t) {
-    vec3 c0 = vec3(0.75, 0.85, 1.00); // pale blue
-    vec3 c1 = vec3(0.85, 0.78, 1.00); // pale lavender
-    vec3 c2 = vec3(0.78, 0.95, 0.88); // pale mint
-    vec3 c3 = vec3(1.00, 0.88, 0.72); // pale gold
-    float seg = fract(t) * 4.0;
-    float i = floor(seg);
-    float f = smoothstep(0.0, 1.0, fract(seg));
-    if (i < 0.5) return mix(c0, c1, f);
-    if (i < 1.5) return mix(c1, c2, f);
-    if (i < 2.5) return mix(c2, c3, f);
-    return mix(c3, c0, f);
+float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash(i);
+    float b = hash(i + vec2(1.0, 0.0));
+    float c = hash(i + vec2(0.0, 1.0));
+    float d = hash(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
 
 void main() {
     vec2 fragCoord = FlutterFragCoord().xy;
-    // Flutter's coordinate system has Y=0 at the top; flip so the shader's
-    // "y up" logic renders correctly.
-    fragCoord.y = uRes.y - fragCoord.y;
-    vec2 uv = fragCoord / uRes.xy;
-    vec2 p = (fragCoord - 0.5 * uRes.xy) / uRes.y; // aspect-correct, centered, y up
 
-    // ---------- TIME OF DAY ----------
-    float dayCycle = 240.0;
-    float tod = fract(uTime / dayCycle);
-    float sunAngle = tod * TAU;
-    float sunHeight = sin(sunAngle);
-    float sunXn = cos(sunAngle);
-    float daylight = smoothstep(-0.25, 0.25, sunHeight);
+    // Guard against zero resolution
+    if (uRes.x < 1.0 || uRes.y < 1.0) {
+        fragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
+    }
 
-    // ---------- SKY ----------
-    vec3 nightSky = vec3(0.035, 0.04, 0.09);
-    vec3 daySky   = vec3(0.42, 0.70, 0.93);
-    vec3 duskSky  = vec3(0.86, 0.46, 0.32);
+    vec2 uv = fragCoord / uRes;
+    // Normalized centered coords, Y up
+    vec2 p = (fragCoord - 0.5 * uRes) / uRes.y;
 
-    vec3 sky = mix(nightSky, daySky, daylight);
-    float horizonGlow = pow(clamp(1.0 - abs(sunHeight) * 1.6, 0.0, 1.0), 4.0);
-    sky = mix(sky, duskSky, horizonGlow * 0.55);
-    sky *= mix(0.85, 1.12, clamp(uv.y, 0.0, 1.0));
+    // --- Sky gradient: deep night blue → purple-black ---
+    vec3 skyBot = vec3(0.01, 0.015, 0.04);
+    vec3 skyTop = vec3(0.04, 0.03, 0.08);
+    vec3 col = mix(skyBot, skyTop, uv.y);
 
-    if (daylight < 0.6) {
-        vec2 starUV = p * 26.0;
-        vec2 gid = floor(starUV);
-        vec2 gf = fract(starUV);
-        float sh = hash12(gid + 91.7);
-        if (sh > 0.985) {
-            vec2 starPos = vec2(hash12(gid + 3.1), hash12(gid + 7.7));
-            float d = length(gf - starPos);
-            float dot = smoothstep(0.22, 0.0, d);
-            float tw = 0.5 + 0.5 * sin(uTime * 2.4 + sh * 80.0);
-            sky += vec3(dot * tw * (1.0 - daylight) * 0.9);
+    // --- Slow aurora-like bands ---
+    float band1 = sin(p.x * 2.5 + uTime * 0.15) * 0.5 + 0.5;
+    float band2 = sin(p.x * 1.8 - uTime * 0.12 + 1.5) * 0.5 + 0.5;
+    float band3 = sin(p.x * 3.2 + uTime * 0.08 + 3.0) * 0.5 + 0.5;
+
+    vec3 aurora = vec3(0.0);
+    aurora += vec3(0.08, 0.25, 0.12) * band1 * smoothstep(0.1, 0.5, uv.y) * smoothstep(0.9, 0.5, uv.y);
+    aurora += vec3(0.15, 0.08, 0.20) * band2 * smoothstep(0.15, 0.55, uv.y) * smoothstep(0.85, 0.55, uv.y);
+    aurora += vec3(0.05, 0.12, 0.22) * band3 * smoothstep(0.2, 0.6, uv.y) * smoothstep(0.8, 0.6, uv.y);
+    col += aurora * 0.4;
+
+    // --- Stars ---
+    vec2 starUV = p * 35.0;
+    vec2 starCell = floor(starUV);
+    vec2 starFrac = fract(starUV);
+    float starHash = hash(starCell + 100.0);
+    if (starHash > 0.985) {
+        vec2 starPos = vec2(hash(starCell + 1.0), hash(starCell + 2.0));
+        float dist = length(starFrac - starPos);
+        float brightness = smoothstep(0.18, 0.0, dist);
+        float twinkle = 0.5 + 0.5 * sin(uTime * 2.5 + starHash * 50.0);
+        col += vec3(0.9, 0.95, 1.0) * brightness * twinkle * 0.7;
+    }
+
+    // --- Shooting star (rare) ---
+    float shootCycle = floor(uTime * 0.08);
+    float shootSeed = hash(vec2(shootCycle, 0.0));
+    if (shootSeed > 0.75) {
+        float shootStart = shootSeed * 4.0;
+        float shootT = uTime - shootCycle * 12.5 - shootStart;
+        if (shootT > 0.0 && shootT < 1.2) {
+            float sx = mix(-0.8, 0.6, shootT / 1.2);
+            float sy = mix(0.4, 0.1, shootT / 1.2);
+            float d = length(p - vec2(sx, sy));
+            float trail = smoothstep(0.02, 0.0, d);
+            col += vec3(1.0, 0.95, 0.85) * trail * (1.0 - shootT / 1.2);
         }
     }
 
-    vec2 sunPos = vec2(sunXn * 0.85, sunHeight * 0.42 + 0.30);
-    float sunDist = length(p - sunPos);
-    vec3 sunColor = mix(vec3(0.75, 0.80, 0.92), vec3(1.0, 0.86, 0.55), daylight);
-    float sunDisc = smoothstep(0.075, 0.06, sunDist);
-    float sunGlow = pow(clamp(1.0 - sunDist / 0.32, 0.0, 1.0), 3.0) * 0.5;
-    sky += sunColor * sunGlow;
-    sky = mix(sky, sunColor, sunDisc);
+    // --- Distant hills silhouette ---
+    float hill1 = -0.25 + noise(vec2(p.x * 2.0 + uTime * 0.02, 0.0)) * 0.08;
+    float hill2 = -0.30 + noise(vec2(p.x * 3.5 + uTime * 0.015, 10.0)) * 0.06;
+    if (p.y < hill2) {
+        col = mix(col, vec3(0.005, 0.008, 0.015), 0.85);
+    } else if (p.y < hill1) {
+        col = mix(col, vec3(0.01, 0.015, 0.025), 0.7);
+    }
 
-    vec3 col = sky;
+    // --- Foreground ground ---
+    float ground = -0.38 + noise(vec2(p.x * 4.0 + uTime * 0.03, 20.0)) * 0.04;
+    if (p.y < ground) {
+        float depth = clamp((ground - p.y) / 0.25, 0.0, 1.0);
+        vec3 soil = vec3(0.008, 0.012, 0.018);
+        soil *= mix(1.0, 0.4, depth);
 
-    // ---------- BACKGROUND RIDGES (parallax) ----------
-    float camBG1 = mod(uTime * 0.012, 100000.0);
-    float camBG2 = mod(uTime * 0.024, 100000.0);
-
-    vec3 ridgeFar  = mix(vec3(0.10, 0.13, 0.20), vec3(0.55, 0.62, 0.66), daylight);
-    vec3 ridgeNear = mix(vec3(0.06, 0.08, 0.14), vec3(0.36, 0.46, 0.42), daylight);
-
-    float ry1 = -0.30 + fbm1((p.x + camBG1) * 1.6) * 0.16;
-    float ry2 = -0.35 + fbm1((p.x + camBG2) * 2.4) * 0.15;
-
-    if (p.y < ry1) col = mix(col, ridgeFar, 0.9);
-    if (p.y < ry2) col = ridgeNear;
-
-    // ---------- FOREGROUND GROUND ----------
-    float camFG = mod(uTime * 0.05, 100000.0);
-    float groundBase = -0.40;
-    float groundAmp = 0.06;
-    float groundFreq = 1.1;
-    float grassBand = 0.10;
-
-    float gy = groundYAt(p.x + camFG, groundBase, groundAmp, groundFreq);
-
-    if (p.y < gy + grassBand) {
-        vec3 soil = mix(vec3(0.05, 0.07, 0.05), vec3(0.30, 0.20, 0.12), daylight * 0.7 + 0.3);
-        float depth = clamp((gy - p.y) / 0.3, 0.0, 1.0);
-        soil *= mix(1.0, 0.55, depth);
-
-        vec2 soilCell = floor(vec2((p.x + camFG) * 130.0, p.y * 130.0));
-        float n = (hash12(soilCell) - 0.5) * 0.05;
-        soil += vec3(n);
-
-        vec3 grass = mix(vec3(0.05, 0.10, 0.05), vec3(0.20, 0.42, 0.18), daylight * 0.8 + 0.2);
-        float withinGrass = smoothstep(gy, gy + grassBand * 0.4, p.y);
-
-        float tuftW = 0.026;
-        float tileX = floor((p.x + camFG) / tuftW);
-        float rnd = hash11(tileX * 57.1);
-        if (rnd < 0.55) {
-            float cxWorld = (tileX + 0.5) * tuftW;
-            float cxScreen = cxWorld - camFG;
-            float sway = sin(uTime * 1.3 + tileX) * 0.006;
-            float lean = (hash11(tileX * 13.3) - 0.5) * 0.03 + sway;
-            float tuftHeight = 0.05 + hash11(tileX * 4.4) * 0.045;
-            float txs = (p.x - cxScreen) + (p.y - gy) * lean;
-            float tys = (p.y - gy);
+        // Grass tufts
+        float tuftX = floor((p.x + uTime * 0.03) * 40.0);
+        float tuftR = hash(vec2(tuftX, 30.0));
+        if (tuftR < 0.5 && p.y > ground - 0.04) {
+            float tx = (tuftX + 0.5) / 40.0 - uTime * 0.03;
+            float sway = sin(uTime * 1.2 + tuftX) * 0.008;
+            float bladeX = (p.x - tx) + (p.y - ground) * ((tuftR - 0.5) * 0.8 + sway);
+            float bladeY = p.y - ground;
+            float bladeH = 0.04 + tuftR * 0.03;
             float w = 0.003;
-            float blade = step(0.0, tys) * step(tys, tuftHeight) *
-                          step(abs(txs), mix(w, 0.0005, clamp(tys / tuftHeight, 0.0, 1.0)));
-            grass += vec3(0.08, 0.16, 0.06) * blade;
+            if (bladeY > 0.0 && bladeY < bladeH && abs(bladeX) < w * (1.0 - bladeY / bladeH)) {
+                soil += vec3(0.04, 0.10, 0.03);
+            }
         }
-
-        float rim = 1.0 - smoothstep(0.0, 0.004, abs(gy - p.y));
-        grass += vec3(0.10, 0.11, 0.04) * rim * daylight;
-
-        col = mix(soil, grass, withinGrass);
+        col = soil;
     }
 
-    // ---------- RAIN (comes and goes, drifts in hue) ----------
-    float rainCycle = fbm1(uTime * 0.045 + 12.0);
-    float rainIntensity = smoothstep(0.55, 0.82, rainCycle);
-
-    if (rainIntensity > 0.001) {
-        vec2 rp = p * vec2(34.0, 9.0);
-        rp.x += p.y * 2.4;
-        rp.y += uTime * 2.6;
-        vec2 rid = floor(rp);
-        vec2 rf = fract(rp);
-        float rh = hash12(rid);
-        float streak = smoothstep(0.94, 1.0, rh) * smoothstep(0.0, 0.15, rf.x) * smoothstep(1.0, 0.7, rf.x);
-
-        vec3 rainTint = rainPalette(uTime * 0.02);
-
-        col += rainTint * streak * rainIntensity * 0.55;
-        col *= mix(1.0, 0.82, rainIntensity * 0.6);
-
-        float boltTick = floor(uTime * 1.7);
-        float boltGate = step(0.985, hash11(boltTick));
-        float bolt = boltGate * pow(hash11(boltTick + 3.3), 6.0) * step(0.7, rainIntensity);
-        col += vec3(bolt) * 0.6;
-    }
-
-    // ---------- HOP CHARACTER (crosses the screen every so often) ----------
-    float hopPeriod = 52.0;
-    float hopCycle = floor(uTime / hopPeriod);
-    float hopSeed = hash11(hopCycle * 7.13);
-    if (hopSeed > 0.45) {
-        float hopStart = hash11(hopCycle * 3.7) * (hopPeriod * 0.5);
-        float hopDur = 5.5;
-        float ht = uTime - hopCycle * hopPeriod - hopStart;
-        float phase = clamp(ht / hopDur, 0.0, 1.0);
-        if (ht > 0.0 && phase < 1.0) {
-            float dir = hopSeed > 0.72 ? 1.0 : -1.0;
-            float charScreenX = mix(-dir * 0.95, dir * 0.95, phase);
-
-            float hopsCount = 5.0;
-            float bounce = abs(sin(phase * PI * hopsCount));
-            float squash = 1.0 - 0.35 * pow(1.0 - bounce, 6.0) + 0.10 * pow(bounce, 8.0);
-
-            float charGY = groundYAt(charScreenX + camFG, groundBase, groundAmp, groundFreq);
-            float cy = charGY + bounce * 0.05;
-
-            vec2 cp;
-            cp.x = (p.x - charScreenX) * dir;
-            cp.y = (p.y - cy);
-            cp.y /= squash;
-            cp.x *= squash;
-
-            float body = sdEllipse(cp, vec2(0.0, 0.013), vec2(0.019, 0.014));
-            float head = sdCircle(cp, vec2(0.008, 0.030), 0.014);
-            float ear1 = sdEllipse(cp, vec2(0.001, 0.046), vec2(0.0032, 0.013));
-            float ear2 = sdEllipse(cp, vec2(0.013, 0.047), vec2(0.0032, 0.013));
-            float d = min(min(body, head), min(ear1, ear2));
-
-            float mask = smoothstep(0.0015, -0.0015, d);
-            vec3 critterCol = mix(vec3(0.55, 0.40, 0.30), vec3(0.95, 0.85, 0.72), daylight * 0.6 + 0.2);
-            float shade = 1.0 - clamp(-d * 6.0, 0.0, 0.3);
-            col = mix(col, critterCol * shade, mask);
-        }
-    }
+    // --- Subtle vignette ---
+    float vignette = 1.0 - dot((uv - 0.5) * 1.4, (uv - 0.5) * 1.4);
+    vignette = clamp(vignette, 0.0, 1.0);
+    col *= vignette * 0.4 + 0.6;
 
     fragColor = vec4(col, 1.0);
 }
