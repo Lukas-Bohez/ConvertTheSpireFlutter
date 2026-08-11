@@ -171,9 +171,18 @@ jobs:
             Write-Error "Build output not found: $src"
             exit 1
           }
-          Compress-Archive -Path "$src\*" `
-            -DestinationPath "${{ env.OUTPUT_NAME }}-windows-x64.zip" `
-            -Force
+          # Change into the Release directory so Compress-Archive stores flat
+          # paths (no long build\windows\x64\runner\Release prefix). This
+          # avoids the Windows MAX_PATH limit when users extract with the
+          # built-in zip tool.
+          Push-Location $src
+          try {
+            Compress-Archive -Path "*" `
+              -DestinationPath "$env:GITHUB_WORKSPACE\${{ env.OUTPUT_NAME }}-windows-x64.zip" `
+              -Force
+          } finally {
+            Pop-Location
+          }
 
       - uses: actions/upload-artifact@v5
         with:

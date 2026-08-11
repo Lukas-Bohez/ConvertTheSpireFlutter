@@ -39,7 +39,9 @@ class _CinematicViewScreenState extends State<CinematicViewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Theme(
+      body: Container(
+        color: Colors.black,
+        child: Theme(
         data: Theme.of(context).copyWith(
           splashColor: Colors.transparent,
           highlightColor: Colors.transparent,
@@ -92,7 +94,8 @@ class _CinematicViewScreenState extends State<CinematicViewScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 

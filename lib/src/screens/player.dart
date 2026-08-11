@@ -5121,8 +5121,21 @@ class _PlayerScreenState extends State<PlayerScreen>
                   icon: Icons.auto_awesome,
                   onPressed: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const CinematicViewScreen()),
+                      PageRouteBuilder(
+                        opaque: true,
+                        barrierColor: Colors.black,
+                        pageBuilder: (_, __, ___) =>
+                            const CinematicViewScreen(),
+                        transitionsBuilder:
+                            (_, animation, __, child) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          );
+                        },
+                        transitionDuration:
+                            const Duration(milliseconds: 350),
+                      ),
                     );
                   },
                   tooltip: 'Cinematic view',
