@@ -5133,8 +5133,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                             child: child,
                           );
                         },
-                        transitionDuration:
-                            const Duration(milliseconds: 350),
+                        transitionDuration: Duration.zero,
                       ),
                     );
                   },

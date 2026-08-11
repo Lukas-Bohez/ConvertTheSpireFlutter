@@ -353,8 +353,13 @@ class _BrowserShellState extends State<BrowserShell> {
 
   void _loadInBrowser(String url) {
     BrowserScreen.pendingUrl = url;
-    BrowserScreen.navigate(url);
     widget.onNavigate('browser.tab');
+    // Defer consumption until after the frame settles so that if the
+    // browser screen is recreated during navigation the new instance
+    // picks up the pending URL in its initState post-frame callback.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      BrowserScreen.navigate(url);
+    });
   }
 
   void _finishEditing() {

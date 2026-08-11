@@ -1267,6 +1267,7 @@ class _BrowserScreenState extends State<BrowserScreen>
                         _addressController.text.trim()),
                     isFavourited: _isFavourited,
                     onFavouriteTap: _showNewTabPage ? null : _toggleFavourite,
+                    onAddressBarTap: BrowserScreen.focusAddressBar,
                   ),
 
                   // -- Progress bar --

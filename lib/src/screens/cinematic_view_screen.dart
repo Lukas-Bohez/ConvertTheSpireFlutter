@@ -37,65 +37,43 @@ class _CinematicViewScreenState extends State<CinematicViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Container(
-        color: Colors.black,
-        child: Theme(
-        data: Theme.of(context).copyWith(
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-          hoverColor: Colors.transparent,
-          focusColor: Colors.transparent,
-          iconButtonTheme: const IconButtonThemeData(
-            style: ButtonStyle(
-              overlayColor: WidgetStatePropertyAll(Colors.transparent),
-              splashFactory: NoSplash.splashFactory,
-            ),
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom().copyWith(
-              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-              splashFactory: NoSplash.splashFactory,
-            ),
-          ),
-        ),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _showControls,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              const AmbientScene(),
-              AnimatedOpacity(
-                opacity: _controlsVisible ? 1 : 0,
-                duration: const Duration(milliseconds: 400),
-                child: IgnorePointer(
-                  ignoring: !_controlsVisible,
-                  child: SafeArea(
-                    child: Column(
-                      children: [
-                        Align(
-                          alignment: Alignment.topLeft,
-                          child: IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white),
-                            tooltip: 'Close cinematic view',
-                            onPressed: () => Navigator.of(context).pop(),
-                          ),
+    return Container(
+      color: Colors.black,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _showControls,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            const ColoredBox(color: Colors.black),
+            const AmbientScene(),
+            AnimatedOpacity(
+              opacity: _controlsVisible ? 1 : 0,
+              duration: const Duration(milliseconds: 400),
+              child: IgnorePointer(
+                ignoring: !_controlsVisible,
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      Align(
+                        alignment: Alignment.topLeft,
+                        child: IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          tooltip: 'Close cinematic view',
+                          onPressed: () => Navigator.of(context).pop(),
                         ),
-                        const Spacer(),
-                        _CinematicTransportOverlay(),
-                      ],
-                    ),
+                      ),
+                      const Spacer(),
+                      _CinematicTransportOverlay(),
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    ),
-  );
+    );
   }
 }
 
