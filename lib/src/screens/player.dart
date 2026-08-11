@@ -130,6 +130,7 @@ class MediaItem {
   int playCount; // number of times this track has been played
   Duration totalPlayedDuration;
   DateTime? lastPlayedAt; // timestamp of most recent play
+  double? trackGainDb; // ReplayGain track gain in dB
 
   MediaItem(
     this.path,
@@ -143,6 +144,7 @@ class MediaItem {
     this.playCount = 0,
     this.totalPlayedDuration = Duration.zero,
     this.lastPlayedAt,
+    this.trackGainDb,
   });
 
   MediaItem copyWith({
@@ -155,6 +157,7 @@ class MediaItem {
     int? playCount,
     Duration? totalPlayedDuration,
     DateTime? lastPlayedAt,
+    double? trackGainDb,
   }) =>
       MediaItem(
         path,
@@ -168,6 +171,7 @@ class MediaItem {
         playCount: playCount ?? this.playCount,
         totalPlayedDuration: totalPlayedDuration ?? this.totalPlayedDuration,
         lastPlayedAt: lastPlayedAt ?? this.lastPlayedAt,
+        trackGainDb: trackGainDb ?? this.trackGainDb,
       );
 
   String get resolvedArtist {
@@ -1588,6 +1592,7 @@ class PlayerState with ChangeNotifier {
         artist: resolvedArtist.isNotEmpty ? resolvedArtist : item.artist,
         genre: _extractGenre(tag) ?? item.genre,
         modifiedAt: modifiedAt,
+        trackGainDb: _extractReplayGainTrackGain(tag) ?? item.trackGainDb,
       );
       if (i == currentIndex) {
         _updateMediaNotification(lib[i]);
@@ -1693,7 +1698,7 @@ class PlayerState with ChangeNotifier {
               await _audio!.setFilePath(localPath);
             }
             if (generation != _loadGeneration) return;
-            _runOnMainThread(() => _audio!.setVolume(volume));
+            _runOnMainThread(() => _audio!.setVolume(volume * _trackGainMultiplier));
             duration = _audio!.duration;
             position = Duration.zero;
             if (generation != _loadGeneration) return;
@@ -1713,7 +1718,7 @@ class PlayerState with ChangeNotifier {
                   _lastMkOpenTime = now;
                   await _openMediaWithFallback(player, item.path, play: true);
                 }
-                await player.setVolume(volume * _videoVolumeBoost * 100);
+                await player.setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
                 // attempt to read duration; may be zero until stream updates
                 try {
                   duration = await player.stream.duration
@@ -1778,7 +1783,7 @@ class PlayerState with ChangeNotifier {
               } catch (_) {}
               return;
             }
-            await _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+            await _mkPlayer!.setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
             _recordPlayStart(item);
           } catch (e) {
             debugPrint('media_kit video load error: $e');
@@ -1857,7 +1862,7 @@ class PlayerState with ChangeNotifier {
       duration = ctrl.value.duration;
       position = Duration.zero;
       _emitPositionUiState();
-      await ctrl.setVolume((volume * _videoVolumeBoost).clamp(0.0, 1.0));
+      await ctrl.setVolume((volume * _videoVolumeBoost * _trackGainMultiplier).clamp(0.0, 1.0));
       await ctrl.play();
       _videoReady = true;
 
@@ -1946,7 +1951,7 @@ class PlayerState with ChangeNotifier {
           await _audioMkPlayer!.seek(resumePosition);
         } catch (_) {}
       }
-      await _audioMkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+      await _audioMkPlayer!.setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
       if (wasPlaying) {
         await _audioMkPlayer!.play();
       } else {
@@ -1987,7 +1992,7 @@ class PlayerState with ChangeNotifier {
           await _mkPlayer!.seek(resumePosition);
         } catch (_) {}
       }
-      await _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+      await _mkPlayer!.setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
       if (shouldKeepPlaying) {
         await _mkPlayer!.play();
       } else {
@@ -2032,7 +2037,7 @@ class PlayerState with ChangeNotifier {
       if (resumePosition > Duration.zero) {
         await _audio!.seek(resumePosition);
       }
-      _runOnMainThread(() => _audio!.setVolume(volume));
+      _runOnMainThread(() => _audio!.setVolume(volume * _trackGainMultiplier));
       if (wasPlaying) {
         await _audio!.play();
       } else {
@@ -2194,7 +2199,7 @@ class PlayerState with ChangeNotifier {
               } else {
                 await _audio!.setFilePath(localPath);
               }
-              await _audio!.setVolume(volume);
+              await _audio!.setVolume(volume * _trackGainMultiplier);
               await _audio!.play();
             }
           } catch (_) {}
@@ -2477,26 +2482,28 @@ class PlayerState with ChangeNotifier {
   }
 
   void _applyVolume() {
+    // Apply per-track ReplayGain normalization on top of user volume.
+    final effective = volume * _trackGainMultiplier;
     // Only restore audio volume when audio is actually active.
     // When video is playing, audio is paused+muted; restoring volume here
     // would un-mute it and cause double audio.
     if (!isVideo) {
-      if (_audio != null) _runOnMainThread(() => _audio!.setVolume(volume));
+      if (_audio != null) _runOnMainThread(() => _audio!.setVolume(effective));
     }
     if (_useMediaKit) {
       if (_mkPlayer != null) {
-        _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+        _mkPlayer!.setVolume(effective * _videoVolumeBoost * 100);
       }
       if (_audioMkPlayer != null) {
-        _audioMkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+        _audioMkPlayer!.setVolume(effective * _videoVolumeBoost * 100);
       }
     }
     if (_androidController != null) {
       _androidController!
-          .setVolume((volume * _videoVolumeBoost).clamp(0.0, 1.0));
+          .setVolume((effective * _videoVolumeBoost).clamp(0.0, 1.0));
     }
     if (_videoBackgroundAudioMode && _audio != null) {
-      _runOnMainThread(() => _audio!.setVolume(volume));
+      _runOnMainThread(() => _audio!.setVolume(effective));
     }
   }
 
@@ -2682,6 +2689,39 @@ class PlayerState with ChangeNotifier {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Extract ReplayGain track gain from metadata (dB).
+  double? _extractReplayGainTrackGain(dynamic tag) {
+    try {
+      if (tag is VorbisMetadata) {
+        final gain = tag.replayGainTrackGain.firstOrNull;
+        if (gain != null) return _parseReplayGainDb(gain);
+      } else if (tag is Mp3Metadata) {
+        for (final entry in tag.customMetadata.entries) {
+          final key = entry.key.toUpperCase();
+          if (key.contains('REPLAYGAIN_TRACK_GAIN')) {
+            return _parseReplayGainDb(entry.value);
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  double? _parseReplayGainDb(String raw) {
+    final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-+]'), '');
+    final value = double.tryParse(cleaned);
+    if (value == null || value.isNaN) return null;
+    // Clamp to a safe ±15 dB range to avoid extreme boosts/cuts.
+    return value.clamp(-15.0, 15.0);
+  }
+
+  /// Linear multiplier derived from the current track's ReplayGain value.
+  /// 0 dB = 1.0x (no change). +6 dB ≁E2.0x, -6 dB ≁E0.5x.
+  double get _trackGainMultiplier {
+    final gainDb = currentItem?.trackGainDb ?? 0.0;
+    return pow(10, gainDb / 20).toDouble();
   }
 
   Future<DateTime?> _modifiedAtForPath(String path) async {
@@ -3574,7 +3614,7 @@ class PlayerState with ChangeNotifier {
               _lastMkOpenTime = now;
               await _openMediaWithFallback(_audioMkPlayer!, path, play: true);
             }
-            await _audioMkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+            await _audioMkPlayer!.setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
             duration = await _audioMkPlayer!.stream.duration
                 .firstWhere((d) => d.inMilliseconds > 0)
                 .timeout(const Duration(seconds: 1),
@@ -3601,7 +3641,7 @@ class PlayerState with ChangeNotifier {
                 } else {
                   await _audio!.setFilePath(local);
                 }
-                await _audio!.setVolume(volume);
+                await _audio!.setVolume(volume * _trackGainMultiplier);
                 duration = _audio!.duration;
                 position = Duration.zero;
                 await _audio!.play();
@@ -3628,7 +3668,7 @@ class PlayerState with ChangeNotifier {
             _lastMkOpenTime = now;
             await _openMediaWithFallback(_mkPlayer!, path, play: true);
           }
-          await _mkPlayer!.setVolume(volume * _videoVolumeBoost * 100);
+          await _mkPlayer!.setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
           if (idx >= 0 && idx < library.length) {
             _recordPlayStart(library[idx]);
           }
@@ -4394,7 +4434,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                         Tab(text: 'All ($allCount)'),
                         Tab(text: '♪ Songs ($songCount)'),
                         Tab(text: '▶ Videos ($videoCount)'),
-                        Tab(text: '★ Fav ($favCount)'),
+                        Tab(text: '☁EFav ($favCount)'),
                       ],
                     ),
                   ),
@@ -5012,7 +5052,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                     try {
                       final title = item.title ?? p.basename(item.path);
                       final text =
-                          'Check out $title — https://play.google.com/store/apps/details?id=com.torrentspire.ai';
+                          'Check out $title  Ehttps://play.google.com/store/apps/details?id=com.torrentspire.ai';
                       await Share.share(text);
                     } catch (_) {}
                   },
@@ -5607,7 +5647,7 @@ class _FavouritesTab extends StatelessWidget {
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
       return const _EmptyHint(
-          message: 'No favourites yet.\nTap ★ on any track to add it here.');
+          message: 'No favourites yet.\nTap ☁Eon any track to add it here.');
     }
     return _MediaGrid(entries: entries, state: state, onTap: onTap);
   }

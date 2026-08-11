@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../screens/player.dart' show PlayerState, MediaItem, MediaType;
+import '../screens/player.dart' show PlayerState;
 import '../widgets/ambient_scene.dart';
 
 class CinematicViewScreen extends StatefulWidget {
@@ -45,6 +45,18 @@ class _CinematicViewScreenState extends State<CinematicViewScreen> {
           highlightColor: Colors.transparent,
           hoverColor: Colors.transparent,
           focusColor: Colors.transparent,
+          iconButtonTheme: const IconButtonThemeData(
+            style: ButtonStyle(
+              overlayColor: WidgetStatePropertyAll(Colors.transparent),
+              splashFactory: NoSplash.splashFactory,
+            ),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom().copyWith(
+              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+              splashFactory: NoSplash.splashFactory,
+            ),
+          ),
         ),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -94,12 +106,8 @@ class _CinematicTransportOverlay extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.12),
-        ),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -109,10 +117,18 @@ class _CinematicTransportOverlay extends StatelessWidget {
               item.title ?? item.path.split('/').last,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
+                shadows: [
+                  Shadow(
+                    color: Colors.black87,
+                    blurRadius: 6,
+                    offset: Offset(0, 1),
+                  ),
+                ],
               ),
             ),
             if (item.resolvedArtist.isNotEmpty)
@@ -120,9 +136,17 @@ class _CinematicTransportOverlay extends StatelessWidget {
                 item.resolvedArtist,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white70,
                   fontSize: 12,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black87,
+                      blurRadius: 6,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
                 ),
               ),
             const SizedBox(height: 8),

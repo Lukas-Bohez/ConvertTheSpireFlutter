@@ -5,7 +5,7 @@ description: >
   optionally support the project via donations.
   Windows · Linux · Android. Built with Flutter.
 publish_to: 'none'
-version: 12.2.27+1257
+version: 12.2.28+1258
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
