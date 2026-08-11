@@ -286,6 +286,7 @@ class BrowserToolbar extends StatelessWidget {
                                     cs.primaryContainer.withValues(alpha: 0.8),
                                 foregroundColor: cs.onPrimaryContainer,
                               ),
+                              ),
                             ),
                   // Overflow menu
                   _OverflowMenuButton(
