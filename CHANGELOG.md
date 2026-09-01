@@ -1,5 +1,15 @@
 # Changelog
 
+## 13.0.2+1265 — DLL Linking & Download Fix Release
+
+### Fixed
+- **Windows launch crash**: Removed the `SetDllDirectoryW`-based DLL subfolder mechanism that moved plugin DLLs into `dlls/` at packaging time. The Windows loader loads the executable's direct import dependencies before `wWinMain` runs, so `SetDllDirectoryW` — called inside `wWinMain` — could not resolve DLLs the loader needed during process startup, preventing the app from launching. All plugin DLLs now ship flat in the release root directory.
+- **YouTube `androidVr` PO-token regression**: Replaced `androidVr` with `tv` in every youtube_explode_dart client list and in the yt-dlp `--extractor-args` passed to yt-dlp. YouTube now requires a GVS PO token for `androidVr` on anything above 360p, which was silently blocking HD downloads on all platforms. The `tv` client returns playable streams without PO tokens and works on desktop, Android, and iOS.
+- **Windows release packaging**: Removed the `organize_dlls.ps1` invocation from the CI release workflow so DLLs are never moved into a subfolder that the Windows loader can't see at startup.
+
+### Notes
+- See [docs/releases/latest.md](docs/releases/latest.md) for the current release summary.
+
 ## 13.0.1 — Regression Fix Release
 
 ### Fixed

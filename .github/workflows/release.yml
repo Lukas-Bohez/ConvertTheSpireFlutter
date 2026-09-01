@@ -177,12 +177,6 @@ jobs:
             Write-Error "Build output not found: $src"
             exit 1
           }
-          # Declutter the release folder: move non-essential plugin DLLs into a
-          # dlls/ subfolder (the app's direct imports, flutter_windows.dll, VC++
-          # runtimes and system DLLs stay in the root). The script is fail-soft and
-          # always exits 0, so receiving these even installing it never breaks.
-
-            powershell -NoProfile -ExecutionPolicy Bypass -File "windows\scripts\organize_dlls.ps1" -BundleRoot $src -BinaryName "${{ env.APP_NAME }}"
           # Change into the Release directory so Compress-Archive stores flat
           # paths (no long build\windows\x64\runner\Release prefix). This
           # avoids the Windows MAX_PATH limit when users extract with the

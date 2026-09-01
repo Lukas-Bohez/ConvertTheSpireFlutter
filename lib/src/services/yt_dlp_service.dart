@@ -577,8 +577,8 @@ class YtDlpService {
 
     // Conditionally pass --js-runtimes node: when Node.js is available
     await _tryApplyNodeRuntime(args);
-    // Use android_vr client which doesn't trigger SABR-only streaming experiment
-    args.addAll(['--extractor-args', 'youtube:player_client=android_vr,web']);
+    // Use tv client which doesn't trigger SABR-only streaming experiment
+    args.addAll(['--extractor-args', 'youtube:player_client=tv,web']);
 
     if (extraHeaders != null) {
       for (final entry in extraHeaders.entries) {

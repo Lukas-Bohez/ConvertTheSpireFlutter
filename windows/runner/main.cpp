@@ -16,21 +16,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     CreateAndAttachConsole();
   }
 
-  // Add a dlls/ subfolder (next to the executable) to the DLL search path so
-  // plugin DLLs can be moved out of the release root while still being found
-  // by LoadLibrary. This is done with an absolute path so it works regardless
-  // of the process's current working directory.
-  {
-    wchar_t exe_path[MAX_PATH];
-    if (::GetModuleFileNameW(nullptr, exe_path, MAX_PATH) > 0) {
-      wchar_t* last_slash = wcsrchr(exe_path, L'\\');
-      if (last_slash != nullptr) {
-        *last_slash = L'\0';
-        std::wstring dlls_path = std::wstring(exe_path) + L"\\dlls";
-        ::SetDllDirectoryW(dlls_path.c_str());
-      }
-    }
-  }
+  // All plugin DLLs remain in the root directory next to the executable so
+  // the Windows loader can resolve them during process startup. We
+  // deliberately do NOT move DLLs into a dlls/ subfolder or call
+  // SetDllDirectoryW: that API only takes effect for LoadLibrary calls issued
+  // after it returns, but the loader has already bound the executable's direct
+  // import dependencies before wWinMain begins, so any DLL moved to a
+  // subfolder at that point would be lost and the process would fail to start.
 
   // Certain GPU/driver combinations crash inside dcomp.dll when the engine tries
   // to initialize DirectComposition.  Force software rendering to avoid those

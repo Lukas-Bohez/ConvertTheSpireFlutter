@@ -355,7 +355,7 @@ class DownloadService {
     // Muxed streams (360p max) are reliable; HD adaptive streams may fail.
     // Fetch stream manifest with multiple YouTube API clients.  The default
     // androidSdkless client often returns empty manifests on mobile; rotating
-    // through safari, androidVr and tv clients dramatically improves success.
+    // through tv, safari and ios clients dramatically improves success.
     final streams = await _getManifestWithFallbackClients(video.id);
 
     final needsConversion = formatLower != 'mp4';
@@ -1099,8 +1099,8 @@ class DownloadService {
                     final fresh = await yt.videos.streamsClient.getManifest(
                       videoId,
                       ytClients: [
-                        YoutubeApiClient.safari,
-                        YoutubeApiClient.androidVr
+                        YoutubeApiClient.tv,
+                        YoutubeApiClient.safari
                       ],
                     ).timeout(const Duration(seconds: 30));
                     final match = _findStreamByTag(fresh, originalTag);
@@ -1156,8 +1156,8 @@ class DownloadService {
                   final fresh = await yt.videos.streamsClient.getManifest(
                     videoId,
                     ytClients: [
-                      YoutubeApiClient.safari,
-                      YoutubeApiClient.androidVr
+                      YoutubeApiClient.tv,
+                      YoutubeApiClient.safari
                     ],
                   ).timeout(const Duration(seconds: 30));
                   final match = _findStreamByTag(fresh, originalTag);
@@ -1232,17 +1232,15 @@ class DownloadService {
   /// auto-fallback to its internal [tv] client when the first call yields
   /// nothing.
   Future<StreamManifest> _getManifestWithFallbackClients(dynamic videoId) async {
-    // Primary clients: mobile-focused ones that currently return streams.
-    // androidVr is a mobile-only client; on Windows it can return unplayable
-    // VR streams, so we exclude it from the first fallback bucket there.
+    // Primary clients: tv and safari don't require PO tokens and work
+    // across all platforms. androidVr is excluded everywhere because
+    // YouTube now requires a GVS PO token for HD formats on that client.
     final clientBuckets = <List<YoutubeApiClient>>[
-      if (Platform.isWindows)
-        [YoutubeApiClient.tv, YoutubeApiClient.safari]
-      else
-        [YoutubeApiClient.safari, YoutubeApiClient.androidVr],
+      [YoutubeApiClient.tv, YoutubeApiClient.safari],
       [YoutubeApiClient.ios],
       [YoutubeApiClient.mweb],
     ];
+
 
     // First attempt: try the default client quickly.
     try {

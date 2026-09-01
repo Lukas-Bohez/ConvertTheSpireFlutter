@@ -1,16 +1,15 @@
-# Release Notes - v13.0.1
+# Release Notes - v13.0.2
 
-## Regression fix release
+## DLL Linking & Download Fix Release
 
 ## Highlights
 
-* **Cinematic view rewritten.** The new ambient shader uses a deterministic day/night cycle, soft drifting clouds, rain puddles, and stars that twinkle on individual schedules instead of a single strobing pulse. The transport controls now sit on a simple dark translucent panel, eliminating the white/grey overlay that appeared when they faded in. The black top bar is also gone.
-* **Windows playback fixed.** The YouTube fallback client list no longer selects the `androidVr` client on Windows, which was producing unplayable streams. Desktop now rotates through `tv`, `safari`, `ios`, and `web` clients instead.
-* **Windows release bundle tidier.** Plugin DLLs are moved into a `dlls/` subfolder next to the executable; the executable and its direct runtime dependencies stay in the root.
-* See [CHANGELOG.md](CHANGELOG.md) for the full list of changes.
+* **Windows launch fixed.** The `SetDllDirectoryW` + `dlls/` subfolder mechanism was unreliable — the Windows loader binds the executable's direct import dependencies before `wWinMain` begins, so any DLL moved to a `dlls/` subfolder could not be resolved at process startup, preventing the app from launching. All plugin DLLs now ship flat in the release root directory, and the `organize_dlls.ps1` step has been removed from the release workflow.
+* **YouTube `androidVr` PO-token fix.** Replaced `androidVr` with `tv` everywhere — in all `youtube_explode_dart` client lists (both the `_getManifestWithFallbackClients` bucket rotation and the Android download manifest-refresh paths) and in the yt-dlp `--extractor-args` (`youtube:player_client=tv,web`). YouTube now requires a GVS PO token for `androidVr` above 360p, which was silently blocking HD downloads on all platforms.
+* **Cinematic view** (from v13.0.1) — see [CHANGELOG.md](CHANGELOG.md) for the full list of changes.
 
 ## Build Notes
 
-* GitHub release tag: `v13.0.1`
-* Release page: [v13.0.1](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.1)
+* GitHub release tag: `v13.0.2`
+* Release page: [v13.0.2](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.2)
 * `flutter analyze` and `flutter test --coverage` pass cleanly.
