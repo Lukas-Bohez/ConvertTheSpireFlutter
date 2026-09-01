@@ -519,7 +519,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
 
     // Check favourite state.
-    _checkFavouriteState();
+    unawaited(_checkFavouriteState());
 
     // Record in history (unless incognito).
     if (!(_tabManager.activeTab?.isIncognito ?? false) && urlStr.isNotEmpty) {
@@ -527,12 +527,12 @@ class _BrowserScreenState extends State<BrowserScreen>
       final faviconUrl = domain.isNotEmpty
           ? 'https://www.google.com/s2/favicons?sz=64&domain_url=$domain'
           : null;
-      _repo.addHistory(urlStr, title, faviconUrl);
-      _repo.upsertRecentSite(urlStr, title, faviconUrl);
+      unawaited(_repo.addHistory(urlStr, title, faviconUrl));
+      unawaited(_repo.upsertRecentSite(urlStr, title, faviconUrl));
     }
 
     // Inject video detection JS.
-    controller.evaluateJavascript(source: VideoDetectorService.injectionJs);
+    unawaited(controller.evaluateJavascript(source: VideoDetectorService.injectionJs));
 
     // Inject input focus listeners so we can pause the cursor when an input
     // gains focus and surface a native text field for TV remote typing.
@@ -547,15 +547,15 @@ class _BrowserScreenState extends State<BrowserScreen>
 
     // Inject popup blocker when ad-block is on.
     if (_adBlock.adBlockEnabled) {
-      controller.evaluateJavascript(
-          source: VideoDetectorService.popupBlockerJs);
+      unawaited(controller.evaluateJavascript(
+          source: VideoDetectorService.popupBlockerJs));
     }
 
     // Attach playback event listeners so the page can notify us when a
     // video starts playing. The injected handler calls `onVideoPlayback`
     // which we handle above to update the tab preview.
     try {
-      controller.evaluateJavascript(source: r"""
+      unawaited(controller.evaluateJavascript(source: r"""
       (function(){
         try {
           if (window.__flutter_playback_injected) return; window.__flutter_playback_injected = true;
@@ -567,7 +567,7 @@ class _BrowserScreenState extends State<BrowserScreen>
           new MutationObserver(function(){ document.querySelectorAll('video').forEach(function(v){ attach(v); }); }).observe(document.body||document.documentElement, {childList:true, subtree:true});
         } catch(e){}
       })();
-      """);
+      """));
     } catch (_) {}
 
     // Try to capture a screenshot of the page for the tab preview. Not all
@@ -956,14 +956,14 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _goBack() async {
     if (_webViewController != null && await _webViewController!.canGoBack()) {
-      _webViewController!.goBack();
+      unawaited(_webViewController!.goBack());
     }
   }
 
   void _goForward() async {
     if (_webViewController != null &&
         await _webViewController!.canGoForward()) {
-      _webViewController!.goForward();
+      unawaited(_webViewController!.goForward());
     }
   }
 
@@ -1120,8 +1120,8 @@ class _BrowserScreenState extends State<BrowserScreen>
     _desktopMode = !_desktopMode;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('browser_desktop_mode', _desktopMode);
-    _webViewController?.setSettings(settings: _buildSettings());
-    _webViewController?.reload();
+    unawaited(_webViewController?.setSettings(settings: _buildSettings()));
+    unawaited(_webViewController?.reload());
     setState(() {});
   }
 
@@ -1184,7 +1184,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _performFind(String query) async {
     if (query.isEmpty) {
-      _findInteractionController?.clearMatches();
+      unawaited(_findInteractionController?.clearMatches());
       setState(() {
         _findMatchCount = 0;
         _findActiveIndex = 0;
@@ -1537,7 +1537,7 @@ class _BrowserScreenState extends State<BrowserScreen>
         // page title available in `_pageTitle` if needed in future
         try {
           // Share only the URL to avoid duplicate pastes in some targets.
-          SharePlus.instance.share(ShareParams(text: url));
+          unawaited(SharePlus.instance.share(ShareParams(text: url)));
         } catch (e) {
           try {
             final existing = await Clipboard.getData('text/plain');
@@ -1559,7 +1559,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       return;
     }
     if (action == 'adblock') {
-      _adBlock.toggleAdBlock();
+      unawaited(_adBlock.toggleAdBlock());
       setState(() {});
       return;
     }

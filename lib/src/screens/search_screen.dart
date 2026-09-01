@@ -246,7 +246,7 @@ class _SearchScreenState extends State<SearchScreen>
         _results = results;
         _loading = false;
       });
-      _refreshDownloadedFiles();
+      unawaited(_refreshDownloadedFiles());
     } catch (e) {
       if (!mounted) return;
       setState(() {

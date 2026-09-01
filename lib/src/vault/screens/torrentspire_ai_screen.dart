@@ -331,12 +331,12 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
       );
     }
     await _refreshTorrents();
-    _triggerAutoEvent(
+    unawaited(_triggerAutoEvent(
       _triggers.onDownloadStarted(
         name: result.name,
         size: _formatSize(result.size ?? 0),
       ),
-    );
+    ));
   }
 
   Future<void> _selectResult(SearchResult result) async {
@@ -344,7 +344,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
       _selected = result;
     });
     _contextService.updateSelected(result);
-    _triggerAutoEvent(_triggers.onResultSelected(result));
+    unawaited(_triggerAutoEvent(_triggers.onResultSelected(result)));
     // Ensure AI is ready before generating info card
     await _syncAiSettings();
     await _generateInfoCard(result);

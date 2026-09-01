@@ -99,7 +99,7 @@ void onServiceStart(ServiceInstance service) async {
     }
 
     if (TorrentEngineService.instance.shouldStopService()) {
-      service.stopSelf();
+      unawaited(service.stopSelf());
       timer.cancel();
     }
   });

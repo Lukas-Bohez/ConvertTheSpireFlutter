@@ -649,7 +649,7 @@ class PlayerState with ChangeNotifier {
       try {
         for (final s in _mkSubs) {
           try {
-            s.cancel();
+            unawaited(s.cancel());
           } catch (_) {}
         }
       } catch (_) {}
@@ -998,8 +998,8 @@ class PlayerState with ChangeNotifier {
     _favouriteCache.remove(path);
     _disliked.remove(path);
     _playStats.remove(path);
-    prefs.setStringList('player_favourites', _favourites.toList());
-    prefs.setStringList('player_disliked', _disliked.toList());
+    unawaited(prefs.setStringList('player_favourites', _favourites.toList()));
+    unawaited(prefs.setStringList('player_disliked', _disliked.toList()));
     _savePlayStats();
     _saveFavouriteCache();
 
@@ -1326,10 +1326,10 @@ class PlayerState with ChangeNotifier {
     // For other platforms, perform a limited background scan so UI feels
     // responsive without exhausting resources.
     if (!Platform.isWindows && !Platform.isAndroid) {
-      _loadThumbnailsSequentially(version, maxItems: 30);
+      unawaited(_loadThumbnailsSequentially(version, maxItems: 30));
     }
     // Ensure the current playing item has a thumbnail request pending.
-    requestThumbnailForIndex(currentIndex);
+    unawaited(requestThumbnailForIndex(currentIndex));
     _startDirectoryWatcher(items);
     unawaited(_enrichArtistsInBackground(version));
   }
@@ -1551,13 +1551,11 @@ class PlayerState with ChangeNotifier {
         // video-frame grab above also came up empty. Generate a still
         // frame from the cinematic ambient shader instead of leaving the
         // item on the generic music-note/video-camera placeholder.
-        if (thumb == null) {
-          thumb = await CinematicThumbnailService.generate(
-            width: 320,
-            height: 320,
-            seed: path,
-          );
-        }
+        thumb ??= await CinematicThumbnailService.generate(
+          width: 320,
+          height: 320,
+          seed: path,
+        );
 
         if (thumb != null) {
           try {
@@ -1769,12 +1767,12 @@ class PlayerState with ChangeNotifier {
         try {
           if (_audio != null) {
             await _audio!.pause();
-            _audio!.setVolume(0);
+            unawaited(_audio!.setVolume(0));
           }
           if (_audioMkPlayer != null) {
             try {
               await _audioMkPlayer!.pause();
-              _audioMkPlayer!.setVolume(0);
+              unawaited(_audioMkPlayer!.setVolume(0));
             } catch (_) {}
           }
         } catch (_) {}
@@ -1816,7 +1814,7 @@ class PlayerState with ChangeNotifier {
       if (generation == _loadGeneration) {
         notifyListeners();
         // Make sure we have a thumbnail for the now-playing item.
-        requestThumbnailForIndex(currentIndex);
+        unawaited(requestThumbnailForIndex(currentIndex));
       }
     }
   }
@@ -2681,7 +2679,7 @@ class PlayerState with ChangeNotifier {
         _applyStatsToItem(_favouriteCache[path]!);
       }
     }
-    _loadFavouriteThumbsFromDisk();
+    unawaited(_loadFavouriteThumbsFromDisk());
     _cleanupFavouriteData();
     notifyListeners();
   }
@@ -4181,7 +4179,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
     // Show loading dialog while scanning folder (prevents UI freeze on large folders)
     if (!mounted) return;
-    showDialog(
+    unawaited(showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => const AlertDialog(
@@ -4195,7 +4193,7 @@ class _PlayerScreenState extends State<PlayerScreen>
           ],
         ),
       ),
-    );
+    ));
 
     try {
       // Handle both regular filesystem paths and SAF URIs

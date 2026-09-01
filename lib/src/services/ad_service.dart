@@ -170,7 +170,7 @@ class AdService with WidgetsBindingObserver {
         },
       ),
     );
-    banner.load();
+    unawaited(banner.load());
     return completer.future.timeout(
       const Duration(seconds: 15),
       onTimeout: () {
@@ -362,7 +362,7 @@ class AdService with WidgetsBindingObserver {
         },
       ),
     );
-    nativeAd.load();
+    unawaited(nativeAd.load());
     return completer.future.timeout(
       const Duration(seconds: 15),
       onTimeout: () {

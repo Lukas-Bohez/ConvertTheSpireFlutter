@@ -16,6 +16,7 @@ class SoundService {
   Future<void> _play(String asset) async {
     if (!SettingsService.instance.soundEffectsEnabled) return;
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      // ignore: unawaited_futures
       HapticFeedback.lightImpact();
     }
     // On Windows, ensure the first sound is played after a short delay and on the main thread.

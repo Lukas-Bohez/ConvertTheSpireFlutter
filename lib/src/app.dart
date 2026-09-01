@@ -294,7 +294,7 @@ class _MyAppState extends State<MyApp>
       await ColourRewardService.instance.init();
 
       // Prune old album art cache in background.
-      albumArtService.pruneOldAlbumArt();
+      unawaited(albumArtService.pruneOldAlbumArt());
 
       // Fix: set onSafAccessDenied only ONCE (after controller is fully created)
       // to avoid the earlier assignment being silently overwritten by the later one.

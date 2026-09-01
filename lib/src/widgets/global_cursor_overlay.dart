@@ -88,7 +88,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
     });
     _keyChannel.setMethodCallHandler(_isAndroidTV ? _onNativeKeyEvent : null);
     if (_isAndroidTV && !_ticker.isActive) {
-      _ticker.start();
+      unawaited(_ticker.start());
     }
   }
 

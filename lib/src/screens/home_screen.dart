@@ -350,7 +350,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           previewPlayer: widget.controller.previewPlayer,
           onDownload: (result, format) async {
             widget.controller.addSearchResultToQueue(result, format: format);
-            widget.controller.downloadAll();
+            unawaited(widget.controller.downloadAll());
           },
         );
       case 2:
@@ -413,7 +413,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               format: format,
               videoQuality: quality,
             );
-            widget.controller.downloadAll();
+            unawaited(widget.controller.downloadAll());
             _navigateToPage(3); // show queue
           },
           onPlaylistDetected: (url, format, quality) {
@@ -3046,9 +3046,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         await widget.controller.saveSettings(
                           settings.copyWith(themeMode: mode),
                         );
-                        widget.controller.setThemeMode(
+                        unawaited(widget.controller.setThemeMode(
                           (_resolveThemeMode(mode)),
-                        );
+                        ));
                       },
                       itemBuilder: (BuildContext context) => [
                         const PopupMenuItem<String>(
@@ -3810,8 +3810,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   _ffmpegPathController.text = selectedPath);
                               final s = widget.controller.settings;
                               if (s != null) {
-                                widget.controller.saveSettings(
-                                    s.copyWith(ffmpegPath: selectedPath));
+                                unawaited(widget.controller.saveSettings(
+                                    s.copyWith(ffmpegPath: selectedPath)));
                               }
                             }
                           },
@@ -3946,8 +3946,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   _ytDlpPathController.text = selectedPath);
                               final s = widget.controller.settings;
                               if (s != null) {
-                                widget.controller.saveSettings(
-                                    s.copyWith(ytDlpPath: selectedPath));
+                                unawaited(widget.controller.saveSettings(
+                                    s.copyWith(ytDlpPath: selectedPath)));
                               }
                             }
                           },

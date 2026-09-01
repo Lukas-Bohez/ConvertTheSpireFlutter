@@ -127,9 +127,9 @@ class AdBlockService extends ChangeNotifier {
 
     if (needsFetch) {
       // Fetch in background - don't block init
-      _fetchAndCache().catchError((e) {
+      unawaited(_fetchAndCache().catchError((e) {
         if (kDebugMode) debugPrint('AdBlock fetch failed: $e');
-      });
+      }));
     }
   }
 

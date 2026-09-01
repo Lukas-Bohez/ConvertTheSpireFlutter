@@ -35,8 +35,8 @@ Future<bool?> showDeleteDownloadDialog(
           ],
           const SizedBox(height: 12),
           const Text(
-            "This will permanently delete the file from your device. "
-            "This can't be undone.",
+            'This will permanently delete the file from your device. '
+            'This can\'t be undone.',
           ),
         ],
       ),

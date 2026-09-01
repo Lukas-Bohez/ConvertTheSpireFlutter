@@ -432,7 +432,7 @@ class UnifiedDownloadService extends ChangeNotifier {
 /// implementing this against the real service once its main-app accessor
 /// is confirmed (see masterprompt open questions). The three methods below
 /// map onto real, existing methods:
-///   - cacheTorrentSource(String torrentId, List<int> torrentBytes) — exact
+///   - `cacheTorrentSource(String torrentId, List<int> torrentBytes)` — exact
 ///     match, confirmed at torrent_engine_service.dart ~line 1040.
 ///   - startTorrent(String torrentId, {String? destinationPath}) — exact
 ///     match, confirmed at ~line 1254.

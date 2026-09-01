@@ -1693,7 +1693,7 @@ class TorrentEngineService {
               }
             });
 
-          downloader.startDownload();
+          unawaited(downloader.startDownload());
 
           // First attempt: 10 minutes timeout, retry attempt: 3 minutes
           final timeout = attempt == 1
