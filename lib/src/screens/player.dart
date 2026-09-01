@@ -30,7 +30,7 @@ import 'package:window_manager/window_manager.dart';
 import '../services/android_saf.dart';
 import '../services/audio_handler.dart';
 import '../services/background_media_update_guard.dart';
-import '../services/cinematic_thumbnail_service.dart';
+
 import '../services/ffmpeg_service.dart';
 import '../services/media_organizer.dart';
 import '../services/platform_dirs.dart';
@@ -40,7 +40,7 @@ import '../utils/lock.dart';
 import '../utils/snack.dart';
 import '../vault/platform/desktop_window.dart';
 import '../widgets/tv_file_browser.dart';
-import 'cinematic_view_screen.dart';
+
 
 // --- Public entry point -------------------------------------------------------
 
@@ -1546,16 +1546,6 @@ class PlayerState with ChangeNotifier {
         if (thumb == null && item.type == MediaType.video) {
           thumb = await _generateVideoThumbnailSafe(path);
         }
-
-        // Final fallback: no embedded art, and either it's audio or the
-        // video-frame grab above also came up empty. Generate a still
-        // frame from the cinematic ambient shader instead of leaving the
-        // item on the generic music-note/video-camera placeholder.
-        thumb ??= await CinematicThumbnailService.generate(
-          width: 320,
-          height: 320,
-          seed: path,
-        );
 
         if (thumb != null) {
           try {
@@ -5145,29 +5135,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                   active: state.repeatMode != RepeatMode.off,
                   onPressed: state.cycleRepeat,
                   tooltip: 'Repeat',
-                  size: 22,
-                ),
-                _ControlButton(
-                  icon: Icons.auto_awesome,
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      PageRouteBuilder(
-                        opaque: true,
-                        barrierColor: Colors.black,
-                        pageBuilder: (_, __, ___) =>
-                            const CinematicViewScreen(),
-                        transitionsBuilder:
-                            (_, animation, __, child) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: child,
-                          );
-                        },
-                        transitionDuration: Duration.zero,
-                      ),
-                    );
-                  },
-                  tooltip: 'Cinematic view',
                   size: 22,
                 ),
               ],
