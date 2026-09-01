@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../screens/player.dart' show PlayerState, PositionUiState;
@@ -189,131 +188,123 @@ class _CinematicTransportOverlay extends StatelessWidget {
     final item = state.currentItem;
     final cs = Theme.of(context).colorScheme;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        // `BackdropFilter` defaults to `BlendMode.srcOver`, which the Flutter
-        // docs explicitly call out as producing "surprising results" when a
-        // parent uses a save layer -- which `FadeTransition` does (it's an
-        // `Opacity` under the hood). That's exactly what wraps this widget,
-        // and it's why the panel flashed solid grey every time the controls
-        // faded in/out. `BlendMode.src` is the documented fix.
-        // https://api.flutter.dev/flutter/widgets/BackdropFilter-class.html
-        blendMode: BlendMode.src,
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.35),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.08),
-              width: 1,
-            ),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.10),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Title / Artist
-              if (item != null) ...[
-                Text(
-                  item.title ?? item.path.split('/').last,
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Title / Artist
+          if (item != null) ...[
+            Text(
+              item.title ?? item.path.split('/').last,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                letterSpacing: 0.2,
+                shadows: [
+                  Shadow(
+                    color: Colors.black87,
+                    blurRadius: 8,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+            ),
+            if (item.resolvedArtist.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 3),
+                child: Text(
+                  item.resolvedArtist,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    letterSpacing: 0.2,
+                    color: Colors.white70,
+                    fontSize: 12,
+                    letterSpacing: 0.1,
                     shadows: [
                       Shadow(
                         color: Colors.black87,
-                        blurRadius: 8,
+                        blurRadius: 6,
                         offset: Offset(0, 1),
                       ),
                     ],
                   ),
                 ),
-                if (item.resolvedArtist.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Text(
-                      item.resolvedArtist,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                        letterSpacing: 0.1,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black87,
-                            blurRadius: 6,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 10),
-              ],
-
-              // Progress bar with time labels
-              _CinematicProgressBar(
-                onInteraction: onInteraction,
               ),
+            const SizedBox(height: 10),
+          ],
 
-              const SizedBox(height: 10),
+          // Progress bar with time labels
+          _CinematicProgressBar(
+            onInteraction: onInteraction,
+          ),
 
-              // Transport buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _CircleIconButton(
-                    icon: Icons.skip_previous_rounded,
-                    size: 28,
-                    onPressed: () {
-                      onInteraction();
-                      state.previous(only: state.activeTabFilter);
-                    },
-                    tooltip: 'Previous',
-                  ),
-                  const SizedBox(width: 18),
-                  _CircleIconButton(
-                    icon: state.isPlaying
-                        ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded,
-                    size: 36,
-                    backgroundColor: cs.primary.withValues(alpha: 0.3),
-                    onPressed: () {
-                      onInteraction();
-                      state.togglePlay();
-                    },
-                    tooltip: state.isPlaying ? 'Pause' : 'Play',
-                  ),
-                  const SizedBox(width: 18),
-                  _CircleIconButton(
-                    icon: Icons.skip_next_rounded,
-                    size: 28,
-                    onPressed: () {
-                      onInteraction();
-                      state.next(only: state.activeTabFilter);
-                    },
-                    tooltip: 'Next',
-                  ),
-                ],
+          const SizedBox(height: 10),
+
+          // Transport buttons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _CircleIconButton(
+                icon: Icons.skip_previous_rounded,
+                size: 28,
+                onPressed: () {
+                  onInteraction();
+                  state.previous(only: state.activeTabFilter);
+                },
+                tooltip: 'Previous',
+              ),
+              const SizedBox(width: 18),
+              _CircleIconButton(
+                icon: state.isPlaying
+                    ? Icons.pause_rounded
+                    : Icons.play_arrow_rounded,
+                size: 36,
+                backgroundColor: cs.primary.withValues(alpha: 0.3),
+                onPressed: () {
+                  onInteraction();
+                  state.togglePlay();
+                },
+                tooltip: state.isPlaying ? 'Pause' : 'Play',
+              ),
+              const SizedBox(width: 18),
+              _CircleIconButton(
+                icon: Icons.skip_next_rounded,
+                size: 28,
+                onPressed: () {
+                  onInteraction();
+                  state.next(only: state.activeTabFilter);
+                },
+                tooltip: 'Next',
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 }
-
 class _CinematicProgressBar extends StatelessWidget {
   const _CinematicProgressBar({required this.onInteraction});
 

@@ -176,3 +176,18 @@ if(IS_MULTICONFIG)
     endif()
   " COMPONENT Runtime)
 endif()
+
+# Move non-essential plugin DLLs into a dlls/ subfolder so the release root is
+# not cluttered with dozens of DLLs. The executable's direct imports (including
+# flutter_windows.dll) stay in the root; everything else is moved and loaded
+# from the subfolder via SetDllDirectory in main.cpp.
+set(_ORGANIZE_DLLS_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/organize_dlls.ps1")
+install(CODE "
+  execute_process(
+    COMMAND powershell -NoProfile -ExecutionPolicy Bypass -File \"${_ORGANIZE_DLLS_SCRIPT}\" \"${INSTALL_BUNDLE_LIB_DIR}\" \"${BINARY_NAME}\"
+    RESULT_VARIABLE _org_result
+  )
+  if(NOT _org_result EQUAL 0)
+    message(WARNING "DLL reorganization script returned ${_org_result}")
+  endif()
+" COMPONENT Runtime)

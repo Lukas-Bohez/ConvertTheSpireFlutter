@@ -1,17 +1,16 @@
-# Release Notes - v13.0.0
+# Release Notes - v13.0.1
 
-## fix & compliance release
+## Regression fix release
 
 ## Highlights
 
-* Fixed Linux/macOS yt-dlp downloads — the app was fetching a yt-dlp release asset that needs a system Python 3.11+ interpreter instead of the correct self-contained binary, which broke downloads (including playlists) on machines without a new enough system Python. This is what Linux Mint users were reporting.
-* Raised `targetSdkVersion` to 36 (Android 16) to stay compliant with Google Play's target API policy.
-* Fixed `build_release.sh`: removed a hardcoded, stale version/build number that could silently override `pubspec.yaml`'s version, and added the missing `GITHUB_RELEASE` dart-define so the GitHub build's ad-free/unlocked-colours mode actually activates.
-* Rebuilt the Play Store AAB for `v13.0.0` and replaced the old local AAB artifacts.
-* Release assets continue to include Windows, Linux, macOS, Android APK, SHA256 checksums, and the AAB (AAB is uploaded to Play Console separately, not attached to the GitHub release).
+* **Cinematic view rewritten.** The new ambient shader uses a deterministic day/night cycle, soft drifting clouds, rain puddles, and stars that twinkle on individual schedules instead of a single strobing pulse. The transport controls now sit on a simple dark translucent panel, eliminating the white/grey overlay that appeared when they faded in. The black top bar is also gone.
+* **Windows playback fixed.** The YouTube fallback client list no longer selects the `androidVr` client on Windows, which was producing unplayable streams. Desktop now rotates through `tv`, `safari`, `ios`, and `web` clients instead.
+* **Windows release bundle tidier.** Plugin DLLs are moved into a `dlls/` subfolder next to the executable; the executable and its direct runtime dependencies stay in the root.
+* See [CHANGELOG.md](CHANGELOG.md) for the full list of changes.
 
 ## Build Notes
 
-* GitHub release tag: `v13.0.0`
-* Release page: [v13.0.0](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.0)
+* GitHub release tag: `v13.0.1`
+* Release page: [v13.0.1](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.1)
 * `flutter analyze` and `flutter test --coverage` pass cleanly.

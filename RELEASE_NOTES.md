@@ -1,11 +1,11 @@
-# Release Notes — v13.0.0
+# Release Notes — v13.0.1
 
 ## What's New
-- Linux and macOS now download the correct self-contained yt-dlp binary instead of a variant that requires a system Python 3.11+ interpreter.
-- Target API level raised to 36 (Android 16) for Play Store compliance.
-- Local build script fixed: version number is now always read from `pubspec.yaml`, and the GitHub build's ad-free/unlocked-colours flag is now set correctly.
+- A completely rewritten cinematic ambient shader with a gentle day/night cycle, drifting clouds, rain puddles, and individual star schedules — no more strobing, black top bar, or white overlay when the transport controls appear.
+- Cleaner Windows release bundles: non-essential plugin DLLs are now tucked into a `dlls/` folder.
 
 ## Bug Fixes
-- Fixed "can't download playlists" and similar failures reported by Linux Mint users — root cause was the wrong yt-dlp asset being downloaded for Linux.
+- Fixed Windows playback/download failures where the YouTube `androidVr` client was incorrectly chosen and returned unplayable streams.
+- Removed the white/grey flash over the cinematic view controls.
 
 See [CHANGELOG.md](CHANGELOG.md) for fuller details.

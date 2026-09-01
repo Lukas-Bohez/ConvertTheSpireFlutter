@@ -1233,10 +1233,15 @@ class DownloadService {
   /// nothing.
   Future<StreamManifest> _getManifestWithFallbackClients(dynamic videoId) async {
     // Primary clients: mobile-focused ones that currently return streams.
+    // androidVr is a mobile-only client; on Windows it can return unplayable
+    // VR streams, so we exclude it from the first fallback bucket there.
     final clientBuckets = <List<YoutubeApiClient>>[
-      [YoutubeApiClient.safari, YoutubeApiClient.androidVr],
-      [YoutubeApiClient.tv],
+      if (Platform.isWindows)
+        [YoutubeApiClient.tv, YoutubeApiClient.safari]
+      else
+        [YoutubeApiClient.safari, YoutubeApiClient.androidVr],
       [YoutubeApiClient.ios],
+      [YoutubeApiClient.mweb],
     ];
 
     // First attempt: try the default client quickly.

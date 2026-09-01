@@ -1,5 +1,15 @@
 # Changelog
 
+## 13.0.1 — Regression Fix Release
+
+### Fixed
+- **Cinematic view** rebuilt with a new deterministic ambient shader and a non-blurred transport overlay. This fixes the solid white/grey layer that appeared when the controls faded in, the black top bar, and the overly flickering starfield.
+- **Windows playback failures** caused by the YouTube `androidVr` client being selected on desktop. The fallback client list now avoids `androidVr` on Windows and prefers `tv`/`safari`/`ios`/`web` instead.
+- **Windows release clutter:** plugin DLLs are now moved into a `dlls/` subfolder next to the executable, while the executable and its direct runtime dependencies remain in the root.
+
+### Notes
+- See [docs/releases/latest.md](docs/releases/latest.md) for the current release summary.
+
 ## 13.0.0 — Linux Download Fix & Target API 36
 
 ### Fixed

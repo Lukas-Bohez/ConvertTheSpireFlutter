@@ -2,6 +2,9 @@
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
 
+#include <cwchar>
+#include <string>
+
 #include "flutter_window.h"
 #include "utils.h"
 
@@ -11,6 +14,22 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // new console when running with a debugger.
   if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
     CreateAndAttachConsole();
+  }
+
+  // Add a dlls/ subfolder (next to the executable) to the DLL search path so
+  // plugin DLLs can be moved out of the release root while still being found
+  // by LoadLibrary. This is done with an absolute path so it works regardless
+  // of the process's current working directory.
+  {
+    wchar_t exe_path[MAX_PATH];
+    if (::GetModuleFileNameW(nullptr, exe_path, MAX_PATH) > 0) {
+      wchar_t* last_slash = wcsrchr(exe_path, L'\\');
+      if (last_slash != nullptr) {
+        *last_slash = L'\0';
+        std::wstring dlls_path = std::wstring(exe_path) + L"\\dlls";
+        ::SetDllDirectoryW(dlls_path.c_str());
+      }
+    }
   }
 
   // Certain GPU/driver combinations crash inside dcomp.dll when the engine tries
