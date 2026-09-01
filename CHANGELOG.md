@@ -1,5 +1,15 @@
 # Changelog
 
+## 13.0.0 — Linux Download Fix & Target API 36
+
+### Fixed
+- Linux and macOS builds now download the correct self-contained yt-dlp binary instead of a variant that silently required a system Python 3.11+ interpreter. This was the cause of "can't download playlists" and similar reports from Linux Mint users.
+- `targetSdkVersion` raised to 36 (Android 16) for Play Store compliance.
+- `build_release.sh` no longer hardcodes a stale version/build number; it now reads the version from `pubspec.yaml` like every other part of the build does, and sets the `GITHUB_RELEASE` build flag correctly for both flavors.
+
+### Notes
+- See [docs/releases/latest.md](docs/releases/latest.md) for the current release summary.
+
 ## 10.7.1 — Fixed Windows Crash
 
 ### Highlights

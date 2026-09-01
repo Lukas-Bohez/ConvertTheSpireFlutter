@@ -1,20 +1,11 @@
-# Release Notes — v5.2.0
+# Release Notes — v13.0.0
 
 ## What's New
-- Windows browser now falls back safely when embedded WebView is unavailable.
-- Play Store builds disable YouTube conversion features while APK builds keep them enabled.
-- Android Vault AI tabs are hidden on Android devices.
-- Release workflow now publishes both Android APK and AAB artifacts.
-- Fixed Android share button for downloaded files
-- Fixed "Open Folder" button now showing on Android
-- Browser fallback UI for PCs without WebView2 runtime
-- Linux AppImage for better compatibility on older distros
-- Battery monitoring now reacts instantly (stream-based)
-- CSV import uses safe parser (no more freeze on large files)
+- Linux and macOS now download the correct self-contained yt-dlp binary instead of a variant that requires a system Python 3.11+ interpreter.
+- Target API level raised to 36 (Android 16) for Play Store compliance.
+- Local build script fixed: version number is now always read from `pubspec.yaml`, and the GitHub build's ad-free/unlocked-colours flag is now set correctly.
 
 ## Bug Fixes
-- Worker pool no longer downloads same item twice
-- Notifications now appear on Android 13+
-- Converted files now visible in Files app on Android
+- Fixed "can't download playlists" and similar failures reported by Linux Mint users — root cause was the wrong yt-dlp asset being downloaded for Linux.
 
 See [CHANGELOG.md](CHANGELOG.md) for fuller details.
