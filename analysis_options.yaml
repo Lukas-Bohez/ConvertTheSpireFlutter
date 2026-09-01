@@ -22,6 +22,8 @@ analyzer:
     - build/**
     - results/**
     - .dart_tool/**
+    - todo/**
+    - C
 
 linter:
   rules:
