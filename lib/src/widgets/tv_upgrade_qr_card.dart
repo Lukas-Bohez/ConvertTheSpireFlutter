@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart'; // NEW dependency — not in pubspec.yaml yet
+import 'package:qr/qr.dart';
 
 /// Optional TV polish for the "get the full version from GitHub" flow.
 ///
@@ -33,16 +33,21 @@ class TvUpgradeQrCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final qrCode = QrCode.fromData(
+      data: releaseUrl,
+      errorCorrectLevel: QrErrorCorrectLevel.L,
+    );
+    final qrImage = QrImage(qrCode);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            QrImageView(
-              data: releaseUrl,
-              size: 220,
-              backgroundColor: Colors.white,
+            CustomPaint(
+              size: const Size(220, 220),
+              painter: _QrPainter(qrImage: qrImage),
             ),
             const SizedBox(height: 16),
             Text(
@@ -61,4 +66,45 @@ class TvUpgradeQrCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _QrPainter extends CustomPainter {
+  final QrImage qrImage;
+
+  _QrPainter({required this.qrImage});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double moduleCount = qrImage.moduleCount.toDouble();
+    final double moduleSize = size.width / moduleCount;
+    final paint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.fill;
+
+    // White background
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()..color = Colors.white,
+    );
+
+    // Draw QR modules
+    for (int row = 0; row < qrImage.moduleCount; row++) {
+      for (int col = 0; col < qrImage.moduleCount; col++) {
+        if (qrImage.isDark(row, col)) {
+          canvas.drawRect(
+            Rect.fromLTWH(
+              col * moduleSize,
+              row * moduleSize,
+              moduleSize,
+              moduleSize,
+            ),
+            paint,
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _QrPainter oldDelegate) => false;
 }

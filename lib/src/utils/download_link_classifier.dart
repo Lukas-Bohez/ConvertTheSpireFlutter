@@ -12,7 +12,7 @@
 /// more thing to recognise.
 library;
 
-import '../../models/unified_download_task.dart';
+import '../models/unified_download_task.dart';
 
 class DownloadLinkIntent {
   final UnifiedDownloadType type;
