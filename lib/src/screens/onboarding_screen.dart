@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../config/build_flags.dart';
+import '../widgets/tv_safe_area.dart';
 
 /// A multi-page onboarding flow that introduces the app's features.
 ///
@@ -9,6 +10,16 @@ import '../config/build_flags.dart';
 ///  * Automatically on first launch - the caller marks "seenOnboarding" when
 ///    [onFinish] fires.
 ///  * Manually from the Guide screen via a button.
+///
+/// Redesigned 2026-08 to cut the flow from 14 pages down to 5 by grouping
+/// related features onto shared pages instead of one page per feature, and
+/// to keep every page's content clear of a TV's overscan area via
+/// [TvSafeArea]. See ONBOARDING_UX_REDESIGN.md for the full write-up and
+/// the old-page -> new-page content mapping. Pages are no longer dropped
+/// wholesale for the Play Store build the way they used to be - see
+/// `_buildPages()` below - only the bullets inside a page that don't apply
+/// to the current build/platform are hidden, so every flavour still gets
+/// all 5 pages.
 class OnboardingScreen extends StatefulWidget {
   final VoidCallback onFinish;
   final ValueChanged<ThemeMode>? onThemeChanged;
@@ -32,177 +43,160 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
   late ThemeMode _themeMode;
+  late final List<_OnboardingPage> _pages;
   int _page = 0;
 
-  // Get filtered pages based on build type
-  List<_OnboardingPage> get _pages {
-    final allPages = _OnboardingScreenState._allPages();
-    if (!kPlayStoreBuild) return allPages;
+  // --- Page content --------------------------------------------------------
 
-    // For Play Store build, only show essential pages:
-    // 0: Welcome, 4: Browser, 8: Settings, 11: Guide, 12: Player, 13: Support
-    return [
-      allPages[0], // Welcome (but with modified text)
-      allPages[4], // Browser
-      allPages[8], // Settings
-      allPages[11], // Guide
-      allPages[12], // Player
-      allPages[13], // Support
-    ];
-  }
-
-  // All onboarding pages
-  static List<_OnboardingPage> _allPages() => <_OnboardingPage>[
-        // Welcome
+  static List<_OnboardingPage> _buildPages() => <_OnboardingPage>[
+        // Welcome (was page 1 of 14: Welcome)
         _OnboardingPage(
           icon: Icons.download_rounded,
           title: 'Welcome',
           detail: kPlayStoreBuild
-              ? 'Vault the Spire is a torrent vault and media hub. '
-                  'Add magnet links and .torrent files, manage downloads, '
-                  'and keep everything organized from one app.'
-              : 'Convert Spire Reborn is a cross-platform torrent and '
-                  'media toolkit. Add magnet links and .torrent files, manage '
-                  'downloads, convert formats, cast to your TV, and more - all from '
-                  'one app.',
+              ? '${getAppTitle()} is a torrent vault and media hub. Add '
+                  'magnet links and .torrent files, manage downloads, and '
+                  'keep everything organized from one app.'
+              : '${getAppTitle()} is a cross-platform torrent and media '
+                  'toolkit. Add magnet links and .torrent files, manage '
+                  'downloads, convert formats, cast to your TV, and more '
+                  '- all from one app.',
           color: const Color(0xFF00897B),
           preview: const _WelcomePreview(),
         ),
 
-        // Supported Platforms
-        const _OnboardingPage(
-          icon: Icons.language_rounded,
-          title: 'Supported Sources',
-          detail: 'Not just torrents. The app can work with magnet links, '
-              '.torrent files, browser links, local files, and other supported '
-              'sources in the host shell.',
-          color: Color(0xFFFF6D00),
-          preview: _PlatformsPreview(),
-        ),
-
-        // Search
-        const _OnboardingPage(
-          icon: Icons.search_rounded,
-          title: 'Search',
-          detail:
-              'Look up a title by keyword or paste a magnet / torrent link. '
-              'Preview the result and pick a destination before downloading.',
-          color: Color(0xFF6C63FF),
-          preview: _SearchPreview(),
-        ),
-
-        // Multi-Search
-        const _OnboardingPage(
+        // Find & Add Content (was: Supported Sources, Search,
+        // Multi-Search, Browser, Bulk Import - 5 of the old 14 pages)
+        _OnboardingPage(
           icon: Icons.travel_explore_rounded,
-          title: 'Multi-Search',
-          detail: 'Search multiple sources at once and compare results side by '
-              'side. Tap a row to inspect details before adding it to the queue.',
-          color: Color(0xFF43CFBB),
+          title: 'Find & Add Content',
+          detail: kPlayStoreBuild
+              ? 'Browse the web in the built-in view and open magnet or '
+                  'torrent links directly, without leaving the app.'
+              : 'Add torrent files, magnet links, browser links, or local '
+                  'files. Search by keyword, compare results from more '
+                  'than one source, browse the web for links, or paste a '
+                  'whole list to import at once.',
+          color: const Color(0xFF6C63FF),
+          preview: _FeatureListPreview(items: [
+            _FeatureItem(
+              icon: Icons.search_rounded,
+              color: const Color(0xFF6C63FF),
+              label: 'Search',
+              blurb: 'Preview a result before you download it',
+              visible: !kPlayStoreBuild,
+            ),
+            _FeatureItem(
+              icon: Icons.travel_explore_rounded,
+              color: const Color(0xFF43CFBB),
+              label: 'Multi-Search',
+              blurb: 'Compare results from several sources at once',
+              visible: !kPlayStoreBuild,
+            ),
+            const _FeatureItem(
+              icon: Icons.open_in_browser_rounded,
+              color: Color(0xFF4A90D9),
+              label: 'Browser',
+              blurb: 'Browse the web and open links in-app',
+            ),
+            _FeatureItem(
+              icon: Icons.upload_file_rounded,
+              color: const Color(0xFF5BA85A),
+              label: 'Bulk Import',
+              blurb: 'Paste or import a list of links at once',
+              visible: !kPlayStoreBuild,
+            ),
+          ]),
         ),
 
-        // Browser
-        const _OnboardingPage(
-          icon: Icons.open_in_browser_rounded,
-          title: 'Browser',
-          detail: 'Browse the web in the built-in view and open magnet or '
-              'torrent links directly without leaving the app.',
-          color: Color(0xFF4A90D9),
-        ),
-
-        // Queue
+        // Manage Your Downloads (was: Queue, Stats)
         _OnboardingPage(
           icon: Icons.queue_music_rounded,
-          title: 'Queue',
+          title: 'Manage Your Downloads',
           detail: kPlayStoreBuild
-              ? 'Manage your downloads. Start all, cancel, retry failures, '
-                  'or show completed files in your file manager.'
-              : 'Manage your downloads. Start all, cancel, retry failures, '
-                  'cast to your TV, or show completed files in your file manager.',
+              ? 'Manage your downloads: start, retry, or cancel, and find '
+                  'finished files in your file manager.'
+              : 'Manage your downloads: start, retry, cancel, or cast to '
+                  'your TV. Check totals, success rate, and trends any '
+                  'time in Stats.',
           color: const Color(0xFFE07B54),
-          preview: const _QueuePreview(),
+          preview: _FeatureListPreview(items: [
+            const _FeatureItem(
+              icon: Icons.queue_music_rounded,
+              color: Color(0xFFE07B54),
+              label: 'Queue',
+              blurb: 'Start, retry, cancel, and track status',
+            ),
+            _FeatureItem(
+              icon: Icons.bar_chart_rounded,
+              color: const Color(0xFFD4A017),
+              label: 'Stats',
+              blurb: 'Totals, success rate, and trends over time',
+              visible: !kPlayStoreBuild,
+            ),
+          ]),
         ),
 
-        // Bulk Import
-        const _OnboardingPage(
-          icon: Icons.upload_file_rounded,
-          title: 'Bulk Import',
-          detail: 'Paste a list of links or import a text/CSV file to enqueue '
-              'many items at once.',
-          color: Color(0xFF5BA85A),
-        ),
-
-        // Stats
-        const _OnboardingPage(
-          icon: Icons.bar_chart_rounded,
-          title: 'Stats',
-          detail: 'See download totals, success rate, format breakdown, top '
-              'sources, and trends over time.',
-          color: Color(0xFFD4A017),
-        ),
-
-        // Settings
-        const _OnboardingPage(
-          icon: Icons.settings_rounded,
-          title: 'Settings',
-          detail: 'Choose download folders, format defaults, FFmpeg options, '
-              'retry behaviour, and appearance.',
-          color: Color(0xFF607D8B),
-        ),
-
-        // Convert
-        const _OnboardingPage(
-          icon: Icons.transform_rounded,
-          title: 'Convert',
-          detail: 'Convert any local audio/video file between popular formats '
-              'using FFmpeg.',
-          color: Color(0xFFE57373),
-        ),
-
-        // Logs
-        const _OnboardingPage(
-          icon: Icons.list_alt_rounded,
-          title: 'Logs',
-          detail:
-              'Inspect the internal application log. Copy or clear at any time.',
-          color: Color(0xFF78909C),
-        ),
-
-        // Guide
+        // Play, Convert & Customize (was: Player, Convert, Settings)
         _OnboardingPage(
-          icon: Icons.menu_book_rounded,
-          title: 'Guide',
-          detail: kPlayStoreBuild
-              ? 'A help screen you can revisit from the Guide tab for Browser, Player, Torrents, and Settings.'
-              : 'A help screen you can revisit from the Guide tab.',
-          color: const Color(0xFF26A69A),
+          icon: Icons.tune_rounded,
+          title: 'Play, Convert & Customize',
+          // Convert tab is hidden on all Android builds, not just Play
+          // Store - see isTabVisibleInCurrentBuild(9) in build_flags.dart.
+          // The old onboarding described Convert unconditionally, so
+          // Android users were being told about a feature they had no way
+          // to reach. Tying this page to the same flag fixes that.
+          detail: isTabVisibleInCurrentBuild(9)
+              ? 'Play your files in the built-in player, convert between '
+                  'formats with FFmpeg, and set folders, defaults, and '
+                  'appearance in Settings.'
+              : 'Play your files in the built-in player, and set folders, '
+                  'format defaults, and appearance in Settings.',
+          color: const Color(0xFF7E57C2),
+          preview: _FeatureListPreview(items: [
+            const _FeatureItem(
+              icon: Icons.music_note_rounded,
+              color: Color(0xFF7E57C2),
+              label: 'Player',
+              blurb: 'Playback, shuffle, repeat, and a simple library',
+            ),
+            _FeatureItem(
+              icon: Icons.transform_rounded,
+              color: const Color(0xFFE57373),
+              label: 'Convert',
+              blurb: 'Convert audio/video between formats with FFmpeg',
+              visible: isTabVisibleInCurrentBuild(9),
+            ),
+            const _FeatureItem(
+              icon: Icons.settings_rounded,
+              color: Color(0xFF607D8B),
+              label: 'Settings',
+              blurb: 'Folders, format defaults, retry behaviour, and more',
+            ),
+          ]),
         ),
 
-        // Player
-        const _OnboardingPage(
-          icon: Icons.music_note_rounded,
-          title: 'Player',
-          detail: 'Built-in media player for your files. Playback, shuffle, '
-              'repeat, and a simple library.',
-          color: Color(0xFF7E57C2),
-        ),
-
-        // Support CTA (last page)
-        const _OnboardingPage(
+        // Help & Support (was: Guide, Logs, Support Us)
+        _OnboardingPage(
           icon: Icons.favorite_rounded,
-          title: 'Support Us',
-          detail:
-              'Help keep this app open-source and ad-free by supporting the project. '
-              'You can donate via Buy Me a Coffee or GitHub Sponsors.',
-          color: Color(0xFFE91E63),
-          preview: _SupportPreview(),
+          title: 'Help & Support',
+          detail: kPlayStoreBuild
+              ? 'Revisit the Guide any time you need a refresher, and '
+                  'help keep the project going with a donation.'
+              : 'Revisit the Guide any time, check the internal Logs if '
+                  'something goes wrong, and help keep the project '
+                  'open-source and ad-free with a donation.',
+          color: const Color(0xFFE91E63),
+          preview: const _HelpSupportPreview(),
         ),
       ];
 
-  // --─ Lifecycle ----------------------------------------------------------─
+  // --- Lifecycle ------------------------------------------------------------
 
   @override
   void initState() {
     super.initState();
+    _pages = _buildPages();
     _themeMode = widget.themeMode;
     _controller = PageController();
     _animController = AnimationController(
@@ -216,16 +210,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _animController.forward();
     });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    // Precache any images used in the onboarding flow so that swiping between
-    // pages doesn't cause a decode/paint jank (black flash) on first display.
-    // If you add image assets to onboarding pages, add them here with
-    // `precacheImage(AssetImage(...), context);`.
   }
 
   void _setupAnimations() {
@@ -300,7 +284,31 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ThemeMode.system => 'Auto',
       };
 
-  // --─ Sub-builders ------------------------------------------------------─
+  // --- Sub-builders -----------------------------------------------------
+
+  // Replaces the old Scaffold(appBar: AppBar(...)). An AppBar sits outside
+  // the body, so it never got the SafeArea/TvSafeArea protection below it -
+  // on a TV the title and theme toggle could end up right in the overscan
+  // strip. Building the title bar as ordinary body content means the same
+  // TvSafeArea that protects the rest of the page protects this too.
+  Widget _buildTitleBar(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              getAppTitle(),
+              textAlign: TextAlign.center,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ),
+          _buildThemeToggle(theme),
+        ],
+      ),
+    );
+  }
 
   Widget _buildProgressBar(ThemeData theme) {
     final progress = (_page + 1) / _pages.length;
@@ -423,8 +431,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 onPressed: _back,
                 style: TextButton.styleFrom(
                   foregroundColor: onSurface.withValues(alpha: 0.65),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 12),
                 ),
                 icon: const Icon(Icons.arrow_back_ios_rounded, size: 15),
                 label: const Text(
@@ -438,8 +446,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 onPressed: widget.onFinish,
                 style: TextButton.styleFrom(
                   foregroundColor: onSurface.withValues(alpha: 0.55),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 12),
                 ),
                 child: const Text(
                   'Skip',
@@ -495,7 +503,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // --─ Build --------------------------------------------------------------
+  // --- Build ----------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -504,20 +512,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final squareSide = (screenWidth * 0.50).clamp(150.0, 280.0);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          getAppTitle(),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: _buildThemeToggle(theme),
-          ),
-        ],
-      ),
       body: Focus(
         autofocus: true,
         onKeyEvent: (node, event) {
@@ -540,109 +534,114 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           }
         },
         child: SafeArea(
-          child: Column(
-            children: [
-              const SizedBox(height: 8),
-              _buildProgressBar(theme),
-              Expanded(
-                child: PageView(
-                  controller: _controller,
-                  onPageChanged: _onPageChanged,
-                  children: List.generate(_pages.length, (index) {
-                    final p = _pages[index];
-                    return _KeepAlivePage(
-                      key: ValueKey('onboarding_page_$index'),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 28.0,
-                          vertical: 12,
-                        ),
-                        child: FadeTransition(
-                          opacity: _fadeAnim,
-                          child: SlideTransition(
-                            position: _slideAnim,
-                            child: SingleChildScrollView(
-                              physics: const BouncingScrollPhysics(),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    width: squareSide,
-                                    height: squareSide,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          p.color.withValues(alpha: 0.18),
-                                          p.color.withValues(alpha: 0.06),
-                                        ],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      ),
-                                      borderRadius: BorderRadius.circular(28),
-                                      border: Border.all(
-                                        color: p.color.withValues(alpha: 0.30),
-                                        width: 1.5,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color:
-                                              p.color.withValues(alpha: 0.15),
-                                          blurRadius: 28,
-                                          offset: const Offset(0, 8),
+          child: TvSafeArea(
+            child: Column(
+              children: [
+                _buildTitleBar(theme),
+                _buildProgressBar(theme),
+                Expanded(
+                  child: PageView(
+                    controller: _controller,
+                    onPageChanged: _onPageChanged,
+                    children: List.generate(_pages.length, (index) {
+                      final p = _pages[index];
+                      return _KeepAlivePage(
+                        key: ValueKey('onboarding_page_$index'),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 28.0,
+                            vertical: 12,
+                          ),
+                          child: FadeTransition(
+                            opacity: _fadeAnim,
+                            child: SlideTransition(
+                              position: _slideAnim,
+                              child: SingleChildScrollView(
+                                physics: const BouncingScrollPhysics(),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      width: squareSide,
+                                      height: squareSide,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            p.color.withValues(alpha: 0.18),
+                                            p.color.withValues(alpha: 0.06),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
                                         ),
-                                      ],
+                                        borderRadius:
+                                            BorderRadius.circular(28),
+                                        border: Border.all(
+                                          color:
+                                              p.color.withValues(alpha: 0.30),
+                                          width: 1.5,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: p.color
+                                                .withValues(alpha: 0.15),
+                                            blurRadius: 28,
+                                            offset: const Offset(0, 8),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Icon(
+                                        p.icon,
+                                        size: squareSide * 0.42,
+                                        color: p.color,
+                                      ),
                                     ),
-                                    child: Icon(
-                                      p.icon,
-                                      size: squareSide * 0.42,
-                                      color: p.color,
+                                    if (p.preview != null) ...[
+                                      const SizedBox(height: 20),
+                                      p.preview!,
+                                    ],
+                                    const SizedBox(height: 28),
+                                    Text(
+                                      p.title,
+                                      style: theme.textTheme.headlineMedium
+                                          ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: p.color,
+                                        letterSpacing: -0.5,
+                                      ),
                                     ),
-                                  ),
-                                  if (p.preview != null) ...[
-                                    const SizedBox(height: 20),
-                                    p.preview!,
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      p.detail,
+                                      textAlign: TextAlign.center,
+                                      style:
+                                          theme.textTheme.bodyLarge?.copyWith(
+                                        height: 1.65,
+                                        color: theme.colorScheme.onSurface
+                                            .withValues(alpha: 0.78),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
                                   ],
-                                  const SizedBox(height: 28),
-                                  Text(
-                                    p.title,
-                                    style: theme.textTheme.headlineMedium
-                                        ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: p.color,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 14),
-                                  Text(
-                                    p.detail,
-                                    textAlign: TextAlign.center,
-                                    style: theme.textTheme.bodyLarge?.copyWith(
-                                      height: 1.65,
-                                      color: theme.colorScheme.onSurface
-                                          .withValues(alpha: 0.78),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  }),
+                      );
+                    }),
+                  ),
                 ),
-              ),
-              _buildDots(theme),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
-                child: _buildControls(theme),
-              ),
-              const SizedBox(height: 12),
-            ],
+                _buildDots(theme),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 8),
+                  child: _buildControls(theme),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         ),
       ),
@@ -650,7 +649,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 }
 
-// --─ Data model ------------------------------------------------------------─
+// --- Data model --------------------------------------------------------------
 
 class _OnboardingPage {
   final IconData icon;
@@ -665,6 +664,28 @@ class _OnboardingPage {
     required this.detail,
     required this.color,
     this.preview,
+  });
+}
+
+/// One row inside a [_FeatureListPreview] card.
+class _FeatureItem {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final String blurb;
+
+  /// Whether this row should be shown for the current build/platform.
+  /// Defaults to true; pages set this per-item for features that aren't
+  /// available in every flavour - e.g. Search is hidden in Play Store
+  /// builds, Convert is hidden on Android.
+  final bool visible;
+
+  const _FeatureItem({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.blurb,
+    this.visible = true,
   });
 }
 
@@ -691,7 +712,7 @@ class _KeepAlivePageState extends State<_KeepAlivePage>
   }
 }
 
-// --─ Preview widgets --------------------------------------------------------
+// --- Preview widgets -----------------------------------------------------
 
 /// Welcome page - shows a brief feature overview.
 class _WelcomePreview extends StatelessWidget {
@@ -753,176 +774,27 @@ class _WelcomePreview extends StatelessWidget {
   }
 }
 
-/// Supported platforms grid.
-class _PlatformsPreview extends StatelessWidget {
-  const _PlatformsPreview();
+/// Compact card listing several related features - icon, label, and a
+/// one-line blurb per row. Used on every page that groups more than one
+/// of the old 14 pages together, so cutting the page count doesn't cut
+/// any of the original information - it just no longer gets a whole
+/// screen to itself.
+class _FeatureListPreview extends StatelessWidget {
+  final List<_FeatureItem> items;
 
-  static const _platforms = [
-    '.torrent files',
-    'Magnet links',
-    'Browser links',
-    'Local files',
-    'Queue actions',
-    'Library tracking',
-    'Download folders',
-    'Clipboard import',
-    'Search results',
-    'Saved collections',
-    'Settings sync',
-    'Vault tabs',
-    'and more',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = const Color(0xFFFF6D00);
-    final platforms = kPlayStoreBuild ? _platforms : _platforms;
-
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      alignment: WrapAlignment.center,
-      children: platforms.map((name) {
-        final isMore = name.startsWith('1000');
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: isMore
-                ? accent.withValues(alpha: 0.15)
-                : (isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : Colors.grey.withValues(alpha: 0.10)),
-            borderRadius: BorderRadius.circular(16),
-            border: isMore
-                ? Border.all(color: accent.withValues(alpha: 0.4))
-                : null,
-          ),
-          child: Text(
-            name,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isMore ? FontWeight.bold : FontWeight.w500,
-              color: isMore ? accent : null,
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-/// Search tab preview.
-class _SearchPreview extends StatelessWidget {
-  const _SearchPreview();
+  const _FeatureListPreview({required this.items});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final border = isDark ? const Color(0xFF3A3A3A) : const Color(0xFFDDDDDD);
+    final subtitle = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final visibleItems = items.where((i) => i.visible).toList();
 
     return Container(
-      key: const Key('onboarding_preview_search'),
-      width: 260,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            enabled: false,
-            decoration: InputDecoration(
-              isDense: true,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              hintText: 'Search or paste a link\u2026',
-              hintStyle: TextStyle(
-                  fontSize: 13, color: Colors.grey.withValues(alpha: 0.7)),
-              prefixIcon: const Icon(Icons.search_rounded, size: 18),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: border),
-              ),
-              filled: true,
-              fillColor: isDark
-                  ? Colors.white.withValues(alpha: 0.04)
-                  : Colors.grey.withValues(alpha: 0.06),
-            ),
-          ),
-          const SizedBox(height: 8),
-          ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Icon(Icons.music_video_rounded,
-                  size: 20, color: Color(0xFF6C63FF)),
-            ),
-            title: const Text('Example video title',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            subtitle: const Text('3:42 \u00b7 MP3 320 kbps',
-                style: TextStyle(fontSize: 11)),
-            trailing: const Icon(Icons.add_circle_outline_rounded, size: 20),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Queue tab preview.
-class _QueuePreview extends StatelessWidget {
-  const _QueuePreview();
-
-  static const _items = [
-    (
-      label: 'Live at the Spire',
-      icon: Icons.pause_circle_filled_rounded,
-      color: Color(0xFF607D8B),
-      status: 'Paused',
-    ),
-    (
-      label: 'Tutorial Walkthrough',
-      icon: Icons.download_rounded,
-      color: Color(0xFF43CFBB),
-      status: 'Downloading\u2026',
-    ),
-    (
-      label: 'Broken link example',
-      icon: Icons.error_outline_rounded,
-      color: Color(0xFFE57373),
-      status: 'Failed',
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final border = isDark ? const Color(0xFF3A3A3A) : const Color(0xFFDDDDDD);
-
-    return Container(
-      key: const Key('onboarding_preview_queue'),
-      width: 260,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      width: 280,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
@@ -937,24 +809,39 @@ class _QueuePreview extends StatelessWidget {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: _items
+        children: visibleItems
             .map((item) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 5),
                   child: Row(
                     children: [
-                      Icon(item.icon, size: 20, color: item.color),
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: item.color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(item.icon, size: 18, color: item.color),
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(item.label,
-                                style: const TextStyle(
-                                    fontSize: 13, fontWeight: FontWeight.w500),
-                                overflow: TextOverflow.ellipsis),
-                            Text(item.status,
-                                style:
-                                    TextStyle(fontSize: 11, color: item.color)),
+                            Text(
+                              item.label,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              item.blurb,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 11, color: subtitle),
+                            ),
                           ],
                         ),
                       ),
@@ -963,6 +850,38 @@ class _QueuePreview extends StatelessWidget {
                 ))
             .toList(),
       ),
+    );
+  }
+}
+
+/// Help & Support page preview: Guide/Logs as feature rows, plus the
+/// original donation card underneath.
+class _HelpSupportPreview extends StatelessWidget {
+  const _HelpSupportPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _FeatureListPreview(items: [
+          const _FeatureItem(
+            icon: Icons.menu_book_rounded,
+            color: Color(0xFF26A69A),
+            label: 'Guide',
+            blurb: 'A help screen you can revisit any time',
+          ),
+          _FeatureItem(
+            icon: Icons.list_alt_rounded,
+            color: const Color(0xFF78909C),
+            label: 'Logs',
+            blurb: 'Inspect, copy, or clear the internal app log',
+            visible: !kPlayStoreBuild,
+          ),
+        ]),
+        const SizedBox(height: 12),
+        const _SupportPreview(),
+      ],
     );
   }
 }
@@ -1034,7 +953,7 @@ class _SupportPreview extends StatelessWidget {
             ),
             child: const Center(
               child: Text(
-                'Go to Settings → Support to donate',
+                'Go to Settings \u2192 Support to donate',
                 style: TextStyle(
                     fontSize: 12, fontWeight: FontWeight.w600, color: accent),
               ),

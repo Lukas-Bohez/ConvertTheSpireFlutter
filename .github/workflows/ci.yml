@@ -30,7 +30,14 @@ jobs:
         run: flutter pub get
 
       - name: Analyze code
-        run: flutter analyze --no-fatal-warnings --no-fatal-infos
+        run: flutter analyze
+
+      - name: Block committed keystores
+        run: |
+          if git ls-files | grep -qiE "\.jks$|\.keystore$"; then
+            echo "::error::A keystore file is tracked in git. Remove it and rotate the key."
+            exit 1
+          fi
 
       - name: Run tests
         run: |

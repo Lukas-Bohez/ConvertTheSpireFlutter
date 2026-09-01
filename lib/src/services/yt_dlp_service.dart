@@ -161,10 +161,29 @@ class YtDlpService {
           'Could not determine app data directory for yt-dlp installation.');
     }
 
-    // Download from GitHub releases (single self-contained binary)
-    final url = Platform.isWindows
-        ? 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe'
-        : 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
+    // Download from GitHub releases (self-contained binary per platform).
+    // IMPORTANT: yt-dlp's bare `yt-dlp` release asset is a Python zipapp
+    // that requires a system Python 3.11+ interpreter on PATH -- it is NOT
+    // a standalone binary. Downloading it for Linux/macOS is what caused
+    // "can't download" reports (Linux Mint users especially, since many
+    // Mint releases ship an older system Python by default). Linux and
+    // macOS each publish their own real self-contained binary that needs
+    // no system Python at all -- use those instead.
+    final String url;
+    if (Platform.isWindows) {
+      url =
+          'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
+    } else if (Platform.isLinux) {
+      url =
+          'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux';
+    } else if (Platform.isMacOS) {
+      url =
+          'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos';
+    } else {
+      // Not expected to be hit on supported desktop targets; keep the old
+      // behavior as a last-resort fallback rather than throwing here.
+      url = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
+    }
 
     final client = http.Client();
     try {

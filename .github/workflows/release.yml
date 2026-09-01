@@ -6,6 +6,12 @@
 #
 # Required secrets (configure in Settings -> Secrets and variables -> Actions):
 #
+#   Android signing:
+#     ANDROID_KEYSTORE_BASE64    - base64-encoded .jks keystore
+#     ANDROID_KEYSTORE_PASSWORD  - keystore password
+#     ANDROID_KEY_ALIAS          - key alias
+#     ANDROID_KEY_PASSWORD       - key password
+#
 #   macOS signing & notarization (optional; omit to ship unsigned):
 #     MACOS_CERTIFICATE_BASE64  - base64-encoded .p12 Developer ID certificate
 #     MACOS_CERTIFICATE_PASSWORD - .p12 import password
@@ -70,7 +76,7 @@ jobs:
         run: flutter pub get
 
       - name: Analyze
-        run: flutter analyze --no-fatal-warnings --no-fatal-infos
+        run: flutter analyze
 
       - name: Run tests
         run: flutter test --coverage
@@ -345,6 +351,25 @@ jobs:
             grep -n 'repositories' -A2 "$PLUGIN_DIR/build.gradle" || true
           else
             echo "video_thumbnail build.gradle not found; skipping patch"
+          fi
+
+      - name: Decode keystore
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
+          fi
+
+      - name: Write key.properties
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ]; then
+            cat > android/key.properties <<EOF
+          storeFile=upload-keystore.jks
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          EOF
           fi
 
       - name: Build APK (GitHub release flavor)

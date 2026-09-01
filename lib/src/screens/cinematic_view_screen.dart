@@ -190,8 +190,17 @@ class _CinematicTransportOverlay extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        // `BackdropFilter` defaults to `BlendMode.srcOver`, which the Flutter
+        // docs explicitly call out as producing "surprising results" when a
+        // parent uses a save layer -- which `FadeTransition` does (it's an
+        // `Opacity` under the hood). That's exactly what wraps this widget,
+        // and it's why the panel flashed solid grey every time the controls
+        // faded in/out. `BlendMode.src` is the documented fix.
+        // https://api.flutter.dev/flutter/widgets/BackdropFilter-class.html
+        blendMode: BlendMode.src,
         child: Container(
           margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),

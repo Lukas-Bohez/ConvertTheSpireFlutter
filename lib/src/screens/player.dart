@@ -30,6 +30,7 @@ import 'package:window_manager/window_manager.dart';
 import '../services/android_saf.dart';
 import '../services/audio_handler.dart';
 import '../services/background_media_update_guard.dart';
+import '../services/cinematic_thumbnail_service.dart';
 import '../services/ffmpeg_service.dart';
 import '../services/media_organizer.dart';
 import '../services/platform_dirs.dart';
@@ -1544,6 +1545,18 @@ class PlayerState with ChangeNotifier {
 
         if (thumb == null && item.type == MediaType.video) {
           thumb = await _generateVideoThumbnailSafe(path);
+        }
+
+        // Final fallback: no embedded art, and either it's audio or the
+        // video-frame grab above also came up empty. Generate a still
+        // frame from the cinematic ambient shader instead of leaving the
+        // item on the generic music-note/video-camera placeholder.
+        if (thumb == null) {
+          thumb = await CinematicThumbnailService.generate(
+            width: 320,
+            height: 320,
+            seed: path,
+          );
         }
 
         if (thumb != null) {
@@ -5068,7 +5081,26 @@ class _PlayerScreenState extends State<PlayerScreen>
                         : _PlayerTheme.sub(context),
                     size: 24,
                   ),
+                  tooltip: state.isFavourite(item.path)
+                      ? 'Remove favourite'
+                      : 'Add favourite',
                   onPressed: () => state.toggleFavourite(item.path),
+                ),
+                // Dislike button -- previously only reachable via the
+                // overflow menu, so it was easy to lose track of.
+                IconButton(
+                  icon: Icon(
+                    state.isDisliked(item.path)
+                        ? Icons.thumb_down_rounded
+                        : Icons.thumb_down_outlined,
+                    color: state.isDisliked(item.path)
+                        ? Theme.of(context).colorScheme.error
+                        : _PlayerTheme.sub(context),
+                    size: 22,
+                  ),
+                  tooltip:
+                      state.isDisliked(item.path) ? 'Undo dislike' : 'Dislike',
+                  onPressed: () => state.toggleDislike(item.path),
                 ),
                 _TrackMenuButton(
                   state: state,
@@ -5702,6 +5734,33 @@ class _MediaGrid extends StatelessWidget {
   }
 }
 
+/// Small corner badge marking a favourited or disliked item at a glance,
+/// without needing to open the track menu. Favourite takes priority in the
+/// rare case both are somehow set at once.
+class _FavDislikeBadge extends StatelessWidget {
+  final bool isFavourite;
+  final bool isDisliked;
+
+  const _FavDislikeBadge({required this.isFavourite, required this.isDisliked});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isFavourite && !isDisliked) return const SizedBox.shrink();
+    final icon = isFavourite ? Icons.star_rounded : Icons.thumb_down_rounded;
+    final color =
+        isFavourite ? Colors.amber : Theme.of(context).colorScheme.error;
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.6),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+      ),
+      child: Icon(icon, size: 12, color: color),
+    );
+  }
+}
+
 class _MediaCard extends StatelessWidget {
   final MapEntry<int, MediaItem> entry;
   final PlayerState state;
@@ -5734,6 +5793,15 @@ class _MediaCard extends StatelessWidget {
                         state.thumbnailForItem(item, size: 0, expand: true) ??
                             Container(color: cs.surfaceContainerHighest),
                   ),
+                  if (state.isFavourite(item.path) || state.isDisliked(item.path))
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: _FavDislikeBadge(
+                        isFavourite: state.isFavourite(item.path),
+                        isDisliked: state.isDisliked(item.path),
+                      ),
+                    ),
                   Positioned(
                     left: 0,
                     right: 0,
@@ -5934,20 +6002,35 @@ class _SongTile extends StatelessWidget {
       }
     }
 
+    final isFav = state.isFavourite(item.path);
+    final isDisliked = state.isDisliked(item.path);
+
     return ListTile(
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: state.thumbnailForItem(item, size: 56) ??
-            Container(
-              width: 56,
-              height: 56,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.11),
-              child: Icon(Icons.music_note,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+      leading: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: state.thumbnailForItem(item, size: 56) ??
+                Container(
+                  width: 56,
+                  height: 56,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.11),
+                  child: Icon(Icons.music_note,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+          ),
+          if (isFav || isDisliked)
+            Positioned(
+              right: -4,
+              bottom: -4,
+              child:
+                  _FavDislikeBadge(isFavourite: isFav, isDisliked: isDisliked),
             ),
+        ],
       ),
       title: Text(
         item.title ?? p.basename(item.path),

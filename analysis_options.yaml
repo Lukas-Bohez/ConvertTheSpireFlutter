@@ -1,3 +1,7 @@
+# Extends the existing config. Everything above the "--- added ---" marker
+# in each section is unchanged from the current analysis_options.yaml.
+# See masterprompt_bitplayer_human_code_style.md for why the additions exist.
+
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
@@ -8,6 +12,11 @@ analyzer:
     unused_local_variable: error
     missing_return: error
     unnecessary_this: warning
+    # --- added ---
+    # Surfaces the fully-silent `catch (_) {}` blocks from audit Finding 3b
+    # as analyzer warnings so they show up in `flutter analyze` and in most
+    # editors' Problems panel, not just in a manual grep sweep.
+    empty_catches: warning
   exclude:
     - test/**
     - build/**
@@ -29,3 +38,17 @@ linter:
     library_private_types_in_public_api: false
     no_wildcard_variable_uses: false
     use_build_context_synchronously: false
+    # --- added ---
+    empty_catches: true
+    # An un-awaited Future can silently swallow an exception the same way a
+    # bare catch does - same underlying issue as Finding 3, different shape.
+    unawaited_futures: true
+    # Cosmetic, but genuinely part of standard Dart style and cheap to enable.
+    unnecessary_brace_in_string_interps: true
+
+# Note on import style (audit Finding 7): deliberately NOT adding
+# `prefer_relative_imports` or `always_use_package_imports` here. Existing
+# imports are a close-to-even mix (188 relative / 151 absolute) and turning
+# either rule on would flag ~150+ pre-existing lines with no functional
+# benefit. Convention for new code is documented in
+# bitplayer_human_code_style_reference.md instead of enforced mechanically.

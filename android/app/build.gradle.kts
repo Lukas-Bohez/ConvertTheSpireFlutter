@@ -53,8 +53,8 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // Minimum supported SDK required by bundled Android plugins.
         minSdk = 24
-        // Target API 35 to satisfy Play Console requirements
-        targetSdk = 35
+        // Target API 36 (Android 16) to satisfy Play Console requirements
+        targetSdk = 36
         versionCode = flutterVersionCode
         versionName = flutterVersionName
         ndk {

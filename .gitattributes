@@ -1,0 +1,29 @@
+# Fixes audit Finding 4: 74 files were CRLF, 111 were LF, mixed even within
+# the same directory (src/screens/ had both). This normalizes everything
+# to LF going forward so it can't drift back after Phase 0's one-time cleanup.
+#
+# See masterprompt_bitplayer_human_code_style.md, Phase 0.
+
+* text=auto eol=lf
+
+*.dart text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.gradle text eol=lf
+
+# Windows-specific scripts genuinely benefit from CRLF - leave them alone.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# Binary assets - never touch line endings in these.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.webp binary
+*.ttf binary
+*.otf binary
+*.aab binary
+*.apk binary
