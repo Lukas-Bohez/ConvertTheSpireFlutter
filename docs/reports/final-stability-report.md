@@ -1,6 +1,6 @@
 # Final Stability Report
 
-This is a short summary of the release hardening work that preceded the current 10.8.0 build.
+This is a short summary of the release hardening work that preceded the current 13.0.0 build.
 
 ## Confirmed Items
 

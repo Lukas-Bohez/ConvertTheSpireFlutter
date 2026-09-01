@@ -1,19 +1,20 @@
-## Convert the Spire Reborn v5.0.0 - "The Polish Release"
+## Convert the Spire Reborn v13.0.0 - "The Linux & Compliance Release"
 
 > ⚠️ **Pre-release / Beta** - core features are stable but
 > some edge cases remain. Feedback very welcome.
 
-### What's new in v5.0.0
-- Full browser toolbar redesign: download button front and
-  centre, cast/more actions moved to ⋮ menu
-- Live URL tracking via onUpdateVisitedHistory - download
-  button always reflects the actual current page
-- DropdownButtonFormField value binding fixed across all tabs
-- AppColors theme extension - zero hardcoded color values
-- Queue sidebar adapts to panel width (compact/full modes)
-- Navigation history (back/forward) across all tabs
-- CI/CD pinned to Flutter 3.41.2 across all build jobs
-- Dependency verification step added to CI pipeline
+### What's new in v13.0.0
+- Linux & macOS now download the correct self-contained yt-dlp binary (no system Python required)
+- Target API level raised to 36 (Android 16) for Play Store compliance
+- Fixed build_release.sh: version reads from pubspec.yaml, GITHUB_RELEASE flag set correctly
+- Cinematic view v2: de-periodized star twinkle, sun/moon always visible, clouds, rain with puddles
+- Browser bottom bar auto-hide with gesture-gated search bar
+- Onboarding streamlined from 14 to 5 pages, Android TV overscan fixed
+- Unified downloads inbox with filter/sort toolbar
+- Favourite/dislike badges visible in player and cinematic transport
+- Offline thumbnail generation from cinematic view
+- Keystore exposure fixed (removed from public repo history)
+- Strict CI lint gates enabled (no more --no-fatal-warnings)
 
 ### Download
 | Platform | File |
@@ -38,15 +39,11 @@ Requires libmpv and development headers for builds:
 
 ### Known limitations in this pre-release
 - DLNA casting may drop on some older renderers
-- Android background mining pauses on low battery;
-  heat throttling not yet fine-tuned
-- No in-app auto-update yet (planned for v5.1)
+- No in-app auto-update yet (planned for future release)
 - Linux requires manual libmpv install (one-liner above)
 
 ### Privacy
-No telemetry or analytics. Mining is 100% opt-in and only
-shares CPU cycles via public QUBIC endpoints - no personal
-data is sent. All downloads happen locally via yt-dlp.
+No telemetry or analytics. All downloads happen locally via yt-dlp.
 
 ---
 
