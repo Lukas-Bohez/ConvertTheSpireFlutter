@@ -23,6 +23,18 @@ import 'platform_dirs.dart';
 /// On mobile/web, yt-dlp is not available - the app falls back to
 /// youtube_explode_dart for stream downloads.
 class YtDlpService {
+  /// When the last automatic self-update finished (millis since epoch).
+  ///
+  /// Used to throttle the update-and-retry path so a burst of failed downloads
+  /// (e.g. the "page needs to be reloaded" YouTube regression) only triggers
+  /// one binary refresh instead of hammering GitHub on every attempt.
+  static DateTime? _lastAutoUpdate;
+
+  static const Duration _autoUpdateCooldown = Duration(hours: 2);
+
+  /// Resolved Deno JS runtime path (per session), avoids re-probing/downloading.
+  static String? _denoPath;
+
   Future<String> _getYtDlpWorkingDir() async {
     final temp = await getTemporaryDirectory();
     return temp.path;
@@ -577,6 +589,9 @@ class YtDlpService {
 
     // Conditionally pass --js-runtimes node: when Node.js is available
     await _tryApplyNodeRuntime(args);
+    // Ensure a JS runtime (Deno) is available for nsig/SABR extraction — a
+    // missing/old runtime is a common cause of "page needs to be reloaded".
+    await _tryApplyDenoRuntime(args, onProgress);
     // Use tv client which doesn't trigger SABR-only streaming experiment
     args.addAll(['--extractor-args', 'youtube:player_client=tv,web']);
 
@@ -683,11 +698,50 @@ class YtDlpService {
       final isFormatUnavailable =
           message.contains('Requested format is not available') ||
               message.contains('format is not available');
+      final isReloadError =
+          message.contains('page needs to be reloaded') ||
+              message.contains('UNPLAYABLE') ||
+              message.contains('playability status: UNPLAYABLE') ||
+              message.contains('sign in to confirm') ||
+              message.contains('confirm you are not a bot');
       if (hadCookieArgs && isFormatUnavailable) {
         debugPrint(
             'yt-dlp failed with format unavailable while cookies were enabled; retrying once without cookies');
         final retryArgs = _stripCookieArgs(args);
         await runAttempt(retryArgs);
+      } else if (isReloadError) {
+        // YouTube-side extractor/player change (e.g. "The page needs to be
+        // reloaded"). Self-update throttled to the cooldown window, then retry
+        // once — a newer yt-dlp usually has the SABR/nsig patch that fixes it.
+        debugPrint('yt-dlp hit a reload/playability error: $message');
+        final cooldownOk =
+            _lastAutoUpdate == null ||
+                DateTime.now().difference(_lastAutoUpdate!) >=
+                    _autoUpdateCooldown;
+        if (cooldownOk) {
+          try {
+            final updatedPath = await updateYtDlp(
+              configuredPath: null,
+              onProgress: null,
+            );
+            if (updatedPath.isNotEmpty &&
+                await File(updatedPath).exists() &&
+                updatedPath != ytDlpPath) {
+              _lastAutoUpdate = DateTime.now();
+              debugPrint(
+                  'yt-dlp self-updated to $updatedPath; retrying download once');
+              await runAttempt([for (final a in args) a]);
+            } else {
+              rethrow;
+            }
+          } catch (updateErr) {
+            // Self-update failed; surface the original download error.
+            debugPrint('yt-dlp self-update failed ($updateErr); not retrying');
+            rethrow;
+          }
+        } else {
+          rethrow;
+        }
       } else {
         rethrow;
       }
@@ -934,6 +988,152 @@ class YtDlpService {
       }
     } catch (_) {
       // Silently ignore — yt-dlp still works without a JS runtime
+    }
+  }
+
+  /// Ensure a JavaScript runtime (Deno) is available so yt-dlp can evaluate
+  /// YouTube's signature / nsig / SABR player code. Without one, modern
+  /// yt-dlp emits "The page needs to be reloaded" / UNPLAYABLE errors.
+  ///
+  /// Tries an existing Deno install first; if none is found it downloads the
+  /// standalone Deno binary into the app support dir (lazy, ~25-30 MB) and
+  /// reuses it for the rest of the session. Never throws.
+  Future<void> _tryApplyDenoRuntime(
+    List<String> args,
+    void Function(int pct, String? speed, String? eta)? onProgress,
+  ) async {
+    if (kIsWeb || Platform.isAndroid || Platform.isIOS) return;
+    try {
+      if (_denoPath != null && await File(_denoPath!).exists()) {
+        args.addAll(['--js-runtimes', 'deno:$_denoPath']);
+        debugPrint('yt-dlp: using Deno runtime at $_denoPath');
+        return;
+      }
+
+      // Look for an existing Deno install on common paths / PATH.
+      final String? denoPath = await _locateExistingDeno();
+      if (denoPath != null && await File(denoPath).exists()) {
+        _denoPath = denoPath;
+        args.addAll(['--js-runtimes', 'deno:$denoPath']);
+        debugPrint('yt-dlp: found existing Deno runtime at $denoPath');
+        return;
+      }
+
+      // Download a bundled Deno binary for the current platform.
+      final support = await PlatformDirs.getAppSupportDir();
+      if (support == null) return;
+      final binDir = Directory(p.join(
+          support.path, 'deno'));
+      if (!await binDir.exists()) await binDir.create(recursive: true);
+
+      final bool isWindows = Platform.isWindows;
+      final String assetName;
+      final bool isArmMac = Platform.isMacOS &&
+          (await _cpuArchitecture() == 'arm64');
+      if (isWindows) {
+        assetName = 'deno-x86_64-pc-windows-msvc.zip';
+      } else if (Platform.isLinux) {
+        assetName = 'deno-x86_64-unknown-linux-gnu.zip';
+      } else if (isArmMac) {
+        assetName = 'deno-aarch64-apple-darwin.zip';
+      } else {
+        assetName = 'deno-x86_64-apple-darwin.zip';
+      }
+
+      final url =
+          'https://github.com/denoland/deno/releases/latest/download/$assetName';
+      final destBase = p.join(binDir.path,
+          assetName.replaceAll('.zip', ''));
+      if (await File(destBase).exists()) {
+        _denoPath = destBase;
+        args.addAll(['--js-runtimes', 'deno:$destBase']);
+        debugPrint('yt-dlp: using previously bundled Deno at $destBase');
+        return;
+      }
+
+      debugPrint('yt-dlp: downloading Deno runtime ($assetName)');
+      final dl = await http.get(Uri.parse(url)).timeout(
+            const Duration(seconds: 60),
+          );
+      if (dl.statusCode != 200) {
+        debugPrint('yt-dlp: Deno download failed HTTP ${dl.statusCode}');
+        return;
+      }
+      final zipPath = p.join(binDir.path, assetName);
+      await File(zipPath).writeAsBytes(dl.bodyBytes, flush: true);
+
+      // Deno ships as a zip containing the single binary — extract it.
+      if (isWindows) {
+        final out = await Process.run('tar',
+            ['-xf', zipPath, '-C', binDir.path],
+            runInShell: true);
+        if (out.exitCode != 0) {
+          // Fall back to Expand-Archive on Windows PowerShell.
+          await Process.run('powershell',
+              ['-NoProfile', '-Command',
+               "Expand-Archive -Force '${zipPath.replaceAll("'", "''")}' -DestinationPath '${binDir.path.replaceAll("'", "''")}'"],
+              runInShell: true);
+        }
+      } else {
+        await Process.run('tar', ['-xf', zipPath, '-C', binDir.path],
+            runInShell: true);
+        await Process.run('chmod', ['+x', destBase]);
+      }
+      try {
+        await File(zipPath).delete();
+      } catch (_) {}
+
+      if (await File(destBase).exists()) {
+        _denoPath = destBase;
+        args.addAll(['--js-runtimes', 'deno:$destBase']);
+        debugPrint('yt-dlp: Deno runtime ready at $destBase');
+      } else {
+        debugPrint('yt-dlp: Deno extraction produced no binary at $destBase');
+      }
+    } catch (e) {
+      debugPrint('yt-dlp: failed to provision Deno runtime: $e');
+    }
+  }
+
+  /// Look for a system Deno install (common paths then PATH).
+  Future<String?> _locateExistingDeno() async {
+    const paths = [
+      'C:\\Program Files\\deno\\deno.exe',
+      '/usr/bin/deno',
+      '/usr/local/bin/deno',
+      '/opt/homebrew/bin/deno',
+      '/root/.deno/bin/deno',
+    ];
+    for (final pPath in paths) {
+      if (await File(pPath).exists()) return pPath;
+    }
+    try {
+      final result = await Process.run(
+        Platform.isWindows ? 'where' : 'which', ['deno'],
+        runInShell: true,
+      ).timeout(const Duration(seconds: 5));
+      if (result.exitCode == 0) {
+        final lines = result.stdout.toString().trim()
+            .split(RegExp(r'\r?\n'));
+        for (final l in lines) {
+          if (l.trim().isNotEmpty) {
+            final candidate = l.trim();
+            if (await File(candidate).exists()) return candidate;
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<String> _cpuArchitecture() async {
+    try {
+      final r = await Process.run(Platform.isWindows ? 'echo' : 'uname',
+          Platform.isWindows ? ['%PROCESSOR_ARCHITECTURE%'] : ['-m'],
+          runInShell: true);
+      return r.stdout.toString().trim().toLowerCase();
+    } catch (_) {
+      return 'x86_64';
     }
   }
 

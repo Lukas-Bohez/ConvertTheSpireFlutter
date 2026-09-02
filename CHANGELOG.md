@@ -1,5 +1,20 @@
 # Changelog
 
+## 13.0.4+1267 — yt-dlp "page needs to be reloaded" Fix
+
+### Fixed
+- **Self-updating yt-dlp on "page needs to be reloaded" / UNPLAYABLE failures.** When a download fails with YouTube's "The page needs to be reloaded", `UNPLAYABLE`, or bot/age-check errors, the app now automatically updates the yt-dlp binary (throttled to once per 2 hours per session) and retries the download once. YouTube-side extractor/player (nsig/SABR) changes are patched on stable releases within days, so a refresh routinely restores downloads that a pinned binary was failing.
+- **Bundled a JavaScript runtime (Deno) for yt-dlp.** Modern yt-dlp needs an external JS interpreter to evaluate YouTube's signature code; without one it emits "page needs to be reloaded" / UNPLAYABLE errors. The app now detects a system Deno/Node install or lazily downloads a standalone Deno binary (into the app support dir) and passes it to yt-dlp via `--js-runtimes deno:...`.
+- **Kept the existing non-fatal fallback updater** (best-effort on boot) and made the download-path auto-update cooldown-aware so a failed burst doesn't hammer the GitHub API.
+
+### Notes
+- Also includes the v13.0.3 changes: cinematic view (and its ambient shader) fully removed.
+
+## 13.0.3+1266 — Remove Cinematic View
+
+### Removed
+- **Cinematic view and all related code removed.** Deleted the ambient shader, the cinematic view screen, the ambient-scene widget, and the cinematic thumbnail renderer. The player now opens the standard fullscreen album/song view instead of the ambient shader. Removing it simplifies the player and avoids GPU/driver-specific rendering artifacts on a range of desktop hardware.
+
 ## 13.0.2+1265 — DLL Linking & Download Fix Release
 
 ### Fixed

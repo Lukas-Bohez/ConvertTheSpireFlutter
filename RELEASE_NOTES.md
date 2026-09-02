@@ -1,10 +1,12 @@
-# Release Notes — v13.0.2
+# Release Notes — v13.0.4
 
 ## What's New
-(none — fix release)
+- **Downloads are far more resilient to YouTube's frequent player/extractor changes.** When a download hits "The page needs to be reloaded" or `UNPLAYABLE`, the app auto-updates yt-dlp and retries once, so most transient YouTube breakage now self-heals without the user touching anything.
+- **Bundled JavaScript runtime for yt-dlp** — the app now provisions a standalone Deno binary (or reuses a system Deno/Node install) so YouTube's signature/extraction code can always be evaluated, removing a whole class of "page needs to be reloaded" failures.
+- Cinematic view removed (continues from v13.0.3).
 
 ## Bug Fixes
-- **Windows launch crash**: Removed the `SetDllDirectoryW`-based DLL subfolder mechanism that moved plugin DLLs into `dlls/` at packaging time. The Windows loader loads the executable's direct import dependencies before `wWinMain` runs, so `SetDllDirectoryW` — called inside `wWinMain` — couldn't resolve DLLs the loader needed during process startup. All plugin DLLs now ship flat in the release root directory, and the `organize_dlls.ps1` invocation has been removed from the release workflow.
-- **YouTube `androidVr` PO-token regression**: Replaced `androidVr` with `tv` in all youtube_explode_dart client lists and yt-dlp extractor args across all platforms (not just Windows). YouTube now requires a GVS PO token for `androidVr` above 360p, which was blocking HD downloads.
+- Auto-update on reload/UNPLAYABLE errors, throttled (2h/session) to avoid hammering the GitHub API.
+- Best-effort self-update on boot kept for keeping the bundled yt-dlp fresh.
 
 See [CHANGELOG.md](CHANGELOG.md) for fuller details.
