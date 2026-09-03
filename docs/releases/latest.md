@@ -1,15 +1,17 @@
-# Release Notes - v13.0.4
+# Release Notes - v13.0.5
 
-## yt-dlp "page needs to be reloaded" Fix
+## yt-dlp / youtube_explode_dart Reliability Pass v2
 
 ## Highlights
 
-* **Downloads self-heal when YouTube changes its player/extractor.** When a download fails with "The page needs to be reloaded", `UNPLAYABLE`, or bot/age-check errors, the app now auto-updates the yt-dlp binary (throttled to once per 2 hours per session) and retries the download once. YouTube-side nsig/SABR changes are patched on stable yt-dlp releases within days, so a refresh routinely restores downloads that a pinned binary was failing.
-* **A JavaScript runtime is now bundled for yt-dlp.** Modern yt-dlp needs an external JS interpreter to evaluate YouTube's signature code; without one it emits "page needs to be reloaded" / UNPLAYABLE errors. The app detects a system Deno/Node install or lazily downloads a standalone Deno binary into the app support dir and passes it to yt-dlp via `--js-runtimes deno:...`.
-* **Cinematic view removed** (from v13.0.3). The player now uses the standard fullscreen album/song view instead of the ambient shader.
+* **Android playlist loading fixed.** Large YouTube playlists (e.g. 785 tracks) now load reliably. The app wires a JS-challenge solver (Deno) into youtube_explode_dart — the same runtime yt-dlp uses — so YouTube's bot check no longer silently starves the playlist stream.
+* **CJK title matching improved.** Downloaded tracks with Japanese/Chinese titles no longer get marked as "missing" when re-scanned. Added character-bigram similarity as a fallback tier so titles without spaces between words match correctly.
+* **Japanese author names display correctly.** Broadened filename artist parsing to recognize `/`, `_`, and `【】` tag prefixes (common in Japanese/VOCALOID uploads), and switched the local-library tag read to the same metadata package the rest of the codebase already trusts.
+* **"Could not check for updates" no longer intermittent.** The update check is now cached for an hour and branches on GitHub's 403 rate-limit response with a clear message.
+* **"yt-dlp missing" no longer shows during active downloads.** The status indicator now distinguishes "checking", "transient error", and "genuinely not configured".
 
 ## Build Notes
 
-* GitHub release tag: `v13.0.4`
-* Release page: [v13.0.4](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.4)
+* GitHub release tag: `v13.0.5`
+* Release page: [v13.0.5](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.5)
 * `flutter analyze` and `flutter test --coverage` pass cleanly.

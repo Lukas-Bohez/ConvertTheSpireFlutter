@@ -1,5 +1,19 @@
 # Changelog
 
+## 13.0.5+1268 — yt-dlp / youtube_explode_dart Reliability Pass v2
+
+### Added
+- **DenoRuntimeService** — shared Deno provisioning for both yt-dlp's `--js-runtimes` and youtube_explode_dart's `DenoEJSSolver`, so a single provisioned binary serves both.
+- **Bigram similarity fallback** in `_titlesMatch` for CJK and other non-space-delimited scripts.
+
+### Fixed
+- **Android playlist loading** — wired `DenoEJSSolver` into the `YoutubeExplode` instance serving playlist loads; raised inactivity timeout 25s → 60s and made the retry loop continuation-aware.
+- **CJK title matching** — character-bigram Dice-coefficient fallback so Japanese/Chinese titles no longer lose all matching tolerance.
+- **Japanese author names** — broadened `_artistFromFilename` to recognize `/`, `_`, `／`, and `【】` tag prefixes; switched local-library tag read from `audio_metadata_reader` to `MetadataGod` for consistency.
+- **"Could not check for updates"** — cached the latest-release check for an hour (SharedPreferences) and branched on HTTP 403 with a rate-limit-specific message.
+- **"yt-dlp missing" during downloads** — status indicator now distinguishes checking / transient error / genuinely not configured.
+- **Dead code** — deleted `yt_dlp_updater.dart` and `yt_dlp_update_controller.dart` (never called).
+
 ## 13.0.4+1267 — yt-dlp "page needs to be reloaded" Fix
 
 ### Fixed
