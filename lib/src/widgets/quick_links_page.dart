@@ -41,6 +41,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
   String? _ytDlpVersion;
   bool _ytDlpChecking = true;
   bool _ytDlpFailed = false;
+  bool _ytDlpTransientError = false;
   bool _isFolderWritable = true;
 
   @override
@@ -88,6 +89,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
     setState(() {
       _ytDlpChecking = true;
       _ytDlpFailed = false;
+      _ytDlpTransientError = false;
     });
     try {
       final v = await widget.getYtDlpVersion();
@@ -97,8 +99,14 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
           _ytDlpFailed = v == null;
         });
       }
+    } on Exception catch (e) {
+      // Transient errors (binary busy during a download, timeout, etc.)
+      // are not the same as "not installed". Surface them as a retryable
+      // state rather than an actionable "click Settings" message.
+      debugPrint('QuickLinksPage: yt-dlp version check transient error: $e');
+      if (mounted) setState(() => _ytDlpTransientError = true);
     } catch (_) {
-      if (mounted) setState(() => _ytDlpFailed = true);
+      if (mounted) setState(() => _ytDlpTransientError = true);
     } finally {
       if (mounted) setState(() => _ytDlpChecking = false);
     }
@@ -297,19 +305,23 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                     size: 18,
                     color: _ytDlpFailed
                         ? Colors.redAccent
-                        : (_ytDlpChecking ? Colors.amber : Colors.green),
+                        : (_ytDlpChecking || _ytDlpTransientError
+                            ? Colors.amber
+                            : Colors.green),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     _ytDlpChecking
                         ? 'Checking engine...'
-                        : _ytDlpFailed
-                            ? 'yt-dlp not available (click Settings)'
-                            : 'yt-dlp ${_ytDlpVersion ?? 'unknown'}',
+                        : _ytDlpTransientError
+                            ? 'Engine check interrupted — retrying...'
+                            : _ytDlpFailed
+                                ? 'yt-dlp not available (click Settings)'
+                                : 'yt-dlp ${_ytDlpVersion ?? 'unknown'}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(width: 12),
-                  if (_ytDlpFailed)
+                  if (_ytDlpFailed || _ytDlpTransientError)
                     TextButton(
                       onPressed: _checkYtDlpVersion,
                       child: const Text('Retry'),
