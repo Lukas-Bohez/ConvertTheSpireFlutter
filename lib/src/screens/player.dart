@@ -8,7 +8,7 @@ import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:audio_service/audio_service.dart' as audio_svc;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
     show MissingPluginException, DeviceOrientation, SystemChrome, SystemUiMode;
@@ -184,14 +184,24 @@ class MediaItem {
 }
 
 String _artistFromFilename(String path) {
-  final filename = p
+  var filename = p
       .basenameWithoutExtension(path)
       .replaceAll(RegExp(r'\s*\[[a-zA-Z0-9_\-]{11}\]'), '')
       .trim();
-  if (!filename.contains(' - ')) return '';
-  final artist = filename.split(' - ').first.trim();
-  if (artist.isEmpty || artist.length >= 60) return '';
-  return artist;
+  // Strip leading tag prefixes like 【ShaniMas】 or [tag] that are common
+  // in Japanese/VOCALOID community uploads.
+  filename = filename.replaceFirst(RegExp(r'^[【\[].*?[】\]]\s*'), '');
+  // Recognise artist/title separators in priority order: the unambiguous
+  // " - " first, then " / ", the full-width slash, and finally "_" only
+  // when nothing else matched.
+  final separators = [' - ', ' / ', '／', '_'];
+  for (final sep in separators) {
+    if (filename.contains(sep)) {
+      final artist = filename.split(sep).first.trim();
+      if (artist.isNotEmpty && artist.length < 60) return artist;
+    }
+  }
+  return '';
 }
 
 String _titleFromFilename(String path) {
@@ -1581,9 +1591,14 @@ class PlayerState with ChangeNotifier {
     final item = lib[i];
     try {
       final metaPath = await _resolveLocalPath(item.path);
-      final tag = readMetadata(File(metaPath), getImage: false);
+      await MetadataGod.initialize();
+      final tag = await MetadataGod.readMetadata(file: metaPath);
       if (_loadVersion != version) return;
       final modifiedAt = item.modifiedAt ?? await _modifiedAtForPath(item.path);
+      if (kDebugMode) {
+        debugPrint('Player: resolveArtist for ${p.basename(item.path)} '
+            'tag.artist=${tag.artist} tag.albumArtist=${tag.albumArtist}');
+      }
       final resolvedArtist =
           resolveArtist(tag, item.path, fallbackArtist: item.artist);
       lib[i] = item.copyWith(
