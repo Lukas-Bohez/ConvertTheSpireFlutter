@@ -8,6 +8,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:youtube_explode_dart/solvers.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
 
@@ -28,6 +29,7 @@ import 'screens/player.dart' show PlayerState;
 import 'services/bulk_import_service.dart';
 import 'services/convert_service.dart';
 import 'services/download_service.dart';
+import 'services/deno_runtime_service.dart';
 import 'services/ffmpeg_service.dart';
 import 'services/file_organization_service.dart';
 import 'services/installer_service.dart';
@@ -186,12 +188,26 @@ class _MyAppState extends State<MyApp>
     return true;
   }
 
+  Future<YoutubeExplode> _createYoutubeExplode() async {
+    if (kIsWeb) return YoutubeExplode();
+    try {
+      final denoPath = await DenoRuntimeService.resolveOrDownload();
+      if (denoPath != null) {
+        final solver = await DenoEJSSolver.init(denoExe: denoPath);
+        return YoutubeExplode(jsSolver: solver);
+      }
+    } catch (e) {
+      debugPrint('MyApp: failed to wire DenoEJSSolver: $e');
+    }
+    return YoutubeExplode();
+  }
+
   Future<void> _initController() async {
     if (kDebugMode) debugPrint('MyApp: starting controller initialization');
     try {
       final logs = LogService();
       final settingsStore = SettingsStore();
-      final ytExplode = YoutubeExplode();
+      final ytExplode = await _createYoutubeExplode();
       _ytExplode = ytExplode;
       final youtube = YouTubeService(yt: ytExplode);
       final ffmpeg = FfmpegService();

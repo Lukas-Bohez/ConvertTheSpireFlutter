@@ -18,7 +18,9 @@ class PlaylistService {
   final String? _ytDlpPath;
   final LogService? _logs;
 
-  static const Duration _playlistStreamTimeout = Duration(seconds: 25);
+  // Inactivity timeout per playlist page. Large playlists over slower/mobile
+  // connections (Android) can idle past 25s between pages, so give room。
+  static const Duration _playlistStreamTimeout = Duration(seconds: 60);
 
   String? _lastPlaylistDiagnostics;
   String? get lastPlaylistDiagnostics => _lastPlaylistDiagnostics;
