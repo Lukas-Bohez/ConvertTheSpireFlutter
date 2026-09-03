@@ -586,7 +586,24 @@ class PlaylistService {
       if (minLen > 0 && overlap / minLen >= 0.6) return true;
     }
 
+    // Final fallback: character-bigram similarity works for scripts with
+    // no spaces between words (CJK, etc.), where the word-split above loses
+    // all tolerance.
+    if (_bigramSimilarity(a, b) >= 0.5) return true;
+
     return false;
+  }
+
+  static double _bigramSimilarity(String a, String b) {
+    if (a.isEmpty || b.isEmpty) return 0;
+    if (a == b) return 1;
+    Set<String> bigrams(String s) {
+      if (s.length < 2) return {s};
+      return {for (var i = 0; i < s.length - 1; i++) s.substring(i, i + 2)};
+    }
+    final ba = bigrams(a), bb = bigrams(b);
+    final overlap = ba.intersection(bb).length;
+    return (2 * overlap) / (ba.length + bb.length);
   }
 
   static Iterable<String> _titleSegments(String input) sync* {
