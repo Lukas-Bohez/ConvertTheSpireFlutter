@@ -6,8 +6,10 @@ import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/safe_json.dart';
+import 'deno_runtime_service.dart';
 import 'network_proxy_service.dart';
 import 'platform_dirs.dart';
 
@@ -31,9 +33,6 @@ class YtDlpService {
   static DateTime? _lastAutoUpdate;
 
   static const Duration _autoUpdateCooldown = Duration(hours: 2);
-
-  /// Resolved Deno JS runtime path (per session), avoids re-probing/downloading.
-  static String? _denoPath;
 
   Future<String> _getYtDlpWorkingDir() async {
     final temp = await getTemporaryDirectory();
@@ -350,6 +349,53 @@ class YtDlpService {
     await updateYtDlp(configuredPath: configuredPath, onProgress: onProgress);
   }
 
+  static const Duration _minUpdateCheckInterval = Duration(hours: 1);
+
+  /// Fetch the latest yt-dlp release metadata, cached for an hour to avoid
+  /// exhausting GitHub's unauthenticated 60 req/hr/IP rate limit.
+  static Future<Map<String, dynamic>> _cachedFetchLatestRelease() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastCheck = prefs.getInt('yt_dlp_last_update_check_ms');
+    final cachedJson = prefs.getString('yt_dlp_cached_release_json');
+    if (lastCheck != null && cachedJson != null) {
+      final elapsed =
+          DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(lastCheck));
+      if (elapsed < _minUpdateCheckInterval && cachedJson.isNotEmpty) {
+        try {
+          final cached = jsonDecode(cachedJson) as Map<String, dynamic>;
+          debugPrint('yt-dlp update check: cache hit (${cached['tag_name']})');
+          return cached;
+        } catch (_) {
+          // Cache corrupted — fall through to re-fetch.
+        }
+      }
+    }
+
+    final response = await http.get(
+      Uri.parse('https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest'),
+      headers: {'Accept': 'application/vnd.github+json'},
+    );
+    if (response.statusCode == 403) {
+      throw Exception(
+          'GitHub API rate-limited (60 req/hr for unauthenticated '
+          'requests) — try again later.');
+    }
+    if (response.statusCode != 200) {
+      throw Exception('GitHub API failed: ${response.statusCode}');
+    }
+
+    final release = jsonDecode(response.body) as Map<String, dynamic>;
+    final tag = (release['tag_name'] ?? '').toString().trim();
+    if (tag.isEmpty) {
+      throw Exception('GitHub API returned an empty release tag');
+    }
+
+    await prefs.setInt('yt_dlp_last_update_check_ms', DateTime.now().millisecondsSinceEpoch);
+    await prefs.setString('yt_dlp_cached_release_json', response.body);
+    debugPrint('yt-dlp update check: fetched latest tag $tag');
+    return release;
+  }
+
   /// Force-update the local yt-dlp binary by re-downloading it.
   ///
   /// This is useful when YouTube breaks and a newer yt-dlp release is needed.
@@ -376,19 +422,8 @@ class YtDlpService {
 
     try {
       onProgress?.call(5, 'Checking latest yt-dlp release');
-      final response = await http.get(
-        Uri.parse('https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest'),
-        headers: {'Accept': 'application/vnd.github+json'},
-      );
-      if (response.statusCode != 200) {
-        throw Exception('GitHub API failed: ${response.statusCode}');
-      }
-
-      final release = jsonDecode(response.body) as Map<String, dynamic>;
+      final release = await _cachedFetchLatestRelease();
       final latestTag = (release['tag_name'] ?? '').toString().trim();
-      if (latestTag.isEmpty) {
-        throw Exception('GitHub API returned an empty release tag');
-      }
 
       final ytDlpPath = await _getYtDlpPath(configuredPath);
       final currentVersion = await _getCurrentYtDlpVersion(ytDlpPath);
@@ -591,7 +626,7 @@ class YtDlpService {
     await _tryApplyNodeRuntime(args);
     // Ensure a JS runtime (Deno) is available for nsig/SABR extraction — a
     // missing/old runtime is a common cause of "page needs to be reloaded".
-    await _tryApplyDenoRuntime(args, onProgress);
+    await _tryApplyDenoRuntime(args);
     // Use tv client which doesn't trigger SABR-only streaming experiment
     args.addAll(['--extractor-args', 'youtube:player_client=tv,web']);
 
@@ -735,9 +770,13 @@ class YtDlpService {
               rethrow;
             }
           } catch (updateErr) {
-            // Self-update failed; surface the original download error.
+            // Self-update failed; surface the original download error with
+            // the reason the update didn't happen.
             debugPrint('yt-dlp self-update failed ($updateErr); not retrying');
-            rethrow;
+            throw Exception(
+                'yt-dlp hit a reload/playability error and the follow-up '
+                'self-update failed: $updateErr. Try updating manually in '
+                'Settings, or try again later.');
           }
         } else {
           rethrow;
@@ -994,150 +1033,17 @@ class YtDlpService {
   /// Ensure a JavaScript runtime (Deno) is available so yt-dlp can evaluate
   /// YouTube's signature / nsig / SABR player code. Without one, modern
   /// yt-dlp emits "The page needs to be reloaded" / UNPLAYABLE errors.
-  ///
-  /// Tries an existing Deno install first; if none is found it downloads the
-  /// standalone Deno binary into the app support dir (lazy, ~25-30 MB) and
-  /// reuses it for the rest of the session. Never throws.
-  Future<void> _tryApplyDenoRuntime(
-    List<String> args,
-    void Function(int pct, String? speed, String? eta)? onProgress,
-  ) async {
+
+  /// Delegates to the shared [DenoRuntimeService] so the same provisioned
+  /// binary is reused by youtube_explode_dart's `DenoEJSSolver`. Never throws。
+  Future<void> _tryApplyDenoRuntime(List<String> args) async {
     if (kIsWeb || Platform.isAndroid || Platform.isIOS) return;
-    try {
-      if (_denoPath != null && await File(_denoPath!).exists()) {
-        args.addAll(['--js-runtimes', 'deno:$_denoPath']);
-        debugPrint('yt-dlp: using Deno runtime at $_denoPath');
-        return;
-      }
-
-      // Look for an existing Deno install on common paths / PATH.
-      final String? denoPath = await _locateExistingDeno();
-      if (denoPath != null && await File(denoPath).exists()) {
-        _denoPath = denoPath;
-        args.addAll(['--js-runtimes', 'deno:$denoPath']);
-        debugPrint('yt-dlp: found existing Deno runtime at $denoPath');
-        return;
-      }
-
-      // Download a bundled Deno binary for the current platform.
-      final support = await PlatformDirs.getAppSupportDir();
-      if (support == null) return;
-      final binDir = Directory(p.join(
-          support.path, 'deno'));
-      if (!await binDir.exists()) await binDir.create(recursive: true);
-
-      final bool isWindows = Platform.isWindows;
-      final String assetName;
-      final bool isArmMac = Platform.isMacOS &&
-          (await _cpuArchitecture() == 'arm64');
-      if (isWindows) {
-        assetName = 'deno-x86_64-pc-windows-msvc.zip';
-      } else if (Platform.isLinux) {
-        assetName = 'deno-x86_64-unknown-linux-gnu.zip';
-      } else if (isArmMac) {
-        assetName = 'deno-aarch64-apple-darwin.zip';
-      } else {
-        assetName = 'deno-x86_64-apple-darwin.zip';
-      }
-
-      final url =
-          'https://github.com/denoland/deno/releases/latest/download/$assetName';
-      final destBase = p.join(binDir.path,
-          assetName.replaceAll('.zip', ''));
-      if (await File(destBase).exists()) {
-        _denoPath = destBase;
-        args.addAll(['--js-runtimes', 'deno:$destBase']);
-        debugPrint('yt-dlp: using previously bundled Deno at $destBase');
-        return;
-      }
-
-      debugPrint('yt-dlp: downloading Deno runtime ($assetName)');
-      final dl = await http.get(Uri.parse(url)).timeout(
-            const Duration(seconds: 60),
-          );
-      if (dl.statusCode != 200) {
-        debugPrint('yt-dlp: Deno download failed HTTP ${dl.statusCode}');
-        return;
-      }
-      final zipPath = p.join(binDir.path, assetName);
-      await File(zipPath).writeAsBytes(dl.bodyBytes, flush: true);
-
-      // Deno ships as a zip containing the single binary — extract it.
-      if (isWindows) {
-        final out = await Process.run('tar',
-            ['-xf', zipPath, '-C', binDir.path],
-            runInShell: true);
-        if (out.exitCode != 0) {
-          // Fall back to Expand-Archive on Windows PowerShell.
-          await Process.run('powershell',
-              ['-NoProfile', '-Command',
-               "Expand-Archive -Force '${zipPath.replaceAll("'", "''")}' -DestinationPath '${binDir.path.replaceAll("'", "''")}'"],
-              runInShell: true);
-        }
-      } else {
-        await Process.run('tar', ['-xf', zipPath, '-C', binDir.path],
-            runInShell: true);
-        await Process.run('chmod', ['+x', destBase]);
-      }
-      try {
-        await File(zipPath).delete();
-      } catch (_) {}
-
-      if (await File(destBase).exists()) {
-        _denoPath = destBase;
-        args.addAll(['--js-runtimes', 'deno:$destBase']);
-        debugPrint('yt-dlp: Deno runtime ready at $destBase');
-      } else {
-        debugPrint('yt-dlp: Deno extraction produced no binary at $destBase');
-      }
-    } catch (e) {
-      debugPrint('yt-dlp: failed to provision Deno runtime: $e');
-    }
+    final deno = await DenoRuntimeService.resolveOrDownload();
+    if (deno == null || !deno.trim().isNotEmpty) return;
+    args.addAll(['--js-runtimes', 'deno:$deno']);
+    debugPrint('yt-dlp: using Deno runtime at $deno');
   }
 
-  /// Look for a system Deno install (common paths then PATH).
-  Future<String?> _locateExistingDeno() async {
-    const paths = [
-      'C:\\Program Files\\deno\\deno.exe',
-      '/usr/bin/deno',
-      '/usr/local/bin/deno',
-      '/opt/homebrew/bin/deno',
-      '/root/.deno/bin/deno',
-    ];
-    for (final pPath in paths) {
-      if (await File(pPath).exists()) return pPath;
-    }
-    try {
-      final result = await Process.run(
-        Platform.isWindows ? 'where' : 'which', ['deno'],
-        runInShell: true,
-      ).timeout(const Duration(seconds: 5));
-      if (result.exitCode == 0) {
-        final lines = result.stdout.toString().trim()
-            .split(RegExp(r'\r?\n'));
-        for (final l in lines) {
-          if (l.trim().isNotEmpty) {
-            final candidate = l.trim();
-            if (await File(candidate).exists()) return candidate;
-          }
-        }
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  Future<String> _cpuArchitecture() async {
-    try {
-      final r = await Process.run(Platform.isWindows ? 'echo' : 'uname',
-          Platform.isWindows ? ['%PROCESSOR_ARCHITECTURE%'] : ['-m'],
-          runInShell: true);
-      return r.stdout.toString().trim().toLowerCase();
-    } catch (_) {
-      return 'x86_64';
-    }
-  }
-
-  /// Apply proxy settings to yt-dlp arguments if configured.
   Future<void> _applyProxyArg(List<String> args) async {
     final proxy = await NetworkProxyService.ytDlpProxyUrl();
     if (proxy != null && proxy.isNotEmpty) {
