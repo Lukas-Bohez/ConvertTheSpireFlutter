@@ -356,20 +356,36 @@ jobs:
       - name: Decode keystore
         shell: bash
         run: |
-          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
+          if [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set - refusing to build a debug-signed release APK."
+            echo "::error::Users with the release-signed build could not update over it (signature mismatch)."
+            exit 1
           fi
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
 
       - name: Write key.properties
         shell: bash
         run: |
-          if [ -n "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ]; then
-            cat > android/key.properties <<EOF
+          if [ -z "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ]; then
+            echo "::error::ANDROID_KEYSTORE_PASSWORD is not set - refusing to build a debug-signed release APK."
+            exit 1
+          fi
+          cat > android/key.properties <<EOF
           storeFile=upload-keystore.jks
           storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
           keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
           EOF
+
+      - name: Verify release signing (fail on debug cert)
+        shell: bash
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          CERT=$("$BT/apksigner" verify --print-certs build/app/outputs/flutter-apk/app-full-release.apk | grep 'CN=')
+          echo "$CERT"
+          if echo "$CERT" | grep -qi 'Android Debug'; then
+            echo "::error::Release APK is debug-signed - aborting."
+            exit 1
           fi
 
       - name: Build APK (GitHub release flavor)

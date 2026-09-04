@@ -1,5 +1,11 @@
 # Changelog
 
+## 13.0.7+1270 — Hotfix: Updates + Torrent Loading
+
+### Fixed
+- **GitHub-build updates failing to install** — the v13.0.6 CI build was signed with the debug certificate because the signing secrets were missing from the repository, so updating over a release-signed install failed with a signature mismatch. The keystore is now configured as a repo secret, the workflow hard-fails if signing secrets are absent, and the built APK is verified not debug-signed before publishing. Existing installs can update over-the-top again with this release.
+- **Torrents stuck on an endless spinner** — 13.0.6 keyed the vault database with an encryption key while SQLCipher was not loaded in the shipped binaries; the database open threw and the torrents screen never loaded. The database now opens unencrypted (as before 13.0.6) and the key provisioning is disabled until real SQLCipher support ships with a proper migration.
+
 ## 13.0.6+1269 — Reliability Pass v2 Completion + Monetization Wiring
 
 ### Fixed

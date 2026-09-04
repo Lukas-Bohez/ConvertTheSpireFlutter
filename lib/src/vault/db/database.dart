@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -35,17 +36,22 @@ class AppDatabase {
         await db.rawQuery('PRAGMA foreign_keys = ON');
 
         if (_encryptionKey != null && _encryptionKey!.isNotEmpty) {
-          await db.rawQuery(
-            "PRAGMA key = '${_encryptionKey!.replaceAll("'", "''")}'",
-          );
-
           final cipherRows = await db.rawQuery('PRAGMA cipher_version;');
           final cipherVersion = cipherRows.isNotEmpty
               ? cipherRows.first.values.first?.toString() ?? ''
               : '';
           if (cipherVersion.isEmpty) {
-            throw StateError(
-                'SQLCipher not loaded  -  check your dependencies!');
+            // SQLCipher is not loaded in this build. Keying the database
+            // anyway would make every read fail — ignore the key and open
+            // the database unencrypted instead of throwing (13.0.6 regression).
+            debugPrint(
+                'AppDatabase: encryption key set but SQLCipher not loaded - '
+                'opening database unencrypted.');
+            _encryptionKey = null;
+          } else {
+            await db.rawQuery(
+              "PRAGMA key = '${_encryptionKey!.replaceAll("'", "''")}'",
+            );
           }
         }
       },

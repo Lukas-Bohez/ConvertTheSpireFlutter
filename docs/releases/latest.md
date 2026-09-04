@@ -1,17 +1,15 @@
-# Release Notes - v13.0.5
+# Release Notes - v13.0.7
 
-## yt-dlp / youtube_explode_dart Reliability Pass v2
+## Hotfix: Updates + Torrent Loading
 
 ## Highlights
 
-* **Android playlist loading fixed.** Large YouTube playlists (e.g. 785 tracks) now load reliably. The app wires a JS-challenge solver (Deno) into youtube_explode_dart — the same runtime yt-dlp uses — so YouTube's bot check no longer silently starves the playlist stream.
-* **CJK title matching improved.** Downloaded tracks with Japanese/Chinese titles no longer get marked as "missing" when re-scanned. Added character-bigram similarity as a fallback tier so titles without spaces between words match correctly.
-* **Japanese author names display correctly.** Broadened filename artist parsing to recognize `/`, `_`, and `【】` tag prefixes (common in Japanese/VOCALOID uploads), and switched the local-library tag read to the same metadata package the rest of the codebase already trusts.
-* **"Could not check for updates" no longer intermittent.** The update check is now cached for an hour and branches on GitHub's 403 rate-limit response with a clear message.
-* **"yt-dlp missing" no longer shows during active downloads.** The status indicator now distinguishes "checking", "transient error", and "genuinely not configured".
+* **GitHub-build updates install again.** The v13.0.6 release APK was signed with the debug certificate (missing CI signing secrets), so it could not install over a release-signed build. Signing is now configured in CI, guarded, and verified before publishing. Installing v13.0.7 over any previous release works normally — no uninstall needed.
+* **Torrents list loads again.** 13.0.6 keyed the vault database while SQLCipher was not loaded, so the database open failed and the torrents screen spun forever. The database opens unencrypted again; DB encryption returns later together with a real SQLCipher dependency and migration.
 
 ## Build Notes
 
-* GitHub release tag: `v13.0.5`
-* Release page: [v13.0.5](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.5)
-* `flutter analyze` and `flutter test --coverage` pass cleanly.
+* GitHub release tag: `v13.0.7`
+* Release page: [v13.0.7](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.7)
+* `flutter analyze` passes cleanly.
+* Play AAB not required for this hotfix (Play builds were unaffected).
