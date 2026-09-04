@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../config/build_flags.dart';
+import '../theme/motion_tokens.dart';
 import '../widgets/tv_safe_area.dart';
 
 /// A multi-page onboarding flow that introduces the app's features.
@@ -199,9 +200,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _pages = _buildPages();
     _themeMode = widget.themeMode;
     _controller = PageController();
-    _animController = AnimationController(
+        _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 320),
+      duration: MotionTokens.standard,
     );
     _setupAnimations();
 
@@ -216,12 +217,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     // Use a subtle fade (0.92 -> 1.0) instead of full fade-from-black to
     // avoid transient black flashes on slower mobile devices when pages are
     // rebuilt during fast swipes.
-    _fadeAnim = Tween<double>(begin: 0.92, end: 1.0).animate(
-        CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+        _fadeAnim = Tween<double>(begin: 0.92, end: 1.0).animate(
+        CurvedAnimation(parent: _animController, curve: MotionTokens.enter));
     _slideAnim = Tween<Offset>(
       begin: const Offset(0, 0.04),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    ).animate(CurvedAnimation(parent: _animController, curve: MotionTokens.enter));
   }
 
   @override
@@ -238,9 +239,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   void _next() {
     if (_page < _pages.length - 1) {
-      _controller.nextPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
+            _controller.nextPage(
+        duration: MotionTokens.standard,
+        curve: MotionTokens.standardCurve,
       );
     }
   }
@@ -255,9 +256,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   void _back() {
     if (_page > 0) {
-      _controller.previousPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
+            _controller.previousPage(
+        duration: MotionTokens.standard,
+        curve: MotionTokens.standardCurve,
       );
     }
   }
@@ -340,8 +341,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             borderRadius: BorderRadius.circular(4),
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: progress),
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOut,
+              duration: MotionTokens.standard,
+              curve: MotionTokens.standardCurve,
               builder: (context, value, _) => LinearProgressIndicator(
                 value: value,
                 minHeight: 5,
@@ -362,8 +363,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       children: List.generate(_pages.length, (i) {
         final bool active = i == _page;
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
+          duration: MotionTokens.standard,
+          curve: MotionTokens.standardCurve,
           width: active ? 22 : 7,
           height: 7,
           margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
@@ -386,7 +387,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         onTap: _cycleTheme,
         borderRadius: BorderRadius.circular(20),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
+          duration: MotionTokens.quick,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: pageColor.withValues(alpha: 0.12),
@@ -462,7 +463,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ),
         // Next / Done
         AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
+          duration: MotionTokens.quick,
           child: isLast
               ? ElevatedButton.icon(
                   key: const ValueKey('done'),
