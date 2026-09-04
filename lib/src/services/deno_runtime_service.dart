@@ -14,6 +14,7 @@ class DenoRuntimeService {
 
   static Future<String?> resolveOrDownload() async {
     if (kIsWeb) return null;
+    if (Platform.isAndroid || Platform.isIOS) return null;
     if (_cachedPath != null && await File(_cachedPath!).exists()) {
       return _cachedPath;
     }
