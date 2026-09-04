@@ -110,7 +110,8 @@ class _AdNativeSlotState extends State<AdNativeSlot> {
       return const SizedBox.shrink();
     }
 
-    _nativeFuture ??= AdService.instance.loadNativeAd();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    _nativeFuture ??= AdService.instance.loadNativeAd(isDark: isDark);
     return FutureBuilder<NativeAd?>(
       future: _nativeFuture,
       builder: (context, snapshot) {

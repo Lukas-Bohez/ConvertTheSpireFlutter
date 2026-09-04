@@ -13,6 +13,7 @@ import '../services/ad_service.dart';
 import '../services/purchase_service.dart';
 import '../state/app_controller.dart';
 import '../utils/snack.dart';
+import '../widgets/monetization_widgets.dart';
 
 /// Support and monetization page for donations, ads, and the Remove Ads unlock.
 class SupportScreen extends StatefulWidget {
@@ -617,6 +618,8 @@ class _SupportScreenState extends State<SupportScreen> {
             onTap: () => _openUrl('https://github.com/sponsors/Lukas-Bohez'),
           ),
         ),
+        const SizedBox(height: 12),
+        if (!purchase.isAdFree && playAdMode) const AdBannerSlot(),
         const SizedBox(height: 16),
         Card(
           child: Padding(

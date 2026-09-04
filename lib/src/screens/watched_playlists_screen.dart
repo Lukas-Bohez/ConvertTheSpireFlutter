@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/watched_playlist_service.dart';
 import '../utils/snack.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/monetization_widgets.dart';
 import '../widgets/tv_file_browser.dart';
 
 class PlaylistFolderConfig {
@@ -266,9 +267,17 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     separatorBuilder: (_, __) => const SizedBox(height: 4),
-                    itemCount: _urls.length,
+                    itemCount: _urls.length + (_urls.length ~/ 6),
                     itemBuilder: (context, index) {
-                      final url = _urls[index];
+                      const adInterval = 7;
+                      if ((index + 1) % adInterval == 0) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: AdNativeSlot(),
+                        );
+                      }
+                      final realIndex = index - (index ~/ adInterval);
+                      final url = _urls[realIndex];
                       final folder = _playlistFolders[url];
                       String folderLabel;
                       if (folder == null || !folder.hasAny) {

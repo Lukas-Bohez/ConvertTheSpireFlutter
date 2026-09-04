@@ -320,16 +320,22 @@ class AdService with WidgetsBindingObserver {
     return completer.future;
   }
 
-  Future<NativeAd?> loadNativeAd() async {
+  Future<NativeAd?> loadNativeAd({bool isDark = false}) async {
     if (!_isSupportedPlatform || _adsSuppressed) return null;
     final completer = Completer<NativeAd?>();
     late final NativeAd nativeAd;
+
+    final backgroundColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final primaryTextColor = isDark ? Colors.white : Colors.black87;
+    final secondaryTextColor = isDark ? Colors.white70 : Colors.black54;
+    final tertiaryTextColor = isDark ? Colors.white54 : Colors.black45;
+
     nativeAd = NativeAd(
       adUnitId: nativeAdUnitId,
       request: const AdRequest(),
       nativeTemplateStyle: NativeTemplateStyle(
         templateType: TemplateType.medium,
-        mainBackgroundColor: Colors.white,
+        mainBackgroundColor: backgroundColor,
         cornerRadius: 12,
         callToActionTextStyle: NativeTemplateTextStyle(
           textColor: Colors.white,
@@ -338,16 +344,16 @@ class AdService with WidgetsBindingObserver {
           style: NativeTemplateFontStyle.bold,
         ),
         primaryTextStyle: NativeTemplateTextStyle(
-          textColor: Colors.black87,
+          textColor: primaryTextColor,
           size: 14,
           style: NativeTemplateFontStyle.bold,
         ),
         secondaryTextStyle: NativeTemplateTextStyle(
-          textColor: Colors.black54,
+          textColor: secondaryTextColor,
           size: 12,
         ),
         tertiaryTextStyle: NativeTemplateTextStyle(
-          textColor: Colors.black45,
+          textColor: tertiaryTextColor,
           size: 11,
         ),
       ),
