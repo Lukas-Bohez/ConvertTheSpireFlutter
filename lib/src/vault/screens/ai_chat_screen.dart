@@ -16,11 +16,18 @@ class AiChatScreen extends StatefulWidget {
 }
 
 class _AiChatScreenState extends State<AiChatScreen> {
-  final TextEditingController _baseUrlController = TextEditingController(
-    text: !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-        ? kAndroidLocalOllamaUrl
-        : 'http://localhost:11434',
-  );
+  late final TextEditingController _baseUrlController;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialUrl = !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+        ? '' // Real devices need the host PC's LAN IP; 10.0.2.2 only works in emulator
+        : 'http://localhost:11434';
+    _baseUrlController = TextEditingController(text: initialUrl);
+    _aiService = AiCopilotService(baseUrl: initialUrl);
+    _initialize();
+  }
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
 
@@ -37,13 +44,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
   DateTime _lastStreamPaint = DateTime.fromMillisecondsSinceEpoch(0);
   static const Duration _streamPaintInterval = Duration(milliseconds: 80);
   String _pendingAssistantText = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _aiService = AiCopilotService(baseUrl: _baseUrlController.text.trim());
-    _initialize();
-  }
 
   @override
   void dispose() {
@@ -131,9 +131,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     setState(() {
       _checking = false;
-      _status = ok
-          ? 'Connected to Ollama at $trimmed'
-          : 'Cannot reach Ollama at $trimmed';
+      if (ok) {
+        _status = 'Connected to Ollama at $trimmed';
+      } else if (_isAndroid) {
+        _status = 'Can\'t reach that address. Make sure Ollama is running on '
+            'your computer with OLLAMA_HOST=0.0.0.0 set, and that your phone '
+            'is on the same Wi-Fi network.';
+      } else {
+        _status = 'Cannot reach Ollama at $trimmed';
+      }
     });
 
     if (ok) {
@@ -419,50 +425,86 @@ class _AiChatScreenState extends State<AiChatScreen> {
     );
   }
 
+  bool get _isAndroid =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
   Widget _buildControlPanel(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
+        if (_isAndroid) ...[
+          const Icon(Icons.wifi, size: 32),
+          const SizedBox(height: 8),
+          const Text(
+            'Connect to Ollama on your network',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Ollama needs to run on a computer on the same Wi-Fi network '
+            'as this device. On that computer, expose Ollama to the network '
+            'with:',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          SelectableText(
+            'OLLAMA_HOST=0.0.0.0 ollama serve',
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Then enter your computer\'s IP address below. Note: this only '
+            'works on trusted local networks — Ollama has no built-in auth.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+        ],
         TextField(
           controller: _baseUrlController,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Ollama URL',
-            hintText: 'http://localhost:11434',
-            border: OutlineInputBorder(),
+            hintText: _isAndroid
+                ? 'http://192.168.1.x:11434'
+                : 'http://localhost:11434',
+            border: const OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _checking ? null : _connect,
-                icon: const Icon(Icons.link),
-                label: const Text('Connect'),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _startOllamaServer,
-                icon: const Icon(Icons.play_arrow),
-                label: const Text('Start Local'),
-              ),
-            ),
-          ],
+        ElevatedButton.icon(
+          onPressed: _checking ? null : _connect,
+          icon: const Icon(Icons.link),
+          label: const Text('Connect'),
         ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _installOllama,
-                icon: const Icon(Icons.download),
-                label: const Text('Install Ollama'),
+        if (!_isAndroid) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _startOllamaServer,
+                  icon: const Icon(Icons.play_arrow),
+                  label: const Text('Start Local'),
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _installOllama,
+                  icon: const Icon(Icons.download),
+                  label: const Text('Install Ollama'),
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 8),
         Text(
           _ollamaInstalled ? 'Ollama CLI detected' : 'Ollama CLI not detected',
