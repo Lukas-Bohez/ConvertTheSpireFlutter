@@ -779,7 +779,16 @@ class YtDlpService {
                 'Settings, or try again later.');
           }
         } else {
-          rethrow;
+          // Self-update on cooldown — still attempt one plain retry with the
+          // same binary before giving up. Costs nothing extra and may recover
+          // a purely transient hiccup unrelated to yt-dlp's version.
+          debugPrint('yt-dlp: reload error, self-update on cooldown — plain retry');
+          try {
+            await runAttempt([for (final a in args) a]);
+            return;
+          } catch (_) {
+            rethrow;
+          }
         }
       } else {
         rethrow;
