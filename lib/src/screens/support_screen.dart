@@ -13,6 +13,7 @@ import '../services/ad_service.dart';
 import '../services/purchase_service.dart';
 import '../state/app_controller.dart';
 import '../utils/snack.dart';
+import '../widgets/monetization_widgets.dart';
 
 /// Support and monetization page for donations, ads, and the Remove Ads unlock.
 class SupportScreen extends StatefulWidget {
@@ -606,7 +607,19 @@ class _SupportScreenState extends State<SupportScreen> {
             onTap: () => _openUrl('https://buymeacoffee.com/orokaconner'),
           ),
         ),
-        const SizedBox(height: 12),
+                const SizedBox(height: 12),
+        if (kPlayStoreBuild)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.open_in_browser, color: Colors.blue),
+              title: const Text('Advanced build on GitHub'),
+              subtitle: const Text('Open-source build with all features enabled'),
+              trailing: const Icon(Icons.open_in_new),
+              onTap: () => _openUrl(
+                  'https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases'),
+            ),
+          ),
+        if (kPlayStoreBuild) const SizedBox(height: 12),
         Card(
           child: ListTile(
             leading: const Icon(Icons.favorite, color: Colors.pink),
@@ -617,6 +630,8 @@ class _SupportScreenState extends State<SupportScreen> {
             onTap: () => _openUrl('https://github.com/sponsors/Lukas-Bohez'),
           ),
         ),
+        const SizedBox(height: 12),
+        if (!purchase.isAdFree && playAdMode) const AdBannerSlot(),
         const SizedBox(height: 16),
         Card(
           child: Padding(

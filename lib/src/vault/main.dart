@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:convert_the_spire_reborn/src/config/build_flags.dart';
-import 'package:convert_the_spire_reborn/src/vault/db/sqlcipher_bootstrap.dart';
+import 'package:convert_the_spire_reborn/src/vault/db/database.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/desktop_window.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/hotkeys.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/notifications_desktop.dart';
@@ -16,6 +16,7 @@ import 'package:convert_the_spire_reborn/src/vault/services/theme_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/tray_service.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/vault_key_service.dart';
 import 'package:convert_the_spire_reborn/src/widgets/adaptive_ui_frame.dart';
 import 'package:dtorrent_task_v2/dtorrent_task_v2.dart' as dt;
 import 'package:flutter/foundation.dart'
@@ -120,7 +121,12 @@ Future<void> main() async {
       }
       await setupServiceLocator();
       await _initializeMetadataCache();
-      await initSqlCipherOnAndroid();
+      try {
+        final dbKey = await VaultKeyService.getOrCreateKey();
+        AppDatabase.setEncryptionKey(dbKey);
+      } catch (e) {
+        debugPrint('Vault: failed to provision DB encryption key: $e');
+      }
       await _requestAndroidPermissions();
 
       if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {

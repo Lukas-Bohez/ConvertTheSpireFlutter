@@ -14,7 +14,7 @@ Future<void> initBackgroundService() async {
     androidConfiguration: AndroidConfiguration(
       onStart: onServiceStart,
       autoStart: false,
-      isForegroundMode: false,
+      isForegroundMode: true,
       notificationChannelId: 'torrent_engine_channel',
       initialNotificationTitle: 'Vault The Spire Torrent Service',
       initialNotificationContent: 'Initializing torrent background service...',

@@ -1,7 +1,8 @@
-import 'package:convert_the_spire_reborn/src/vault/db/sqlcipher_bootstrap.dart';
+import 'package:convert_the_spire_reborn/src/vault/db/database.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/identity_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/vault_key_service.dart';
 import 'package:flutter/foundation.dart';
 
 class VaultBootstrap {
@@ -15,7 +16,15 @@ class VaultBootstrap {
 
   static Future<void> _initialize() async {
     try {
-      await initSqlCipherOnAndroid();
+      // Provision DB encryption key before any DB access. No-op if SQLCipher
+      // isn't available — the AppDatabase guard handles that gracefully.
+      try {
+        final dbKey = await VaultKeyService.getOrCreateKey();
+        AppDatabase.setEncryptionKey(dbKey);
+      } catch (e) {
+        debugPrint('Vault: failed to provision DB encryption key: $e');
+      }
+
       await SettingsService.instance.load();
       await IdentityService.instance.initialize();
       await TorrentService.instance.resumeActiveTorrents();

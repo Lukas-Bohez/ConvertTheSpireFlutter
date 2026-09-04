@@ -44,6 +44,7 @@ import 'services/settings_store.dart';
 import 'services/statistics_service.dart';
 import 'services/tray_service.dart';
 import 'services/watched_playlist_service.dart';
+import 'services/webview_ejs_solver.dart';
 import 'services/youtube_service.dart';
 import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
@@ -191,13 +192,16 @@ class _MyAppState extends State<MyApp>
   Future<YoutubeExplode> _createYoutubeExplode() async {
     if (kIsWeb) return YoutubeExplode();
     try {
+      if (Platform.isAndroid || Platform.isIOS) {
+        return YoutubeExplode(jsSolver: WebViewEJSSolver());
+      }
       final denoPath = await DenoRuntimeService.resolveOrDownload();
       if (denoPath != null) {
         final solver = await DenoEJSSolver.init(denoExe: denoPath);
         return YoutubeExplode(jsSolver: solver);
       }
     } catch (e) {
-      debugPrint('MyApp: failed to wire DenoEJSSolver: $e');
+      debugPrint('MyApp: failed to wire jsSolver: $e');
     }
     return YoutubeExplode();
   }

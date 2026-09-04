@@ -779,7 +779,16 @@ class YtDlpService {
                 'Settings, or try again later.');
           }
         } else {
-          rethrow;
+          // Self-update on cooldown — still attempt one plain retry with the
+          // same binary before giving up. Costs nothing extra and may recover
+          // a purely transient hiccup unrelated to yt-dlp's version.
+          debugPrint('yt-dlp: reload error, self-update on cooldown — plain retry');
+          try {
+            await runAttempt([for (final a in args) a]);
+            return;
+          } catch (_) {
+            rethrow;
+          }
         }
       } else {
         rethrow;
@@ -880,6 +889,23 @@ class YtDlpService {
     }
     for (final path in candidates) {
       await _safeDelete(path);
+    }
+
+    // Scan the output directory for any remaining file sharing the same stem.
+    // Catches intermediate files yt-dlp was writing when killed (e.g. a partial
+    // .mp4/.webm source download that hadn't been extracted to the final format
+    // yet) that the known-suffix list above might miss.
+    // Note: matches by exact stem, so two different queued videos that sanitize
+    // to the same filename could theoretically collide — low-risk since both
+    // would have to be mid-flight at the exact same moment.
+    final dir = Directory(p.dirname(outputPath));
+    final stem = p.basenameWithoutExtension(outputPath);
+    if (await dir.exists()) {
+      await for (final entity in dir.list()) {
+        if (entity is File && p.basenameWithoutExtension(entity.path) == stem) {
+          await _safeDelete(entity.path);
+        }
+      }
     }
   }
 
