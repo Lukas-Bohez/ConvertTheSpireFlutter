@@ -377,19 +377,29 @@ jobs:
           keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
           EOF
 
+      - name: Build APK (GitHub release flavor)
+        run: flutter build apk --flavor full --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
+
       - name: Verify release signing (fail on debug cert)
         shell: bash
         run: |
-          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
-          CERT=$("$BT/apksigner" verify --print-certs build/app/outputs/flutter-apk/app-full-release.apk | grep 'CN=')
-          echo "$CERT"
-          if echo "$CERT" | grep -qi 'Android Debug'; then
-            echo "::error::Release APK is debug-signed - aborting."
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-full-release.apk
+          if [ ! -f "$APK" ]; then
+            echo "::error::Release APK not found at $APK"
             exit 1
           fi
-
-      - name: Build APK (GitHub release flavor)
-        run: flutter build apk --flavor full --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          CERT=$("$BT/apksigner" verify --print-certs "$APK" | grep 'CN=' || true)
+          echo "$CERT"
+          if [ -z "$CERT" ]; then
+            echo "::error::Could not read signing certificate from release APK."
+            exit 1
+          fi
+          if echo "$CERT" | grep -qi 'Android Debug'; then
+            echo "::error::Release APK is debug-signed - aborting. Users could not update over a release-signed install."
+            exit 1
+          fi
 
       - name: Build AAB (Play Store flavor)
         run: flutter build appbundle --flavor play --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=true --dart-define=GITHUB_RELEASE=false
