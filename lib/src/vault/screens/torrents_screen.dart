@@ -8,6 +8,7 @@ import 'package:convert_the_spire_reborn/src/vault/screens/torrent_detail_screen
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
+import 'package:convert_the_spire_reborn/src/widgets/empty_state.dart';
 import 'package:convert_the_spire_reborn/src/widgets/tv_file_browser.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -918,83 +919,56 @@ class _TorrentsScreenState extends State<TorrentsScreen>
   Widget _buildEmptyState() {
     final hasFolder =
         SettingsService.instance.downloadDestination.trim().isNotEmpty;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              hasFolder
-                  ? Icons.download_for_offline_outlined
-                  : Icons.folder_open_outlined,
-              size: 72,
-              color: Theme.of(context).colorScheme.outlineVariant,
+    return EmptyState(
+      icon: hasFolder
+          ? Icons.download_for_offline_outlined
+          : Icons.folder_open_outlined,
+      title: hasFolder ? 'No torrents yet' : 'Set Download Folder First',
+      subtitle: hasFolder
+          ? (Platform.isAndroid
+              ? 'Tap + to add or create torrents'
+              : Platform.isIOS
+                  ? 'Tap + to add or create torrents'
+                  : 'Use + in the top bar to add or create torrents\nYou can also drag and drop files')
+          : 'Go to Settings > Download Location and choose a folder on external storage to prevent file corruption from inaccessible app storage.',
+      action: hasFolder
+          ? Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              alignment: WrapAlignment.center,
+              children: [
+                FilledButton.icon(
+                  onPressed: _showAddMagnetDialog,
+                  icon: const Icon(Icons.add_link),
+                  label: const Text('Add Magnet'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _pickTorrentFile,
+                  icon: const Icon(Icons.file_open_outlined),
+                  label: const Text('Add .torrent File'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _openCreateTorrent,
+                  icon: const Icon(Icons.create_new_folder_outlined),
+                  label: const Text('Create Torrent'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    launchUrl(
+                      Uri.parse('https://quizthespire.com/'),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  },
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Visit Quiz the Spire'),
+                ),
+              ],
+            )
+          : FilledButton.icon(
+              onPressed: _showSetDownloadFolderDialog,
+              icon: const Icon(Icons.folder_open),
+              label: const Text('Go to Settings'),
             ),
-            const SizedBox(height: 16),
-            Text(
-              hasFolder ? 'No torrents yet' : 'Set Download Folder First',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              hasFolder
-                  ? (Platform.isAndroid
-                      ? 'Tap + to add or create torrents'
-                      : Platform.isIOS
-                          ? 'Tap + to add or create torrents'
-                          : 'Use + in the top bar to add or create torrents\nYou can also drag and drop files')
-                  : 'Go to Settings > Download Location and choose a folder on external storage to prevent file corruption from inaccessible app storage.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 24),
-            if (hasFolder)
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                alignment: WrapAlignment.center,
-                children: [
-                  FilledButton.icon(
-                    onPressed: _showAddMagnetDialog,
-                    icon: const Icon(Icons.add_link),
-                    label: const Text('Add Magnet'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _pickTorrentFile,
-                    icon: const Icon(Icons.file_open_outlined),
-                    label: const Text('Add .torrent File'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _openCreateTorrent,
-                    icon: const Icon(Icons.create_new_folder_outlined),
-                    label: const Text('Create Torrent'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      launchUrl(
-                        Uri.parse('https://quizthespire.com/'),
-                        mode: LaunchMode.externalApplication,
-                      );
-                    },
-                    icon: const Icon(Icons.open_in_new),
-                    label: const Text('Visit Quiz the Spire'),
-                  ),
-                ],
-              )
-            else
-              FilledButton.icon(
-                onPressed: _showSetDownloadFolderDialog,
-                icon: const Icon(Icons.folder_open),
-                label: const Text('Go to Settings'),
-              ),
-          ],
-        ),
-      ),
     );
   }
 
