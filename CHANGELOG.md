@@ -1,5 +1,21 @@
 # Changelog
 
+## 13.0.6+1269 — Reliability Pass v2 Completion + Monetization Wiring
+
+### Fixed
+- **Android playlist loading** — headless WebView JS challenge solver (`WebViewEJSSolver`) replaces Deno on mobile; Deno stays desktop-only.
+- **Orphaned downloads on cancel** — cancelling no longer leaves behind the intermediate `.mp4`/`.webm` yt-dlp was writing; cleanup now scans for all files sharing the output stem.
+- **Reload errors during update cooldown** — a "page needs to be reloaded" failure now gets a plain retry even while the 2-hour self-update cooldown is active, instead of failing with zero retries.
+- **Reload-error bursts** — 3+ reload errors within 5 minutes are treated as a YouTube-side throttle: the queue pauses for 7 minutes with a visible message instead of hammering into it.
+- **AdMob** — native ads are now theme-aware; new placements in Watched Playlists and the Support screen.
+- **Torrent background survival** — the Android torrent service runs in foreground mode so the OS won't kill it in the background.
+
+### Added
+- **Vault** — database encryption key is now provisioned via `flutter_secure_storage` and wired into both bootstrap paths.
+- **Ollama (Android)** — clearer connectivity UX: desktop-only buttons hidden, network panel with `OLLAMA_HOST=0.0.0.0` guidance, actionable error messages.
+- **Play build** — "Advanced build on GitHub" link added to the Support screen.
+- **Motion tokens** adopted across onboarding; shared `EmptyState` widget reused in the vault torrents screen.
+
 ## 13.0.5+1268 — yt-dlp / youtube_explode_dart Reliability Pass v2
 
 ### Added
