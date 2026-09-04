@@ -110,6 +110,14 @@ class AppController extends ChangeNotifier {
   late final VoidCallback _fullModeListener;
   Future<void> Function()? onLibraryRefreshRequested;
 
+  // Burst detection: reload-error timestamps within the window.
+  // Three or more within 5 minutes triggers a queue pause.
+  final List<DateTime> _reloadErrorTimestamps = [];
+  DateTime? _burstPauseUntil;
+  static const Duration _burstWindow = Duration(minutes: 5);
+  static const int _burstThreshold = 3;
+  static const Duration _burstPauseDuration = Duration(minutes: 7);
+
   void scheduleNotify() {
     if (_notifyPending) return;
     _notifyPending = true;
@@ -692,6 +700,14 @@ class AppController extends ChangeNotifier {
           return;
         }
 
+        // Record reload-errors for burst detection. A burst (3+ within 5 min)
+        // pauses the whole queue instead of continuing to hammer a throttle.
+        if (_isReloadError(msg) && !token.cancelled) {
+          if (_recordReloadErrorAndCheckBurst()) {
+            logs.add('Burst of reload-errors detected — pausing queue for ${_burstPauseDuration.inMinutes} minutes');
+          }
+        }
+
         // Don't retry YouTube permanent errors (bot detection, unavailable, etc.)
         final isRetryable = !_isYouTubePermanentError(msg) &&
             !token.cancelled &&
@@ -739,6 +755,19 @@ class AppController extends ChangeNotifier {
 
         Future<void> worker() async {
           while (true) {
+            // If a burst was detected, pause the queue instead of hammering
+            // a throttle that needs minutes to clear, not seconds.
+            if (isBurstPaused) {
+              final remaining = burstPauseRemaining;
+              if (remaining != null) {
+                final resumeAt = DateTime.now().add(remaining);
+                logs.add(
+                    'Pausing downloads — YouTube may be rate-limiting this session, resuming at ${resumeAt.hour.toString().padLeft(2, '0')}:${resumeAt.minute.toString().padLeft(2, '0')}');
+              }
+              await Future.delayed(const Duration(seconds: 15));
+              continue;
+            }
+
             QueueItem? next;
             if (pending.isEmpty) break;
             // Take the first pending item (work-stealing).
@@ -1001,6 +1030,50 @@ class AppController extends ChangeNotifier {
         lower.contains('does not exist') ||
         lower.contains('taken down') ||
         lower.contains('not supported on web');
+  }
+
+  /// Returns true if the error is a reload/playability error (distinct from
+  /// permanent errors and transient network issues).
+  static bool _isReloadError(String msg) {
+    final lower = msg.toLowerCase();
+    return lower.contains('page needs to be reloaded') ||
+        lower.contains('confirm you') ||
+        lower.contains('not a bot');
+  }
+
+  /// Records a reload-error timestamp and returns true if a burst was detected
+  /// (3+ within the 5-minute window), triggering a queue pause.
+  bool _recordReloadErrorAndCheckBurst() {
+    final now = DateTime.now();
+    _reloadErrorTimestamps.removeWhere(
+        (t) => now.difference(t) > _burstWindow);
+    _reloadErrorTimestamps.add(now);
+
+    if (_reloadErrorTimestamps.length >= _burstThreshold) {
+      _burstPauseUntil = now.add(_burstPauseDuration);
+      _reloadErrorTimestamps.clear();
+      return true;
+    }
+    return false;
+  }
+
+  /// Returns true if the queue is currently paused due to a detected burst.
+  bool get isBurstPaused {
+    final pauseUntil = _burstPauseUntil;
+    if (pauseUntil == null) return false;
+    if (DateTime.now().isAfter(pauseUntil)) {
+      _burstPauseUntil = null;
+      return false;
+    }
+    return true;
+  }
+
+  /// Remaining burst-pause duration, or null if not paused.
+  Duration? get burstPauseRemaining {
+    final pauseUntil = _burstPauseUntil;
+    if (pauseUntil == null) return null;
+    final remaining = pauseUntil.difference(DateTime.now());
+    return remaining.isNegative ? null : remaining;
   }
 
   Future<String?> _ensureFfmpegPath(AppSettings settings, String format) async {
