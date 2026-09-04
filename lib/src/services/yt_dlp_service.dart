@@ -881,6 +881,23 @@ class YtDlpService {
     for (final path in candidates) {
       await _safeDelete(path);
     }
+
+    // Scan the output directory for any remaining file sharing the same stem.
+    // Catches intermediate files yt-dlp was writing when killed (e.g. a partial
+    // .mp4/.webm source download that hadn't been extracted to the final format
+    // yet) that the known-suffix list above might miss.
+    // Note: matches by exact stem, so two different queued videos that sanitize
+    // to the same filename could theoretically collide — low-risk since both
+    // would have to be mid-flight at the exact same moment.
+    final dir = Directory(p.dirname(outputPath));
+    final stem = p.basenameWithoutExtension(outputPath);
+    if (await dir.exists()) {
+      await for (final entity in dir.list()) {
+        if (entity is File && p.basenameWithoutExtension(entity.path) == stem) {
+          await _safeDelete(entity.path);
+        }
+      }
+    }
   }
 
   /// Fallback shell downloader for yt-dlp binary.
