@@ -19,8 +19,8 @@ class PlaylistService {
   final LogService? _logs;
 
   // Inactivity timeout per playlist page. Large playlists over slower/mobile
-  // connections (Android) can idle past 25s between pages, so give room。
-  static const Duration _playlistStreamTimeout = Duration(seconds: 60);
+  // connections (Android) can idle past 60s between pages, so give room.
+  static const Duration _playlistStreamTimeout = Duration(seconds: 180);
 
   String? _lastPlaylistDiagnostics;
   String? get lastPlaylistDiagnostics => _lastPlaylistDiagnostics;
@@ -63,27 +63,57 @@ class PlaylistService {
     }
 
     // --- Step 2: Fallback to youtube_explode_dart (mobile / no yt-dlp) ---
+    // yt-dlp is desktop-only; on Android/iOS every playlist runs through here.
+    // Per-video logging below pinpoints the actual failure shape (slow trickle
+    // vs. immediate empty page vs. exception) on large playlists.
+    _lastPlaylistDiagnostics = null;
     try {
       final playlist = await _yt.playlists.get(playlistId);
       expectedCount = playlist.videoCount ?? 0;
-    } catch (_) {}
+    } catch (e) {
+      _logs?.add('youtube_explode_dart playlist.get failed: $e');
+    }
     try {
-      for (var attempt = 0; attempt < 3; attempt++) {
+      const maxAttempts = 5;
+      final stopwatch = Stopwatch()..start();
+      for (var attempt = 1; attempt <= maxAttempts; attempt++) {
         final before = videosById.length;
-        final stream =
-            _yt.playlists.getVideos(playlistId).timeout(_playlistStreamTimeout);
-        await for (final video in stream) {
-          videosById[video.id.value] = video;
-          if (cap != null && videosById.length >= cap) break;
+        int emittedThisAttempt = 0;
+        final stream = _yt.playlists
+            .getVideos(playlistId)
+            .timeout(_playlistStreamTimeout);
+        try {
+          await for (final video in stream) {
+            videosById[video.id.value] = video;
+            emittedThisAttempt++;
+            if (attempt == 1 && emittedThisAttempt % 25 == 0) {
+              _logs?.add(
+                  'Playlist loading: ${videosById.length} videos in '
+                  '${stopwatch.elapsed.inSeconds}s...');
+            }
+            if (cap != null && videosById.length >= cap) break;
+          }
+        } on TimeoutException {
+          _logs?.add(
+              'Playlist stream idle >${_playlistStreamTimeout.inSeconds}s on '
+              'attempt $attempt after ${videosById.length} videos; '
+              '${stopwatch.elapsed.inSeconds}s elapsed - will retry from start');
         }
         final reachedCap = cap != null && videosById.length >= cap;
         final reachedExpected =
             expectedCount > 0 && videosById.length >= expectedCount;
         if (reachedCap || reachedExpected) break;
-        if (videosById.length == before) break;
+        // No net progress this attempt - don't keep re-treading the same pages.
+        if (videosById.length == before) {
+          _logs?.add(
+              'Playlist attempt $attempt made no progress (${videosById.length} '
+              'videos) - stopping retries');
+          break;
+        }
       }
-    } on TimeoutException catch (e) {
-      _logs?.add('youtube_explode_dart playlist stream timed out: $e');
+      _logs?.add(
+          'Playlist fetched via youtube_explode_dart: ${videosById.length} '
+          'tracks in ${stopwatch.elapsed.inSeconds}s (expected ~$expectedCount)');
     } catch (e) {
       _logs?.add('youtube_explode_dart playlist fetch error: $e');
     }

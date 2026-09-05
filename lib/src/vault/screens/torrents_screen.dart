@@ -8,6 +8,7 @@ import 'package:convert_the_spire_reborn/src/vault/screens/torrent_detail_screen
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
+import 'package:convert_the_spire_reborn/src/vault/vault_bootstrap.dart';
 import 'package:convert_the_spire_reborn/src/widgets/empty_state.dart';
 import 'package:convert_the_spire_reborn/src/widgets/tv_file_browser.dart';
 import 'package:flutter/material.dart';
@@ -158,10 +159,23 @@ class _TorrentsScreenState extends State<TorrentsScreen>
   void initState() {
     super.initState();
     unawaited(_loadSortMode());
-    unawaited(TorrentService.instance.refreshTorrentStates());
+    // Gate the first DB access on vault bootstrap completing so the torrents
+    // list and the app-startup chain never race an open against the same DB
+    // file (low-end PCs hit this as an instant crash entering Torrents).
+    unawaited(_initTorrents());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkDownloadFolderOnInit();
     });
+  }
+
+  Future<void> _initTorrents() async {
+    try {
+      await VaultBootstrap.ensureInitialized();
+      if (!mounted) return;
+      await TorrentService.instance.refreshTorrentStates();
+    } catch (e) {
+      debugPrint('TorrentsScreen: initial load failed: $e');
+    }
   }
 
   Future<void> _checkDownloadFolderOnInit() async {
