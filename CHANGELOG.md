@@ -1,10 +1,14 @@
 # Changelog
 
-## 13.0.7+1270 — Hotfix: Updates + Torrent Loading
+## 13.0.8+1271 — Low-End Stability & Playlist Reliability
 
 ### Fixed
-- **GitHub-build updates failing to install** — the v13.0.6 CI build was signed with the debug certificate because the signing secrets were missing from the repository, so updating over a release-signed install failed with a signature mismatch. The keystore is now configured as a repo secret, the workflow hard-fails if signing secrets are absent, and the built APK is verified not debug-signed before publishing. Existing installs can update over-the-top again with this release.
-- **Torrents stuck on an endless spinner** — 13.0.6 keyed the vault database with an encryption key while SQLCipher was not loaded in the shipped binaries; the database open threw and the torrents screen never loaded. The database now opens unencrypted (as before 13.0.6) and the key provisioning is disabled until real SQLCipher support ships with a proper migration.
+- **Crash entering Torrents tab on low-end PCs.** Memoized the vault DB open as a single in-flight Future so concurrent first callers don't race two opens; `TorrentsScreen` now awaits `VaultBootstrap.ensureInitialized()` before its first DB access.
+- **yt-dlp self-update hard-failing on slow machines.** The Windows binary-replace in `updateYtDlp` now retries with backoff on transient file locks; a self-update failure falls back to one plain retry with the existing binary before surfacing an error.
+- **Android playlist import returning 0 of ~790.** Added per-video logging, raised the inter-page idle timeout to 180s, and retry stops when an attempt makes no net progress.
+
+### Internal
+- CI release workflow verifies the built APK is not debug-signed and hard-fails if signing secrets are absent.
 
 ## 13.0.6+1269 — Reliability Pass v2 Completion + Monetization Wiring
 

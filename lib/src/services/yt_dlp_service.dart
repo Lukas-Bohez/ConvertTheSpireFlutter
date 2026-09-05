@@ -467,13 +467,7 @@ class YtDlpService {
 
       onProgress?.call(70, 'Replacing binary');
       if (Platform.isWindows) {
-        final backupPath = '$ytDlpPath.bak';
-        if (await targetFile.exists()) {
-          await _safeDelete(backupPath);
-          await targetFile.rename(backupPath);
-        }
-        await File(tempPath).rename(ytDlpPath);
-        await _safeDelete(backupPath);
+        await _replaceWindowsBinary(ytDlpPath, tempPath);
       } else {
         await _safeDelete(ytDlpPath);
         await File(tempPath).rename(ytDlpPath);
@@ -487,6 +481,40 @@ class YtDlpService {
     } catch (e) {
       debugPrint('yt-dlp update failed: $e');
       rethrow;
+    }
+  }
+
+  /// Replaces a Windows yt-dlp binary with a freshly downloaded one.
+  ///
+  /// A just-exited process's .exe can remain briefly locked on Windows
+  /// (antivirus real-time scanning, slow OS handle teardown) — worse on
+  /// low-end PCs. A transient lock here throws straight out of updateYtDlp()
+  /// with no retry, surfacing as "auto repair failed". Retry with backoff.
+  Future<void> _replaceWindowsBinary(String ytDlpPath, String tempPath) async {
+    final targetFile = File(ytDlpPath);
+    final backupPath = '$ytDlpPath.bak';
+    const maxAttempts = 5;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        if (await targetFile.exists()) {
+          await _safeDelete(backupPath);
+          await targetFile.rename(backupPath);
+        }
+        await File(tempPath).rename(ytDlpPath);
+        await _safeDelete(backupPath);
+        return;
+      } on FileSystemException catch (e) {
+        final isLock = e.osError?.errorCode == 32 ||
+            e.message.toLowerCase().contains('being used') ||
+            e.message.toLowerCase().contains('permission denied') ||
+            e.message.toLowerCase().contains('access is denied');
+        if (!isLock || attempt == maxAttempts) rethrow;
+        final delay = Duration(milliseconds: 250 * attempt);
+        debugPrint(
+            'yt-dlp: binary locked (attempt $attempt/$maxAttempts), '
+            'retrying in ${delay.inMilliseconds}ms: $e');
+        await Future.delayed(delay);
+      }
     }
   }
 
@@ -770,13 +798,26 @@ class YtDlpService {
               rethrow;
             }
           } catch (updateErr) {
-            // Self-update failed; surface the original download error with
-            // the reason the update didn't happen.
-            debugPrint('yt-dlp self-update failed ($updateErr); not retrying');
-            throw Exception(
-                'yt-dlp hit a reload/playability error and the follow-up '
-                'self-update failed: $updateErr. Try updating manually in '
-                'Settings, or try again later.');
+            // Self-update failed (binary lock, GitHub API hiccup, network
+            // blip...). Don't hard-fail the download immediately — fall back
+            // to one plain retry with the existing binary, mirroring what the
+            // cooldown branch already does. This is the common case (cooldown
+            // elapsed) and the one low-end PCs hit most often because the
+            // binary-lock window scales with hardware speed.
+            debugPrint(
+                'yt-dlp self-update failed ($updateErr); retrying with current '
+                'binary before giving up');
+            try {
+              await runAttempt([for (final a in args) a]);
+              return;
+            } catch (_) {
+              // Fallback retry also failed — surface the original download
+              // error with the reason the update didn't happen.
+              throw Exception(
+                  'yt-dlp hit a reload/playability error and the follow-up '
+                  'self-update failed: $updateErr. Try updating manually in '
+                  'Settings, or try again later.');
+            }
           }
         } else {
           // Self-update on cooldown — still attempt one plain retry with the

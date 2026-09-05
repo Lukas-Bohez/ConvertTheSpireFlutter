@@ -11,6 +11,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static Database? _database;
+  static Future<Database>? _dbFuture;
   static String? _encryptionKey;
 
   /// Optionally set a SQLCipher key before opening the DB.
@@ -18,11 +19,16 @@ class AppDatabase {
     _encryptionKey = key;
   }
 
-  Future<Database> get database async {
-    if (_database != null) return _database!;
+  Future<Database> get database => _dbFuture ??= _openDatabase();
 
-    final dbPath = await _getDatabasePath();
-    _database = await openDatabase(
+  /// Opens the database once. Concurrent callers before the first open
+  /// completes all await the same in-flight Future rather than racing two
+  /// opens against the same file path (sqflite_common_ffi throws on that),
+  /// which was the root cause of the low-end-PC crash entering Torrents.
+  Future<Database> _openDatabase() async {
+    try {
+      final dbPath = await _getDatabasePath();
+      final db = await openDatabase(
       dbPath,
       version: 5,
       onCreate: _onCreate,
@@ -60,7 +66,15 @@ class AppDatabase {
         await _ensureDirectMessageServer(db);
       },
     );
-    return _database!;
+      _database = db;
+      return db;
+    } catch (e) {
+      // Open failed - clear the memoized Future so the next caller retries
+      // instead of receiving the same failed Future forever.
+      _dbFuture = null;
+      _database = null;
+      rethrow;
+    }
   }
 
   Future<String> _getDatabasePath() async {
