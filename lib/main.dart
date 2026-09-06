@@ -2,10 +2,8 @@ import 'dart:async';
 import 'dart:io' show Directory, File, FileMode, Platform;
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart'
-    show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -20,6 +18,7 @@ import 'src/config/full_mode_access.dart';
 import 'src/services/ad_service.dart';
 import 'src/services/purchase_service.dart';
 import 'src/services/review_service.dart';
+import 'src/services/session_log_service.dart';
 import 'src/vault/platform/crash_dump.dart';
 
 Future<File?> _prepareStartupErrorLogFile() async {
@@ -63,6 +62,11 @@ Future<void> main() async {
     // This avoids `Zone mismatch` errors from Flutter.
     WidgetsFlutterBinding.ensureInitialized();
 
+    // Startup/shutdown breadcrumbs: written to session_log_*.log on close
+    // or on error, to diagnose slow starts on low-end hardware.
+    SessionLogService.instance.start();
+    SessionLogService.instance.mark('widgets_binding_ready');
+
     // Keep the global image cache conservative so TV devices don't retain too
     // many full-resolution thumbnails at once.
     PaintingBinding.instance.imageCache.maximumSize = 80;
@@ -70,6 +74,7 @@ Future<void> main() async {
 
     // Initialize the runtime flavor detection so kPlayStoreBuild is valid.
     await initAppFlavor();
+    SessionLogService.instance.mark('initAppFlavor_done');
     // Propagate into build_flags runtime flag. Only treat the runtime-detected
     // Play flavor as authoritative on Android; otherwise desktop app names
     // that contain the branding string should not enable Play-store-only
@@ -79,6 +84,7 @@ Future<void> main() async {
 
     // Track launches for review prompt heuristics.
     await ReviewService.trackLaunch();
+    SessionLogService.instance.mark('trackLaunch_done');
 
     startupErrorLogFile = await _prepareStartupErrorLogFile();
 
@@ -115,6 +121,7 @@ Future<void> main() async {
         details.exceptionAsString(),
         details.stack ?? StackTrace.current,
       );
+      unawaited(SessionLogService.instance.flush('flutter_error'));
       unawaited(captureCrashDump(
         'flutter_error',
         startupErrorLogFile?.path ?? '',
@@ -130,6 +137,7 @@ Future<void> main() async {
     };
 
     await requestAndroidPermissions();
+    SessionLogService.instance.mark('permissions_done');
 
     // Initialize purchase service only on Play Store Android builds.
     // The `in_app_purchase` plugin is not available on desktop builds and
@@ -141,6 +149,7 @@ Future<void> main() async {
 
     // Initialize AdService to load cached monetization state
     await AdService.instance.initialize();
+    SessionLogService.instance.mark('adService_init_done');
 
     // Handle UMP consent for EU/EEA users and initialize the Google Mobile Ads SDK.
     // This must be called after AdService.instance.initialize() but should replace
@@ -171,29 +180,12 @@ Future<void> main() async {
       if (!userData.existsSync()) userData.createSync(recursive: true);
     }
 
-    WebViewEnvironment? webViewEnvironment;
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
-      try {
-        final available = await WebViewEnvironment.getAvailableVersion();
-        if (available != null) {
-          final appSupport = await getApplicationSupportDirectory();
-          final webViewDataDir = '${appSupport.path}\\WebView2UserData';
-          webViewEnvironment = await WebViewEnvironment.create(
-            settings:
-                WebViewEnvironmentSettings(userDataFolder: webViewDataDir),
-          );
-          if (kDebugMode) {
-            debugPrint('[WebView] created environment at $webViewDataDir');
-          }
-        } else {
-          if (kDebugMode) {
-            debugPrint('[WebView] WebView2 runtime not available');
-          }
-        }
-      } catch (e) {
-        if (kDebugMode) debugPrint('[WebView] environment init failed: $e');
-      }
-    }
+    // NOTE: the old flutter_inappwebview `WebViewEnvironment.create()` call
+    // was removed here - it eagerly invoked the flutter_inappwebview Windows
+    // plugin at startup, which crashed with an illegal instruction on CPUs
+    // without BMI2. The Windows browser now uses `webview_windows`
+    // (WebView2) via BrowserWebviewFactory, which initializes its own
+    // environment lazily with the same short user-data path.
 
     if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
       sqfliteFfiInit();
@@ -204,6 +196,7 @@ Future<void> main() async {
     if (!kIsWeb) {
       try {
         MediaKit.ensureInitialized();
+        SessionLogService.instance.mark('mediaKit_done');
       } catch (e, st) {
         final msg = '$e';
         if (msg.contains('Unsupported platform')) {
@@ -236,10 +229,13 @@ Future<void> main() async {
       try {
         await windowManager.setPreventClose(true);
       } catch (_) {}
+      SessionLogService.instance.mark('window_ready');
     }
 
     await FullModeAccess.instance.load();
+    SessionLogService.instance.mark('fullModeAccess_done');
 
+    SessionLogService.instance.mark('runApp');
     runApp(
       MultiProvider(
         providers: [
@@ -249,12 +245,12 @@ Future<void> main() async {
         ],
         child: MyApp(
           mediaKitInitError: mediaKitError,
-          webViewEnvironment: webViewEnvironment,
         ),
       ),
     );
   }, (error, stack) {
     _logStartupError(startupErrorLogFile, 'ZONE ERROR', error, stack);
+    unawaited(SessionLogService.instance.flush('zone_error'));
     unawaited(captureCrashDump(
       'zone_error',
       startupErrorLogFile?.path ?? '',

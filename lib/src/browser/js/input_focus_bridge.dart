@@ -59,17 +59,13 @@ const String inputFocusBridgeJs = """
           var val = tag === 'textarea'
             ? (e.target.value || '')
             : (e.target.isContentEditable ? (e.target.innerText || '') : (e.target.value || ''));
-          if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
-            window.flutter_inappwebview.callHandler('InputFocusChannel', JSON.stringify({ value: val, kind: kind }));
-          }
+          window.__bbCall('InputFocusChannel', JSON.stringify({ value: val, kind: kind }));
         }
       } catch(ex){}
     });
     document.addEventListener('focusout', function(e) {
       try {
-        if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
-          window.flutter_inappwebview.callHandler('InputFocusChannel', '__blur__');
-        }
+        window.__bbCall('InputFocusChannel', '__blur__');
       } catch(ex){}
     });
     if (!window.__keyBlocker) {

@@ -1,5 +1,17 @@
 # Changelog
 
+## 13.0.10+1273 - Windows Crash Fix (WebView) + 16:9 Thumbnails + Session Diagnostics
+
+### Fixed
+- **Windows startup crash on older CPUs (root cause found via crash dumps).** `flutter_inappwebview`'s Windows plugin ships a binary containing BMI2 instructions (confirmed: `EXCEPTION_ILLEGAL_INSTRUCTION` at a fixed offset in `flutter_inappwebview_windows_plugin.dll`), and the app eagerly created a `WebViewEnvironment` at startup, crashing pre-2013/2015 CPUs instantly. The in-app browser on Windows now runs on WebView2 (`webview_windows`) via a platform adapter; `flutter_inappwebview` remains for Android/iOS only. Android behaviour is unchanged.
+- **Headless WebView JS solver race.** `WebViewEJSSolver._ensureReady()` now memoizes its initialization as a single in-flight Future (same pattern as the v13.0.8 database fix), so concurrent YouTube metadata calls can't race two headless WebView inits.
+
+### Changed
+- **All player thumbnails are 16:9** (same width as before, height derived from it): track-list rows were square, library grid cards filled the whole card; both are now 16:9, with the grid card shape retuned to match.
+
+### Added
+- **Session diagnostics for slow starts.** Timestamped startup breadcrumbs (flavor init, permissions, ads, media kit, window ready, first frame) are written to `session_log_<timestamp>.log` in the documents folder on every normal app close - not only on crashes - so slow-start reports come with real phase timings. Crash/error paths now flush the same log.
+
 ## 13.0.8+1271 — Low-End Stability & Playlist Reliability
 
 ### Fixed

@@ -28,6 +28,11 @@ class AdBlockService extends ChangeNotifier {
   bool get isLoaded => _loaded;
   DateTime? get lastUpdated => _lastUpdated;
 
+  /// The always-blocked popup/tracking domains. Exposed so the Windows
+  /// WebView adapter (which cannot intercept requests) can embed them in
+  /// an injected fetch/XHR blocker.
+  Set<String> get hardcodedPopupDomains => _hardcodedPopupDomains;
+
   /// Common popup / tracking domains that are always blocked.
   static final _hardcodedPopupDomains = HashSet<String>.from([
     'popads.net',

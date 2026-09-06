@@ -65,7 +65,9 @@ class VideoDetectorService extends ChangeNotifier {
 
   function safeCall(name, payload) {
     try {
-      if (window && window.flutter_inappwebview && typeof window.flutter_inappwebview.callHandler === 'function') {
+      if (window && typeof window.__bbCall === 'function') {
+        window.__bbCall(name, payload);
+      } else if (window && window.flutter_inappwebview && typeof window.flutter_inappwebview.callHandler === 'function') {
         window.flutter_inappwebview.callHandler(name, payload);
       }
     } catch (e) {

@@ -4,7 +4,6 @@ import 'dart:io' show Platform, Process;
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
@@ -40,6 +39,7 @@ import 'services/notification_service.dart';
 import 'services/playlist_service.dart';
 import 'services/preview_player_service.dart';
 import 'services/purchase_service.dart';
+import 'services/session_log_service.dart';
 import 'services/settings_store.dart';
 import 'services/statistics_service.dart';
 import 'services/tray_service.dart';
@@ -55,9 +55,8 @@ import 'widgets/tv_file_browser.dart';
 
 class MyApp extends StatefulWidget {
   final String? mediaKitInitError;
-  final WebViewEnvironment? webViewEnvironment;
 
-  const MyApp({super.key, this.mediaKitInitError, this.webViewEnvironment});
+  const MyApp({super.key, this.mediaKitInitError});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -76,6 +75,7 @@ class _MyAppState extends State<MyApp>
   @override
   void initState() {
     super.initState();
+    SessionLogService.instance.mark('myapp_initState');
     WidgetsBinding.instance.addObserver(this);
     PaintingBinding.instance.imageCache.maximumSize = 80;
     PaintingBinding.instance.imageCache.maximumSizeBytes = 40 << 20;
@@ -292,7 +292,6 @@ class _MyAppState extends State<MyApp>
         logs: logs,
       );
       controller = AppController(
-        webViewEnvironment: widget.webViewEnvironment,
         settingsStore: settingsStore,
         youtube: youtube,
         downloadService: downloadService,
@@ -428,6 +427,8 @@ class _MyAppState extends State<MyApp>
     if (kIsWeb) return;
     if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) return;
 
+    SessionLogService.instance.mark('window_close_requested');
+
     // Close-to-tray must be a pure hide path. Do not dispose WebViews,
     // kill WebView2 processes, or destroy the window in this branch.
     final shouldMinimiseToTray = _controller?.settings?.minimizeToTrayOnClose ??
@@ -502,6 +503,16 @@ class _MyAppState extends State<MyApp>
         }
       }
     }
+
+    // Write the session breadcrumbs (startup timings, close timings) to
+    // disk before the process goes away - happens on every normal close,
+    // not only on crashes, so slow-start data arrives with every session.
+    try {
+      final path = await SessionLogService.instance.flush('normal_exit');
+      if (kDebugMode) {
+        debugPrint('[App] session log written: $path');
+      }
+    } catch (_) {}
 
     try {
       await windowManager.setPreventClose(false);
@@ -703,6 +714,11 @@ class _MyAppState extends State<MyApp>
 
         final prefs = snap.data!;
         final controller = _controller!;
+
+        // First time the app UI is actually ready - the end of "startup"
+        // for slow-start measurements.
+        SessionLogService.instance
+            .markOnce('controller_ready', 'app_controller_ready_first_frame');
 
         Widget contentChild;
         if (!controller.onboardingChecked) {

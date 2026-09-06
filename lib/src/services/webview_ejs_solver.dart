@@ -10,13 +10,25 @@ class WebViewEJSSolver extends BaseEJSSolver {
   HeadlessInAppWebView? _headless;
   InAppWebViewController? _controller;
 
-  Future<void> _ensureReady() async {
+  /// Memoized so concurrent callers share one initialization instead of
+  /// racing two `HeadlessInAppWebView.run()` calls (same pattern as
+  /// `AppDatabase.database`). Each caller awaits the same future; if init
+  /// fails, the future is cleared so a later call can retry.
+  Future<void>? _readyFuture;
+
+  Future<void> _ensureReady() =>
+      _readyFuture ??= _initHeadless().whenComplete(() {
+        if (_controller == null) _readyFuture = null;
+      });
+
+  Future<void> _initHeadless() async {
     if (_controller != null) return;
-    _headless = HeadlessInAppWebView(
+    final headless = HeadlessInAppWebView(
       initialUrlRequest: URLRequest(url: WebUri('about:blank')),
       onWebViewCreated: (controller) => _controller = controller,
     );
-    await _headless!.run();
+    await headless.run();
+    _headless = headless;
   }
 
   @override

@@ -7,7 +7,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -15,6 +14,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../browser/adblock/adblock_service.dart';
 import '../browser/cast/cast_service.dart';
 import '../browser/cast/unified_cast_service.dart';
+import '../browser/js/js_bridge.dart';
+import '../browser/platform/browser_webview_controller.dart';
+import '../browser/platform/browser_webview_factory.dart';
 import '../browser/tabs/tab_manager.dart';
 import '../browser/video/video_detector_service.dart';
 import '../data/browser_db.dart';
@@ -96,7 +98,8 @@ class _BrowserScreenState extends State<BrowserScreen>
   final TabManager _tabManager = TabManager();
   final VideoDetectorService _videoDetector = VideoDetectorService();
 
-  InAppWebViewController? _webViewController;
+  BrowserWebviewController? _webViewController;
+  final List<StreamSubscription> _webviewSubs = [];
   bool _cursorActive = false;
   FindInteractionController? _findInteractionController;
   final TextEditingController _addressController = TextEditingController();
@@ -248,7 +251,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   Future<Uint8List?> _takeScreenshot() async {
     try {
-      final bytes = await (_webViewController as dynamic).takeScreenshot();
+      final bytes = await _webViewController?.takeScreenshot();
       return bytes is Uint8List && bytes.isNotEmpty ? bytes : null;
     } catch (_) {
       return null;
@@ -266,6 +269,12 @@ class _BrowserScreenState extends State<BrowserScreen>
     _findController.dispose();
     _castService.dispose();
     _videoDetector.dispose();
+    for (final sub in _webviewSubs) {
+      unawaited(sub.cancel());
+    }
+    _webviewSubs.clear();
+    unawaited(_webViewController?.dispose());
+    _webViewController = null;
     if (BrowserScreen.currentLocation.value != null) {
       BrowserScreen.currentLocation.value = null;
     }
@@ -281,13 +290,13 @@ class _BrowserScreenState extends State<BrowserScreen>
   /// Dispose any active WebView controllers (used during app shutdown).
   Future<void>? disposeAllWebViewControllers() async {
     try {
-      if (_webViewController != null) {
+      final controller = _webViewController;
+      if (controller != null) {
         try {
-          await _webViewController!.stopLoading();
+          await controller.stop();
         } catch (_) {}
         try {
-          await _webViewController!
-              .loadUrl(urlRequest: URLRequest(url: WebUri('about:blank')));
+          await controller.loadUrl('about:blank');
         } catch (_) {}
       }
     } catch (_) {}
@@ -331,8 +340,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     _publishBrowserLocation();
 
     if (_webViewController != null) {
-      _webViewController!
-          .loadUrl(urlRequest: URLRequest(url: WebUri(normalized)));
+      _webViewController!.loadUrl(normalized);
     } else {
       debugPrint('[BROWSER] controller not ready, queueing URL: $normalized');
       _pendingUrl = normalized;
@@ -357,46 +365,79 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   // -- WebView callbacks --
 
-  InAppWebViewSettings _buildSettings() {
-    return InAppWebViewSettings(
-      javaScriptEnabled: true,
-      domStorageEnabled: true,
-      databaseEnabled: true,
-      cacheEnabled: true,
-      mediaPlaybackRequiresUserGesture: false,
-      allowsInlineMediaPlayback: true,
-      useHybridComposition: true,
-      transparentBackground: false,
-      useShouldInterceptRequest: true,
-      supportZoom: true,
-      builtInZoomControls: true,
-      displayZoomControls: false,
-      useWideViewPort: true,
-      loadWithOverviewMode: true,
-      allowContentAccess: true,
-      allowFileAccess: true,
-      mixedContentMode: MixedContentMode.MIXED_CONTENT_COMPATIBILITY_MODE,
-      incognito: _tabManager.activeTab?.isIncognito ?? false,
-      userAgent: _desktopMode
-          ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-              '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-          : null,
+  /// Creates the platform WebView adapter and wires its event streams.
+  /// Replaces the previous `InAppWebView` callback registrations; both the
+  /// Android (`flutter_inappwebview`) and Windows (`webview_windows`)
+  /// backends surface the same events through the neutral adapter.
+  void _createWebviewAdapter() {
+    if (_webViewController != null) return;
+    final adapter = BrowserWebviewFactory.create(
+      findInteractionController: _findInteractionController,
+      blockedDomains: _adBlock.hardcodedPopupDomains,
+      hooks: BrowserWebViewHooks()
+        ..shouldAllowNavigation = _shouldAllowNavigation
+        ..shouldBlockResource = _shouldBlockResource,
     );
-  }
+    if (adapter == null) return;
+    _webViewController = adapter;
+    _webviewSubs.addAll([
+      adapter.pageEvents.listen(_onPageEvent),
+      adapter.progressEvents.listen((progress) {
+        if (mounted) setState(() => _progress = progress);
+      }),
+      adapter.jsMessages.listen(_onJsMessage),
+      adapter.urlEvents.listen(_onUrlChanged),
+      adapter.consoleEvents.listen((message) {
+        if (kDebugMode) debugPrint('WebView Console: $message');
+      }),
+      adapter.errorEvents.listen(_onErrorEvent),
+      adapter.historyEvents.listen((state) {
+        if (mounted) {
+          setState(() {
+            _canGoBack = state.canGoBack;
+            _canGoForward = state.canGoForward;
+          });
+        }
+      }),
+      adapter.scrollEvents.listen((y) {
+        // Keep video detection alive while the user scrolls (old
+        // onScrollChanged behaviour).
+        unawaited(_webViewController
+            ?.evaluateJs(withJsBridge(VideoDetectorService.injectionJs)));
+      }),
+    ]);
 
-  void _onWebViewCreated(InAppWebViewController controller) {
-    debugPrint('[BROWSER] onWebViewCreated - controller ready');
-    _webViewController = controller;
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
-      _webviewInputChannel.invokeMethod('registerWebView');
+      try {
+        _webviewInputChannel.invokeMethod('registerWebView');
+      } catch (_) {}
     });
 
-    // Handler to receive input focus events from page JS
-    controller.addJavaScriptHandler(
-      handlerName: 'InputFocusChannel',
-      callback: (args) {
-        final msg = args.isNotEmpty ? args[0].toString() : '';
+    unawaited(adapter.applySettings(
+        desktopMode: _desktopMode,
+        incognito: _tabManager.activeTab?.isIncognito ?? false));
+
+    // Load any URL that was requested before the controller was ready.
+    final urlToLoad = _pendingUrl;
+    _pendingUrl = null;
+    if (urlToLoad != null && urlToLoad.isNotEmpty) {
+      unawaited(adapter.loadUrl(urlToLoad));
+    }
+  }
+
+  void _onPageEvent(BrowserPageEvent event) {
+    if (event.isStart) {
+      _onLoadStart(event.url);
+    } else {
+      _onLoadStop(event.url);
+    }
+  }
+
+  Future<void> _onJsMessage(BrowserJsMessage message) async {
+    switch (message.handler) {
+      case 'InputFocusChannel':
+        final msg = message.payload;
         if (msg == '__blur__') {
           if (_typingOverlayVisible) return;
           _resumeCursor();
@@ -404,74 +445,74 @@ class _BrowserScreenState extends State<BrowserScreen>
           _pauseCursor();
           _handleInputFocusMessage(msg);
         }
-      },
-    );
-
-    controller.addJavaScriptHandler(
-      handlerName: 'onVideoFound',
-      callback: (args) {
-        if (args.isNotEmpty) {
-          _videoDetector.handleJsCallback(args[0].toString());
+      case 'onVideoFound':
+        if (message.payload.isNotEmpty) {
+          _videoDetector.handleJsCallback(message.payload);
         }
-      },
-    );
-
-    controller.addJavaScriptHandler(
-      handlerName: 'onVideoPlayback',
-      callback: (args) async {
-        try {
-          final event = args.isNotEmpty ? args[0].toString() : 'play';
-          // Start/stop a throttled periodic screenshot while video plays.
-          if (event == 'play') {
-            // Only start background periodic captures when the tab switcher
-            // is visible to avoid continuous disk writes.
-            if (_isTabSwitcherVisible) {
-              if (_playbackScreenshotTimer == null ||
-                  !_playbackScreenshotTimer!.isActive) {
-                _playbackScreenshotTimer = Timer.periodic(
-                  const Duration(seconds: 2),
-                  (t) async {
-                    final activeTab = _tabManager.activeTab;
-                    if (activeTab == null || _webViewController == null) {
-                      t.cancel();
-                      return;
-                    }
-                    try {
-                      final bytes = await _takeScreenshot();
-                      if (bytes != null) {
-                        await _tabManager.setScreenshot(activeTab.id, bytes);
-                      }
-                    } catch (e) {
-                      debugPrint(
-                          '[BROWSER] periodic playback screenshot failed: $e');
-                    }
-                  },
-                );
-              }
-            }
-          } else if (event == 'pause' || event == 'ended') {
-            _playbackScreenshotTimer?.cancel();
-            _playbackScreenshotTimer = null;
-          }
-        } catch (_) {}
-      },
-    );
-
-    // Load any URL that was requested before the controller was ready.
-    final urlToLoad = _pendingUrl;
-    _pendingUrl = null;
-    if (urlToLoad != null && urlToLoad.isNotEmpty) {
-      controller.loadUrl(urlRequest: URLRequest(url: WebUri(urlToLoad)));
+      case 'onVideoPlayback':
+        await _handleVideoPlaybackEvent(message.payload);
+      case 'onCreateWindow':
+        // Open new-window requests in the same WebView.
+        if (message.payload.isNotEmpty) {
+          _navigateTo(message.payload);
+        }
+      case 'onDownloadStart':
+        final url = message.payload;
+        if (url.isNotEmpty) {
+          try {
+            await launchUrl(Uri.parse(url),
+                mode: LaunchMode.externalApplication);
+          } catch (_) {}
+        }
+      default:
+        break;
     }
   }
 
-  void _onLoadStart(InAppWebViewController controller, WebUri? url) {
+  Future<void> _handleVideoPlaybackEvent(String event) async {
+    try {
+      final actualEvent = event.isEmpty ? 'play' : event;
+      // Start/stop a throttled periodic screenshot while video plays.
+      if (actualEvent == 'play') {
+        // Only start background periodic captures when the tab switcher
+        // is visible to avoid continuous disk writes.
+        if (_isTabSwitcherVisible) {
+          if (_playbackScreenshotTimer == null ||
+              !_playbackScreenshotTimer!.isActive) {
+            _playbackScreenshotTimer = Timer.periodic(
+              const Duration(seconds: 2),
+              (t) async {
+                final activeTab = _tabManager.activeTab;
+                if (activeTab == null || _webViewController == null) {
+                  t.cancel();
+                  return;
+                }
+                try {
+                  final bytes = await _takeScreenshot();
+                  if (bytes != null) {
+                    await _tabManager.setScreenshot(activeTab.id, bytes);
+                  }
+                } catch (e) {
+                  debugPrint(
+                      '[BROWSER] periodic playback screenshot failed: $e');
+                }
+              },
+            );
+          }
+        }
+      } else if (actualEvent == 'pause' || actualEvent == 'ended') {
+        _playbackScreenshotTimer?.cancel();
+        _playbackScreenshotTimer = null;
+      }
+    } catch (_) {}
+  }
+
+  void _onLoadStart(String urlStr) {
     // Stop any ongoing playback screenshot timer when navigating.
     _playbackScreenshotTimer?.cancel();
     _playbackScreenshotTimer = null;
-    debugPrint('[BROWSER] onLoadStart - $url');
+    debugPrint('[BROWSER] onLoadStart - $urlStr');
     _videoDetector.clearForPage();
-    final urlStr = url?.toString() ?? '';
     // Ignore about:blank navigations caused by WebView initialisation.
     if (urlStr == 'about:blank') return;
     setState(() {
@@ -488,9 +529,8 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   }
 
-  void _onLoadStop(InAppWebViewController controller, WebUri? url) async {
-    debugPrint('[BROWSER] onLoadStop - $url');
-    final urlStr = url?.toString() ?? '';
+  void _onLoadStop(String urlStr) async {
+    debugPrint('[BROWSER] onLoadStop - $urlStr');
     // Ignore about:blank completions.
     if (urlStr == 'about:blank') return;
     if (mounted) {
@@ -502,9 +542,9 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
     _publishBrowserLocation();
 
-    final title = await controller.getTitle() ?? '';
-    _canGoBack = await controller.canGoBack();
-    _canGoForward = await controller.canGoForward();
+    final title = await _webViewController?.getTitle() ?? '';
+    _canGoBack = await _webViewController?.canGoBack() ?? false;
+    _canGoForward = await _webViewController?.canGoForward() ?? false;
 
     setState(() {
       _isLoading = false;
@@ -532,7 +572,8 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
 
     // Inject video detection JS.
-    unawaited(controller.evaluateJavascript(source: VideoDetectorService.injectionJs));
+    unawaited(_webViewController
+        ?.evaluateJs(withJsBridge(VideoDetectorService.injectionJs)));
 
     // Inject input focus listeners so we can pause the cursor when an input
     // gains focus and surface a native text field for TV remote typing.
@@ -547,27 +588,27 @@ class _BrowserScreenState extends State<BrowserScreen>
 
     // Inject popup blocker when ad-block is on.
     if (_adBlock.adBlockEnabled) {
-      unawaited(controller.evaluateJavascript(
-          source: VideoDetectorService.popupBlockerJs));
+      unawaited(_webViewController
+          ?.evaluateJs(withJsBridge(VideoDetectorService.popupBlockerJs)));
     }
 
     // Attach playback event listeners so the page can notify us when a
     // video starts playing. The injected handler calls `onVideoPlayback`
     // which we handle above to update the tab preview.
     try {
-      unawaited(controller.evaluateJavascript(source: r"""
+      unawaited(_webViewController?.evaluateJs(withJsBridge(r"""
       (function(){
         try {
           if (window.__flutter_playback_injected) return; window.__flutter_playback_injected = true;
           function notify(e) {
-            try { if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) { window.flutter_inappwebview.callHandler('onVideoPlayback', e.type); } } catch(ex){}
+            try { window.__bbCall('onVideoPlayback', e.type); } catch(ex){}
           }
           function attach(v){ try { if (!v.__flutter_playback_attached){ v.addEventListener('play', notify); v.addEventListener('pause', notify); v.addEventListener('ended', notify); v.__flutter_playback_attached = true; } } catch(ex){} }
           document.querySelectorAll('video').forEach(function(v){ attach(v); });
           new MutationObserver(function(){ document.querySelectorAll('video').forEach(function(v){ attach(v); }); }).observe(document.body||document.documentElement, {childList:true, subtree:true});
         } catch(e){}
       })();
-      """));
+      """)));
     } catch (_) {}
 
     // Try to capture a screenshot of the page for the tab preview. Not all
@@ -587,14 +628,30 @@ class _BrowserScreenState extends State<BrowserScreen>
     } catch (_) {}
   }
 
-  void _onProgressChanged(InAppWebViewController controller, int progress) {
-    setState(() => _progress = progress / 100.0);
+  void _onUrlChanged(String urlStr) {
+    if (urlStr.isEmpty || urlStr == 'about:blank') return;
+    setState(() {
+      _addressController.text = urlStr;
+      _isSecure = urlStr.startsWith('https://');
+    });
+    final activeTab = _tabManager.activeTab;
+    if (activeTab != null) {
+      _tabManager.updateTab(activeTab.id, url: urlStr);
+    }
+    _checkFavouriteState();
   }
 
-  Future<NavigationActionPolicy?> _shouldOverrideUrlLoading(
-      InAppWebViewController controller, NavigationAction action) async {
-    final url = action.request.url?.toString() ?? '';
-    // Handle external protocols (tel:, mailto:, etc.).
+  void _onErrorEvent(BrowserErrorEvent event) {
+    debugPrint(
+        '[BROWSER] onReceivedError - ${event.url} | ${event.description}');
+    if (event.isMainFrame) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  /// Returns false to cancel external-protocol navigations
+  /// (tel:, mailto:, etc.).
+  Future<bool> _shouldAllowNavigation(String url) async {
     if (url.startsWith('tel:') ||
         url.startsWith('mailto:') ||
         url.startsWith('intent:') ||
@@ -602,17 +659,17 @@ class _BrowserScreenState extends State<BrowserScreen>
       try {
         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       } catch (_) {}
-      return NavigationActionPolicy.CANCEL;
+      return false;
     }
-    return NavigationActionPolicy.ALLOW;
+    return true;
   }
 
-  Future<WebResourceResponse?> _shouldInterceptRequest(
-      InAppWebViewController controller, WebResourceRequest request) async {
-    final url = request.url.toString();
-
-    // Ad-block (skip on YouTube/Google sites whose players depend on Google ad
-    // domains like doubleclick.net and googlesyndication.com).
+  /// Per-request resource filter (Android). Not supported on Windows -
+  /// there the Windows adapter embeds the same hardcoded blocklist in an
+  /// injected fetch/XHR hook instead.
+  bool _shouldBlockResource(String url) {
+    // Ad-block (skip on YouTube/Google sites whose players depend on
+    // Google ad domains like doubleclick.net and googlesyndication.com).
     if (_adBlock.adBlockEnabled && _adBlock.shouldBlock(url)) {
       final pageHost =
           Uri.tryParse(_addressController.text)?.host.toLowerCase() ?? '';
@@ -622,7 +679,7 @@ class _BrowserScreenState extends State<BrowserScreen>
           pageHost.endsWith('.google.com') ||
           pageHost.contains('.google.');
       if (!isGoogleSite) {
-        return WebResourceResponse(data: Uint8List(0));
+        return true;
       }
     }
 
@@ -631,33 +688,13 @@ class _BrowserScreenState extends State<BrowserScreen>
       _videoDetector.notifyVideoFound(url);
     }
 
-    return null;
-  }
-
-  void _onConsoleMessage(
-      InAppWebViewController controller, ConsoleMessage message) {
-    if (kDebugMode) {
-      debugPrint('WebView Console: ${message.message}');
-    }
-  }
-
-  void _onReceivedError(InAppWebViewController controller,
-      WebResourceRequest request, WebResourceError error) {
-    debugPrint(
-        '[BROWSER] onReceivedError - ${request.url} | ${error.type} | ${error.description}');
-    if (request.isForMainFrame ?? false) {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  void _onScrollChanged(InAppWebViewController controller, int x, int y) {
-    controller.evaluateJavascript(source: VideoDetectorService.injectionJs);
+    return false;
   }
 
   // ---------------- WebView input / cursor helpers ----------------
 
   Future<void> _injectInputFocusListeners() async {
-    await _webViewController?.evaluateJavascript(source: """
+    await _webViewController?.evaluateJs(withJsBridge("""
       if (!window.__cursorListenersInjected) {
         window.__cursorListenersInjected = true;
         document.addEventListener('focusin', function(e) {
@@ -675,19 +712,16 @@ class _BrowserScreenState extends State<BrowserScreen>
               var val = tag === 'textarea'
                 ? (e.target.value || '')
                 : (e.target.isContentEditable ? (e.target.innerText || '') : (e.target.value || ''));
-              if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
-                window.flutter_inappwebview.callHandler('InputFocusChannel', JSON.stringify({ value: val, kind: kind }));
-              }
+              window.__bbCall('InputFocusChannel', JSON.stringify({ value: val, kind: kind }));
             }
-          } catch(ex){}
-        });
-        document.addEventListener('focusout', function(e) {
-          try {
-            if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
-              window.flutter_inappwebview.callHandler('InputFocusChannel', '__blur__');
-            }
-          } catch(ex){}
-        });
+          }
+        } catch(ex){}
+      });
+      document.addEventListener('focusout', function(e) {
+        try {
+          window.__bbCall('InputFocusChannel', '__blur__');
+        } catch(ex){}
+      });
         if (!window.__keyBlocker) {
           window.__keyBlocker = true;
           document.addEventListener('keydown', function(e) {
@@ -697,7 +731,7 @@ class _BrowserScreenState extends State<BrowserScreen>
           }, true);
         }
       }
-    """);
+    """));
   }
 
   void _pauseCursor() {
@@ -721,7 +755,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   Future<void> _injectTap(Offset position) async {
     try {
-      await _webViewController?.evaluateJavascript(source: """
+      await _webViewController?.evaluateJs(withJsBridge("""
         (function() {
           var x = ${position.dx};
           var y = ${position.dy};
@@ -759,10 +793,10 @@ class _BrowserScreenState extends State<BrowserScreen>
             var value = tag === 'textarea'
               ? (target.value || '')
               : (target.isContentEditable ? (target.innerText || '') : (target.value || ''));
-            window.flutter_inappwebview.callHandler('InputFocusChannel', JSON.stringify({ value: value, kind: kind }));
+            window.__bbCall('InputFocusChannel', JSON.stringify({ value: value, kind: kind }));
           }
         })();
-      """);
+      """));
     } catch (e) {
       debugPrint('injectTap failed: $e');
     }
@@ -770,7 +804,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   Future<void> _injectScroll(double deltaY, Offset cursorPosition) async {
     try {
-      await _webViewController?.evaluateJavascript(source: """
+      await _webViewController?.evaluateJs(withJsBridge("""
         (function() {
           var el = document.elementFromPoint(${cursorPosition.dx}, ${cursorPosition.dy});
           while (el && el !== document.body) {
@@ -782,7 +816,7 @@ class _BrowserScreenState extends State<BrowserScreen>
           }
           window.scrollBy(0, $deltaY);
         })();
-      """);
+      """));
     } catch (e) {
       debugPrint('injectScroll failed: $e');
     }
@@ -791,7 +825,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   Future<void> _injectTextAndSubmit(String value) async {
     final escaped = value.replaceAll('\\', '\\\\').replaceAll("'", "\\'");
     try {
-      await _webViewController?.evaluateJavascript(source: """
+      await _webViewController?.evaluateJs(withJsBridge("""
         (function(){
           var el = window.__flutterFocusedInput || document.activeElement;
           if (!el) return;
@@ -855,7 +889,7 @@ class _BrowserScreenState extends State<BrowserScreen>
             window.__flutterFocusedInputKind = null;
           } catch(e){}
         })();
-      """);
+      """));
     } catch (e) {
       debugPrint('injectTextAndSubmit failed: $e');
     }
@@ -863,8 +897,8 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   Future<void> _blurWebViewInput() async {
     try {
-      await _webViewController?.evaluateJavascript(
-          source: 'if (document.activeElement) document.activeElement.blur();');
+      await _webViewController
+          ?.evaluateJs('if (document.activeElement) document.activeElement.blur();');
     } catch (_) {}
   }
 
@@ -971,11 +1005,10 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (_showNewTabPage) return;
     final currentUrl = _addressController.text.trim();
     if (_isLoading) {
-      _webViewController?.stopLoading();
+      _webViewController?.stop();
       setState(() => _isLoading = false);
     } else if (currentUrl.isNotEmpty && currentUrl != 'about:blank') {
-      _webViewController?.loadUrl(
-          urlRequest: URLRequest(url: WebUri(currentUrl)));
+      _webViewController?.loadUrl(currentUrl);
     }
   }
 
@@ -1023,7 +1056,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     var titleToSave = _pageTitle;
     if (titleToSave.isEmpty && _webViewController != null) {
       try {
-        titleToSave = await (_webViewController as dynamic).getTitle();
+        titleToSave = await _webViewController!.getTitle() ?? '';
       } catch (_) {}
     }
 
@@ -1120,7 +1153,8 @@ class _BrowserScreenState extends State<BrowserScreen>
     _desktopMode = !_desktopMode;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('browser_desktop_mode', _desktopMode);
-    unawaited(_webViewController?.setSettings(settings: _buildSettings()));
+    unawaited(_webViewController?.applySettings(
+        desktopMode: _desktopMode, incognito: false));
     unawaited(_webViewController?.reload());
     setState(() {});
   }
@@ -1174,7 +1208,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _closeFindInPage() {
-    _findInteractionController?.clearMatches();
+    unawaited(_webViewController?.clearFind());
     setState(() {
       _showFindBar = false;
       _findMatchCount = 0;
@@ -1184,18 +1218,23 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _performFind(String query) async {
     if (query.isEmpty) {
-      unawaited(_findInteractionController?.clearMatches());
+      unawaited(_webViewController?.clearFind());
       setState(() {
         _findMatchCount = 0;
         _findActiveIndex = 0;
       });
       return;
     }
-    await _findInteractionController?.findAll(find: query);
+    final count = await _webViewController?.findInPage(query);
+    // On Android the match count arrives asynchronously through the
+    // FindInteractionController callback; -1 means "not reported here".
+    if (count != null && count >= 0 && mounted) {
+      setState(() => _findMatchCount = count);
+    }
   }
 
   void _findNext() {
-    _findInteractionController?.findNext(forward: true);
+    unawaited(_webViewController?.findNext(forward: true));
     if (_findMatchCount > 0) {
       setState(() {
         _findActiveIndex = (_findActiveIndex + 1) % _findMatchCount;
@@ -1204,7 +1243,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _findPrevious() {
-    _findInteractionController?.findNext(forward: false);
+    unawaited(_webViewController?.findNext(forward: false));
     if (_findMatchCount > 0) {
       setState(() {
         _findActiveIndex =
@@ -1369,54 +1408,14 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   Widget _buildWebView() {
+    _createWebviewAdapter();
+    final controller = _webViewController;
+    if (controller == null) return _buildPlatformUnavailable();
     return CursorOverlay(
       active: _cursorActive,
       onTap: (pos) async => await _injectTap(pos),
       onScroll: (dy, pos) async => await _injectScroll(dy, pos),
-      child: InAppWebView(
-        key: const ValueKey('browser_webview'),
-        initialSettings: _buildSettings(),
-        findInteractionController: _findInteractionController,
-        onWebViewCreated: _onWebViewCreated,
-        onLoadStart: _onLoadStart,
-        onLoadStop: _onLoadStop,
-        onProgressChanged: _onProgressChanged,
-        shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
-        shouldInterceptRequest: _shouldInterceptRequest,
-        onConsoleMessage: _onConsoleMessage,
-        onReceivedError: _onReceivedError,
-        onScrollChanged: _onScrollChanged,
-        onUpdateVisitedHistory: (controller, url, androidIsReload) {
-          final urlStr = url?.toString() ?? '';
-          if (urlStr.isEmpty || urlStr == 'about:blank') return;
-          setState(() {
-            _addressController.text = urlStr;
-            _isSecure = urlStr.startsWith('https://');
-          });
-          final activeTab = _tabManager.activeTab;
-          if (activeTab != null) {
-            _tabManager.updateTab(activeTab.id, url: urlStr);
-          }
-          controller.canGoBack().then((v) {
-            if (mounted) setState(() => _canGoBack = v);
-          });
-          controller.canGoForward().then((v) {
-            if (mounted) setState(() => _canGoForward = v);
-          });
-          _checkFavouriteState();
-        },
-        onDownloadStartRequest: (controller, request) {
-          launchUrl(request.url, mode: LaunchMode.externalApplication);
-        },
-        onCreateWindow: (controller, createWindowAction) async {
-          // Open new-window requests in the same WebView.
-          final url = createWindowAction.request.url;
-          if (url != null) {
-            _navigateTo(url.toString());
-          }
-          return false;
-        },
-      ),
+      child: controller.buildWidget(),
     );
   }
 
@@ -1673,8 +1672,7 @@ class _BrowserScreenState extends State<BrowserScreen>
           setState(() => _showNewTabPage = showNew);
           _publishBrowserLocation();
           if (!showNew && tab != null && tab.url.isNotEmpty) {
-            _webViewController?.loadUrl(
-                urlRequest: URLRequest(url: WebUri(tab.url)));
+            _webViewController?.loadUrl(tab.url);
           }
           Navigator.pop(context);
         },
@@ -1685,8 +1683,7 @@ class _BrowserScreenState extends State<BrowserScreen>
           setState(() => _showNewTabPage = showNew);
           _publishBrowserLocation();
           if (!showNew && tab != null && tab.url.isNotEmpty) {
-            _webViewController?.loadUrl(
-                urlRequest: URLRequest(url: WebUri(tab.url)));
+            _webViewController?.loadUrl(tab.url);
           }
         },
         onNewTab: () {

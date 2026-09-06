@@ -862,12 +862,15 @@ class PlayerState with ChangeNotifier {
         fit: BoxFit.cover,
       );
     }
+    // 16:9 instead of square, same width as before, height derived from it.
+    final width = size.toDouble();
+    final height = width * 9 / 16;
     return Image.memory(
       data,
-      width: size.toDouble(),
-      height: size.toDouble(),
-      cacheWidth: (size * 2).round(),
-      cacheHeight: (size * 2).round(),
+      width: width,
+      height: height,
+      cacheWidth: (width * 2).round(),
+      cacheHeight: (height * 2).round(),
       filterQuality: FilterQuality.low,
       fit: BoxFit.cover,
     );
@@ -5715,7 +5718,10 @@ class _MediaGrid extends StatelessWidget {
         crossAxisCount: crossAxisCount,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: width < 900 ? 0.82 : 0.9,
+        // Hand-tuned: thumbnail block is now a fixed 16:9 instead of
+        // filling the card, so the card itself is shorter relative to its
+        // width (was 0.82 : 0.9 when the thumbnail filled the tile).
+        childAspectRatio: width < 900 ? 1.15 : 1.25,
       ),
       itemCount: entries.length,
       itemBuilder: (ctx, i) {
@@ -5777,7 +5783,8 @@ class _MediaCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
+            AspectRatio(
+              aspectRatio: 16 / 9,
               child: Stack(
                 children: [
                   Positioned.fill(
