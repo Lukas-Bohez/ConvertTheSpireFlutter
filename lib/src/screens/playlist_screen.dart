@@ -94,12 +94,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     });
 
     try {
-      // Fetch info + tracks in parallel
-      final infoFuture = widget.playlistService.getPlaylistInfo(url);
-      final tracksFuture = widget.playlistService.getYouTubePlaylistTracks(url);
-
-      final info = await infoFuture;
-      final tracks = await tracksFuture;
+      final info = await widget.playlistService.getPlaylistInfo(url);
+      final tracks = await widget.playlistService.getYouTubePlaylistTracks(url);
 
       if (!mounted) return;
       setState(() {

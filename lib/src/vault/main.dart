@@ -27,6 +27,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
 
 // import './screens/home_screen.dart';
+import 'platform/crash_dump.dart';
 import 'router.dart';
 
 Future<bool> _requestAndroidPermissions() async {
@@ -79,6 +80,7 @@ Future<void> main() async {
   PlatformDispatcher.instance.onError = (error, stack) {
     debugPrint('UNCAUGHT PLATFORM ERROR: $error');
     debugPrint(stack.toString());
+    unawaited(captureCrashDump('vault_platform_error', ''));
     return true; // handled
   };
   ErrorWidget.builder = (FlutterErrorDetails details) {
@@ -224,6 +226,7 @@ Future<void> main() async {
       }
       debugPrint('UNCAUGHT ZONED ERROR: $error');
       debugPrint(stack.toString());
+      unawaited(captureCrashDump('vault_zone_error', ''));
     },
   );
 }

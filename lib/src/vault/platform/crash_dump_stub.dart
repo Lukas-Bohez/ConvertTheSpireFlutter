@@ -1,1 +1,1 @@
-Future<void> captureWindowsMiniDump(String reason, String logPath) async {}
+Future<void> captureCrashDump(String reason, String logPath) async {}

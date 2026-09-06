@@ -41,7 +41,6 @@ import '../utils/snack.dart';
 import '../vault/platform/desktop_window.dart';
 import '../widgets/tv_file_browser.dart';
 
-
 // --- Public entry point -------------------------------------------------------
 
 class PlayerPage extends StatelessWidget {
@@ -1714,7 +1713,8 @@ class PlayerState with ChangeNotifier {
               await _audio!.setFilePath(localPath);
             }
             if (generation != _loadGeneration) return;
-            _runOnMainThread(() => _audio!.setVolume(volume * _trackGainMultiplier));
+            _runOnMainThread(
+                () => _audio!.setVolume(volume * _trackGainMultiplier));
             duration = _audio!.duration;
             position = Duration.zero;
             if (generation != _loadGeneration) return;
@@ -1734,7 +1734,8 @@ class PlayerState with ChangeNotifier {
                   _lastMkOpenTime = now;
                   await _openMediaWithFallback(player, item.path, play: true);
                 }
-                await player.setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
+                await player.setVolume(
+                    volume * _videoVolumeBoost * _trackGainMultiplier * 100);
                 // attempt to read duration; may be zero until stream updates
                 try {
                   duration = await player.stream.duration
@@ -1799,7 +1800,8 @@ class PlayerState with ChangeNotifier {
               } catch (_) {}
               return;
             }
-            await _mkPlayer!.setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
+            await _mkPlayer!.setVolume(
+                volume * _videoVolumeBoost * _trackGainMultiplier * 100);
             _recordPlayStart(item);
           } catch (e) {
             debugPrint('media_kit video load error: $e');
@@ -1878,7 +1880,8 @@ class PlayerState with ChangeNotifier {
       duration = ctrl.value.duration;
       position = Duration.zero;
       _emitPositionUiState();
-      await ctrl.setVolume((volume * _videoVolumeBoost * _trackGainMultiplier).clamp(0.0, 1.0));
+      await ctrl.setVolume(
+          (volume * _videoVolumeBoost * _trackGainMultiplier).clamp(0.0, 1.0));
       await ctrl.play();
       _videoReady = true;
 
@@ -1967,7 +1970,8 @@ class PlayerState with ChangeNotifier {
           await _audioMkPlayer!.seek(resumePosition);
         } catch (_) {}
       }
-      await _audioMkPlayer!.setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
+      await _audioMkPlayer!
+          .setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
       if (wasPlaying) {
         await _audioMkPlayer!.play();
       } else {
@@ -2008,7 +2012,8 @@ class PlayerState with ChangeNotifier {
           await _mkPlayer!.seek(resumePosition);
         } catch (_) {}
       }
-      await _mkPlayer!.setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
+      await _mkPlayer!
+          .setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
       if (shouldKeepPlaying) {
         await _mkPlayer!.play();
       } else {
@@ -3630,7 +3635,8 @@ class PlayerState with ChangeNotifier {
               _lastMkOpenTime = now;
               await _openMediaWithFallback(_audioMkPlayer!, path, play: true);
             }
-            await _audioMkPlayer!.setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
+            await _audioMkPlayer!.setVolume(
+                volume * _videoVolumeBoost * _trackGainMultiplier * 100);
             duration = await _audioMkPlayer!.stream.duration
                 .firstWhere((d) => d.inMilliseconds > 0)
                 .timeout(const Duration(seconds: 1),
@@ -3684,7 +3690,8 @@ class PlayerState with ChangeNotifier {
             _lastMkOpenTime = now;
             await _openMediaWithFallback(_mkPlayer!, path, play: true);
           }
-          await _mkPlayer!.setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
+          await _mkPlayer!.setVolume(
+              volume * _videoVolumeBoost * _trackGainMultiplier * 100);
           if (idx >= 0 && idx < library.length) {
             _recordPlayStart(library[idx]);
           }
@@ -5195,25 +5202,28 @@ class _TrackThumbnail extends StatelessWidget {
   final Uint8List? data;
   final bool isVideo;
   final double size;
+  final double? height;
   final double radius;
 
   const _TrackThumbnail(
       {this.data,
       required this.isVideo,
       required this.size,
+      this.height,
       required this.radius});
 
   @override
   Widget build(BuildContext context) {
+    final thumbnailHeight = height ?? size;
     if (data != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(radius),
         child: Image.memory(
           data!,
           width: size,
-          height: size,
+          height: thumbnailHeight,
           cacheWidth: (size * 2).round(),
-          cacheHeight: (size * 2).round(),
+          cacheHeight: (thumbnailHeight * 2).round(),
           filterQuality: FilterQuality.low,
           fit: BoxFit.cover,
         ),
@@ -5223,13 +5233,13 @@ class _TrackThumbnail extends StatelessWidget {
     final icon = isVideo ? Icons.videocam_rounded : Icons.music_note;
     return Container(
       width: size,
-      height: size,
+      height: thumbnailHeight,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
       ),
       child: Icon(icon,
-          size: size * 0.55,
+          size: (size < thumbnailHeight ? size : thumbnailHeight) * 0.55,
           color: Theme.of(context).colorScheme.onSurface.withAlpha(153)),
     );
   }
@@ -5247,18 +5257,20 @@ class _NowPlayingThumbnailSlot extends StatelessWidget {
             constraints.hasBoundedWidth && constraints.maxWidth.isFinite
                 ? constraints.maxWidth
                 : fallbackWidth;
-        final size = (availableWidth * 0.38).clamp(72.0, 180.0);
+        final width = (availableWidth * 0.32).clamp(64.0, 140.0);
+        final height = width * 9 / 16;
 
         final state = context.watch<PlayerState>();
         final item = state.currentItem;
         if (item == null) return const SizedBox.shrink();
         return SizedBox(
-          width: size,
-          height: size,
+          width: width,
+          height: height,
           child: _TrackThumbnail(
             data: item.thumbnailData,
             isVideo: item.type == MediaType.video,
-            size: size,
+            size: width,
+            height: height,
             radius: 10,
           ),
         );
@@ -5773,7 +5785,8 @@ class _MediaCard extends StatelessWidget {
                         state.thumbnailForItem(item, size: 0, expand: true) ??
                             Container(color: cs.surfaceContainerHighest),
                   ),
-                  if (state.isFavourite(item.path) || state.isDisliked(item.path))
+                  if (state.isFavourite(item.path) ||
+                      state.isDisliked(item.path))
                     Positioned(
                       top: 6,
                       right: 6,

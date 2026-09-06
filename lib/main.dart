@@ -20,6 +20,7 @@ import 'src/config/full_mode_access.dart';
 import 'src/services/ad_service.dart';
 import 'src/services/purchase_service.dart';
 import 'src/services/review_service.dart';
+import 'src/vault/platform/crash_dump.dart';
 
 Future<File?> _prepareStartupErrorLogFile() async {
   try {
@@ -114,9 +115,17 @@ Future<void> main() async {
         details.exceptionAsString(),
         details.stack ?? StackTrace.current,
       );
+      unawaited(captureCrashDump(
+        'flutter_error',
+        startupErrorLogFile?.path ?? '',
+      ));
     };
     ui.PlatformDispatcher.instance.onError = (error, stack) {
       _logStartupError(startupErrorLogFile, 'PLATFORM ERROR', error, stack);
+      unawaited(captureCrashDump(
+        'platform_error',
+        startupErrorLogFile?.path ?? '',
+      ));
       return true;
     };
 
@@ -246,5 +255,9 @@ Future<void> main() async {
     );
   }, (error, stack) {
     _logStartupError(startupErrorLogFile, 'ZONE ERROR', error, stack);
+    unawaited(captureCrashDump(
+      'zone_error',
+      startupErrorLogFile?.path ?? '',
+    ));
   });
 }

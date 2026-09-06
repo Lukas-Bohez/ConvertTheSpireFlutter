@@ -1,14 +1,16 @@
 import 'dart:ffi';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:win32/win32.dart';
 
 Future<void> captureWindowsMiniDump(String reason, String logPath) async {
   try {
     final dir = await getApplicationSupportDirectory();
+    final safeReason = reason.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
     final filename =
-        'webview_crash_${DateTime.now().toIso8601String().replaceAll(':', '-')}.dmp';
+        'app_crash_${safeReason}_${DateTime.now().toIso8601String().replaceAll(':', '-')}.dmp';
     final path = '${dir.path}${Platform.pathSeparator}$filename';
     final hFile = CreateFile(
       TEXT(path),
@@ -32,7 +34,7 @@ Future<void> captureWindowsMiniDump(String reason, String logPath) async {
           IntPtr,
         ),
         int Function(int, int, int, int, int, int, int)>('MiniDumpWriteDump');
-    miniDumpWriteDump(
+    final result = miniDumpWriteDump(
       GetCurrentProcess(),
       GetCurrentProcessId(),
       hFile,
@@ -42,5 +44,13 @@ Future<void> captureWindowsMiniDump(String reason, String logPath) async {
       0,
     );
     CloseHandle(hFile);
-  } catch (_) {}
+    debugPrint(
+      result != 0
+          ? 'Crash dump written to $path (log: $logPath)'
+          : 'Crash dump capture failed for $path (log: $logPath)',
+    );
+  } catch (error, stack) {
+    debugPrint('Crash dump capture failed: $error');
+    debugPrint(stack.toString());
+  }
 }
