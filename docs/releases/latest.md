@@ -1,20 +1,18 @@
-# Release Notes - v13.0.8
+# Release Notes - v13.0.12
 
-## Low-End Stability & Playlist Reliability
+## QA Fixes & Stability
 
 ## Fixes
 
-* **Crash entering the Torrents tab on low-end PCs.** Concurrent first-opens of the vault database (app startup vs. the Torrents tab building instantly on entering Vault) could race two openDatabase calls against the same file and throw; the fix memoizes a single in-flight open Future and makes TorrentsScreen await vault bootstrap before its first DB access.
-* **yt-dlp "auto repair failed" on slow machines.** The Windows binary-replace step in a self-update had no retry, so a transient lock on the just-exited yt-dlp.exe (antivirus scan, slow OS handle teardown) would hard-fail the download; the rename now retries with backoff, and a self-update failure falls back to one plain retry with the existing binary instead of failing immediately.
-* **Android playlist import still returning 0 tracks on large playlists.** Added per-video diagnostic logging, raised the inter-page idle timeout, and added smarter retry.
+* **Windows startup crash fixed.** Removed the `WebViewEnvironment.create()` call that crashed on some machines (notably lower-end CPUs); the WebView EJS solver now initializes lazily with memoized, always-reset futures so a silent init failure can't wedge the app.
+* **Share button shares the actual media file** instead of just an app link and the song title, with a text fallback for streamed files not on disk.
+* **Session logs now actually get written on normal close.** Two competing window-close paths raced each other; they're consolidated into a single path so log flushing always runs before exit.
+* **Consistent button sizing app-wide** via unified `ButtonStyle` themes (filled/outlined/elevated) — fixes the mismatched "Add Magnet" button and similar inconsistencies.
+* **Mobile now-playing row overflow fixed.** The share icon no longer overlaps the AUDIO badge on phones; the row clips cleanly and icon buttons were compacted.
+* **yt-dlp diagnostics added** for the Deno JS-runtime fallback (silent-failure path now logs), to pin down the low-end-only "page needs to be reloaded" failures.
 
 ## Build Notes
 
-* GitHub release tag: v13.0.8
-* Release page: [v13.0.8](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.8)
-* flutter analyze and flutter test pass cleanly.
-
-* GitHub release tag: `v13.0.7`
-* Release page: [v13.0.7](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.7)
-* `flutter analyze` passes cleanly.
-* Play AAB not required for this hotfix (Play builds were unaffected).
+* GitHub release tag: v13.0.12
+* Release page: [v13.0.12](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.12)
+* flutter analyze passes cleanly.
