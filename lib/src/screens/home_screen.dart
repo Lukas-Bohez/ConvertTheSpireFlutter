@@ -21,6 +21,7 @@ import '../services/android_saf.dart';
 import '../services/folder_access_service.dart';
 import '../services/ipfs_service.dart';
 import '../services/review_service.dart';
+import '../services/session_log_service.dart';
 import '../services/shortcut_service.dart';
 import '../services/tray_service.dart';
 import '../services/update_service.dart';
@@ -189,7 +190,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     } catch (_) {}
 
     if (kDebugMode) {
-      debugPrint('[NAV] QuickLinks routeToIndex keys: ${QuickLinksService.routeToIndex.keys.join(', ')}');
+      debugPrint(
+          '[NAV] QuickLinks routeToIndex keys: ${QuickLinksService.routeToIndex.keys.join(', ')}');
     }
 
     if (!kPlayStoreBuild) {
@@ -297,6 +299,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
 
     _trayService!.onTrayQuit = () async {
+      // This path calls exit(0) below, which can (and per the missing
+      // session logs, apparently does) win the race against app.dart's
+      // onWindowClose() - which also flushes the session log, but only
+      // after up to ~5s of WebView2 process polling. Flush here too, so
+      // whichever path wins the race, the log is already on disk.
+      try {
+        await SessionLogService.instance.flush('normal_exit');
+      } catch (_) {}
       try {
         await BrowserScreen.browserKey.currentState
             ?.disposeAllWebViewControllers();

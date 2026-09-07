@@ -1,6 +1,26 @@
 # Changelog
 
-## 13.0.10+1273 - Windows Crash Fix (WebView) + 16:9 Thumbnails + Session Diagnostics
+## 13.0.12+1275 — Single Close Path & Ship Fixes
+
+### Changed
+- **Window-close handling consolidated into a single path.** `TrayService` no longer reacts to `onWindowClose` — `_MyAppState` in `app.dart` is the sole close path. This eliminates the v13.0.11 race at its root (previously `onTrayQuit`'s `exit(0)` could kill the process before app.dart's slower teardown flushed the session log; now there is only one teardown sequence). Geometry is saved explicitly on close, the tray icon is destroyed on quit so it doesn't linger, and a failed hide-to-tray now falls through to full teardown instead of leaving the window stuck open.
+
+## 13.0.11+1274 — QA Fixes & yt-dlp Diagnostics
+
+### Fixed
+- **Share button now shares the actual audio file.** Was `Share.share(text)`, which only ever shared an app-store link and the song title. Now shares the real file via `SharePlus.instance.share(ShareParams(files: [XFile(item.path)]))` (matching the pattern in `home_screen.dart`), falling back to a text-only share only if the file isn't on disk (e.g. streamed).
+- **Missing session logs on normal close — found the actual cause.** Two independent `WindowListener`s (`app.dart` and `TrayService`) both fire `onWindowClose`. `TrayService`'s `onTrayQuit` calls `exit(0)` immediately, which kills the process before `app.dart`'s slower `onWindowClose` (which poll for WebView2 teardown before flushing) ever reaches its flush line. Fixed by flushing the session log first in the `onTrayQuit` path, so whichever path wins the race, the log is already on disk.
+- **Inconsistent button sizing — unified at the theme level.** No `FilledButtonTheme`/`OutlinedButtonTheme`/`ElevatedButtonTheme` existed, so different button types fell back to Material 3's per-type defaults (not guaranteed identical once icons are involved). One shared `_unifiedButtonStyle` applied to all three in both light and dark themes fixes it everywhere at once.
+- **Mobile share-icon-over-badge glitch.** The now-playing card's track-info `Row` overflows on real phone widths; `Row`'s default `clipBehavior: Clip.none` paints overflowing children at their out-of-bounds position, landing the share icon on top of the type badge. Wrapped the `Row` in `ClipRect(clipBehavior: Clip.hardEdge)` (clean crop instead of overlap) and added `visualDensity: VisualDensity.compact` on the three icon buttons (share/favourite/dislike) to shrink their footprint.
+
+### Added
+- **Deno binary verification.** `DenoRuntimeService.resolveOrDownload()` now runs `deno --version` on every resolved binary (cached, system-found, and newly-downloaded) instead of only checking file existence. Logs which failure mode a low-end PC hits — "not found", "download failed (HTTP N)", or "exists but won't run" — so the next round can fix the specific cause rather than guessing.
+- **yt-dlp Deno-unavailable warning.** When the Deno JS runtime can't be resolved (the silent failure path), a debugPrint now fires pointing to the deno-runtime logs, making "page needs to be reloaded" failures debuggable.
+
+### Internal
+- Node.js detection path (`_tryApplyNodeRuntime`) now logs when Node isn't found, so the Deno fallback is observable rather than silent.
+
+
 
 ### Fixed
 - **Windows startup crash on older CPUs (root cause found via crash dumps).** `flutter_inappwebview`'s Windows plugin ships a binary containing BMI2 instructions (confirmed: `EXCEPTION_ILLEGAL_INSTRUCTION` at a fixed offset in `flutter_inappwebview_windows_plugin.dll`), and the app eagerly created a `WebViewEnvironment` at startup, crashing pre-2013/2015 CPUs instantly. The in-app browser on Windows now runs on WebView2 (`webview_windows`) via a platform adapter; `flutter_inappwebview` remains for Android/iOS only. Android behaviour is unchanged.

@@ -358,8 +358,8 @@ class YtDlpService {
     final lastCheck = prefs.getInt('yt_dlp_last_update_check_ms');
     final cachedJson = prefs.getString('yt_dlp_cached_release_json');
     if (lastCheck != null && cachedJson != null) {
-      final elapsed =
-          DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(lastCheck));
+      final elapsed = DateTime.now()
+          .difference(DateTime.fromMillisecondsSinceEpoch(lastCheck));
       if (elapsed < _minUpdateCheckInterval && cachedJson.isNotEmpty) {
         try {
           final cached = jsonDecode(cachedJson) as Map<String, dynamic>;
@@ -376,8 +376,7 @@ class YtDlpService {
       headers: {'Accept': 'application/vnd.github+json'},
     );
     if (response.statusCode == 403) {
-      throw Exception(
-          'GitHub API rate-limited (60 req/hr for unauthenticated '
+      throw Exception('GitHub API rate-limited (60 req/hr for unauthenticated '
           'requests) — try again later.');
     }
     if (response.statusCode != 200) {
@@ -390,7 +389,8 @@ class YtDlpService {
       throw Exception('GitHub API returned an empty release tag');
     }
 
-    await prefs.setInt('yt_dlp_last_update_check_ms', DateTime.now().millisecondsSinceEpoch);
+    await prefs.setInt(
+        'yt_dlp_last_update_check_ms', DateTime.now().millisecondsSinceEpoch);
     await prefs.setString('yt_dlp_cached_release_json', response.body);
     debugPrint('yt-dlp update check: fetched latest tag $tag');
     return release;
@@ -510,8 +510,7 @@ class YtDlpService {
             e.message.toLowerCase().contains('access is denied');
         if (!isLock || attempt == maxAttempts) rethrow;
         final delay = Duration(milliseconds: 250 * attempt);
-        debugPrint(
-            'yt-dlp: binary locked (attempt $attempt/$maxAttempts), '
+        debugPrint('yt-dlp: binary locked (attempt $attempt/$maxAttempts), '
             'retrying in ${delay.inMilliseconds}ms: $e');
         await Future.delayed(delay);
       }
@@ -620,23 +619,30 @@ class YtDlpService {
     // Common options
     args.addAll([
       '--no-mtime',
-      '--extractor-args', 'youtube:lang=en',
+      '--extractor-args',
+      'youtube:lang=en',
       '--no-playlist',
       '--newline',
       '--no-colors',
       '--no-overwrites',
       '--no-part',
-      '-o', _escapeTemplate(outputPath),
-      '--extractor-retries', '3',
-      '--retries', '10',
+      '-o',
+      _escapeTemplate(outputPath),
+      '--extractor-retries',
+      '3',
+      '--retries',
+      '10',
     ]);
 
     args.addAll([
       '--embed-metadata',
       '--embed-thumbnail',
-      '--parse-metadata', '%(uploader|)s:%(meta_artist)s',
-      '--parse-metadata', '%(uploader|)s:%(meta_album_artist)s',
-      '--parse-metadata', '%(title)s:%(meta_title)s',
+      '--parse-metadata',
+      '%(uploader|)s:%(meta_artist)s',
+      '--parse-metadata',
+      '%(uploader|)s:%(meta_album_artist)s',
+      '--parse-metadata',
+      '%(title)s:%(meta_title)s',
       '--add-metadata',
     ]);
 
@@ -761,12 +767,11 @@ class YtDlpService {
       final isFormatUnavailable =
           message.contains('Requested format is not available') ||
               message.contains('format is not available');
-      final isReloadError =
-          message.contains('page needs to be reloaded') ||
-              message.contains('UNPLAYABLE') ||
-              message.contains('playability status: UNPLAYABLE') ||
-              message.contains('sign in to confirm') ||
-              message.contains('confirm you are not a bot');
+      final isReloadError = message.contains('page needs to be reloaded') ||
+          message.contains('UNPLAYABLE') ||
+          message.contains('playability status: UNPLAYABLE') ||
+          message.contains('sign in to confirm') ||
+          message.contains('confirm you are not a bot');
       if (hadCookieArgs && isFormatUnavailable) {
         debugPrint(
             'yt-dlp failed with format unavailable while cookies were enabled; retrying once without cookies');
@@ -777,10 +782,8 @@ class YtDlpService {
         // reloaded"). Self-update throttled to the cooldown window, then retry
         // once — a newer yt-dlp usually has the SABR/nsig patch that fixes it.
         debugPrint('yt-dlp hit a reload/playability error: $message');
-        final cooldownOk =
-            _lastAutoUpdate == null ||
-                DateTime.now().difference(_lastAutoUpdate!) >=
-                    _autoUpdateCooldown;
+        final cooldownOk = _lastAutoUpdate == null ||
+            DateTime.now().difference(_lastAutoUpdate!) >= _autoUpdateCooldown;
         if (cooldownOk) {
           try {
             final updatedPath = await updateYtDlp(
@@ -823,7 +826,8 @@ class YtDlpService {
           // Self-update on cooldown — still attempt one plain retry with the
           // same binary before giving up. Costs nothing extra and may recover
           // a purely transient hiccup unrelated to yt-dlp's version.
-          debugPrint('yt-dlp: reload error, self-update on cooldown — plain retry');
+          debugPrint(
+              'yt-dlp: reload error, self-update on cooldown — plain retry');
           try {
             await runAttempt([for (final a in args) a]);
             return;
@@ -890,15 +894,24 @@ class YtDlpService {
 
   static int _qualityToHeight(String quality) {
     switch (quality) {
-      case '360p': return 360;
-      case '480p': return 480;
-      case '720p': return 720;
-      case '1080p': return 1080;
-      case '1440p': return 1440;
-      case '2160p': return 2160;
-      case '4320p': return 4320;
-      case 'best': return 9999;
-      default: return 720;
+      case '360p':
+        return 360;
+      case '480p':
+        return 480;
+      case '720p':
+        return 720;
+      case '1080p':
+        return 1080;
+      case '1440p':
+        return 1440;
+      case '2160p':
+        return 2160;
+      case '4320p':
+        return 4320;
+      case 'best':
+        return 9999;
+      default:
+        return 720;
     }
   }
 
@@ -972,7 +985,10 @@ class YtDlpService {
         cmd.write(
             "try { (New-Object System.Net.WebClient).DownloadFile('$safeUrl','$safeDest') } catch { exit 1 }");
         final pr = await Process.run('powershell', [
-          '-NoProfile', '-NonInteractive', '-Command', cmd.toString(),
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          cmd.toString(),
         ]).timeout(const Duration(seconds: 60));
         if (pr.exitCode == 0) return;
       } catch (_) {}
@@ -989,7 +1005,10 @@ class YtDlpService {
         cmd.write(
             "try { Invoke-WebRequest -Uri '$safeUrl' -OutFile '$safeDest' -UseBasicParsing } catch { exit 1 }");
         final pr = await Process.run('powershell', [
-          '-NoProfile', '-NonInteractive', '-Command', cmd.toString(),
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          cmd.toString(),
         ]).timeout(const Duration(seconds: 90));
         if (pr.exitCode == 0) return;
       } catch (_) {}
@@ -1001,7 +1020,10 @@ class YtDlpService {
         final cmd =
             "try { Start-BitsTransfer -Source '$safeUrl' -Destination '$safeDest' -Priority High } catch { exit 1 }";
         final pr = await Process.run('powershell', [
-          '-NoProfile', '-NonInteractive', '-Command', cmd,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          cmd,
         ]).timeout(const Duration(seconds: 60));
         if (pr.exitCode == 0) return;
       } catch (_) {}
@@ -1012,7 +1034,11 @@ class YtDlpService {
         final safeUrl = url.replaceAll("'", "''");
         final safeDest = dest.replaceAll("'", "''");
         final pr = await Process.run('certutil', [
-          '-urlcache', '-split', '-f', safeUrl, safeDest,
+          '-urlcache',
+          '-split',
+          '-f',
+          safeUrl,
+          safeDest,
         ]).timeout(const Duration(seconds: 90));
         if (pr.exitCode == 0) {
           final tmpFile = File('$dest.TMP');
@@ -1074,12 +1100,12 @@ class YtDlpService {
       }
       if (nodePath == null) {
         final result = await Process.run(
-          Platform.isWindows ? 'where' : 'which', ['node'],
+          Platform.isWindows ? 'where' : 'which',
+          ['node'],
           runInShell: true,
         ).timeout(const Duration(seconds: 5));
         if (result.exitCode == 0) {
-          final lines = result.stdout.toString().trim()
-              .split(RegExp(r'\r?\n'));
+          final lines = result.stdout.toString().trim().split(RegExp(r'\r?\n'));
           for (final l in lines) {
             if (l.trim().isNotEmpty) {
               nodePath = l.trim();
@@ -1091,6 +1117,8 @@ class YtDlpService {
       if (nodePath != null && nodePath.isNotEmpty) {
         args.addAll(['--js-runtimes', 'node:$nodePath']);
         debugPrint('yt-dlp: using Node.js JS runtime at $nodePath');
+      } else {
+        debugPrint('yt-dlp: Node.js not found, falling back to Deno');
       }
     } catch (_) {
       // Silently ignore — yt-dlp still works without a JS runtime
@@ -1106,7 +1134,18 @@ class YtDlpService {
   Future<void> _tryApplyDenoRuntime(List<String> args) async {
     if (kIsWeb || Platform.isAndroid || Platform.isIOS) return;
     final deno = await DenoRuntimeService.resolveOrDownload();
-    if (deno == null || !deno.trim().isNotEmpty) return;
+    if (deno == null || deno.trim().isEmpty) {
+      // Silent failure path — no log line at all makes it impossible to
+      // distinguish "no Deno installed" from "download failed" from
+      // "binary present but crashes on this CPU". Each of those needs a
+      // different fix. The deno_runtime_service now logs which one it is.
+      debugPrint(
+        'yt-dlp: Deno JS runtime unavailable — downloads may hit '
+        '"page needs to be reloaded" errors. Check deno-runtime logs '
+        'in session_log_*.log for the specific failure mode.',
+      );
+      return;
+    }
     args.addAll(['--js-runtimes', 'deno:$deno']);
     debugPrint('yt-dlp: using Deno runtime at $deno');
   }

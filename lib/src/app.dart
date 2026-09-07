@@ -260,7 +260,11 @@ class _MyAppState extends State<MyApp>
         odyseeSearcher: odyseeSearcher,
       );
       final previewPlayer = PreviewPlayerService();
-      final playlistService = PlaylistService(yt: ytExplode, ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath, logs: logs);
+      final playlistService = PlaylistService(
+          yt: ytExplode,
+          ytDlp: ytDlp,
+          ytDlpPath: resolvedYtDlpPath,
+          logs: logs);
       final bulkImportService = BulkImportService();
       final musicBrainzService = MusicBrainzService();
       final lyricsService = LyricsService();
@@ -429,6 +433,12 @@ class _MyAppState extends State<MyApp>
 
     SessionLogService.instance.mark('window_close_requested');
 
+    // Persist window geometry on close - resize/move only save on a debounce,
+    // which a quick open->close can outrun.
+    try {
+      await TrayService.saveWindowGeometry();
+    } catch (_) {}
+
     // Close-to-tray must be a pure hide path. Do not dispose WebViews,
     // kill WebView2 processes, or destroy the window in this branch.
     final shouldMinimiseToTray = _controller?.settings?.minimizeToTrayOnClose ??
@@ -439,10 +449,12 @@ class _MyAppState extends State<MyApp>
       }
       try {
         await windowManager.hide();
+        return;
       } catch (e) {
         if (kDebugMode) debugPrint('[App] windowManager.hide failed: $e');
+        // Fall through to full teardown rather than leaving the window
+        // stuck open when hide fails.
       }
-      return;
     }
 
     if (kDebugMode) {
@@ -515,6 +527,12 @@ class _MyAppState extends State<MyApp>
     } catch (_) {}
 
     try {
+      await TrayService.destroyActive();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[App] tray destroy failed: $e');
+    }
+
+    try {
       await windowManager.setPreventClose(false);
       await windowManager.destroy();
     } catch (e) {
@@ -530,6 +548,15 @@ class _MyAppState extends State<MyApp>
     // Let the host process tear down normally rather than forcing exit(),
     // which could race with WebView2 teardown.
   }
+
+  static final ButtonStyle _unifiedButtonStyle = ButtonStyle(
+    minimumSize: const WidgetStatePropertyAll(Size(64, 40)),
+    padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
+    shape: WidgetStatePropertyAll(RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20),
+    )),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -573,6 +600,16 @@ class _MyAppState extends State<MyApp>
             selectedItemColor: lightScheme.primary,
             unselectedItemColor: lightScheme.onSurface.withValues(alpha: 0.7),
           ),
+          // Force identical padding/min-size/shape across button types so
+          // rows mixing FilledButton/OutlinedButton/ElevatedButton (e.g. the
+          // Torrents empty-state actions) don't render at different sizes -
+          // Material 3's per-type defaults are close but not guaranteed
+          // identical once icons are involved.
+          filledButtonTheme: FilledButtonThemeData(style: _unifiedButtonStyle),
+          outlinedButtonTheme:
+              OutlinedButtonThemeData(style: _unifiedButtonStyle),
+          elevatedButtonTheme:
+              ElevatedButtonThemeData(style: _unifiedButtonStyle),
         );
 
         final darkTheme = ThemeData.from(
@@ -595,6 +632,11 @@ class _MyAppState extends State<MyApp>
             selectedItemColor: darkScheme.primary,
             unselectedItemColor: darkScheme.onSurface.withValues(alpha: 0.7),
           ),
+          filledButtonTheme: FilledButtonThemeData(style: _unifiedButtonStyle),
+          outlinedButtonTheme:
+              OutlinedButtonThemeData(style: _unifiedButtonStyle),
+          elevatedButtonTheme:
+              ElevatedButtonThemeData(style: _unifiedButtonStyle),
         );
 
         return ExcludeFocus(

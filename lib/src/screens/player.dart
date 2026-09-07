@@ -5029,97 +5029,116 @@ class _PlayerScreenState extends State<PlayerScreen>
           // -- Track info --
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 8, 4),
-            child: Row(
-              children: [
-                // Thumbnail
-                const _NowPlayingThumbnailSlot(),
-                const SizedBox(width: 12),
-                // Title / artist / type badge
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          // Type badge - clear visual distinction between audio and video
-                          _TypeBadge(type: item.type),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                color: _PlayerTheme.text(context),
+            child: ClipRect(
+              clipBehavior: Clip.hardEdge,
+              child: Row(
+                children: [
+                  // Thumbnail
+                  const _NowPlayingThumbnailSlot(),
+                  const SizedBox(width: 12),
+                  // Title / artist / type badge
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            // Type badge - clear visual distinction between audio and video
+                            _TypeBadge(type: item.type),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                  color: _PlayerTheme.text(context),
+                                ),
                               ),
                             ),
+                          ],
+                        ),
+                        if (artist.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            artist,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12, color: _PlayerTheme.sub(context)),
                           ),
                         ],
-                      ),
-                      if (artist.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          artist,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontSize: 12, color: _PlayerTheme.sub(context)),
-                        ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.share),
-                  tooltip: 'Share',
-                  onPressed: () async {
-                    try {
-                      final title = item.title ?? p.basename(item.path);
-                      final text =
-                          'Check out $title  Ehttps://play.google.com/store/apps/details?id=com.torrentspire.ai';
-                      await Share.share(text);
-                    } catch (_) {}
-                  },
-                ),
-                // Favourite button
-                IconButton(
-                  icon: Icon(
-                    state.isFavourite(item.path)
-                        ? Icons.star_rounded
-                        : Icons.star_border_rounded,
-                    color: state.isFavourite(item.path)
-                        ? Colors.amber
-                        : _PlayerTheme.sub(context),
-                    size: 24,
+                  IconButton(
+                    icon: const Icon(Icons.share),
+                    tooltip: 'Share',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () async {
+                      try {
+                        final title = item.title ?? p.basename(item.path);
+                        final file = File(item.path);
+                        if (await file.exists()) {
+                          await SharePlus.instance.share(
+                            ShareParams(
+                                files: [XFile(item.path)], title: title),
+                          );
+                        } else {
+                          // File isn't on disk (e.g. streamed, not
+                          // downloaded) - fall back to a text share.
+                          await SharePlus.instance.share(
+                            ShareParams(
+                                text:
+                                    'Check out $title on Bitplayer: https://play.google.com/store/apps/details?id=com.torrentspire.ai'),
+                          );
+                        }
+                      } catch (_) {}
+                    },
                   ),
-                  tooltip: state.isFavourite(item.path)
-                      ? 'Remove favourite'
-                      : 'Add favourite',
-                  onPressed: () => state.toggleFavourite(item.path),
-                ),
-                // Dislike button -- previously only reachable via the
-                // overflow menu, so it was easy to lose track of.
-                IconButton(
-                  icon: Icon(
-                    state.isDisliked(item.path)
-                        ? Icons.thumb_down_rounded
-                        : Icons.thumb_down_outlined,
-                    color: state.isDisliked(item.path)
-                        ? Theme.of(context).colorScheme.error
-                        : _PlayerTheme.sub(context),
-                    size: 22,
+                  // Favourite button
+                  IconButton(
+                    icon: Icon(
+                      state.isFavourite(item.path)
+                          ? Icons.star_rounded
+                          : Icons.star_border_rounded,
+                      color: state.isFavourite(item.path)
+                          ? Colors.amber
+                          : _PlayerTheme.sub(context),
+                      size: 24,
+                    ),
+                    tooltip: state.isFavourite(item.path)
+                        ? 'Remove favourite'
+                        : 'Add favourite',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => state.toggleFavourite(item.path),
                   ),
-                  tooltip:
-                      state.isDisliked(item.path) ? 'Undo dislike' : 'Dislike',
-                  onPressed: () => state.toggleDislike(item.path),
-                ),
-                _TrackMenuButton(
-                  state: state,
-                  entry: MapEntry(state.currentIndex, item),
-                ),
-              ],
+                  // Dislike button -- previously only reachable via the
+                  // overflow menu, so it was easy to lose track of.
+                  IconButton(
+                    icon: Icon(
+                      state.isDisliked(item.path)
+                          ? Icons.thumb_down_rounded
+                          : Icons.thumb_down_outlined,
+                      color: state.isDisliked(item.path)
+                          ? Theme.of(context).colorScheme.error
+                          : _PlayerTheme.sub(context),
+                      size: 22,
+                    ),
+                    tooltip: state.isDisliked(item.path)
+                        ? 'Undo dislike'
+                        : 'Dislike',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => state.toggleDislike(item.path),
+                  ),
+                  _TrackMenuButton(
+                    state: state,
+                    entry: MapEntry(state.currentIndex, item),
+                  ),
+                ],
+              ),
             ),
           ),
 

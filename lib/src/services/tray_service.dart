@@ -18,6 +18,8 @@ class TrayService with TrayListener, WindowListener {
   static bool enabled = false;
   static bool shouldMinimiseToTrayOnClose = false;
 
+  static TrayService? _active;
+
   bool _initialised = false;
   bool Function() shouldMinimiseToTray;
   VoidCallback? onTrayShow;
@@ -28,9 +30,27 @@ class TrayService with TrayListener, WindowListener {
   bool get isDesktop =>
       !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
 
+  /// Saves the current window bounds to prefs. Called from app.dart's single
+  /// window-close path so geometry persists on quit (resize/move only save
+  /// on a debounce, which a quick open->close can outrun).
+  static Future<void> saveWindowGeometry() async {
+    try {
+      await _active?._saveWindowGeometry();
+    } catch (_) {}
+  }
+
+  /// Destroys the active tray (icon + listeners) so it doesn't linger after
+  /// quit. Called from app.dart's single window-close path.
+  static Future<void> destroyActive() async {
+    try {
+      await _active?.destroy();
+    } catch (_) {}
+  }
+
   Future<void> init() async {
     if (!isDesktop || _initialised) return;
     _initialised = true;
+    _active = this;
     enabled = true;
     shouldMinimiseToTrayOnClose = shouldMinimiseToTray();
 
@@ -106,24 +126,12 @@ class TrayService with TrayListener, WindowListener {
   }
 
   // -- WindowListener ------------------------------------------------------
-
-  @override
-  void onWindowClose() {
-    _saveWindowGeometry();
-    if (shouldMinimiseToTray()) {
-      debugPrint('TrayService: minimising to tray instead of closing');
-      unawaited(() async {
-        try {
-          await windowManager.hide();
-        } catch (e) {
-          debugPrint('TrayService: hide failed on close: $e');
-          onTrayQuit?.call();
-        }
-      }());
-    } else {
-      onTrayQuit?.call();
-    }
-  }
+  // NOTE: onWindowClose is deliberately NOT overridden here. _MyAppState in
+  // app.dart is the single window-close path; having TrayService also react
+  // to close meant two independent teardown paths racing each other
+  // (onTrayQuit's exit(0) could kill the process before app.dart's slower
+  // path flushed the session log). Geometry is saved on resize/move below
+  // and explicitly from app.dart's close path via saveWindowGeometry().
 
   @override
   void onWindowResized() => _scheduleGeometrySave();
@@ -198,6 +206,8 @@ class TrayService with TrayListener, WindowListener {
 
   Future<void> destroy() async {
     if (!_initialised) return;
+    _initialised = false;
+    if (identical(_active, this)) _active = null;
     enabled = false;
     shouldMinimiseToTrayOnClose = false;
 
