@@ -226,7 +226,11 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    FilledButton.tonalIcon(
+                    // Same variant as its siblings (Force reannounce, Force
+                    // DHT refresh, …) — these are conceptually parallel
+                    // actions and previously used a tonal FilledButton,
+                    // which rendered with a different emphasis/color.
+                    OutlinedButton.icon(
                       icon: const Icon(Icons.refresh, size: 16),
                       label: const Text('Force refresh'),
                       onPressed: () async {

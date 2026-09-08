@@ -551,6 +551,10 @@ class _MyAppState extends State<MyApp>
 
   static final ButtonStyle _unifiedButtonStyle = ButtonStyle(
     minimumSize: const WidgetStatePropertyAll(Size(64, 40)),
+    // Pin the height from above as well: a .icon() constructor's internal
+    // padding can produce a height *smaller* than a plain minimum allows,
+    // so rows mixing Filled/Outlined variants could still render unevenly.
+    maximumSize: const WidgetStatePropertyAll(Size(double.infinity, 40)),
     padding: const WidgetStatePropertyAll(
         EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
     shape: WidgetStatePropertyAll(RoundedRectangleBorder(

@@ -56,6 +56,14 @@ dependencies:
   fl_chart: ^1.2.0
   audio_metadata_reader: ^1.6.0
   metadata_god: ^1.1.0
+  # metadata_god 1.1.0's prebuilt Rust library is codegen'd with
+  # flutter_rust_bridge 2.11.1, but pub otherwise resolves a newer frb runtime
+  # (2.12.0), and RustLib.init() then throws
+  # "Bad state: metadata_god's codegen version (2.11.1) should be the same as
+  # runtime version (2.12.0)" on every library refresh / folder pick
+  # (observed in startup_errors.log on Windows). Pin the runtime to the
+  # codegen version; metadata_god has no newer release to move to.
+  flutter_rust_bridge: 2.11.1
   csv: ^8.0.0
   pdf: ^3.12.0
   multicast_dns: 0.3.3

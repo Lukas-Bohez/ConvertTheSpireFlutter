@@ -112,6 +112,12 @@ class AppController extends ChangeNotifier {
   // Three or more within 5 minutes triggers a queue pause.
   final List<DateTime> _reloadErrorTimestamps = [];
   DateTime? _burstPauseUntil;
+  // Dedup for burst-pause logging: the end-timestamp of the pause whose
+  // "Pausing downloads…" line was already emitted. The line is logged on the
+  // transition into a pause (and once on resume), never on every 15-second
+  // worker poll — a 7-minute pause previously produced ~(420/15)×workers
+  // identical entries in the Application Logs screen.
+  DateTime? _loggedBurstPauseUntil;
   static const Duration _burstWindow = Duration(minutes: 5);
   static const int _burstThreshold = 3;
   static const Duration _burstPauseDuration = Duration(minutes: 7);
@@ -755,14 +761,26 @@ class AppController extends ChangeNotifier {
             // If a burst was detected, pause the queue instead of hammering
             // a throttle that needs minutes to clear, not seconds.
             if (isBurstPaused) {
-              final remaining = burstPauseRemaining;
-              if (remaining != null) {
-                final resumeAt = DateTime.now().add(remaining);
-                logs.add(
-                    'Pausing downloads — YouTube may be rate-limiting this session, resuming at ${resumeAt.hour.toString().padLeft(2, '0')}:${resumeAt.minute.toString().padLeft(2, '0')}');
+              // Log the pause once per pause window (first worker to observe
+              // it), not on every 15-second poll from every worker.
+              final pauseUntil = _burstPauseUntil;
+              if (pauseUntil != null && pauseUntil != _loggedBurstPauseUntil) {
+                final remaining = burstPauseRemaining;
+                if (remaining != null) {
+                  _loggedBurstPauseUntil = pauseUntil;
+                  final resumeAt = DateTime.now().add(remaining);
+                  logs.add(
+                      'Pausing downloads — YouTube may be rate-limiting this session, resuming at ${resumeAt.hour.toString().padLeft(2, '0')}:${resumeAt.minute.toString().padLeft(2, '0')}');
+                }
               }
               await Future.delayed(const Duration(seconds: 15));
               continue;
+            }
+
+            // First worker to notice a previously-logged pause has ended.
+            if (_loggedBurstPauseUntil != null) {
+              _loggedBurstPauseUntil = null;
+              logs.add('Burst pause over — resuming downloads');
             }
 
             QueueItem? next;

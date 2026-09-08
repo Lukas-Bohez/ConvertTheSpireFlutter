@@ -6,6 +6,7 @@ import "package:http/http.dart" as http;
 import "package:path/path.dart" as p;
 
 import "platform_dirs.dart";
+import "session_log_service.dart";
 
 class DenoRuntimeService {
   DenoRuntimeService._();
@@ -19,22 +20,28 @@ class DenoRuntimeService {
       if (await _verifyDenoRuns(_cachedPath!)) {
         return _cachedPath;
       }
-      debugPrint(
-          "deno-runtime: cached binary at $_cachedPath failed verification, re-provisioning");
+      _note(
+        "verify_failed_cached",
+        "deno-runtime: cached binary at $_cachedPath failed verification, re-provisioning",
+      );
     }
     final existing = await _locateExistingDeno();
     if (existing != null && await File(existing).exists()) {
       if (await _verifyDenoRuns(existing)) {
         _cachedPath = existing;
+        _note("ok", "deno-runtime: using existing Deno at $existing");
         return existing;
       }
-      debugPrint(
-          "deno-runtime: existing Deno at $existing failed verification");
+      _note(
+        "verify_failed_existing",
+        "deno-runtime: existing Deno at $existing failed verification",
+      );
     }
     try {
       final support = await PlatformDirs.getAppSupportDir();
       if (support == null) {
-        debugPrint("deno-runtime: no app support dir, cannot provision Deno");
+        _note("no_support_dir",
+            "deno-runtime: no app support dir, cannot provision Deno");
         return null;
       }
       final binDir = Directory(p.join(support.path, "deno"));
@@ -57,22 +64,36 @@ class DenoRuntimeService {
       final url =
           "https://github.com/denoland/deno/releases/latest/download/$assetName";
       final destBase = p.join(binDir.path, assetName.replaceAll(".zip", ""));
-      final destFile = File(destBase);
-      if (await destFile.exists()) {
-        if (await _verifyDenoRuns(destBase)) {
-          _cachedPath = destBase;
-          return destBase;
+
+      // Check for the *actual* extracted binary BEFORE downloading. Official
+      // Deno zips unpack a single `deno.exe` (Windows) / `deno` (Unix) at the
+      // archive root — never a file named like the asset. Earlier versions
+      // only checked `destBase` (extension-less on Windows), so a successful
+      // download+extract was invisible on every subsequent call:
+      // resolveOrDownload() returned null forever and re-downloaded the whole
+      // zip on each attempt, leaving yt-dlp without a JS runtime and downloads
+      // failing with "page needs to be reloaded".
+      final found = await _findProvisionedBinary(binDir, destBase);
+      if (found != null) {
+        if (await _verifyDenoRuns(found)) {
+          _cachedPath = found;
+          _note("ok", "deno-runtime: using provisioned Deno at $found");
+          return found;
         }
-        debugPrint(
-            "deno-runtime: previously downloaded Deno at $destBase failed verification, re-downloading");
+        _note(
+          "verify_failed_provisioned",
+          "deno-runtime: provisioned Deno at $found exists but failed to run",
+        );
       }
 
-      debugPrint("deno-runtime: downloading Deno ($assetName)");
+      _note("downloading", "deno-runtime: downloading Deno ($assetName)");
       final dl =
           await http.get(Uri.parse(url)).timeout(const Duration(seconds: 60));
       if (dl.statusCode != 200) {
-        debugPrint(
-            "deno-runtime: download failed, HTTP ${dl.statusCode} from $url");
+        _note(
+          "download_failed_http_${dl.statusCode}",
+          "deno-runtime: download failed, HTTP ${dl.statusCode} from $url",
+        );
         return null;
       }
       final zipPath = p.join(binDir.path, assetName);
@@ -88,34 +109,80 @@ class DenoRuntimeService {
               [
                 "-NoProfile",
                 "-Command",
-                "Expand-Archive -Force '$zipPath' -DestinationPath '$binDir.path'"
+                "Expand-Archive -Force '$zipPath' -DestinationPath '${binDir.path}'"
               ],
               runInShell: true);
         }
       } else {
         await Process.run("tar", ["-xf", zipPath, "-C", binDir.path],
             runInShell: true);
-        await Process.run("chmod", ["+x", destBase]);
       }
       try {
         await File(zipPath).delete();
       } catch (_) {}
 
-      if (await destFile.exists()) {
-        if (await _verifyDenoRuns(destBase)) {
-          _cachedPath = destBase;
-          return destBase;
+      final downloaded = await _findProvisionedBinary(binDir, destBase);
+      if (downloaded != null) {
+        if (await _verifyDenoRuns(downloaded)) {
+          _cachedPath = downloaded;
+          _note("ok", "deno-runtime: provisioned Deno at $downloaded");
+          return downloaded;
         }
-        debugPrint(
-            "deno-runtime: downloaded Deno at $destBase exists but failed to run");
+        _note(
+          "verify_failed_downloaded",
+          "deno-runtime: downloaded Deno at $downloaded exists but failed to run",
+        );
       }
-      debugPrint(
-          "deno-runtime: downloaded and extracted but binary not found at $destBase");
+      _note(
+        "binary_not_found",
+        "deno-runtime: downloaded and extracted but binary not found in ${binDir.path}",
+      );
       return null;
     } catch (e) {
-      debugPrint("deno-runtime: failed to provision Deno: $e");
+      _note("provision_failed", "deno-runtime: failed to provision Deno: $e");
       return null;
     }
+  }
+
+  /// Locates the Deno binary inside [binDir], before or after extraction.
+  ///
+  /// Official Deno release zips contain a single `deno.exe` (Windows) or
+  /// `deno` (Unix) at the archive root. The asset-derived [destBase] name is
+  /// also accepted so binaries from other layouts keep resolving.
+  static Future<String?> _findProvisionedBinary(
+      Directory binDir, String destBase) async {
+    final candidates = <String>[
+      if (Platform.isWindows) ...[
+        p.join(binDir.path, "deno.exe"),
+        "$destBase.exe",
+      ] else ...[
+        p.join(binDir.path, "deno"),
+      ],
+      destBase,
+    ];
+    for (final candidate in candidates) {
+      final f = File(candidate);
+      if (await f.exists()) {
+        if (!Platform.isWindows) {
+          await Process.run("chmod", ["+x", candidate]);
+        }
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  /// Best-effort breadcrumb into session_log_*.log (flushed on exit/error).
+  ///
+  /// debugPrint output is invisible for a released Windows GUI app, so the
+  /// failure modes below were previously unobservable in the field. Each
+  /// distinct [key] is recorded once per session; repeated download attempts
+  /// must not spam the log.
+  static void _note(String key, String message) {
+    debugPrint(message);
+    try {
+      SessionLogService.instance.markOnce("deno-$key", message);
+    } catch (_) {}
   }
 
   static Future<String?> _locateExistingDeno() async {
@@ -145,8 +212,10 @@ class DenoRuntimeService {
         }
       }
     } catch (_) {}
-    debugPrint(
-        "deno-runtime: no existing Deno found on PATH or in known locations");
+    _note(
+      "not_on_path",
+      "deno-runtime: no existing Deno found on PATH or in known locations",
+    );
     return null;
   }
 
