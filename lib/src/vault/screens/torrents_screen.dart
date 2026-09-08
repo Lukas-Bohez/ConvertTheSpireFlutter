@@ -951,19 +951,19 @@ class _TorrentsScreenState extends State<TorrentsScreen>
               runSpacing: 10,
               alignment: WrapAlignment.center,
               children: [
-                FilledButton.icon(
+                OutlinedButton.icon(
                   onPressed: _showAddMagnetDialog,
-                  icon: const Icon(Icons.add_link),
+                  icon: const Icon(Icons.add_link, size: 18),
                   label: const Text('Add Magnet'),
                 ),
                 OutlinedButton.icon(
                   onPressed: _pickTorrentFile,
-                  icon: const Icon(Icons.file_open_outlined),
+                  icon: const Icon(Icons.file_open_outlined, size: 18),
                   label: const Text('Add .torrent File'),
                 ),
                 OutlinedButton.icon(
                   onPressed: _openCreateTorrent,
-                  icon: const Icon(Icons.create_new_folder_outlined),
+                  icon: const Icon(Icons.create_new_folder_outlined, size: 18),
                   label: const Text('Create Torrent'),
                 ),
                 OutlinedButton.icon(
@@ -973,14 +973,14 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                       mode: LaunchMode.externalApplication,
                     );
                   },
-                  icon: const Icon(Icons.open_in_new),
+                  icon: const Icon(Icons.open_in_new, size: 18),
                   label: const Text('Visit Quiz the Spire'),
                 ),
               ],
             )
           : FilledButton.icon(
               onPressed: _showSetDownloadFolderDialog,
-              icon: const Icon(Icons.folder_open),
+              icon: const Icon(Icons.folder_open, size: 18),
               label: const Text('Go to Settings'),
             ),
     );

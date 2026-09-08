@@ -4407,6 +4407,10 @@ class _PlayerScreenState extends State<PlayerScreen>
           headerSliverBuilder: (context, innerBoxIsScrolled) {
             final isMobile = MediaQuery.of(context).size.width < 600;
             final showVideoPane = showVideo;
+            // The search bar is hidden on mobile while a video is playing
+            // (kept out of the way of the video surface); everywhere else it
+            // is part of the pinned header below.
+            final showSearch = !(isMobile && showVideoPane);
             return [
               if (showVideoPane)
                 SliverPersistentHeader(
@@ -4443,37 +4447,44 @@ class _PlayerScreenState extends State<PlayerScreen>
                     minHeight: 2,
                   ),
                 ),
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _FixedHeightSliverDelegate(
-                  height: 48,
-                  child: ColoredBox(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    child: TabBar(
-                      controller: _tabController,
-                      labelColor: _PlayerTheme.accent,
-                      unselectedLabelColor: _PlayerTheme.sub(context),
-                      indicatorColor: _PlayerTheme.accent,
-                      isScrollable: true,
-                      tabAlignment: TabAlignment.start,
-                      tabs: [
-                        Tab(text: 'All ($allCount)'),
-                        Tab(text: '♪ Songs ($songCount)'),
-                        Tab(text: '▶ Videos ($videoCount)'),
-                        Tab(text: '☁EFav ($favCount)'),
-                      ],
+              // Pinned TabBar (+ optional search bar). Wrapped in a
+              // SliverOverlapAbsorber and matched by a SliverOverlapInjector
+              // at the top of each tab body, so the grid's first row and its
+              // scrollbar render BELOW this header instead of being hidden
+              // behind it (the classic NestedScrollView overlap gotcha).
+              SliverOverlapAbsorber(
+                handle:
+                    NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+                sliver: SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _FixedHeightSliverDelegate(
+                    height: 48.0 + (showSearch ? searchBarHeight : 0.0),
+                    child: ColoredBox(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      child: Column(
+                        children: [
+                          TabBar(
+                            controller: _tabController,
+                            labelColor: _PlayerTheme.accent,
+                            unselectedLabelColor: _PlayerTheme.sub(context),
+                            indicatorColor: _PlayerTheme.accent,
+                            isScrollable: true,
+                            tabAlignment: TabAlignment.start,
+                            tabs: [
+                              Tab(text: 'All ($allCount)'),
+                              Tab(text: '♪ Songs ($songCount)'),
+                              Tab(text: '▶ Videos ($videoCount)'),
+                              Tab(text: '☁EFav ($favCount)'),
+                            ],
+                          ),
+                          if (showSearch)
+                            Expanded(child: _buildSearchBar(state)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-              if (!(isMobile && showVideoPane))
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _FixedHeightSliverDelegate(
-                    height: searchBarHeight,
-                    child: _buildSearchBar(state),
-                  ),
-                ),
             ];
           },
           body: TabBarView(
@@ -5002,6 +5013,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     final title = item.title ?? p.basenameWithoutExtension(item.path);
     final artist = item.resolvedArtist;
     final cs = Theme.of(context).colorScheme;
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
@@ -5073,31 +5085,18 @@ class _PlayerScreenState extends State<PlayerScreen>
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.share),
-                    tooltip: 'Share',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () async {
-                      try {
-                        final title = item.title ?? p.basename(item.path);
-                        final file = File(item.path);
-                        if (await file.exists()) {
-                          await SharePlus.instance.share(
-                            ShareParams(
-                                files: [XFile(item.path)], title: title),
-                          );
-                        } else {
-                          // File isn't on disk (e.g. streamed, not
-                          // downloaded) - fall back to a text share.
-                          await SharePlus.instance.share(
-                            ShareParams(
-                                text:
-                                    'Check out $title on Bitplayer: https://play.google.com/store/apps/details?id=com.torrentspire.ai'),
-                          );
-                        }
-                      } catch (_) {}
-                    },
-                  ),
+                  // Share is intentionally omitted from the now-playing row
+                  // on phones — the row is already tight (thumbnail + title +
+                  // favourite/dislike/menu), so Share is reached from the
+                  // 3-dot track menu there instead. Inline on tablet/desktop
+                  // where there is room.
+                  if (!isMobile)
+                    IconButton(
+                      icon: const Icon(Icons.share),
+                      tooltip: 'Share',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _shareMediaItem(item),
+                    ),
                   // Favourite button
                   IconButton(
                     icon: Icon(
@@ -5494,7 +5493,30 @@ class _PlayPauseButton extends StatelessWidget {
   }
 }
 
-enum _TrackMenuAction { queue, favourite, dislike, fixMetadata, delete }
+enum _TrackMenuAction { share, queue, favourite, dislike, fixMetadata, delete }
+
+/// Shares the current media item — the real file if it's on disk, otherwise
+/// a text link. Used both by the inline now-playing Share button
+/// (tablet/desktop) and by the 3-dot track menu (so phones, where the inline
+/// Share button is hidden to de-clutter the row, can still share).
+Future<void> _shareMediaItem(MediaItem item) async {
+  try {
+    final title = item.title ?? p.basename(item.path);
+    final file = File(item.path);
+    if (await file.exists()) {
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(item.path)], title: title),
+      );
+    } else {
+      await SharePlus.instance.share(
+        ShareParams(
+          text:
+              'Check out $title on Bitplayer: https://play.google.com/store/apps/details?id=com.torrentspire.ai',
+        ),
+      );
+    }
+  } catch (_) {}
+}
 
 class _TrackMenuButton extends StatelessWidget {
   final PlayerState state;
@@ -5515,6 +5537,9 @@ class _TrackMenuButton extends StatelessWidget {
           color: Theme.of(context).colorScheme.onSurfaceVariant),
       onSelected: (action) async {
         switch (action) {
+          case _TrackMenuAction.share:
+            await _shareMediaItem(item);
+            break;
           case _TrackMenuAction.queue:
             state.enqueue(index);
             break;
@@ -5571,6 +5596,14 @@ class _TrackMenuButton extends StatelessWidget {
         }
       },
       itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: _TrackMenuAction.share,
+          child: ListTile(
+            leading: Icon(Icons.share),
+            title: Text('Share'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
         const PopupMenuItem(
           value: _TrackMenuAction.queue,
           child: ListTile(
@@ -5640,7 +5673,7 @@ class _AllTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
-      return _EmptyHint(
+      return _EmptyTabScroll(
           message: state.library.isEmpty
               ? 'Your library is empty.\nTap the folder icon to open a folder or download media.'
               : 'No results for this search.');
@@ -5665,7 +5698,7 @@ class _SongsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (entries.isEmpty) return const _EmptyHint(message: 'No songs found.');
+    if (entries.isEmpty) return const _EmptyTabScroll(message: 'No songs found.');
     return _MediaGrid(entries: entries, state: state, onTap: onTap);
   }
 }
@@ -5684,7 +5717,7 @@ class _VideosTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (entries.isEmpty) return const _EmptyHint(message: 'No videos found.');
+    if (entries.isEmpty) return const _EmptyTabScroll(message: 'No videos found.');
     return _MediaGrid(entries: entries, state: state, onTap: onTap);
   }
 }
@@ -5704,7 +5737,7 @@ class _FavouritesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
-      return const _EmptyHint(
+      return const _EmptyTabScroll(
           message: 'No favourites yet.\nTap ☁Eon any track to add it here.');
     }
     return _MediaGrid(entries: entries, state: state, onTap: onTap);
@@ -5720,7 +5753,7 @@ class _MediaGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
+    final width = MediaQuery.sizeOf(context).width;
     final crossAxisCount = width < 500
         ? 2
         : width < 900
@@ -5730,23 +5763,55 @@ class _MediaGrid extends StatelessWidget {
                 : width < 1600
                     ? 5
                     : 6;
-    return GridView.builder(
-      shrinkWrap: false,
-      physics: null,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        // Hand-tuned: thumbnail block is now a fixed 16:9 instead of
-        // filling the card, so the card itself is shorter relative to its
-        // width (was 0.82 : 0.9 when the thumbnail filled the tile).
-        childAspectRatio: width < 900 ? 1.15 : 1.25,
-      ),
-      itemCount: entries.length,
-      itemBuilder: (ctx, i) {
-        final entry = entries[i];
-        return _MediaCard(entry: entry, state: state, onTap: onTap);
-      },
+    // CustomScrollView (not a plain GridView) so we can lead with a
+    // SliverOverlapInjector that cancels the pinned TabBar/search header
+    // overlap — this keeps the first row (and the scrollbar) below that
+    // header instead of being hidden behind it. The scrollable remains
+    // primary so NestedScrollView still collapses the now-playing card.
+    return CustomScrollView(
+      slivers: [
+        SliverOverlapInjector(
+          handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+        ),
+        SliverGrid(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            // Hand-tuned: thumbnail block is now a fixed 16:9 instead of
+            // filling the card, so the card itself is shorter relative to its
+            // width (was 0.82 : 0.9 when the thumbnail filled the tile).
+            childAspectRatio: width < 900 ? 1.15 : 1.25,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (ctx, i) =>
+                _MediaCard(entry: entries[i], state: state, onTap: onTap),
+            childCount: entries.length,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Body used by a tab when it has no entries. Wraps the empty hint in the
+/// same overlap-injector scroll view so it aligns below the pinned header.
+class _EmptyTabScroll extends StatelessWidget {
+  final String message;
+  const _EmptyTabScroll({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      slivers: [
+        SliverOverlapInjector(
+          handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+        ),
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: _EmptyHint(message: message),
+        ),
+      ],
     );
   }
 }
