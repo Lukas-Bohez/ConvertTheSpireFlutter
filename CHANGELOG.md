@@ -1,5 +1,15 @@
 # Changelog
 
+## 13.0.17+1280 — Defensive pinned-header clipping + review pass
+
+### Fixed
+- **Home screen search header could paint over the scrollable body.** The search bar sits in a fixed-height pinned `SliverPersistentHeader` (`_SearchHeaderDelegate`) whose `build` returned the child with no clip — the same latent overflow class already fixed in the player's pinned header (v13.0.15). Wrapped the delegate's child in a `ClipRect` so any content exceeding the fixed extent is clipped instead of drawn over the body below.
+
+### Review (no functional change)
+- Verified the v13.0.16 metadata_god → pure-Dart `audio_metadata_reader` Windows fix: the duck-typed `dynamic` metadata consumption in `resolveArtist`, `_extractGenre` and `_extractReplayGainTrackGain` is safe (every access is try/catch-wrapped with `.toString()`; the replay-gain extractor falls through gracefully on non-matching types), and both `audio_metadata_reader` and `metadata_god` are present in `pubspec.yaml`.
+- Confirmed the v13.0.15 player fixes (single-row scrollable genre chips, player pinned-header `ClipRect`, corrected header heights, and the unified-button `maximumSize` cap removal) are all intact after the v13.0.16 changes.
+- `flutter analyze` clean; all 30 tests pass.
+
 ## 13.0.16+1279 — Folder-load crash fix on low-end Windows (no BMI2) + 811-video playlist install
 
 ### Fixed

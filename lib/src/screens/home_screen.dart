@@ -72,7 +72,13 @@ class _SearchHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return SizedBox.expand(child: child);
+    // Clip so content can never paint over the scrollable body below if it
+    // ever exceeds the fixed header extent (same defence as the player's
+    // pinned header).
+    return ClipRect(
+      clipBehavior: Clip.hardEdge,
+      child: SizedBox.expand(child: child),
+    );
   }
 
   @override
