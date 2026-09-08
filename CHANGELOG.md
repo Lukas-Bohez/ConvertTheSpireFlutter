@@ -1,5 +1,13 @@
 # Changelog
 
+## 13.0.13+1276 窶・Low-End CPU Stability Fixes
+
+### Fixed
+- **metadata_god / flutter_rust_bridge codegen mismatch (library refresh crash).** metadata_god 1.1.0's shipped Rust library was built with frb codegen 2.11.1 while pub resolved frb runtime 2.12.0, so every library refresh / folder pick threw `ZONE ERROR: Bad state: metadata_god's codegen version (2.11.1) should be the same as runtime version (2.12.0)`. `flutter_rust_bridge` is now pinned to 2.11.1 as a direct dependency.
+- **Deno provisioning could never succeed (yt-dlp "page needs to be reloaded").** `DenoRuntimeService.resolveOrDownload()` computed the destination as `deno-x86_64-pc-windows-msvc` (no `.exe`) while the official Windows zip extracts `deno.exe`, so download+extract succeeded but lookup failed and the whole zip was re-downloaded on every attempt. The provisioned-binary lookup now checks `deno.exe` / `deno` / `$destBase.exe` / `destBase` before and after extraction, and all outcomes (success and each failure mode) are surfaced via `SessionLogService.markOnce` keys (`deno-ok`, `deno-not_on_path`, `deno-download_failed_http_*`, `deno-verify_failed_*`, `deno-binary_not_found`, …).
+- **Burst-pause log spam.** `downloadAll()` workers each logged "Pausing downloads — YouTube may be rate-limiting…" every 15 s for the whole pause (a 7-minute pause with 3 workers ≈ 84 identical entries). Pause/resume is now logged once per pause window with a single worker, and a "Burst pause over — resuming downloads" line follows.
+- **Add Magnet button sizing.** The torrents empty state's `Add Magnet` button (kept as the emphasized primary `FilledButton.icon` action) is height-pinned via the unified button theme's `maximumSize`, fixing the mismatched/overflowing appearance.
+
 ## 13.0.12+1275 — Single Close Path & Ship Fixes
 
 ### Changed
