@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:metadata_god/metadata_god.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
@@ -775,13 +777,46 @@ class _LocalFile {
   });
 }
 
+bool _metadataGodDisabledForMatching = false;
+
+bool get _metadataGodEnabledForMatching =>
+    !kIsWeb && !Platform.isWindows && !Platform.isIOS;
+
+/// Reads local audio metadata for playlist/local matching using the safe
+/// engine for this platform. Mirrors `player.dart`'s `_readLocalTag`: native
+/// `metadata_god` (Rust via flutter_rust_bridge) on Android, pure-Dart
+/// `audio_metadata_reader` on Windows / iOS / web. On older Windows CPUs that
+/// lack BMI2/AVX2 the native Rust lib can crash the whole process with an
+/// illegal instruction, and that can't be caught by any Dart handler, so we
+/// never load it on Windows. Only `title`/`artist` are used by the caller. A
+/// runtime native failure disables the engine for the session and falls back
+/// to the pure-Dart reader.
+Future<dynamic> _readLocalTagForMatching(String path) async {
+  if (_metadataGodEnabledForMatching && !_metadataGodDisabledForMatching) {
+    try {
+      await MetadataGod.initialize();
+      return await MetadataGod.readMetadata(file: path);
+    } catch (e) {
+      _metadataGodDisabledForMatching = true;
+      debugPrint('metadata_god disabled for matching session '
+          '(native read failed, using pure-Dart fallback): $e');
+      // fall through to the pure-Dart reader for the rest of the session.
+    }
+  }
+  try {
+    return readMetadata(File(path), getImage: false);
+  } catch (_) {
+    return null;
+  }
+}
+
 Future<List<String>> _labelsFromMetadata(String path, String ext) async {
   try {
     if (!['.mp3', '.m4a', '.ogg', '.flac'].contains(ext)) {
       return const <String>[];
     }
-    await MetadataGod.initialize();
-    final metadata = await MetadataGod.readMetadata(file: path);
+    final metadata = await _readLocalTagForMatching(path);
+    if (metadata == null) return const <String>[];
     final labels = <String>[];
     final title = metadata.title?.trim() ?? '';
     final artist = metadata.artist?.trim() ?? '';

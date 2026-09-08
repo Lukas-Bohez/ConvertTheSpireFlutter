@@ -1350,7 +1350,6 @@ class PlayerState with ChangeNotifier {
     if (_artistEnrichmentRunning) return;
     _artistEnrichmentRunning = true;
     try {
-      await MetadataGod.initialize();
       final upperBound = _folderItemCount.clamp(0, library.length);
       for (var i = 0; i < upperBound; i++) {
         if (_disposed || _loadVersion != version) return;
@@ -1379,7 +1378,8 @@ class PlayerState with ChangeNotifier {
           final file = File(resolvedPath);
           if (!await file.exists()) continue;
 
-          final metadata = await MetadataGod.readMetadata(file: resolvedPath);
+          final metadata = await _readLocalTag(resolvedPath);
+          if (metadata == null) continue;
           final localArtist = resolveArtist(metadata, resolvedPath);
           if (localArtist.isNotEmpty) {
             _artistCache[item.path] = localArtist;
@@ -1412,6 +1412,10 @@ class PlayerState with ChangeNotifier {
           _artistLookupInFlight.remove(item.path);
         }
       }
+    } catch (e) {
+      // Never let metadata enrichment take the app down — folder load must
+      // always succeed on low-end hardware even if some files are unreadable.
+      debugPrint('artist enrichment aborted: $e');
     } finally {
       _artistEnrichmentRunning = false;
     }
@@ -1423,6 +1427,10 @@ class PlayerState with ChangeNotifier {
     required String artist,
   }) async {
     if (!_supportsMetadataRewrite(resolvedPath)) return;
+    // Native tag write — only available where `metadata_god` runs (Android).
+    // On Windows / disabled we skip the write; the resolved artist is still
+    // applied to the in-memory library item by the caller.
+    if (!_metadataGodAvailable) return;
     try {
       await MetadataGod.writeMetadata(
         file: resolvedPath,
@@ -1593,8 +1601,8 @@ class PlayerState with ChangeNotifier {
     final item = lib[i];
     try {
       final metaPath = await _resolveLocalPath(item.path);
-      await MetadataGod.initialize();
-      final tag = await MetadataGod.readMetadata(file: metaPath);
+      final tag = await _readLocalTag(metaPath);
+      if (tag == null) return;
       if (_loadVersion != version) return;
       final modifiedAt = item.modifiedAt ?? await _modifiedAtForPath(item.path);
       if (kDebugMode) {
@@ -2697,6 +2705,62 @@ class PlayerState with ChangeNotifier {
     notifyListeners();
   }
 
+  // --- Local metadata engine --------------------------------------------------
+
+  /// `metadata_god` ships a prebuilt Rust library via `flutter_rust_bridge`.
+  /// On older Windows CPUs that lack BMI2/AVX2 (e.g. the Ivy Bridge i3-3220
+  /// used for low-end QA), native plugins in this project have repeatedly
+  /// crashed the whole process with an illegal-instruction exception — see
+  /// the `flutter_inappwebview` precedent in `lib/main.dart` and CHANGELOG
+  /// v13.0.8. A native crash cannot be caught by any Dart handler (the
+  /// `runZonedGuarded` in `main.dart` only catches Dart exceptions), so a
+  /// single BMI2 instruction inside `metadata_god`'s Rust lib would kill the
+  /// app during folder load. We therefore never load the native engine on
+  /// Windows and read tags with the pure-Dart `audio_metadata_reader`
+  /// instead. On Android `metadata_god` is kept (it is known to work and is
+  /// the only writable tag path). If `metadata_god` ever throws at runtime
+  /// (e.g. a future `flutter_rust_bridge` version skew) the engine is
+  /// disabled for the rest of the session and we fall back to the
+  /// pure-Dart reader as well, so the app keeps working instead of dying.
+  bool _metadataGodDisabled = false;
+
+  bool get _metadataGodEnabledOnPlatform =>
+      !kIsWeb && !Platform.isWindows && !Platform.isIOS;
+
+  bool get _metadataGodAvailable =>
+      _metadataGodEnabledOnPlatform && !_metadataGodDisabled;
+
+  /// Reads local audio metadata with the safe engine for this platform.
+  ///
+  /// Returns the native `Metadata` (metadata_god) on Android, or the
+  /// pure-Dart `AudioMetadata` (audio_metadata_reader) elsewhere / after any
+  /// native failure. Both are consumed duck-typed via `dynamic`; callers use
+  /// fields common to both (`title`, `artist`, `albumArtist`) plus
+  /// `resolveArtist`, `_extractGenre` and `_extractReplayGainTrackGain`,
+  /// all of which tolerate either shape. Returns `null` if even the
+  /// pure-Dart reader fails (corrupt file etc.); a native failure never
+  /// escapes this method.
+  Future<dynamic> _readLocalTag(String resolvedPath) async {
+    if (_metadataGodAvailable) {
+      try {
+        await MetadataGod.initialize();
+        return await MetadataGod.readMetadata(file: resolvedPath);
+      } catch (e) {
+        // Any Dart-level failure disables the native engine for the session
+        // and we fall through to the pure-Dart reader.
+        _metadataGodDisabled = true;
+        debugPrint('metadata_god disabled for session '
+            '(native read failed, using pure-Dart fallback): $e');
+      }
+    }
+    try {
+      return readMetadata(File(resolvedPath), getImage: true);
+    } catch (e) {
+      debugPrint('audio_metadata_reader failed for $resolvedPath: $e');
+      return null;
+    }
+  }
+
   String? _extractGenre(dynamic tag) {
     try {
       final raw = (tag as dynamic).genre;
@@ -3078,6 +3142,14 @@ class PlayerState with ChangeNotifier {
   Future<bool> fixSongMetadata(MediaItem item) async {
     if (_disposed) return false;
     if (!_supportsMetadataRewrite(item.path)) return false;
+    // Native tag rewrite — only available where `metadata_god` runs (Android).
+    // On Windows / disabled there is no writable tag engine, so this is a
+    // graceful no-op rather than a native crash on low-end CPUs.
+    if (!_metadataGodAvailable) {
+      debugPrint('fixSongMetadata: native tag write unavailable on this '
+          'platform; skipping write-back for ${item.path}');
+      return false;
+    }
 
     await MetadataGod.initialize();
 
@@ -3168,6 +3240,11 @@ class PlayerState with ChangeNotifier {
   Future<int> bulkFixArtistMetadata({
     void Function(int done, int total)? onProgress,
   }) async {
+    if (!_metadataGodAvailable) {
+      debugPrint('bulkFixArtistMetadata: native tag write unavailable on this '
+          'platform; nothing to do');
+      return 0;
+    }
     final targets = library
         .where((item) =>
             item.type == MediaType.audio && item.resolvedArtist.isEmpty)
