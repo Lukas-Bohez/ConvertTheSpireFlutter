@@ -4367,7 +4367,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   Widget build(BuildContext context) {
     final state = context.watch<PlayerState>();
     final screenWidth = MediaQuery.of(context).size.width;
-    final searchBarHeight = screenWidth < 600 ? 128.0 : 88.0;
+    final searchBarHeight = screenWidth < 600 ? 72.0 : 112.0;
 
     final songCount = state.audioEntries.length;
     final videoCount = state.videoEntries.length;
@@ -4461,25 +4461,31 @@ class _PlayerScreenState extends State<PlayerScreen>
                     height: 48.0 + (showSearch ? searchBarHeight : 0.0),
                     child: ColoredBox(
                       color: Theme.of(context).scaffoldBackgroundColor,
-                      child: Column(
-                        children: [
-                          TabBar(
-                            controller: _tabController,
-                            labelColor: _PlayerTheme.accent,
-                            unselectedLabelColor: _PlayerTheme.sub(context),
-                            indicatorColor: _PlayerTheme.accent,
-                            isScrollable: true,
-                            tabAlignment: TabAlignment.start,
-                            tabs: [
-                              Tab(text: 'All ($allCount)'),
-                              Tab(text: '♪ Songs ($songCount)'),
-                              Tab(text: '▶ Videos ($videoCount)'),
-                              Tab(text: '☁EFav ($favCount)'),
-                            ],
-                          ),
-                          if (showSearch)
-                            Expanded(child: _buildSearchBar(state)),
-                        ],
+                      // Clip any content that would overflow the fixed header
+                      // height so it can never paint over the tab grid below
+                      // (defense-in-depth on top of the single-row chips).
+                      child: ClipRect(
+                        clipBehavior: Clip.hardEdge,
+                        child: Column(
+                          children: [
+                            TabBar(
+                              controller: _tabController,
+                              labelColor: _PlayerTheme.accent,
+                              unselectedLabelColor: _PlayerTheme.sub(context),
+                              indicatorColor: _PlayerTheme.accent,
+                              isScrollable: true,
+                              tabAlignment: TabAlignment.start,
+                              tabs: [
+                                Tab(text: 'All ($allCount)'),
+                                Tab(text: '♪ Songs ($songCount)'),
+                                Tab(text: '▶ Videos ($videoCount)'),
+                                Tab(text: '☁EFav ($favCount)'),
+                              ],
+                            ),
+                            if (showSearch)
+                              Expanded(child: _buildSearchBar(state)),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -4925,7 +4931,23 @@ class _PlayerScreenState extends State<PlayerScreen>
         ));
       }
       if (chips.isEmpty) return const SizedBox.shrink();
-      return Wrap(spacing: 8, runSpacing: 8, children: chips);
+      // Single horizontally-scrolling row: the search bar lives in a
+      // fixed-height pinned header, so a wrapping Wrap would overflow it when
+      // there are many genres (e.g. "People", "Blogs", "Music", …) and paint
+      // over the grid below. One row + horizontal scroll keeps every genre
+      // reachable without ever overflowing the header.
+      return SizedBox(
+        height: 40,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.zero,
+          physics: const ClampingScrollPhysics(),
+          shrinkWrap: true,
+          itemCount: chips.length,
+          separatorBuilder: (context, index) => const SizedBox(width: 8),
+          itemBuilder: (context, index) => chips[index],
+        ),
+      );
     }
 
     final searchField = TextField(

@@ -551,10 +551,14 @@ class _MyAppState extends State<MyApp>
 
   static final ButtonStyle _unifiedButtonStyle = ButtonStyle(
     minimumSize: const WidgetStatePropertyAll(Size(64, 40)),
-    // Pin the height from above as well: a .icon() constructor's internal
-    // padding can produce a height *smaller* than a plain minimum allows,
-    // so rows mixing Filled/Outlined variants could still render unevenly.
-    maximumSize: const WidgetStatePropertyAll(Size(double.infinity, 40)),
+    // Only a 40 *floor* — deliberately NO height cap. v13.0.12 added a
+    // `maximumSize: (inf, 40)` here to even out FilledButton vs OutlinedButton
+    // heights, but that cap also clamped any button that intentionally sets a
+    // larger size via styleFrom (the circular play/pause button with
+    // minimumSize 48, the full-width Search/Download buttons with padding 16,
+    // …) down to 40, clipping their content. Those variants are now uniform
+    // at the call sites, so a floor alone keeps siblings consistent while
+    // letting genuinely taller buttons render at their real height.
     padding: const WidgetStatePropertyAll(
         EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
     shape: WidgetStatePropertyAll(RoundedRectangleBorder(

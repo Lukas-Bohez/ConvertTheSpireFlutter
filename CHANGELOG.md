@@ -1,5 +1,15 @@
 # Changelog
 
+## 13.0.15+1278 — Player tag glitch + button-height clamp fixes
+
+### Fixed
+- **Player — genre filter chips overflowing the pinned header into the grid (the "people / blogs / music tags glitch").** The genre chips lived in a `Wrap` inside the search bar, which is in a **fixed-height pinned `SliverPersistentHeader`**. When the library had many genres (e.g. People, Blogs, Music, …) the wrapped chips exceeded the header's fixed height and — because nothing clipped them — painted *over* the media grid below. The chips are now a single horizontally-scrollable row (every genre stays reachable, none overflow), the pinned header child is wrapped in a `ClipRect` so any overflow is clipped instead of drawn over the body, and the header height was corrected to actually fit one search row + one chip row (mobile tightened from 128 → 72, desktop raised from 88 → 112).
+- **Button-height cap clipping intentional taller buttons (regression from v13.0.12).** The unified button theme capped every button at 40 px tall with `maximumSize`, which clamped any button that deliberately sets a larger size via `styleFrom`: the circular play/pause button (`minimumSize 48` was clipped to 40) and the full-width Search / Preview + Download buttons (`padding 16` was clipped to 40, cropping their labels). Removed the `maximumSize` cap — keeping only the 40 *floor* — so sibling buttons stay consistent while genuinely taller buttons render at their real height again. The v13.0.14 empty-state buttons stay even because they're now all `OutlinedButton.icon` with 18 px icons.
+
+### Confirmed (live run on the main PC)
+- `deno-runtime: using provisioned Deno at …\deno.exe` — the v13.0.13 Deno lookup fix finds the existing binary (no re-download) on a real launch.
+- No `metadata_god` `ZONE ERROR` on startup/library access — the `flutter_rust_bridge` 2.11.1 pin holds at runtime.
+
 ## 13.0.14+1277 — Player / empty-state UI fixes (Add Magnet, overlap, share)
 
 ### Fixed
