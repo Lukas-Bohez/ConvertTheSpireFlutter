@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:convert_the_spire_reborn/src/browser/platform/browser_webview_controller.dart';
@@ -14,10 +16,19 @@ void main() {
         expect(controller, isNotNull,
             reason: 'Factory should return a controller on web platform');
         expect(controller, isA<BrowserWebviewController>());
+      } else if (Platform.isWindows ||
+          Platform.isAndroid ||
+          Platform.isIOS ||
+          Platform.isMacOS) {
+        expect(controller, isNotNull,
+            reason:
+                'Factory should return a non-null controller on supported platform ${Platform.operatingSystem}');
+        expect(controller, isA<BrowserWebviewController>());
       } else {
-        // On desktop/mobile, a controller should be returned
-        // (null only on unsupported platforms like Linux in some configs);
-        expect(controller, isA<BrowserWebviewController?>());
+        // Unsupported platforms (e.g. Linux) return null
+        expect(controller, isNull,
+            reason:
+                'Factory should return null on unsupported platform ${Platform.operatingSystem}');
       }
     });
 
@@ -66,16 +77,32 @@ void main() {
       await expectLater(controller.dispose(), completes);
     });
 
-    test('factory returns non-null on current platform', () {
+    test('factory returns non-null on supported platforms only', () {
       // This test verifies the factory works on the current platform.
       // On Windows, it returns BrowserWindowsWebViewAdapter.
       // On web, it returns BrowserWebWebViewAdapter.
       // On Android/iOS/macOS, it returns BrowserInAppWebViewAdapter.
+      // On Linux, it returns null (unsupported).
       final controller = BrowserWebviewFactory.create();
-      // The controller should be non-null on all supported platforms
-      expect(controller, isNotNull,
-          reason:
-              'Factory should return a non-null controller on supported platforms');
+      if (kIsWeb) {
+        expect(controller, isNotNull,
+            reason:
+                'Factory should return a non-null controller on web platform');
+        expect(controller, isA<BrowserWebviewController>());
+      } else if (Platform.isWindows ||
+          Platform.isAndroid ||
+          Platform.isIOS ||
+          Platform.isMacOS) {
+        expect(controller, isNotNull,
+            reason:
+                'Factory should return a non-null controller on supported platforms');
+        expect(controller, isA<BrowserWebviewController>());
+      } else {
+        // Unsupported platforms (e.g. Linux) return null
+        expect(controller, isNull,
+            reason:
+                'Factory should return null on unsupported platforms');
+      }
     });
   });
 }
