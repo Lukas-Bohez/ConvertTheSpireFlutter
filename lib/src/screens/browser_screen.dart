@@ -4,7 +4,7 @@ import 'dart:io';
 
 // 'dart:typed_data' is not required; Uint8List is available via flutter services import
 
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -137,7 +137,9 @@ class _BrowserScreenState extends State<BrowserScreen>
   late final AnimationController _castBadgeController;
 
   /// True when the platform supports an in-app WebView.
-  bool get _webViewSupported => !kIsWeb && !Platform.isLinux;
+  /// Web is supported via flutter_inappwebview's iframe-based adapter.
+  /// Linux is not supported (no reliable WebView backend).
+  bool get _webViewSupported => !Platform.isLinux;
 
   @override
   void initState() {

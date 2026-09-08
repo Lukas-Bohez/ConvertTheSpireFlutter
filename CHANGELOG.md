@@ -1,5 +1,17 @@
 # Changelog
 
+## 13.0.18+1281 — Web browser support, player tab icons, low-end PC safety
+
+### Added
+- **Web browser support.** The in-app browser now works on web platform via `flutter_inappwebview`'s iframe-based adapter. Browser screen renders and functions correctly in web browsers.
+
+### Fixed
+- **Player tab icons replaced emoji with proper Material Icons.** The player tabs now use `Icons.library_music`, `Icons.music_note`, `Icons.video_library`, and `Icons.favorite` instead of emoji characters (♪, ▶, ☁) that rendered inconsistently across platforms.
+- **Favourites tab renamed from "EFav" to "Fav".** Cleaner, more professional label.
+
+### Safety
+- **Web browser adapter is safe for low-end PCs.** The web adapter uses pure HTML/JS iframe rendering with no native code, no BMI2 instructions. Windows continues to use WebView2 (`webview_windows`) which is also BMI2-safe. The factory correctly selects the right adapter per platform.
+
 ## 13.0.17+1280 — Defensive pinned-header clipping + review pass
 
 ### Fixed

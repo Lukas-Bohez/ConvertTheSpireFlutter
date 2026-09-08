@@ -4553,10 +4553,22 @@ class _PlayerScreenState extends State<PlayerScreen>
                               isScrollable: true,
                               tabAlignment: TabAlignment.start,
                               tabs: [
-                                Tab(text: 'All ($allCount)'),
-                                Tab(text: '♪ Songs ($songCount)'),
-                                Tab(text: '▶ Videos ($videoCount)'),
-                                Tab(text: '☁EFav ($favCount)'),
+                                Tab(
+                                  icon: const Icon(Icons.library_music, size: 20),
+                                  text: 'All ($allCount)',
+                                ),
+                                Tab(
+                                  icon: const Icon(Icons.music_note, size: 20),
+                                  text: 'Songs ($songCount)',
+                                ),
+                                Tab(
+                                  icon: const Icon(Icons.video_library, size: 20),
+                                  text: 'Videos ($videoCount)',
+                                ),
+                                Tab(
+                                  icon: const Icon(Icons.favorite, size: 20),
+                                  text: 'Fav ($favCount)',
+                                ),
                               ],
                             ),
                             if (showSearch)

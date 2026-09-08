@@ -6,6 +6,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart'
 
 import 'browser_webview_controller.dart';
 import 'browser_webview_inappwebview.dart';
+import 'browser_webview_web.dart';
 import 'browser_webview_windows.dart';
 
 export 'package:flutter_inappwebview/flutter_inappwebview.dart'
@@ -13,21 +14,29 @@ export 'package:flutter_inappwebview/flutter_inappwebview.dart'
 
 /// Chooses the WebView implementation for the current platform at runtime.
 ///
-/// Both adapters are statically compiled on every platform (Dart imports
+/// All adapters are statically compiled on every platform (Dart imports
 /// are harmless), but only the selected one is ever *used*, so on Windows
 /// no `flutter_inappwebview` native code is ever invoked - avoiding the
 /// BMI2 illegal-instruction crash on old CPUs.
+///
+/// Supported platforms:
+///  - Web: `flutter_inappwebview` web (iframe-based)
+///  - Android/iOS/macOS: `flutter_inappwebview` native
+///  - Windows: `webview_windows` (WebView2)
+///  - Linux: not supported (returns null)
 class BrowserWebviewFactory {
   BrowserWebviewFactory._();
 
-  /// Returns null on platforms without a supported WebView (Linux, web).
+  /// Returns null on platforms without a supported WebView (Linux only).
   static BrowserWebviewController? create({
     FindInteractionController? findInteractionController,
     Set<String> blockedDomains = const {},
     BrowserWebViewHooks? hooks,
   }) {
-    if (kIsWeb) return null;
     try {
+      if (kIsWeb) {
+        return BrowserWebWebViewAdapter(hooks: hooks);
+      }
       if (Platform.isWindows) {
         return BrowserWindowsWebViewAdapter(
             blockedDomains: blockedDomains, hooks: hooks);
