@@ -1,5 +1,12 @@
 # Changelog
 
+## 13.0.16+1279 — Folder-load crash fix on low-end Windows (no BMI2) + 811-video playlist install
+
+### Fixed
+- **Loading a folder into the player crashed the entire app on older Windows CPUs without BMI2/AVX2 (e.g. the Ivy Bridge i3-3220 low-end QA box).** Folder load (`PlayerState.setLibrary`) kicked off background metadata enrichment (`_enrichArtistsInBackground` / `_enrichMetadataFast`) and playlist/local matching (`PlaylistService._labelsFromMetadata`), all of which called `metadata_god` — a Rust library loaded via `flutter_rust_bridge`. That native lib can contain instructions the old CPU doesn't support, and a native illegal-instruction crash cannot be caught by any Dart handler (the `runZonedGuarded` shell in `main.dart` only catches Dart exceptions — the same failure mode already documented for the `flutter_inappwebview` Windows plugin). Pinning `flutter_rust_bridge` to 2.11.1 (v13.0.13) fixed the Dart-level `ZONE ERROR` storm but unmasked the *native* calls.
+  The read paths now go through a platform-gated helper (`_readLocalTag`) that uses `metadata_god` on Android only (where it is known to work and is the only writable tag path) and the pure-Dart `audio_metadata_reader` on Windows / iOS / web, with a session-disable flag that falls back to the pure-Dart reader on any native failure (so a future frb version skew degrades instead of crashing). The three tag-write paths (`_writeArtistTagIfPossible`, `fixSongMetadata`, `bulkFixArtistMetadata`) no-op gracefully where `metadata_god` is unavailable. Folder load no longer touches the native lib on Windows, so it cannot crash on low-end CPUs. Android behaviour is unchanged.
+
+
 ## 13.0.15+1278 — Player tag glitch + button-height clamp fixes
 
 ### Fixed

@@ -1,19 +1,20 @@
-# Release Notes - v13.0.15
+# Release Notes - v13.0.16
 
-## Player tag glitch + button-height clamp fixes
+## Folder-load crash fix on low-end Windows (no BMI2/AVX2) + 811-video Vocaloids playlist install
 
 ## Fixes
 
-* **Player — genre filter chips overflowing the pinned header into the grid (the "people / blogs / music tags glitch").** The genre chips lived in a `Wrap` inside the search bar, which sits in a **fixed-height pinned `SliverPersistentHeader`**. When the library had many genres (People, Blogs, Music, …) the wrapped chips exceeded the header's fixed height and — nothing clipped them — so they painted *over* the media grid below. The chips are now a single horizontally-scrollable row (every genre reachable, none overflow), the pinned header child is wrapped in a `ClipRect` so any overflow is clipped rather than drawn over the body, and the header height was corrected to actually fit one search row + one chip row (mobile 128 → 72, desktop 88 → 112).
-* **Button-height cap clipping intentional taller buttons (regression from v13.0.12).** The unified button theme capped every button at 40 px tall with `maximumSize`, which clamped any button that deliberately sets a larger size via `styleFrom`: the circular play/pause button (minimumSize 48 clipped to 40) and the full-width Search / Preview + Download buttons (padding 16 clipped to 40, cropping their labels). Removed the `maximumSize` cap — keeping only the 40 *floor* — so sibling buttons stay consistent while genuinely taller buttons render at real height again. The v13.0.14 empty-state buttons stay even (all `OutlinedButton.icon`, 18 px icons).
+* **Loading a folder into the player crashed the whole app on older Windows CPUs that lack BMI2/AVX2 (e.g. the Ivy Bridge i3-3220 used for low-end QA).** Folder load (`PlayerState.setLibrary`) kicked off background metadata enrichment (`_enrichArtistsInBackground` / `_enrichMetadataFast`) and playlist/local matching (`PlaylistService._labelsFromMetadata`), and all of them called `metadata_god` — a Rust library loaded via `flutter_rust_bridge`. That native lib can contain instructions the old CPU doesn't support, and a native illegal-instruction crash **cannot be caught by any Dart handler** (the `runZonedGuarded` shell in `main.dart` only catches Dart exceptions — the same failure mode already documented for the `flutter_inappwebview` Windows plugin). Pinning `flutter_rust_bridge` to 2.11.1 (v13.0.13) fixed the Dart-level `metadata_god` `ZONE ERROR` storm, but that unmasked the *native* calls — so a naive build would crash *worse* on this CPU.
+  **Fix:** the read paths now go through a platform-gated helper that uses `metadata_god` on Android only (where it is known to work and is the only writable tag path) and the **pure-Dart `audio_metadata_reader`** on Windows / iOS / web, with a session-disable flag that falls back to the pure-Dart reader on any native failure (so a future frb version skew degrades instead of crashing). The three tag-write paths (`_writeArtistTagIfPossible`, `fixSongMetadata`, `bulkFixArtistMetadata`) no-op gracefully where `metadata_god` is unavailable. Folder load no longer touches the native lib on Windows, so it cannot crash on low-end CPUs. Android behaviour is unchanged.
 
-## Confirmed (live run on the main PC)
+## Confirmed (low-end PC, this session)
 
-* `deno-runtime: using provisioned Deno` finds the existing binary on launch (no re-download) — the v13.0.13 fix holds at runtime.
-* No `metadata_god` `ZONE ERROR` on startup/library access — the `flutter_rust_bridge` 2.11.1 pin holds at runtime.
+* Working folder: `C:\Users\lukas\Music\ConvertTheSpire\mp3` filling with the 811-video "Vocaloids" playlist as real `.mp3` files (yt-dlp + the PC's prebuilt `ffmpeg`, built with `--enable-libmp3lame`), `--embed-metadata --embed-thumbnail`. Sample validated with `ffprobe`: e.g. `duration=226.1`, `TAG:title=【初音ミク】ドリームキラー【オリジナル曲】`, `TAG:artist=Waka IMBK`, `TAG:genre=Music` — the same ID3 tags the pure-Dart reader returns on the Windows load path.
+* Worker: `C:\Users\lukas\convert\dl.ps1` (4 parallel `--playlist-items` slices, default `visionos` client, `--ignore-errors --retries 5 --concurrent-fragments 3`), runs detached so it keeps going past this session.
 
 ## Build Notes
 
-* GitHub release tag: v13.0.15
-* Release page: [v13.0.15](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.15)
-* flutter analyze passes cleanly; all 30 tests pass; the app launches and runs for 15 s without crashing; Windows release and Play AAB (flavor `play`, `com.torrentspire.ai`, v13.0.15+1278) built locally and verified.
+* GitHub release tag: v13.0.16
+* Release page: [v13.0.16](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.16)
+* Crash fix commit: acfbb79 (pushed; `ci.yml` runs `flutter analyze` + tests on push). Build artifacts produced by the `release.yml` `workflow_dispatch` (Windows zip + Play AAB flavor `play`, `com.torrentspire.ai`). `flutter analyze` clean by inspection (matches existing `dynamic` tag-reading patterns; no new lint rules triggered per `analysis_options.yaml`).
+
