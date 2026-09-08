@@ -1,18 +1,20 @@
-# Release Notes - v13.0.12
+# Release Notes - v13.0.13
 
-## QA Fixes & Stability
+## Low-End CPU Stability Fixes
 
 ## Fixes
 
-* **Windows startup crash fixed.** Removed the `WebViewEnvironment.create()` call that crashed on some machines (notably lower-end CPUs); the WebView EJS solver now initializes lazily with memoized, always-reset futures so a silent init failure can't wedge the app.
-* **Share button shares the actual media file** instead of just an app link and the song title, with a text fallback for streamed files not on disk.
-* **Session logs now actually get written on normal close.** Two competing window-close paths raced each other; they're consolidated into a single path so log flushing always runs before exit.
-* **Consistent button sizing app-wide** via unified `ButtonStyle` themes (filled/outlined/elevated) — fixes the mismatched "Add Magnet" button and similar inconsistencies.
-* **Mobile now-playing row overflow fixed.** The share icon no longer overlaps the AUDIO badge on phones; the row clips cleanly and icon buttons were compacted.
-* **yt-dlp diagnostics added** for the Deno JS-runtime fallback (silent-failure path now logs), to pin down the low-end-only "page needs to be reloaded" failures.
+* **Library refresh crash fixed (metadata_god / flutter_rust_bridge mismatch).** metadata_god's bundled Rust library was built with frb codegen 2.11.1 while pub resolved runtime 2.12.0, so every library refresh / folder pick threw a ZONE ERROR. `flutter_rust_bridge` is now pinned to 2.11.1.
+* **Deno provisioning now actually succeeds.** The provisioned-binary lookup couldn't find `deno.exe` after extraction and re-downloaded the whole zip on every attempt (causing yt-dlp "page needs to be reloaded" failures). The lookup now checks all naming variants before and after extraction, and every deno-runtime outcome is surfaced in the session log.
+* **Burst-pause log spam fixed.** Downloads pausing due to rate-limiting logged one line per worker every 15 s (≈84 identical entries for a 7-minute pause); pause/resume is now logged once per pause window.
+* **Add Magnet button sizing** in the torrents empty state is height-pinned by the unified button theme; it stays the emphasized primary action.
+
+## Internal
+
+* Line endings renormalized repo-wide per `.gitattributes` (no behavior change).
 
 ## Build Notes
 
-* GitHub release tag: v13.0.12
-* Release page: [v13.0.12](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.12)
-* flutter analyze passes cleanly.
+* GitHub release tag: v13.0.13
+* Release page: [v13.0.13](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.0.13)
+* flutter analyze passes cleanly; Windows release and Play AAB (flavor `play`, `com.torrentspire.ai`, v13.0.13+1276) built locally and verified.
