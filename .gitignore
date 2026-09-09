@@ -84,6 +84,7 @@ aab/*.aab
 # 
 *.log
 analyze_output.txt
+diag_output*.txt
 buildlog.txt
 buildlog_*.txt
 build_log*.txt

@@ -82,7 +82,7 @@ jobs:
         run: flutter test --coverage
 
       # Upload coverage so it's available in the release notes / CI history
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: coverage/
@@ -190,7 +190,7 @@ jobs:
             Pop-Location
           }
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-x64
           path: ${{ env.OUTPUT_NAME }}-windows-x64.zip
@@ -258,7 +258,7 @@ jobs:
           fi
 
       # Upload zip unconditionally; AppImage only if it was actually built
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-x64
           path: |
@@ -310,7 +310,7 @@ jobs:
           ditto -c -k --keepParent "$APP" \
             "${{ env.OUTPUT_NAME }}-macOS.zip"
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: macos-x64
           path: ${{ env.OUTPUT_NAME }}-macOS.zip
@@ -431,7 +431,7 @@ jobs:
           cp build/app/outputs/flutter-apk/app-full-release.apk \
             android-builds/${{ env.ANDROID_APK_NAME }}
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: android-apk
           path: android-builds/
@@ -443,7 +443,7 @@ jobs:
           cp build/app/outputs/bundle/playRelease/app-play-release.aab \
             android-aab/${{ env.ANDROID_AAB_NAME }}
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: android-aab-play
           path: android-aab/
@@ -461,7 +461,7 @@ jobs:
 
     steps:
       - name: Download all build artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
@@ -496,7 +496,7 @@ jobs:
           cat ../SHA256SUMS.txt
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
