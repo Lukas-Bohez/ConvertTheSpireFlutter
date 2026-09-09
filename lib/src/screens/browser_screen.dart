@@ -77,6 +77,40 @@ class BrowserScreen extends StatefulWidget {
 
   static void focusAddressBar() => BrowserShell.requestAddressBarFocus();
 
+  /// Builds the navigation target for a search or URL in [raw] using the
+  /// given [engine]. Public + static so it is directly unit-testable.
+  ///
+  /// DuckDuckGo intentionally uses the static `html.` endpoint: the regular
+  /// `duckduckgo.com/?q=` page is a JS app that renders an empty body inside
+  /// embedded WebView2/iframes, and Google/Bing serve consent or bot-check
+  /// walls to non-store browsers. The html. endpoint always returns
+  /// server-rendered results on every platform.
+  static String buildSearchUrl(String raw, {String engine = 'DuckDuckGo'}) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return '';
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    // Torrent clients paste magnet: URIs into the address bar - never send
+    // those to a search engine, open them as-is.
+    if (trimmed.startsWith('magnet:?')) return trimmed;
+    final domainPattern = RegExp(r'^[^\s]+\.[a-zA-Z]{2,}(:\d+)?([/?#].*)?$');
+    if (domainPattern.hasMatch(trimmed)) return 'https://$trimmed';
+    final ipPattern =
+        RegExp(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?(/.*)?$');
+    if (ipPattern.hasMatch(trimmed)) return 'https://$trimmed';
+    if (trimmed.startsWith('localhost')) return 'http://$trimmed';
+
+    final encoded = Uri.encodeComponent(trimmed);
+    return switch (engine) {
+      'Google' => 'https://www.google.com/search?q=$encoded',
+      'Bing' => 'https://www.bing.com/search?q=$encoded',
+      'Brave' => 'https://search.brave.com/search?q=$encoded',
+      _ => 'https://html.duckduckgo.com/html/?q=$encoded',
+    };
+  }
+
+
   // Public hooks for external widgets (e.g. BrowserShell) to pause/resume
   // cursor mode on this screen.
   static void pauseCursor() => browserKey.currentState?._pauseCursor();
@@ -310,25 +344,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   // -- URL helpers --
 
   String _normalizeInput(String raw) {
-    final trimmed = raw.trim();
-    if (trimmed.isEmpty) return '';
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return trimmed;
-    }
-    final domainPattern = RegExp(r'^[^\s]+\.[a-zA-Z]{2,}(:\d+)?([/?#].*)?$');
-    if (domainPattern.hasMatch(trimmed)) return 'https://$trimmed';
-    final ipPattern =
-        RegExp(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?(/.*)?$');
-    if (ipPattern.hasMatch(trimmed)) return 'https://$trimmed';
-    if (trimmed.startsWith('localhost')) return 'http://$trimmed';
-
-    final encoded = Uri.encodeComponent(trimmed);
-    return switch (_searchEngine) {
-      'Google' => 'https://www.google.com/search?q=$encoded',
-      'Bing' => 'https://www.bing.com/search?q=$encoded',
-      'Brave' => 'https://search.brave.com/search?q=$encoded',
-      _ => 'https://duckduckgo.com/?q=$encoded',
-    };
+    return BrowserScreen.buildSearchUrl(raw, engine: _searchEngine);
   }
 
   void _navigateTo(String urlStr) {

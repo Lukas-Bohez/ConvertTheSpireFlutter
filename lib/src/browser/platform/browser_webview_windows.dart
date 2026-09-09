@@ -57,7 +57,17 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
 
   /// Lazily initializes the WebView2 environment + controller. Safe to
   /// await repeatedly; every caller shares the same readiness future.
-  Future<void> _ensureReady() => _readyFuture ??= _init();
+  /// A failed attempt is discarded so the next call retries from scratch
+  /// instead of poisoning the browser for the whole session.
+  Future<void> _ensureReady() async {
+    final future = _readyFuture ??= _init();
+    try {
+      await future;
+    } catch (_) {
+      if (identical(_readyFuture, future)) _readyFuture = null;
+      rethrow;
+    }
+  }
 
   Future<void> _init() async {
     // The environment must be initialized before the first controller and
@@ -113,8 +123,26 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
       }),
     ]);
 
-    await _native.initialize();
+    try {
+      await _native.initialize();
+    } catch (e) {
+      // WebView2 environment creation can transiently fail (runtime busy,
+      // first-run profile setup). Retry once before giving up so a single
+      // hiccup cannot leave the browser permanently blank.
+      debugPrint('[BROWSER] webview initialize failed, retrying: $e');
+      await Future<void>.delayed(const Duration(milliseconds: 750));
+      await _native.initialize();
+    }
     await _native.setPopupWindowPolicy(WebviewPopupWindowPolicy.sameWindow);
+    // Present a real desktop Chrome UA. Without this, Google/Bing serve
+    // consent or bot-check walls to WebView2 (blank results pages).
+    try {
+      await _native.setUserAgent(
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+          '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36');
+    } catch (_) {
+      // Older package versions may not expose setUserAgent - non-fatal.
+    }
     // Shared JS bridge + popup suppression + ad-block hook run before any
     // page script on every document.
     await _native.addScriptToExecuteOnDocumentCreated(_documentCreatedJs());
@@ -192,10 +220,19 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
 
   @override
   Widget buildWidget() {
-    // Kick off initialization; the widget shows a blank surface until the
-    // controller reports ready.
+    // Kick off initialization. `webview_windows`' Webview widget only reads
+    // `controller.value.isInitialized` while building and never rebuilds
+    // when initialization completes afterwards, so building it too early
+    // freezes its blank placeholder forever (the "black webview" bug: the
+    // page loads invisibly while the user sees a black rectangle). Gate
+    // the widget on the controller's ValueNotifier instead - the same
+    // pattern the package's own example uses.
     unawaited(_ensureReady());
-    return Webview(_native);
+    return ValueListenableBuilder<WebviewValue>(
+      valueListenable: _native,
+      builder: (context, value, child) =>
+          value.isInitialized ? Webview(_native) : const SizedBox.expand(),
+    );
   }
 
   @override

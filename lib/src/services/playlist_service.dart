@@ -75,49 +75,72 @@ class PlaylistService {
     } catch (e) {
       _logs?.add('youtube_explode_dart playlist.get failed: $e');
     }
+    // --- Step 2a: Direct lockupViewModel parser --------------------------------
+    // YouTube migrated playlist pages from `playlistVideoRenderer` to the new
+    // `lockupViewModel` format. youtube_explode_dart 3.1.0 only parses the
+    // legacy renderer, so its getVideos() stream yields 0 videos for every
+    // playlist - the "0/800" bug on Android/iOS (no yt-dlp fallback there).
+    // This parser walks the page JSON for lockups with
+    // contentType=LOCKUP_CONTENT_TYPE_VIDEO, which is position-independent:
+    // it keeps working even if YouTube reshuffles the surrounding containers.
     try {
-      const maxAttempts = 5;
-      final stopwatch = Stopwatch()..start();
-      for (var attempt = 1; attempt <= maxAttempts; attempt++) {
-        final before = videosById.length;
-        int emittedThisAttempt = 0;
-        final stream = _yt.playlists
-            .getVideos(playlistId)
-            .timeout(_playlistStreamTimeout);
-        try {
-          await for (final video in stream) {
-            videosById[video.id.value] = video;
-            emittedThisAttempt++;
-            if (attempt == 1 && emittedThisAttempt % 25 == 0) {
-              _logs?.add(
-                  'Playlist loading: ${videosById.length} videos in '
-                  '${stopwatch.elapsed.inSeconds}s...');
-            }
-            if (cap != null && videosById.length >= cap) break;
-          }
-        } on TimeoutException {
-          _logs?.add(
-              'Playlist stream idle >${_playlistStreamTimeout.inSeconds}s on '
-              'attempt $attempt after ${videosById.length} videos; '
-              '${stopwatch.elapsed.inSeconds}s elapsed - will retry from start');
-        }
-        final reachedCap = cap != null && videosById.length >= cap;
-        final reachedExpected =
-            expectedCount > 0 && videosById.length >= expectedCount;
-        if (reachedCap || reachedExpected) break;
-        // No net progress this attempt - don't keep re-treading the same pages.
-        if (videosById.length == before) {
-          _logs?.add(
-              'Playlist attempt $attempt made no progress (${videosById.length} '
-              'videos) - stopping retries');
-          break;
-        }
+      final lockupVideos =
+          await _fetchPlaylistViaLockupParser(playlistId, cap, expectedCount);
+      for (final video in lockupVideos) {
+        videosById[video.id.value] = video;
       }
       _logs?.add(
-          'Playlist fetched via youtube_explode_dart: ${videosById.length} '
-          'tracks in ${stopwatch.elapsed.inSeconds}s (expected ~$expectedCount)');
+          'Lockup parser: ${lockupVideos.length} videos (total ${videosById.length}, expected ~$expectedCount)');
     } catch (e) {
-      _logs?.add('youtube_explode_dart playlist fetch error: $e');
+      _logs?.add('Lockup parser failed: $e');
+    }
+
+    // --- Step 2b: Legacy youtube_explode_dart stream (old-format pages) -------
+    if (videosById.isEmpty) {
+      try {
+        const maxAttempts = 5;
+        final stopwatch = Stopwatch()..start();
+        for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+          final before = videosById.length;
+          int emittedThisAttempt = 0;
+          final stream = _yt.playlists
+              .getVideos(playlistId)
+              .timeout(_playlistStreamTimeout);
+          try {
+            await for (final video in stream) {
+              videosById[video.id.value] = video;
+              emittedThisAttempt++;
+              if (attempt == 1 && emittedThisAttempt % 25 == 0) {
+                _logs?.add(
+                    'Playlist loading: ${videosById.length} videos in '
+                    '${stopwatch.elapsed.inSeconds}s...');
+              }
+              if (cap != null && videosById.length >= cap) break;
+            }
+          } on TimeoutException {
+            _logs?.add(
+                'Playlist stream idle >${_playlistStreamTimeout.inSeconds}s on '
+                'attempt $attempt after ${videosById.length} videos; '
+                '${stopwatch.elapsed.inSeconds}s elapsed - will retry from start');
+          }
+          final reachedCap = cap != null && videosById.length >= cap;
+          final reachedExpected =
+              expectedCount > 0 && videosById.length >= expectedCount;
+          if (reachedCap || reachedExpected) break;
+          // No net progress this attempt - don't keep re-treading the same pages.
+          if (videosById.length == before) {
+            _logs?.add(
+                'Playlist attempt $attempt made no progress (${videosById.length} '
+                'videos) - stopping retries');
+            break;
+          }
+        }
+        _logs?.add(
+            'Playlist fetched via youtube_explode_dart: ${videosById.length} '
+            'tracks in ${stopwatch.elapsed.inSeconds}s (expected ~$expectedCount)');
+      } catch (e) {
+        _logs?.add('youtube_explode_dart playlist fetch error: $e');
+      }
     }
 
     final videos = videosById.values.toList();
@@ -140,6 +163,348 @@ class PlaylistService {
         source: 'youtube',
       );
     }).toList();
+  }
+
+  // --─ Lockup parser (new YouTube playlist page format) ────────────────────
+
+  /// Fetches playlist videos by walking the page JSON for `lockupViewModel`
+  /// entries with `contentType == LOCKUP_CONTENT_TYPE_VIDEO`. Handles the new
+  /// YouTube page format that youtube_explode_dart 3.1.0 cannot parse, and
+  /// follows `continuationItemViewModel` tokens through the innertube browse
+  /// API for large playlists (800+ entries).
+  Future<List<Video>> _fetchPlaylistViaLockupParser(
+      PlaylistId playlistId, int? cap, int expectedCount) async {
+    final results = <Video>[];
+    final client = HttpClient();
+    try {
+      client.userAgent =
+          'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 '
+          '(KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36';
+      final html = await _httpGetString(client,
+          'https://www.youtube.com/playlist?list=${playlistId.value}&hl=en&persist_hl=1');
+      dynamic root = _extractYtInitialData(html);
+      if (root == null) {
+        // Android/mobile networks frequently get YouTube's consent interstitial
+        // or a bot-check page (no ytInitialData). Retry with TVHTML5-style
+        // consent parameters before giving up, otherwise large playlists
+        // report 0/800 on phones while working fine on desktop.
+        _logs?.add(
+            'Lockup parser: ytInitialData not found in playlist HTML; retrying with consent params');
+        final retryHtml = await _httpGetString(client,
+            'https://www.youtube.com/playlist?list=${playlistId.value}&hl=en&persist_hl=1&has_verified=1&bpctr=9999999999');
+        root = _extractYtInitialData(retryHtml);
+        if (root == null) {
+          _logs?.add(
+              'Lockup parser: YouTube returned a consent/blocked page (no data). '
+              'Check VPN/region or retry; cannot enumerate playlist entries.');
+          return const [];
+        }
+      }
+      final visitorData = _digString(root, const [
+        'responseContext',
+        'webResponseContextExtensionData',
+        'ytConfigData',
+        'visitorData',
+      ]);
+      var page = 1;
+      const maxPages = 100; // 100 pages x ~100 entries covers 800+ easily.
+      while (root != null && page <= maxPages) {
+        final lockups = <Map<String, dynamic>>[];
+        _collectVideoLockups(root, lockups);
+        for (final lockup in lockups) {
+          if (cap != null && results.length >= cap) return results;
+          final video = _videoFromLockup(lockup);
+          if (video != null) results.add(video);
+        }
+        _logs?.add('Lockup parser page $page: +${lockups.length} videos '
+            '(total ${results.length})');
+        if (cap != null && results.length >= cap) break;
+        if (expectedCount > 0 && results.length >= expectedCount) break;
+        final tokens = <String>[];
+        _collectContinuationTokens(root, tokens);
+        if (tokens.isEmpty) break;
+        root = await _browseContinuation(client, tokens.first, visitorData);
+        page++;
+      }
+    } finally {
+      client.close(force: true);
+    }
+    return results;
+  }
+
+  /// Parses a YouTube playlist HTML page and returns the video titles/ids it
+  /// contains in document order. Public solely so the Lockup parser can be
+  /// verified against offline fixtures (no live YouTube needed) - the same
+  /// pattern as [BrowserScreen.buildSearchUrl].
+  static List<Video> parsePlaylistHtmlForTesting(String html) {
+    final root = _extractYtInitialData(html);
+    if (root == null) return const [];
+    final lockups = <Map<String, dynamic>>[];
+    _collectVideoLockups(root, lockups);
+    final videos = <Video>[];
+    for (final lockup in lockups) {
+      final video = _videoFromLockup(lockup);
+      if (video != null) videos.add(video);
+    }
+    return videos;
+  }
+
+  /// Returns the pagination tokens found in a YouTube playlist HTML page.
+  /// Test-support hook mirroring [parsePlaylistHtmlForTesting].
+  static List<String> continuationTokensForTesting(String html) {
+    final root = _extractYtInitialData(html);
+    if (root == null) return const [];
+    final tokens = <String>[];
+    _collectContinuationTokens(root, tokens);
+    return tokens;
+  }
+
+  // -- Lockup parser helpers ------------------------------------------------
+
+  /// GET [url] and return the body decoded as UTF-8 (follows redirects).
+  Future<String> _httpGetString(HttpClient client, String url) async {
+    final request = await client.getUrl(Uri.parse(url));
+    request.headers.set('accept-language', 'en-US,en;q=0.9');
+    request.headers.set(
+        'accept', 'text/html,application/xhtml+xml,application/xml');
+    final response = await request.close();
+    return response.transform(utf8.decoder).join();
+  }
+
+  /// Post to the innertube `browse` API with a continuation token and return
+  /// the parsed JSON response (or null on any failure).
+  Future<dynamic> _browseContinuation(
+      HttpClient client, String token, String? visitorData) async {
+    final request = await client.postUrl(Uri.parse(
+        'https://www.youtube.com/youtubei/v1/browse?prettyPrint=false'));
+    request.headers.set('content-type', 'application/json');
+    request.headers.set('accept', 'application/json');
+    if (visitorData != null && visitorData.isNotEmpty) {
+      request.headers.set('x-goog-visitor-id', visitorData);
+    }
+    request.write(jsonEncode({
+      'context': {
+        'client': {
+          'clientName': 'WEB',
+          'clientVersion': '2.20250101.00.00',
+          'hl': 'en',
+          'gl': 'US',
+        },
+      },
+      'continuation': token,
+    }));
+    final response = await request.close();
+    final body = await response.transform(utf8.decoder).join();
+    try {
+      return jsonDecode(body);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Extracts the `ytInitialData` JSON object from a YouTube HTML page.
+  /// Handles both `var ytInitialData = {...};` and
+  /// `window["ytInitialData"] = {...};` embeds via brace matching so
+  /// truncated/HTML-escaped surroundings can't break the parse.
+  static dynamic _extractYtInitialData(String html) {
+    const markerFull = 'var ytInitialData = ';
+    const markerAlt = 'window["ytInitialData"] = ';
+    var start = html.indexOf(markerFull);
+    if (start < 0) start = html.indexOf(markerAlt);
+    if (start < 0) return null;
+    start = html.indexOf('{', start);
+    if (start < 0) return null;
+    var depth = 0;
+    var inString = false;
+    var escape = false;
+    for (var i = start; i < html.length; i++) {
+      final ch = html[i];
+      if (inString) {
+        if (escape) {
+          escape = false;
+        } else if (ch == r'\') {
+          escape = true;
+        } else if (ch == '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (ch == '"') {
+        inString = true;
+      } else if (ch == '{') {
+        depth++;
+      } else if (ch == '}') {
+        depth--;
+        if (depth == 0) {
+          try {
+            return jsonDecode(html.substring(start, i + 1));
+          } catch (_) {
+            return null;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  /// Walks [root] following [path] however it is nested - through maps,
+  /// lists, or any combination - returning the first string found at the
+  /// end of the walk, or null.
+  static String? _digString(dynamic root, List<String> path) {
+    dynamic node = root;
+    for (final key in path) {
+      node = _jsonNextKey(node, key);
+      if (node == null) return null;
+    }
+    return node is String ? node : null;
+  }
+
+  /// Deep first-[key] value search across nested maps and lists.
+  static dynamic _jsonNextKey(dynamic node, String key) {
+    if (node is Map) {
+      if (node.containsKey(key)) return node[key];
+      for (final v in node.values) {
+        final r = _jsonNextKey(v, key);
+        if (r != null) return r;
+      }
+      return null;
+    }
+    if (node is List) {
+      for (final item in node) {
+        final r = _jsonNextKey(item, key);
+        if (r != null) return r;
+      }
+      return null;
+    }
+    return null;
+  }
+
+  /// Collects every `lockupViewModel` whose contentType is a video, in
+  /// document order. Position-independent: does not depend on wrapper
+  /// renderer names, so it survives YouTube reshuffling its containers.
+  static void _collectVideoLockups(dynamic node, List<Map<String, dynamic>> out) {
+    if (node is Map) {
+      final lockup = node['lockupViewModel'];
+      if (lockup is Map &&
+          lockup['contentType'] == 'LOCKUP_CONTENT_TYPE_VIDEO') {
+        out.add(lockup.cast<String, dynamic>());
+      }
+      for (final entry in node.entries) {
+        if (entry.key == 'lockupViewModel') continue;
+        _collectVideoLockups(entry.value, out);
+      }
+    } else if (node is List) {
+      for (final item in node) {
+        _collectVideoLockups(item, out);
+      }
+    }
+  }
+/// Collects every continuation token for pagination.
+  static void _collectContinuationTokens(dynamic node, List<String> out) {
+    if (node is Map) {
+      final item = node['continuationItemViewModel'];
+      if (item is Map) {
+        final vm = item['continuationViewModel'];
+        if (vm is Map) {
+          final token = vm['continuation'];
+          if (token is String && token.isNotEmpty) out.add(token);
+        }
+      }
+      for (final entry in node.entries) {
+        if (entry.key == 'continuationItemViewModel') continue;
+        _collectContinuationTokens(entry.value, out);
+      }
+    } else if (node is List) {
+      for (final item in node) {
+        _collectContinuationTokens(item, out);
+      }
+    }
+  }
+
+  /// Builds a [Video] from a video lockupViewModel, tolerating the several
+  /// naming layouts YouTube has shipped for title/author/duration/thumbnail.
+  static Video? _videoFromLockup(Map<String, dynamic> lockup) {
+    try {
+      dynamic content = lockup['content'];
+      if (content is! Map) content = lockup;
+      final videoIdRaw = (content['contentId'] ??
+              lockup['contentId'] ??
+              content['videoId'] ??
+              '')
+          .toString()
+          .trim();
+      if (videoIdRaw.length != 11) {
+        return null;
+      }
+      final videoId = VideoId(videoIdRaw);
+      var title = _digString(content, const ['metadata', 'title', 'content']);
+      if (title == null || title.isEmpty) {
+        title = _digString(content, const ['title', 'content']);
+      }
+      if (title == null || title.isEmpty) {
+        title = _digString(content, const ['title']);
+      }
+      if (title == null || title.isEmpty) return null;
+      var author = _digString(content, const ['channelName', 'content']);
+      if (author == null || author.isEmpty) {
+        author =
+            _digString(content, const ['metadata', 'secondaryText', 'content']);
+      }
+      if (author == null || author.isEmpty) {
+        author = _digString(content, const ['secondaryText', 'content']);
+      }
+      if (author != null && author.startsWith('@')) {
+        author = author.substring(1);
+      }
+      var durationText =
+          _digString(content, const ['metadata', 'thirdText', 'content']);
+      if (durationText == null || durationText.isEmpty) {
+        durationText = _digString(content, const ['viewText', 'content']);
+      }
+      final duration = _parseDurationText(durationText);
+      final channelIdStr = _digString(content, const ['channelId']) ?? '';
+      // ChannelId() throws on ids that do not match the strict UC+24 format
+      // (most lockup payloads omit channelId entirely). Fall back to a
+      // well-formed placeholder so a missing/malformed channel id cannot
+      // cause the whole video to be dropped.
+      final channelId = (channelIdStr.isNotEmpty &&
+              channelIdStr.startsWith('UC') &&
+              channelIdStr.length == 24)
+          ? ChannelId(channelIdStr)
+          : ChannelId('UCdddddddddddddddddddddd');
+      return Video(
+        videoId,
+        title,
+        author ?? '',
+        channelId,
+        null,
+        null,
+        null,
+        '',
+        duration,
+        ThumbnailSet(videoIdRaw),
+        null,
+        const Engagement(0, null, null),
+        false,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Parses "4:05" / "1:02:03" style duration strings. Returns null for
+  /// anything non-numeric (e.g. "LIVE").
+  static Duration? _parseDurationText(String? text) {
+    if (text == null || text.trim().isEmpty) return null;
+    final parts = text.trim().split(':');
+    if (parts.length < 2) return null;
+    var seconds = 0;
+    for (final part in parts) {
+      final n = int.tryParse(part.trim());
+      if (n == null) return null;
+      seconds = seconds * 60 + n;
+    }
+    return Duration(seconds: seconds);
   }
 
   /// Get playlist metadata (title, author, description, video count).

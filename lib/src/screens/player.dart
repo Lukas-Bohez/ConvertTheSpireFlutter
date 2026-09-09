@@ -4480,7 +4480,8 @@ class _PlayerScreenState extends State<PlayerScreen>
       body: SafeArea(
         top: false,
         bottom: true,
-        child: NestedScrollView(
+        child: PlayerNoAutoScrollbars(
+          child: NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) {
             final isMobile = MediaQuery.of(context).size.width < 600;
             final showVideoPane = showVideo;
@@ -4615,6 +4616,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 onTap: _onTrackTap,
               ),
             ],
+          ),
           ),
         ),
       ),
@@ -5879,7 +5881,8 @@ class _MediaGrid extends StatelessWidget {
     // overlap — this keeps the first row (and the scrollbar) below that
     // header instead of being hidden behind it. The scrollable remains
     // primary so NestedScrollView still collapses the now-playing card.
-    return CustomScrollView(
+    return PlayerBodyScrollbar(
+      child: CustomScrollView(
       slivers: [
         SliverOverlapInjector(
           handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
@@ -5901,6 +5904,7 @@ class _MediaGrid extends StatelessWidget {
           ),
         ),
       ],
+      ),
     );
   }
 }
@@ -6144,6 +6148,69 @@ class _SectionHeader extends StatelessWidget {
         style:
             theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
       ),
+    );
+  }
+}
+
+/// Disables the platform-automatic desktop scrollbars for a subtree.
+///
+/// The player's outer [NestedScrollView] would otherwise get an automatic
+/// scrollbar whose track spans the *whole* viewport - including the area
+/// behind the pinned TabBar/search header - so its thumb disappears
+/// underneath that sticky header. The tab bodies instead get an explicit
+/// [PlayerBodyScrollbar] confined to the area below the header.
+class PlayerNoAutoScrollbars extends StatelessWidget {
+  final Widget child;
+  const PlayerNoAutoScrollbars({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+      child: child,
+    );
+  }
+}
+
+/// Scrollbar that respects the NestedScrollView's pinned header overlap.
+/// 
+/// In a NestedScrollView, the body extends behind pinned headers. This widget
+/// ensures the scrollbar track starts below the pinned header area, keeping
+/// the thumb fully visible at all times.
+class PlayerBodyScrollbar extends StatelessWidget {
+  final Widget child;
+  const PlayerBodyScrollbar({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    // Try to get the overlap handle from NestedScrollView
+    SliverOverlapAbsorberHandle? handle;
+    try {
+      handle = NestedScrollView.sliverOverlapAbsorberHandleFor(context);
+    } catch (_) {
+      // Not inside a NestedScrollView - use plain scrollbar
+      return Scrollbar(thumbVisibility: true, child: child);
+    }
+
+    // Use AnimatedBuilder to rebuild when the handle's extent changes.
+    // Flow analysis proves `handle` is non-null here (either assigned above
+    // or the catch returned); the closure needs an explicit `!` because the
+    // promotion does not flow into it.
+    return AnimatedBuilder(
+      animation: handle,
+      builder: (context, _) {
+        final overlapExtent = handle!.layoutExtent ?? 0.0;
+        
+        // Use RawScrollbar with mainAxisMargin to offset the scrollbar below the header
+        // This ensures the scrollbar track starts below the pinned header
+        return RawScrollbar(
+          thumbVisibility: true,
+          thickness: 8,
+          radius: const Radius.circular(4),
+          mainAxisMargin: overlapExtent > 0 ? overlapExtent / 2 : 0,
+          child: child,
+        );
+      },
     );
   }
 }
