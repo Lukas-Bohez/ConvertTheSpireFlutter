@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:webview_windows/webview_windows.dart';
 
 import 'browser_webview_controller.dart';
@@ -55,15 +55,28 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   final _scrollEvents = StreamController<int>.broadcast();
   final List<StreamSubscription> _nativeSubs = [];
 
+  /// Tracks WebView2 initialization state for the widget builder.
+  /// - null = still initializing
+  /// - true = initialized successfully
+  /// - false = initialization failed (see [_initError])
+  final ValueNotifier<bool?> _initState = ValueNotifier<bool?>(null);
+  final ValueNotifier<String?> _initError = ValueNotifier<String?>(null);
+
   /// Lazily initializes the WebView2 environment + controller. Safe to
   /// await repeatedly; every caller shares the same readiness future.
   /// A failed attempt is discarded so the next call retries from scratch
   /// instead of poisoning the browser for the whole session.
   Future<void> _ensureReady() async {
+    if (_initState.value == true) return; // already initialized
+    _initState.value = null; // initializing
+    _initError.value = null;
     final future = _readyFuture ??= _init();
     try {
       await future;
-    } catch (_) {
+      _initState.value = true;
+    } catch (e) {
+      _initState.value = false;
+      _initError.value = e.toString();
       if (identical(_readyFuture, future)) _readyFuture = null;
       rethrow;
     }
@@ -227,11 +240,69 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
     // page loads invisibly while the user sees a black rectangle). Gate
     // the widget on the controller's ValueNotifier instead - the same
     // pattern the package's own example uses.
-    unawaited(_ensureReady());
-    return ValueListenableBuilder<WebviewValue>(
-      valueListenable: _native,
-      builder: (context, value, child) =>
-          value.isInitialized ? Webview(_native) : const SizedBox.expand(),
+    //
+    // We also track our own init state so we can surface a retry UI if
+    // WebView2 initialization fails (e.g. runtime missing, GPU issue).
+    // Without this, a init failure leaves a permanent blank SizedBox.
+    unawaited(_ensureReady().catchError((_) {
+      // Error state is already captured in _initError/_initState.
+    }));
+    return ListenableBuilder(
+      listenable: Listenable.merge([_initState, _initError, _native]),
+      builder: (context, child) {
+        final initState = _initState.value;
+        final initError = _initError.value;
+        // Initialization failed - show error with retry button.
+        if (initState == false && initError != null) {
+          return _buildInitError(initError);
+        }
+        // Still initializing or not yet started - show blank placeholder.
+        if (initState != true) {
+          return const SizedBox.expand();
+        }
+        // Initialized - show the WebView.
+        return Webview(_native);
+      },
+    );
+  }
+
+  Widget _buildInitError(String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+            const SizedBox(height: 16),
+            const Text(
+              'Browser initialization failed',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
+              textAlign: TextAlign.center,
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                _initState.value = null;
+                _initError.value = null;
+                _readyFuture = null;
+                unawaited(_ensureReady().catchError((_) {}));
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -380,6 +451,8 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
     ]) {
       await c.close();
     }
+    _initState.dispose();
+    _initError.dispose();
     try {
       await _native.dispose();
     } catch (_) {}

@@ -186,5 +186,60 @@ void main() {
       expect(videos.length, equals(1));
       expect(videos.first.id.value, equals('VIDEOID3333'));
     });
+
+    test('parses real YouTube lockupViewModel structure (lockupMetadataViewModel + contentMetadataViewModel)', () {
+      // This matches the actual YouTube page structure observed in the wild.
+      // Built with StringBuffer to avoid triple-quote escaping issues with the
+      // _extractYtInitialData brace-matcher.
+      final sb = StringBuffer();
+      sb.writeln('<script>');
+      sb.writeln('var ytInitialData = {');
+      sb.writeln('  "contents": {');
+      sb.writeln('    "twoColumnBrowseResultsRenderer": {');
+      sb.writeln('      "tabs": [ { "tabRenderer": { "content": {');
+      sb.writeln('        "sectionListRenderer": {');
+      sb.writeln('          "contents": [');
+      sb.writeln('            { "playlistVideoListRenderer": {');
+      sb.writeln('                "contents": [');
+      sb.writeln('                  {');
+      sb.writeln('                    "lockupViewModel": {');
+      sb.writeln('                      "contentType": "LOCKUP_CONTENT_TYPE_VIDEO",');
+      sb.writeln('                      "content": {');
+      sb.writeln('                        "contentId": "0VH1Lim8gL8",');
+      sb.writeln('                        "metadata": {');
+      sb.writeln('                          "lockupMetadataViewModel": {');
+      sb.writeln('                            "title": { "content": "Deep Learning State of the Art (2020)" }');
+      sb.writeln('                          },');
+      sb.writeln('                          "contentMetadataViewModel": {');
+      sb.writeln('                            "metadataRows": [');
+      sb.writeln('                              { "metadataParts": [');
+      sb.writeln('                                { "text": { "content": "Lex Fridman" } },');
+      sb.writeln('                                { "text": { "content": "1:02:03" } }');
+      sb.writeln('                              ] }');
+      sb.writeln('                            ]');
+      sb.writeln('                          }');
+      sb.writeln('                        }');
+      sb.writeln('                      }');
+      sb.writeln('                    }');
+      sb.writeln('                  }');
+      sb.writeln('                ]');
+      sb.writeln('              }');
+      sb.writeln('            }');
+      sb.writeln('          ]');
+      sb.writeln('        }');
+      sb.writeln('      } } } ]');
+      sb.writeln('    }');
+      sb.writeln('  }');
+      sb.writeln('};');
+      sb.writeln('</script>');
+      final html = sb.toString();
+
+      final videos = PlaylistService.parsePlaylistHtmlForTesting(html);
+      expect(videos.length, equals(1),
+          reason: 'Should extract the one video from the real YouTube structure');
+      expect(videos.first.id.value, equals('0VH1Lim8gL8'));
+      expect(videos.first.title, equals('Deep Learning State of the Art (2020)'));
+      expect(videos.first.author, equals('Lex Fridman'));
+    });
   });
 }

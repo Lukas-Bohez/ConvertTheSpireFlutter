@@ -437,7 +437,14 @@ class PlaylistService {
         return null;
       }
       final videoId = VideoId(videoIdRaw);
-      var title = _digString(content, const ['metadata', 'title', 'content']);
+      // Title: try the real YouTube structure first
+      // (metadata.lockupMetadataViewModel.title.content), then fall back to
+      // older/alternate layouts.
+      var title = _digString(
+          content, const ['metadata', 'lockupMetadataViewModel', 'title', 'content']);
+      if (title == null || title.isEmpty) {
+        title = _digString(content, const ['metadata', 'title', 'content']);
+      }
       if (title == null || title.isEmpty) {
         title = _digString(content, const ['title', 'content']);
       }
@@ -445,7 +452,13 @@ class PlaylistService {
         title = _digString(content, const ['title']);
       }
       if (title == null || title.isEmpty) return null;
-      var author = _digString(content, const ['channelName', 'content']);
+      // Author: try the real YouTube structure first
+      // (metadata.contentMetadataViewModel.metadataRows[0].metadataParts[0].text.content),
+      // then fall back to older/alternate layouts.
+      var author = _extractAuthorFromContentMetadata(content);
+      if (author == null || author.isEmpty) {
+        author = _digString(content, const ['channelName', 'content']);
+      }
       if (author == null || author.isEmpty) {
         author =
             _digString(content, const ['metadata', 'secondaryText', 'content']);
@@ -456,6 +469,7 @@ class PlaylistService {
       if (author != null && author.startsWith('@')) {
         author = author.substring(1);
       }
+      // Duration: try the real YouTube structure first, then fall back.
       var durationText =
           _digString(content, const ['metadata', 'thirdText', 'content']);
       if (durationText == null || durationText.isEmpty) {
@@ -487,6 +501,37 @@ class PlaylistService {
         const Engagement(0, null, null),
         false,
       );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Extracts the author/channel name from the contentMetadataViewModel
+  /// structure that YouTube uses in the new lockupViewModel format:
+  /// metadata.contentMetadataViewModel.metadataRows[N].metadataParts[M].text.content
+  static String? _extractAuthorFromContentMetadata(dynamic content) {
+    try {
+      final metadata = content is Map ? content['metadata'] : null;
+      if (metadata is! Map) return null;
+      final contentMetadata = metadata['contentMetadataViewModel'];
+      if (contentMetadata is! Map) return null;
+      final rows = contentMetadata['metadataRows'];
+      if (rows is! List || rows.isEmpty) return null;
+      // The author is typically in the first row, first part.
+      for (final row in rows) {
+        if (row is! Map) continue;
+        final parts = row['metadataParts'];
+        if (parts is! List || parts.isEmpty) continue;
+        for (final part in parts) {
+          if (part is! Map) continue;
+          final text = part['text'];
+          if (text is Map && text['content'] is String) {
+            final candidate = text['content'] as String;
+            if (candidate.isNotEmpty) return candidate;
+          }
+        }
+      }
+      return null;
     } catch (_) {
       return null;
     }
