@@ -10,11 +10,12 @@
 
 ## Improvements
 
+* **Watch the same playlist more than once.** Watched playlists are now entry-based: the same URL can be added multiple times with different folders/formats, via a single add/edit dialog. Legacy watched playlists migrate automatically on first launch, and each check cycle fetches a unique playlist exactly once while fanning new tracks out to every entry watching it.
 * New deterministic crash-recovery tests (injected fake controller — no WebView2 runtime required) verify retry state and the absence of stream-listener collisions. EEA playlist + consent-interstitial fixtures added.
 
 ## Build Notes
 
 * GitHub release tag: v13.1.0
 * Release page: [v13.1.0](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.1.0)
-* `flutter analyze` clean; all 71 tests pass; release workflow builds Windows, Linux, macOS, Android, and web artifacts.
+* `flutter analyze` clean; all 79 tests pass; release workflow builds Windows, Linux, macOS, Android, and web artifacts.
 
