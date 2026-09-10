@@ -504,6 +504,13 @@ class AppController extends ChangeNotifier {
       return;
     }
 
+    // Respect an in-progress burst-pause no matter who's calling this -
+    // worker() already waits for it, but resumeDownload() and the UI's
+    // retry button call this function directly and were bypassing it.
+    while (isBurstPaused) {
+      await Future.delayed(const Duration(seconds: 15));
+    }
+
     // Resolve title if it's still a raw URL (user downloaded without preview)
     // Only attempt YouTube metadata fetch for YouTube URLs
     final isYouTube = _isYouTubeUrl(item.url);
@@ -961,7 +968,17 @@ class AppController extends ChangeNotifier {
     next[index] = updated;
     queue = next;
     scheduleNotify();
-    unawaited(_saveQueue());
+    // Only persist on an actual status change - progress/speed/eta ticks
+    // fire many times a second during a download and don't need to survive
+    // a restart. Persisting every tick means re-encoding and rewriting the
+    // WHOLE queue (every completed item is kept forever by _saveQueue's
+    // filter) on every tick of whatever's currently downloading, which
+    // gets more expensive as the library grows - severe enough on weak
+    // hardware to produce timeout-flavored failures with no YouTube-side
+    // cause at all.
+    if (original.status != updated.status) {
+      unawaited(_saveQueue());
+    }
   }
 
   Future<void> _saveQueue() async {
