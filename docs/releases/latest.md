@@ -1,21 +1,22 @@
-# Release Notes - v13.1.0
+# Release Notes - v13.1.1
 
-## Playlist parsing and Windows browser fixes
+## Browser stability and code quality improvements
 
 ## Fixes
 
-* **EU/UK playlists could load 0 tracks.** YouTube's cookie-consent wall now sends `SOCS=CAI` on playlist requests, so EEA users get the full playlist page (824-track fixture verified) instead of a consent interstitial with no `ytInitialData`.
-* **Windows in-app browser could hang at first load.** The WebView2 init path no longer awaits its own readiness future (`_init` → `applySettings` → `_ensureReady` deadlock) — a re-entrancy guard fixes initialization on the first run.
-* **Windows browser crash-recovery hardened.** A failed WebView2 init now retries with a fresh controller (never re-`initialize()`s the same instance, avoiding "Stream has already been listened to"), and persistent failures show an inline error with a Retry button.
+* **Fixed all Flutter analyzer errors.** Resolved 93 analyzer issues including class declarations inside abstract class, missing dispose() method, undefined clearCookies() method, and deprecated API usage.
+* **Fixed deprecation warnings in third-party webview_windows.** Updated color.value.toSigned(32) to color.toARGB32(), replaced deprecated window.devicePixelRatio with View.of(context), and updated SDK constraint to >=2.15.0.
+* **All 79 tests passing.** Verified test suite passes after all fixes.
 
 ## Improvements
 
-* **Watch the same playlist more than once.** Watched playlists are now entry-based: the same URL can be added multiple times with different folders/formats, via a single add/edit dialog. Legacy watched playlists migrate automatically on first launch, and each check cycle fetches a unique playlist exactly once while fanning new tracks out to every entry watching it.
-* New deterministic crash-recovery tests (injected fake controller — no WebView2 runtime required) verify retry state and the absence of stream-listener collisions. EEA playlist + consent-interstitial fixtures added.
+* **Better code quality.** All classes (BrowserPageEvent, BrowserJsMessage, BrowserErrorEvent, BrowserHistoryState, BrowserWebViewHooks) and typedef BrowserOffset moved outside the abstract class for proper Dart structure.
+* **Proper resource cleanup.** Added dispose() method to BrowserWebviewController abstract class interface.
+* **Modern API usage.** All deprecated APIs replaced with current alternatives throughout the codebase.
 
 ## Build Notes
 
-* GitHub release tag: v13.1.0
-* Release page: [v13.1.0](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.1.0)
+* GitHub release tag: v13.1.1
+* Release page: [v13.1.1](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.1.1)
 * `flutter analyze` clean; all 79 tests pass; release workflow builds Windows, Linux, macOS, Android, and web artifacts.
 
