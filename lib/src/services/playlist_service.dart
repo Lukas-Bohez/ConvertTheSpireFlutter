@@ -264,9 +264,19 @@ class PlaylistService {
   /// GET [url] and return the body decoded as UTF-8 (follows redirects).
   Future<String> _httpGetString(HttpClient client, String url) async {
     final request = await client.getUrl(Uri.parse(url));
-    request.headers.set('accept-language', 'en-US,en;q=0.9');
+        request.headers.set('accept-language', 'en-US,en;q=0.9');
     request.headers.set(
         'accept', 'text/html,application/xhtml+xml,application/xml');
+    // Bypasses YouTube's EU/UK "before you continue" cookie-consent
+    // interstitial, which serves a consent page with no ytInitialData
+    // instead of the playlist to any request made from an EEA-geolocated
+    // IP that lacks this cookie. The old CONSENT cookie this used to take
+    // is no longer honored; SOCS=CAI ("accept all") is the current bypass
+    // - see https://github.com/yt-dlp/yt-dlp/issues/7774. The bpctr/
+    // has_verified retry below predates this and targets a different,
+    // now largely inactive bot-check page, so it stays as a harmless
+    // second-chance fallback rather than the primary fix.
+    request.headers.set('cookie', 'SOCS=CAI');
     final response = await request.close();
     return response.transform(utf8.decoder).join();
   }
@@ -277,8 +287,11 @@ class PlaylistService {
       HttpClient client, String token, String? visitorData) async {
     final request = await client.postUrl(Uri.parse(
         'https://www.youtube.com/youtubei/v1/browse?prettyPrint=false'));
-    request.headers.set('content-type', 'application/json');
+        request.headers.set('content-type', 'application/json');
     request.headers.set('accept', 'application/json');
+    // Same EU consent-wall bypass as _httpGetString - continuation pages
+    // are a separate request and need it too.
+    request.headers.set('cookie', 'SOCS=CAI');
     if (visitorData != null && visitorData.isNotEmpty) {
       request.headers.set('x-goog-visitor-id', visitorData);
     }

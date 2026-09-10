@@ -27,17 +27,41 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   BrowserWindowsWebViewAdapter({
     required Set<String> blockedDomains,
     BrowserWebViewHooks? hooks,
+    WebviewController Function()? controllerFactory,
   })  : _blockedDomains = blockedDomains,
-        _hooks = hooks ?? BrowserWebViewHooks();
+        _hooks = hooks ?? BrowserWebViewHooks(),
+        _controllerFactory = controllerFactory ?? WebviewController.new {
+    _native = _controllerFactory();
+  }
 
   static bool _environmentInitialized = false;
+
+  /// Factory used to mint the [_native] controllers. Injectable from tests
+  /// so the crash-recovery path can be exercised with a deterministic fake
+  /// that fails the first [WebviewController.initialize] call without
+  /// touching a real WebView2 runtime.
+  final WebviewController Function() _controllerFactory;
 
   final Set<String> _blockedDomains;
   // ignore: unused_field
   final BrowserWebViewHooks _hooks;
 
-  final WebviewController _native = WebviewController();
+  /// Non-final: a controller that failed [initialize] must never be reused
+  /// for a second attempt — `webview_windows` 0.4.0 throws "Bad state: Stream
+  /// has already been listened to" when initialize() is called twice on the
+  /// same instance. Instead, [_spawnAndInitializeController] discards the
+  /// failed controller and creates a fresh one for every attempt.
+  late WebviewController _native;
+
+  /// Bumped every time [_native] is replaced with a fresh controller, so
+  /// [buildWidget]'s outer [ValueListenableBuilder] rebuilds and rebinds
+  /// to the new instance. A [ValueListenableBuilder] already on screen
+  /// stays bound to whichever controller object it was constructed with,
+  /// so swapping the [_native] field alone leaves a dead, never-
+  /// initializing controller on screen forever.
+  final ValueNotifier<int> _generation = ValueNotifier<int>(0);
   Future<void>? _readyFuture;
+  bool _initializing = false;
   bool _desktopMode = false;
   String _lastUrl = '';
   String _lastTitle = '';
@@ -53,7 +77,8 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   final _errorEvents = StreamController<BrowserErrorEvent>.broadcast();
   final _historyEvents = StreamController<BrowserHistoryState>.broadcast();
   final _scrollEvents = StreamController<int>.broadcast();
-  final List<StreamSubscription> _nativeSubs = [];
+
+  List<StreamSubscription> _nativeSubs = [];
 
   /// Tracks WebView2 initialization state for the widget builder.
   /// - null = still initializing
@@ -67,8 +92,16 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   /// A failed attempt is discarded so the next call retries from scratch
   /// instead of poisoning the browser for the whole session.
   Future<void> _ensureReady() async {
-    if (_initState.value == true) return; // already initialized
-    _initState.value = null; // initializing
+    if (_initState.value == true) return;
+    if (_initializing && _native.value.isInitialized) {
+      // Re-entered from _init()'s own post-init setup (the
+      // _init -> applySettings -> _ensureReady chain): the controller is
+      // already initialized, and awaiting the in-flight _init() future here
+      // would deadlock ("Future awaited itself"). Let the caller proceed;
+      // the outer _ensureReady finalizes _initState when _init() returns.
+      return;
+    }
+    _initState.value = null;
     _initError.value = null;
     final future = _readyFuture ??= _init();
     try {
@@ -83,24 +116,80 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   }
 
   Future<void> _init() async {
-    // The environment must be initialized before the first controller and
-    // can only be set once per process.
-    if (!_environmentInitialized) {
-      try {
-        // Keep the WebView2 profile in the same short-path location the app
-        // has always used (avoids long-path crashes).
-        final local = Platform.environment['LOCALAPPDATA'] ?? '';
-        if (local.isNotEmpty) {
-          await WebviewController.initializeEnvironment(
-              userDataPath: '$local\\ConvertTheSpireReborn\\WebView2');
-          _environmentInitialized = true;
+    _initializing = true;
+    try {
+      // The environment must be initialized before the first controller and
+      // can only be set once per process.
+      if (!_environmentInitialized) {
+        try {
+          // Keep the WebView2 profile in the same short-path location the app
+          // has always used (avoids long-path crashes).
+          final local = Platform.environment['LOCALAPPDATA'] ?? '';
+          if (local.isNotEmpty) {
+            await WebviewController.initializeEnvironment(
+                userDataPath: '$local\\ConvertTheSpireReborn\\WebView2');
+            _environmentInitialized = true;
+          }
+        } catch (_) {
+          // Fall back to the WebView2 default profile location.
         }
-      } catch (_) {
-        // Fall back to the WebView2 default profile location.
       }
-    }
 
-    _nativeSubs.addAll([
+      try {
+        await _spawnAndInitializeController();
+      } catch (e) {
+        // WebView2 controller creation can transiently fail (runtime busy,
+        // first-run profile setup). webview_windows 0.4.0's
+        // WebviewController.initialize() is NOT safe to call a second time on
+        // the same instance: it throws "Bad state: Stream has already been
+        // listened to" (confirmed against the package's own actively-maintained
+        // fork, which lists both re-entrant initialize() and broadcast event
+        // streams as fixes over this exact upstream version). Retry with a
+        // brand-new controller instance instead of re-calling initialize()
+        // on the failed one.
+        debugPrint(
+            '[BROWSER] webview initialize failed, retrying with a fresh controller: $e');
+        await Future<void>.delayed(const Duration(milliseconds: 750));
+        await _spawnAndInitializeController();
+      }
+      await _native.setPopupWindowPolicy(WebviewPopupWindowPolicy.sameWindow);
+      // Present a real desktop Chrome UA. Without this, Google/Bing serve
+      // consent or bot-check walls to WebView2 (blank results pages).
+      try {
+        await _native.setUserAgent(
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+            '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36');
+      } catch (_) {
+        // Older package versions may not expose setUserAgent - non-fatal.
+      }
+      // Shared JS bridge + popup suppression + ad-block hook run before any
+      // page script on every document.
+      await _native.addScriptToExecuteOnDocumentCreated(_documentCreatedJs());
+      await applySettings(desktopMode: _desktopMode, incognito: false);
+    } finally {
+      _initializing = false;
+    }
+  }
+
+  /// Discards whatever is currently in [_native] (a no-op the first time),
+  /// creates a fresh [WebviewController], wires up its event subscriptions,
+  /// and calls `initialize()` on it exactly once — so every attempt, first
+  /// or retry, gets a controller that has never had `initialize()` called
+  /// on it before. Bumps [_generation] so [buildWidget] rebuilds against
+  /// the new instance.
+  Future<void> _spawnAndInitializeController() async {
+    for (final s in _nativeSubs) {
+      await s.cancel();
+    }
+    _nativeSubs = [];
+    try {
+      await _native.dispose();
+    } catch (_) {
+      // First-ever call: nothing real to dispose yet — fine either way.
+    }
+    _native = _controllerFactory();
+    _generation.value++;
+    _nativeSubs = [
       _native.loadingState.listen((state) {
         switch (state) {
           case LoadingState.loading:
@@ -134,36 +223,10 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
             description: status.toString(),
             isMainFrame: true));
       }),
-    ]);
-
-    try {
-      await _native.initialize();
-    } catch (e) {
-      // WebView2 environment creation can transiently fail (runtime busy,
-      // first-run profile setup). Retry once before giving up so a single
-      // hiccup cannot leave the browser permanently blank.
-      debugPrint('[BROWSER] webview initialize failed, retrying: $e');
-      await Future<void>.delayed(const Duration(milliseconds: 750));
-      await _native.initialize();
-    }
-    await _native.setPopupWindowPolicy(WebviewPopupWindowPolicy.sameWindow);
-    // Present a real desktop Chrome UA. Without this, Google/Bing serve
-    // consent or bot-check walls to WebView2 (blank results pages).
-    try {
-      await _native.setUserAgent(
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-          '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36');
-    } catch (_) {
-      // Older package versions may not expose setUserAgent - non-fatal.
-    }
-    // Shared JS bridge + popup suppression + ad-block hook run before any
-    // page script on every document.
-    await _native.addScriptToExecuteOnDocumentCreated(_documentCreatedJs());
-    await applySettings(desktopMode: _desktopMode, incognito: false);
+    ];
+    await _native.initialize();
   }
 
-  /// Parses the `{handler, payload}` envelope produced by the shared JS
-  /// bridge (`window.chrome.webview.postMessage`).
   void _handleWebMessage(dynamic message) {
     try {
       dynamic decoded = message;
@@ -199,7 +262,6 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
       } catch (e) {}
     };
   }
-  // Ad-block: WebView2 cannot intercept requests, so hook fetch/XHR.
   var blocked = [$domainList];
   function isBlocked(url) {
     try {
@@ -237,32 +299,33 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
     // `controller.value.isInitialized` while building and never rebuilds
     // when initialization completes afterwards, so building it too early
     // freezes its blank placeholder forever (the "black webview" bug: the
-    // page loads invisibly while the user sees a black rectangle). Gate
-    // the widget on the controller's ValueNotifier instead - the same
-    // pattern the package's own example uses.
+    // page loads invisibly while the user sees a black rectangle).
     //
     // We also track our own init state so we can surface a retry UI if
     // WebView2 initialization fails (e.g. runtime missing, GPU issue).
     // Without this, a init failure leaves a permanent blank SizedBox.
-    unawaited(_ensureReady().catchError((_) {
-      // Error state is already captured in _initError/_initState.
-    }));
-    return ListenableBuilder(
-      listenable: Listenable.merge([_initState, _initError, _native]),
-      builder: (context, child) {
-        final initState = _initState.value;
-        final initError = _initError.value;
-        // Initialization failed - show error with retry button.
-        if (initState == false && initError != null) {
-          return _buildInitError(initError);
-        }
-        // Still initializing or not yet started - show blank placeholder.
-        if (initState != true) {
-          return const SizedBox.expand();
-        }
-        // Initialized - show the WebView.
-        return Webview(_native);
-      },
+    //
+    // ValueListenableBuilder on _generation ensures that when
+    // _spawnAndInitializeController swaps in a fresh controller, the
+    // Listenable.merge below is rebuilt with the new _native — otherwise
+    // it stays bound to the old, dead controller and never fires.
+    unawaited(_ensureReady().catchError((_) {}));
+    return ValueListenableBuilder<int>(
+      valueListenable: _generation,
+      builder: (context, _, __) => ListenableBuilder(
+        listenable: Listenable.merge([_initState, _initError, _native]),
+        builder: (context, child) {
+          final initState = _initState.value;
+          final initError = _initError.value;
+          if (initState == false && initError != null) {
+            return _buildInitError(initError);
+          }
+          if (initState != true) {
+            return const SizedBox.expand();
+          }
+          return Webview(_native);
+        },
+      ),
     );
   }
 
@@ -365,19 +428,17 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
       {required bool desktopMode, required bool incognito}) async {
     _desktopMode = desktopMode;
     await _ensureReady();
+    // Desktop Firefox/Chrome UA depending on mode; mobile-ish UAs make
+    // Google/Bing serve bot-check walls in the WebView2 engine.
     if (desktopMode) {
       await _native.setUserAgent(
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
           '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
     } else {
-      // WebView2 has no "reset to default UA" API; restore a standard
-      // WebView2-shaped UA (without desktop-mode flags).
       await _native.setUserAgent(
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
           '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0');
     }
-    // Incognito is not supported by WebView2's shared profile; see class
-    // docs.
   }
 
   @override
@@ -388,73 +449,121 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
     _lastQuery = query;
     await _ensureReady();
     if (query.isEmpty) return 0;
-    final count = await _native.executeScript(
+    final result = await _native.executeScript(
         'document.body ? (document.body.innerText.match(/'
         '${_escapeRegExp(query)}/gi) || []).length : 0');
-    await _native.executeScript('window.find(${_jsString(query)}, false)');
-    return count is int ? count : int.tryParse('$count') ?? -1;
+    return _toInt(result);
   }
 
   @override
   Future<void> findNext({bool forward = true}) async {
-    await _ensureReady();
     if (_lastQuery.isEmpty) return;
+    await _ensureReady();
+    // window.find() takes a literal string, not a regex, so we use
+    // jsonEncode to produce a properly-escaped JS string literal.
     await _native.executeScript(
-        'window.find(${_jsString(_lastQuery)}, ${forward ? 'false' : 'true'})');
+        'window.find(${jsonEncode(_lastQuery)}, false, false, '
+        'undefined, 0, false, $forward);');
   }
 
   @override
   Future<void> clearFind() async {
-    await _ensureReady();
-    await _native
-        .executeScript('window.getSelection().removeAllRanges(); 0');
+    _lastQuery = '';
   }
 
-  static String _escapeRegExp(String s) =>
-      s.replaceAllMapped(RegExp(r'[.*+?^\${}()|[\]\\]'), (m) => '\\${m[0]}');
+  /// Safely coerces the dynamic result of [WebviewController.executeScript]
+  /// into an int. WebView2 returns numbers as JSON, which the
+  /// `webview_windows` plugin delivers as `int`, `double`, or a numeric
+  /// `String` depending on the Dart FFI round-trip.
+  static int _toInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    try {
+      return int.parse(value.toString());
+    } catch (_) {
+      return 0;
+    }
+  }
 
-  static String _jsString(String s) => "'${s.replaceAll("'", r"\'")}'";
+  /// Escapes all RegExp metacharacters in [input] so it can be used
+  /// literally inside a JavaScript `/pattern/flags` regex.
+  static String _escapeRegExp(String input) {
+    return input.replaceAllMapped(
+      RegExp(r'[\.*+?^${}()|[\]\\]'),
+      (match) => '\\${match.group(0)}',
+    );
+  }
 
-  // Streams (unchanged bodies).
   @override
   Stream<BrowserPageEvent> get pageEvents => _pageEvents.stream;
+
   @override
   Stream<double> get progressEvents => _progressEvents.stream;
+
   @override
   Stream<BrowserJsMessage> get jsMessages => _jsMessages.stream;
+
   @override
   Stream<String> get urlEvents => _urlEvents.stream;
+
   @override
   Stream<String> get consoleEvents => _consoleEvents.stream;
+
   @override
   Stream<BrowserErrorEvent> get errorEvents => _errorEvents.stream;
+
   @override
   Stream<BrowserHistoryState> get historyEvents => _historyEvents.stream;
-  // WebView2 does not expose scroll positions to the embedder.
+
   @override
   Stream<int> get scrollEvents => _scrollEvents.stream;
+
+  
+  // --· visibleForTesting hooks for crash-recovery test ---------------------
+
+  /// Exposed for testing the crash-recovery path. On success this is `true`;
+  /// on failure `false`; while initializing `null`.
+  @visibleForTesting
+  bool? get debugInitState => _initState.value;
+
+  /// The cached error message from the last failed init (null when none).
+  @visibleForTesting
+  String? get debugInitError => _initError.value;
+
+  /// Whether a readiness future is currently in-flight. After a failure the
+  /// future is cleared so a follow-up call creates a fresh attempt; after a
+  /// success it is intentionally kept (cached, completed) so `_ensureReady`
+  /// short-circuits via `_initState == true`.
+  @visibleForTesting
+  bool get debugHasPendingFuture => _readyFuture != null;
+
+  /// Public entry point for tests to trigger initialization. Mirrors
+  /// [loadUrl]'s internal await of [_ensureReady] without needing a URL.
+  @visibleForTesting
+  Future<void> debugEnsureReady() => _ensureReady();
 
   @override
   Future<void> dispose() async {
     for (final s in _nativeSubs) {
       await s.cancel();
     }
-    for (final c in [
-      _pageEvents,
-      _progressEvents,
-      _jsMessages,
-      _urlEvents,
-      _consoleEvents,
-      _errorEvents,
-      _historyEvents,
-      _scrollEvents,
-    ]) {
-      await c.close();
-    }
-    _initState.dispose();
-    _initError.dispose();
+    _nativeSubs = [];
     try {
       await _native.dispose();
-    } catch (_) {}
+    } catch (_) {
+      // already disposed or not initialized — safe to ignore
+    }
+    await _pageEvents.close();
+    await _progressEvents.close();
+    await _jsMessages.close();
+    await _urlEvents.close();
+    await _consoleEvents.close();
+    await _errorEvents.close();
+    await _historyEvents.close();
+    await _scrollEvents.close();
+    _generation.dispose();
+    _initState.dispose();
+    _initError.dispose();
   }
 }

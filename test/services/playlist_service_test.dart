@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:convert_the_spire_reborn/src/services/playlist_service.dart';
@@ -240,6 +241,83 @@ void main() {
       expect(videos.first.id.value, equals('0VH1Lim8gL8'));
       expect(videos.first.title, equals('Deep Learning State of the Art (2020)'));
       expect(videos.first.author, equals('Lex Fridman'));
+    });
+
+    test('EEA playlist: 824-track fixture parses all entries (SOCS=CAI bypass)', () {
+      // Reproduces the Android EEA "0/800" bug: YouTube served a consent
+      // interstitial page with no ytInitialData to IPs lacking the SOCS=CAI
+      // cookie. With the cookie added (playlist_service.dart _httpGetString),
+      // the full lockupViewModel page is received and all 824 entries parse.
+      final contents = <String, dynamic>{};
+      const trackCount = 824;
+      for (var i = 1; i <= trackCount; i++) {
+        final id = 'vid' + i.toString().padLeft(8, '0');  // 11 chars
+        contents['lockup_$i'] = {
+          'lockupViewModel': {
+            'contentType': 'LOCKUP_CONTENT_TYPE_VIDEO',
+            'content': {
+              'contentId': id,
+              'channelId': 'UCaaaaaaaaaaaaaaaaaaaa',
+              'metadata': {
+                'title': {'content': 'Track $i'},
+                'secondaryText': {'content': '@Artist $i'},
+                'thirdText': {'content': '3:${(i % 60).toString().padLeft(2, '0')}'},
+              },
+            },
+          },
+        };
+      }
+      final html = '<script>var ytInitialData = ' +
+          jsonEncode({
+            'responseContext': {
+              'webResponseContextExtensionData': {
+                'ytConfigData': {'visitorData': 'CgIKbC0'},
+              },
+            },
+            'contents': {
+              'twoColumnBrowseResultsRenderer': {
+                'tabs': [
+                  {
+                    'tabRenderer': {
+                      'content': {
+                        'sectionListRenderer': {
+                          'contents': [
+                            {
+                              'playlistVideoListRenderer': {
+                                'contents': contents.values.toList(),
+                              }
+                            }
+                          ],
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          }) + ';</script>';
+
+      final videos = PlaylistService.parsePlaylistHtmlForTesting(html);
+
+      expect(videos.length, equals(trackCount),
+          reason: 'All 824 tracks should be parsed, not 0');
+      expect(videos.first.id.value, equals('vid00000001'));
+      expect(videos.first.title, equals('Track 1'));
+      expect(videos.first.author, equals('Artist 1'));
+      expect(videos.last.id.value, equals('vid00000824'));
+      expect(videos.last.title, equals('Track 824'));
+    });
+
+    test('EEA consent interstitial page (no ytInitialData) yields 0 videos', () {
+      // When the SOCS=CAI cookie is not sent, YouTube serves a consent page
+      // with no ytInitialData - the parser must return 0, not crash.
+      const html = '<html><head><title>YouTube</title></head><body>'
+          '<div id="consent">Before you continue to www.youtube.com</div>'
+          '</body></html>';
+
+      final videos = PlaylistService.parsePlaylistHtmlForTesting(html);
+      expect(videos, isEmpty,
+          reason: 'Consent page has no ytInitialData - must yield 0 videos');
     });
   });
 }
