@@ -442,6 +442,48 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   }
 
   @override
+  Future<void> clearSession() async {
+    try {
+      await _native.clearCookies();
+    } catch (_) {}
+    try {
+      await _native.clearCache();
+    } catch (_) {}
+    try {
+      // Clear any in-memory form data the page may have stashed in the DOM.
+      await _native.executeScript('''
+        (function() {
+          try {
+            var forms = document.querySelectorAll('form');
+            for (var i = 0; i < forms.length; i++) {
+              var inputs = forms[i].elements;
+              for (var j = 0; j < inputs.length; j++) {
+                var el = inputs[j];
+                if (el.type === 'text' || el.type === 'email' ||
+                    el.type === 'password' || el.type === 'search' ||
+                    el.type === 'number' || el.type === 'url' ||
+                    el.type === 'tel') {
+                  el.value = '';
+                }
+              }
+            }
+            document.cookie = '';
+            document.cookie = 'expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            return 'ok';
+          } catch (e) {
+            return 'err';
+          }
+        })();
+      ''');
+    } catch (_) {}
+    try {
+      // Reload so the cleared session is reflected in the displayed page
+      // rather than leaving the user staring at a stale DOM.
+      await _native.executeScript('window.location.reload(true)');
+    } catch (_) {}
+  }
+
+  @override
   Future<Uint8List?> takeScreenshot() async => null;
 
   @override

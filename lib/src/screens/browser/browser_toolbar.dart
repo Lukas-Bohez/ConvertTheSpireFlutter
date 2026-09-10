@@ -529,6 +529,22 @@ class _OverflowMenuButton extends StatelessWidget {
                     const SizedBox(width: 12),
                     const Text('Add cookies (for downloads)'),
                   ])),
+              PopupMenuItem(
+                  value: 'history',
+                  child: Row(children: [
+                    Icon(Icons.history,
+                        color: Theme.of(context).colorScheme.onSurface),
+                    const SizedBox(width: 12),
+                    const Text('History'),
+                  ])),
+              PopupMenuItem(
+                  value: 'clear_session',
+                  child: Row(children: [
+                    Icon(Icons.delete_sweep,
+                        color: Theme.of(context).colorScheme.onSurface),
+                    const SizedBox(width: 12),
+                    const Text('Clear browsing data'),
+                  ])),
             ],
           );
           if (selection != null) onMenuAction(selection);

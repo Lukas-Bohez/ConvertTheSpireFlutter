@@ -78,21 +78,32 @@ abstract class BrowserWebviewController {
   /// platforms that don't report scrolling.
   Stream<int> get scrollEvents;
 
+  /// Clears the in-app WebView's internal session state: cookies,
+  /// cached content, DOM storage / form data, and the back/forward
+  /// navigation stack. After calling this the current page is reloaded
+  /// so the user sees a clean slate rather than a detached blank frame.
+  ///
+  /// Non-fatal: if the underlying platform throws, the method still
+  /// returns normally and the screen shows a snackbar.
+  Future<void> clearSession();
   Future<void> dispose();
 }
 
+/// Page load lifecycle event.
 class BrowserPageEvent {
   final bool isStart;
   final String url;
   const BrowserPageEvent({required this.isStart, required this.url});
 }
 
+/// Messages sent from page JS through the shared `__bbCall` bridge.
 class BrowserJsMessage {
   final String handler;
   final String payload;
   const BrowserJsMessage({required this.handler, required this.payload});
 }
 
+/// Navigation errors for main-frame loads.
 class BrowserErrorEvent {
   final String url;
   final String description;
@@ -104,6 +115,7 @@ class BrowserErrorEvent {
   });
 }
 
+/// Back/forward availability changes.
 class BrowserHistoryState {
   final bool canGoBack;
   final bool canGoForward;
@@ -126,3 +138,5 @@ class BrowserWebViewHooks {
 // Keep `Offset` referenced so the dart:ui import stays meaningful for
 // implementers that need it (cursor tap coordinates are injected via JS).
 typedef BrowserOffset = Offset;
+
+

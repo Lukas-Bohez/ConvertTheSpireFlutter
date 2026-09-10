@@ -1621,6 +1621,39 @@ class _BrowserScreenState extends State<BrowserScreen>
       _openHistory();
       return;
     }
+    if (action == 'clear_session') {
+      if (_webViewController != null) {
+        try {
+          await _webViewController!.clearSession();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Browser data cleared'),
+                  duration: Duration(seconds: 3)),
+            );
+          }
+        } catch (e) {
+          debugPrint('[BROWSER] clear_session failed: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Could not clear browser data'),
+                  duration: Duration(seconds: 4)),
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Browser not loaded — tap a page first'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+      return;
+    }
     if (action == 'favourites') {
       _openFavourites();
       return;

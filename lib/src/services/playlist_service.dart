@@ -180,24 +180,35 @@ class PlaylistService {
       client.userAgent =
           'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 '
           '(KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36';
-      final html = await _httpGetString(client,
-          'https://www.youtube.com/playlist?list=${playlistId.value}&hl=en&persist_hl=1');
-      dynamic root = _extractYtInitialData(html);
+      // --- Primary first page: Innertube browse API with browseId.
+      // YouTube serves its EU/EEA "before you continue" consent interstitial
+      // to the HTML /playlist page (a consent shell with no ytInitialData),
+      // so HTML scraping returns 0 of ~800 entries on phones. The JSON
+      // innertube browse API with a browseId is not subject to that wall and
+      // returns the same lockupViewModel structures the continuation pages
+      // already use - so we get the first page the same way we get the rest.
+      _logs?.add('Lockup parser: fetching first page via browse API (browseId)');
+      dynamic root =
+          await _browseFirstPage(client, playlistId.value, null);
+      // --- Fallback: legacy HTML scraping (works where the API is blocked).
       if (root == null) {
-        // Android/mobile networks frequently get YouTube's consent interstitial
-        // or a bot-check page (no ytInitialData). Retry with TVHTML5-style
-        // consent parameters before giving up, otherwise large playlists
-        // report 0/800 on phones while working fine on desktop.
         _logs?.add(
-            'Lockup parser: ytInitialData not found in playlist HTML; retrying with consent params');
-        final retryHtml = await _httpGetString(client,
-            'https://www.youtube.com/playlist?list=${playlistId.value}&hl=en&persist_hl=1&has_verified=1&bpctr=9999999999');
-        root = _extractYtInitialData(retryHtml);
+            'Lockup parser: browse API returned no data; falling back to HTML scrape');
+        final html = await _httpGetString(client,
+            'https://www.youtube.com/playlist?list=${playlistId.value}&hl=en&persist_hl=1');
+        root = _extractYtInitialData(html);
         if (root == null) {
           _logs?.add(
-              'Lockup parser: YouTube returned a consent/blocked page (no data). '
-              'Check VPN/region or retry; cannot enumerate playlist entries.');
-          return const [];
+              'Lockup parser: ytInitialData not found in playlist HTML; retrying with consent params');
+          final retryHtml = await _httpGetString(client,
+              'https://www.youtube.com/playlist?list=${playlistId.value}&hl=en&persist_hl=1&has_verified=1&bpctr=9999999999');
+          root = _extractYtInitialData(retryHtml);
+          if (root == null) {
+            _logs?.add(
+                'Lockup parser: YouTube returned a consent/blocked page (no data). '
+                'Check VPN/region or retry; cannot enumerate playlist entries.');
+            return const [];
+          }
         }
       }
       final visitorData = _digString(root, const [
@@ -230,6 +241,41 @@ class PlaylistService {
       client.close(force: true);
     }
     return results;
+  }
+
+  /// Posts to the innertube `browse` API with a playlist [browseId]
+  /// (`VL<playlistId>`) and returns the parsed JSON of the FIRST page, or null
+  /// on any failure. Not subject to the HTML consent interstitial that breaks
+  /// playlist scraping on EEA/mobile networks.
+  Future<dynamic> _browseFirstPage(
+      HttpClient client, String playlistId, String? visitorData) async {
+    final request = await client.postUrl(Uri.parse(
+        'https://www.youtube.com/youtubei/v1/browse?prettyPrint=false'));
+    request.headers.set('content-type', 'application/json');
+    request.headers.set('accept', 'application/json');
+    request.headers.set('accept-language', 'en-US,en;q=0.9');
+    request.headers.set('cookie', 'SOCS=CAI');
+    if (visitorData != null && visitorData.isNotEmpty) {
+      request.headers.set('x-goog-visitor-id', visitorData);
+    }
+    request.write(jsonEncode({
+      'context': {
+        'client': {
+          'clientName': 'WEB',
+          'clientVersion': '2.20250101.00.00',
+          'hl': 'en',
+          'gl': 'US',
+        },
+      },
+      'browseId': 'VL$playlistId',
+    }));
+    final response = await request.close();
+    final body = await response.transform(utf8.decoder).join();
+    try {
+      return jsonDecode(body);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Parses a YouTube playlist HTML page and returns the video titles/ids it

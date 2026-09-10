@@ -218,6 +218,26 @@ class BrowserInAppWebViewAdapter implements BrowserWebviewController {
   Future<void> clearFind() async =>
       _findInteractionController?.clearMatches();
 
+  @override
+  Future<void> clearSession() async {
+    try {
+      // Clear cookies via JS bridge - works across all flutter_inappwebview
+      // platforms (Android, iOS, macOS). The web version also uses this approach.
+      await _controller?.evaluateJavascript(source: '''
+        InAppWebView.clearCookies(true);
+      ''');
+    } catch (_) {}
+    try {
+      await InAppWebViewController.clearAllCache();
+    } catch (_) {}
+    try {
+      // Force a reload so the page is served from a clean session once
+      // the clears above have taken effect rather than leaving the user on
+      // a stale in-memory DOM.
+      await _controller?.reload();
+    } catch (_) {}
+  }
+
   /// Exposed so the screen can keep its match-count callback wired up.
   FindInteractionController? get findInteractionController =>
       _findInteractionController;

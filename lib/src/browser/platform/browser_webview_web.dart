@@ -216,6 +216,28 @@ class BrowserWebWebViewAdapter implements BrowserWebviewController {
   }
 
   @override
+  Future<void> clearSession() async {
+    try {
+      // Clear cookies across the whole WebView instance via the SDK's
+      // JS bridge. flutter_inappwebview exposes InAppWebView.clearCookies
+      // as a global JS function that clears all cookies (and storage,
+      // when called with a true argument).
+      await _controller?.evaluateJavascript(source: '''
+        InAppWebView.clearCookies(true);
+      ''');
+    } catch (_) {}
+    try {
+      await InAppWebViewController.clearAllCache();
+    } catch (_) {}
+    try {
+      // Force a reload so the page is served from a clean session once
+      // the clears above have taken effect rather than leaving the user on
+      // a stale in-memory DOM.
+      await _controller?.reload();
+    } catch (_) {}
+  }
+
+  @override
   Future<void> dispose() async {
     try {
       await _controller?.stopLoading();
