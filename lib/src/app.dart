@@ -280,16 +280,14 @@ class _MyAppState extends State<MyApp>
       watchedPlaylistService = WatchedPlaylistService(
         fetchPlaylistTracks: (url) =>
             playlistService.getYouTubePlaylistTracks(url),
-        onNewTrack: (playlistUrl, track) async {
+        onNewPlaylistTrack: (playlistUrl, track, {folder, format}) async {
           final defaultFormat =
               controller.settings?.defaultAudioFormat ?? 'mp3';
-          final folderForFormat = await watchedPlaylistService
-              .getFolderForPlaylist(playlistUrl, format: defaultFormat);
-          final folder = folderForFormat ??
-              await watchedPlaylistService.getFolderForPlaylist(playlistUrl);
+          // Each entry carries its own destination: per-entry format falls
+          // back to the app-wide default, per-entry folder to the default.
           controller.addSearchResultToQueue(
             track,
-            format: defaultFormat,
+            format: format ?? defaultFormat,
             outputFolder: folder?.trim().isNotEmpty == true ? folder : null,
           );
         },

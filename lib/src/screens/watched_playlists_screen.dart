@@ -1,29 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../services/download_service.dart';
 import '../services/watched_playlist_service.dart';
 import '../utils/snack.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/monetization_widgets.dart';
 import '../widgets/tv_file_browser.dart';
 
-class PlaylistFolderConfig {
-  final String? defaultFolder;
-  final String? mp3Folder;
-  final String? m4aFolder;
-  final String? mp4Folder;
+/// Result of the add/edit entry dialog.
+class _WatchedEntryInputs {
+  final String url;
+  final String? folder;
+  final String? format;
 
-  const PlaylistFolderConfig({
-    this.defaultFolder,
-    this.mp3Folder,
-    this.m4aFolder,
-    this.mp4Folder,
-  });
-
-  bool get hasAny =>
-      (defaultFolder?.trim().isNotEmpty == true) ||
-      (mp3Folder?.trim().isNotEmpty == true) ||
-      (m4aFolder?.trim().isNotEmpty == true) ||
-      (mp4Folder?.trim().isNotEmpty == true);
+  const _WatchedEntryInputs({required this.url, this.folder, this.format});
 }
 
 /// Screen for managing watched playlists that auto-download new tracks.
@@ -39,8 +29,7 @@ class WatchedPlaylistsScreen extends StatefulWidget {
 class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
     with AutomaticKeepAliveClientMixin {
   final _urlController = TextEditingController();
-  List<String> _urls = [];
-  final Map<String, PlaylistFolderConfig> _playlistFolders = {};
+  List<WatchedPlaylistEntry> _entries = [];
   bool _checking = false;
 
   @override
@@ -49,58 +38,62 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
   @override
   void initState() {
     super.initState();
-    _loadUrls();
+    _loadEntries();
   }
 
-  Future<void> _loadUrls() async {
-    final urls = await widget.watchedService.getWatchedUrls();
+  Future<void> _loadEntries() async {
+    final entries = await widget.watchedService.getEntries();
     if (!mounted) return;
-    setState(() => _urls = urls);
-    await _loadPlaylistFolders(urls);
+    setState(() => _entries = entries);
   }
 
-  Future<void> _loadPlaylistFolders(List<String> urls) async {
-    final folders = <String, PlaylistFolderConfig>{};
-    for (final url in urls) {
-      final defaultFolder =
-          await widget.watchedService.getFolderForPlaylist(url);
-      final mp3Folder =
-          await widget.watchedService.getFolderForPlaylist(url, format: 'mp3');
-      final m4aFolder =
-          await widget.watchedService.getFolderForPlaylist(url, format: 'm4a');
-      final mp4Folder =
-          await widget.watchedService.getFolderForPlaylist(url, format: 'mp4');
-      folders[url] = PlaylistFolderConfig(
-        defaultFolder: defaultFolder,
-        mp3Folder: mp3Folder,
-        m4aFolder: m4aFolder,
-        mp4Folder: mp4Folder,
-      );
-    }
-    if (mounted) {
-      setState(() => _playlistFolders
-        ..clear()
-        ..addAll(folders));
-    }
-  }
+  static bool _isPlaylistUrl(String url) =>
+      url.contains('youtube.com/playlist') || url.contains('youtu.be');
 
   Future<void> _addPlaylist() async {
     final url = _urlController.text.trim();
     if (url.isEmpty) return;
-    if (!url.contains('youtube.com/playlist') && !url.contains('youtu.be')) {
+    if (!_isPlaylistUrl(url)) {
       if (mounted) {
         Snack.show(context, 'Please enter a valid YouTube playlist URL',
             level: SnackLevel.warning);
       }
       return;
     }
-    await widget.watchedService.addPlaylist(url);
-    if (!mounted) return;
+    final result = await showDialog<_WatchedEntryInputs>(
+      context: context,
+      builder: (ctx) => _WatchedEntryDialog(initialUrl: url),
+    );
+    if (result == null || !mounted) return;
+    await widget.watchedService.addEntry(
+      url: result.url,
+      folder: result.folder,
+      format: result.format,
+    );
     _urlController.clear();
-    await _loadUrls();
+    await _loadEntries();
   }
 
-  Future<void> _removePlaylist(String url) async {
+  Future<void> _editEntry(WatchedPlaylistEntry entry) async {
+    final result = await showDialog<_WatchedEntryInputs>(
+      context: context,
+      builder: (ctx) => _WatchedEntryDialog(
+        initialUrl: entry.url,
+        initialFormat: entry.format,
+        initialFolder: entry.folder,
+        isEdit: true,
+      ),
+    );
+    if (result == null || !mounted) return;
+    await widget.watchedService.updateEntry(
+      entry.id,
+      folder: result.folder,
+      format: result.format,
+    );
+    await _loadEntries();
+  }
+
+  Future<void> _removeEntry(WatchedPlaylistEntry entry) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -120,70 +113,10 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
       ),
     );
     if (confirmed != true) return;
-    await widget.watchedService.removePlaylist(url);
-    await _loadUrls();
+    await widget.watchedService.removeEntry(entry.id);
+    await _loadEntries();
   }
-
-  Future<void> _pickPlaylistFolder(String url) async {
-    final choice = await showDialog<String>(
-      context: context,
-      builder: (ctx) => SimpleDialog(
-        title: const Text('Set playlist folder'),
-        children: [
-          SimpleDialogOption(
-            child: const Text('All formats (default)'),
-            onPressed: () => Navigator.pop(ctx, 'default'),
-          ),
-          SimpleDialogOption(
-            child: const Text('MP3 folder'),
-            onPressed: () => Navigator.pop(ctx, 'mp3'),
-          ),
-          SimpleDialogOption(
-            child: const Text('M4A folder'),
-            onPressed: () => Navigator.pop(ctx, 'm4a'),
-          ),
-          SimpleDialogOption(
-            child: const Text('MP4 folder'),
-            onPressed: () => Navigator.pop(ctx, 'mp4'),
-          ),
-          SimpleDialogOption(
-            child: const Text('Clear folders'),
-            onPressed: () => Navigator.pop(ctx, 'clear'),
-          ),
-        ],
-      ),
-    );
-
-    if (choice == null) return;
-    if (choice == 'clear') {
-      await widget.watchedService.removeFolderForPlaylist(url);
-      await _loadPlaylistFolders(_urls);
-      if (mounted) {
-        Snack.show(context, 'Playlist folders cleared', level: SnackLevel.info);
-      }
-      return;
-    }
-
-    final directory = await pickDirectoryPath(
-      context,
-      dialogTitle: 'Select watched folder',
-    );
-    if (directory == null || !mounted) return;
-
-    if (choice == 'default') {
-      await widget.watchedService.setFolderForPlaylist(url, directory);
-    } else {
-      await widget.watchedService
-          .setFolderForPlaylist(url, directory, format: choice);
-    }
-
-    await _loadPlaylistFolders(_urls);
-    if (mounted) {
-      Snack.show(context, 'Folder set for playlist', level: SnackLevel.info);
-    }
-  }
-
-  Future<void> _checkNow() async {
+Future<void> _checkNow() async {
     setState(() => _checking = true);
     try {
       final found = await widget.watchedService.checkAllPlaylists();
@@ -215,6 +148,24 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
       canPop: true,
       child: Column(
         children: [
+          // The feature explanation lives here once, not on every card.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.auto_awesome, size: 18, color: cs.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Watched playlists are checked periodically, and any new '
+                    'tracks are automatically downloaded.',
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Card(
@@ -257,7 +208,7 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
           ),
           if (_checking) const LinearProgressIndicator(),
           Expanded(
-            child: _urls.isEmpty
+            child: _entries.isEmpty
                 ? const EmptyState(
                     icon: Icons.playlist_add,
                     title: 'No watched playlists yet',
@@ -267,7 +218,7 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     separatorBuilder: (_, __) => const SizedBox(height: 4),
-                    itemCount: _urls.length + (_urls.length ~/ 6),
+                    itemCount: _entries.length + (_entries.length ~/ 6),
                     itemBuilder: (context, index) {
                       const adInterval = 7;
                       if ((index + 1) % adInterval == 0) {
@@ -277,72 +228,221 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
                         );
                       }
                       final realIndex = index - (index ~/ adInterval);
-                      final url = _urls[realIndex];
-                      final folder = _playlistFolders[url];
-                      String folderLabel;
-                      if (folder == null || !folder.hasAny) {
-                        folderLabel = 'Download folder: (default)';
-                      } else if (folder.defaultFolder?.trim().isNotEmpty ==
-                          true) {
-                        folderLabel =
-                            'Download folder: ${folder.defaultFolder!.split(RegExp(r'[/\\]')).last}';
-                      } else {
-                        final parts = <String>[];
-                        if (folder.mp3Folder?.trim().isNotEmpty == true) {
-                          parts.add(
-                              'MP3: ${folder.mp3Folder!.split(RegExp(r'[/\\]')).last}');
-                        }
-                        if (folder.m4aFolder?.trim().isNotEmpty == true) {
-                          parts.add(
-                              'M4A: ${folder.m4aFolder!.split(RegExp(r'[/\\]')).last}');
-                        }
-                        if (folder.mp4Folder?.trim().isNotEmpty == true) {
-                          parts.add(
-                              'MP4: ${folder.mp4Folder!.split(RegExp(r'[/\\]')).last}');
-                        }
-                        folderLabel = parts.join(' • ');
-                      }
-                      return Card(
-                        child: ListTile(
-                          leading: Icon(Icons.playlist_play, color: cs.primary),
-                          title: Text(url,
-                              maxLines: 1, overflow: TextOverflow.ellipsis),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Checked periodically for new tracks'),
-                              const SizedBox(height: 2),
-                              Text(
-                                folderLabel,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    color: cs.onSurfaceVariant, fontSize: 12),
-                              ),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.folder_open),
-                                tooltip: 'Choose folder for this playlist',
-                                onPressed: () => _pickPlaylistFolder(url),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                tooltip: 'Remove playlist',
-                                onPressed: () => _removePlaylist(url),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
+                      final entry = _entries[realIndex];
+                      return _buildEntryCard(cs, entry);
                     },
                   ),
           ),
         ],
       ),
+    );
+  }
+Widget _buildEntryCard(ColorScheme cs, WatchedPlaylistEntry entry) {
+    final format = entry.format?.trim().toUpperCase();
+    final formatLabel = (format == null || format.isEmpty)
+        ? 'Format: app default'
+        : 'Format: $format';
+    final folder = entry.folder;
+    final folderLabel = (folder == null || folder.trim().isEmpty)
+        ? 'Folder: (default)'
+        : 'Folder: ${folder.split(RegExp(r'[/\\]')).last}';
+
+    // Format is always shown so two entries watching the same URL (but
+    // different destinations) are clearly distinct even when folders match.
+    return Card(
+      child: ListTile(
+        leading: Icon(Icons.playlist_play, color: cs.primary),
+        title: Text(entry.url, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              formatLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              folderLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+            ),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: 'Edit watch settings',
+              onPressed: () => _editEntry(entry),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Remove playlist',
+              onPressed: () => _removeEntry(entry),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Single dialog that collects URL (add mode), folder, and format for one
+/// entry — replacing the old two-step folder dialog.
+class _WatchedEntryDialog extends StatefulWidget {
+  final String initialUrl;
+  final String? initialFormat;
+  final String? initialFolder;
+  final bool isEdit;
+
+  const _WatchedEntryDialog({
+    required this.initialUrl,
+    this.initialFormat,
+    this.initialFolder,
+    this.isEdit = false,
+  });
+
+  @override
+  State<_WatchedEntryDialog> createState() => _WatchedEntryDialogState();
+}
+
+class _WatchedEntryDialogState extends State<_WatchedEntryDialog> {
+  late final TextEditingController _urlController;
+  String? _format; // null = app default format
+  String? _folder; // null = app default download folder
+
+  @override
+  void initState() {
+    super.initState();
+    _urlController = TextEditingController(text: widget.initialUrl);
+    _format = widget.initialFormat;
+    _folder = widget.initialFolder;
+  }
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickFolder() async {
+    final directory = await pickDirectoryPath(
+      context,
+      dialogTitle: 'Select watched folder',
+    );
+    if (directory == null || !mounted) return;
+    setState(() => _folder = directory);
+  }
+
+  void _submit() {
+    final url = _urlController.text.trim();
+    if (!widget.isEdit) {
+      if (url.isEmpty ||
+          (!url.contains('youtube.com/playlist') && !url.contains('youtu.be'))) {
+        Snack.show(context, 'Please enter a valid YouTube playlist URL',
+            level: SnackLevel.warning);
+        return;
+      }
+    }
+    Navigator.pop(
+      context,
+      _WatchedEntryInputs(
+        url: url.isEmpty ? widget.initialUrl : url,
+        folder: _folder,
+        format: _format,
+      ),
+    );
+  }
+@override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    // Reuse the app's real supported formats so this list never drifts out
+    // of sync if the downloader gains or loses a format.
+    final formats = DownloadService.supportedFormats.toList()..sort();
+    return AlertDialog(
+      title: Text(
+          widget.isEdit ? 'Edit watched playlist' : 'Add watched playlist'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _urlController,
+              enabled: !widget.isEdit,
+              decoration: const InputDecoration(
+                hintText: 'Paste YouTube playlist URL',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.link),
+                isDense: true,
+              ),
+              onSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              key: ValueKey('wp-format-'
+                  '${widget.isEdit ? (widget.initialFormat ?? 'default') : 'new'}'),
+              initialValue: _format ?? '',
+              decoration: const InputDecoration(
+                labelText: 'Download format',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.audio_file),
+              ),
+              items: [
+                const DropdownMenuItem<String>(
+                    value: '', child: Text('App default')),
+                for (final fmt in formats)
+                  DropdownMenuItem<String>(
+                      value: fmt, child: Text(fmt.toUpperCase())),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _format = value.isEmpty ? null : value);
+              },
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.folder_open),
+                  label: const Text('Choose folder'),
+                  onPressed: _pickFolder,
+                ),
+                if (_folder != null) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _folder!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.cancel),
+                    tooltip: 'Use default folder',
+                    onPressed: () => setState(() => _folder = null),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(widget.isEdit ? 'Update' : 'Add'),
+        ),
+      ],
     );
   }
 }
