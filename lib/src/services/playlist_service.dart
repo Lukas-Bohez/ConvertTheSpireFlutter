@@ -953,7 +953,7 @@ class PlaylistService {
     // Basing this on the playlist's own matched files keeps categorisation
     // stable in mixed-format folders the playlist doesn't reference.
     final matchedFiles = matched.map((m) => localFiles[m._fileIndex]).toList();
-    String dominantExtension = _dominantExtension(matchedFiles, mediaExtensions);
+    final dominantExtension = _dominantExtension(matchedFiles, mediaExtensions);
 
     // -- 4. Categorise extra files not in the playlist ----------------------
     final extras = <ExtraFile>[];
@@ -964,7 +964,7 @@ class PlaylistService {
       // Incomplete download: the file name carries the app's in-progress temp
       // infix (e.g. `Song Name.temp.mp4`, `Song Name.temp.webm`,
       // `Song Name.temp.video.mp4`, `Song Name.temp.audio.opus`).
-      if (_isIncompleteDownload(f.fileName, f.extension)) {
+      if (_isIncompleteDownload(f.baseName, f.extension)) {
         extras.add(ExtraFile(
           filePath: f.path,
           fileName: f.baseName,

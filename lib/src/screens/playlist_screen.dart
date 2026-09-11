@@ -4,7 +4,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
+import 'package:provider/provider.dart';
 
+import '../models/app_settings.dart';
 import '../models/search_result.dart';
 import '../services/ad_service.dart';
 import '../services/android_saf.dart';
@@ -272,8 +274,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
   List<ExtraFile> _extrasOfKind(PlaylistExtraKind kind) =>
       _comparison?.extras
-          ?.where((e) => e.kind == kind)
-          ?.toList() ??
+          .where((e) => e.kind == kind)
+          .toList() ??
       const <ExtraFile>[];
 
   /// Resolves the configured destination folder for a file extension:
@@ -347,7 +349,6 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       // at the new destination. If moveAndDeduplicate moved nothing
       // (e.g. unwritable target), all originals are kept untouched — a
       // "resolve" action must never destroy a file that was never moved.
-      var removed = 0;
       if (moved == 0) {
         debugPrint('[Extras] SAFEGUARD: 0 files moved to destination; '
             'keeping ${files.length} originals');
@@ -355,7 +356,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         for (final f in files) {
           if (!mounted) break;
           if (_destinationVerified(f, targetFolder)) {
-            if (await _deleteExtraFile(f)) removed++;
+            await _deleteExtraFile(f);
           } else {
             debugPrint('[Extras] SAFEGUARD: ${f.fileName} not verified at '
                 'destination, keeping original');
@@ -544,7 +545,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     }
   }
 
-    @override
+  @override
   void dispose() {
     _urlController.dispose();
     _folderController.dispose();
@@ -1253,7 +1254,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         _buildExtrasSection(
           theme,
           title: 'Incomplete downloads',
-          subtitle: "Partially-downloaded temp artifacts - safe to delete",
+          subtitle: 'Partially-downloaded temp artifacts - safe to delete',
           icon: Icons.warning_amber,
           color: Colors.orange,
           files: incomplete,
