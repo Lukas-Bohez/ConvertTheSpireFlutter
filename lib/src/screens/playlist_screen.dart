@@ -219,6 +219,33 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     }
   }
 
+    /// Verifies that [f] exists at [targetFolder] before deleting the original.
+  ///
+  /// For filesystem targets this checks that a file with the same basename
+  /// exists at the destination AND has a non-zero size (sanity check).
+  /// For SAF (`content://`) targets, per-file path verification requires
+  /// enumerating the tree via the native channel; callers should guard SAF
+  /// deletes with moveAndDeduplicate's aggregate `moved` count (done in
+  /// [_moveExtrasToTarget]).
+  bool _destinationVerified(ExtraFile f, String targetFolder) {
+    if (targetFolder.startsWith('content://')) {
+      // SAF: cannot verify a specific file path without native enumeration.
+      // Caller guards with `moved > 0` from moveAndDeduplicate.
+      return true;
+    }
+    final destPath = p.join(targetFolder, p.basename(f.filePath));
+    final dest = File(destPath);
+    if (!dest.existsSync()) {
+      debugPrint('[Extras] SAFEGUARD: destination missing for ${f.fileName}');
+      return false;
+    }
+    if (dest.lengthSync() == 0) {
+      debugPrint('[Extras] SAFEGUARD: destination file is empty for ${f.fileName}');
+      return false;
+    }
+    return true;
+  }
+
   /// Copies an extra file into [stagingDir], normalising SAF content://
   /// sources through the native temp-copy channel first. Returns the staged
   /// file or null on failure.
