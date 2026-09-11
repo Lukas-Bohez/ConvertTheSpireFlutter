@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
@@ -89,7 +89,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     await _compareToFolder();
   }
 
-  // --─ Actions --------------------------------------------------------------
+  // --â”€ Actions --------------------------------------------------------------
 
   Future<void> _loadPlaylist() async {
     AdService.instance.registerInteraction();
@@ -98,7 +98,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
     setState(() {
       _loading = true;
-      _loadingMessage = 'Fetching playlist…';
+      _loadingMessage = 'Fetching playlistâ€¦';
       _error = null;
       _comparison = null;
       _playlistInfo = null;
@@ -148,7 +148,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
     setState(() {
       _loading = true;
-      _loadingMessage = 'Scanning folder & matching…';
+      _loadingMessage = 'Scanning folder & matchingâ€¦';
     });
 
     try {
@@ -181,7 +181,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       });
     }
   }
-// --─ Extras auto-resolve -------------------------------------------------
+// --â”€ Extras auto-resolve -------------------------------------------------
 
   AppSettings? get _extrasSettings {
     // Best-effort read: if the action runs outside a build pass (e.g. an
@@ -270,10 +270,10 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     }
   }
 
-Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
+List<ExtraFile> _extrasOfKind(PlaylistExtraKind kind) =>
       _comparison?.extras
-          .where((e) => e.kind == kind)
-          .toList() ??
+          ?.where((e) => e.kind == kind)
+          ?.toList() ??
       const <ExtraFile>[];
 
   /// Resolves the configured destination folder for a file extension:
@@ -338,17 +338,17 @@ Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
 
       final result = await MediaOrganizer.moveAndDeduplicate(
           [staging.path], targetFolder);
-      final moved = result['moved'];
-      final deleted = result['deleted'];
+      final moved = result['moved'] ?? 0;
+      final deleted = result['deleted'] ?? 0;
       debugPrint('[Extras] moveAndDeduplicate result: $result');
 
-            // True move semantics: remove the originals that were copied over.
+      // True move semantics: remove the originals that were copied over.
       // SAFETY: only delete an original after positively verifying it exists
       // at the new destination. If moveAndDeduplicate moved nothing
-      // (e.g. unwritable target), all originals are kept untouched — a
+      // (e.g. unwritable target), all originals are kept untouched â€” a
       // "resolve" action must never destroy a file that was never moved.
       var removed = 0;
-      if (moved == null || moved == 0) {
+      if (moved == 0) {
         debugPrint('[Extras] SAFEGUARD: 0 files moved to destination; '
             'keeping ${files.length} originals');
       } else {
@@ -494,9 +494,9 @@ Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
   String _extrasItemSubtitle(ExtraFile f) {
     return switch (f.kind) {
       PlaylistExtraKind.incompleteDownload =>
-        'Incomplete download  •  ${f.extension}',
+        'Incomplete download  â€¢  ${f.extension}',
       PlaylistExtraKind.wrongFormat =>
-        '${f.extension}  •  different from folder format',
+        '${f.extension}  â€¢  different from folder format',
       PlaylistExtraKind.notInPlaylist => f.extension,
     };
   }
@@ -555,7 +555,7 @@ Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
   @override
   bool get wantKeepAlive => true;
 
-  // --─ Build ----------------------------------------------------------------
+  // --â”€ Build ----------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -591,7 +591,7 @@ Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
     );
   }
 
-  // --─ Input Section --------------------------------------------------------
+  // --â”€ Input Section --------------------------------------------------------
 
   Widget _buildInputSection(ThemeData theme, ColorScheme cs) {
     return Card(
@@ -642,7 +642,7 @@ Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
                   IconButton.outlined(
                     onPressed: _pickFolder,
                     icon: const Icon(Icons.folder_open),
-                    tooltip: 'Browse…',
+                    tooltip: 'Browseâ€¦',
                   ),
                   const SizedBox(width: 4),
                   FilledButton.tonalIcon(
@@ -717,7 +717,7 @@ Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
     );
   }
 
-  // --─ Tab bar --------------------------------------------------------------
+  // --â”€ Tab bar --------------------------------------------------------------
 
   Widget _buildTabBar(ColorScheme cs) {
     final matched = _comparison?.downloadedCount ?? 0;
@@ -759,7 +759,7 @@ Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
     );
   }
 
-  // --─ Overview Tab --------------------------------------------------------─
+  // --â”€ Overview Tab --------------------------------------------------------â”€
 
   Widget _buildOverviewTab(ThemeData theme, ColorScheme cs) {
     return NotificationListener<ScrollEndNotification>(
@@ -778,7 +778,7 @@ Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
                 title: Text(_playlistInfo!.title,
                     style: theme.textTheme.titleMedium),
                 subtitle: Text(
-                  '${_playlistInfo!.author}  •  ${_tracks!.length} tracks  •  '
+                  '${_playlistInfo!.author}  â€¢  ${_tracks!.length} tracks  â€¢  '
                   '${_formatTotalDuration(_tracks!)}',
                 ),
                 trailing: PopupMenuButton<String>(
@@ -964,7 +964,7 @@ Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
     );
   }
 
-  // --─ Matched Tab ----------------------------------------------------------
+  // --â”€ Matched Tab ----------------------------------------------------------
 
   Widget _buildMatchedTab(ThemeData theme) {
     if (_comparison == null) {
@@ -1020,7 +1020,7 @@ Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
                   DropdownMenuItem(
                       value: _SortMode.title, child: Text('Title A-Z')),
                   DropdownMenuItem(
-                      value: _SortMode.confidence, child: Text('Confidence ↑')),
+                      value: _SortMode.confidence, child: Text('Confidence â†‘')),
                 ],
                 onChanged: (v) =>
                     setState(() => _sortMode = v ?? _SortMode.original),
@@ -1050,7 +1050,7 @@ Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
     );
   }
 
-  // --─ Missing Tab ----------------------------------------------------------
+  // --â”€ Missing Tab ----------------------------------------------------------
 
   Widget _buildMissingTab(ThemeData theme) {
     if (_comparison == null) {
@@ -1177,7 +1177,7 @@ Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
                   title: Text(t.title,
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle:
-                      Text('${t.artist}  •  ${_formatDuration(t.duration)}'),
+                      Text('${t.artist}  â€¢  ${_formatDuration(t.duration)}'),
                   trailing: IconButton(
                     icon: const Icon(Icons.download, size: 20),
                     tooltip: 'Download this track',
@@ -1193,7 +1193,7 @@ Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
     );
   }
 
-  // --─ Extras Tab ----------------------------------------------------------─
+  // --â”€ Extras Tab ----------------------------------------------------------â”€
 
   Widget _buildRunCompareHint(ThemeData theme) {
     final folder = _folderController.text.trim();
@@ -1365,7 +1365,7 @@ static const int _extrasMaxShownPerSection = 120;
                   title: Text(f.fileName,
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle: Text(
-                      '${_extrasItemSubtitle(f)}  •  ${f.filePath}',
+                      '${_extrasItemSubtitle(f)}  â€¢  ${f.filePath}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall
@@ -1382,7 +1382,7 @@ static const int _extrasMaxShownPerSection = 120;
           if (files.length > shown.length)
             Padding(
               padding: const EdgeInsets.all(8),
-              child: Text('…and ${files.length - shown.length} more',
+              child: Text('â€¦and ${files.length - shown.length} more',
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: Colors.grey)),
             ),
@@ -1391,7 +1391,7 @@ static const int _extrasMaxShownPerSection = 120;
     );
   }
 
-  // --─ Helpers --------------------------------------------------------------
+  // --â”€ Helpers --------------------------------------------------------------
 
   String _formatDuration(Duration d) {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -1409,9 +1409,9 @@ static const int _extrasMaxShownPerSection = 120;
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // Helper widgets
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 enum _SortMode { original, title, confidence }
 
