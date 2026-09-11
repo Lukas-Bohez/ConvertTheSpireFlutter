@@ -315,10 +315,25 @@ Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
       final deleted = result['deleted'];
       debugPrint('[Extras] moveAndDeduplicate result: $result');
 
-      // True move semantics: remove the originals that were copied over.
+            // True move semantics: remove the originals that were copied over.
+      // SAFETY: only delete an original after positively verifying it exists
+      // at the new destination. If moveAndDeduplicate moved nothing
+      // (e.g. unwritable target), all originals are kept untouched — a
+      // "resolve" action must never destroy a file that was never moved.
       var removed = 0;
-      for (final f in files) {
-        if (await _deleteExtraFile(f)) removed++;
+      if (moved == null || moved == 0) {
+        debugPrint('[Extras] SAFEGUARD: 0 files moved to destination; '
+            'keeping ${files.length} originals');
+      } else {
+        for (final f in files) {
+          if (!mounted) break;
+          if (_destinationVerified(f, targetFolder)) {
+            if (await _deleteExtraFile(f)) removed++;
+          } else {
+            debugPrint('[Extras] SAFEGUARD: ${f.fileName} not verified at '
+                'destination, keeping original');
+          }
+        }
       }
       try {
         staging.deleteSync();
