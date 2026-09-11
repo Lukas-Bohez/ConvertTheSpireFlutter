@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
@@ -190,7 +189,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     // async resolve triggered by a button), degrade to null and let the
     // caller prompt for a folder instead of failing the whole operation.
     try {
-      return context.read<AppController>()?.settings;
+      return context.read<AppController>().settings;
     } catch (_) {
       return null;
     }
@@ -273,9 +272,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   }
 
   List<ExtraFile> _extrasOfKind(PlaylistExtraKind kind) =>
-      _comparison?.extras
-          .where((e) => e.kind == kind)
-          .toList() ??
+      _comparison?.extras.where((e) => e.kind == kind).toList() ??
       const <ExtraFile>[];
 
   /// Resolves the configured destination folder for a file extension:
