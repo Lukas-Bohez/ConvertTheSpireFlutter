@@ -847,11 +847,16 @@ class PlaylistService {
     await File(outputPath).writeAsString(buf.toString());
   }
 
-  // --─ Smart playlist ↁEfolder comparison ----------------------------------
+  // --─ Smart playlist ↔ folder comparison -----------------------------------
 
   /// Scans [folderPath] recursively and cross-references every playlist track
   /// against the files found.  Uses multi-strategy fuzzy matching so renamed,
   /// reformatted, or differently-cased files are still recognised.
+  ///
+  /// Unlike the prior audio-only scan, [compareToFolder] now indexes **every**
+  /// file (including video/container files such as `.mp4`/`.webm`) so the Extras
+  /// tab can surface incomplete downloads (files whose name contains the
+  /// `.temp.` infix) and wrong-format files alongside genuinely untracked media.
   Future<PlaylistFolderComparison> compareToFolder(
     List<SearchResult> playlistTracks,
     String folderPath, {
@@ -869,8 +874,13 @@ class PlaylistService {
       );
     }
 
-    // -- 1. Index all audio files in the folder --------------------------
-    final audioExtensions = {
+    // -- 1. Index every file in the folder ---------------------------------
+    // Composite of a broad "media-like" set (audio + video containers that
+    // the app can download) plus a wide generic catch-all.  An extension that
+    // is not in either set is still indexed so temp files and weird one-offs
+    // are visible to the extras tab; only truly metadata-unreadable files are
+    // skipped at the metadata layer, not at the scan layer.
+    final mediaExtensions = <String>{
       '.mp3',
       '.flac',
       '.m4a',
@@ -879,40 +889,55 @@ class PlaylistService {
       '.wav',
       '.aac',
       '.wma',
-      '.webm'
+      '.webm', // audio-only webm / video webm both appear here
     };
+    final videoContainerExtensions = <String>{
+      '.mp4',
+      '.mkv',
+      '.avi',
+      '.mov',
+      '.wmv',
+      '.m4v',
+    };
+    final indexedExtensions = mediaExtensions.union(videoContainerExtensions);
+
     final localFiles = <_LocalFile>[];
 
     await for (final entity in dir.list(recursive: recursive)) {
-      if (entity is File) {
-        final path = entity.path;
-        final ext = _extensionOf(path);
-        if (!audioExtensions.contains(ext)) continue;
+      if (entity is! File) continue;
+      final path = entity.path;
+      final ext = _extensionOf(path).toLowerCase();
 
-        final fileName = _fileNameWithoutExt(path);
-        final metadataLabels = await _labelsFromMetadata(path, ext);
-        final labels = <String>{fileName, ...metadataLabels}.toList();
-        localFiles.add(_LocalFile(
-          path: path,
-          baseName: fileName,
-          labels: labels,
-          normalised: _normalise(fileName),
-          tokens: {
-            ..._tokenise(fileName),
-            ...labels.expand(_tokenise),
-          },
-        ));
-      }
+      // Files with no extension or only a temp infix (no real ext) are still
+      // indexed so they can be flagged as incomplete downloads.
+      final hasRecognisedExtension = indexedExtensions.contains(ext) || ext.isEmpty;
+      if (!hasRecognisedExtension) continue;
+
+      final fileName = _fileNameWithoutExt(path);
+      final metadataLabels =
+          await _labelsFromMetadata(path, ext.isEmpty ? '.bin' : ext);
+      final labels = <String>[fileName, ...metadataLabels].toList();
+      localFiles.add(_LocalFile(
+        path: path,
+        baseName: fileName,
+        labels: labels,
+        normalised: _normalise(fileName),
+        tokens: {
+          ..._tokenise(fileName),
+          ...labels.expand(_tokenise),
+        },
+        extension: ext.isEmpty ? _guessTempExt(path) : ext,
+      ));
     }
 
-    // -- 2. Match each playlist track to the best local file ------------─
+    // -- 2. Match each playlist track to the best local file ----------------
     final usedFileIndices = <int>{};
     final matched = <TrackMatch>[];
     final missing = <SearchResult>[];
 
     for (final track in playlistTracks) {
-      final result =
-          _findBestMatch(track, localFiles, usedFileIndices, matchThreshold);
+      final result = _findBestMatch(
+          track, localFiles, usedFileIndices, matchThreshold);
       if (result != null) {
         matched.add(result);
         usedFileIndices.add(result._fileIndex);
@@ -921,15 +946,56 @@ class PlaylistService {
       }
     }
 
-    // -- 3. Detect extra files not in the playlist ----------------------─
+    // -- 3. Determine the dominant extension among MATCHED files ------------
+    // Used to decide whether an extra file is "wrong format" vs "not in
+    // playlist".  Audio extensions are preferred over video containers so a
+    // folder that mixes `.mp3` + `.mp4` still reports `.mp3` as dominant.
+    // Basing this on the playlist's own matched files keeps categorisation
+    // stable in mixed-format folders the playlist doesn't reference.
+    final matchedFiles = matched.map((m) => localFiles[m._fileIndex]).toList();
+    String dominantExtension = _dominantExtension(matchedFiles, mediaExtensions);
+
+    // -- 4. Categorise extra files not in the playlist ----------------------
     final extras = <ExtraFile>[];
     for (var i = 0; i < localFiles.length; i++) {
-      if (!usedFileIndices.contains(i)) {
+      if (usedFileIndices.contains(i)) continue;
+      final f = localFiles[i];
+
+      // Incomplete download: the file name carries the app's in-progress temp
+      // infix (e.g. `Song Name.temp.mp4`, `Song Name.temp.webm`,
+      // `Song Name.temp.video.mp4`, `Song Name.temp.audio.opus`).
+      if (_isIncompleteDownload(f.fileName, f.extension)) {
         extras.add(ExtraFile(
-          filePath: localFiles[i].path,
-          fileName: localFiles[i].baseName,
+          filePath: f.path,
+          fileName: f.baseName,
+          extension: f.extension,
+          kind: PlaylistExtraKind.incompleteDownload,
         ));
+        continue;
       }
+
+      // Wrong format: the file has a recognised media/container extension but
+      // it differs from the folder's dominant extension.
+      if (dominantExtension.isNotEmpty &&
+          f.extension.isNotEmpty &&
+          f.extension != dominantExtension) {
+        extras.add(ExtraFile(
+          filePath: f.path,
+          fileName: f.baseName,
+          extension: f.extension,
+          kind: PlaylistExtraKind.wrongFormat,
+        ));
+        continue;
+      }
+
+      // Not in playlist: matched format (or extensionless temp file, or a
+      // genuinely weird file) that the playlist doesn't reference.
+      extras.add(ExtraFile(
+        filePath: f.path,
+        fileName: f.baseName,
+        extension: f.extension,
+        kind: PlaylistExtraKind.notInPlaylist,
+      ));
     }
 
     return PlaylistFolderComparison(
@@ -1223,6 +1289,61 @@ class PlaylistService {
     }
     return prev[lb];
   }
+
+  // --─ Extra-file categorisation helpers ---------------------------------─
+
+  /// Recognises an incomplete download: the name carries the app's `.temp.`
+  /// infix used for in-progress downloads (e.g. `Song.temp.mp4`,
+  /// `Song.temp.webm`, `Song.temp.video.mp4`, `Song.temp.audio.opus`).
+  static bool _isIncompleteDownload(String fileName, String extension) {
+    return fileName.contains('.temp.') || extension.contains('.temp.');
+  }
+
+  /// Picks the dominant (most common) extension among [files]. Audio media
+  /// extensions are preferred over video containers so a folder mixing e.g.
+  /// `.mp3` + `.mp4` still reports `.mp3` as dominant; within the same family
+  /// the most frequent extension wins. Returns '' when nothing usable exists.
+  static String _dominantExtension(
+    List<_LocalFile> files,
+    Set<String> preferred,
+  ) {
+    final counts = <String, int>{};
+    for (final f in files) {
+      if (f.extension.isEmpty) continue;
+      counts[f.extension] = (counts[f.extension] ?? 0) + 1;
+    }
+    if (counts.isEmpty) return '';
+
+    String best = '';
+    var bestCount = 0;
+    for (final entry in counts.entries) {
+      final isBetter = best.isEmpty ||
+          entry.value > bestCount ||
+          // Same count: prefer a "preferred" (audio) extension over secondary.
+          (entry.value == bestCount &&
+              preferred.contains(entry.key) &&
+              !preferred.contains(best));
+      if (isBetter) {
+        best = entry.key;
+        bestCount = entry.value;
+      }
+    }
+    return best;
+  }
+
+  /// For extensionless temp files, recover a display extension from the
+  /// `.temp.<ext>` infix so the Extras tab can label them accurately.
+  static String _guessTempExt(String path) {
+    final lower = path.toLowerCase();
+    final idx = lower.lastIndexOf('.temp.');
+    if (idx >= 0) {
+      final after = lower.substring(idx + 6);
+      final dot = after.lastIndexOf('.');
+      if (dot >= 0) return after.substring(dot);
+      if (after.isNotEmpty) return '.$after';
+    }
+    return '';
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════╁E
@@ -1236,6 +1357,7 @@ class _LocalFile {
   final List<String> labels;
   final String normalised;
   final Set<String> tokens;
+  final String extension;
 
   const _LocalFile({
     required this.path,
@@ -1243,6 +1365,7 @@ class _LocalFile {
     required this.labels,
     required this.normalised,
     required this.tokens,
+    required this.extension,
   });
 }
 
@@ -1344,12 +1467,29 @@ class TrackMatch {
   }
 }
 
+/// Category for an extra file found during playlist↔folder comparison.
+enum PlaylistExtraKind {
+  /// File has a `.temp.` infix — an incomplete in-progress download.
+  incompleteDownload,
+  /// File's extension differs from the folder's dominant extension.
+  wrongFormat,
+  /// File matches the folder's dominant format but is not in the playlist.
+  notInPlaylist,
+}
+
 /// A file in the folder that doesn't match any playlist track.
 class ExtraFile {
   final String filePath;
   final String fileName;
+  final String extension;
+  final PlaylistExtraKind kind;
 
-  const ExtraFile({required this.filePath, required this.fileName});
+  const ExtraFile({
+    required this.filePath,
+    required this.fileName,
+    required this.extension,
+    required this.kind,
+  });
 }
 
 /// Full result of cross-referencing a playlist against a local folder.

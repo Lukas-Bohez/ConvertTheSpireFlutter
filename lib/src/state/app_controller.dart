@@ -982,6 +982,7 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> _saveQueue() async {
+    final sw = Stopwatch()..start();
     try {
       final prefs = await SharedPreferences.getInstance();
       final filtered = queue
@@ -993,7 +994,13 @@ class AppController extends ChangeNotifier {
           .toList();
       final data = jsonEncode(filtered.map((q) => q.toJson()).toList());
       await prefs.setString(_queueKey, data);
-    } catch (_) {}
+      logs.add(
+          '[_saveQueue] persisted ${filtered.length} items in '
+          '${sw.elapsedMilliseconds}ms');
+    } catch (e) {
+      logs.add('[_saveQueue] persist FAILED after ${sw.elapsedMilliseconds}ms: '
+          '${_cleanError(e)}');
+    }
   }
 
   Future<void> _loadQueue() async {

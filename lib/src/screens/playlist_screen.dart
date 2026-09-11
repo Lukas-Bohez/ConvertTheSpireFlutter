@@ -1,8 +1,15 @@
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 
 import '../models/search_result.dart';
 import '../services/ad_service.dart';
+import '../services/android_saf.dart';
+import '../services/media_organizer.dart';
+import '../services/platform_dirs.dart';
 import '../services/playlist_service.dart';
 import '../state/app_controller.dart';
 import '../utils/snack.dart';
@@ -42,6 +49,11 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   String? _error;
   String _selectedFormat = 'mp3';
   String? _playlistDiagnostics;
+
+  // Extras auto-resolve state
+  bool _extrasBusy = false;
+  // Target folder for "not in playlist" moves - prompted once, then reused.
+  String? _extrasTargetFolder;
 
   late final TabController _tabController;
 
@@ -128,7 +140,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     }
   }
 
-  Future<void> _compareToFolder() async {
+  Future<void> _compareToFolder({bool jumpToBestTab = true}) async {
     AdService.instance.registerInteraction();
     if (_tracks == null || _tracks!.isEmpty) return;
     final folder = _folderController.text.trim();
@@ -150,11 +162,14 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         _loading = false;
         _loadingMessage = null;
         _missingSelection = comparison.missing.toSet();
-        // Jump to the most interesting tab
-        if (comparison.missingCount > 0) {
-          _tabController.index = 2; // Missing tab
-        } else {
-          _tabController.index = 1; // Matched tab
+        // After an Extras auto-resolve refresh, stay where the user is.
+        if (jumpToBestTab) {
+          // Jump to the most interesting tab
+          if (comparison.missingCount > 0) {
+            _tabController.index = 2; // Missing tab
+          } else {
+            _tabController.index = 1; // Matched tab
+          }
         }
       });
     } catch (e) {
@@ -165,6 +180,283 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         _loadingMessage = null;
       });
     }
+  }
+// --─ Extras auto-resolve -------------------------------------------------
+
+  AppSettings? get _extrasSettings {
+    // Best-effort read: if the action runs outside a build pass (e.g. an
+    // async resolve triggered by a button), degrade to null and let the
+    // caller prompt for a folder instead of failing the whole operation.
+    try {
+      return context.read<AppController>()?.settings;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String? _nonEmpty(String? value) {
+    final trimmed = value?.trim() ?? '';
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  /// Deletes an extra file, SAF-aware (content:// documents via the native
+  /// channel). Returns true when the file is gone afterwards.
+  Future<bool> _deleteExtraFile(ExtraFile f) async {
+    try {
+      if (f.filePath.startsWith('content://')) {
+        final ok = await AndroidSaf().deleteSafUri(uri: f.filePath);
+        debugPrint('[Extras] deleteSafUri(${f.fileName}) -> $ok');
+        return ok;
+      }
+      final file = File(f.filePath);
+      if (!file.existsSync()) return true;
+      file.deleteSync();
+      debugPrint('[Extras] Deleted ${f.filePath}');
+      return true;
+    } catch (e) {
+      debugPrint('[Extras] Delete failed ${f.filePath}: $e');
+      return false;
+    }
+  }
+
+  /// Copies an extra file into [stagingDir], normalising SAF content://
+  /// sources through the native temp-copy channel first. Returns the staged
+  /// file or null on failure.
+  Future<File?> _stageExtraFile(ExtraFile f, String stagingDir) async {
+    try {
+      final destName = p.basename(f.filePath);
+      final dest = File(p.join(stagingDir, destName));
+      if (f.filePath.startsWith('content://')) {
+        final temp = await PlatformDirs.copyToTemp(f.filePath);
+        if (temp == null) {
+          debugPrint('[Extras] copyToTemp failed for ${f.filePath}');
+          return null;
+        }
+        File(temp).copySync(dest.path);
+      } else {
+        File(f.filePath).copySync(dest.path);
+      }
+      return dest;
+    } catch (e) {
+      debugPrint('[Extras] Staging failed ${f.filePath}: $e');
+      return null;
+    }
+  }
+
+Future<List<ExtraFile>> _extrasOfKind(PlaylistExtraKind kind) =>
+      _comparison?.extras
+          .where((e) => e.kind == kind)
+          .toList() ??
+      const <ExtraFile>[];
+
+  /// Resolves the configured destination folder for a file extension:
+  /// per-format folder from settings when set, else the default download dir.
+  String _formatTargetFor(String extension) {
+    final settings = _extrasSettings;
+    final fallback = settings?.downloadDir?.trim() ?? '';
+    if (settings == null) return fallback;
+    switch (extension.toLowerCase()) {
+      case '.mp3':
+        return _nonEmpty(settings.downloadDirMp3) ?? fallback;
+      case '.m4a':
+        return _nonEmpty(settings.downloadDirM4a) ?? fallback;
+      case '.mp4':
+        return _nonEmpty(settings.downloadDirMp4) ?? fallback;
+      default:
+        return fallback;
+    }
+  }
+
+/// Moves [files] into [targetFolder] using the app's SAF-aware
+  /// `MediaOrganizer.moveAndDeduplicate` (copy + dedupe), then deletes the
+  /// originals so the net effect is a true move. Re-runs the comparison
+  /// afterwards so the Extras tab reflects the new state.
+  Future<void> _moveExtrasToTarget(
+    List<ExtraFile> files,
+    String targetFolder,
+    String label,
+  ) async {
+    if (files.isEmpty || targetFolder.trim().isEmpty) return;
+    if (_extrasBusy) return;
+    setState(() => _extrasBusy = true);
+    try {
+      // Prepare target (filesystem targets only; SAF trees already exist).
+      if (!targetFolder.startsWith('content://')) {
+        await Directory(targetFolder).create(recursive: true);
+      }
+
+      // Stage the specific files in a throwaway cache directory so we hand
+      // only the intended files to moveAndDeduplicate, never whole folders.
+      final cacheDir = await PlatformDirs.getCacheDir();
+      final staging = Directory(p.join(
+          cacheDir.path, 'extras_move_${DateTime.now().millisecondsSinceEpoch}'));
+      await staging.create(recursive: true);
+
+      var staged = 0;
+      for (final f in files) {
+        if (await _stageExtraFile(f, staging.path) != null) staged++;
+      }
+      debugPrint('[Extras] Staged $staged/${files.length} files for "$label"');
+
+      if (staged == 0) {
+        try {
+          staging.deleteSync();
+        } catch (_) {}
+        if (mounted) {
+          Snack.show(context, 'No files could be moved',
+              level: SnackLevel.error);
+        }
+        return;
+      }
+
+      final result = await MediaOrganizer.moveAndDeduplicate(
+          [staging.path], targetFolder);
+      final moved = result['moved'];
+      final deleted = result['deleted'];
+      debugPrint('[Extras] moveAndDeduplicate result: $result');
+
+      // True move semantics: remove the originals that were copied over.
+      var removed = 0;
+      for (final f in files) {
+        if (await _deleteExtraFile(f)) removed++;
+      }
+      try {
+        staging.deleteSync();
+      } catch (_) {}
+
+      if (mounted) {
+        Snack.show(context,
+            '$label: moved $moved files, deleted $deleted duplicates',
+            level: moved > 0 ? SnackLevel.success : SnackLevel.info);
+      }
+      await _compareToFolder(jumpToBestTab: false);
+    } catch (e) {
+      debugPrint('[Extras] Auto-resolve failed: $e');
+      if (mounted) {
+        Snack.show(context, 'Auto-resolve failed: $e', level: SnackLevel.error);
+      }
+    } finally {
+      if (mounted) setState(() => _extrasBusy = false);
+    }
+  }
+
+  /// Prompts for a target folder and stores it for reuse.
+  Future<void> _chooseExtrasTarget(String dialogTitle) async {
+    final result =
+        await pickDirectoryPath(context, dialogTitle: dialogTitle);
+    if (result != null && result.isNotEmpty) {
+      setState(() => _extrasTargetFolder = result);
+    }
+  }
+/// Remove every incomplete (`.temp.`) download in one pass.
+  Future<void> _autoResolveIncomplete() async {
+    final extras = _extrasOfKind(PlaylistExtraKind.incompleteDownload);
+    if (extras.isEmpty || _extrasBusy) return;
+    setState(() => _extrasBusy = true);
+    try {
+      var removed = 0;
+      for (final f in extras) {
+        if (await _deleteExtraFile(f)) removed++;
+      }
+      debugPrint('[Extras] Deleted $removed/${extras.length} incomplete');
+      if (mounted) {
+        Snack.show(context, 'Deleted $removed incomplete download files',
+            level: removed > 0 ? SnackLevel.success : SnackLevel.info);
+      }
+      await _compareToFolder(jumpToBestTab: false);
+    } finally {
+      if (mounted) setState(() => _extrasBusy = false);
+    }
+  }
+
+  /// Move wrong-format files to the configured folder for their extension.
+  Future<void> _autoResolveWrongFormat() async {
+    final extras = _extrasOfKind(PlaylistExtraKind.wrongFormat);
+    if (extras.isEmpty || _extrasBusy) return;
+
+    // Group by extension so each group lands in its own configured folder.
+    final byExtension = <String, List<ExtraFile>>{};
+    for (final e in extras) {
+      byExtension.putIfAbsent(e.extension.toLowerCase(), () => []).add(e);
+    }
+    for (final entry in byExtension.entries) {
+      if (!mounted) return;
+      var target = _formatTargetFor(entry.key);
+      if (target.isEmpty) {
+        await _chooseExtrasTarget('Choose a folder for ${entry.key} files');
+        target = _extrasTargetFolder ?? '';
+      }
+      await _moveExtrasToTarget(
+          entry.value, target, 'Moved ${entry.value.length} ${entry.key} files');
+    }
+  }
+
+  /// Move files that are the right format but not in the playlist to the
+  /// user-chosen folder (prompted once, reused for subsequent resolves).
+  Future<void> _autoResolveNotInPlaylist() async {
+    final extras = _extrasOfKind(PlaylistExtraKind.notInPlaylist);
+    if (extras.isEmpty || _extrasBusy) return;
+
+    if (_extrasTargetFolder == null || _extrasTargetFolder!.trim().isEmpty) {
+      await _chooseExtrasTarget('Choose folder to move extra files into');
+    }
+    await _moveExtrasToTarget(extras, _extrasTargetFolder?.trim() ?? '',
+        'Moved ${extras.length} files not in playlist');
+  }
+
+  /// Resolves a single extra file according to its category.
+  Future<void> _resolveExtra(ExtraFile f) async {
+    if (_extrasBusy) return;
+    switch (f.kind) {
+      case PlaylistExtraKind.incompleteDownload:
+        setState(() => _extrasBusy = true);
+        try {
+          if (await _deleteExtraFile(f) && mounted) {
+            Snack.show(context, 'Deleted ${f.fileName}',
+                level: SnackLevel.success);
+          }
+          await _compareToFolder(jumpToBestTab: false);
+        } finally {
+          if (mounted) setState(() => _extrasBusy = false);
+        }
+        break;
+      case PlaylistExtraKind.wrongFormat:
+        var target = _formatTargetFor(f.extension);
+        if (target.isEmpty) {
+          await _chooseExtrasTarget('Choose a folder for ${f.extension} files');
+          target = _extrasTargetFolder ?? '';
+        }
+        await _moveExtrasToTarget([f], target, 'Moved ${f.fileName}');
+        break;
+      case PlaylistExtraKind.notInPlaylist:
+        if (_extrasTargetFolder == null || _extrasTargetFolder!.trim().isEmpty) {
+          await _chooseExtrasTarget('Choose folder to move extra files into');
+        }
+        await _moveExtrasToTarget([f], _extrasTargetFolder?.trim() ?? '',
+            'Moved ${f.fileName}');
+        break;
+    }
+  }
+
+  /// Short human label for a category's per-item action.
+  String _extrasItemActionLabel(ExtraFile f) {
+    return switch (f.kind) {
+      PlaylistExtraKind.incompleteDownload => 'Delete this file',
+      PlaylistExtraKind.wrongFormat =>
+        'Move ${f.extension} file to format folder',
+      PlaylistExtraKind.notInPlaylist => 'Move to target folder',
+    };
+  }
+
+  /// Short subtitle line for a category's per-item tile.
+  String _extrasItemSubtitle(ExtraFile f) {
+    return switch (f.kind) {
+      PlaylistExtraKind.incompleteDownload =>
+        'Incomplete download  •  ${f.extension}',
+      PlaylistExtraKind.wrongFormat =>
+        '${f.extension}  •  different from folder format',
+      PlaylistExtraKind.notInPlaylist => f.extension,
+    };
   }
 
   Future<void> _exportMissing() async {
@@ -634,7 +926,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
   Widget _buildMatchedTab(ThemeData theme) {
     if (_comparison == null) {
-      return const Center(child: Text('Run a comparison first'));
+      return _buildRunCompareHint(theme);
     }
 
     var matches = List<TrackMatch>.from(_comparison!.matched);
@@ -720,7 +1012,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
   Widget _buildMissingTab(ThemeData theme) {
     if (_comparison == null) {
-      return const Center(child: Text('Run a comparison first'));
+      return _buildRunCompareHint(theme);
     }
     if (_comparison!.missing.isEmpty) {
       return Center(
@@ -861,11 +1153,45 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
   // --─ Extras Tab ----------------------------------------------------------─
 
+  Widget _buildRunCompareHint(ThemeData theme) {
+    final folder = _folderController.text.trim();
+    final canCompare =
+        _tracks != null && _tracks!.isNotEmpty && folder.isNotEmpty;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.folder_open, size: 56, color: Colors.grey.shade300),
+          const SizedBox(height: 12),
+          Text('Run a comparison first',
+              style: theme.textTheme.titleMedium),
+          if (folder.isNotEmpty)
+            Text('Folder: $folder',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+          if (canCompare) ...[
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: _loading ? null : _compareToFolder,
+              icon: const Icon(Icons.compare_arrows, size: 18),
+              label: const Text('Compare Now'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildExtrasTab(ThemeData theme) {
     if (_comparison == null) {
-      return const Center(child: Text('Run a comparison first'));
+      return _buildRunCompareHint(theme);
     }
-    if (_comparison!.extras.isEmpty) {
+    final incomplete = _extrasOfKind(PlaylistExtraKind.incompleteDownload);
+    final wrongFormat = _extrasOfKind(PlaylistExtraKind.wrongFormat);
+    final notInPlaylist = _extrasOfKind(PlaylistExtraKind.notInPlaylist);
+    if (incomplete.isEmpty && wrongFormat.isEmpty && notInPlaylist.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -879,43 +1205,147 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       );
     }
 
-    return Column(
+    return ListView(
+      padding: const EdgeInsets.all(12),
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            children: [
-              Icon(Icons.info_outline, size: 18, color: Colors.blue.shade300),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '${_comparison!.extraCount} files in the folder are not in the playlist',
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ),
-            ],
-          ),
+        _buildExtrasSection(
+          theme,
+          title: 'Incomplete downloads',
+          subtitle: "Partially-downloaded temp artifacts - safe to delete",
+          icon: Icons.warning_amber,
+          color: Colors.orange,
+          files: incomplete,
+          actionIcon: Icons.delete_outline,
+          onItemAction: _resolveExtra,
+          resolveAllLabel: 'Delete all',
+          onResolveAll: _autoResolveIncomplete,
         ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: _comparison!.extras.length,
-            itemBuilder: (context, i) {
-              final f = _comparison!.extras[i];
-              return ListTile(
-                dense: true,
-                leading: const Icon(Icons.audio_file, color: Colors.blue),
-                title: Text(f.fileName,
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text(f.filePath,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: Colors.grey)),
-              );
-            },
-          ),
+        const SizedBox(height: 8),
+        _buildExtrasSection(
+          theme,
+          title: 'Wrong format',
+          subtitle:
+              "Files whose format differs from the folder's dominant format",
+          icon: Icons.audio_file,
+          color: Colors.amber,
+          files: wrongFormat,
+          actionIcon: Icons.insert_drive_file,
+          onItemAction: _resolveExtra,
+          resolveAllLabel: 'Move all',
+          onResolveAll: _autoResolveWrongFormat,
+        ),
+        const SizedBox(height: 8),
+        _buildExtrasSection(
+          theme,
+          title: 'Not in playlist',
+          subtitle: 'Right-format files that no playlist track matches',
+          icon: Icons.library_music,
+          color: Colors.blue,
+          files: notInPlaylist,
+          actionIcon: Icons.insert_drive_file,
+          onItemAction: _resolveExtra,
+          resolveAllLabel: 'Move all',
+          onResolveAll: _autoResolveNotInPlaylist,
         ),
       ],
+    );
+  }
+static const int _extrasMaxShownPerSection = 120;
+
+  Widget _buildExtrasSection(
+    ThemeData theme, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required List<ExtraFile> files,
+    required IconData actionIcon,
+    required void Function(ExtraFile) onItemAction,
+    required String resolveAllLabel,
+    required VoidCallback onResolveAll,
+  }) {
+    final shown = files.take(_extrasMaxShownPerSection).toList();
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+            child: Row(
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(title, style: theme.textTheme.titleSmall),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text('${files.length}',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: color,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                      Text(subtitle,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: Colors.grey)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (files.isNotEmpty)
+                  FilledButton.tonalIcon(
+                    onPressed: _extrasBusy ? null : onResolveAll,
+                    icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
+                    label: Text(resolveAllLabel),
+                  ),
+              ],
+            ),
+          ),
+          ...shown.map((f) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 1),
+                child: ListTile(
+                  dense: true,
+                  leading: Icon(icon, color: color, size: 18),
+                  title: Text(f.fileName,
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  subtitle: Text(
+                      '${_extrasItemSubtitle(f)}  •  ${f.filePath}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: Colors.grey)),
+                  trailing: IconButton(
+                    icon: Icon(actionIcon, size: 18),
+                    tooltip: _extrasItemActionLabel(f),
+                    onPressed: () {
+                      if (!_extrasBusy) onItemAction(f);
+                    },
+                  ),
+                ),
+              )),
+          if (files.length > shown.length)
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text('…and ${files.length - shown.length} more',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: Colors.grey)),
+            ),
+        ],
+      ),
     );
   }
 
