@@ -181,7 +181,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       });
     }
   }
-// --─ Extras auto-resolve -------------------------------------------------
+  // --─ Extras auto-resolve -------------------------------------------------
 
   AppSettings? get _extrasSettings {
     // Best-effort read: if the action runs outside a build pass (e.g. an
@@ -270,7 +270,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     }
   }
 
-List<ExtraFile> _extrasOfKind(PlaylistExtraKind kind) =>
+  List<ExtraFile> _extrasOfKind(PlaylistExtraKind kind) =>
       _comparison?.extras
           ?.where((e) => e.kind == kind)
           ?.toList() ??
@@ -390,7 +390,7 @@ List<ExtraFile> _extrasOfKind(PlaylistExtraKind kind) =>
       setState(() => _extrasTargetFolder = result);
     }
   }
-/// Remove every incomplete (`.temp.`) download in one pass.
+  /// Remove every incomplete (`.temp.`) download in one pass.
   Future<void> _autoResolveIncomplete() async {
     final extras = _extrasOfKind(PlaylistExtraKind.incompleteDownload);
     if (extras.isEmpty || _extrasBusy) return;
@@ -544,7 +544,7 @@ List<ExtraFile> _extrasOfKind(PlaylistExtraKind kind) =>
     }
   }
 
-  @override
+    @override
   void dispose() {
     _urlController.dispose();
     _folderController.dispose();
