@@ -279,7 +279,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   /// per-format folder from settings when set, else the default download dir.
   String _formatTargetFor(String extension) {
     final settings = _extrasSettings;
-    final fallback = settings?.downloadDir?.trim() ?? '';
+    final fallback = settings?.downloadDir.trim() ?? '';
     if (settings == null) return fallback;
     switch (extension.toLowerCase()) {
       case '.mp3':
