@@ -1,24 +1,18 @@
-# Release Notes - v13.2.0
+# Release Notes - v13.2.1
 
-## Download queue reliability and playlist Extras improvements
+## yt-dlp SABR/player_client fix, browser tab thumbnails, decode fix, live Missing tab
 
 ## Fixes
 
-* **Fixed repeated download failures on lower-end hardware.** The download queue was being fully rewritten to disk on every progress update of the song currently downloading - including every previously-completed song. With a large download history this made each tick slower and slower until it produced timeout-flavored failures with no YouTube-side cause. The queue is now only persisted when a download's status actually changes, not on progress/speed/ETA ticks.
-* **Fixed the burst-pause cooldown not being honored by every retry path.** A failing download could keep retrying every few seconds instead of actually backing off after a burst of reload-errors was detected. `downloadSingle()` now respects an in-progress burst-pause no matter how it's called (worker, resume button, or retry button).
-* **Fixed a null-safety analyzer issue** in `playlist_screen.dart` (redundant null-aware operator on `settings?.downloadDir?.trim()`).
-
-## New
-
-* **Playlist Extras tab categorization.** The Extras tab now separates leftover incomplete-download files (`.temp.` infix), files in the wrong format for their folder, and files that just aren't in this playlist - each with a one-tap fix and a "resolve all" option for the whole category.
-
-## Notes
-
-* **Low-end hardware confirmation pending.** The queue-persistence fix is code-verified and analyze/test-clean, but live confirmation on the affected low-end machine is still pending. The `[_saveQueue] persisted N items in Xms` log line is the live signal to verify it there.
+* **Fixed YouTube downloads failing with "the page needs to be reloaded" — root cause found and fixed.** The app was forcing `--extractor-args youtube:player_client=tv,web` on every download under the belief that the tv client avoids YouTube's SABR-only streaming experiment. Live verification (2026-09, yt-dlp 2026.08.19, Deno 2.9.6) proved it now *causes* the failure it was meant to prevent: the tv player response returns UNPLAYABLE, and the web client's https formats are skipped as "missing a URL" (YouTube is forcing SABR streaming for that client, yt-dlp#12482). The override is removed; downloads now use yt-dlp's default client order. Verified via bisection on the affected Windows machine and independently confirmed against yt-dlp#12482 and an Arch Linux forum thread — the `tv` client specifically is affected, not just `web`.
+* **Fixed browser tab-switcher screenshot thumbnails stretched to 16:9 at decode time.** The tab-switcher's `Image.memory` and `Image.file` in `browser_screen.dart` passed paired `cacheWidth: 640, cacheHeight: 360` decode hints. A browser page's rendered viewport has no guaranteed aspect, so non-16:9 pages were pre-stretched at decode time. Dropped `cacheWidth`, kept `cacheHeight: 360` (aspect-preserving).
+* **Fixed thumbnail stretching in the now-playing hero card and the mini-player bar.** All thumbnail sites passed paired `cacheWidth`+`cacheHeight` decode hints sized to the display box. `instantiateImageCodec` scales to exactly those dimensions without preserving the source image's own aspect, so square or portrait thumbnails were pre-stretched at decode time. Decode hints are now height-only (aspect-preserving) at every site.
+* **Fixed the playlist "Missing" tab going stale after downloading missing tracks.** `Download Selected` only queues downloads and returns immediately, and nothing ever re-ran the folder compare afterwards. The playlist screen now listens to `AppController` and moves tracks Missing → Matched in memory immediately when a queue item reaches `completed`.
+* **Fixed a misleading "self-update failed" error** from yt-dlp reload-error recovery. The catch block wrapped both the self-update call and the post-update retried download, hiding the fact that a current yt-dlp still can't extract the video. The two outcomes are now reported distinctly.
 
 ## Build Notes
 
-* GitHub release tag: v13.2.0
-* Release page: [v13.2.0](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.2.0)
-* `flutter analyze` clean; all 79 tests pass; release workflow builds Windows, Linux, macOS, Android, and web artifacts.
+* GitHub release tag: v13.2.1
+* Release page: [v13.2.1](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.2.1)
+* `flutter analyze` clean; all tests pass; release workflow builds Windows, Linux, macOS, and Android artifacts.
 

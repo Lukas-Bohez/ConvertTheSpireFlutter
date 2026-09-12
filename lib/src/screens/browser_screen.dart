@@ -1914,7 +1914,6 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                                                       .getScreenshotBytes(
                                                           tab.id) ??
                                                   tab.screenshotPath),
-                                              cacheWidth: 640,
                                               cacheHeight: 360,
                                               filterQuality:
                                                   FilterQuality.low,
@@ -1928,7 +1927,6 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                                               File(tab.screenshotPath!),
                                               key: ValueKey(
                                                   tab.screenshotPath),
-                                              cacheWidth: 640,
                                               cacheHeight: 360,
                                               filterQuality:
                                                   FilterQuality.low,
