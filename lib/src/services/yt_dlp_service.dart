@@ -661,8 +661,17 @@ class YtDlpService {
     // Ensure a JS runtime (Deno) is available for nsig/SABR extraction — a
     // missing/old runtime is a common cause of "page needs to be reloaded".
     await _tryApplyDenoRuntime(args);
-    // Use tv client which doesn't trigger SABR-only streaming experiment
-    args.addAll(['--extractor-args', 'youtube:player_client=tv,web']);
+    // NOTE: do NOT force `--extractor-args youtube:player_client=tv,web` here.
+    // It was added under the belief that the tv client avoids YouTube's
+    // SABR-only streaming experiment, but live verification (2026-09,
+    // yt-dlp 2026.08.19) proved it now *causes* the failure it was meant to
+    // prevent: the tv player response comes back UNPLAYABLE, and the web
+    // client's https formats are dropped as "missing a URL" (SABR streaming,
+    // yt-dlp#12482) — surfacing as `ERROR: [youtube] <id>: The page needs to
+    // be reloaded.` even with a working JS runtime, while the same binary
+    // with default client selection extracts the same video fine. Verified
+    // on the affected machine with this app's provisioned yt-dlp + Deno
+    // (deno-2.9.6) and both the video and audio format specs used below.
 
     if (extraHeaders != null) {
       for (final entry in extraHeaders.entries) {
