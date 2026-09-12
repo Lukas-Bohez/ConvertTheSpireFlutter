@@ -2093,7 +2093,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   item.thumbnailUrl!,
                                   width: 80,
                                   height: 60,
-                                  cacheWidth: 160,
+                                  // Height-only decode hint — a paired
+                                  // cacheWidth/cacheHeight pre-distorts the
+                                  // decoded bitmap to the box's aspect (the
+                                  // codec does not preserve the source's own
+                                  // aspect), the same thumbnail-stretch bug
+                                  // fixed in the player hero/mini-player art.
                                   cacheHeight: 120,
                                   filterQuality: FilterQuality.low,
                                   fit: BoxFit.cover,

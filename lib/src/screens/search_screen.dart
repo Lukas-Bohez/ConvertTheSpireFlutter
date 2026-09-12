@@ -433,7 +433,11 @@ class _SearchScreenState extends State<SearchScreen>
                               child: Image.network(r.thumbnailUrl,
                                   width: 56,
                                   height: 56,
-                                  cacheWidth: 112,
+                                  // Height-only decode hint — a paired
+                                  // cacheWidth/cacheHeight pre-squashes 16:9
+                                  // source art to the square box aspect at
+                                  // decode time (the same thumbnail-stretch
+                                  // bug fixed in the player art).
                                   cacheHeight: 112,
                                   filterQuality: FilterQuality.low,
                                   fit: BoxFit.cover),

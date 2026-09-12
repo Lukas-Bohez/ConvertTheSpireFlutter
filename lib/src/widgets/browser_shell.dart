@@ -1036,7 +1036,14 @@ class _BrowserShellState extends State<BrowserShell> {
       child: artwork != null && artwork.isNotEmpty
           ? Image.memory(
               artwork,
-              cacheWidth: (size * aspectRatio * 2).round(),
+              // Height-only decode hint. A paired cacheWidth/cacheHeight
+              // makes the decoder scale the source to exactly that box aspect
+              // *without preserving the source's own aspect*, so square
+              // (album-art) or portrait thumbnails were pre-stretched to 16:9
+              // at decode time and BoxFit.cover could no longer undo it - the
+              // stretched/flattened art in the mini-player bar. A single
+              // dimension keeps the decoded bitmap at the source's true aspect
+              // and cover then crops correctly.
               cacheHeight: (size * 2).round(),
               filterQuality: FilterQuality.low,
               fit: BoxFit.cover,

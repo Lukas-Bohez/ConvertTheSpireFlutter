@@ -854,9 +854,13 @@ class PlayerState with ChangeNotifier {
     final data = item.thumbnailData;
     if (data == null) return null;
     if (expand) {
+      // Decode hint: height only. A paired cacheWidth/cacheHeight forces the
+      // decoder to scale to exactly that aspect without preserving the
+      // source's own aspect (the codec distorts to fit), so the old 512x512
+      // square hint pre-stretched 16:9 artwork before BoxFit.cover ever ran —
+      // the stretched now-playing hero art.
       return Image.memory(
         data,
-        cacheWidth: 512,
         cacheHeight: 512,
         filterQuality: FilterQuality.low,
         fit: BoxFit.cover,
@@ -869,7 +873,7 @@ class PlayerState with ChangeNotifier {
       data,
       width: width,
       height: height,
-      cacheWidth: (width * 2).round(),
+      // Height-only decode hint — see the expand branch above.
       cacheHeight: (height * 2).round(),
       filterQuality: FilterQuality.low,
       fit: BoxFit.cover,
@@ -4482,141 +4486,144 @@ class _PlayerScreenState extends State<PlayerScreen>
         bottom: true,
         child: PlayerNoAutoScrollbars(
           child: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            final isMobile = MediaQuery.of(context).size.width < 600;
-            final showVideoPane = showVideo;
-            // The search bar is hidden on mobile while a video is playing
-            // (kept out of the way of the video surface); everywhere else it
-            // is part of the pinned header below.
-            final showSearch = !(isMobile && showVideoPane);
-            return [
-              if (showVideoPane)
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _FixedHeightSliverDelegate(
-                    height: 260.0,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeInOut,
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              final isMobile = MediaQuery.of(context).size.width < 600;
+              final showVideoPane = showVideo;
+              // The search bar is hidden on mobile while a video is playing
+              // (kept out of the way of the video surface); everywhere else it
+              // is part of the pinned header below.
+              final showSearch = !(isMobile && showVideoPane);
+              return [
+                if (showVideoPane)
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _FixedHeightSliverDelegate(
                       height: 260.0,
-                      clipBehavior: Clip.hardEdge,
-                      decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.background),
-                      child: _VideoPane(
-                        mkController: state.videoController,
-                        androidController: state.androidVideoController,
-                        visible: true,
-                        ready: state.videoReady,
-                        isFullScreen: _isFullScreen,
-                        onTap: state.togglePlay,
-                        onToggleFullScreen: _toggleFullScreen,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeInOut,
+                        height: 260.0,
+                        clipBehavior: Clip.hardEdge,
+                        decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.background),
+                        child: _VideoPane(
+                          mkController: state.videoController,
+                          androidController: state.androidVideoController,
+                          visible: true,
+                          ready: state.videoReady,
+                          isFullScreen: _isFullScreen,
+                          onTap: state.togglePlay,
+                          onToggleFullScreen: _toggleFullScreen,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              if (!(isMobile && showVideoPane))
-                SliverToBoxAdapter(child: _buildHeader()),
-              if (!(isMobile && showVideoPane))
-                SliverToBoxAdapter(child: _buildNowPlaying(state)),
-              if (state.isLoading)
-                const SliverToBoxAdapter(
-                  child: LinearProgressIndicator(
-                    color: _PlayerTheme.accent,
-                    minHeight: 2,
+                if (!(isMobile && showVideoPane))
+                  SliverToBoxAdapter(child: _buildHeader()),
+                if (!(isMobile && showVideoPane))
+                  SliverToBoxAdapter(child: _buildNowPlaying(state)),
+                if (state.isLoading)
+                  const SliverToBoxAdapter(
+                    child: LinearProgressIndicator(
+                      color: _PlayerTheme.accent,
+                      minHeight: 2,
+                    ),
                   ),
-                ),
-              // Pinned TabBar (+ optional search bar). Wrapped in a
-              // SliverOverlapAbsorber and matched by a SliverOverlapInjector
-              // at the top of each tab body, so the grid's first row and its
-              // scrollbar render BELOW this header instead of being hidden
-              // behind it (the classic NestedScrollView overlap gotcha).
-              SliverOverlapAbsorber(
-                handle:
-                    NestedScrollView.sliverOverlapAbsorberHandleFor(context),
-                sliver: SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _FixedHeightSliverDelegate(
-                    height: 48.0 + (showSearch ? searchBarHeight : 0.0),
-                    child: ColoredBox(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      // Clip any content that would overflow the fixed header
-                      // height so it can never paint over the tab grid below
-                      // (defense-in-depth on top of the single-row chips).
-                      child: ClipRect(
-                        clipBehavior: Clip.hardEdge,
-                        child: Column(
-                          children: [
-                            TabBar(
-                              controller: _tabController,
-                              labelColor: _PlayerTheme.accent,
-                              unselectedLabelColor: _PlayerTheme.sub(context),
-                              indicatorColor: _PlayerTheme.accent,
-                              isScrollable: true,
-                              tabAlignment: TabAlignment.start,
-                              tabs: [
-                                Tab(
-                                  icon: const Icon(Icons.library_music, size: 20),
-                                  text: 'All ($allCount)',
-                                ),
-                                Tab(
-                                  icon: const Icon(Icons.music_note, size: 20),
-                                  text: 'Songs ($songCount)',
-                                ),
-                                Tab(
-                                  icon: const Icon(Icons.video_library, size: 20),
-                                  text: 'Videos ($videoCount)',
-                                ),
-                                Tab(
-                                  icon: const Icon(Icons.favorite, size: 20),
-                                  text: 'Fav ($favCount)',
-                                ),
-                              ],
-                            ),
-                            if (showSearch)
-                              Expanded(child: _buildSearchBar(state)),
-                          ],
+                // Pinned TabBar (+ optional search bar). Wrapped in a
+                // SliverOverlapAbsorber and matched by a SliverOverlapInjector
+                // at the top of each tab body, so the grid's first row and its
+                // scrollbar render BELOW this header instead of being hidden
+                // behind it (the classic NestedScrollView overlap gotcha).
+                SliverOverlapAbsorber(
+                  handle:
+                      NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+                  sliver: SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _FixedHeightSliverDelegate(
+                      height: 48.0 + (showSearch ? searchBarHeight : 0.0),
+                      child: ColoredBox(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        // Clip any content that would overflow the fixed header
+                        // height so it can never paint over the tab grid below
+                        // (defense-in-depth on top of the single-row chips).
+                        child: ClipRect(
+                          clipBehavior: Clip.hardEdge,
+                          child: Column(
+                            children: [
+                              TabBar(
+                                controller: _tabController,
+                                labelColor: _PlayerTheme.accent,
+                                unselectedLabelColor: _PlayerTheme.sub(context),
+                                indicatorColor: _PlayerTheme.accent,
+                                isScrollable: true,
+                                tabAlignment: TabAlignment.start,
+                                tabs: [
+                                  Tab(
+                                    icon: const Icon(Icons.library_music,
+                                        size: 20),
+                                    text: 'All ($allCount)',
+                                  ),
+                                  Tab(
+                                    icon:
+                                        const Icon(Icons.music_note, size: 20),
+                                    text: 'Songs ($songCount)',
+                                  ),
+                                  Tab(
+                                    icon: const Icon(Icons.video_library,
+                                        size: 20),
+                                    text: 'Videos ($videoCount)',
+                                  ),
+                                  Tab(
+                                    icon: const Icon(Icons.favorite, size: 20),
+                                    text: 'Fav ($favCount)',
+                                  ),
+                                ],
+                              ),
+                              if (showSearch)
+                                Expanded(child: _buildSearchBar(state)),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ];
-          },
-          body: TabBarView(
-            controller: _tabController,
-            children: [
-              _AllTab(
-                entries: _sortAndFilterEntries(
-                  state.library.asMap().entries.take(state.folderItemCount > 0
-                      ? state.folderItemCount
-                      : state.library.length),
-                  state,
+              ];
+            },
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _AllTab(
+                  entries: _sortAndFilterEntries(
+                    state.library.asMap().entries.take(state.folderItemCount > 0
+                        ? state.folderItemCount
+                        : state.library.length),
+                    state,
+                  ),
+                  state: state,
+                  scrollCtl: _scrollControllers[0],
+                  onTap: _onTrackTap,
                 ),
-                state: state,
-                scrollCtl: _scrollControllers[0],
-                onTap: _onTrackTap,
-              ),
-              _SongsTab(
-                entries: _sortAndFilterEntries(state.audioEntries, state),
-                state: state,
-                scrollCtl: _scrollControllers[1],
-                onTap: _onTrackTap,
-              ),
-              _VideosTab(
-                entries: _sortAndFilterEntries(state.videoEntries, state),
-                state: state,
-                scrollCtl: _scrollControllers[2],
-                onTap: _onTrackTap,
-              ),
-              _FavouritesTab(
-                entries: _sortAndFilterEntries(state.favouriteEntries, state),
-                state: state,
-                scrollCtl: _scrollControllers[3],
-                onTap: _onTrackTap,
-              ),
-            ],
-          ),
+                _SongsTab(
+                  entries: _sortAndFilterEntries(state.audioEntries, state),
+                  state: state,
+                  scrollCtl: _scrollControllers[1],
+                  onTap: _onTrackTap,
+                ),
+                _VideosTab(
+                  entries: _sortAndFilterEntries(state.videoEntries, state),
+                  state: state,
+                  scrollCtl: _scrollControllers[2],
+                  onTap: _onTrackTap,
+                ),
+                _FavouritesTab(
+                  entries: _sortAndFilterEntries(state.favouriteEntries, state),
+                  state: state,
+                  scrollCtl: _scrollControllers[3],
+                  onTap: _onTrackTap,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -5356,7 +5363,9 @@ class _TrackThumbnail extends StatelessWidget {
           data!,
           width: size,
           height: thumbnailHeight,
-          cacheWidth: (size * 2).round(),
+          // Height-only decode hint so the decoded bitmap keeps the source's
+          // true aspect and BoxFit.cover crops instead of revealing a
+          // pre-distorted decode (see thumbnailForItem).
           cacheHeight: (thumbnailHeight * 2).round(),
           filterQuality: FilterQuality.low,
           fit: BoxFit.cover,
@@ -5811,7 +5820,9 @@ class _SongsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (entries.isEmpty) return const _EmptyTabScroll(message: 'No songs found.');
+    if (entries.isEmpty) {
+      return const _EmptyTabScroll(message: 'No songs found.');
+    }
     return _MediaGrid(entries: entries, state: state, onTap: onTap);
   }
 }
@@ -5830,7 +5841,9 @@ class _VideosTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (entries.isEmpty) return const _EmptyTabScroll(message: 'No videos found.');
+    if (entries.isEmpty) {
+      return const _EmptyTabScroll(message: 'No videos found.');
+    }
     return _MediaGrid(entries: entries, state: state, onTap: onTap);
   }
 }
@@ -5883,27 +5896,27 @@ class _MediaGrid extends StatelessWidget {
     // primary so NestedScrollView still collapses the now-playing card.
     return PlayerBodyScrollbar(
       child: CustomScrollView(
-      slivers: [
-        SliverOverlapInjector(
-          handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
-        ),
-        SliverGrid(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            // Hand-tuned: thumbnail block is now a fixed 16:9 instead of
-            // filling the card, so the card itself is shorter relative to its
-            // width (was 0.82 : 0.9 when the thumbnail filled the tile).
-            childAspectRatio: width < 900 ? 1.15 : 1.25,
+        slivers: [
+          SliverOverlapInjector(
+            handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
           ),
-          delegate: SliverChildBuilderDelegate(
-            (ctx, i) =>
-                _MediaCard(entry: entries[i], state: state, onTap: onTap),
-            childCount: entries.length,
+          SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              // Hand-tuned: thumbnail block is now a fixed 16:9 instead of
+              // filling the card, so the card itself is shorter relative to its
+              // width (was 0.82 : 0.9 when the thumbnail filled the tile).
+              childAspectRatio: width < 900 ? 1.15 : 1.25,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (ctx, i) =>
+                  _MediaCard(entry: entries[i], state: state, onTap: onTap),
+              childCount: entries.length,
+            ),
           ),
-        ),
-      ],
+        ],
       ),
     );
   }
@@ -6173,7 +6186,7 @@ class PlayerNoAutoScrollbars extends StatelessWidget {
 }
 
 /// Scrollbar that respects the NestedScrollView's pinned header overlap.
-/// 
+///
 /// In a NestedScrollView, the body extends behind pinned headers. This widget
 /// ensures the scrollbar track starts below the pinned header area, keeping
 /// the thumb fully visible at all times.
@@ -6200,7 +6213,7 @@ class PlayerBodyScrollbar extends StatelessWidget {
       animation: handle,
       builder: (context, _) {
         final overlapExtent = handle!.layoutExtent ?? 0.0;
-        
+
         // Use RawScrollbar with mainAxisMargin to offset the scrollbar below the header
         // This ensures the scrollbar track starts below the pinned header
         return RawScrollbar(

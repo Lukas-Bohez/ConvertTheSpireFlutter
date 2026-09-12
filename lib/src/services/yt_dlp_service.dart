@@ -779,12 +779,25 @@ class YtDlpService {
         await runAttempt(retryArgs);
       } else if (isReloadError) {
         // YouTube-side extractor/player change (e.g. "The page needs to be
-        // reloaded"). Self-update throttled to the cooldown window, then retry
-        // once — a newer yt-dlp usually has the SABR/nsig patch that fixes it.
+        // reloaded"). Self-update throttled to the cooldown window, then
+        // retry once. NOTE from field data: a successful self-update has NOT
+        // reliably fixed this on the affected low-end machine — the fresh
+        // binary hit the exact same extraction error — so the two outcomes
+        // are reported distinctly below, and a verbose `yt-dlp -v <url>` run
+        // on the affected machine is the real next diagnostic step, not
+        // another app-side theory.
         debugPrint('yt-dlp hit a reload/playability error: $message');
         final cooldownOk = _lastAutoUpdate == null ||
             DateTime.now().difference(_lastAutoUpdate!) >= _autoUpdateCooldown;
         if (cooldownOk) {
+          // Phase 1: run the self-update, tracking its outcome separately
+          // from the retried download. These are two different failure modes,
+          // and the previous single catch conflated them: when the update
+          // succeeded and the *retried download* failed the same way again
+          // (a fresh yt-dlp still hitting the YouTube extraction error), the
+          // app reported "self-update failed" with the download's error text.
+          Object? updateError;
+          var updated = false;
           try {
             final updatedPath = await updateYtDlp(
               configuredPath: null,
@@ -794,33 +807,56 @@ class YtDlpService {
                 await File(updatedPath).exists() &&
                 updatedPath != ytDlpPath) {
               _lastAutoUpdate = DateTime.now();
+              updated = true;
               debugPrint(
                   'yt-dlp self-updated to $updatedPath; retrying download once');
-              await runAttempt([for (final a in args) a]);
             } else {
-              rethrow;
+              // Update ran but produced nothing new — treat it like a failed
+              // update so the plain-retry fallback below still applies.
+              updateError = Exception(
+                  'self-update produced no new binary (path unchanged or missing)');
             }
-          } catch (updateErr) {
-            // Self-update failed (binary lock, GitHub API hiccup, network
-            // blip...). Don't hard-fail the download immediately — fall back
-            // to one plain retry with the existing binary, mirroring what the
-            // cooldown branch already does. This is the common case (cooldown
-            // elapsed) and the one low-end PCs hit most often because the
-            // binary-lock window scales with hardware speed.
-            debugPrint(
-                'yt-dlp self-update failed ($updateErr); retrying with current '
-                'binary before giving up');
+          } catch (e) {
+            updateError = e;
+          }
+
+          if (updated) {
+            // The update itself succeeded. If the retried download fails,
+            // that must NOT be reported as "self-update failed" — a freshly
+            // updated yt-dlp still couldn't extract this video, which points
+            // at a live YouTube/extractor problem on this machine, not a
+            // stale binary.
             try {
               await runAttempt([for (final a in args) a]);
               return;
-            } catch (_) {
-              // Fallback retry also failed — surface the original download
-              // error with the reason the update didn't happen.
+            } catch (retryErr) {
               throw Exception(
-                  'yt-dlp hit a reload/playability error and the follow-up '
-                  'self-update failed: $updateErr. Try updating manually in '
-                  'Settings, or try again later.');
+                  'yt-dlp self-updated successfully, but the retried download '
+                  'still failed the same way — this is a YouTube extraction '
+                  'problem with the current yt-dlp, not a stale binary. Run '
+                  '`yt-dlp -v <url>` outside the app and read the full verbose '
+                  'output. Download error: ${_describeError(retryErr)}');
             }
+          }
+
+          // The self-update itself failed (binary lock, GitHub API hiccup,
+          // network blip...). Don't hard-fail immediately — fall back to one
+          // plain retry with the existing binary, mirroring what the cooldown
+          // branch does. This is the common case on low-end PCs because the
+          // binary-lock window scales with hardware speed.
+          final updateMsg = _describeError(updateError ??
+              Exception('self-update failed for an unknown reason'));
+          debugPrint('yt-dlp self-update failed ($updateMsg); retrying with '
+              'current binary before giving up');
+          try {
+            await runAttempt([for (final a in args) a]);
+            return;
+          } catch (retryErr) {
+            throw Exception(
+                'yt-dlp hit a reload/playability error, the self-update itself '
+                'failed ($updateMsg), and a plain retry with the existing '
+                'binary also failed. Try updating manually in Settings, or '
+                'try again later. Download error: ${_describeError(retryErr)}');
           }
         } else {
           // Self-update on cooldown — still attempt one plain retry with the
@@ -869,6 +905,13 @@ class YtDlpService {
   }
 
   // --─ Helpers ----------------------------------------------------------─
+
+  /// Strips the redundant `Exception: ` prefix Dart's toString() adds, so a
+  /// nested error reads cleanly when embedded in a larger user-facing message.
+  static String _describeError(Object e) {
+    final s = e.toString();
+    return s.startsWith('Exception: ') ? s.substring(11) : s;
+  }
 
   static List<String> _stripCookieArgs(List<String> args) {
     final stripped = <String>[];

@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import '../models/app_settings.dart';
+import '../models/queue_item.dart';
 import '../models/search_result.dart';
 import '../services/ad_service.dart';
 import '../services/android_saf.dart';
@@ -51,6 +52,11 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   String _selectedFormat = 'mp3';
   String? _playlistDiagnostics;
 
+  /// AppController, captured post-frame so downloads that complete while this
+  /// screen is open can reconcile the Missing tab in memory (see
+  /// [_reconcileDownloadedMissing]). Null when the controller is not in scope.
+  AppController? _appController;
+
   // Extras auto-resolve state
   bool _extrasBusy = false;
   // Target folder for "not in playlist" moves - prompted once, then reused.
@@ -70,14 +76,31 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     // Process any pending request that was set before initState ran
     final pending = widget.pendingRequest?.value;
     if (pending != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _processPendingRequest(pending));
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _processPendingRequest(pending));
     }
+    // Listen to AppController so the Missing tab updates live when a
+    // previously-missing track finishes downloading (read-only listener,
+    // captured post-frame like _extrasSettings does).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        final controller = context.read<AppController>();
+        _appController = controller;
+        controller.addListener(_onControllerChanged);
+        _reconcileDownloadedMissing();
+      } catch (_) {
+        // AppController not in scope (widget used standalone) — the live
+        // reconcile is unavailable; the Compare button still refreshes.
+      }
+    });
   }
 
   void _onPendingRequest() {
     final pending = widget.pendingRequest?.value;
     if (pending == null) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _processPendingRequest(pending));
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _processPendingRequest(pending));
   }
 
   Future<void> _processPendingRequest(PendingPlaylistRequest request) async {
@@ -182,6 +205,89 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       });
     }
   }
+
+  // --─ Live Missing-tab reconciliation --------------------------------------
+
+  void _onControllerChanged() {
+    if (!mounted) return;
+    _reconcileDownloadedMissing();
+  }
+
+  /// Moves tracks out of the Missing tab the moment their download completes.
+  ///
+  /// "Download Selected" only *queues* work — it returns immediately while
+  /// AppController downloads in the background — and previously nothing ever
+  /// re-checked afterwards, so the Missing tab kept showing a stale snapshot
+  /// from the last Compare run even after the queue panel showed the same
+  /// track as completed. Instead of rescanning the folder, this reconciles
+  /// against the queue itself: a track whose queue item has reached
+  /// DownloadStatus.completed moves missing → matched in memory (the queue's
+  /// outputPath is ground truth; the next full Compare will agree since the
+  /// file is really in the folder).
+  void _reconcileDownloadedMissing() {
+    final comparison = _comparison;
+    if (comparison == null || comparison.missing.isEmpty) return;
+    final controller = _appController;
+    if (controller == null) return;
+
+    // Cheap early exits: nothing completed in the queue, nothing to move.
+    final completed = controller.queue
+        .where((q) => q.status == DownloadStatus.completed)
+        .toList();
+    if (completed.isEmpty) return;
+
+    final downloaded = <SearchResult, QueueItem>{};
+    for (final track in comparison.missing) {
+      for (final q in completed) {
+        if (_queueUrlMatchesTrack(q.url, track)) {
+          downloaded[track] = q;
+          break;
+        }
+      }
+    }
+    if (downloaded.isEmpty || !mounted) return;
+
+    setState(() {
+      final remaining =
+          comparison.missing.where((t) => !downloaded.containsKey(t)).toList();
+      final matched = List<TrackMatch>.of(comparison.matched);
+      downloaded.forEach((track, q) {
+        final path = q.outputPath ?? '';
+        matched.add(TrackMatch(
+          track: track,
+          filePath: path,
+          fileName: path.isEmpty ? '' : p.basename(path),
+          // Downloaded by this app with a known output path — ground truth.
+          confidence: 1.0,
+          method: MatchMethod.exact,
+          fileIndex: -1, // no folder-scan index; de-dup only applies to scans
+        ));
+      });
+      _comparison = PlaylistFolderComparison(
+        total: comparison.total,
+        matched: matched,
+        missing: remaining,
+        extras: comparison.extras,
+        folderPath: comparison.folderPath,
+      );
+      _missingSelection.removeAll(downloaded.keys);
+    });
+  }
+
+  /// True when [queueUrl] is the download URL that was queued for [track].
+  ///
+  /// YouTube results are queued as `https://www.youtube.com/watch?v=<id>`
+  /// (see AppController.addSearchResultToQueue); generic results queue their
+  /// raw URL, which is stored in SearchResult.id itself.
+  bool _queueUrlMatchesTrack(String queueUrl, SearchResult track) {
+    if (track.id.isEmpty) return false;
+    if (queueUrl == track.id) return true; // generic source: the id IS the url
+    final uri = Uri.tryParse(queueUrl);
+    if (uri == null) return false;
+    return uri.queryParameters['v'] == track.id ||
+        uri.path.endsWith('/${track.id}');
+  }
+
   // --─ Extras auto-resolve -------------------------------------------------
 
   AppSettings? get _extrasSettings {
@@ -220,7 +326,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     }
   }
 
-    /// Verifies that [f] exists at [targetFolder] before deleting the original.
+  /// Verifies that [f] exists at [targetFolder] before deleting the original.
   ///
   /// For filesystem targets this checks that a file with the same basename
   /// exists at the destination AND has a non-zero size (sanity check).
@@ -241,7 +347,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       return false;
     }
     if (dest.lengthSync() == 0) {
-      debugPrint('[Extras] SAFEGUARD: destination file is empty for ${f.fileName}');
+      debugPrint(
+          '[Extras] SAFEGUARD: destination file is empty for ${f.fileName}');
       return false;
     }
     return true;
@@ -293,7 +400,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     }
   }
 
-/// Moves [files] into [targetFolder] using the app's SAF-aware
+  /// Moves [files] into [targetFolder] using the app's SAF-aware
   /// `MediaOrganizer.moveAndDeduplicate` (copy + dedupe), then deletes the
   /// originals so the net effect is a true move. Re-runs the comparison
   /// afterwards so the Extras tab reflects the new state.
@@ -314,8 +421,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       // Stage the specific files in a throwaway cache directory so we hand
       // only the intended files to moveAndDeduplicate, never whole folders.
       final cacheDir = await PlatformDirs.getCacheDir();
-      final staging = Directory(p.join(
-          cacheDir.path, 'extras_move_${DateTime.now().millisecondsSinceEpoch}'));
+      final staging = Directory(p.join(cacheDir.path,
+          'extras_move_${DateTime.now().millisecondsSinceEpoch}'));
       await staging.create(recursive: true);
 
       var staged = 0;
@@ -335,8 +442,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         return;
       }
 
-      final result = await MediaOrganizer.moveAndDeduplicate(
-          [staging.path], targetFolder);
+      final result =
+          await MediaOrganizer.moveAndDeduplicate([staging.path], targetFolder);
       final moved = result['moved'] ?? 0;
       final deleted = result['deleted'] ?? 0;
       debugPrint('[Extras] moveAndDeduplicate result: $result');
@@ -365,8 +472,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       } catch (_) {}
 
       if (mounted) {
-        Snack.show(context,
-            '$label: moved $moved files, deleted $deleted duplicates',
+        Snack.show(
+            context, '$label: moved $moved files, deleted $deleted duplicates',
             level: moved > 0 ? SnackLevel.success : SnackLevel.info);
       }
       await _compareToFolder(jumpToBestTab: false);
@@ -382,12 +489,12 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
   /// Prompts for a target folder and stores it for reuse.
   Future<void> _chooseExtrasTarget(String dialogTitle) async {
-    final result =
-        await pickDirectoryPath(context, dialogTitle: dialogTitle);
+    final result = await pickDirectoryPath(context, dialogTitle: dialogTitle);
     if (result != null && result.isNotEmpty) {
       setState(() => _extrasTargetFolder = result);
     }
   }
+
   /// Remove every incomplete (`.temp.`) download in one pass.
   Future<void> _autoResolveIncomplete() async {
     final extras = _extrasOfKind(PlaylistExtraKind.incompleteDownload);
@@ -426,8 +533,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         await _chooseExtrasTarget('Choose a folder for ${entry.key} files');
         target = _extrasTargetFolder ?? '';
       }
-      await _moveExtrasToTarget(
-          entry.value, target, 'Moved ${entry.value.length} ${entry.key} files');
+      await _moveExtrasToTarget(entry.value, target,
+          'Moved ${entry.value.length} ${entry.key} files');
     }
   }
 
@@ -469,11 +576,12 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         await _moveExtrasToTarget([f], target, 'Moved ${f.fileName}');
         break;
       case PlaylistExtraKind.notInPlaylist:
-        if (_extrasTargetFolder == null || _extrasTargetFolder!.trim().isEmpty) {
+        if (_extrasTargetFolder == null ||
+            _extrasTargetFolder!.trim().isEmpty) {
           await _chooseExtrasTarget('Choose folder to move extra files into');
         }
-        await _moveExtrasToTarget([f], _extrasTargetFolder?.trim() ?? '',
-            'Moved ${f.fileName}');
+        await _moveExtrasToTarget(
+            [f], _extrasTargetFolder?.trim() ?? '', 'Moved ${f.fileName}');
         break;
     }
   }
@@ -544,6 +652,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
   @override
   void dispose() {
+    _appController?.removeListener(_onControllerChanged);
     _urlController.dispose();
     _folderController.dispose();
     _tabController.dispose();
@@ -1203,14 +1312,12 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         children: [
           Icon(Icons.folder_open, size: 56, color: Colors.grey.shade300),
           const SizedBox(height: 12),
-          Text('Run a comparison first',
-              style: theme.textTheme.titleMedium),
+          Text('Run a comparison first', style: theme.textTheme.titleMedium),
           if (folder.isNotEmpty)
             Text('Folder: $folder',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style:
-                    theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
           if (canCompare) ...[
             const SizedBox(height: 12),
             FilledButton.icon(
@@ -1290,7 +1397,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       ],
     );
   }
-static const int _extrasMaxShownPerSection = 120;
+
+  static const int _extrasMaxShownPerSection = 120;
 
   Widget _buildExtrasSection(
     ThemeData theme, {
@@ -1362,8 +1470,7 @@ static const int _extrasMaxShownPerSection = 120;
                   leading: Icon(icon, color: color, size: 18),
                   title: Text(f.fileName,
                       maxLines: 1, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(
-                      '${_extrasItemSubtitle(f)}  •  ${f.filePath}',
+                  subtitle: Text('${_extrasItemSubtitle(f)}  •  ${f.filePath}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall
@@ -1381,8 +1488,8 @@ static const int _extrasMaxShownPerSection = 120;
             Padding(
               padding: const EdgeInsets.all(8),
               child: Text('…and ${files.length - shown.length} more',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: Colors.grey)),
+                  style:
+                      theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
             ),
         ],
       ),
