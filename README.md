@@ -82,6 +82,23 @@ This app is open source, privacy-focused, and does not track what you download.
 
 ---
 
+## Screenshots
+
+Some screens from the v13.2.1 build:
+
+![Media player with volume boosting and full audio control](screenshots/media-player-audio-controls.webp)
+![Search songs and download them](screenshots/search-and-download-songs.webp)
+![Convert files between the supported media types](screenshots/convert-files-between-supported-media-types.webp)
+![Match playlists to folders to see which songs you are missing](screenshots/match-playlists-to-folders.webp)
+![Watch playlists auto-install](screenshots/watch-playlists-auto-install.webp)
+![A custom file explorer, so it also works on your TV](screenshots/custom-file-explorer-tv.webp)
+![Settings that let you customize how you use the app](screenshots/customize-how-you-use-the-app.webp)
+![Customizable appearance in the support tab](screenshots/customizable-appearance-support-tab.webp)
+![Includes a guide on how to use the app](screenshots/built-in-guide.webp)
+![Full logs so you know what's happening](screenshots/full-logs.webp)
+![Full torrent settings](screenshots/full-torrent-settings.webp)
+![Torrents and Ollama safety checks](screenshots/torrents-and-ollama-safety-checks.webp)
+
 ## Contributing
 
 I would love your help! Feel free to open an issue or submit a pull request.
