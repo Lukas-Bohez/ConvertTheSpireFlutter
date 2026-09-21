@@ -1,5 +1,3 @@
-![Convert The Spire Reborn](https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/main/docs/screenshots/banner.png)
-
 <p align="center">
   <a href="https://youtu.be/66Rx8PDY_r0"><img src="https://img.youtube.com/vi/66Rx8PDY_r0/maxresdefault.jpg" width="70%" alt="Watch the demo video on YouTube"></a>
   <br><b>▶ <a href="https://youtu.be/66Rx8PDY_r0">Watch the demo video</a></b>

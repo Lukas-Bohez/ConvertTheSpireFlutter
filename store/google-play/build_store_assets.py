@@ -12,10 +12,11 @@ What it writes
   store/google-play/
     app-icon-512.png                  Play Console "App icon" (512x512, opaque)
     tv-banner-1280x720.png            Play Console "TV banner"
-    tv-promo-banner-1920x1080.png     promo image (also used on GitHub releases)
+    tv-promo-banner-1920x1080.png     promo image (Play Console only)
     tv-screenshot-1-1920x1080.png     Play Console TV screenshots
     tv-screenshot-2-1920x1080.png
-  docs/screenshots/banner.png         same promo image, shown on GitHub releases
+  docs/screenshots/banner.png         same promo image (kept for reference;
+                                      GitHub releases do not show a banner)
   android/app/src/main/play_tv_assets/  copies of the three TV images above
   android/app/src/play/res/             launcher icons (adaptive fg + legacy),
                                         icon background colour, and the in-app

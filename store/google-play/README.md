@@ -9,7 +9,7 @@ real screenshots by one script**, so they can never drift apart.
 | `app-icon-512.png` | Store icon (opaque, 512x512) | Main store listing -> App icon |
 | `tv-banner-1280x720.png` | Android TV banner | Graphics -> TV banner |
 | `tv-screenshot-1-1920x1080.png`, `tv-screenshot-2-...png` | TV screenshots | Graphics -> TV screenshots |
-| `tv-promo-banner-1920x1080.png` | Promo image (also the GitHub release banner) | optional promo graphic |
+| `tv-promo-banner-1920x1080.png` | Promo image | optional promo graphic |
 | `build_store_assets.py` | Regenerates everything | - |
 
 ## Updating the store graphics
@@ -21,7 +21,8 @@ real screenshots by one script**, so they can never drift apart.
 3. Upload the PNGs from this folder in Play Console.
 
 The script also rewrites, in one go:
-- `docs/screenshots/banner.png` - the image at the top of every GitHub release.
+- `docs/screenshots/banner.png` - a copy of the promo image. GitHub releases
+  deliberately do **not** show a banner; they open with the demo video.
 - `android/app/src/main/play_tv_assets/` - copies of the TV images.
 - `android/app/src/play/res/` - the **launcher icons** (adaptive foreground with
   the logo inside the safe zone + opaque background colour + legacy icons) and the
