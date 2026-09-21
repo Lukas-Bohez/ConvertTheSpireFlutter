@@ -8,14 +8,6 @@
 
 ---
 
-![Convert The Spire Reborn](docs/screenshots/banner.png)
-
-| | |
-|---|---|
-| ![Screenshot 1](docs/screenshots/screenshot-1.png) | ![Screenshot 2](docs/screenshots/screenshot-2.png) |
-
----
-
 ## What is this?
 
 Hey everyone! If you remember the old web-based Convert the Spire downloader, you probably know that YouTube eventually blocked our server's IP. To keep the project alive and better than ever, I built **Convert the Spire Reborn**.

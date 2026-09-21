@@ -392,9 +392,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          sparse-checkout: |
-            docs/releases
-            docs/screenshots
+          sparse-checkout: docs/releases
           sparse-checkout-cone-mode: true
 
       - name: Download all build artifacts
@@ -462,5 +460,4 @@ jobs:
             artifacts/windows-x64/*.zip
             artifacts/macos-x64/*.zip
             artifacts/android-apk/${{ env.ANDROID_APK_NAME }}
-            docs/screenshots/screenshot-*.png
             SHA256SUMS.txt
