@@ -127,6 +127,18 @@ class BrowserRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears history AND the quick-access "recent sites" tiles (favourites are
+  /// kept). Previously only history was wiped, so quick-access links stayed.
+  Future<void> clearBrowsingData() async {
+    final db = await BrowserDb.database;
+    await db.delete('history');
+    await db.delete('recent_sites');
+    notifyListeners();
+  }
+
+  /// Ask listeners (new-tab page, history screen) to re-read from the database.
+  void refresh() => notifyListeners();
+
   /// Prune browser history.
   /// - Removes entries older than [maxAgeDays].
   /// - Ensures at most [maxRows] rows remain by deleting oldest entries.
@@ -251,6 +263,7 @@ class BrowserRepository extends ChangeNotifier {
         'favicon = COALESCE(?, favicon) WHERE url = ?',
         [DateTime.now().millisecondsSinceEpoch, title, favicon, url],
       );
+      notifyListeners();
     } else {
       await db.insert('recent_sites', {
         'url': url,
@@ -259,6 +272,7 @@ class BrowserRepository extends ChangeNotifier {
         'visit_count': 1,
         'last_visit': DateTime.now().millisecondsSinceEpoch,
       });
+      notifyListeners();
     }
   }
 

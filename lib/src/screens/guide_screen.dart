@@ -106,10 +106,9 @@ class GuideScreen extends StatelessWidget {
                   _PlatformRow(
                     icon: Icons.desktop_mac,
                     name: 'Linux',
-                    status: 'Full support',
-                    detail:
-                        'Downloads, conversion, notifications. Video playback requires the system libmpv runtime (install mpv/libmpv via your package manager).',
-                    supported: true,
+                    status: 'Discontinued',
+                    detail: 'Official Linux builds ended with v14.0.0',
+                    supported: false,
                   ),
                   Divider(height: 1),
                   _PlatformRow(
@@ -352,12 +351,6 @@ class GuideScreen extends StatelessWidget {
                       title: 'Android: choose a writable folder',
                       detail:
                           'On Android you must pick a download folder through the system file picker so the app gets write permission.',
-                    ),
-                    SizedBox(height: 10),
-                    _TipRow(
-                      title: 'Linux: enable video playback',
-                      detail:
-                          'Install mpv/libmpv with your package manager (e.g. sudo apt install mpv libmpv-dev) to enable video playback. Without libmpv the app will fall back to audio-only mode.',
                     ),
                     SizedBox(height: 10),
                     _TipRow(

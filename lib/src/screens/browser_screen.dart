@@ -1020,13 +1020,21 @@ class _BrowserScreenState extends State<BrowserScreen>
   }
 
   void _reload() {
-    if (_showNewTabPage) return;
+    if (_showNewTabPage) {
+      // Refresh quick access / history tiles on the new-tab page.
+      _repo.refresh();
+      return;
+    }
     final currentUrl = _addressController.text.trim();
     if (_isLoading) {
       _webViewController?.stop();
       setState(() => _isLoading = false);
     } else if (currentUrl.isNotEmpty && currentUrl != 'about:blank') {
-      _webViewController?.loadUrl(currentUrl);
+      final ctrl = _webViewController;
+      if (ctrl == null) return;
+      // A real reload; fall back to re-loading the URL if the platform
+      // controller can't reload yet.
+      ctrl.reload().catchError((_) => ctrl.loadUrl(currentUrl));
     }
   }
 
@@ -1622,6 +1630,13 @@ class _BrowserScreenState extends State<BrowserScreen>
       return;
     }
     if (action == 'clear_session') {
+      // Always wipe stored history + quick-access links, even when no page is
+      // loaded (this used to require an open page and never touched them).
+      try {
+        await _repo.clearBrowsingData();
+      } catch (e) {
+        debugPrint('[BROWSER] clearBrowsingData failed: $e');
+      }
       if (_webViewController != null) {
         try {
           await _webViewController!.clearSession();
@@ -1646,7 +1661,7 @@ class _BrowserScreenState extends State<BrowserScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Browser not loaded — tap a page first'),
+              content: Text('Browsing history and quick links cleared'),
               duration: Duration(seconds: 3),
             ),
           );

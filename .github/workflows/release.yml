@@ -197,76 +197,6 @@ jobs:
           retention-days: 7
 
   # =========================================================================
-  # 3. Linux x64  (zip + AppImage when build script is present)
-  # =========================================================================
-  build-linux:
-    name: Build Linux
-    needs: test-and-analyze
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      # Flutter Linux requires these system libraries
-      - name: Install Linux build dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y --no-install-recommends \
-            clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev libstdc++-12-dev \
-            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
-            libsecret-1-dev \
-            libmpv-dev mpv libass-dev \
-            fuse libfuse2 \
-            libayatana-appindicator3-dev \
-            libjson-glib-dev
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: false
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build Linux release
-        run: flutter build linux --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
-
-      - name: Package Linux zip
-        run: |
-          set -euo pipefail
-          BUNDLE="$GITHUB_WORKSPACE/build/linux/x64/release/bundle"
-          if [ ! -d "$BUNDLE" ]; then
-            echo "ERROR: bundle not found at $BUNDLE"
-            exit 1
-          fi
-          cd "$BUNDLE"
-          zip -r "$GITHUB_WORKSPACE/${{ env.OUTPUT_NAME }}-linux-x64.zip" .
-
-      # Build the AppImage only when the helper script is present in the repo.
-      # If you haven't added one yet, this step is skipped gracefully.
-      - name: Build AppImage (if script exists)
-        id: appimage
-        run: |
-          if [ -f "scripts/build-appimage.sh" ]; then
-            chmod +x scripts/build-appimage.sh
-            bash scripts/build-appimage.sh
-            echo "built=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "scripts/build-appimage.sh not found - skipping AppImage build."
-            echo "built=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      # Upload zip unconditionally; AppImage only if it was actually built
-      - uses: actions/upload-artifact@v7
-        with:
-          name: linux-x64
-          path: |
-            ${{ env.OUTPUT_NAME }}-linux-x64.zip
-            ${{ steps.appimage.outputs.built == 'true' && format('{0}-linux-x64.AppImage', env.OUTPUT_NAME) || '' }}
-          retention-days: 7
-
-  # =========================================================================
   # 4. macOS (universal / arm64 + x64)
   # =========================================================================
   build-macos:
@@ -454,12 +384,19 @@ jobs:
   # =========================================================================
   release:
     name: Publish Release
-    needs: [build-windows, build-linux, build-macos, build-android]
+    needs: [build-windows, build-macos, build-android]
     runs-on: ubuntu-latest
     permissions:
       contents: write   # Required to create releases and upload assets
 
     steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: |
+            docs/releases
+            docs/screenshots
+          sparse-checkout-cone-mode: true
+
       - name: Download all build artifacts
         uses: actions/download-artifact@v8
         with:
@@ -473,7 +410,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          for dir in windows-x64 linux-x64 macos-x64 android-apk; do
+          for dir in windows-x64 macos-x64 android-apk; do
             count=$(find "artifacts/$dir" -type f 2>/dev/null | wc -l)
             if [ "$count" -eq 0 ]; then
               echo "ERROR: No files found in artifacts/$dir"
@@ -495,6 +432,22 @@ jobs:
           | sort | xargs sha256sum > ../SHA256SUMS.txt
           cat ../SHA256SUMS.txt
 
+      # Screenshots go at the TOP of the release body so they are the first
+      # thing anyone sees when opening or linking to the release. Image URLs
+      # are pinned to the release tag.
+      - name: Compose release body
+        env:
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          python3 - <<'PY'
+          import os
+          t = open('docs/releases/release_body_template.md', encoding='utf-8').read()
+          t = t.replace('{{TAG}}', os.environ['RELEASE_TAG'])
+          t = t.replace('{{NOTES}}', os.environ['RELEASE_NOTES'])
+          open('release_body.md', 'w', encoding='utf-8').write(t)
+          PY
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         env:
@@ -502,12 +455,12 @@ jobs:
         with:
           tag_name: ${{ inputs.release_tag }}
           name: ${{ inputs.release_name }}
-          body: ${{ inputs.release_notes }}
+          body_path: release_body.md
           prerelease: ${{ inputs.is_prerelease }}
           fail_on_unmatched_files: true
           files: |
             artifacts/windows-x64/*.zip
-            artifacts/linux-x64/*
             artifacts/macos-x64/*.zip
             artifacts/android-apk/${{ env.ANDROID_APK_NAME }}
+            docs/screenshots/screenshot-*.png
             SHA256SUMS.txt

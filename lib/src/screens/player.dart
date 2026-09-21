@@ -32,6 +32,7 @@ import '../services/audio_handler.dart';
 import '../services/background_media_update_guard.dart';
 
 import '../services/ffmpeg_service.dart';
+import '../services/loudness_service.dart';
 import '../services/media_organizer.dart';
 import '../services/platform_dirs.dart';
 import '../services/review_service.dart';
@@ -456,6 +457,7 @@ class PlayerState with ChangeNotifier {
   static const int _maxHistoryEntries = 50;
   static const int _maxRecentShuffleEntries = 24;
   final Map<String, _PlaybackStats> _playStats = {};
+  Duration _statsCommittedPosition = Duration.zero;
 
   Directory? _thumbCacheDir;
   Set<String> _favourites = {};
@@ -549,8 +551,6 @@ class PlayerState with ChangeNotifier {
 
   bool _videoReady = false;
   bool _videoCompletionFired = false;
-  bool _videoBackgroundAudioMode = false;
-  bool _desktopVideoBackgroundAudioMode = false;
   Duration? _backgroundVideoResumePosition;
   final Set<String> _ignoredBrokenMediaPaths = <String>{};
 
@@ -799,12 +799,6 @@ class PlayerState with ChangeNotifier {
 
   bool get isPlaying {
     if (isVideo) {
-      if (_videoBackgroundAudioMode && _audio != null) {
-        return _audio!.playing;
-      }
-      if (_desktopVideoBackgroundAudioMode && _audioMkPlayer != null) {
-        return _audioMkPlayer!.state.playing;
-      }
       if (_useMediaKit && _mkPlayer != null) return _mkPlayer!.state.playing;
       return _androidController?.value.isPlaying ?? false;
     }
@@ -832,6 +826,11 @@ class PlayerState with ChangeNotifier {
 
   void _onPlaybackPositionUpdated(Duration pos) {
     position = pos;
+    // Persist listening time periodically so a killed/throttled process
+    // doesn't lose it.
+    if (pos - _statsCommittedPosition >= const Duration(seconds: 30)) {
+      _commitCurrentPlayStats();
+    }
     if (_isSeeking) {
       final pending = _pendingSeekTarget ?? _seekPreviewPosition;
       if (pending == null || (pos - pending).inMilliseconds.abs() <= 350) {
@@ -1190,18 +1189,38 @@ class PlayerState with ChangeNotifier {
       playCount: current.playCount + 1,
       lastPlayedAt: DateTime.now(),
     );
+    // A fresh play starts a fresh time window; without this, the old track's
+    // position was re-added on every commit.
+    _statsCommittedPosition = Duration.zero;
     _applyStatsToItem(item);
+    final idx = library.indexWhere((e) => e.path == item.path);
+    if (idx >= 0) _applyStatsToItem(library[idx]);
     _savePlayStats();
+    notifyListeners();
   }
 
+  /// Adds only the time listened since the previous commit (a delta), so the
+  /// lifecycle / select / completion / periodic commits can never double count.
   void _commitCurrentPlayStats() {
     final item = currentItem;
     if (item == null) return;
     final played = position;
-    if (played <= Duration.zero) return;
+    final delta = played - _statsCommittedPosition;
+    if (delta <= Duration.zero) {
+      // Seeked backwards or position was reset: just re-baseline.
+      _statsCommittedPosition = played < Duration.zero ? Duration.zero : played;
+      return;
+    }
+    _statsCommittedPosition = played;
+    // A single commit can never legitimately exceed the track length (seeking
+    // forward is not "time played").
+    final cap = duration;
+    final counted = (cap != null && cap > Duration.zero && delta > cap)
+        ? cap
+        : delta;
     final current = _statsForPath(item.path);
     _playStats[item.path] = current.copyWith(
-      totalPlayedDuration: current.totalPlayedDuration + played,
+      totalPlayedDuration: current.totalPlayedDuration + counted,
       lastPlayedAt: DateTime.now(),
     );
     _applyStatsToItem(item);
@@ -1704,6 +1723,10 @@ class PlayerState with ChangeNotifier {
     _videoReady = false;
     notifyListeners();
 
+    // Measure loudness first (cached after the first play) so the very first
+    // seconds already play at the leveled volume.
+    await _ensureLoudness(item, wait: true);
+    if (generation != _loadGeneration) return;
     _applyVolume();
 
     try {
@@ -1728,8 +1751,7 @@ class PlayerState with ChangeNotifier {
               await _audio!.setFilePath(localPath);
             }
             if (generation != _loadGeneration) return;
-            _runOnMainThread(
-                () => _audio!.setVolume(volume * _trackGainMultiplier));
+            _runOnMainThread(() => _audio!.setVolume(_audioPlayerVolume));
             duration = _audio!.duration;
             position = Duration.zero;
             if (generation != _loadGeneration) return;
@@ -1930,224 +1952,81 @@ class PlayerState with ChangeNotifier {
     }
   }
 
+  /// Videos are NOT converted to audio when the app leaves the foreground:
+  /// they simply pause and keep their position. (The old video<->audio hand-off
+  /// was the cause of videos restarting from 0:00 on return.)
   Future<void> onAppLifecycleChanged(AppLifecycleState state) async {
     if (_disposed) return;
 
-    if (Platform.isAndroid) {
-      if (state == AppLifecycleState.inactive ||
-          state == AppLifecycleState.hidden ||
-          state == AppLifecycleState.paused) {
-        _commitCurrentPlayStats();
-        await _enterBackgroundVideoAudioMode();
-        return;
-      }
-      if (state == AppLifecycleState.resumed) {
-        await _restoreForegroundVideoPlayback();
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      _commitCurrentPlayStats();
+      // Desktop: losing window focus must not touch playback. Android:
+      // `inactive` also fires for the notification shade / dialogs, so only
+      // pause once the app is really hidden.
+      final desktop = !kIsWeb &&
+          (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+      if (!desktop && state != AppLifecycleState.inactive) {
+        await _pauseVideoForBackground();
       }
       return;
     }
-
-    if (!kIsWeb &&
-        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      if (state == AppLifecycleState.inactive ||
-          state == AppLifecycleState.hidden ||
-          state == AppLifecycleState.paused) {
-        _commitCurrentPlayStats();
-        await _enterDesktopBackgroundVideoAudioMode();
-        return;
-      }
-      if (state == AppLifecycleState.resumed) {
-        await _restoreDesktopForegroundVideoPlayback();
-      }
+    if (state == AppLifecycleState.resumed) {
+      await _restoreVideoAfterBackground();
     }
   }
 
-  Future<void> _enterDesktopBackgroundVideoAudioMode() async {
-    if (_desktopVideoBackgroundAudioMode || _disposed) return;
-    if (!_useMediaKit || _mkPlayer == null || _audioMkPlayer == null) return;
-
+  Future<void> _pauseVideoForBackground() async {
     final item = currentItem;
     if (item == null || item.type != MediaType.video) return;
-
-    final resumePosition = position;
-    final wasPlaying = _mkPlayer!.state.playing;
-    _backgroundVideoResumePosition = resumePosition;
-
-    try {
-      await _mkPlayer!.pause();
-    } catch (_) {}
-
-    await _audioLock.acquire();
-    try {
-      await _openMediaWithFallback(_audioMkPlayer!, item.path, play: false);
-      if (resumePosition > Duration.zero) {
-        try {
-          await _audioMkPlayer!.seek(resumePosition);
-        } catch (_) {}
-      }
-      await _audioMkPlayer!
-          .setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
-      if (wasPlaying) {
-        await _audioMkPlayer!.play();
-      } else {
-        await _audioMkPlayer!.pause();
-      }
-      _desktopVideoBackgroundAudioMode = true;
-      _updateMediaNotification(item);
-      _emitPositionUiState();
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Failed to enter desktop background video audio mode: $e');
-      _desktopVideoBackgroundAudioMode = false;
-    } finally {
-      _audioLock.release();
+    // `inactive` fires repeatedly; don't overwrite the saved position with a
+    // reset value once we've already paused.
+    if (position > Duration.zero) {
+      _backgroundVideoResumePosition = position;
     }
-  }
-
-  Future<void> _restoreDesktopForegroundVideoPlayback() async {
-    if (!_desktopVideoBackgroundAudioMode || _disposed) return;
-    final item = currentItem;
-    if (item == null || item.type != MediaType.video || _mkPlayer == null) {
-      _desktopVideoBackgroundAudioMode = false;
-      notifyListeners();
-      return;
-    }
-
-    final resumePosition = _backgroundVideoResumePosition ?? position;
-    final shouldKeepPlaying = _audioMkPlayer?.state.playing ?? false;
-
     try {
-      await _audioMkPlayer?.pause();
-    } catch (_) {}
-
-    try {
-      await _openMediaWithFallback(_mkPlayer!, item.path, play: false);
-      if (resumePosition > Duration.zero) {
-        try {
-          await _mkPlayer!.seek(resumePosition);
-        } catch (_) {}
-      }
-      await _mkPlayer!
-          .setVolume(volume * _videoVolumeBoost * _trackGainMultiplier * 100);
-      if (shouldKeepPlaying) {
-        await _mkPlayer!.play();
-      } else {
+      if (_useMediaKit && _mkPlayer != null) {
         await _mkPlayer!.pause();
+      } else {
+        await _androidController?.pause();
       }
-      position = resumePosition;
-      _videoReady = true;
-      _emitPositionUiState();
-    } catch (e) {
-      debugPrint('Failed to restore desktop foreground video playback: $e');
-    }
-
-    _desktopVideoBackgroundAudioMode = false;
+    } catch (_) {}
     notifyListeners();
   }
 
-  Future<void> _enterBackgroundVideoAudioMode() async {
-    if (_videoBackgroundAudioMode || _disposed) return;
-    if (_useMediaKit || _audio == null) return;
-
+  /// Leaves the video paused at the position it had. Only if the underlying
+  /// player lost its state while backgrounded do we reload and seek back.
+  Future<void> _restoreVideoAfterBackground() async {
+    final saved = _backgroundVideoResumePosition;
+    _backgroundVideoResumePosition = null;
     final item = currentItem;
-    if (item == null || item.type != MediaType.video) return;
-    final controller = _androidController;
-    if (controller == null) return;
-
-    final resumePosition = controller.value.position;
-    final wasPlaying = controller.value.isPlaying;
-    _backgroundVideoResumePosition = resumePosition;
+    if (item == null || item.type != MediaType.video || saved == null) return;
+    if (saved <= Duration.zero) return;
 
     try {
-      await controller.pause();
-      await controller.setVolume(0);
-    } catch (_) {}
-
-    try {
-      final localPath = await _resolveLocalPath(item.path);
-      if (localPath.startsWith('http') || localPath.startsWith('content://')) {
-        await _audio!.setUrl(localPath);
+      if (_useMediaKit && _mkPlayer != null) {
+        final now = _mkPlayer!.state.position;
+        if (saved - now > const Duration(seconds: 3)) {
+          await _mkPlayer!.seek(saved);
+        }
       } else {
-        await _audio!.setFilePath(localPath);
+        final ctrl = _androidController;
+        if (ctrl == null || !ctrl.value.isInitialized || ctrl.value.hasError) {
+          final generation = ++_loadGeneration;
+          await _loadCurrent(currentIndex, generation);
+          if (_disposed || generation != _loadGeneration) return;
+          await _androidController?.seekTo(saved);
+          await _androidController?.pause();
+        } else if (saved - ctrl.value.position > const Duration(seconds: 3)) {
+          await ctrl.seekTo(saved);
+        }
       }
-      if (resumePosition > Duration.zero) {
-        await _audio!.seek(resumePosition);
-      }
-      _runOnMainThread(() => _audio!.setVolume(volume * _trackGainMultiplier));
-      if (wasPlaying) {
-        await _audio!.play();
-      } else {
-        await _audio!.pause();
-      }
-      duration = _audio!.duration ?? duration;
-      position = resumePosition;
-      _videoBackgroundAudioMode = true;
-      _updateMediaNotification(item);
-      notifyListeners();
+      position = saved;
+      _emitPositionUiState();
     } catch (e) {
-      debugPrint('Failed to enter background video audio mode: $e');
-      _videoBackgroundAudioMode = false;
+      debugPrint('restore video after background failed: $e');
     }
-  }
-
-  Future<void> _restoreForegroundVideoPlayback() async {
-    if (!_videoBackgroundAudioMode || _disposed) return;
-    final item = currentItem;
-    final resumePosition = _backgroundVideoResumePosition ?? position;
-    final shouldKeepPlaying = _audio?.playing ?? false;
-
-    try {
-      await _audio?.pause();
-    } catch (_) {}
-
-    _videoBackgroundAudioMode = false;
-
-    if (item == null || item.type != MediaType.video) {
-      notifyListeners();
-      return;
-    }
-
-    // Reuse current Android controller when available to avoid a full reload
-    // that can leave timeline/progress in a stale visual state.
-    final existingController = _androidController;
-    if (!_useMediaKit && existingController != null) {
-      try {
-        await existingController.setVolume(
-          (volume * _videoVolumeBoost).clamp(0.0, 1.0),
-        );
-        if (resumePosition > Duration.zero) {
-          await existingController.seekTo(resumePosition);
-        }
-        if (shouldKeepPlaying) {
-          await existingController.play();
-        } else {
-          await existingController.pause();
-        }
-        position = resumePosition;
-        _emitPositionUiState();
-        notifyListeners();
-        return;
-      } catch (_) {
-        // Fall back to reload path below.
-      }
-    }
-
-    final generation = ++_loadGeneration;
-    await _loadCurrent(currentIndex, generation);
-    if (_disposed || generation != _loadGeneration) return;
-
-    final controller = _androidController;
-    if (controller != null) {
-      try {
-        if (resumePosition > Duration.zero) {
-          await controller.seekTo(resumePosition);
-        }
-        if (!shouldKeepPlaying) {
-          await controller.pause();
-        }
-      } catch (_) {}
-    }
-
     notifyListeners();
   }
 
@@ -2198,18 +2077,6 @@ class PlayerState with ChangeNotifier {
   Future<void> togglePlay() async {
     if (_disposed) return;
     if (isVideo) {
-      if (_videoBackgroundAudioMode && _audio != null) {
-        _audio!.playing ? await _audio!.pause() : await _audio!.play();
-        notifyListeners();
-        return;
-      }
-      if (_desktopVideoBackgroundAudioMode && _audioMkPlayer != null) {
-        await (_audioMkPlayer!.state.playing
-            ? _audioMkPlayer!.pause()
-            : _audioMkPlayer!.play());
-        notifyListeners();
-        return;
-      }
       if (_useMediaKit && _mkPlayer != null) {
         await (_mkPlayer!.state.playing
             ? _mkPlayer!.pause()
@@ -2235,7 +2102,7 @@ class PlayerState with ChangeNotifier {
               } else {
                 await _audio!.setFilePath(localPath);
               }
-              await _audio!.setVolume(volume * _trackGainMultiplier);
+              await _audio!.setVolume(_audioPlayerVolume);
               await _audio!.play();
             }
           } catch (_) {}
@@ -2262,30 +2129,6 @@ class PlayerState with ChangeNotifier {
         'PlayerState.seek requested: $d, isVideo=$isVideo, _useMediaKit=$_useMediaKit');
     if (isVideo) {
       _videoCompletionFired = false;
-      if (_videoBackgroundAudioMode && _audio != null) {
-        try {
-          await _audio!.seek(d);
-          _backgroundVideoResumePosition = d;
-        } catch (e) {
-          debugPrint('background video seek error: $e');
-        }
-        position = d;
-        _emitPositionUiState();
-        _scheduleNotify();
-        return;
-      }
-      if (_desktopVideoBackgroundAudioMode && _audioMkPlayer != null) {
-        try {
-          await _audioMkPlayer!.seek(d);
-          _backgroundVideoResumePosition = d;
-        } catch (e) {
-          debugPrint('desktop background video seek error: $e');
-        }
-        position = d;
-        _emitPositionUiState();
-        _scheduleNotify();
-        return;
-      }
       if (_useMediaKit && _mkPlayer != null) {
         debugPrint('Seeking media_kit video player to $d');
         try {
@@ -2524,7 +2367,10 @@ class PlayerState with ChangeNotifier {
     // When video is playing, audio is paused+muted; restoring volume here
     // would un-mute it and cause double audio.
     if (!isVideo) {
-      if (_audio != null) _runOnMainThread(() => _audio!.setVolume(effective));
+      if (_audio != null) {
+        final v = effective.clamp(0.0, 1.0).toDouble();
+        _runOnMainThread(() => _audio!.setVolume(v));
+      }
     }
     if (_useMediaKit) {
       if (_mkPlayer != null) {
@@ -2537,9 +2383,6 @@ class PlayerState with ChangeNotifier {
     if (_androidController != null) {
       _androidController!
           .setVolume((effective * _videoVolumeBoost).clamp(0.0, 1.0));
-    }
-    if (_videoBackgroundAudioMode && _audio != null) {
-      _runOnMainThread(() => _audio!.setVolume(effective));
     }
   }
 
@@ -2607,7 +2450,11 @@ class PlayerState with ChangeNotifier {
   }
 
   void _handleCompletion() {
+    // Count the tail of the track that hasn't been committed yet.
+    final total = duration;
+    if (total != null && total > position) position = total;
     _commitCurrentPlayStats();
+    _statsCommittedPosition = Duration.zero;
     position = Duration.zero;
     final queuedIndex = _popNextQueuedIndex();
     if (queuedIndex != null) {
@@ -2671,6 +2518,7 @@ class PlayerState with ChangeNotifier {
 
   Future<void> _loadPrefs() async {
     volume = prefs.getDouble('volume') ?? 0.5;
+    volumeLeveling = prefs.getBool(_volumeLevelingPrefsKey) ?? true;
     shuffle = prefs.getBool('shuffle') ?? false;
     repeatMode = RepeatMode.values[
         (prefs.getInt('repeat') ?? 0).clamp(0, RepeatMode.values.length - 1)];
@@ -2812,8 +2660,62 @@ class PlayerState with ChangeNotifier {
   /// Linear multiplier derived from the current track's ReplayGain value.
   /// 0 dB = 1.0x (no change). +6 dB ≁E2.0x, -6 dB ≁E0.5x.
   double get _trackGainMultiplier {
-    final gainDb = currentItem?.trackGainDb ?? 0.0;
+    final item = currentItem;
+    double gainDb = item?.trackGainDb ?? 0.0;
+    if (volumeLeveling && item != null) {
+      // Measured loudness beats a (rarely present) ReplayGain tag: it pulls
+      // every track to the same target level.
+      gainDb = _levelGainDb[item.path] ?? gainDb;
+    }
     return pow(10, gainDb / 20).toDouble();
+  }
+
+  /// Volume for just_audio, which only accepts 0..1.
+  double get _audioPlayerVolume =>
+      (volume * _trackGainMultiplier).clamp(0.0, 1.0).toDouble();
+
+  // --- Volume leveling ------------------------------------------------------
+
+  bool volumeLeveling = true;
+  final Map<String, double> _levelGainDb = {};
+  LoudnessService? _loudness;
+  static const String _volumeLevelingPrefsKey = 'player_volume_leveling';
+
+  void setVolumeLeveling(bool enabled) {
+    volumeLeveling = enabled;
+    prefs.setBool(_volumeLevelingPrefsKey, enabled);
+    _applyVolume();
+    if (enabled) unawaited(_ensureLoudness(currentItem));
+    notifyListeners();
+  }
+
+  /// Makes sure [item] has a measured gain. Waits briefly so the level is
+  /// right from the first second; slower analyses apply when they finish.
+  Future<void> _ensureLoudness(MediaItem? item, {bool wait = false}) async {
+    if (item == null || !volumeLeveling || kIsWeb) return;
+    if (_levelGainDb.containsKey(item.path)) return;
+    try {
+      final loudness = _loudness ??= LoudnessService(prefs);
+      final local = await _resolveLocalPath(item.path);
+      final cached = loudness.cachedGainDb(local);
+      if (cached != null) {
+        _levelGainDb[item.path] = cached;
+        return;
+      }
+      final future = loudness.gainDbFor(local).then((gain) {
+        if (gain == null || _disposed) return;
+        _levelGainDb[item.path] = gain;
+        if (currentItem?.path == item.path) _applyVolume();
+      });
+      if (wait) {
+        await future.timeout(const Duration(milliseconds: 2500),
+            onTimeout: () {});
+      } else {
+        unawaited(future);
+      }
+    } catch (e) {
+      debugPrint('ensureLoudness failed: $e');
+    }
   }
 
   Future<DateTime?> _modifiedAtForPath(String path) async {
@@ -3747,7 +3649,7 @@ class PlayerState with ChangeNotifier {
                 } else {
                   await _audio!.setFilePath(local);
                 }
-                await _audio!.setVolume(volume * _trackGainMultiplier);
+                await _audio!.setVolume(_audioPlayerVolume);
                 duration = _audio!.duration;
                 position = Duration.zero;
                 await _audio!.play();
@@ -4692,6 +4594,25 @@ class _PlayerScreenState extends State<PlayerScreen>
                   color: Theme.of(context).colorScheme.onSurface),
               tooltip: 'Fix missing metadata',
               onPressed: _showFixAllMetadataDialog,
+            ),
+            IconButton(
+              icon: Icon(Icons.graphic_eq_rounded,
+                  color: context.watch<PlayerState>().volumeLeveling
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.onSurface),
+              tooltip: context.watch<PlayerState>().volumeLeveling
+                  ? 'Volume leveling: on'
+                  : 'Volume leveling: off',
+              onPressed: () {
+                final state = context.read<PlayerState>();
+                state.setVolumeLeveling(!state.volumeLeveling);
+                Snack.show(
+                    context,
+                    state.volumeLeveling
+                        ? 'Volume leveling on - every track plays at the same loudness'
+                        : 'Volume leveling off',
+                    level: SnackLevel.info);
+              },
             ),
             PopupMenuButton<String>(
               tooltip: 'Queue actions',

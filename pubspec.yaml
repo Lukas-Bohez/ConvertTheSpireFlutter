@@ -3,9 +3,9 @@ description: >
   All-in-one media suite -- download from 1800+ sites,
   convert 27+ formats, play, cast to DLNA/UPnP, and
   optionally support the project via donations.
-  Windows · Linux · Android. Built with Flutter.
+  Windows · macOS · Android. Built with Flutter.
 publish_to: 'none'
-version: 13.2.1+1287
+version: 14.0.0+1288
 
 environment:
   sdk: ">=3.0.0 <4.0.0"

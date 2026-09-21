@@ -2,9 +2,17 @@
 
 ## 📥 Quick Downloads
 
-* **[Latest GitHub Release (v13.2.1)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest)**: Get the full-featured app for Windows, Linux, macOS, and Android (APK). The GitHub APK builds are ad-free and unlock all colours by default.
+* **[Latest GitHub Release (v14.0.0)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest)**: Get the full-featured app for Windows, macOS, and Android (APK). The GitHub APK builds are ad-free and unlock all colours by default.
 * **[Official Website (quizthespire.com)](https://quizthespire.com/)**: An additional place to download the app and learn more.
 * **[Google Play Store (Convert The Spire Reborn)](https://play.google.com/store/apps/details?id=com.torrentspire.ai)**: The limited, App Store-compatible version featuring only the torrenting and media player functionality to comply with Play policies.
+
+---
+
+![Convert The Spire Reborn](docs/screenshots/banner.png)
+
+| | |
+|---|---|
+| ![Screenshot 1](docs/screenshots/screenshot-1.png) | ![Screenshot 2](docs/screenshots/screenshot-2.png) |
 
 ---
 
@@ -14,7 +22,7 @@ Hey everyone! If you remember the old web-based Convert the Spire downloader, yo
 
 It is a fully native Flutter app that handles torrent management, media downloading, playlist importing, and playback right on your own device. It started out as a simple, ad-free tool to bulk-download massive playlists, but it has grown into a full media suite. You can now work with torrents and supported sources, cast to your TV, and easily manage your local library.
 
-Because it runs natively on Windows, Linux, Android, and macOS, there is no heavy Electron bloat and no browser overhead. Android Play builds ship with YouTube conversion disabled to match Play policy, while APK builds keep the full downloader available.
+Because it runs natively on Windows, Android, and macOS, there is no heavy Electron bloat and no browser overhead. Android Play builds ship with YouTube conversion disabled to match Play policy, while APK builds keep the full downloader available.
 
 ## Repository Layout
 
@@ -69,7 +77,7 @@ You can download the app directly from our site at [quizthespire.com](https://qu
 * **Windows:** Download the `.zip`, extract it, and run the `.exe`.
 * **Android:** Grab the `.apk` for direct install, or upload the `.aab` to Google Play.
 * **Android TV:** Uses the same Android build; UI is adaptive, but it is not separately certified for every TV model.
-* **Linux:** Download the Linux package. Make sure you have `libmpv` installed on your system!
+* **Linux:** No longer distributed as of v14.0.0 (the build could not be kept reliable). The source is still in the repo if you want to build it yourself.
 * **macOS:** Download the macOS release package or build from source.
 
 ---

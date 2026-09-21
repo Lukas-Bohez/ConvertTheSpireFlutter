@@ -249,8 +249,8 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
               onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           FilledButton(
             onPressed: () async {
-              await widget.repo.clearHistory();
-              Navigator.pop(ctx);
+              await widget.repo.clearBrowsingData();
+              if (ctx.mounted) Navigator.pop(ctx);
               if (mounted) {
                 Snack.show(context, 'Browsing data cleared',
                     level: SnackLevel.info);

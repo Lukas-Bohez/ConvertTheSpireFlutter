@@ -1,18 +1,27 @@
-# Release Notes - v13.2.1
+# Release Notes - v14.0.0
 
-## yt-dlp SABR/player_client fix, browser tab thumbnails, decode fix, live Missing tab
+## Reliable play stats, simpler video playback, real volume leveling, and a friendlier error experience
 
-## Fixes
+### Fixed
 
-* **Fixed YouTube downloads failing with "the page needs to be reloaded" — root cause found and fixed.** The app was forcing `--extractor-args youtube:player_client=tv,web` on every download under the belief that the tv client avoids YouTube's SABR-only streaming experiment. Live verification (2026-09, yt-dlp 2026.08.19, Deno 2.9.6) proved it now *causes* the failure it was meant to prevent: the tv player response returns UNPLAYABLE, and the web client's https formats are skipped as "missing a URL" (YouTube is forcing SABR streaming for that client, yt-dlp#12482). The override is removed; downloads now use yt-dlp's default client order. Verified via bisection on the affected Windows machine and independently confirmed against yt-dlp#12482 and an Arch Linux forum thread — the `tv` client specifically is affected, not just `web`.
-* **Fixed browser tab-switcher screenshot thumbnails stretched to 16:9 at decode time.** The tab-switcher's `Image.memory` and `Image.file` in `browser_screen.dart` passed paired `cacheWidth: 640, cacheHeight: 360` decode hints. A browser page's rendered viewport has no guaranteed aspect, so non-16:9 pages were pre-stretched at decode time. Dropped `cacheWidth`, kept `cacheHeight: 360` (aspect-preserving).
-* **Fixed thumbnail stretching in the now-playing hero card and the mini-player bar.** All thumbnail sites passed paired `cacheWidth`+`cacheHeight` decode hints sized to the display box. `instantiateImageCodec` scales to exactly those dimensions without preserving the source image's own aspect, so square or portrait thumbnails were pre-stretched at decode time. Decode hints are now height-only (aspect-preserving) at every site.
-* **Fixed the playlist "Missing" tab going stale after downloading missing tracks.** `Download Selected` only queues downloads and returns immediately, and nothing ever re-ran the folder compare afterwards. The playlist screen now listens to `AppController` and moves tracks Missing → Matched in memory immediately when a queue item reaches `completed`.
-* **Fixed a misleading "self-update failed" error** from yt-dlp reload-error recovery. The catch block wrapped both the self-update call and the post-update retried download, hiding the fact that a current yt-dlp still can't extract the video. The two outcomes are now reported distinctly.
+* **Play counts and time played now stay in sync.** Listening time was added as the track's *absolute* position on every app-lifecycle/select event (so it double counted), while the play count was only recorded after several awaited steps that could be skipped. Time is now committed as a delta since the last commit (also saved every 30 s and on track completion), the play count is refreshed in the UI immediately, and per-track stats are re-baselined on each new play.
+* **Videos no longer restart from the start after you leave the app.** Videos are now treated differently from songs: the glitchy video-to-audio "background mode" hand-off has been removed. A video simply pauses when the app goes to the background (Android) and keeps its position; on desktop, losing window focus no longer touches playback.
+* **Browser "Clear browsing data" now really clears everything.** It previously wiped history only and needed an open page; quick-access links (recent sites) were never cleared. Both are cleared now, and the new-tab page refreshes right away.
+* **Browser Refresh button** now performs a real reload and refreshes the quick-access tiles on the new-tab page (it used to do nothing there).
 
-## Build Notes
+### Improved
 
-* GitHub release tag: v13.2.1
-* Release page: [v13.2.1](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v13.2.1)
-* `flutter analyze` clean; all tests pass; release workflow builds Windows, Linux, macOS, and Android artifacts.
+* **Volume leveling (new, on by default).** Every track/video is measured once (FFmpeg `volumedetect`, cached) and played at a common target loudness, so a very quiet track and a very loud one sound equally loud. Toggle it with the equaliser icon in the player toolbar.
+* **Errors are impossible to miss.** Error messages now have a red border, a bug icon, a longer display time and a light-hearted headline above the real message.
+* **Releases now include screenshots and a README link** automatically (appended by the release workflow).
 
+### Removed
+
+* **Linux builds are discontinued.** The release workflow no longer builds or publishes Linux artifacts.
+
+### Build Notes
+
+* Android Play AAB built with `--flavor play` (version 14.0.0+1288).
+* Release workflow builds Windows, macOS, and Android artifacts.
+* GitHub release tag: v14.0.0
+* Release page: [v14.0.0](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v14.0.0)
