@@ -177,6 +177,17 @@ jobs:
             Write-Error "Build output not found: $src"
             exit 1
           }
+          # Guard the tidy layout: the root must hold only the exe, data/ and
+          # dll/ - never loose DLLs (they all live in dll/).
+          $rootDlls = @(Get-ChildItem -Path $src -File -Filter *.dll)
+          if ($rootDlls.Count -gt 0) {
+            Write-Error "Loose DLLs in the release root: $($rootDlls.Name -join ', ')"
+            exit 1
+          }
+          if (!(Test-Path "$src\dll\flutter_windows.dll")) {
+            Write-Error "dll\flutter_windows.dll is missing"
+            exit 1
+          }
           # Change into the Release directory so Compress-Archive stores flat
           # paths (no long build\windows\x64\runner\Release prefix). This
           # avoids the Windows MAX_PATH limit when users extract with the

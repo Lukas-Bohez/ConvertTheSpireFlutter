@@ -1,27 +1,27 @@
-# Release Notes - v14.0.0
+# Release Notes - v14.0.1
 
-## Reliable play stats, simpler video playback, real volume leveling, and a friendlier error experience
+## Tidy Windows download, fixed Android icon, and the demo video
 
 ### Fixed
 
-* **Play counts and time played now stay in sync.** Listening time was added as the track's *absolute* position on every app-lifecycle/select event (so it double counted), while the play count was only recorded after several awaited steps that could be skipped. Time is now committed as a delta since the last commit (also saved every 30 s and on track completion), the play count is refreshed in the UI immediately, and per-track stats are re-baselined on each new play.
-* **Videos no longer restart from the start after you leave the app.** Videos are now treated differently from songs: the glitchy video-to-audio "background mode" hand-off has been removed. A video simply pauses when the app goes to the background (Android) and keeps its position; on desktop, losing window focus no longer touches playback.
-* **Browser "Clear browsing data" now really clears everything.** It previously wiped history only and needed an open page; quick-access links (recent sites) were never cleared. Both are cleared now, and the new-tab page refreshes right away.
-* **Browser Refresh button** now performs a real reload and refreshes the quick-access tiles on the new-tab page (it used to do nothing there).
+* **The Windows download is no longer a wall of DLLs.** The zip root now contains just `convert_the_spire_reborn.exe`, a `data/` folder and a `dll/` folder holding every library, so the exe is easy to find. This works by delay-loading the engine and plugin DLLs and pointing the loader at `dll/` before they are first used (the earlier attempt crashed at launch because those imports were resolved before the app started). The exe now links the C runtime statically, so it needs no runtime DLLs beside it.
+* **Android launcher icon was cut off and had see-through parts.** The icon is rebuilt from the real logo with an opaque background and the whole logo (including the music note) kept inside the adaptive-icon safe zone, so it is no longer zoomed in or cropped by round/squircle masks. A matching legacy icon is included for older Android versions.
+* **Old AI-generated logo removed from the Android TV banner and Play TV images.** The TV banner, the two TV screenshots and the promo image now use the proper logo and real app screenshots.
+* **Windows builds no longer fail on machines using a non-UTF-8 system code page** (for example Japanese code page 932): sources are now compiled as UTF-8.
+
+### Added
+
+* **Demo video.** Watch the tour on YouTube: https://youtu.be/66Rx8PDY_r0. It is linked from the README, at the top of every GitHub release and from the in-app Support screen.
+* **Store assets folder.** `store/google-play/` holds every Play Console graphic plus one script that regenerates all of them (and the Android launcher icons) from the real logo and screenshots.
 
 ### Improved
 
-* **Volume leveling (new, on by default).** Every track/video is measured once (FFmpeg `volumedetect`, cached) and played at a common target loudness, so a very quiet track and a very loud one sound equally loud. Toggle it with the equaliser icon in the player toolbar.
-* **Errors are impossible to miss.** Error messages now have a red border, a bug icon, a longer display time and a light-hearted headline above the real message.
-* **Releases now include screenshots and a README link** automatically (appended by the release workflow).
-
-### Removed
-
-* **Linux builds are discontinued.** The release workflow no longer builds or publishes Linux artifacts.
+* The release workflow now fails if any loose DLL ends up in the Windows zip root.
+* Unit tests for the volume-leveling gain calculation.
 
 ### Build Notes
 
-* Android Play AAB built with `--flavor play` (version 14.0.0+1288).
+* Android Play AAB built with `--flavor play` (version 14.0.1+1289).
 * Release workflow builds Windows, macOS, and Android artifacts.
-* GitHub release tag: v14.0.0
-* Release page: [v14.0.0](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v14.0.0)
+* GitHub release tag: v14.0.1
+* Release page: [v14.0.1](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v14.0.1)

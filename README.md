@@ -2,9 +2,17 @@
 
 ## 📥 Quick Downloads
 
-* **[Latest GitHub Release (v14.0.0)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest)**: Get the full-featured app for Windows, macOS, and Android (APK). The GitHub APK builds are ad-free and unlock all colours by default.
+* **[Latest GitHub Release (v14.0.1)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest)**: Get the full-featured app for Windows, macOS, and Android (APK). The GitHub APK builds are ad-free and unlock all colours by default.
 * **[Official Website (quizthespire.com)](https://quizthespire.com/)**: An additional place to download the app and learn more.
 * **[Google Play Store (Convert The Spire Reborn)](https://play.google.com/store/apps/details?id=com.torrentspire.ai)**: The limited, App Store-compatible version featuring only the torrenting and media player functionality to comply with Play policies.
+
+---
+
+## ▶ Watch the demo
+
+[![Convert the Spire Reborn demonstration video](https://img.youtube.com/vi/66Rx8PDY_r0/maxresdefault.jpg)](https://youtu.be/66Rx8PDY_r0)
+
+*A quick tour of the app: [watch on YouTube](https://youtu.be/66Rx8PDY_r0).*
 
 ---
 
@@ -66,10 +74,10 @@ A concise overview of the main layers:
 
 You can download the app directly from our site at [quizthespire.com](https://quizthespire.com/) or head over to the [GitHub Releases](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases) page for the pre-built binaries and Play-ready AABs. *(See the Quick Downloads section at the top of this page for direct links!)*
 
-* **Windows:** Download the `.zip`, extract it, and run the `.exe`.
+* **Windows:** Download the `.zip`, extract it, and run `convert_the_spire_reborn.exe`. The folder is kept tidy: just the `.exe`, `data/` and a `dll/` folder that holds every library.
 * **Android:** Grab the `.apk` for direct install, or upload the `.aab` to Google Play.
 * **Android TV:** Uses the same Android build; UI is adaptive, but it is not separately certified for every TV model.
-* **Linux:** No longer distributed as of v14.0.0 (the build could not be kept reliable). The source is still in the repo if you want to build it yourself.
+* **Linux:** No longer distributed as of v14.0.1 (the build could not be kept reliable). The source is still in the repo if you want to build it yourself.
 * **macOS:** Download the macOS release package or build from source.
 
 ---

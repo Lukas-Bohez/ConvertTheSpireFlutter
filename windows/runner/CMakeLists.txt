@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
+# cmake_minimum_required resets policies; re-enable so MSVC_RUNTIME_LIBRARY works.
+cmake_policy(SET CMP0091 NEW)
 project(runner LANGUAGES CXX)
 
 # Define the application target. To change its name, change BINARY_NAME in the
@@ -45,9 +47,15 @@ add_dependencies(${BINARY_NAME} flutter_assemble)
 set(CMAKE_INSTALL_UCRT_LIBRARIES TRUE)
 set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
 include(InstallRequiredSystemLibraries)
+# They go into dll/ (not the exe folder) so the release root stays tidy; the
+# plugin DLLs in dll/ find them there via SetDllDirectory (see main.cpp). The
+# exe itself links the C runtime statically (see the top-level CMakeLists.txt)
+# so it needs none of them at process start.
+add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${BINARY_NAME}>/dll")
 foreach(lib ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS})
   add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${lib}" "$<TARGET_FILE_DIR:${BINARY_NAME}>")
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${lib}" "$<TARGET_FILE_DIR:${BINARY_NAME}>/dll")
 endforeach()
 
 # If the media_kit plugin bundles an older msvcp140.dll inside its plugin

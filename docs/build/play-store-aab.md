@@ -24,4 +24,4 @@ The Play bundle must keep these manifest entries after merging:
 * `android.hardware.touchscreen` with `required="false"`
 * `android.hardware.faketouch` with `required="false"`
 * `LEANBACK_LAUNCHER`
-* `android:banner="@drawable/tv_banner"`
+* `android:banner="@drawable/banner" (regenerate with store/google-play/build_store_assets.py)`

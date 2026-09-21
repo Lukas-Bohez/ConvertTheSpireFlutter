@@ -72,13 +72,25 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   }
   ::SetUnhandledExceptionFilter(WriteNativeCrashDump);
 
-  // All plugin DLLs remain in the root directory next to the executable so
-  // the Windows loader can resolve them during process startup. We
-  // deliberately do NOT move DLLs into a dlls/ subfolder or call
-  // SetDllDirectoryW: that API only takes effect for LoadLibrary calls issued
-  // after it returns, but the loader has already bound the executable's direct
-  // import dependencies before wWinMain begins, so any DLL moved to a
-  // subfolder at that point would be lost and the process would fail to start.
+  // All DLLs live in a "dll" folder next to the executable so the release
+  // root only contains the exe, data/ and dll/. The exe delay-loads
+  // flutter_windows.dll and every plugin DLL (see windows/CMakeLists.txt), so
+  // nothing has been bound yet: point the loader at dll/ *before* the first
+  // Flutter/plugin call. LoadLibrary("libmpv-2.dll") etc. from Dart FFI then
+  // resolves through the same directory. Harmless if dll/ does not exist.
+  {
+    wchar_t exe_path[MAX_PATH] = {};
+    const DWORD len = GetModuleFileNameW(nullptr, exe_path, MAX_PATH);
+    if (len > 0 && len < MAX_PATH) {
+      std::wstring dll_dir(exe_path, len);
+      const size_t sep = dll_dir.find_last_of(L"\\/");
+      if (sep != std::wstring::npos) {
+        dll_dir.resize(sep);
+        dll_dir += L"\\dll";
+        ::SetDllDirectoryW(dll_dir.c_str());
+      }
+    }
+  }
 
   // Certain GPU/driver combinations crash inside dcomp.dll when the engine tries
   // to initialize DirectComposition.  Force software rendering to avoid those

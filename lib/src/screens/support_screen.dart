@@ -600,6 +600,16 @@ class _SupportScreenState extends State<SupportScreen> {
         ],
         Card(
           child: ListTile(
+            leading: const Icon(Icons.play_circle_fill, color: Colors.red),
+            title: const Text('Watch the demo video'),
+            subtitle: const Text('A quick tour of the app on YouTube'),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () => _openUrl('https://youtu.be/66Rx8PDY_r0'),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: ListTile(
             leading: const Icon(Icons.coffee, color: Colors.brown),
             title: const Text('Buy Me a Coffee'),
             subtitle: const Text('Help keep this project free & open-source'),

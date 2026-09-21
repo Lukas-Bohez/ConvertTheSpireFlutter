@@ -1,5 +1,8 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
+# Honour MSVC_RUNTIME_LIBRARY / CMAKE_MSVC_RUNTIME_LIBRARY. Under a 3.14 minimum
+# this policy defaults to OLD, which silently ignores them.
+cmake_policy(SET CMP0091 NEW)
 project(convert_the_spire_reborn LANGUAGES CXX)
 
 # Workaround for flutter_inappwebview_windows plugin: its CMakeLists uses
@@ -51,12 +54,16 @@ add_definitions(-DUNICODE -D_UNICODE)
 # Force the MSVC runtime library selection so that stale CMake caches can never
 # accidentally produce debug-CRT binaries in a Release build.  This policy is
 # inherited by all targets including plugins.
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>")
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 # Silence MSVC warning C4821 (BOM/unicode encoding detection) treated as error
 # Some Windows SDK headers can trigger C4821; disable it globally for MSVC.
 if(MSVC)
   add_compile_options(/wd4821)
+  # Read sources as UTF-8 regardless of the system code page. Without this,
+  # plugin headers containing non-ASCII bytes fail with C4819 (treated as an
+  # error) on machines using e.g. code page 932/936/949.
+  add_compile_options(/utf-8)
 endif()
 
 # Compilation settings that should be applied to most targets.
@@ -91,6 +98,27 @@ add_subdirectory("runner")
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# --- Tidy release folder: keep every DLL in "dll/" -------------------------
+# The exe's *direct* imports (flutter_windows.dll and each plugin DLL) are bound
+# by the Windows loader before wWinMain runs, which is why calling
+# SetDllDirectory from wWinMain alone could not work (it crashed at launch in
+# 13.0.x). Delay-loading them defers the load to first use, i.e. after
+# wWinMain has pointed the loader at dll/ (see runner/main.cpp). The result:
+# the release root holds only the exe, data/ and dll/.
+target_link_libraries(${BINARY_NAME} PRIVATE delayimp)
+target_link_options(${BINARY_NAME} PRIVATE "/DELAYLOAD:flutter_windows.dll")
+foreach(plugin ${FLUTTER_PLUGIN_LIST})
+  target_link_options(${BINARY_NAME} PRIVATE
+    "/DELAYLOAD:$<TARGET_FILE_NAME:${plugin}_plugin>")
+endforeach(plugin)
+
+# Link the C/C++ runtime statically into the exe (and the wrapper library it
+# embeds) so the exe has no startup dependency on VCRUNTIME/MSVCP/UCRT DLLs and
+# nothing but the exe has to sit in the release root. Plugin DLLs keep the
+# shared runtime; only C APIs cross the exe/DLL boundary, so mixing is safe.
+set_target_properties(${BINARY_NAME} flutter_wrapper_app PROPERTIES
+  MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 # The ANGLE archive bundled by media_kit_libs_windows_video includes a zlib.dll
 # built against the debug CRT (VCRUNTIME140D.dll / ucrtbased.dll).  Nothing in
 # the release folder depends on it (verified with dumpbin /dependents), and its
@@ -118,7 +146,8 @@ else()
 endif()
 
 set(INSTALL_BUNDLE_DATA_DIR "${CMAKE_INSTALL_PREFIX}/data")
-set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}")
+# All DLLs (engine, plugins, bundled native libs) live in dll/ next to the exe.
+set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}/dll")
 
 install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
   COMPONENT Runtime)
@@ -177,3 +206,13 @@ if(IS_MULTICONFIG)
   " COMPONENT Runtime)
 endif()
 
+# Some plugins copy their DLLs next to the exe during their own build (e.g.
+# WebView2Loader.dll). Move any such stragglers into dll/ so the release root
+# only holds: exe, data/, dll/.
+install(CODE "
+  file(GLOB _root_dlls \"${CMAKE_INSTALL_PREFIX}/*.dll\")
+  foreach(_d \${_root_dlls})
+    file(COPY \"\${_d}\" DESTINATION \"${CMAKE_INSTALL_PREFIX}/dll\")
+    file(REMOVE \"\${_d}\")
+  endforeach()
+" COMPONENT Runtime)

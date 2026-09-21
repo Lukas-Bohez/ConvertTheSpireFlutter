@@ -97,12 +97,7 @@ class LoudnessService {
       final max = _parse(output, 'max_volume');
       if (mean == null || mean.isNaN || mean < -90) return null;
 
-      var gain = targetMeanDb - mean;
-      if (max != null && gain > 0) {
-        final headroom = peakCeilingDb - max;
-        if (headroom < gain) gain = headroom < 0 ? 0 : headroom;
-      }
-      gain = gain.clamp(maxCutDb, maxBoostDb).toDouble();
+      final gain = computeGainDb(mean, max);
       _cache[key] = gain;
       await _save();
       return gain;
@@ -110,6 +105,18 @@ class LoudnessService {
       debugPrint('LoudnessService: analysis failed for $localPath: $e');
       return null;
     }
+  }
+
+  /// Gain (dB) that moves a track with the given mean/peak volume to
+  /// [targetMeanDb], without boosting past [peakCeilingDb] (no clipping) and
+  /// within [maxCutDb]..[maxBoostDb].
+  static double computeGainDb(double meanDb, double? maxDb) {
+    var gain = targetMeanDb - meanDb;
+    if (maxDb != null && gain > 0) {
+      final headroom = peakCeilingDb - maxDb;
+      if (headroom < gain) gain = headroom < 0 ? 0 : headroom;
+    }
+    return gain.clamp(maxCutDb, maxBoostDb).toDouble();
   }
 
   double? _parse(String output, String field) {
