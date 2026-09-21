@@ -107,3 +107,6 @@ keystorefilesupload/
 key reset/
 C/
 todo/
+
+# local, not for publication
+github-support-request.md
