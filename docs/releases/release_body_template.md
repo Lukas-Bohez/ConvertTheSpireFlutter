@@ -1,4 +1,4 @@
-![Convert The Spire Reborn](https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/docs/screenshots/banner.png)
+![Convert The Spire Reborn](https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/main/docs/screenshots/banner.png)
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/screenshots/media-player-audio-controls.webp" width="32%" alt="media player audio controls">
