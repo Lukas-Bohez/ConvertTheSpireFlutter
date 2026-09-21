@@ -1,0 +1,247 @@
+{
+  "@@locale": "en",
+  "tabSearch": "Search",
+  "@tabSearch": {
+    "description": "Navigation tab: search for media to download"
+  },
+  "tabMultiSearch": "Search+",
+  "@tabMultiSearch": {
+    "description": "Navigation tab: multi-source search"
+  },
+  "tabBrowser": "Browser",
+  "@tabBrowser": {
+    "description": "Navigation tab: built-in web browser"
+  },
+  "tabQueue": "Queue",
+  "@tabQueue": {
+    "description": "Navigation tab: download queue"
+  },
+  "tabPlaylists": "Playlists",
+  "@tabPlaylists": {
+    "description": "Navigation tab: saved playlists"
+  },
+  "tabImport": "Import",
+  "@tabImport": {
+    "description": "Navigation tab: bulk import"
+  },
+  "tabStats": "Statistics",
+  "@tabStats": {
+    "description": "Navigation tab: statistics"
+  },
+  "tabSettings": "Settings",
+  "@tabSettings": {
+    "description": "Navigation tab: settings"
+  },
+  "tabSupport": "Support",
+  "@tabSupport": {
+    "description": "Navigation tab: support the project"
+  },
+  "tabConvert": "Convert",
+  "@tabConvert": {
+    "description": "Navigation tab: file conversion"
+  },
+  "tabLogs": "Logs",
+  "@tabLogs": {
+    "description": "Navigation tab: activity logs"
+  },
+  "tabGuide": "Guide",
+  "@tabGuide": {
+    "description": "Navigation tab: user guide"
+  },
+  "tabPlayer": "Player",
+  "@tabPlayer": {
+    "description": "Navigation tab: media player"
+  },
+  "tabHome": "Home",
+  "@tabHome": {
+    "description": "Navigation tab: home screen"
+  },
+  "tabTorrents": "Torrents",
+  "@tabTorrents": {
+    "description": "Navigation tab: torrent client"
+  },
+  "downloadComplete": "Download complete",
+  "@downloadComplete": {
+    "description": "Download finished successfully"
+  },
+  "downloadFailed": "Download failed",
+  "@downloadFailed": {
+    "description": "Download ended with an error"
+  },
+  "downloadCancelled": "Cancelled",
+  "@downloadCancelled": {
+    "description": "Download was cancelled"
+  },
+  "downloading": "Downloading",
+  "@downloading": {
+    "description": "Download in progress"
+  },
+  "queued": "Queued",
+  "@queued": {
+    "description": "Waiting in the download queue"
+  },
+  "converting": "Converting",
+  "@converting": {
+    "description": "File conversion in progress"
+  },
+  "paused": "Paused",
+  "@paused": {
+    "description": "Playback or download is paused"
+  },
+  "actionDownload": "Download",
+  "@actionDownload": {
+    "description": "Button: start a download"
+  },
+  "actionCancel": "Cancel",
+  "@actionCancel": {
+    "description": "Button: cancel"
+  },
+  "actionRetry": "Retry",
+  "@actionRetry": {
+    "description": "Button: try again"
+  },
+  "actionDelete": "Delete",
+  "@actionDelete": {
+    "description": "Button: delete"
+  },
+  "actionRemove": "Remove",
+  "@actionRemove": {
+    "description": "Button: remove an item from a list"
+  },
+  "actionPause": "Pause",
+  "@actionPause": {
+    "description": "Button: pause"
+  },
+  "actionResume": "Resume",
+  "@actionResume": {
+    "description": "Button: resume"
+  },
+  "actionPlay": "Play",
+  "@actionPlay": {
+    "description": "Button: play"
+  },
+  "actionSave": "Save",
+  "@actionSave": {
+    "description": "Button: save"
+  },
+  "actionOpen": "Open",
+  "@actionOpen": {
+    "description": "Button: open"
+  },
+  "actionClose": "Close",
+  "@actionClose": {
+    "description": "Button: close"
+  },
+  "actionClear": "Clear",
+  "@actionClear": {
+    "description": "Button: clear a list or field"
+  },
+  "actionRefresh": "Refresh",
+  "@actionRefresh": {
+    "description": "Button: refresh/reload"
+  },
+  "actionAdd": "Add",
+  "@actionAdd": {
+    "description": "Button: add"
+  },
+  "actionDone": "Done",
+  "@actionDone": {
+    "description": "Button: confirm and finish"
+  },
+  "actionShare": "Share",
+  "@actionShare": {
+    "description": "Button: share"
+  },
+  "actionCopy": "Copy",
+  "@actionCopy": {
+    "description": "Button: copy to clipboard"
+  },
+  "actionSelectAll": "Select all",
+  "@actionSelectAll": {
+    "description": "Button: select every item"
+  },
+  "playerAll": "All",
+  "@playerAll": {
+    "description": "Player filter: all media"
+  },
+  "playerSongs": "Songs",
+  "@playerSongs": {
+    "description": "Player filter: audio files"
+  },
+  "playerVideos": "Videos",
+  "@playerVideos": {
+    "description": "Player filter: video files"
+  },
+  "playerFavourites": "Favourites",
+  "@playerFavourites": {
+    "description": "Player filter: favourited media"
+  },
+  "playerNowPlaying": "Now playing",
+  "@playerNowPlaying": {
+    "description": "Label above the current track"
+  },
+  "playerShuffle": "Shuffle",
+  "@playerShuffle": {
+    "description": "Player control: shuffle order"
+  },
+  "playerRepeat": "Repeat",
+  "@playerRepeat": {
+    "description": "Player control: repeat"
+  },
+  "playerNoFavourites": "No favourites yet",
+  "@playerNoFavourites": {
+    "description": "Empty state for favourites"
+  },
+  "castToDevice": "Cast to device",
+  "@castToDevice": {
+    "description": "Send playback to a TV or speaker"
+  },
+  "castScanning": "Scanning for devices…",
+  "@castScanning": {
+    "description": "Looking for cast targets"
+  },
+  "castNoDevices": "No devices found",
+  "@castNoDevices": {
+    "description": "No cast targets were found"
+  },
+  "castDisconnect": "Disconnect",
+  "@castDisconnect": {
+    "description": "Stop casting"
+  },
+  "commonError": "Error",
+  "@commonError": {
+    "description": "Generic error label"
+  },
+  "commonLoading": "Loading…",
+  "@commonLoading": {
+    "description": "Generic loading label"
+  },
+  "commonYes": "Yes",
+  "@commonYes": {
+    "description": "Affirmative answer"
+  },
+  "commonNo": "No",
+  "@commonNo": {
+    "description": "Negative answer"
+  },
+  "commonOk": "OK",
+  "@commonOk": {
+    "description": "Acknowledge a message"
+  },
+  "commonSearchHint": "Search…",
+  "@commonSearchHint": {
+    "description": "Placeholder text in a search box"
+  },
+  "commonEmpty": "Nothing here yet",
+  "@commonEmpty": {
+    "description": "Generic empty-list state"
+  },
+  "settingsLanguage": "Language",
+  "@settingsLanguage": {
+    "description": "Settings entry: app language"
+  },
+  "settingsLanguageSystem": "System default",
+  "@settingsLanguageSystem": {
+    "description": "Language option: follow the device language"
+  }
+}

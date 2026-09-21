@@ -1,27 +1,25 @@
-# Release Notes - v14.0.1
+# Release Notes - v14.1.0
 
-## Tidy Windows download, fixed Android icon, and the demo video
+## Playlists past 100 videos on Android, and the app in 18 languages
 
 ### Fixed
 
-* **The Windows download is no longer a wall of DLLs.** The zip root now contains just `convert_the_spire_reborn.exe`, a `data/` folder and a `dll/` folder holding every library, so the exe is easy to find. This works by delay-loading the engine and plugin DLLs and pointing the loader at `dll/` before they are first used (the earlier attempt crashed at launch because those imports were resolved before the app started). The exe now links the C runtime statically, so it needs no runtime DLLs beside it.
-* **Android launcher icon was cut off and had see-through parts.** The icon is rebuilt from the real logo with an opaque background and the whole logo (including the music note) kept inside the adaptive-icon safe zone, so it is no longer zoomed in or cropped by round/squircle masks. A matching legacy icon is included for older Android versions.
-* **Old AI-generated logo removed from the Android TV banner and Play TV images.** The TV banner, the two TV screenshots and the promo image now use the proper logo and real app screenshots.
-* **Windows builds no longer fail on machines using a non-UTF-8 system code page** (for example Japanese code page 932): sources are now compiled as UTF-8.
+* **Playlists stopped at 100 videos on Android.** This is the big one. Android has no yt-dlp fallback, so every playlist is enumerated by the in-app page parser, which walks YouTube page by page using a "continuation token". YouTube emits that token in several different shapes and switches between them without notice — the parser only recognised one of them, so on any playlist whose page used a different shape pagination stopped dead after the first page, at exactly 100 entries. All known token shapes are now recognised, so an 800-item playlist enumerates fully on a phone.
+* **Continuation pages that used the classic item format parsed to zero videos.** YouTube mixes two item layouts (`lockupViewModel` and `playlistVideoRenderer`) and can return a different one on page 2 than on page 1. Only the first was parsed, so some playlists paged forever while adding nothing. Both layouts are now read, and pages are merged by video id so nothing is counted twice.
+* **Pagination could stall or spin.** Each continuation token is now spent once, and entries are de-duplicated by video id, so a repeated token can no longer loop forever re-fetching the same page.
 
 ### Added
 
-* **Demo video.** Watch the tour on YouTube: https://youtu.be/66Rx8PDY_r0. It is linked from the README, at the top of every GitHub release and from the in-app Support screen.
-* **Store assets folder.** `store/google-play/` holds every Play Console graphic plus one script that regenerates all of them (and the Android launcher icons) from the real logo and screenshots.
+* **The app now speaks 18 languages.** It follows your device language automatically, with English as the fallback: Arabic, Dutch, English, French, German, Hindi, Indonesian, Italian, Japanese, Korean, Polish, Portuguese, Russian, Simplified Chinese, Spanish, Turkish, Ukrainian and Vietnamese. Right-to-left layout works for Arabic. This first pass covers the navigation and the common actions and states; the longer screens are still English and will be translated as native speakers review them. Contributions are very welcome — the files are plain `.arb` under `lib/l10n/`.
 
 ### Improved
 
-* The release workflow now fails if any loose DLL ends up in the Windows zip root.
-* Unit tests for the volume-leveling gain calculation.
+* The playlist parser is covered by offline tests for every token shape and both item layouts, so a future YouTube change fails a test instead of silently capping playlists again.
+* Every translation file is checked in CI against the English template — a missing or blank translation fails the build rather than showing a blank label.
 
 ### Build Notes
 
-* Android Play AAB built with `--flavor play` (version 14.0.1+1289).
-* Release workflow builds Windows, macOS, and Android artifacts.
-* GitHub release tag: v14.0.1
-* Release page: [v14.0.1](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v14.0.1)
+* Android Play AAB built with `--flavor play` (version 14.1.0+1290).
+* `flutter analyze` clean; 150 tests pass (was 86).
+* GitHub release tag: v14.1.0
+* Release page: [v14.1.0](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v14.1.0)

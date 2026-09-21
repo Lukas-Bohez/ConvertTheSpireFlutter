@@ -218,23 +218,42 @@ class PlaylistService {
         'visitorData',
       ]);
       var page = 1;
-      const maxPages = 100; // 100 pages x ~100 entries covers 800+ easily.
+      // 1000 pages x ~100 entries. Pagination ends on its own when YouTube runs
+      // out of continuation tokens; this is only a runaway guard.
+      const maxPages = 1000;
+      final seenIds = <String>{};
+      final spentTokens = <String>{};
       while (root != null && page <= maxPages) {
-        final lockups = <Map<String, dynamic>>[];
-        _collectVideoLockups(root, lockups);
-        for (final lockup in lockups) {
+        var added = 0;
+        for (final video in _videosFromPage(root)) {
+          if (!seenIds.add(video.id.value)) continue;
+          results.add(video);
+          added++;
           if (cap != null && results.length >= cap) return results;
-          final video = _videoFromLockup(lockup);
-          if (video != null) results.add(video);
         }
-        _logs?.add('Lockup parser page $page: +${lockups.length} videos '
+        _logs?.add('Lockup parser page $page: +$added videos '
             '(total ${results.length})');
         if (cap != null && results.length >= cap) break;
         if (expectedCount > 0 && results.length >= expectedCount) break;
         final tokens = <String>[];
         _collectContinuationTokens(root, tokens);
-        if (tokens.isEmpty) break;
-        root = await _browseContinuation(client, tokens.first, visitorData);
+        // Spend each token once. A response that repeats a token we already
+        // used would otherwise loop forever re-fetching the same entries.
+        String? next;
+        for (final token in tokens) {
+          if (spentTokens.add(token)) {
+            next = token;
+            break;
+          }
+        }
+        if (next == null) {
+          if (expectedCount > 0 && results.length < expectedCount) {
+            _logs?.add('Lockup parser: no further continuation token after '
+                '${results.length}/$expectedCount entries.');
+          }
+          break;
+        }
+        root = await _browseContinuation(client, next, visitorData);
         page++;
       }
     } finally {
@@ -285,14 +304,7 @@ class PlaylistService {
   static List<Video> parsePlaylistHtmlForTesting(String html) {
     final root = _extractYtInitialData(html);
     if (root == null) return const [];
-    final lockups = <Map<String, dynamic>>[];
-    _collectVideoLockups(root, lockups);
-    final videos = <Video>[];
-    for (final lockup in lockups) {
-      final video = _videoFromLockup(lockup);
-      if (video != null) videos.add(video);
-    }
-    return videos;
+    return _videosFromPage(root);
   }
 
   /// Returns the pagination tokens found in a YouTube playlist HTML page.
@@ -459,18 +471,41 @@ class PlaylistService {
     }
   }
 /// Collects every continuation token for pagination.
+  /// Collects the "next page" tokens from a playlist page or a continuation
+  /// response.
+  ///
+  /// YouTube ships this marker in more than one shape and switches between
+  /// them without notice:
+  ///   * `continuationItemViewModel.continuationViewModel.continuation`
+  ///   * `continuationItemRenderer.continuationEndpoint.continuationCommand.token`
+  ///   * a bare `continuationCommand.token`
+  /// Only the first was recognised before, so a playlist whose page used the
+  /// renderer shape stopped dead after the first page - that is the "playlists
+  /// only load 100 videos" bug on Android, which has no yt-dlp fallback.
   static void _collectContinuationTokens(dynamic node, List<String> out) {
     if (node is Map) {
-      final item = node['continuationItemViewModel'];
-      if (item is Map) {
-        final vm = item['continuationViewModel'];
-        if (vm is Map) {
-          final token = vm['continuation'];
-          if (token is String && token.isNotEmpty) out.add(token);
+      for (final path in const [
+        ['continuationItemViewModel', 'continuationViewModel', 'continuation'],
+        [
+          'continuationItemRenderer',
+          'continuationEndpoint',
+          'continuationCommand',
+          'token'
+        ],
+        ['continuationCommand', 'token'],
+        ['continuationEndpoint', 'continuationCommand', 'token'],
+      ]) {
+        final token = _digString(node, path);
+        if (token != null && token.isNotEmpty && !out.contains(token)) {
+          out.add(token);
         }
       }
       for (final entry in node.entries) {
-        if (entry.key == 'continuationItemViewModel') continue;
+        if (entry.key == 'continuationItemViewModel' ||
+            entry.key == 'continuationItemRenderer' ||
+            entry.key == 'continuationCommand') {
+          continue;
+        }
         _collectContinuationTokens(entry.value, out);
       }
     } else if (node is List) {
@@ -478,6 +513,109 @@ class PlaylistService {
         _collectContinuationTokens(item, out);
       }
     }
+  }
+
+  /// Every video on one page, in document order, whichever item shape YouTube
+  /// used. Continuation pages often fall back to the classic
+  /// `playlistVideoRenderer` even when page 1 used the new `lockupViewModel`.
+  static List<Video> _videosFromPage(dynamic root) {
+    final videos = <Video>[];
+    final lockups = <Map<String, dynamic>>[];
+    _collectVideoLockups(root, lockups);
+    for (final lockup in lockups) {
+      final video = _videoFromLockup(lockup);
+      if (video != null) videos.add(video);
+    }
+    final renderers = <Map<String, dynamic>>[];
+    _collectPlaylistVideoRenderers(root, renderers);
+    for (final renderer in renderers) {
+      final video = _videoFromPlaylistRenderer(renderer);
+      if (video != null) videos.add(video);
+    }
+    return videos;
+  }
+
+  static void _collectPlaylistVideoRenderers(
+      dynamic node, List<Map<String, dynamic>> out) {
+    if (node is Map) {
+      final renderer = node['playlistVideoRenderer'];
+      if (renderer is Map) out.add(renderer.cast<String, dynamic>());
+      for (final entry in node.entries) {
+        if (entry.key == 'playlistVideoRenderer') continue;
+        _collectPlaylistVideoRenderers(entry.value, out);
+      }
+    } else if (node is List) {
+      for (final item in node) {
+        _collectPlaylistVideoRenderers(item, out);
+      }
+    }
+  }
+
+  /// Builds a [Video] from the classic `playlistVideoRenderer` shape.
+  static Video? _videoFromPlaylistRenderer(Map<String, dynamic> renderer) {
+    try {
+      final videoIdRaw = (renderer['videoId'] ?? '').toString().trim();
+      if (videoIdRaw.length != 11) return null;
+      final title = _rendererText(renderer['title']);
+      if (title == null || title.isEmpty) return null;
+      var author = _rendererText(renderer['shortBylineText']) ??
+          _rendererText(renderer['longBylineText']) ??
+          _rendererText(renderer['ownerText']);
+      if (author != null && author.startsWith('@')) {
+        author = author.substring(1);
+      }
+      Duration? duration;
+      final seconds =
+          int.tryParse((renderer['lengthSeconds'] ?? '').toString().trim());
+      if (seconds != null && seconds > 0) {
+        duration = Duration(seconds: seconds);
+      } else {
+        duration = _parseDurationText(_rendererText(renderer['lengthText']));
+      }
+      // _digString searches recursively, so this finds browseId nested under
+      // runs[0].navigationEndpoint.browseEndpoint without naming each hop.
+      final channelIdStr =
+          _digString(renderer, const ['shortBylineText', 'browseId']) ?? '';
+      final channelId =
+          (channelIdStr.startsWith('UC') && channelIdStr.length == 24)
+              ? ChannelId(channelIdStr)
+              : ChannelId('UCdddddddddddddddddddddd');
+      return Video(
+        VideoId(videoIdRaw),
+        title,
+        author ?? '',
+        channelId,
+        null,
+        null,
+        null,
+        '',
+        duration,
+        ThumbnailSet(videoIdRaw),
+        null,
+        const Engagement(0, null, null),
+        false,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Reads YouTube's `{runs:[{text:..}]}` / `{simpleText:..}` text shapes.
+  static String? _rendererText(dynamic node) {
+    if (node is String) return node;
+    if (node is! Map) return null;
+    final simple = node['simpleText'];
+    if (simple is String && simple.isNotEmpty) return simple;
+    final runs = node['runs'];
+    if (runs is List) {
+      final buffer = StringBuffer();
+      for (final run in runs) {
+        if (run is Map && run['text'] is String) buffer.write(run['text']);
+      }
+      final text = buffer.toString().trim();
+      if (text.isNotEmpty) return text;
+    }
+    return null;
   }
 
   /// Builds a [Video] from a video lockupViewModel, tolerating the several

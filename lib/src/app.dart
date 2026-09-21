@@ -4,12 +4,15 @@ import 'dart:io' show Platform, Process;
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:youtube_explode_dart/solvers.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
+
+import '../l10n/app_localizations.dart';
 
 import 'config/build_flags.dart';
 import 'config/full_mode_access.dart';
@@ -652,6 +655,15 @@ class _MyAppState extends State<MyApp>
             child: MaterialApp(
               navigatorKey: _navigatorKey,
               title: getAppTitle(),
+              // Follows the device language; falls back to English for any
+              // locale we do not ship yet.
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
               shortcuts: const <ShortcutActivator, Intent>{},
               actions: const <Type, Action<Intent>>{},
               theme: lightTheme,
