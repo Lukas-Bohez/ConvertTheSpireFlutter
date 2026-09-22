@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+
+import '../services/bug_report_service.dart';
 import '../services/session_log_service.dart';
 
 /// What the app shows when a widget fails to build.
@@ -79,22 +82,37 @@ class AppErrorScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Builder(
-                  builder: (buttonContext) => Align(
-                    alignment: Alignment.centerLeft,
-                    child: FilledButton.icon(
-                      onPressed: () async {
-                        await Clipboard.setData(
-                            ClipboardData(text: buildReport()));
-                        final messenger =
-                            ScaffoldMessenger.maybeOf(buttonContext);
-                        messenger?.showSnackBar(
-                          const SnackBar(
-                              content: Text('Details copied to clipboard')),
-                        );
-                      },
-                      icon: const Icon(Icons.copy_all),
-                      label: const Text('Copy details'),
-                    ),
+                  builder: (buttonContext) => Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: () async {
+                          await Clipboard.setData(
+                              ClipboardData(text: buildReport()));
+                          final messenger =
+                              ScaffoldMessenger.maybeOf(buttonContext);
+                          messenger?.showSnackBar(
+                            const SnackBar(
+                                content: Text('Details copied to clipboard')),
+                          );
+                        },
+                        icon: const Icon(Icons.copy_all),
+                        label: const Text('Copy details'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final url = await BugReportService.buildIssueUrl(
+                            title: 'Bug: app error screen',
+                            description: details.exceptionAsString(),
+                          );
+                          await launchUrl(url,
+                              mode: LaunchMode.externalApplication);
+                        },
+                        icon: const Icon(Icons.bug_report_outlined),
+                        label: const Text('Report this'),
+                      ),
+                    ],
                   ),
                 ),
               ],

@@ -4,6 +4,9 @@ import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+import '../utils/process_runner.dart';
+import 'session_log_service.dart';
+
 class FfmpegService {
   Future<void> run(List<String> args, {required String? ffmpegPath}) async {
     if (kIsWeb) {
@@ -67,10 +70,12 @@ class FfmpegService {
 
     // 2. Check system PATH
     try {
-      final result = await Process.run('ffmpeg', ['-version'])
-          .timeout(const Duration(seconds: 5));
-      if (result.exitCode == 0) return 'ffmpeg';
-    } catch (_) {}
+      final result = await runProcess('ffmpeg', const ['-version'],
+          timeout: const Duration(seconds: 5));
+      if (result.ok) return 'ffmpeg';
+    } catch (e, st) {
+      SessionLogService.instance.logSwallowed(e, st, 'ffmpeg PATH probe');
+    }
 
     return null;
   }

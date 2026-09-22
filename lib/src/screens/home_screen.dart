@@ -19,6 +19,7 @@ import '../models/preview_item.dart';
 import '../models/queue_item.dart';
 import '../services/ad_service.dart';
 import '../services/android_saf.dart';
+import '../services/bug_report_service.dart';
 import '../services/folder_access_service.dart';
 import '../services/ipfs_service.dart';
 import '../services/review_service.dart';
@@ -37,6 +38,7 @@ import '../widgets/quick_links_page.dart';
 import '../widgets/quick_links_service.dart';
 import '../widgets/tv_file_browser.dart';
 import '../widgets/update_banner.dart';
+import '../widgets/whats_new_dialog.dart';
 import 'browser_screen.dart';
 import 'bulk_import_screen.dart';
 import 'guide_screen.dart';
@@ -191,6 +193,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
 
     _initDesktopFeatures();
+
+    // Show what changed after the app updated itself under the user.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_maybeShowWhatsNew());
+    });
 
     try {
       _selectedPageIndex = widget.controller.activeTabIndex;
@@ -531,6 +538,32 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   /// Tab index of the browser, used to decide what the refresh button does.
   static const int _browserTabIndex = 2;
+
+  Future<void> _maybeShowWhatsNew() async {
+    final version = widget.controller.currentAppVersion;
+    if (version == null || !mounted) return;
+    if (widget.controller.needsOnboarding) return;
+    await WhatsNewDialog.maybeShow(context, version);
+  }
+
+  /// Opens a prefilled GitHub issue so reports arrive with a version,
+  /// a platform and the tail of the log already attached.
+  Future<void> _reportBug() async {
+    final url = await BugReportService.buildIssueUrl();
+    if (!mounted) return;
+    try {
+      final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
+      if (!opened && mounted) {
+        Snack.show(context, 'Could not open the browser',
+            level: SnackLevel.error);
+      }
+    } catch (e) {
+      if (mounted) {
+        Snack.show(context, 'Could not open the browser: $e',
+            level: SnackLevel.error);
+      }
+    }
+  }
 
   Future<void> _refreshApp() async {
     // In the browser, refresh means "reload this page" - it is the same
@@ -3141,6 +3174,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   _buildLanguageTile(settings),
+                  ListTile(
+                    leading: const Icon(Icons.bug_report_outlined),
+                    title: const Text('Report a bug'),
+                    subtitle: const Text(
+                        'Opens GitHub with your version and recent log filled in'),
+                    trailing: const Icon(Icons.open_in_new),
+                    onTap: () => unawaited(_reportBug()),
+                  ),
                 ],
               ),
             ),
@@ -4318,6 +4359,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 8),
                   _buildLanguageTile(settings),
+                  ListTile(
+                    leading: const Icon(Icons.bug_report_outlined),
+                    title: const Text('Report a bug'),
+                    subtitle: const Text(
+                        'Opens GitHub with your version and recent log filled in'),
+                    trailing: const Icon(Icons.open_in_new),
+                    onTap: () => unawaited(_reportBug()),
+                  ),
                 ],
               ),
             ),
