@@ -1,4 +1,23 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <!-- Flavor-specific manifest for the `full` (GitHub) distribution. -->
+
+    <!-- The GitHub build is ad-free: AdService is gated on kPlayStoreBuild and
+         never initialises the Mobile Ads SDK here. The google_mobile_ads AAR
+         still merges these advertising-ID permissions into every flavor from
+         its own manifest, so they have to be removed explicitly - deleting the
+         declaration from src/main is not enough.
+
+         Verify after changing this with:
+           ./gradlew processFullReleaseManifest
+           grep AD_ID build/app/intermediates/merged_manifests/fullRelease/\
+processFullReleaseManifest/AndroidManifest.xml
+
+         See docs/publishing/play-data-safety.md. -->
+    <uses-permission
+        android:name="com.google.android.gms.permission.AD_ID"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.ACCESS_ADSERVICES_AD_ID"
+        tools:node="remove" />
 </manifest>

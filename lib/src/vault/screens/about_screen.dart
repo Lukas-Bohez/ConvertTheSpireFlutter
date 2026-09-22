@@ -14,6 +14,8 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../config/build_flags.dart';
+
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
 
@@ -1074,12 +1076,20 @@ class _AboutScreenState extends State<AboutScreen>
                           : 'Last diagnostics export: ${_settings.lastDiagnosticsExport}',
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      'Data Safety:\n'
-                      '- No personal data collection\n'
-                      '- No location data\n'
-                      '- No identifiers shared\n'
-                      '- No advertising or analytics',
+                    Text(
+                      kPlayStoreBuild
+                          ? 'Data Safety:\n'
+                              '- No personal data collection\n'
+                              '- No location data\n'
+                              '- No analytics; downloads and browsing stay '
+                              'on your device\n'
+                              '- Ads are served by Google AdMob, which uses '
+                              'your device advertising ID'
+                          : 'Data Safety:\n'
+                              '- No personal data collection\n'
+                              '- No location data\n'
+                              '- No identifiers shared\n'
+                              '- No advertising or analytics',
                     ),
                   ],
                 ),

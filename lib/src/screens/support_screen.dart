@@ -655,8 +655,15 @@ class _SupportScreenState extends State<SupportScreen> {
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'This app does not collect analytics or track what you download. All processing happens locally on your device.',
+                Text(
+                  kPlayStoreBuild
+                      ? 'This app does not collect analytics or track what you '
+                          'download, and all processing happens locally on your '
+                          'device. Ads are served by Google AdMob, which uses '
+                          'your device advertising ID.'
+                      : 'This app does not collect analytics or track what you '
+                          'download. All processing happens locally on your '
+                          'device.',
                 ),
               ],
             ),

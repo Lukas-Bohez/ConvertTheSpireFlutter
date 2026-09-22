@@ -938,9 +938,13 @@ class _SupportPreview extends StatelessWidget {
               Icon(Icons.privacy_tip_outlined,
                   size: 18, color: Colors.green.shade600),
               const SizedBox(width: 8),
-              const Expanded(
-                child: Text('No analytics - everything runs locally',
-                    style: TextStyle(fontSize: 12)),
+              Expanded(
+                child: Text(
+                    kPlayStoreBuild
+                        ? 'No analytics - everything runs locally '
+                            '(ads use your advertising ID)'
+                        : 'No analytics - everything runs locally',
+                    style: const TextStyle(fontSize: 12)),
               ),
             ],
           ),
