@@ -2740,11 +2740,17 @@ class PlayerState with ChangeNotifier {
     if (_disposed) return;
     final key = watchPartyMediaKey;
     if (key == null) return;
+    // Offer the file over the room's own server, so a guest that does not have
+    // it - a TV, or a friend - can still watch along (issue #7).
+    final localPath = currentItem?.path;
+    final sourcePath =
+        localPath == null ? null : watchParty.shareMedia(localPath);
     watchParty.publishState(
       mediaKey: key,
       position: position,
       playing: isPlaying,
       title: currentItem?.title,
+      sourcePath: sourcePath,
     );
   }
 
@@ -2813,9 +2819,18 @@ class PlayerState with ChangeNotifier {
     final index = library
         .indexWhere((item) => p.basename(item.path) == snapshot.mediaKey);
     if (index < 0) {
-      _emitWatchPartyNotice(
-          'The room is watching "${snapshot.title ?? snapshot.mediaKey}", '
-          'which is not in your library.');
+      // No local copy: stream it from the host if they are sharing it.
+      final streamUrl = watchParty.hostStreamUrlFor(snapshot);
+      final label = snapshot.title ?? snapshot.mediaKey;
+      if (streamUrl == null) {
+        _emitWatchPartyNotice(
+            'The room is watching "$label", which is not in your library.');
+        return;
+      }
+      _emitWatchPartyNotice('Streaming "$label" from the host.');
+      await playFileDirect(streamUrl);
+      if (snapshot.position > Duration.zero) await seek(snapshot.position);
+      if (!snapshot.playing && isPlaying) await togglePlay();
       return;
     }
     await select(index);
