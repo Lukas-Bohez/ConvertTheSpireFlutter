@@ -19,6 +19,9 @@ class AppSettings {
   final int convertMaxAgeHours;
 
   final String themeMode; // 'system', 'light', 'dark'
+  // 'system' follows the device language; otherwise a supported locale code
+  // such as 'en', 'pt' or 'zh'. Unknown codes fall back to the device language.
+  final String language;
   final bool
       minimizeToTrayOnClose; // keep running when window is closed (desktop)
 
@@ -55,6 +58,7 @@ class AppSettings {
     required this.convertCleanupMinutes,
     required this.convertMaxAgeHours,
     this.themeMode = 'system',
+    this.language = 'system',
     this.minimizeToTrayOnClose = true,
     this.downloadDirMp3,
     this.downloadDirM4a,
@@ -91,6 +95,7 @@ class AppSettings {
       convertCleanupMinutes: 15,
       convertMaxAgeHours: 2,
       themeMode: 'system',
+      language: 'system',
       defaultAudioFormat: 'mp3',
       downloadDirMp3: null,
       downloadDirM4a: null,
@@ -127,6 +132,7 @@ class AppSettings {
     int? convertCleanupMinutes,
     int? convertMaxAgeHours,
     String? themeMode,
+    String? language,
     String? downloadDirMp3,
     String? downloadDirM4a,
     String? downloadDirMp4,
@@ -163,6 +169,7 @@ class AppSettings {
           convertCleanupMinutes ?? this.convertCleanupMinutes,
       convertMaxAgeHours: convertMaxAgeHours ?? this.convertMaxAgeHours,
       themeMode: themeMode ?? this.themeMode,
+      language: language ?? this.language,
       downloadDirMp3: downloadDirMp3 ?? this.downloadDirMp3,
       downloadDirM4a: downloadDirM4a ?? this.downloadDirM4a,
       downloadDirMp4: downloadDirMp4 ?? this.downloadDirMp4,
@@ -209,6 +216,7 @@ class AppSettings {
           (json['convert_cleanup_minutes'] as num?)?.toInt() ?? 15,
       convertMaxAgeHours: (json['convert_max_age_hours'] as num?)?.toInt() ?? 2,
       themeMode: json['theme_mode'] as String? ?? 'system',
+      language: json['language'] as String? ?? 'system',
       defaultAudioFormat: json['default_audio_format'] as String? ?? 'mp3',
       defaultBitrate: (json['default_bitrate'] as num?)?.toInt() ?? 0,
       minimumBitrate: (json['minimum_bitrate'] as num?)?.toInt() ?? 0,
@@ -249,6 +257,7 @@ class AppSettings {
       'convert_cleanup_minutes': convertCleanupMinutes,
       'convert_max_age_hours': convertMaxAgeHours,
       'theme_mode': themeMode,
+      'language': language,
       'default_audio_format': defaultAudioFormat,
       'default_bitrate': defaultBitrate,
       'minimum_bitrate': minimumBitrate,

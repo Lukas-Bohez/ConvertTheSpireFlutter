@@ -13,6 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config/build_flags.dart';
 import '../config/full_mode_access.dart';
+import '../models/app_languages.dart';
 import '../models/app_settings.dart';
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
@@ -2880,6 +2881,50 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // -- Settings tab -------------------------------------------------------
 
+  /// Language picker, shared by the simplified and the full Settings tab.
+  ///
+  /// The app shipped 18 translations with no way to choose one: it followed the
+  /// device language and nothing else. See issue #7.
+  Widget _buildLanguageTile(AppSettings settings) {
+    final current = appLanguageFor(settings.language);
+    return ListTile(
+      leading: const Icon(Icons.language),
+      title: const Text('Language'),
+      subtitle: Text(
+        current.code == 'system'
+            ? 'Automatic (device language)'
+            : '${current.nativeName} - ${current.englishName}',
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => _pickLanguage(settings),
+    );
+  }
+
+  Future<void> _pickLanguage(AppSettings settings) async {
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Language'),
+        children: [
+          for (final language in kAppLanguages)
+            ListTile(
+              title: Text(language.nativeName),
+              subtitle: Text(language.englishName),
+              trailing: language.code == settings.language
+                  ? Icon(
+                      Icons.check,
+                      color: Theme.of(dialogContext).colorScheme.primary,
+                    )
+                  : null,
+              onTap: () => Navigator.pop(dialogContext, language.code),
+            ),
+        ],
+      ),
+    );
+    if (chosen == null || chosen == settings.language) return;
+    await widget.controller.saveSettings(settings.copyWith(language: chosen));
+  }
+
   Widget _buildSimplifiedSettingsTab(AppSettings settings) {
     // Simplified settings for Play Store build: only torrent path and theme
     final isNarrow = _isNarrowLayout(context);
@@ -3087,6 +3132,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ],
                     ),
                   ),
+                  _buildLanguageTile(settings),
                 ],
               ),
             ),
@@ -4262,6 +4308,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           settings.copyWith(themeMode: value.first));
                     },
                   ),
+                  const SizedBox(height: 8),
+                  _buildLanguageTile(settings),
                 ],
               ),
             ),

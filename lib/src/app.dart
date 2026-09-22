@@ -655,8 +655,10 @@ class _MyAppState extends State<MyApp>
             child: MaterialApp(
               navigatorKey: _navigatorKey,
               title: getAppTitle(),
-              // Follows the device language; falls back to English for any
-              // locale we do not ship yet.
+              // Follows the device language unless the user picked one in
+              // Settings; falls back to English for any locale we do not
+              // ship yet.
+              locale: _resolveLocale(_controller?.settings?.language),
               localizationsDelegates: const [
                 AppLocalizations.delegate,
                 GlobalMaterialLocalizations.delegate,
@@ -806,6 +808,18 @@ class _MyAppState extends State<MyApp>
         return contentChild;
       },
     );
+  }
+
+  /// Maps the stored `language` setting to a locale override.
+  ///
+  /// Returns null for 'system' (and for anything we do not ship), which leaves
+  /// MaterialApp following the device language.
+  static Locale? _resolveLocale(String? code) {
+    if (code == null || code.isEmpty || code == 'system') return null;
+    for (final locale in AppLocalizations.supportedLocales) {
+      if (locale.languageCode == code) return locale;
+    }
+    return null;
   }
 
   static ThemeMode _resolveThemeMode(String? mode) {
