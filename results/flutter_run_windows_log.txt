@@ -1,5 +1,0 @@
-[... TRUNCATED: full flutter run logs captured during run session ...]
-
-(See terminal capture stored by the assistant.)
-
-Full captured output was saved here during the session.

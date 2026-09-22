@@ -1,8 +1,0 @@
-﻿apkanalyzer.bat : 
-At line:1 char:606
-+ ... ab: $aab"; $manifest = & $analyzer manifest print "$aab" 2>&1; $manif ...
-+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
-    + FullyQualifiedErrorId : NativeCommandError
- 
-ERROR: java.nio.file.NoSuchFileException: /AndroidManifest.xml

@@ -6,7 +6,6 @@ import 'package:convert_the_spire_reborn/src/config/build_flags.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/desktop_window.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/hotkeys.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/notifications_desktop.dart';
-import 'package:convert_the_spire_reborn/src/vault/services/background_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/identity_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/service_locator.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
@@ -167,13 +166,11 @@ Future<void> main() async {
       unawaited(
         Future(() async {
           try {
-            if (!kIsWeb && Platform.isAndroid) {
-              debugPrint(
-                'Android background service startup is disabled to keep the app stable while the foreground notification path is fixed.',
-              );
-            } else if (!kIsWeb && Platform.isIOS) {
-              await initBackgroundService();
-            }
+            // Android keeps downloads alive with the native foreground
+            // service (see ForegroundDownloadService and DownloadKeepAlive).
+            // flutter_background_service used to sit here doing nothing
+            // useful: its isolate got a fresh, empty TorrentEngineService, so
+            // it could only ever report 0 MB/s (issue #7).
 
             if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
               await StartupService.ensureDesktopShortcut();

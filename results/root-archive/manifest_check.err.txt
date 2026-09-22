@@ -1,2 +1,0 @@
-
-ERROR: java.nio.file.NoSuchFileException: /AndroidManifest.xml
