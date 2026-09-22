@@ -97,6 +97,26 @@ void main() {
         reason: 'hosting a room must not turn the device into a file server');
   });
 
+  test('leaving the room revokes the shared tokens', () async {
+    await host.startHosting(displayName: 'Host');
+    final path = host.shareMedia(media.path)!;
+    final port = host.boundPort;
+    await host.leave();
+
+    // Host again on the same port; the old token must not resolve.
+    await host.startHosting(displayName: 'Host');
+    expect(host.boundPort, port);
+
+    final client = HttpClient();
+    final response = await (await client
+            .getUrl(Uri.parse('http://127.0.0.1:${host.boundPort}$path')))
+        .close();
+    await response.drain<void>();
+    client.close();
+
+    expect(response.statusCode, HttpStatus.notFound);
+  });
+
   group('MediaSource', () {
     test('builds an absolute URL from the endpoint the guest joined', () {
       const source = MediaSource(path: '/media/abc.mp4');

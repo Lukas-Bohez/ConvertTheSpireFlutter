@@ -534,11 +534,15 @@ class WatchPartyService {
     final discovery = _discoverySocket;
 
     _hostSocket = null;
+    _hostEndpoint = null;
     _guests.clear();
     _server = null;
     _discoverySocket = null;
     _roomCode = null;
     _lastSnapshot = null;
+    // Shared-media tokens must not outlive the room that minted them.
+    _sharedMedia.clear();
+    _tokensByPath.clear();
     _offset.reset();
     if (_currentStatus.role != WatchPartyRole.idle) {
       _setStatus(const WatchPartyStatus.idle());
