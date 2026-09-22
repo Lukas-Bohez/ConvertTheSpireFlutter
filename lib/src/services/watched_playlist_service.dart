@@ -198,11 +198,11 @@ class WatchedPlaylistService {
   ///
   /// Without this, one URL that never resolves hangs the whole check - which
   /// is what left the Windows refresh button spinning forever (issue #7).
-  static const Duration perPlaylistTimeout = Duration(seconds: 30);
+  Duration perPlaylistTimeout = const Duration(seconds: 30);
 
   /// How many playlists to fetch at once. Small on purpose: these hit the same
   /// host, and the point is to bound the wall clock, not to flood it.
-  static const int checkConcurrency = 3;
+  int checkConcurrency = 3;
 
   Future<int>? _checkInFlight;
 

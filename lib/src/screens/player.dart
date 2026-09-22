@@ -4578,8 +4578,16 @@ class _PlayerScreenState extends State<PlayerScreen>
         child: PlayerNoAutoScrollbars(
           child: NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) {
-              final isMobile = MediaQuery.of(context).size.width < 600;
+              final mediaQuery = MediaQuery.of(context);
+              final isMobile = mediaQuery.size.width < 600;
               final showVideoPane = showVideo;
+              // 16:9 of the available width, but never more than 40% of the
+              // screen. A fixed 260px pane swallowed most of a phone screen
+              // and left the queue with nowhere to go (issue #7).
+              final videoPaneHeight = min(
+                mediaQuery.size.width * 9 / 16,
+                mediaQuery.size.height * 0.4,
+              );
               // The search bar is hidden on mobile while a video is playing
               // (kept out of the way of the video surface); everywhere else it
               // is part of the pinned header below.
@@ -4589,11 +4597,11 @@ class _PlayerScreenState extends State<PlayerScreen>
                   SliverPersistentHeader(
                     pinned: true,
                     delegate: _FixedHeightSliverDelegate(
-                      height: 260.0,
+                      height: videoPaneHeight,
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 220),
                         curve: Curves.easeInOut,
-                        height: 260.0,
+                        height: videoPaneHeight,
                         clipBehavior: Clip.hardEdge,
                         decoration: BoxDecoration(
                             color: Theme.of(context).colorScheme.background),
@@ -4746,7 +4754,15 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
+  /// Width below which the header stops being a row of bare icons.
+  ///
+  /// Seven icon buttons in one row is unusable on a phone (issue #7), so on
+  /// narrow screens only the two actions people reach for stay visible and
+  /// the rest move into an overflow menu that has readable labels.
+  static const double _compactHeaderWidth = 600;
+
   Widget _buildHeader() {
+    final compact = MediaQuery.sizeOf(context).width < _compactHeaderWidth;
     return SafeArea(
       bottom: false,
       child: Padding(
@@ -4766,110 +4782,192 @@ class _PlayerScreenState extends State<PlayerScreen>
               ),
             ),
             const Spacer(),
-            IconButton(
-              icon: Icon(Icons.folder_open_rounded,
-                  color: Theme.of(context).colorScheme.onSurface),
-              tooltip: 'Open folder',
-              onPressed: _pickFolder,
-            ),
-            IconButton(
-              icon: Icon(Icons.merge_type_rounded,
-                  color: Theme.of(context).colorScheme.onSurface),
-              tooltip: 'Organize media',
-              onPressed: () => _showOrganizeDialog(),
-            ),
-            IconButton(
-              icon: Icon(Icons.auto_fix_high_rounded,
-                  color: Theme.of(context).colorScheme.onSurface),
-              tooltip: 'Fix missing metadata',
-              onPressed: _showFixAllMetadataDialog,
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.groups_rounded,
-                color: context.watch<PlayerState>().watchParty.status.isActive
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onSurface,
+            if (!compact) ...[
+              _headerIconButton(
+                icon: Icons.folder_open_rounded,
+                tooltip: 'Open folder',
+                onPressed: _pickFolder,
               ),
-              tooltip: context.watch<PlayerState>().watchParty.status.isActive
-                  ? 'Watch Together: ${context.watch<PlayerState>().watchParty.status.roomCode}'
-                  : 'Watch Together',
-              onPressed: () => WatchPartySheet.show(context),
-            ),
-            IconButton(
-              icon: Icon(Icons.graphic_eq_rounded,
-                  color: context.watch<PlayerState>().volumeLeveling
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.onSurface),
-              tooltip: context.watch<PlayerState>().volumeLeveling
-                  ? 'Volume leveling: on'
-                  : 'Volume leveling: off',
-              onPressed: () {
-                final state = context.read<PlayerState>();
-                state.setVolumeLeveling(!state.volumeLeveling);
-                Snack.show(
-                    context,
-                    state.volumeLeveling
-                        ? 'Volume leveling on - every track plays at the same loudness'
-                        : 'Volume leveling off',
-                    level: SnackLevel.info);
-              },
-            ),
-            PopupMenuButton<String>(
-              tooltip: 'Queue actions',
-              icon: Icon(Icons.queue_music_rounded,
-                  color: Theme.of(context).colorScheme.onSurface),
-              onSelected: (value) {
-                final state = context.read<PlayerState>();
-                switch (value) {
-                  case 'current':
-                    state.enqueueScope(_queueScopeForTab(_tabController.index));
-                    break;
-                  case 'all':
-                    state.enqueueScope(QueueScope.all);
-                    break;
-                  case 'songs':
-                    state.enqueueScope(QueueScope.songs);
-                    break;
-                  case 'videos':
-                    state.enqueueScope(QueueScope.videos);
-                    break;
-                  case 'favourites':
-                    state.enqueueScope(QueueScope.favourites);
-                    break;
-                  case 'favSongs':
-                    state.enqueueScope(QueueScope.favSongs);
-                    break;
-                  case 'favVideos':
-                    state.enqueueScope(QueueScope.favVideos);
-                    break;
-                  case 'clear':
-                    state.clearQueue();
-                    break;
-                }
-                if (mounted) {
-                  Snack.show(context, 'Queue updated', level: SnackLevel.info);
-                }
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(
-                    value: 'current', child: Text('Queue current tab')),
-                PopupMenuItem(value: 'all', child: Text('Queue all')),
-                PopupMenuItem(value: 'songs', child: Text('Queue songs')),
-                PopupMenuItem(value: 'videos', child: Text('Queue videos')),
-                PopupMenuItem(
-                    value: 'favourites', child: Text('Queue favourites')),
-                PopupMenuItem(
-                    value: 'favSongs', child: Text('Queue favourite songs')),
-                PopupMenuItem(
-                    value: 'favVideos', child: Text('Queue favourite videos')),
-                PopupMenuDivider(),
-                PopupMenuItem(value: 'clear', child: Text('Clear queue')),
-              ],
-            ),
+              _headerIconButton(
+                icon: Icons.merge_type_rounded,
+                tooltip: 'Organize media',
+                onPressed: () => unawaited(_showOrganizeDialog()),
+              ),
+              _headerIconButton(
+                icon: Icons.auto_fix_high_rounded,
+                tooltip: 'Fix missing metadata',
+                onPressed: _showFixAllMetadataDialog,
+              ),
+            ],
+            _buildWatchTogetherButton(),
+            if (!compact) _buildVolumeLevelingButton(),
+            _buildQueueMenu(),
+            if (compact) _buildHeaderOverflowMenu(),
           ],
         ),
       ),
+    );
+  }
+
+  /// A header button with a touch target that stays finger-sized.
+  Widget _headerIconButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+    Color? color,
+  }) {
+    return IconButton(
+      icon: Icon(icon, color: color ?? Theme.of(context).colorScheme.onSurface),
+      tooltip: tooltip,
+      onPressed: onPressed,
+      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+    );
+  }
+
+  Widget _buildWatchTogetherButton() {
+    final party = context.watch<PlayerState>().watchParty.status;
+    return _headerIconButton(
+      icon: Icons.groups_rounded,
+      color: party.isActive ? Theme.of(context).colorScheme.primary : null,
+      tooltip: party.isActive
+          ? 'Watch Together: ${party.roomCode}'
+          : 'Watch Together',
+      onPressed: () => WatchPartySheet.show(context),
+    );
+  }
+
+  Widget _buildVolumeLevelingButton() {
+    final on = context.watch<PlayerState>().volumeLeveling;
+    return _headerIconButton(
+      icon: Icons.graphic_eq_rounded,
+      color: on ? Theme.of(context).colorScheme.primary : null,
+      tooltip: on ? 'Volume leveling: on' : 'Volume leveling: off',
+      onPressed: _toggleVolumeLeveling,
+    );
+  }
+
+  void _toggleVolumeLeveling() {
+    final state = context.read<PlayerState>();
+    state.setVolumeLeveling(!state.volumeLeveling);
+    Snack.show(
+        context,
+        state.volumeLeveling
+            ? 'Volume leveling on - every track plays at the same loudness'
+            : 'Volume leveling off',
+        level: SnackLevel.info);
+  }
+
+  /// Everything that does not fit on a phone, with labels rather than icons.
+  Widget _buildHeaderOverflowMenu() {
+    final levelingOn = context.watch<PlayerState>().volumeLeveling;
+    return PopupMenuButton<String>(
+      tooltip: 'More',
+      icon:
+          Icon(Icons.more_vert, color: Theme.of(context).colorScheme.onSurface),
+      onSelected: (value) {
+        switch (value) {
+          case 'folder':
+            _pickFolder();
+            break;
+          case 'organize':
+            unawaited(_showOrganizeDialog());
+            break;
+          case 'metadata':
+            _showFixAllMetadataDialog();
+            break;
+          case 'leveling':
+            _toggleVolumeLeveling();
+            break;
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'folder',
+          child: ListTile(
+            leading: Icon(Icons.folder_open_rounded),
+            title: Text('Open folder'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'organize',
+          child: ListTile(
+            leading: Icon(Icons.merge_type_rounded),
+            title: Text('Organize media'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'metadata',
+          child: ListTile(
+            leading: Icon(Icons.auto_fix_high_rounded),
+            title: Text('Fix missing metadata'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'leveling',
+          child: ListTile(
+            leading: const Icon(Icons.graphic_eq_rounded),
+            title: const Text('Volume leveling'),
+            trailing: levelingOn ? const Icon(Icons.check) : null,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQueueMenu() {
+    return PopupMenuButton<String>(
+      tooltip: 'Queue actions',
+      icon: Icon(Icons.queue_music_rounded,
+          color: Theme.of(context).colorScheme.onSurface),
+      onSelected: (value) {
+        final state = context.read<PlayerState>();
+        switch (value) {
+          case 'current':
+            state.enqueueScope(_queueScopeForTab(_tabController.index));
+            break;
+          case 'all':
+            state.enqueueScope(QueueScope.all);
+            break;
+          case 'songs':
+            state.enqueueScope(QueueScope.songs);
+            break;
+          case 'videos':
+            state.enqueueScope(QueueScope.videos);
+            break;
+          case 'favourites':
+            state.enqueueScope(QueueScope.favourites);
+            break;
+          case 'favSongs':
+            state.enqueueScope(QueueScope.favSongs);
+            break;
+          case 'favVideos':
+            state.enqueueScope(QueueScope.favVideos);
+            break;
+          case 'clear':
+            state.clearQueue();
+            break;
+        }
+        if (mounted) {
+          Snack.show(context, 'Queue updated', level: SnackLevel.info);
+        }
+      },
+      itemBuilder: (context) => const [
+        PopupMenuItem(value: 'current', child: Text('Queue current tab')),
+        PopupMenuItem(value: 'all', child: Text('Queue all')),
+        PopupMenuItem(value: 'songs', child: Text('Queue songs')),
+        PopupMenuItem(value: 'videos', child: Text('Queue videos')),
+        PopupMenuItem(value: 'favourites', child: Text('Queue favourites')),
+        PopupMenuItem(value: 'favSongs', child: Text('Queue favourite songs')),
+        PopupMenuItem(
+            value: 'favVideos', child: Text('Queue favourite videos')),
+        PopupMenuDivider(),
+        PopupMenuItem(value: 'clear', child: Text('Clear queue')),
+      ],
     );
   }
 

@@ -3942,7 +3942,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             'yt-dlp $versionText - Could not check for updates';
 
                         if (_ytDlpVersionChecking) {
-                          dotColor = Colors.blueGrey;
+                          dotColor = Theme.of(context).colorScheme.primary;
                           statusText =
                               'yt-dlp $versionText - Checking for updates...';
                         } else if (!_ytDlpVersionCheckFailed &&

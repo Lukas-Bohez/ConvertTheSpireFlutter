@@ -459,7 +459,7 @@ class _CastDialogState extends State<CastDialog> {
                       leading: Icon(
                         device.deviceType.icon,
                         color:
-                            device.isPanasonicViera ? Colors.blue : cs.primary,
+                            device.isPanasonicViera ? cs.tertiary : cs.primary,
                       ),
                       title: Text(device.name),
                       subtitle: Text(
