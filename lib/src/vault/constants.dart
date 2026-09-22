@@ -1,6 +1,6 @@
 const String kBaseUrl = 'https://quizthespire.com/vault/api';
 
-const String kPrivacyPolicyUrl = 'https://quizthespire.com/privacy-policy';
+const String kPrivacyPolicyUrl = 'https://quizthespire.com/privacy';
 
 const int kDefaultTorrentPort = 6881;
 

@@ -51,13 +51,32 @@ Only the `play` flavor needs a Data Safety declaration with collected data.
 
 Play Console → **App content** → **Data safety**.
 
+Privacy policy URL: **https://quizthespire.com/privacy**
+(`kPrivacyPolicyUrl` in `lib/src/vault/constants.dart`. The old
+`/privacy-policy` path 404s — do not use it.)
+
 ### Step 1 — Data collection and security
-- *Does your app collect or share any of the required user data types?* → **Yes**
-- *Is all of the user data collected by your app encrypted in transit?* → **Yes**
+*(Dutch UI: "Gegevensverzameling en beveiliging")*
+
+- *Collects or shares required user data types?* → **Yes / Ja**
+  (AdMob transmits the advertising ID.)
+- *Is all collected user data encrypted in transit?* → **Yes / Ja**
   (AdMob uses HTTPS.)
-- *Do you provide a way for users to request that their data be deleted?* → **Yes**,
-  and link the privacy policy. Users can also reset or delete the advertising ID
-  in Android Settings → Google → Ads.
+- *Which account-creation methods does your app support?* →
+  **"My app does not allow users to create an account" /
+  "Mijn app staat gebruikers niet toe een account te maken"**.
+  Leave every username/OAuth box unticked. The chat, "servers" and DM screens
+  store usernames in local SQLite only (`ChatDao`, `UsersDao`, `ServerService`
+  contain no network code), and the AI chat talks to `http://localhost:11434`
+  (Ollama, desktop only). Nothing authenticates against anything.
+- *Do you provide a way for users to request that their data be deleted?* →
+  There is no account and no server-side data to delete; the only collected
+  value is the advertising ID, which the user resets in
+  Android Settings → Google → Ads. Answer **No / Nee** unless you add a
+  deletion request form, and keep the privacy policy URL above on file.
+- **Additional badges** — leave both unticked. "Independent security review"
+  needs a paid third-party MASA audit you have not had done, and "UPI payments
+  verified" is only for Indian financial apps.
 
 ### Step 2 — Data types
 Tick **only** this, under **Device or other IDs**:
