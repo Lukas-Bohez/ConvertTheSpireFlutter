@@ -256,18 +256,98 @@ class PlaylistService {
         root = await _browseContinuation(client, next, visitorData);
         page++;
       }
+
+      // The WEB client caps at ~200 entries on large playlists. If we came up
+      // short, enumerate again with the YouTube Music client, which pages all
+      // the way, and merge anything new in.
+      if (cap == null && (expectedCount == 0 || results.length < expectedCount)) {
+        final before = results.length;
+        await _appendViaMusicClient(
+            client, playlistId, seenIds, results, expectedCount);
+        if (results.length > before) {
+          _logs?.add('Music client added ${results.length - before} more '
+              'entries (total ${results.length}).');
+        }
+      }
     } finally {
       client.close(force: true);
     }
     return results;
   }
 
+  /// Enumerates [playlistId] with the WEB_REMIX client and appends every video
+  /// not already in [results]. Used when the WEB client stops early.
+  Future<void> _appendViaMusicClient(
+      HttpClient client,
+      PlaylistId playlistId,
+      Set<String> seenIds,
+      List<Video> results,
+      int expectedCount) async {
+    try {
+      dynamic root = await _browseFirstPage(client, playlistId.value, null,
+          clientContext: _musicClientContext);
+      if (root == null) return;
+      final visitorData = _digString(root, const [
+        'responseContext',
+        'webResponseContextExtensionData',
+        'ytConfigData',
+        'visitorData',
+      ]);
+      final spent = <String>{};
+      var page = 1;
+      const maxPages = 1000;
+      while (root != null && page <= maxPages) {
+        for (final video in _videosFromPage(root)) {
+          if (!seenIds.add(video.id.value)) continue;
+          results.add(video);
+        }
+        if (expectedCount > 0 && results.length >= expectedCount) break;
+        final tokens = <String>[];
+        _collectContinuationTokens(root, tokens);
+        String? next;
+        for (final token in tokens) {
+          if (spent.add(token)) {
+            next = token;
+            break;
+          }
+        }
+        if (next == null) break;
+        root = await _browseContinuation(client, next, visitorData,
+            clientContext: _musicClientContext);
+        page++;
+      }
+    } catch (e) {
+      _logs?.add('Music-client playlist pass failed: $e');
+    }
+  }
+
   /// Posts to the innertube `browse` API with a playlist [browseId]
   /// (`VL<playlistId>`) and returns the parsed JSON of the FIRST page, or null
   /// on any failure. Not subject to the HTML consent interstitial that breaks
   /// playlist scraping on EEA/mobile networks.
+  /// Innertube client contexts.
+  ///
+  /// The plain WEB client stops handing out continuation tokens after two
+  /// pages (200 entries) on large playlists - verified against an 863-entry
+  /// playlist where page 2 comes back with no continuation item at all. The
+  /// WEB_REMIX (YouTube Music) client pages the same playlist to the end, so
+  /// it is used as the deep-pagination fallback.
+  static const Map<String, dynamic> _webClientContext = {
+    'clientName': 'WEB',
+    'clientVersion': '2.20250101.00.00',
+    'hl': 'en',
+    'gl': 'US',
+  };
+  static const Map<String, dynamic> _musicClientContext = {
+    'clientName': 'WEB_REMIX',
+    'clientVersion': '1.20240724.00.00',
+    'hl': 'en',
+    'gl': 'US',
+  };
+
   Future<dynamic> _browseFirstPage(
-      HttpClient client, String playlistId, String? visitorData) async {
+      HttpClient client, String playlistId, String? visitorData,
+      {Map<String, dynamic> clientContext = _webClientContext}) async {
     final request = await client.postUrl(Uri.parse(
         'https://www.youtube.com/youtubei/v1/browse?prettyPrint=false'));
     request.headers.set('content-type', 'application/json');
@@ -278,14 +358,7 @@ class PlaylistService {
       request.headers.set('x-goog-visitor-id', visitorData);
     }
     request.write(jsonEncode({
-      'context': {
-        'client': {
-          'clientName': 'WEB',
-          'clientVersion': '2.20250101.00.00',
-          'hl': 'en',
-          'gl': 'US',
-        },
-      },
+      'context': {'client': clientContext},
       'browseId': 'VL$playlistId',
     }));
     final response = await request.close();
@@ -342,7 +415,8 @@ class PlaylistService {
   /// Post to the innertube `browse` API with a continuation token and return
   /// the parsed JSON response (or null on any failure).
   Future<dynamic> _browseContinuation(
-      HttpClient client, String token, String? visitorData) async {
+      HttpClient client, String token, String? visitorData,
+      {Map<String, dynamic> clientContext = _webClientContext}) async {
     final request = await client.postUrl(Uri.parse(
         'https://www.youtube.com/youtubei/v1/browse?prettyPrint=false'));
         request.headers.set('content-type', 'application/json');
@@ -354,14 +428,7 @@ class PlaylistService {
       request.headers.set('x-goog-visitor-id', visitorData);
     }
     request.write(jsonEncode({
-      'context': {
-        'client': {
-          'clientName': 'WEB',
-          'clientVersion': '2.20250101.00.00',
-          'hl': 'en',
-          'gl': 'US',
-        },
-      },
+      'context': {'client': clientContext},
       'continuation': token,
     }));
     final response = await request.close();
@@ -532,6 +599,12 @@ class PlaylistService {
       final video = _videoFromPlaylistRenderer(renderer);
       if (video != null) videos.add(video);
     }
+    final musicItems = <Map<String, dynamic>>[];
+    _collectMusicItems(root, musicItems);
+    for (final item in musicItems) {
+      final video = _videoFromMusicItem(item);
+      if (video != null) videos.add(video);
+    }
     return videos;
   }
 
@@ -580,6 +653,98 @@ class PlaylistService {
           (channelIdStr.startsWith('UC') && channelIdStr.length == 24)
               ? ChannelId(channelIdStr)
               : ChannelId('UCdddddddddddddddddddddd');
+      return Video(
+        VideoId(videoIdRaw),
+        title,
+        author ?? '',
+        channelId,
+        null,
+        null,
+        null,
+        '',
+        duration,
+        ThumbnailSet(videoIdRaw),
+        null,
+        const Engagement(0, null, null),
+        false,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static void _collectMusicItems(
+      dynamic node, List<Map<String, dynamic>> out) {
+    if (node is Map) {
+      final item = node['musicResponsiveListItemRenderer'];
+      if (item is Map) out.add(item.cast<String, dynamic>());
+      for (final entry in node.entries) {
+        if (entry.key == 'musicResponsiveListItemRenderer') continue;
+        _collectMusicItems(entry.value, out);
+      }
+    } else if (node is List) {
+      for (final item in node) {
+        _collectMusicItems(item, out);
+      }
+    }
+  }
+
+  /// Text of one `flexColumns` / `fixedColumns` entry.
+  static String? _musicColumnText(dynamic column) {
+    if (column is! Map) return null;
+    for (final key in const [
+      'musicResponsiveListItemFlexColumnRenderer',
+      'musicResponsiveListItemFixedColumnRenderer',
+    ]) {
+      final renderer = column[key];
+      if (renderer is Map) {
+        final text = _rendererText(renderer['text']);
+        if (text != null && text.isNotEmpty) return text;
+      }
+    }
+    return null;
+  }
+
+  /// Builds a [Video] from a YouTube Music `musicResponsiveListItemRenderer`:
+  /// title in flexColumns[0], artist in flexColumns[1], duration in
+  /// fixedColumns[0].
+  static Video? _videoFromMusicItem(Map<String, dynamic> item) {
+    try {
+      final videoIdRaw =
+          (_digString(item, const ['playlistItemData', 'videoId']) ??
+                  _digString(item, const ['watchEndpoint', 'videoId']) ??
+                  '')
+              .trim();
+      if (videoIdRaw.length != 11) return null;
+
+      final flex = item['flexColumns'];
+      String? title;
+      String? author;
+      if (flex is List && flex.isNotEmpty) {
+        title = _musicColumnText(flex[0]);
+        if (flex.length > 1) author = _musicColumnText(flex[1]);
+      }
+      if (title == null || title.isEmpty) return null;
+      if (author != null && author.startsWith('@')) {
+        author = author.substring(1);
+      }
+
+      Duration? duration;
+      final fixed = item['fixedColumns'];
+      if (fixed is List && fixed.isNotEmpty) {
+        duration = _parseDurationText(_musicColumnText(fixed[0]));
+      }
+
+      // Scoped to the artist column on purpose: a bare recursive search for
+      // browseId would just as happily return an album or menu-entry id.
+      final channelIdStr = (flex is List && flex.length > 1)
+          ? (_digString(flex[1], const ['browseEndpoint', 'browseId']) ?? '')
+          : '';
+      final channelId =
+          (channelIdStr.startsWith('UC') && channelIdStr.length == 24)
+              ? ChannelId(channelIdStr)
+              : ChannelId('UCdddddddddddddddddddddd');
+
       return Video(
         VideoId(videoIdRaw),
         title,
