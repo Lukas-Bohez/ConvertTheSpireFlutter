@@ -110,3 +110,7 @@ todo/
 
 # local, not for publication
 github-support-request.md
+
+# local build logs
+build_aab_*.txt
+build_win_*.txt

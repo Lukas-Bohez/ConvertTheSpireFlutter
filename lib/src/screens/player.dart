@@ -2180,6 +2180,9 @@ class PlayerState with ChangeNotifier {
 
     position = d;
     _emitPositionUiState();
+    // Tell the room at once; waiting for the next periodic tick would leave
+    // everyone else up to a second behind after a scrub.
+    _publishWatchStateSoon();
 
     // After a short delay log the effective position/duration and player states
     // to help diagnose seek-not-applying issues on desktop.
@@ -4041,6 +4044,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _isFullScreen = false;
   bool _searchEditing = false;
   AppController? _appController;
+  StreamSubscription<String>? _watchPartyNoticeSub;
 
   bool get _usesNativeWindowFullscreen =>
       !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
@@ -4073,6 +4077,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         await context.read<PlayerState>().reloadLibraryFromDisk();
       };
     }
+    _listenForWatchPartyNotices(context.read<PlayerState>());
     if (_uiPrefsLoaded) return;
     _uiPrefsLoaded = true;
     final prefs = context.read<PlayerState>().prefs;
@@ -4095,9 +4100,21 @@ class _PlayerScreenState extends State<PlayerScreen>
     unawaited(context.read<PlayerState>().onAppLifecycleChanged(state));
   }
 
+  /// Surfaces Watch Together messages, such as the room moving to a file this
+  /// device does not have. Without this the notice would go nowhere.
+  void _listenForWatchPartyNotices(PlayerState player) {
+    _watchPartyNoticeSub?.cancel();
+    _watchPartyNoticeSub = player.watchPartyNotices.listen((message) {
+      if (mounted) {
+        Snack.show(context, message, level: SnackLevel.warning);
+      }
+    });
+  }
+
   @override
   void dispose() {
     _appController?.onLibraryRefreshRequested = null;
+    _watchPartyNoticeSub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_exitFullScreen());
     _tabController.dispose();
