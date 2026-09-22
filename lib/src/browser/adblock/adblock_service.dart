@@ -88,6 +88,17 @@ class AdBlockService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Test seam: loads a blocklist without touching the network or disk.
+  ///
+  /// Blocking has no other way in — the real list is fetched from EasyList and
+  /// cached — and a silent regression here either breaks every page or lets
+  /// every ad through, so the rules are worth pinning down.
+  @visibleForTesting
+  void seedBlocklistForTesting(Iterable<String> domains, {bool enabled = true}) {
+    _blockedDomains = HashSet<String>.from(domains.map((d) => d.toLowerCase()));
+    _enabled = enabled;
+  }
+
   /// Returns `true` if [url] should be blocked.
   bool shouldBlock(String url) {
     if (!_enabled) return false;

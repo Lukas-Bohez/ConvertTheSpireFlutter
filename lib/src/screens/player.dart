@@ -36,11 +36,14 @@ import '../services/loudness_service.dart';
 import '../services/media_organizer.dart';
 import '../services/platform_dirs.dart';
 import '../services/review_service.dart';
+import '../services/watch_party/watch_party_protocol.dart';
+import '../services/watch_party/watch_party_service.dart';
 import '../state/app_controller.dart';
 import '../utils/lock.dart';
 import '../utils/snack.dart';
 import '../vault/platform/desktop_window.dart';
 import '../widgets/tv_file_browser.dart';
+import 'watch_party_sheet.dart';
 
 // --- Public entry point -------------------------------------------------------
 
@@ -2076,6 +2079,8 @@ class PlayerState with ChangeNotifier {
 
   Future<void> togglePlay() async {
     if (_disposed) return;
+    // Publishing happens after the state actually changes; see the tail of
+    // this method.
     if (isVideo) {
       if (_useMediaKit && _mkPlayer != null) {
         await (_mkPlayer!.state.playing
@@ -2119,6 +2124,7 @@ class PlayerState with ChangeNotifier {
         }
       }
     }
+    _publishWatchStateSoon();
     notifyListeners();
   }
 
@@ -2673,6 +2679,158 @@ class PlayerState with ChangeNotifier {
   /// Volume for just_audio, which only accepts 0..1.
   double get _audioPlayerVolume =>
       (volume * _trackGainMultiplier).clamp(0.0, 1.0).toDouble();
+
+  // --- Watch Together -------------------------------------------------------
+
+  /// Keeps playback in step with other devices. Idle until the user hosts or
+  /// joins a room, and costs nothing until then.
+  final WatchPartyService watchParty = WatchPartyService();
+  StreamSubscription<WatchPartyEvent>? _watchPartySub;
+  Timer? _watchPublishTimer;
+
+  /// True while a remote update is being applied, so the resulting seek/play
+  /// is not bounced straight back to the room as if the user had done it.
+  bool _applyingRemoteSync = false;
+
+  /// Identifies media across devices. The same episode lives at a different
+  /// path on every machine, so the file name is the only portable handle.
+  String? get watchPartyMediaKey {
+    final item = currentItem;
+    if (item == null) return null;
+    return p.basename(item.path);
+  }
+
+  void _ensureWatchPartyWired() {
+    _watchPartySub ??= watchParty.events.listen(_onWatchPartyEvent);
+  }
+
+  /// Starts hosting and returns the room code to share.
+  Future<String> startWatchParty({required String displayName}) async {
+    _ensureWatchPartyWired();
+    final code = await watchParty.startHosting(displayName: displayName);
+    _watchPublishTimer?.cancel();
+    // One second is frequent enough that a late joiner syncs almost at once,
+    // and cheap enough to ignore: a handful of small frames per second.
+    _watchPublishTimer =
+        Timer.periodic(const Duration(seconds: 1), (_) => _publishWatchState());
+    _publishWatchState();
+    notifyListeners();
+    return code;
+  }
+
+  /// Joins a room. Returns null on success, or a message to show the user.
+  Future<String?> joinWatchParty(String code,
+      {required String displayName}) async {
+    _ensureWatchPartyWired();
+    final error = await watchParty.join(code, displayName: displayName);
+    notifyListeners();
+    return error;
+  }
+
+  Future<void> leaveWatchParty() async {
+    _watchPublishTimer?.cancel();
+    _watchPublishTimer = null;
+    await watchParty.leave();
+    notifyListeners();
+  }
+
+  void _publishWatchState() {
+    if (_disposed) return;
+    final key = watchPartyMediaKey;
+    if (key == null) return;
+    watchParty.publishState(
+      mediaKey: key,
+      position: position,
+      playing: isPlaying,
+      title: currentItem?.title,
+    );
+  }
+
+  /// Pushes the local state out immediately after a user action, so the room
+  /// reacts to a pause or seek right away instead of on the next tick.
+  void _publishWatchStateSoon() {
+    if (_applyingRemoteSync) return;
+    if (!watchParty.isHosting) return;
+    _publishWatchState();
+  }
+
+  Future<void> _onWatchPartyEvent(WatchPartyEvent event) async {
+    if (_disposed) return;
+    if (event.kind != WatchPartyEventKind.remoteState) {
+      notifyListeners();
+      return;
+    }
+    final snapshot = event.snapshot;
+    final hostClockNowMs = event.hostClockNowMs;
+    final localKey = watchPartyMediaKey;
+    if (snapshot == null || hostClockNowMs == null || localKey == null) return;
+
+    final decision = computeSyncDecision(
+      snapshot: snapshot,
+      localMediaKey: localKey,
+      localPosition: position,
+      localPlaying: isPlaying,
+      hostClockNowMs: hostClockNowMs,
+    );
+    if (decision.action == SyncAction.none) return;
+
+    _applyingRemoteSync = true;
+    try {
+      switch (decision.action) {
+        case SyncAction.none:
+          break;
+        case SyncAction.seek:
+          await seek(decision.targetPosition!);
+          break;
+        case SyncAction.play:
+          if (decision.targetPosition != null) {
+            await seek(decision.targetPosition!);
+          }
+          if (!isPlaying) await togglePlay();
+          break;
+        case SyncAction.pause:
+          if (decision.targetPosition != null) {
+            await seek(decision.targetPosition!);
+          }
+          if (isPlaying) await togglePlay();
+          break;
+        case SyncAction.loadDifferentMedia:
+          await _followRoomToMedia(snapshot);
+          break;
+      }
+    } catch (e) {
+      debugPrint('WatchParty: failed to apply $decision: $e');
+    } finally {
+      _applyingRemoteSync = false;
+    }
+  }
+
+  /// The room moved to another file. Play our own copy if we have one; say so
+  /// if we do not, rather than silently sitting on the wrong thing.
+  Future<void> _followRoomToMedia(PlaybackSnapshot snapshot) async {
+    final index =
+        library.indexWhere((item) => p.basename(item.path) == snapshot.mediaKey);
+    if (index < 0) {
+      _emitWatchPartyNotice(
+          'The room is watching "${snapshot.title ?? snapshot.mediaKey}", '
+          'which is not in your library.');
+      return;
+    }
+    await select(index);
+    if (snapshot.position > Duration.zero) await seek(snapshot.position);
+    if (!snapshot.playing && isPlaying) await togglePlay();
+  }
+
+  final StreamController<String> _watchPartyNotices =
+      StreamController<String>.broadcast();
+
+  /// Messages the UI should surface (for example: the room moved to a file
+  /// this device does not have).
+  Stream<String> get watchPartyNotices => _watchPartyNotices.stream;
+
+  void _emitWatchPartyNotice(String message) {
+    if (!_watchPartyNotices.isClosed) _watchPartyNotices.add(message);
+  }
 
   // --- Volume leveling ------------------------------------------------------
 
@@ -3501,6 +3659,12 @@ class PlayerState with ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _watchPublishTimer?.cancel();
+    _watchPublishTimer = null;
+    _watchPartySub?.cancel();
+    _watchPartySub = null;
+    unawaited(watchParty.dispose());
+    _watchPartyNotices.close();
     _seekDebounceTimer?.cancel();
     _seekDebounceTimer = null;
     _positionUiController.close();
@@ -4594,6 +4758,18 @@ class _PlayerScreenState extends State<PlayerScreen>
                   color: Theme.of(context).colorScheme.onSurface),
               tooltip: 'Fix missing metadata',
               onPressed: _showFixAllMetadataDialog,
+            ),
+            IconButton(
+              icon: Icon(
+                Icons.groups_rounded,
+                color: context.watch<PlayerState>().watchParty.status.isActive
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onSurface,
+              ),
+              tooltip: context.watch<PlayerState>().watchParty.status.isActive
+                  ? 'Watch Together: ${context.watch<PlayerState>().watchParty.status.roomCode}'
+                  : 'Watch Together',
+              onPressed: () => WatchPartySheet.show(context),
             ),
             IconButton(
               icon: Icon(Icons.graphic_eq_rounded,
