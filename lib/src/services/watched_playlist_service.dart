@@ -114,7 +114,8 @@ class WatchedPlaylistService {
     }
     return urls;
   }
-/// Adds a new watched-playlist entry.
+
+  /// Adds a new watched-playlist entry.
   ///
   /// There is deliberately no dedupe on [url]: the same playlist can be
   /// watched more than once with different [folder] / [format] destinations.
@@ -193,10 +194,39 @@ class WatchedPlaylistService {
   }
 // -- Checking for new tracks -------------------------------------------
 
-  Future<int> checkAllPlaylists() async {
+  /// How long a single playlist fetch may take before it is abandoned.
+  ///
+  /// Without this, one URL that never resolves hangs the whole check - which
+  /// is what left the Windows refresh button spinning forever (issue #7).
+  static const Duration perPlaylistTimeout = Duration(seconds: 30);
+
+  /// How many playlists to fetch at once. Small on purpose: these hit the same
+  /// host, and the point is to bound the wall clock, not to flood it.
+  static const int checkConcurrency = 3;
+
+  Future<int>? _checkInFlight;
+
+  /// Whether a check is running right now.
+  bool get isChecking => _checkInFlight != null;
+
+  /// Checks every watched playlist for new tracks.
+  ///
+  /// Re-entrant calls join the run already in progress instead of starting a
+  /// second one, so the 3-hourly timer and a manual refresh cannot overlap.
+  Future<int> checkAllPlaylists() {
+    final existing = _checkInFlight;
+    if (existing != null) return existing;
+
+    final run = _checkAllPlaylists();
+    _checkInFlight = run;
+    return run.whenComplete(() {
+      if (identical(_checkInFlight, run)) _checkInFlight = null;
+    });
+  }
+
+  Future<int> _checkAllPlaylists() async {
     if (_disposed) return 0;
     final entries = await getEntries();
-    int totalNew = 0;
     // Group entries by URL so each unique playlist is fetched / diffed
     // exactly once per cycle: multiple entries watching the same URL share
     // one check instead of re-hitting YouTube per entry.
@@ -204,11 +234,38 @@ class WatchedPlaylistService {
     for (final e in entries) {
       (byUrl[e.url] ??= <WatchedPlaylistEntry>[]).add(e);
     }
-    for (final group in byUrl.values) {
-      if (_disposed) break;
-      totalNew += await _checkUrl(group);
+
+    final groups = byUrl.values.toList();
+    var totalNew = 0;
+    var next = 0;
+
+    Future<void> worker() async {
+      while (true) {
+        if (_disposed) return;
+        final index = next++;
+        if (index >= groups.length) return;
+        final found = await _checkUrlGuarded(groups[index]);
+        // Read-modify-write *after* the await: `totalNew += await ...` reads
+        // the old value first, so concurrent workers would lose updates.
+        totalNew += found;
+      }
     }
+
+    final workers = <Future<void>>[
+      for (var i = 0; i < checkConcurrency && i < groups.length; i++) worker(),
+    ];
+    await Future.wait(workers);
     return totalNew;
+  }
+
+  /// Runs one check under a timeout so a stalled host cannot block the rest.
+  Future<int> _checkUrlGuarded(List<WatchedPlaylistEntry> watchers) async {
+    try {
+      return await _checkUrl(watchers).timeout(perPlaylistTimeout);
+    } on TimeoutException {
+      logs?.add('Watched playlist check timed out for ${watchers.first.url}');
+      return 0;
+    }
   }
 
   /// Fetches the playlist at [watchers]' shared URL once, diffs it against
@@ -347,7 +404,8 @@ class WatchedPlaylistService {
     }
     return entries;
   }
-Future<void> _snapshotPlaylist(String url) async {
+
+  Future<void> _snapshotPlaylist(String url) async {
     if (_disposed) return;
     try {
       final tracks = await fetchPlaylistTracks(url);

@@ -529,7 +529,15 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     } catch (_) {}
   }
 
+  /// Tab index of the browser, used to decide what the refresh button does.
+  static const int _browserTabIndex = 2;
+
   Future<void> _refreshApp() async {
+    // In the browser, refresh means "reload this page" - it is the same
+    // button people use in every other browser (issue #7).
+    if (_selectedPageIndex == _browserTabIndex && BrowserScreen.reloadPage()) {
+      return;
+    }
     if (_isRefreshing) return;
     setState(() => _isRefreshing = true);
     try {

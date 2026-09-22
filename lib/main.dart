@@ -20,6 +20,7 @@ import 'src/services/purchase_service.dart';
 import 'src/services/review_service.dart';
 import 'src/services/session_log_service.dart';
 import 'src/vault/platform/crash_dump.dart';
+import 'src/widgets/app_error_screen.dart';
 
 Future<File?> _prepareStartupErrorLogFile() async {
   try {
@@ -96,10 +97,14 @@ Future<void> main() async {
       try {
         // Android 13+ requires granular media permissions (audio/video/photos).
         // Request both storage and media permissions to cover older and newer OS versions.
+        // Notifications matter for more than alerts here: the download
+        // foreground service shows its progress through one, and without the
+        // permission the user gets no sign that work is still running.
         final statuses = await [
           Permission.storage,
           Permission.audio,
           Permission.videos,
+          Permission.notification,
         ].request();
 
         if (kDebugMode) {
@@ -112,9 +117,20 @@ Future<void> main() async {
       }
     }
 
+    // A visible, reportable error screen instead of a bare grey rectangle.
+    // Release builds render widget failures as an unexplained grey box, which
+    // is exactly what the Watch Together bug looked like to users (issue #7).
+    ErrorWidget.builder =
+        (FlutterErrorDetails details) => AppErrorScreen(details: details);
+
     // Global error handlers.
     FlutterError.onError = (details) {
       FlutterError.presentError(details);
+      SessionLogService.instance.logSwallowed(
+        details.exception,
+        details.stack ?? StackTrace.current,
+        details.context?.toString() ?? 'flutter_error',
+      );
       _logStartupError(
         startupErrorLogFile,
         'FLUTTER ERROR',

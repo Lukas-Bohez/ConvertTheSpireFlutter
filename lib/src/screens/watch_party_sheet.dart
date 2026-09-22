@@ -1,7 +1,11 @@
+import 'dart:async';
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../services/foreground_service.dart';
 import '../services/watch_party/watch_party_service.dart';
 import '../utils/snack.dart';
 import 'player.dart' show PlayerState;
@@ -13,12 +17,24 @@ import 'player.dart' show PlayerState;
 class WatchPartySheet extends StatefulWidget {
   const WatchPartySheet({super.key});
 
-  static Future<void> show(BuildContext context) => showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        showDragHandle: true,
-        builder: (_) => const WatchPartySheet(),
-      );
+  /// Opens the sheet.
+  ///
+  /// [PlayerState] is re-provided explicitly so the sheet works no matter
+  /// which navigator it is pushed on. Providers now live above MaterialApp,
+  /// but a sheet that reaches for app state and finds none renders as a grey
+  /// error screen in release builds, so this stays belt and braces (issue #7).
+  static Future<void> show(BuildContext context) {
+    final player = context.read<PlayerState>();
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => ChangeNotifierProvider<PlayerState>.value(
+        value: player,
+        child: const WatchPartySheet(),
+      ),
+    );
+  }
 
   @override
   State<WatchPartySheet> createState() => _WatchPartySheetState();
@@ -26,10 +42,35 @@ class WatchPartySheet extends StatefulWidget {
 
 class _WatchPartySheetState extends State<WatchPartySheet> {
   final TextEditingController _codeController = TextEditingController();
-  final TextEditingController _nameController =
-      TextEditingController(text: 'Me');
+  final TextEditingController _nameController = TextEditingController();
   bool _busy = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_fillDefaultName());
+  }
+
+  /// Defaults the display name to the device's own name.
+  ///
+  /// Everybody in a room used to show up as "Me", which is useless when the
+  /// point is telling devices apart (issue #7).
+  Future<void> _fillDefaultName() async {
+    final name = await ForegroundService.deviceName() ?? _fallbackDeviceName();
+    if (!mounted || _nameController.text.isNotEmpty) return;
+    _nameController.text = name;
+  }
+
+  String _fallbackDeviceName() {
+    try {
+      final host = Platform.localHostname.trim();
+      if (host.isNotEmpty && host.toLowerCase() != 'localhost') return host;
+    } catch (e) {
+      debugPrint('watch party: host name unavailable: $e');
+    }
+    return 'This device';
+  }
 
   @override
   void dispose() {

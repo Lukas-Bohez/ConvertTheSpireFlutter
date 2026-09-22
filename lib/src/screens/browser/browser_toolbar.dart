@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../config/build_flags.dart';
+import 'browser_chrome.dart';
 
 /// Top toolbar for the browser with URL bar, navigation, cast button, and menu.
 class BrowserToolbar extends StatelessWidget {
@@ -73,10 +74,9 @@ class BrowserToolbar extends StatelessWidget {
 
     // Incognito gets a dark purple tint; normal mode uses a slightly elevated
     // surface so the toolbar doesn't blend into the page content.
-    final bgColor = isIncognito
-        ? const Color(0xFF1A1A2E)
-        : cs.surfaceContainerLowest;
-    final iconColor = isIncognito ? Colors.white : cs.onSurface;
+    final bgColor =
+        isIncognito ? incognitoSurface(cs) : cs.surfaceContainerLowest;
+    final iconColor = isIncognito ? onIncognitoSurface : cs.onSurface;
 
     return Material(
       elevation: 2,
@@ -130,8 +130,8 @@ class BrowserToolbar extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: isIncognito
                               ? Colors.white.withValues(alpha: 0.08)
-                              : cs.surfaceContainerHighest.withValues(
-                                  alpha: 0.7),
+                              : cs.surfaceContainerHighest
+                                  .withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: isIncognito
@@ -170,8 +170,7 @@ class BrowserToolbar extends StatelessWidget {
                               Expanded(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       _siteDomain(currentUrl),
@@ -266,14 +265,14 @@ class BrowserToolbar extends StatelessWidget {
                                 child: SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 ),
                               ),
                             )
                           : IconButton(
-                              icon: const Icon(Icons.download_rounded,
-                                  size: 20),
+                              icon:
+                                  const Icon(Icons.download_rounded, size: 20),
                               onPressed: downloadEnabled
                                   ? () {
                                       onReleaseWebViewFocus?.call();
@@ -286,8 +285,8 @@ class BrowserToolbar extends StatelessWidget {
                                     cs.primaryContainer.withValues(alpha: 0.8),
                                 foregroundColor: cs.onPrimaryContainer,
                               ),
-                              ),
                             ),
+                    ),
                   // Overflow menu
                   _OverflowMenuButton(
                     onMenuAction: onMenuAction,
@@ -468,16 +467,15 @@ class _OverflowMenuButton extends StatelessWidget {
               buttonContext.findRenderObject() as RenderBox;
           final Offset buttonPos = button.localToGlobal(Offset.zero);
           final Size buttonSize = button.size;
-          final RenderBox overlay = Overlay.of(buttonContext)
-              .context
-              .findRenderObject() as RenderBox;
+          final RenderBox overlay =
+              Overlay.of(buttonContext).context.findRenderObject() as RenderBox;
 
           final selection = await showMenu<String>(
             context: buttonContext,
             color: Theme.of(buttonContext).colorScheme.surfaceContainerHigh,
             elevation: 8,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             position: RelativeRect.fromRect(
               buttonPos & buttonSize,
               Offset.zero & overlay.size,

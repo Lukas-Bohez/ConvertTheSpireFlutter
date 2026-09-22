@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../../data/browser_db.dart';
@@ -34,14 +35,19 @@ class _NewTabPageState extends State<NewTabPage> {
     super.initState();
     _load();
     widget.repo.addListener(_load);
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Capture a one-off screenshot of the NewTabPage for QA.
-      try {
-        await Future.delayed(const Duration(milliseconds: 300));
-        await ScreenshotHelper.captureToFile(
-            _repaintKey, 'results/screenshots/new_tab_page.png');
-      } catch (_) {}
-    });
+    if (kDebugMode) {
+      // QA screenshot. Debug only: this used to run every time a tab opened,
+      // in release builds too, writing into the repo (issue #7).
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          await Future.delayed(const Duration(milliseconds: 300));
+          await ScreenshotHelper.captureToFile(
+              _repaintKey, 'results/screenshots/new_tab_page.png');
+        } catch (e) {
+          debugPrint('new tab QA screenshot failed: $e');
+        }
+      });
+    }
   }
 
   @override

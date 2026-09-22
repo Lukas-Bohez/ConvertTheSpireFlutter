@@ -20,8 +20,10 @@ import '../services/ad_service.dart';
 import '../services/android_saf.dart';
 import '../services/bulk_import_service.dart';
 import '../services/convert_service.dart';
+import '../services/download_keep_alive.dart';
 import '../services/download_service.dart';
 import '../services/file_organization_service.dart';
+import '../services/foreground_service.dart';
 import '../services/installer_service.dart';
 import '../services/log_service.dart';
 import '../services/metadata_service.dart';
@@ -123,6 +125,7 @@ class AppController extends ChangeNotifier {
   static const Duration _burstPauseDuration = Duration(minutes: 7);
 
   void scheduleNotify() {
+    _syncKeepAlive();
     if (_notifyPending) return;
     _notifyPending = true;
     Future.microtask(() {
@@ -131,6 +134,60 @@ class AppController extends ChangeNotifier {
         notifyListeners();
       }
     });
+  }
+
+  /// Tells the Android foreground service how much work is in flight, so the
+  /// process survives the screen going off (issue #7).
+  void _syncKeepAlive() {
+    if (!ForegroundService.isSupported) return;
+    final working = queue
+        .where((item) =>
+            item.status == DownloadStatus.downloading ||
+            item.status == DownloadStatus.converting)
+        .toList();
+    final waiting =
+        queue.where((item) => item.status == DownloadStatus.queued).length;
+    final active = working.length + waiting;
+
+    String text;
+    int progress = -1;
+    if (working.length == 1) {
+      final item = working.first;
+      progress = item.progress.clamp(0, 100);
+      final more = active - 1;
+      text = more > 0 ? '${item.title} (+$more waiting)' : item.title;
+    } else if (working.isNotEmpty) {
+      text = '${working.length} downloading, $waiting waiting';
+    } else if (waiting > 0) {
+      text = '$waiting waiting';
+    } else {
+      text = 'Finishing up';
+    }
+
+    DownloadKeepAlive.instance
+        .report(active: active, text: text, progress: progress);
+  }
+
+  /// Pauses everything that is running. Used by the Stop action on the
+  /// download notification, which has to reach Dart rather than just dismiss
+  /// the notification.
+  Future<void> pauseAllDownloads() async {
+    final running = queue
+        .where((item) =>
+            item.status == DownloadStatus.downloading ||
+            item.status == DownloadStatus.converting ||
+            item.status == DownloadStatus.queued)
+        .toList();
+    for (final item in running) {
+      try {
+        cancelDownload(item);
+      } catch (e) {
+        logs.add('pauseAllDownloads: could not stop ${item.title}: $e');
+      }
+    }
+    logs.add('Downloads paused (${running.length} item(s)).');
+    await DownloadKeepAlive.instance.stopNow();
+    scheduleNotify();
   }
 
   AppController({
@@ -181,6 +238,15 @@ class AppController extends ChangeNotifier {
         debugPrint('NotificationService.initialize error: $e\n$st');
       }
     }
+    if (ForegroundService.isSupported) {
+      DownloadKeepAlive.instance.appName = getAppTitle();
+      DownloadKeepAlive.instance.channelName = 'Downloads';
+      ForegroundService.attach();
+      ForegroundService.onPauseRequested = () {
+        unawaited(pauseAllDownloads());
+      };
+    }
+
     scheduleNotify();
 
     if (!kIsWeb && Platform.isAndroid && kIsGithubRelease) {
@@ -356,29 +422,57 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  /// Refreshes core app state and triggers watched playlist checks.
+  /// The longest a manual refresh may take before it gives up and returns.
+  ///
+  /// Refresh used to await every watched-playlist fetch in turn with no
+  /// timeout, so on Windows - where watched playlists are common - the
+  /// spinner ran until the slowest host answered, or forever (issue #7).
+  static const Duration refreshTimeout = Duration(seconds: 8);
+
+  /// Reloads settings and rebuilds local state. Bounded by [refreshTimeout].
+  ///
+  /// The watched-playlist check is network work that can legitimately take
+  /// minutes, so it runs in the background with its own feedback rather than
+  /// holding the spinner.
   Future<void> refreshAll() async {
     if (_settings == null) return;
 
     try {
-      final loaded = await settingsStore.load();
-      _settings = loaded;
+      await _refreshLocalState().timeout(refreshTimeout);
+    } on TimeoutException {
+      logs.add('refreshAll: timed out after ${refreshTimeout.inSeconds}s');
     } catch (e, st) {
-      logs.add('refreshAll: failed to reload settings: $e');
-      if (kDebugMode) debugPrint('refreshAll settings reload failed: $e\n$st');
+      logs.add('refreshAll: failed: $e');
+      if (kDebugMode) debugPrint('refreshAll failed: $e');
+      if (kDebugMode) debugPrint(st.toString());
     }
 
+    unawaited(checkWatchedPlaylistsInBackground());
+    scheduleNotify();
+  }
+
+  Future<void> _refreshLocalState() async {
+    final loaded = await settingsStore.load();
+    _settings = loaded;
+  }
+
+  /// Runs the watched-playlist check without blocking the caller.
+  ///
+  /// Re-entrancy is handled inside the service, so a manual refresh during the
+  /// 3-hourly auto-check joins that run instead of starting a second one.
+  Future<void> checkWatchedPlaylistsInBackground() async {
     try {
       final newTracks = await watchedPlaylistService.checkAllPlaylists();
       if (newTracks > 0) {
+        logs.add('Watched playlists: $newTracks new track(s).');
         await notificationService.showActiveDownloadsBanner(newTracks);
+        scheduleNotify();
       }
     } catch (e, st) {
-      logs.add('refreshAll: watched playlist check failed: $e');
-      if (kDebugMode) debugPrint('refreshAll playlist check failed: $e\n$st');
+      logs.add('Watched playlist check failed: $e');
+      if (kDebugMode) debugPrint('watched playlist check failed: $e');
+      if (kDebugMode) debugPrint(st.toString());
     }
-
-    scheduleNotify();
   }
 
   /// Called by the app when the lifecycle state changes. Used to adjust
@@ -714,7 +808,8 @@ class AppController extends ChangeNotifier {
         // pauses the whole queue instead of continuing to hammer a throttle.
         if (_isReloadError(msg) && !token.cancelled) {
           if (_recordReloadErrorAndCheckBurst()) {
-            logs.add('Burst of reload-errors detected — pausing queue for ${_burstPauseDuration.inMinutes} minutes');
+            logs.add(
+                'Burst of reload-errors detected — pausing queue for ${_burstPauseDuration.inMinutes} minutes');
           }
         }
 
@@ -994,8 +1089,7 @@ class AppController extends ChangeNotifier {
           .toList();
       final data = jsonEncode(filtered.map((q) => q.toJson()).toList());
       await prefs.setString(_queueKey, data);
-      logs.add(
-          '[_saveQueue] persisted ${filtered.length} items in '
+      logs.add('[_saveQueue] persisted ${filtered.length} items in '
           '${sw.elapsedMilliseconds}ms');
     } catch (e) {
       logs.add('[_saveQueue] persist FAILED after ${sw.elapsedMilliseconds}ms: '
@@ -1084,8 +1178,7 @@ class AppController extends ChangeNotifier {
   /// (3+ within the 5-minute window), triggering a queue pause.
   bool _recordReloadErrorAndCheckBurst() {
     final now = DateTime.now();
-    _reloadErrorTimestamps.removeWhere(
-        (t) => now.difference(t) > _burstWindow);
+    _reloadErrorTimestamps.removeWhere((t) => now.difference(t) > _burstWindow);
     _reloadErrorTimestamps.add(now);
 
     if (_reloadErrorTimestamps.length >= _burstThreshold) {

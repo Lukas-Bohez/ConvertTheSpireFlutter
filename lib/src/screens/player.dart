@@ -1218,9 +1218,8 @@ class PlayerState with ChangeNotifier {
     // A single commit can never legitimately exceed the track length (seeking
     // forward is not "time played").
     final cap = duration;
-    final counted = (cap != null && cap > Duration.zero && delta > cap)
-        ? cap
-        : delta;
+    final counted =
+        (cap != null && cap > Duration.zero && delta > cap) ? cap : delta;
     final current = _statsForPath(item.path);
     _playStats[item.path] = current.copyWith(
       totalPlayedDuration: current.totalPlayedDuration + counted,
@@ -2811,8 +2810,8 @@ class PlayerState with ChangeNotifier {
   /// The room moved to another file. Play our own copy if we have one; say so
   /// if we do not, rather than silently sitting on the wrong thing.
   Future<void> _followRoomToMedia(PlaybackSnapshot snapshot) async {
-    final index =
-        library.indexWhere((item) => p.basename(item.path) == snapshot.mediaKey);
+    final index = library
+        .indexWhere((item) => p.basename(item.path) == snapshot.mediaKey);
     if (index < 0) {
       _emitWatchPartyNotice(
           'The room is watching "${snapshot.title ?? snapshot.mediaKey}", '
@@ -3958,12 +3957,14 @@ class _VideoPaneState extends State<_VideoPane> {
             ? AspectRatio(
                 aspectRatio: val.aspectRatio,
                 child: VideoPlayer(widget.androidController!))
-            : const Center(
-                child: CircularProgressIndicator(color: _PlayerTheme.accent)),
+            : Center(
+                child: CircularProgressIndicator(
+                    color: _PlayerTheme.accent(context))),
       );
     } else {
-      child = const Center(
-          child: CircularProgressIndicator(color: _PlayerTheme.accent));
+      child = Center(
+          child:
+              CircularProgressIndicator(color: _PlayerTheme.accent(context)));
     }
 
     return GestureDetector(
@@ -3996,8 +3997,9 @@ class _VideoPaneState extends State<_VideoPane> {
                     ),
                   ],
                 )
-              : const Center(
-                  child: CircularProgressIndicator(color: _PlayerTheme.accent)),
+              : Center(
+                  child: CircularProgressIndicator(
+                      color: _PlayerTheme.accent(context))),
         ),
       ),
     );
@@ -4006,14 +4008,20 @@ class _VideoPaneState extends State<_VideoPane> {
 
 // --- Theme constants ----------------------------------------------------------
 
+/// Player colours, all derived from the active [ColorScheme].
+///
+/// These used to be hard-coded (a fixed blue accent and fixed tile greys),
+/// which is why the support colour never reached the player bar, its sliders
+/// or its progress indicators (issue #7).
 abstract class _PlayerTheme {
-  static const accent = Color(0xFF5B8DEF);
-  static const accentDim = Color(0x334A7EDB);
+  static Color accent(BuildContext context) =>
+      Theme.of(context).colorScheme.primary;
+
+  static Color accentDim(BuildContext context) =>
+      Theme.of(context).colorScheme.primary.withValues(alpha: 0.2);
 
   static Color tileBg(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF1E1E22)
-          : const Color(0xFFF0F0F5);
+      Theme.of(context).colorScheme.surfaceContainerHigh;
 
   static Color text(BuildContext context) =>
       Theme.of(context).colorScheme.onSurface;
@@ -4606,9 +4614,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                 if (!(isMobile && showVideoPane))
                   SliverToBoxAdapter(child: _buildNowPlaying(state)),
                 if (state.isLoading)
-                  const SliverToBoxAdapter(
+                  SliverToBoxAdapter(
                     child: LinearProgressIndicator(
-                      color: _PlayerTheme.accent,
+                      color: _PlayerTheme.accent(context),
                       minHeight: 2,
                     ),
                   ),
@@ -4635,9 +4643,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                             children: [
                               TabBar(
                                 controller: _tabController,
-                                labelColor: _PlayerTheme.accent,
+                                labelColor: _PlayerTheme.accent(context),
                                 unselectedLabelColor: _PlayerTheme.sub(context),
-                                indicatorColor: _PlayerTheme.accent,
+                                indicatorColor: _PlayerTheme.accent(context),
                                 isScrollable: true,
                                 tabAlignment: TabAlignment.start,
                                 tabs: [
@@ -4745,15 +4753,15 @@ class _PlayerScreenState extends State<PlayerScreen>
         padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
         child: Row(
           children: [
-            const Icon(Icons.music_note_rounded,
-                color: _PlayerTheme.accent, size: 26),
+            Icon(Icons.music_note_rounded,
+                color: _PlayerTheme.accent(context), size: 26),
             const SizedBox(width: 8),
-            const Text(
+            Text(
               'Player',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: _PlayerTheme.accent,
+                color: _PlayerTheme.accent(context),
                 letterSpacing: -0.5,
               ),
             ),
@@ -5428,8 +5436,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                 Expanded(
                   child: Slider(
                     value: state.volume,
-                    activeColor: _PlayerTheme.accent,
-                    inactiveColor: _PlayerTheme.accentDim,
+                    activeColor: _PlayerTheme.accent(context),
+                    inactiveColor: _PlayerTheme.accentDim(context),
                     onChanged: state.setVolume,
                   ),
                 ),
@@ -5588,8 +5596,8 @@ class _PositionWidget extends StatelessWidget {
                   ),
                   child: Slider(
                     value: progress,
-                    activeColor: _PlayerTheme.accent,
-                    inactiveColor: _PlayerTheme.accentDim,
+                    activeColor: _PlayerTheme.accent(context),
+                    inactiveColor: _PlayerTheme.accentDim(context),
                     onChangeStart: dur.inMilliseconds > 0
                         ? (_) => state.beginSeekInteraction()
                         : null,
@@ -5607,14 +5615,14 @@ class _PositionWidget extends StatelessWidget {
                 ),
               ),
               if (ui.isSeeking)
-                const Padding(
-                  padding: EdgeInsets.only(right: 6),
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
                   child: SizedBox(
                     width: 12,
                     height: 12,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: _PlayerTheme.accent,
+                      color: _PlayerTheme.accent(context),
                     ),
                   ),
                 ),
