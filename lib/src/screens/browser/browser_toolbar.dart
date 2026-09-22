@@ -538,6 +538,14 @@ class _OverflowMenuButton extends StatelessWidget {
                     const Text('History'),
                   ])),
               PopupMenuItem(
+                  value: 'userscripts',
+                  child: Row(children: [
+                    Icon(Icons.extension_outlined,
+                        color: Theme.of(context).colorScheme.onSurface),
+                    const SizedBox(width: 12),
+                    const Text('Userscripts'),
+                  ])),
+              PopupMenuItem(
                   value: 'clear_session',
                   child: Row(children: [
                     Icon(Icons.delete_sweep,

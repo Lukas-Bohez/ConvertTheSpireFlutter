@@ -130,6 +130,13 @@ class BrowserWebViewHooks {
   /// `tel:`/`mailto:` schemes).
   Future<bool> Function(String url)? shouldAllowNavigation;
 
+  /// Returns the JavaScript to inject for [url] at the given moment.
+  ///
+  /// `atDocumentStart` runs before the page's own scripts; otherwise it runs
+  /// once the DOM is parsed. Used for userscripts.
+  List<String> Function(String url, {required bool atDocumentStart})?
+      userScriptsFor;
+
   /// Return true to block a resource request (ad-block, video sniffing
   /// side effects happen inside the callback).
   bool Function(String url)? shouldBlockResource;

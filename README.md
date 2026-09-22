@@ -2,11 +2,13 @@
 
 ## 📥 Quick Downloads
 
-* **[Latest GitHub Release (v14.2.0)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest)**: Get the full-featured app for Windows, macOS, and Android (APK). The GitHub APK builds are ad-free and unlock all colours by default.
+* **[Latest GitHub Release (v14.3.0)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest)**: Get the full-featured app for Windows, macOS, and Android (APK). The GitHub APK builds are ad-free and unlock all colours by default.
 * **[Official Website (quizthespire.com)](https://quizthespire.com/)**: An additional place to download the app and learn more.
 * **[Google Play Store (Convert The Spire Reborn)](https://play.google.com/store/apps/details?id=com.torrentspire.ai)**: The limited, App Store-compatible version featuring only the torrenting and media player functionality to comply with Play policies.
 
 ---
+
+**Userscripts** — the built-in browser runs Tampermonkey/Greasemonkey scripts, on top of the ad and tracker blocking it already had.
 
 **Watch Together** — start a room, share a six-character code, and everyone watches in step across phone, PC, Mac and TV. No server, no account; it runs on your own network.
 
@@ -81,7 +83,7 @@ You can download the app directly from our site at [quizthespire.com](https://qu
 * **Windows:** Download the `.zip`, extract it, and run `convert_the_spire_reborn.exe`. The folder is kept tidy: just the `.exe`, `data/` and a `dll/` folder that holds every library.
 * **Android:** Grab the `.apk` for direct install, or upload the `.aab` to Google Play.
 * **Android TV:** Uses the same Android build; UI is adaptive, but it is not separately certified for every TV model.
-* **Linux:** No longer distributed as of v14.2.0 (the build could not be kept reliable). The source is still in the repo if you want to build it yourself.
+* **Linux:** No longer distributed as of v14.3.0 (the build could not be kept reliable). The source is still in the repo if you want to build it yourself.
 * **macOS:** Download the macOS release package or build from source.
 
 ---

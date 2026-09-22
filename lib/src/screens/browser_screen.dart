@@ -18,11 +18,14 @@ import '../browser/js/js_bridge.dart';
 import '../browser/platform/browser_webview_controller.dart';
 import '../browser/platform/browser_webview_factory.dart';
 import '../browser/tabs/tab_manager.dart';
+import '../browser/userscripts/userscript.dart';
+import '../browser/userscripts/userscript_service.dart';
 import '../browser/video/video_detector_service.dart';
 import '../data/browser_db.dart';
 import '../models/search_result.dart';
 import '../services/download_service.dart';
 import '../utils/screenshot_helper.dart';
+import '../utils/snack.dart';
 import '../widgets/browser_shell.dart';
 import '../widgets/cursor_overlay.dart';
 import 'browser/browser_bottom_bar.dart';
@@ -33,6 +36,7 @@ import 'browser/cast_mini_bar.dart';
 import 'browser/favourites_screen.dart';
 import 'browser/history_screen.dart';
 import 'browser/new_tab_page.dart';
+import 'browser/userscripts_screen.dart';
 
 /// Full-featured browser screen with ad-blocking, video detection, and casting.
 class BrowserLocationState {
@@ -128,6 +132,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   // -- Services --
   final BrowserRepository _repo = BrowserRepository();
   final AdBlockService _adBlock = AdBlockService();
+  final UserScriptService _userScripts = UserScriptService();
   final UnifiedCastService _castService = UnifiedCastService();
   final TabManager _tabManager = TabManager();
   final VideoDetectorService _videoDetector = VideoDetectorService();
@@ -180,6 +185,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     _playbackScreenshotTimer?.cancel();
     super.initState();
     _adBlock.init();
+    unawaited(_userScripts.init());
     _castService.startDiscovery();
     _castBadgeController = AnimationController(
       vsync: this,
@@ -394,7 +400,8 @@ class _BrowserScreenState extends State<BrowserScreen>
       blockedDomains: _adBlock.hardcodedPopupDomains,
       hooks: BrowserWebViewHooks()
         ..shouldAllowNavigation = _shouldAllowNavigation
-        ..shouldBlockResource = _shouldBlockResource,
+        ..shouldBlockResource = _shouldBlockResource
+        ..userScriptsFor = _userScriptsFor,
     );
     if (adapter == null) return;
     _webViewController = adapter;
@@ -670,6 +677,12 @@ class _BrowserScreenState extends State<BrowserScreen>
   /// Returns false to cancel external-protocol navigations
   /// (tel:, mailto:, etc.).
   Future<bool> _shouldAllowNavigation(String url) async {
+    // Clicking a .user.js link should offer to install it, the way a
+    // userscript manager does, instead of dumping JavaScript on screen.
+    if (_looksLikeUserScriptUrl(url)) {
+      unawaited(_offerUserScriptInstall(url));
+      return false;
+    }
     if (url.startsWith('tel:') ||
         url.startsWith('mailto:') ||
         url.startsWith('intent:') ||
@@ -685,6 +698,57 @@ class _BrowserScreenState extends State<BrowserScreen>
   /// Per-request resource filter (Android). Not supported on Windows -
   /// there the Windows adapter embeds the same hardcoded blocklist in an
   /// injected fetch/XHR hook instead.
+  /// Userscripts to run on [url]. Document-start scripts go in before the
+  /// page's own code; everything else waits for the DOM.
+  List<String> _userScriptsFor(String url, {required bool atDocumentStart}) =>
+      _userScripts.injectionsFor(
+        url,
+        runAt: atDocumentStart
+            ? UserScriptRunAt.documentStart
+            : UserScriptRunAt.documentEnd,
+      );
+
+  static bool _looksLikeUserScriptUrl(String url) {
+    final withoutQuery = url.split('?').first.split('#').first.toLowerCase();
+    return withoutQuery.endsWith('.user.js');
+  }
+
+  Future<void> _offerUserScriptInstall(String url) async {
+    if (!mounted) return;
+    final install = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Install userscript?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(url, style: Theme.of(ctx).textTheme.bodySmall),
+            const SizedBox(height: 12),
+            const Text(
+              'Userscripts run with full access to the pages they match. '
+              'Only install scripts from a source you trust.',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Install')),
+        ],
+      ),
+    );
+    if (install != true || !mounted) return;
+
+    final error = await _userScripts.installFromUrl(url);
+    if (!mounted) return;
+    Snack.show(context, error ?? 'Userscript installed',
+        level: error == null ? SnackLevel.success : SnackLevel.error);
+  }
+
   bool _shouldBlockResource(String url) {
     // Ad-block (skip on YouTube/Google sites whose players depend on
     // Google ad domains like doubleclick.net and googlesyndication.com).
@@ -1667,6 +1731,13 @@ class _BrowserScreenState extends State<BrowserScreen>
           );
         }
       }
+      return;
+    }
+    if (action == 'userscripts') {
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => UserScriptsScreen(service: _userScripts),
+      ));
       return;
     }
     if (action == 'favourites') {

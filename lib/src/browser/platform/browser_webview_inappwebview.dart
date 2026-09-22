@@ -124,12 +124,37 @@ class BrowserInAppWebViewAdapter implements BrowserWebviewController {
     final urlStr = url?.toString() ?? '';
     _lastUrl = urlStr;
     _pageEvents.add(BrowserPageEvent(isStart: true, url: urlStr));
+    unawaited(_injectUserScripts(controller, urlStr, atDocumentStart: true));
   }
 
   Future<void> _handleLoadStop(
       InAppWebViewController controller, WebUri? url) async {
     final urlStr = url?.toString() ?? _lastUrl ?? '';
     _pageEvents.add(BrowserPageEvent(isStart: false, url: urlStr));
+    await _injectUserScripts(controller, urlStr, atDocumentStart: false);
+  }
+
+  /// Runs each matching userscript in its own evaluate call, so one script
+  /// throwing cannot stop the rest from running.
+  Future<void> _injectUserScripts(
+      InAppWebViewController controller, String url,
+      {required bool atDocumentStart}) async {
+    final provider = _hooks.userScriptsFor;
+    if (provider == null || url.isEmpty) return;
+    List<String> sources;
+    try {
+      sources = provider(url, atDocumentStart: atDocumentStart);
+    } catch (e) {
+      debugPrint('userscript lookup failed: $e');
+      return;
+    }
+    for (final source in sources) {
+      try {
+        await controller.evaluateJavascript(source: source);
+      } catch (e) {
+        debugPrint('userscript injection failed: $e');
+      }
+    }
   }
 
   Future<NavigationActionPolicy?> _shouldOverrideUrlLoading(

@@ -188,3 +188,76 @@ tasks.matching { task ->
 }.configureEach {
     finalizedBy("copyApkToReleases")
 }
+
+// ---------------------------------------------------------------------------
+// Strip dev-dependency plugin registrations from GeneratedPluginRegistrant
+// before javac runs on a release build.
+//
+// `flutter pub get` writes a registrant that registers every plugin, including
+// ones that are only dev_dependencies (integration_test). Gradle correctly
+// leaves those AARs off the *release* compile classpath, so the generated Java
+// then fails to compile with:
+//     package dev.flutter.plugins.integration_test does not exist
+//
+// Flutter records which plugins are dev-only in .flutter-plugins-dependencies,
+// so that file is the source of truth. Only release variants are touched, so
+// debug builds keep integration_test and `flutter test integration_test/`
+// still works.
+// ---------------------------------------------------------------------------
+val stripDevPluginsFromRegistrant by tasks.registering {
+    doLast {
+        val registrant =
+            file("src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java")
+        val depsFile = file("${project.rootDir}/../.flutter-plugins-dependencies")
+        if (!registrant.exists() || !depsFile.exists()) return@doLast
+
+        // Names of plugins flagged as dev-only. Parsed with plain string
+        // scanning rather than a regex: the entries are one-line JSON objects
+        // and this avoids a dependency on a JSON library in the build script.
+        // Flutter writes this file without spaces after the colons, but do
+        // not depend on that: strip whitespace first so either form parses.
+        val deps = depsFile.readText().filterNot { it.isWhitespace() }
+        val devPluginNames = mutableListOf<String>()
+        for (chunk in deps.split("{")) {
+            if (!chunk.contains("\"dev_dependency\":true")) continue
+            val key = "\"name\":\""
+            val start = chunk.indexOf(key)
+            if (start < 0) continue
+            val from = start + key.length
+            val end = chunk.indexOf("\"", from)
+            if (end > from) devPluginNames.add(chunk.substring(from, end))
+        }
+        if (devPluginNames.isEmpty()) return@doLast
+
+        // Each registration is a fixed five-line block:
+        //     try {
+        //       flutterEngine.getPlugins().add(new <class>());
+        //     } catch (Exception e) {
+        //       Log.e(TAG, "Error registering plugin <name>, <class>", e);
+        //     }
+        val lines = registrant.readLines()
+        val drop = BooleanArray(lines.size)
+        var removed = 0
+        for (i in lines.indices) {
+            val line = lines[i]
+            if (!line.contains("getPlugins().add(")) continue
+            if (devPluginNames.none { line.contains(".$it.") }) continue
+            for (j in (i - 1)..(i + 3)) {
+                if (j in lines.indices) drop[j] = true
+            }
+            removed++
+        }
+        if (removed == 0) return@doLast
+
+        registrant.writeText(
+            lines.filterIndexed { i, _ -> !drop[i] }.joinToString("\n") + "\n"
+        )
+        logger.lifecycle(
+            "Removed $removed dev-dependency plugin registration(s) from " +
+                "GeneratedPluginRegistrant for this release build."
+        )
+    }
+}
+
+tasks.matching { it.name.startsWith("compile") && it.name.endsWith("ReleaseJavaWithJavac") }
+    .configureEach { dependsOn(stripDevPluginsFromRegistrant) }
