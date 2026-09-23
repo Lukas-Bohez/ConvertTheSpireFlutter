@@ -10,6 +10,9 @@ import 'foreground_service.dart';
 /// process only needs to be held up once. Before this existed the foreground
 /// service was never started at all and downloads stopped whenever the phone
 /// locked (issue #7).
+///
+/// Each kind of work reports under its own [report] `source`, so the download
+/// queue going idle does not stop the service while a torrent is still running.
 class DownloadKeepAlive {
   DownloadKeepAlive._()
       : _enabled = ForegroundService.isSupported,
@@ -32,6 +35,12 @@ class DownloadKeepAlive {
 
   static final DownloadKeepAlive instance = DownloadKeepAlive._();
 
+  /// The source used when a caller does not name one: the download queue.
+  static const String downloadsSource = 'downloads';
+
+  /// Torrents report under this source.
+  static const String torrentsSource = 'torrents';
+
   final bool _enabled;
   final Future<void> Function(String text, int progress) _start;
   final Future<void> Function(String text, int progress) _update;
@@ -50,6 +59,7 @@ class DownloadKeepAlive {
   /// Notification channel name, shown in Android's notification settings.
   String channelName = 'Downloads';
 
+  final Map<String, _Work> _sources = {};
   int _active = 0;
   bool _serviceRunning = false;
   Timer? _stopTimer;
@@ -60,28 +70,41 @@ class DownloadKeepAlive {
   bool get isServiceRunning => _serviceRunning;
   int get activeCount => _active;
 
-  /// Reports the current amount of active work.
+  /// Reports how much work [source] currently has running.
   ///
   /// [text] and [progress] are shown in the notification; progress is a
-  /// percentage, or -1 for indeterminate.
+  /// percentage, or -1 for indeterminate. When more than one source is busy
+  /// their texts are joined and the progress bar goes indeterminate.
   void report({
     required int active,
     required String text,
     int progress = -1,
+    String source = downloadsSource,
   }) {
     if (!_enabled) return;
 
+    if (active > 0) {
+      _sources[source] = _Work(active, text, progress);
+    } else {
+      _sources.remove(source);
+    }
+
     final was = _active;
-    _active = active < 0 ? 0 : active;
+    _active = _sources.values.fold<int>(0, (sum, work) => sum + work.count);
+    final busy = _sources.values.toList();
+    final shownText = busy.length == 1
+        ? busy.first.text
+        : busy.map((work) => work.text).join(' · ');
+    final shownProgress = busy.length == 1 ? busy.first.progress : -1;
 
     if (_active > 0 && was == 0) {
       _stopTimer?.cancel();
       _stopTimer = null;
       if (_serviceRunning) {
         // The debounce had not fired yet, so the service is still up.
-        _maybeUpdate(text, progress, force: true);
+        _maybeUpdate(shownText, shownProgress, force: true);
       } else {
-        _beginService(text, progress);
+        _beginService(shownText, shownProgress);
       }
       return;
     }
@@ -90,7 +113,7 @@ class DownloadKeepAlive {
       return;
     }
     if (_active > 0) {
-      _maybeUpdate(text, progress);
+      _maybeUpdate(shownText, shownProgress);
     }
   }
 
@@ -98,6 +121,7 @@ class DownloadKeepAlive {
   Future<void> stopNow() async {
     _stopTimer?.cancel();
     _stopTimer = null;
+    _sources.clear();
     _active = 0;
     if (!_serviceRunning) return;
     _serviceRunning = false;
@@ -156,4 +180,12 @@ class DownloadKeepAlive {
   }
 
   static Future<void> _defaultStop() => ForegroundService.stop();
+}
+
+class _Work {
+  final int count;
+  final String text;
+  final int progress;
+
+  const _Work(this.count, this.text, this.progress);
 }

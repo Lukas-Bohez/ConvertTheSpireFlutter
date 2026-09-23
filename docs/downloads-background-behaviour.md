@@ -12,15 +12,20 @@ is, deliberately, so the next report can be checked against it.
 | Situation | What happens |
 |---|---|
 | Screen off, app in background | Downloads continue. `ForegroundDownloadService` runs with a `dataSync` foreground type and holds a partial wake lock and a wifi lock. |
-| App swiped away from recents | The process dies, the queue is already persisted, and downloads resume on next launch. The service is `START_NOT_STICKY` on purpose: a sticky restart brings the service back without a Flutter engine, which leaves a "downloading" notification with nothing behind it. |
-| Stop tapped on the notification | The Dart queue is paused, not just the notification dismissed. The service stops and drops its locks. |
+| App closed with Back, or swiped away from recents | The foreground service keeps the process alive, and `audio_service` keeps the Flutter engine running without an activity, so downloads carry on and the service stops itself when they finish. The method channel lives in `ForegroundBridge`, which holds only the application context, so it keeps working after `MainActivity` is gone. |
+| Process killed anyway (some vendors do this on swipe) | The queue is already persisted and resumes on next launch. The service is `START_NOT_STICKY` on purpose: a sticky restart brings the service back without a Flutter engine, which leaves a "downloading" notification with nothing behind it. |
+| Stop tapped on the notification | Queue downloads and running torrents are paused, not just the notification dismissed. The service stops and drops its locks. When Dart stops the service itself because the work finished, it uses `stopService`, so that never echoes back as a pause. |
 | More than 6 hours of downloading (Android 15+) | The system caps `dataSync` foreground services at 6 hours per 24. `onTimeout` pauses the queue and stops the service rather than letting the app be killed. |
 | Battery optimisation not disabled | The OS can still kill the app, foreground service or not. The GitHub build offers the exemption prompt; the Play build cannot, because Play restricts the direct request. Aggressive vendors (Xiaomi, Samsung, Huawei) need their own per-device settings — see dontkillmyapp.com. |
 | Notifications permission denied | Downloads still run, but the user sees no progress. The permission is requested with the others at startup. |
 
-The service is started and stopped by `DownloadKeepAlive`, which ref-counts
-active work so downloads, torrents and conversions do not each try to hold the
-process up separately. Stopping is debounced by 5 seconds so a queue that
+The service is started and stopped by `DownloadKeepAlive`, which counts
+active work per source so the download queue and torrents do not each try to
+hold the process up separately, and one going idle does not stop the service
+while the other is still busy. The queue (which includes conversions) reports
+on every change; torrents are polled every 3 seconds, and only if the torrent
+engine already exists, so the poll never starts DHT on its own. Seeding
+torrents do not count: a finished torrent should not hold the phone awake. Stopping is debounced by 5 seconds so a queue that
 briefly empties between two items does not tear the service down and
 immediately rebuild it, and notification updates are throttled to once a
 second.

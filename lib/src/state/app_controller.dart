@@ -90,6 +90,10 @@ class AppController extends ChangeNotifier {
   // Onboarding/version gating
   bool onboardingChecked = false;
   bool needsOnboarding = false;
+
+  /// True when this device has never finished onboarding: a first launch,
+  /// as opposed to an update.
+  bool isFreshInstall = false;
   String? currentAppVersion;
   Timer? _playStoreUpdateTimer;
 
@@ -168,6 +172,24 @@ class AppController extends ChangeNotifier {
         .report(active: active, text: text, progress: progress);
   }
 
+  Timer? _torrentKeepAliveTimer;
+
+  /// Reports running torrents to the keep-alive.
+  ///
+  /// Torrents live in their own engine, outside the download queue, so they
+  /// are counted separately. Without this the phone froze torrent downloads on
+  /// lock even though queue downloads kept going. The engine is only read if
+  /// something already created it, so this never starts DHT on its own.
+  void _syncTorrentKeepAlive() {
+    final engine = TorrentEngineService.existingInstance;
+    final count = engine == null ? 0 : engine.activeDownloadIds.length;
+    DownloadKeepAlive.instance.report(
+      active: count,
+      text: count == 1 ? '1 torrent downloading' : '$count torrents downloading',
+      source: DownloadKeepAlive.torrentsSource,
+    );
+  }
+
   /// Pauses everything that is running. Used by the Stop action on the
   /// download notification, which has to reach Dart rather than just dismiss
   /// the notification.
@@ -185,7 +207,10 @@ class AppController extends ChangeNotifier {
         logs.add('pauseAllDownloads: could not stop ${item.title}: $e');
       }
     }
-    logs.add('Downloads paused (${running.length} item(s)).');
+    final torrents =
+        TorrentEngineService.existingInstance?.pauseActiveDownloads() ?? 0;
+    logs.add('Downloads paused (${running.length} item(s), '
+        '$torrents torrent(s)).');
     await DownloadKeepAlive.instance.stopNow();
     scheduleNotify();
   }
@@ -245,6 +270,10 @@ class AppController extends ChangeNotifier {
       ForegroundService.onPauseRequested = () {
         unawaited(pauseAllDownloads());
       };
+      _torrentKeepAliveTimer = Timer.periodic(
+        const Duration(seconds: 3),
+        (_) => _syncTorrentKeepAlive(),
+      );
     }
 
     scheduleNotify();
@@ -413,7 +442,10 @@ class AppController extends ChangeNotifier {
       currentAppVersion = info.version;
       final prefs = await SharedPreferences.getInstance();
       final seen = prefs.getString('onboardingSeenVersion');
-      needsOnboarding = seen != currentAppVersion;
+      // The tour is for a first launch (see OnboardingScreen). It used to run
+      // again after every update; updates now get the What's new dialog.
+      isFreshInstall = seen == null;
+      needsOnboarding = isFreshInstall;
     } catch (e) {
       needsOnboarding = false;
     } finally {
@@ -1481,6 +1513,7 @@ class AppController extends ChangeNotifier {
   @override
   void dispose() {
     _playStoreUpdateTimer?.cancel();
+    _torrentKeepAliveTimer?.cancel();
     FullModeAccess.instance.removeListener(_fullModeListener);
     watchedPlaylistService.dispose();
     previewPlayer.dispose();

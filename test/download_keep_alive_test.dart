@@ -97,4 +97,70 @@ void main() {
 
     expect(events, ['start:One song:10', 'stop']);
   });
+
+  test('an idle download queue does not stop a running torrent', () async {
+    keepAlive.report(
+      active: 1,
+      text: '1 torrent downloading',
+      source: DownloadKeepAlive.torrentsSource,
+    );
+    keepAlive.report(active: 1, text: 'One song', progress: 10);
+    keepAlive.report(active: 0, text: 'Finishing up');
+
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+
+    expect(events.contains('stop'), isFalse);
+    expect(keepAlive.isServiceRunning, isTrue);
+    expect(keepAlive.activeCount, 1);
+  });
+
+  test('two busy sources share one notification', () {
+    keepAlive.report(active: 1, text: 'One song', progress: 10);
+    keepAlive.report(
+      active: 2,
+      text: '2 torrents downloading',
+      source: DownloadKeepAlive.torrentsSource,
+    );
+
+    expect(events, [
+      'start:One song:10',
+      'update:One song · 2 torrents downloading:-1',
+    ]);
+    expect(keepAlive.activeCount, 3);
+  });
+
+  test('stops only when every source is idle', () async {
+    keepAlive.report(active: 1, text: 'One song', progress: 10);
+    keepAlive.report(
+      active: 1,
+      text: '1 torrent downloading',
+      source: DownloadKeepAlive.torrentsSource,
+    );
+    keepAlive.report(active: 0, text: 'Finishing up');
+    keepAlive.report(
+      active: 0,
+      text: '',
+      source: DownloadKeepAlive.torrentsSource,
+    );
+
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+
+    expect(events.last, 'stop');
+    expect(keepAlive.isServiceRunning, isFalse);
+  });
+
+  test('stopNow forgets every source', () async {
+    keepAlive.report(
+      active: 1,
+      text: '1 torrent downloading',
+      source: DownloadKeepAlive.torrentsSource,
+    );
+    await keepAlive.stopNow();
+    keepAlive.report(active: 0, text: 'Finishing up');
+
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+
+    expect(events, ['start:1 torrent downloading:-1', 'stop']);
+    expect(keepAlive.activeCount, 0);
+  });
 }

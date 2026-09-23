@@ -21,7 +21,6 @@ import android.os.SystemClock
 import android.os.PowerManager
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -46,8 +45,6 @@ class MainActivity : AudioServiceActivity() {
     private val channelName = "convert_the_spire/saf"
     private val webviewChannel = "com.yourapp/webview_input"
     private val cursorKeysChannel = "com.yourapp/cursor_keys"
-    private val foregroundChannelName = "convert_the_spire/foreground"
-    private var foregroundChannel: MethodChannel? = null
     private val pickTreeRequestCode = 5011
     private var pendingResult: MethodChannel.Result? = null
     private var browserWebView: WebView? = null
@@ -77,69 +74,7 @@ class MainActivity : AudioServiceActivity() {
         // Downloads keep-alive. Without a handler here, ForegroundService.start()
         // threw MissingPluginException, which the Dart side swallowed - so
         // downloads quietly died whenever the screen went off (issue #7).
-        foregroundChannel =
-            MethodChannel(flutterEngine.dartExecutor.binaryMessenger, foregroundChannelName)
-        foregroundChannel?.setMethodCallHandler { call, result ->
-            when (call.method) {
-                "startForegroundService", "updateForegroundService" -> {
-                    try {
-                        val intent = Intent(this, ForegroundDownloadService::class.java).apply {
-                            action = if (call.method == "startForegroundService") {
-                                ForegroundDownloadService.ACTION_START
-                            } else {
-                                ForegroundDownloadService.ACTION_UPDATE
-                            }
-                            putExtra(
-                                ForegroundDownloadService.EXTRA_TITLE,
-                                call.argument<String>("title")
-                            )
-                            putExtra(
-                                ForegroundDownloadService.EXTRA_TEXT,
-                                call.argument<String>("text")
-                            )
-                            putExtra(
-                                ForegroundDownloadService.EXTRA_PROGRESS,
-                                call.argument<Int>("progress") ?: -1
-                            )
-                            putExtra(
-                                ForegroundDownloadService.EXTRA_CHANNEL_NAME,
-                                call.argument<String>("channelName")
-                            )
-                        }
-                        ContextCompat.startForegroundService(this, intent)
-                        result.success(true)
-                    } catch (e: Exception) {
-                        Log.w("ForegroundBridge", "start failed: " + e.message)
-                        result.success(false)
-                    }
-                }
-                "stopForegroundService" -> {
-                    try {
-                        startService(ForegroundDownloadService.createStopIntent(this))
-                        result.success(true)
-                    } catch (e: Exception) {
-                        Log.w("ForegroundBridge", "stop failed: " + e.message)
-                        result.success(false)
-                    }
-                }
-                "isIgnoringBatteryOptimizations" -> {
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-                        result.success(true)
-                    } else {
-                        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-                        result.success(pm.isIgnoringBatteryOptimizations(packageName))
-                    }
-                }
-                "deviceName" -> result.success(resolveDeviceName())
-                else -> result.notImplemented()
-            }
-        }
-
-        // The notification Stop action has to pause the Dart-side queue, not
-        // just dismiss the notification.
-        ForegroundDownloadService.onStopRequested = {
-            foregroundChannel?.invokeMethod("pauseDownloads", null)
-        }
+        ForegroundBridge(this, flutterEngine.dartExecutor.binaryMessenger)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.torrentspire.ai/battery")
             .setMethodCallHandler { call, result ->
@@ -869,33 +804,4 @@ class MainActivity : AudioServiceActivity() {
             }
         }
     }
-
-    /**
-     * A human-readable name for this device, used as the default Watch
-     * Together display name. Settings.Global.DEVICE_NAME is what the user
-     * actually set; Build.MODEL is the fallback.
-     */
-    private fun resolveDeviceName(): String {
-        try {
-            val name = Settings.Global.getString(contentResolver, "device_name")
-            if (!name.isNullOrBlank()) return name
-        } catch (e: Exception) {
-            Log.w("ForegroundBridge", "device name unavailable: " + e.message)
-        }
-        val manufacturer = Build.MANUFACTURER ?: ""
-        val model = Build.MODEL ?: ""
-        return when {
-            model.startsWith(manufacturer, ignoreCase = true) -> model
-            manufacturer.isBlank() -> model
-            else -> (manufacturer + " " + model).trim()
-        }
-    }
-
-    override fun onDestroy() {
-        ForegroundDownloadService.onStopRequested = null
-        foregroundChannel?.setMethodCallHandler(null)
-        foregroundChannel = null
-        super.onDestroy()
-    }
-
 }

@@ -41,18 +41,64 @@ class ForegroundDownloadService : Service() {
         const val EXTRA_CHANNEL_NAME = "channelName"
 
         /**
-         * Set by MainActivity so the Stop action can reach Dart. Null when no
+         * Set by ForegroundBridge so the Stop action can reach Dart. Null when no
          * engine is attached, in which case stopping is all we can do.
          */
         @Volatile
         @JvmStatic
         var onStopRequested: (() -> Unit)? = null
 
+        /** True while the service is in the foreground with its notification up. */
+        @Volatile
+        var isRunning: Boolean = false
+
         fun createStartIntent(context: Context): Intent =
             Intent(context, ForegroundDownloadService::class.java).apply { action = ACTION_START }
 
         fun createStopIntent(context: Context): Intent =
             Intent(context, ForegroundDownloadService::class.java).apply { action = ACTION_STOP }
+
+        /** Replaces the running notification's text and progress in place. */
+        fun postNotification(context: Context, title: String?, text: String?, progress: Int) {
+            val manager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.notify(NOTIF_ID, buildNotification(context, title, text, progress))
+        }
+
+        fun buildNotification(
+            context: Context,
+            title: String?,
+            text: String?,
+            progress: Int
+        ): android.app.Notification {
+            val pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+
+            val openIntent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pendingOpen = PendingIntent.getActivity(context, 0, openIntent, pendingFlags)
+            // Only this button sends ACTION_STOP, so a stop intent always means
+            // the user asked for it and Dart should pause its work.
+            val pendingStop =
+                PendingIntent.getService(context, 1, createStopIntent(context), pendingFlags)
+
+            val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setContentTitle(title ?: "Downloads")
+                .setContentText(text ?: "Downloading")
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setContentIntent(pendingOpen)
+                .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", pendingStop)
+                .setOnlyAlertOnce(true)
+                .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+                .setOngoing(true)
+
+            if (progress in 0..100) {
+                builder.setProgress(100, progress, false)
+            } else {
+                builder.setProgress(0, 0, true)
+            }
+            return builder.build()
+        }
     }
 
     private var wakeLock: PowerManager.WakeLock? = null
@@ -101,6 +147,7 @@ class ForegroundDownloadService : Service() {
     }
 
     override fun onDestroy() {
+        isRunning = false
         releaseLocks()
         super.onDestroy()
     }
@@ -116,10 +163,12 @@ class ForegroundDownloadService : Service() {
         // Android 14+.
         ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(intent), type)
         started = true
+        isRunning = true
     }
 
     private fun stopEverything() {
         started = false
+        isRunning = false
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         releaseLocks()
         stopSelf()
@@ -153,12 +202,11 @@ class ForegroundDownloadService : Service() {
         try {
             val wifiManager =
                 applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                WifiManager.WIFI_MODE_FULL_LOW_LATENCY
-            } else {
-                @Suppress("DEPRECATION")
-                WifiManager.WIFI_MODE_FULL_HIGH_PERF
-            }
+            // HIGH_PERF, not LOW_LATENCY: the low-latency lock only applies
+            // while the screen is on, and this one exists for the screen-off
+            // case.
+            @Suppress("DEPRECATION")
+            val mode = WifiManager.WIFI_MODE_FULL_HIGH_PERF
             wifiLock = wifiManager.createWifiLock(mode, "ConvertTheSpire:downloads").apply {
                 setReferenceCounted(false)
                 acquire()
@@ -186,37 +234,13 @@ class ForegroundDownloadService : Service() {
     private fun notificationManager(): NotificationManager =
         getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-    private fun buildNotification(intent: Intent?): android.app.Notification {
-        val title = intent?.getStringExtra(EXTRA_TITLE) ?: "Downloads"
-        val text = intent?.getStringExtra(EXTRA_TEXT) ?: "Downloading"
-        val progress = intent?.getIntExtra(EXTRA_PROGRESS, -1) ?: -1
-
-        val pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-
-        val openIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        val pendingOpen = PendingIntent.getActivity(this, 0, openIntent, pendingFlags)
-        val pendingStop =
-            PendingIntent.getService(this, 1, createStopIntent(this), pendingFlags)
-
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentIntent(pendingOpen)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", pendingStop)
-            .setOnlyAlertOnce(true)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setOngoing(true)
-
-        if (progress in 0..100) {
-            builder.setProgress(100, progress, false)
-        } else {
-            builder.setProgress(0, 0, true)
-        }
-        return builder.build()
-    }
+    private fun buildNotification(intent: Intent?): android.app.Notification =
+        ForegroundDownloadService.buildNotification(
+            this,
+            intent?.getStringExtra(EXTRA_TITLE),
+            intent?.getStringExtra(EXTRA_TEXT),
+            intent?.getIntExtra(EXTRA_PROGRESS, -1) ?: -1
+        )
 
     private fun createNotificationChannel(channelName: String?) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
