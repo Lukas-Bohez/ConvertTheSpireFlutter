@@ -62,8 +62,18 @@ void main() {
 
     testWidgets('search, ad-block probe, torrents and history all work',
         (tester) async {
+      // Userscripts: one at document start, one at document end, only for
+      // the search page. The Windows adapter used to ignore this hook, so
+      // userscripts never ran on Windows at all.
+      final hooks = BrowserWebViewHooks()
+        ..userScriptsFor = (url, {required atDocumentStart}) {
+          if (!url.contains('/search')) return const [];
+          return atDocumentStart
+              ? const ['window.__userscriptStart = true;']
+              : const ["document.body.dataset.userscript = 'ran';"];
+        };
       final adapter = BrowserWindowsWebViewAdapter(
-          blockedDomains: {'ads.blocked-test.local'});
+          blockedDomains: {'ads.blocked-test.local'}, hooks: hooks);
       final jsMessages = <BrowserJsMessage>[];
       final urls = <String>[];
       final subs = <StreamSubscription>[
@@ -77,13 +87,12 @@ void main() {
         await adapter.dispose();
       });
 
-      await tester.pumpWidget(
-          MaterialApp(home: Scaffold(body: adapter.buildWidget())));
+      await tester
+          .pumpWidget(MaterialApp(home: Scaffold(body: adapter.buildWidget())));
 
       // 1) The WebView2 surface must actually become visible. This is the
       //    regression guard for the black-rectangle bug.
-      await _waitUntil(
-          tester, () => find.byType(Texture).evaluate().isNotEmpty,
+      await _waitUntil(tester, () => find.byType(Texture).evaluate().isNotEmpty,
           timeout: const Duration(seconds: 45));
       expect(find.byType(Texture), findsOneWidget,
           reason: 'WebView2 texture must render (black-screen regression)');
@@ -92,8 +101,7 @@ void main() {
 
       // 2) A search query renders its results page.
       await adapter.loadUrl('$base/search?q=minecraft');
-      await _waitUntil(
-          tester, () => urls.contains('$base/search?q=minecraft'),
+      await _waitUntil(tester, () => urls.contains('$base/search?q=minecraft'),
           timeout: const Duration(seconds: 30));
       expect(await adapter.getTitle(), 'minecraft - FixtureSearch');
       final searchText =
@@ -101,6 +109,20 @@ void main() {
       expect(searchText, contains('Minecraft Official Result'));
       expect(searchText, contains('query: minecraft'),
           reason: 'the typed query must reach the results page');
+
+      // 2b) Userscripts ran on the page they match.
+      String userscriptEnd = '';
+      for (var i = 0; i < 30 && userscriptEnd != 'ran'; i++) {
+        userscriptEnd = _plain(
+            await adapter.evaluateJs('document.body.dataset.userscript'));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(userscriptEnd, 'ran',
+          reason: 'document-end userscripts must run on Windows');
+      expect(
+          _plain(await adapter.evaluateJs('window.__userscriptStart === true')),
+          'true',
+          reason: 'document-start userscripts must run on Windows');
 
       // 3) Ad-block: the blocked fetch is short-circuited inside the
       //    webview (empty response), the allowed fetch passes through and
@@ -133,15 +155,13 @@ void main() {
       // 5) History navigation.
       await adapter.goBack();
       await _waitUntil(
-          tester,
-          () => urls.isNotEmpty && urls.last.contains('/search'),
+          tester, () => urls.isNotEmpty && urls.last.contains('/search'),
           timeout: const Duration(seconds: 30));
       expect(await adapter.canGoForward(), isTrue);
       expect(await adapter.canGoBack(), isFalse);
     });
   });
 }
-
 
 /// Pumps frames while waiting for a real-world condition (WebView2 and
 /// HTTP are real async, not fake-zone timers).

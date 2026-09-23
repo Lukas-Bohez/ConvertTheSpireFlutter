@@ -760,9 +760,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   }
 
-  /// Per-request resource filter (Android). Not supported on Windows -
-  /// there the Windows adapter embeds the same hardcoded blocklist in an
-  /// injected fetch/XHR hook instead.
   /// Userscripts to run on [url]. Document-start scripts go in before the
   /// page's own code; everything else waits for the DOM.
   List<String> _userScriptsFor(String url, {required bool atDocumentStart}) =>

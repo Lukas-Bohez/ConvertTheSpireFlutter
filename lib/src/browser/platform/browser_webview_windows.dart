@@ -157,6 +157,34 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
     }
   }
 
+  /// Runs the userscripts matching [url], each in its own call so one that
+  /// throws cannot stop the rest.
+  ///
+  /// Mirrors the Android adapter: document-start scripts go in as the new
+  /// document begins loading, the rest once navigation completes. This
+  /// adapter used to ignore the hook entirely, so userscripts installed on
+  /// Windows never ran at all.
+  Future<void> _injectUserScripts(String url,
+      {required bool atDocumentStart}) async {
+    final provider = _hooks.userScriptsFor;
+    if (provider == null || url.isEmpty || url == 'about:blank') return;
+    final List<String> sources;
+    try {
+      sources = provider(url, atDocumentStart: atDocumentStart);
+    } catch (e) {
+      debugPrint('[BROWSER] userscript lookup failed: $e');
+      return;
+    }
+    final native = _native;
+    for (final source in sources) {
+      try {
+        await native.executeScript(source);
+      } catch (e) {
+        debugPrint('[BROWSER] userscript injection failed: $e');
+      }
+    }
+  }
+
   /// Discards whatever is currently in [_native] (a no-op the first time),
   /// creates a fresh [WebviewController], wires up its event subscriptions,
   /// and calls `initialize()` on it exactly once — so every attempt, first
@@ -181,9 +209,11 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
           case LoadingState.loading:
             _progressEvents.add(0);
             _pageEvents.add(BrowserPageEvent(isStart: true, url: _lastUrl));
+            unawaited(_injectUserScripts(_lastUrl, atDocumentStart: true));
           case LoadingState.navigationCompleted:
             _progressEvents.add(1);
             _pageEvents.add(BrowserPageEvent(isStart: false, url: _lastUrl));
+            unawaited(_injectUserScripts(_lastUrl, atDocumentStart: false));
           default:
             break;
         }
