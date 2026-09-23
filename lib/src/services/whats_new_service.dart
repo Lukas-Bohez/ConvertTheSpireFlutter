@@ -86,14 +86,19 @@ class WhatsNewService {
   ///
   /// Returns null on a first install too: somebody who has never run the app
   /// does not need a list of what changed since a version they never had.
-  Future<WhatsNewEntry?> pendingEntry(String version) async {
+  /// Pass [freshInstall] as false for a device that has used the app before,
+  /// so an update from a version that predates this dialog still shows it.
+  Future<WhatsNewEntry?> pendingEntry(
+    String version, {
+    bool freshInstall = true,
+  }) async {
     final current = _normaliseVersion(version);
     if (current.isEmpty) return null;
 
     final prefs = await SharedPreferences.getInstance();
     final lastShown = prefs.getString(_lastShownKey);
     if (lastShown == current) return null;
-    if (lastShown == null) {
+    if (lastShown == null && freshInstall) {
       // First run we know of: record where we are and stay quiet.
       await prefs.setString(_lastShownKey, current);
       return null;

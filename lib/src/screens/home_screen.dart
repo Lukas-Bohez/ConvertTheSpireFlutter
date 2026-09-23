@@ -543,7 +543,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final version = widget.controller.currentAppVersion;
     if (version == null || !mounted) return;
     if (widget.controller.needsOnboarding) return;
-    await WhatsNewDialog.maybeShow(context, version);
+    await WhatsNewDialog.maybeShow(
+      context,
+      version,
+      freshInstall: widget.controller.isFreshInstall,
+    );
   }
 
   /// Opens a prefilled GitHub issue so reports arrive with a version,

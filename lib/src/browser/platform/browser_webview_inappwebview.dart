@@ -159,12 +159,28 @@ class BrowserInAppWebViewAdapter implements BrowserWebviewController {
 
   Future<NavigationActionPolicy?> _shouldOverrideUrlLoading(
       InAppWebViewController controller, NavigationAction action) async {
+    final url = action.request.url?.toString() ?? '';
+    // An iframe - usually an ad - must never open another app or take over
+    // the page with an intent: redirect. Only the page itself may leave the
+    // web; iframes keep ordinary web navigation.
+    if (!action.isForMainFrame && !_isWebNavigation(url)) {
+      return NavigationActionPolicy.CANCEL;
+    }
     final hook = _hooks.shouldAllowNavigation;
     if (hook != null) {
-      final allowed = await hook(action.request.url?.toString() ?? '');
+      final allowed = await hook(url);
       if (!allowed) return NavigationActionPolicy.CANCEL;
     }
     return NavigationActionPolicy.ALLOW;
+  }
+
+  static bool _isWebNavigation(String url) {
+    final lower = url.toLowerCase();
+    return lower.startsWith('http://') ||
+        lower.startsWith('https://') ||
+        lower.startsWith('about:') ||
+        lower.startsWith('data:') ||
+        lower.startsWith('blob:');
   }
 
   Future<WebResourceResponse?> _shouldInterceptRequest(

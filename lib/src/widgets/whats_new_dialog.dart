@@ -12,8 +12,13 @@ class WhatsNewDialog extends StatelessWidget {
   ///
   /// Safe to call on every launch: it is a no-op on a first install and on any
   /// launch of a version whose notes were already shown.
-  static Future<void> maybeShow(BuildContext context, String version) async {
-    final entry = await WhatsNewService.instance.pendingEntry(version);
+  static Future<void> maybeShow(
+    BuildContext context,
+    String version, {
+    bool freshInstall = true,
+  }) async {
+    final entry = await WhatsNewService.instance
+        .pendingEntry(version, freshInstall: freshInstall);
     if (entry == null || !context.mounted) return;
 
     await showDialog<void>(

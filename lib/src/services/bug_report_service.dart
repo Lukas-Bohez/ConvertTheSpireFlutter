@@ -41,8 +41,11 @@ class BugReportService {
     return buffer.toString().trimRight();
   }
 
-  /// The full issue body, including the recent log.
-  static Future<String> buildBody({String? description}) async {
+  /// The full issue body, including the last [logLimit] log lines.
+  static Future<String> buildBody({
+    String? description,
+    int logLimit = logLines,
+  }) async {
     final buffer = StringBuffer()
       ..writeln('## What happened')
       ..writeln()
@@ -55,7 +58,9 @@ class BugReportService {
       ..writeln(await environmentSummary())
       ..writeln();
 
-    final log = SessionLogService.instance.recent(limit: logLines);
+    final log = logLimit > 0
+        ? SessionLogService.instance.recent(limit: logLimit)
+        : const <String>[];
     if (log.isNotEmpty) {
       buffer
         ..writeln('## Recent log')
@@ -71,25 +76,56 @@ class BugReportService {
     return buffer.toString();
   }
 
+  /// The longest URL handed to the browser. GitHub rejects very long query
+  /// strings, and the limit applies after percent-encoding, which roughly
+  /// triples every bracket, colon and slash in a log line.
+  static const int maxUrlLength = 7500;
+
+  static Uri _issueUri(String title, String body) =>
+      Uri.https('github.com', '/$repository/issues/new', {
+        'title': title,
+        'body': body,
+      });
+
   /// The GitHub URL that opens a new issue with [title] and [body] filled in.
   ///
-  /// GitHub rejects very long query strings, so the body is trimmed to stay
-  /// within a length that works in practice.
+  /// A body too long for [maxUrlLength] is cut to the longest prefix that
+  /// fits, measured on the encoded URL rather than on characters.
   static Uri issueUrl({required String title, required String body}) {
-    const maxBody = 6000;
-    final trimmed = body.length <= maxBody
-        ? body
-        : '${body.substring(0, maxBody)}\n\n<!-- log truncated -->';
-    return Uri.https('github.com', '/$repository/issues/new', {
-      'title': title,
-      'body': trimmed,
-    });
+    final full = _issueUri(title, body);
+    if (full.toString().length <= maxUrlLength) return full;
+
+    const marker = '\n\n<!-- log truncated -->';
+    var low = 0;
+    var high = body.length;
+    while (low < high) {
+      final mid = (low + high + 1) ~/ 2;
+      final candidate = _issueUri(title, '${body.substring(0, mid)}$marker');
+      if (candidate.toString().length <= maxUrlLength) {
+        low = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+    return _issueUri(title, '${body.substring(0, low)}$marker');
   }
 
   /// Convenience: the URL for a report about [title].
+  ///
+  /// When the report is too long, the oldest log lines go first: the lines
+  /// just before a failure are the ones worth reading.
   static Future<Uri> buildIssueUrl({
     String title = 'Bug: ',
     String? description,
-  }) async =>
-      issueUrl(title: title, body: await buildBody(description: description));
+  }) async {
+    for (var limit = logLines; limit > 0; limit -= 10) {
+      final body = await buildBody(description: description, logLimit: limit);
+      final url = _issueUri(title, body);
+      if (url.toString().length <= maxUrlLength) return url;
+    }
+    return issueUrl(
+      title: title,
+      body: await buildBody(description: description, logLimit: 0),
+    );
+  }
 }

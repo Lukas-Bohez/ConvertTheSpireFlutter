@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:convert_the_spire_reborn/src/services/whats_new_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Guards the "what's new" parsing.
 ///
@@ -9,6 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// notes come from CHANGELOG.md, which is already maintained, so these tests
 /// mostly protect against the heading format drifting.
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   const changelog = '''
 # Changelog
 
@@ -91,6 +94,53 @@ void main() {
       final pubspec = File('pubspec.yaml').readAsStringSync();
 
       expect(pubspec, contains(WhatsNewService.changelogAsset));
+    });
+  });
+
+  group('pendingEntry', () {
+    String pubspecVersion() {
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+      return RegExp(r'^version:\s*(\S+)', multiLine: true)
+          .firstMatch(pubspec)!
+          .group(1)!;
+    }
+
+    test('a first install shows nothing and remembers the version', () async {
+      SharedPreferences.setMockInitialValues({});
+      final version = pubspecVersion();
+
+      expect(await WhatsNewService.instance.pendingEntry(version), isNull);
+      expect(
+        await WhatsNewService.instance
+            .pendingEntry(version, freshInstall: false),
+        isNull,
+        reason: 'the version was recorded on the first call',
+      );
+    });
+
+    test('an update from a version without this dialog shows the notes',
+        () async {
+      SharedPreferences.setMockInitialValues({});
+      final version = pubspecVersion();
+
+      final entry = await WhatsNewService.instance
+          .pendingEntry(version, freshInstall: false);
+
+      expect(entry, isNotNull,
+          reason: 'people updating from before this dialog existed should '
+              'still see what this release changed');
+    });
+
+    test('notes already shown are not shown again', () async {
+      SharedPreferences.setMockInitialValues({});
+      final version = pubspecVersion();
+      await WhatsNewService.instance.markShown(version);
+
+      expect(
+        await WhatsNewService.instance
+            .pendingEntry(version, freshInstall: false),
+        isNull,
+      );
     });
   });
 }

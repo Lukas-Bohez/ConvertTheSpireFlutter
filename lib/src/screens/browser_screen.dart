@@ -710,13 +710,23 @@ class _BrowserScreenState extends State<BrowserScreen>
       unawaited(_confirmExternalApp(url, package: resolution.package));
       return false;
     }
+    // Phone numbers, email addresses and store links are unambiguous and the
+    // user tapped them on purpose, so they open straight away.
     if (url.startsWith('tel:') ||
         url.startsWith('mailto:') ||
         url.startsWith('market:')) {
-      unawaited(_confirmExternalApp(url));
+      unawaited(_launchExternal(url));
       return false;
     }
     return true;
+  }
+
+  Future<void> _launchExternal(String url) async {
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('external app launch failed: $e');
+    }
   }
 
   /// Asks before handing a link to another app. Never launches on its own.
