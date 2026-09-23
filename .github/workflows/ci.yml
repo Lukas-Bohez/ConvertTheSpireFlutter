@@ -68,9 +68,17 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      # The same two plugin patches the release workflow applies before its
-      # Windows build; without them this job fails on problems the release
-      # build never sees.
+      # The same workarounds the release workflow applies before its Windows
+      # build; without them this job fails on problems the release build never
+      # sees.
+      # Set _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS at the
+      # CMake / environment level so all plugin targets inherit it.
+      - name: Set coroutine deprecation workaround
+        shell: pwsh
+        run: |
+          echo "CXXFLAGS=-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "CMAKE_CXX_FLAGS=-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Patch metadata_god resolve_symlinks for CI
         shell: pwsh
         run: |
