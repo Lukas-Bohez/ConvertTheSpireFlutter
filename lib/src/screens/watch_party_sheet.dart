@@ -120,60 +120,64 @@ class _WatchPartySheetState extends State<WatchPartySheet> {
     final status = player.watchParty.status;
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-          20, 4, 20, MediaQuery.of(context).viewInsets.bottom + 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.groups_rounded),
-              const SizedBox(width: 10),
-              Text('Watch Together', style: theme.textTheme.titleLarge),
+    // Scrollable so the sheet still fits with the keyboard up on a small
+    // phone, or on a phone held sideways.
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+            20, 4, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.groups_rounded),
+                const SizedBox(width: 10),
+                Text('Watch Together', style: theme.textTheme.titleLarge),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Everyone on the same wifi stays in step — play, pause and seek '
+              'together.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 18),
+            if (status.isActive)
+              _ActiveRoom(status: status, onLeave: _busy ? null : _leave)
+            else
+              _JoinOrHost(
+                nameController: _nameController,
+                codeController: _codeController,
+                busy: _busy,
+                onHost: _host,
+                onJoin: _join,
+              ),
+            if (_error != null) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline,
+                        size: 18, color: theme.colorScheme.onErrorContainer),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(_error!,
+                          style: TextStyle(
+                              color: theme.colorScheme.onErrorContainer)),
+                    ),
+                  ],
+                ),
+              ),
             ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Everyone on the same wifi stays in step — play, pause and seek '
-            'together.',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 18),
-          if (status.isActive)
-            _ActiveRoom(status: status, onLeave: _busy ? null : _leave)
-          else
-            _JoinOrHost(
-              nameController: _nameController,
-              codeController: _codeController,
-              busy: _busy,
-              onHost: _host,
-              onJoin: _join,
-            ),
-          if (_error != null) ...[
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline,
-                      size: 18, color: theme.colorScheme.onErrorContainer),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(_error!,
-                        style: TextStyle(
-                            color: theme.colorScheme.onErrorContainer)),
-                  ),
-                ],
-              ),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }

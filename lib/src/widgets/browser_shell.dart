@@ -419,7 +419,7 @@ class _BrowserShellState extends State<BrowserShell> {
 
     // Only listen to the fields that actually affect the shell layout.
     final currentItem =
-        context.select<PlayerState, MediaItem?>((state) => state.currentItem);
+        context.select<PlayerState, MediaItem?>((state) => state.nowPlayingItem);
     final isPlaying =
         context.select<PlayerState, bool>((state) => state.isPlaying);
     final playerState = context.read<PlayerState>();

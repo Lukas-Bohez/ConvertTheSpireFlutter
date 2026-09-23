@@ -49,20 +49,29 @@ ByteRange? parseByteRange(String? header, int fileLength) {
   int end;
   if (startText.isEmpty) {
     // "bytes=-500" means the last 500 bytes.
-    final suffixLength = int.parse(endText);
+    final suffixLength = _parseOffset(endText, header);
     if (suffixLength <= 0) throw RangeError('unsatisfiable range: $header');
     start = fileLength - suffixLength;
     if (start < 0) start = 0;
     end = fileLength - 1;
   } else {
-    start = int.parse(startText);
-    end = endText.isEmpty ? fileLength - 1 : int.parse(endText);
+    start = _parseOffset(startText, header);
+    end = endText.isEmpty ? fileLength - 1 : _parseOffset(endText, header);
     if (start >= fileLength) throw RangeError('range past end: $header');
     if (end >= fileLength) end = fileLength - 1;
     if (end < start) throw RangeError('inverted range: $header');
   }
 
   return ByteRange(start: start, end: end, fileLength: fileLength);
+}
+
+/// A byte offset from a Range header. Digits too long for an int are refused
+/// as unsatisfiable rather than escaping as a FormatException, which would
+/// leave the connection open with no response.
+int _parseOffset(String digits, String header) {
+  final value = int.tryParse(digits);
+  if (value == null) throw RangeError('unsatisfiable range: $header');
+  return value;
 }
 
 /// Serves [file] over [request], honouring Range and HEAD.

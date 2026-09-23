@@ -122,6 +122,27 @@ class _PlaybackStats {
   }
 }
 
+/// The host's stream a Watch Together guest is playing because it does not
+/// have the file itself. Not a library item: nothing is saved for it.
+class RoomStream {
+  RoomStream({
+    required this.mediaKey,
+    required this.url,
+    required this.title,
+    required this.type,
+  }) : item = MediaItem(url, type, title: title);
+
+  /// The room's identifier for the media (the host's file name).
+  final String mediaKey;
+  final String url;
+  final String title;
+  final MediaType type;
+
+  /// A stand-in for display only (title and type). Never added to the
+  /// library, so no file action can reach it.
+  final MediaItem item;
+}
+
 class MediaItem {
   final String path;
   final MediaType type;
@@ -588,11 +609,11 @@ class PlayerState with ChangeNotifier {
     if (!kIsWeb && Platform.isAndroid) {
       _audio ??= AudioPlayer();
       _subs.add(_audio!.positionStream.listen((pos) {
-        if (_disposed || currentItem?.type != MediaType.audio) return;
+        if (_disposed || _activeType != MediaType.audio) return;
         _onPlaybackPositionUpdated(pos);
       }));
       _subs.add(_audio!.durationStream.listen((dur) {
-        if (_disposed || currentItem?.type != MediaType.audio) return;
+        if (_disposed || _activeType != MediaType.audio) return;
         duration = dur;
         _emitPositionUiState();
       }));
@@ -717,32 +738,32 @@ class PlayerState with ChangeNotifier {
     _mkSubs.add(player.stream.position.listen((pos) {
       if (_disposed) return;
       if (isAudio) {
-        if (currentItem?.type != MediaType.audio) return;
+        if (_activeType != MediaType.audio) return;
       } else {
-        if (currentItem?.type != MediaType.video) return;
+        if (_activeType != MediaType.video) return;
       }
       _onPlaybackPositionUpdated(pos);
     }));
     _mkSubs.add(player.stream.duration.listen((dur) {
       if (_disposed) return;
       if (isAudio) {
-        if (currentItem?.type != MediaType.audio) return;
+        if (_activeType != MediaType.audio) return;
       } else {
-        if (currentItem?.type != MediaType.video) return;
+        if (_activeType != MediaType.video) return;
       }
       duration = dur;
       _emitPositionUiState();
     }));
     if (!isAudio) {
       _mkSubs.add(player.stream.width.listen((w) {
-        if (_disposed || currentItem?.type != MediaType.video) return;
+        if (_disposed || _activeType != MediaType.video) return;
         if ((w ?? 0) > 0 && !_videoReady) {
           _videoReady = true;
           _scheduleNotify();
         }
       }));
       _mkSubs.add(player.stream.completed.listen((done) {
-        if (_disposed || !done || currentItem?.type != MediaType.video) return;
+        if (_disposed || !done || _activeType != MediaType.video) return;
         if (!_videoCompletionFired) {
           _videoCompletionFired = true;
           _scheduleNotify(callback: _handleCompletion);
@@ -750,7 +771,7 @@ class PlayerState with ChangeNotifier {
       }));
     } else {
       _mkSubs.add(player.stream.completed.listen((done) {
-        if (_disposed || !done || currentItem?.type != MediaType.audio) return;
+        if (_disposed || !done || _activeType != MediaType.audio) return;
         _scheduleNotify(callback: _handleCompletion);
       }));
     }
@@ -783,7 +804,13 @@ class PlayerState with ChangeNotifier {
     return library[currentIndex];
   }
 
-  bool get isVideo => currentItem?.type == MediaType.video;
+  /// What is actually playing: the room's stream while following one (see
+  /// [roomStream]), otherwise the current library item. Exactly
+  /// `currentItem?.type` whenever no room stream is active, so normal playback
+  /// is unaffected.
+  MediaType? get _activeType => _roomStream?.type ?? currentItem?.type;
+
+  bool get isVideo => _activeType == MediaType.video;
   bool get videoReady => _videoReady;
   Stream<PositionUiState> get positionUiStream => _positionUiController.stream;
   Duration get bufferedPosition {
@@ -1205,6 +1232,11 @@ class PlayerState with ChangeNotifier {
   /// Adds only the time listened since the previous commit (a delta), so the
   /// lifecycle / select / completion / periodic commits can never double count.
   void _commitCurrentPlayStats() {
+    if (_roomStream != null) {
+      // Time spent on a room's stream belongs to no library item.
+      _statsCommittedPosition = position;
+      return;
+    }
     final item = currentItem;
     if (item == null) return;
     final played = position;
@@ -1664,6 +1696,7 @@ class PlayerState with ChangeNotifier {
   Future<void> _selectInternal(int index, {required bool fromHistory}) async {
     if (index < 0 || index >= library.length) return;
     _commitCurrentPlayStats();
+    _roomStream = null;
     _recordHistorySelection(index, fromHistory: fromHistory);
     // Capture NOW before any async gap.
     final targetIndex = index;
@@ -1879,7 +1912,16 @@ class PlayerState with ChangeNotifier {
             await c.initialize();
             return c;
           },
-        if (!path.startsWith('content://'))
+        // A Watch Together guest streams the host's file over HTTP.
+        if (path.startsWith('http://') || path.startsWith('https://'))
+          () async {
+            final c = VideoPlayerController.networkUrl(Uri.parse(path));
+            await c.initialize();
+            return c;
+          },
+        if (!path.startsWith('content://') &&
+            !path.startsWith('http://') &&
+            !path.startsWith('https://'))
           () async {
             final c = VideoPlayerController.file(File(path));
             await c.initialize();
@@ -1927,7 +1969,7 @@ class PlayerState with ChangeNotifier {
       void listener() {
         if (_androidController == null) return;
         final val = _androidController!.value;
-        if (currentItem?.type == MediaType.video) {
+        if (_activeType == MediaType.video) {
           _onPlaybackPositionUpdated(val.position);
           if (val.duration != Duration.zero) {
             duration = val.duration;
@@ -2097,7 +2139,9 @@ class PlayerState with ChangeNotifier {
         } catch (e) {
           debugPrint('just_audio togglePlay error: $e');
           try {
-            final item = currentItem;
+            // Reloading applies to library items only; a room's stream is
+            // reloaded by following the room again.
+            final item = _roomStream == null ? currentItem : null;
             if (item != null && item.type == MediaType.audio) {
               final localPath = await _resolveLocalPath(item.path);
               if (localPath.startsWith('http') ||
@@ -2221,7 +2265,7 @@ class PlayerState with ChangeNotifier {
 
     // For video we only preview while dragging and commit on release.
     // Repeated live seeks can make timeline updates appear stuck/out of sync.
-    if (currentItem?.type == MediaType.video) {
+    if (_activeType == MediaType.video) {
       _seekDebounceTimer?.cancel();
       _seekDebounceTimer = null;
       return;
@@ -2458,6 +2502,9 @@ class PlayerState with ChangeNotifier {
   }
 
   void _handleCompletion() {
+    // The room decides what plays next. Advancing to this device's own next
+    // track would only be undone by the next update from the host.
+    if (_roomStream != null) return;
     // Count the tail of the track that hasn't been committed yet.
     final total = duration;
     if (total != null && total > position) position = total;
@@ -2668,6 +2715,8 @@ class PlayerState with ChangeNotifier {
   /// Linear multiplier derived from the current track's ReplayGain value.
   /// 0 dB = 1.0x (no change). +6 dB ≁E2.0x, -6 dB ≁E0.5x.
   double get _trackGainMultiplier {
+    // A room's stream has no measured loudness; play it as it comes.
+    if (_roomStream != null) return 1.0;
     final item = currentItem;
     double gainDb = item?.trackGainDb ?? 0.0;
     if (volumeLeveling && item != null) {
@@ -2694,9 +2743,25 @@ class PlayerState with ChangeNotifier {
   /// is not bounced straight back to the room as if the user had done it.
   bool _applyingRemoteSync = false;
 
+  /// Set while this device, as a guest, plays the host's stream of a file it
+  /// does not have. [currentItem] still points into the local library then,
+  /// so anything that needs to know what is really playing checks this first.
+  RoomStream? _roomStream;
+  RoomStream? get roomStream => _roomStream;
+
+  /// What to show as playing: the room's stream while following one,
+  /// otherwise [currentItem].
+  MediaItem? get nowPlayingItem => _roomStream?.item ?? currentItem;
+
+  /// True while the room's media is being loaded, so the updates that keep
+  /// arriving meanwhile do not start the same load again.
+  bool _followingRoom = false;
+
   /// Identifies media across devices. The same episode lives at a different
   /// path on every machine, so the file name is the only portable handle.
   String? get watchPartyMediaKey {
+    final stream = _roomStream;
+    if (stream != null) return stream.mediaKey;
     final item = currentItem;
     if (item == null) return null;
     return p.basename(item.path);
@@ -2733,7 +2798,19 @@ class PlayerState with ChangeNotifier {
     _watchPublishTimer?.cancel();
     _watchPublishTimer = null;
     await watchParty.leave();
+    await _endRoomStream();
     notifyListeners();
+  }
+
+  /// Stops the host's stream when the room is gone. It would only fail once
+  /// the host's server closes, so it is ended cleanly instead.
+  Future<void> _endRoomStream() async {
+    if (_roomStream == null) return;
+    _roomStream = null;
+    await _stopPlaybackBestEffort();
+    position = Duration.zero;
+    duration = null;
+    _emitPositionUiState();
   }
 
   void _publishWatchState() {
@@ -2742,9 +2819,12 @@ class PlayerState with ChangeNotifier {
     if (key == null) return;
     // Offer the file over the room's own server, so a guest that does not have
     // it - a TV, or a friend - can still watch along (issue #7).
+    // Only real files can be served; a content:// URI from a system-picked
+    // folder has no path the room's server could open.
     final localPath = currentItem?.path;
-    final sourcePath =
-        localPath == null ? null : watchParty.shareMedia(localPath);
+    final sourcePath = localPath != null && _isServableFile(localPath)
+        ? watchParty.shareMedia(localPath)
+        : null;
     watchParty.publishState(
       mediaKey: key,
       position: position,
@@ -2765,17 +2845,22 @@ class PlayerState with ChangeNotifier {
   Future<void> _onWatchPartyEvent(WatchPartyEvent event) async {
     if (_disposed) return;
     if (event.kind != WatchPartyEventKind.remoteState) {
+      if (event.kind == WatchPartyEventKind.hostLeft) await _endRoomStream();
       notifyListeners();
       return;
     }
     final snapshot = event.snapshot;
     final hostClockNowMs = event.hostClockNowMs;
-    final localKey = watchPartyMediaKey;
-    if (snapshot == null || hostClockNowMs == null || localKey == null) return;
+    if (snapshot == null || hostClockNowMs == null) return;
+    // Updates keep coming once a second while the room's media loads, which
+    // over a network can take longer than that.
+    if (_followingRoom) return;
 
     final decision = computeSyncDecision(
       snapshot: snapshot,
-      localMediaKey: localKey,
+      // Nothing playing yet (a TV with an empty library, say) simply differs
+      // from what the room is watching, so the guest follows it.
+      localMediaKey: watchPartyMediaKey ?? '',
       localPosition: position,
       localPlaying: isPlaying,
       hostClockNowMs: hostClockNowMs,
@@ -2816,26 +2901,63 @@ class PlayerState with ChangeNotifier {
   /// The room moved to another file. Play our own copy if we have one; say so
   /// if we do not, rather than silently sitting on the wrong thing.
   Future<void> _followRoomToMedia(PlaybackSnapshot snapshot) async {
-    final index = library
-        .indexWhere((item) => p.basename(item.path) == snapshot.mediaKey);
-    if (index < 0) {
-      // No local copy: stream it from the host if they are sharing it.
-      final streamUrl = watchParty.hostStreamUrlFor(snapshot);
-      final label = snapshot.title ?? snapshot.mediaKey;
-      if (streamUrl == null) {
-        _emitWatchPartyNotice(
-            'The room is watching "$label", which is not in your library.');
-        return;
+    _followingRoom = true;
+    try {
+      final index = library
+          .indexWhere((item) => p.basename(item.path) == snapshot.mediaKey);
+      if (index < 0) {
+        // No local copy: stream it from the host if they are sharing it.
+        final streamUrl = watchParty.hostStreamUrlFor(snapshot);
+        final label = snapshot.title ?? snapshot.mediaKey;
+        if (streamUrl == null) {
+          _emitWatchPartyNotice(
+              'The room is watching "$label", which is not in your library.');
+          return;
+        }
+        _commitCurrentPlayStats();
+        // Set before loading, so the media key already matches the room and
+        // the updates that follow sync the position instead of reloading.
+        _roomStream = RoomStream(
+          mediaKey: snapshot.mediaKey,
+          url: streamUrl,
+          title: label,
+          type: _roomMediaType(snapshot.mediaKey),
+        );
+        notifyListeners();
+        _emitWatchPartyNotice('Streaming "$label" from the host.');
+        await playFileDirect(streamUrl, fromRoom: true);
+      } else {
+        await select(index);
       }
-      _emitWatchPartyNotice('Streaming "$label" from the host.');
-      await playFileDirect(streamUrl);
       if (snapshot.position > Duration.zero) await seek(snapshot.position);
       if (!snapshot.playing && isPlaying) await togglePlay();
-      return;
+    } finally {
+      _followingRoom = false;
     }
-    await select(index);
-    if (snapshot.position > Duration.zero) await seek(snapshot.position);
-    if (!snapshot.playing && isPlaying) await togglePlay();
+  }
+
+  static bool _isServableFile(String path) =>
+      !path.startsWith('content://') &&
+      !path.startsWith('http://') &&
+      !path.startsWith('https://');
+
+  /// Audio or video, judged from the host's file name.
+  static MediaType _roomMediaType(String mediaKey) {
+    const videoExtensions = {
+      '.mp4',
+      '.mkv',
+      '.avi',
+      '.webm',
+      '.mov',
+      '.wmv',
+      '.flv',
+      '.m4v',
+      '.ts',
+      '.3gp',
+    };
+    return videoExtensions.contains(p.extension(mediaKey).toLowerCase())
+        ? MediaType.video
+        : MediaType.audio;
   }
 
   final StreamController<String> _watchPartyNotices =
@@ -3729,8 +3851,9 @@ class PlayerState with ChangeNotifier {
 
   /// Immediately play a file by its filesystem path. This bypasses any
   /// id/index-based indirection so taps reliably play the exact file.
-  Future<void> playFileDirect(String path) async {
+  Future<void> playFileDirect(String path, {bool fromRoom = false}) async {
     if (_disposed) return;
+    if (!fromRoom) _roomStream = null;
 
     // Prevent pending debounce seeks from a previously selected track from
     // being applied after direct file selection.
@@ -3769,7 +3892,10 @@ class PlayerState with ChangeNotifier {
     // Decide audio vs video using library entry if available, otherwise use
     // extension heuristic.
     MediaType type = MediaType.audio;
-    if (idx >= 0) {
+    final roomStream = _roomStream;
+    if (fromRoom && roomStream != null) {
+      type = roomStream.type;
+    } else if (idx >= 0) {
       type = library[idx].type;
     } else {
       final ext = p.extension(path).toLowerCase();
@@ -5362,6 +5488,8 @@ class _PlayerScreenState extends State<PlayerScreen>
   // --- Now Playing bar ------------------------------------------------------
 
   Widget _buildNowPlaying(PlayerState state) {
+    final stream = state.roomStream;
+    if (stream != null) return _buildRoomStreamCard(state, stream);
     final item = state.currentItem;
     if (item == null) return const SizedBox.shrink();
 
@@ -5564,6 +5692,87 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
+  /// The now-playing card while this device plays a Watch Together host's
+  /// stream. The library-only actions (favourite, dislike, the track menu,
+  /// shuffle, next) do not apply to it; the room drives what plays.
+  Widget _buildRoomStreamCard(PlayerState state, RoomStream stream) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? cs.surfaceContainerHigh
+            : cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.primary.withValues(alpha: 0.42)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+            child: Row(
+              children: [
+                Icon(Icons.groups_rounded, color: cs.primary, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        stream.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: _PlayerTheme.text(context),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Streaming from the Watch Together host',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12, color: _PlayerTheme.sub(context)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _PositionWidget(state: state, formatDur: _fmtDur),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+            child: Row(
+              children: [
+                _PlayPauseButton(
+                  playing: state.isPlaying,
+                  onPressed: state.togglePlay,
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.volume_down_rounded,
+                    size: 18, color: _PlayerTheme.sub(context)),
+                Expanded(
+                  child: Slider(
+                    value: state.volume,
+                    activeColor: _PlayerTheme.accent(context),
+                    inactiveColor: _PlayerTheme.accentDim(context),
+                    onChanged: state.setVolume,
+                  ),
+                ),
+                Icon(Icons.volume_up_rounded,
+                    size: 18, color: _PlayerTheme.sub(context)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _fmtDur(Duration d) {
     final h = d.inHours;
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -5635,7 +5844,11 @@ class _NowPlayingThumbnailSlot extends StatelessWidget {
             constraints.hasBoundedWidth && constraints.maxWidth.isFinite
                 ? constraints.maxWidth
                 : fallbackWidth;
-        final width = (availableWidth * 0.32).clamp(64.0, 140.0);
+        // On a phone the row also holds the title and three buttons; at 32%
+        // of the width the thumbnail left the title about 70px on a 360dp
+        // screen (issue #7). Tablets, desktop and TV keep the larger size.
+        final share = fallbackWidth < 600 ? 0.2 : 0.32;
+        final width = (availableWidth * share).clamp(64.0, 140.0);
         final height = width * 9 / 16;
 
         final state = context.watch<PlayerState>();

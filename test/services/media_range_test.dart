@@ -67,6 +67,13 @@ void main() {
       expect(parseByteRange('bytes=-', length), isNull);
     });
 
+    test('an offset too large for an int is unsatisfiable, not a crash', () {
+      expect(() => parseByteRange('bytes=99999999999999999999999-', length),
+          throwsRangeError);
+      expect(() => parseByteRange('bytes=-99999999999999999999999', length),
+          throwsRangeError);
+    });
+
     test('an empty file has no ranges to serve', () {
       expect(parseByteRange('bytes=0-10', 0), isNull);
     });
