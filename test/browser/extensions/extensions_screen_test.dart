@@ -29,6 +29,16 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('an empty, unmodifiable list from the host is fine',
+      (tester) async {
+    // reconcile() returns a const [] when nothing is installed; sorting it in
+    // place used to show an error the moment the screen opened.
+    await pump(tester, _FakeHost.constEmpty());
+
+    expect(find.textContaining('No extensions yet'), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
+  });
+
   testWidgets('an unsupported platform explains itself', (tester) async {
     await pump(tester,
         const UnsupportedExtensionHost('Extensions need the Windows app.'));
@@ -114,6 +124,14 @@ void main() {
           ['Read and change data on example.com']);
     });
 
+    test('host patterns inside permissions read as sites, not APIs', () {
+      // AMO passes MV2 add-ons' host patterns through inside `permissions`.
+      expect(describePermissions(const ['storage', '<all_urls>'], const []), [
+        'Read and change everything on every website',
+        'Store its own data',
+      ]);
+    });
+
     test('known permissions get a sentence, unknown ones their name', () {
       expect(describePermissions(const ['tabs', 'mystery'], const []), [
         'See the address and title of your open tabs',
@@ -134,9 +152,16 @@ const _darkReader = InstalledExtension(
 );
 
 class _FakeHost implements WebExtensionHost {
-  _FakeHost(List<InstalledExtension> initial) : _list = [...initial];
+  _FakeHost(List<InstalledExtension> initial)
+      : _list = [...initial],
+        _constEmpty = false;
+
+  _FakeHost.constEmpty()
+      : _list = [],
+        _constEmpty = true;
 
   final List<InstalledExtension> _list;
+  final bool _constEmpty;
   final List<(String, bool)> enabledCalls = [];
   final List<String> removed = [];
   final List<ExtensionSource> installed = [];
@@ -155,7 +180,8 @@ class _FakeHost implements WebExtensionHost {
   Stream<ExtensionEvent> get events => _events.stream;
 
   @override
-  Future<List<InstalledExtension>> list() async => [..._list];
+  Future<List<InstalledExtension>> list() async =>
+      _constEmpty ? const [] : [..._list];
 
   @override
   Future<InstalledExtension> install(ExtensionSource source) async {

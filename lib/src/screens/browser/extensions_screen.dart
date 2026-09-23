@@ -89,9 +89,10 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
           : await host.list();
       if (!mounted) return;
       setState(() {
-        _installed = list
-          ..sort(
-              (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        // A copy: the host may hand back an unmodifiable list.
+        _installed = [
+          ...list
+        ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         _loading = false;
       });
     } catch (e) {
@@ -458,6 +459,10 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
 /// listed by name, so nothing the extension asks for is hidden.
 List<String> describePermissions(
     List<String> permissions, List<String> hostPermissions) {
+  // MV2 add-ons carry host patterns inside `permissions`; AMO passes them
+  // through that way. Sort them into the right bucket first.
+  hostPermissions = [...hostPermissions, ...permissions.where(isHostPattern)];
+  permissions = permissions.where((p) => !isHostPattern(p)).toList();
   const readable = {
     'tabs': 'See the address and title of your open tabs',
     'history': 'Read and change your browsing history',
@@ -484,6 +489,24 @@ List<String> describePermissions(
     'menus': 'Add items to right-click menus',
     'alarms': 'Run on a schedule',
     'activeTab': 'Access the current page when you use it',
+    'theme': 'Change the browser’s colours',
+    'webNavigation': 'See which pages you visit',
+    'topSites': 'See your most visited sites',
+    'sessions': 'See recently closed tabs',
+    'browsingData': 'Clear your browsing data',
+    'search': 'Use your search engine',
+    'identity': 'Sign you in to its own service',
+    'fontSettings': 'Read your font settings',
+    'userScripts': 'Run user scripts on pages',
+    'idle': 'Know when you are away from the computer',
+    'sidePanel': 'Show a side panel',
+    'offscreen': 'Run hidden pages in the background',
+    'dns': 'Look up web addresses',
+    'pageCapture': 'Save pages',
+    'tabGroups': 'Organise your tab groups',
+    'debugger': 'Inspect and control pages as a debugger',
+    'desktopCapture': 'Capture your screen',
+    'tabCapture': 'Capture a tab’s sound and picture',
   };
   final lines = <String>{};
   final allSites = hostPermissions.any((h) =>
@@ -789,7 +812,10 @@ class _CatalogTabState extends State<_CatalogTab>
                       ),
                       subtitle: Text(
                         [
-                          if (addon.summary != null) addon.summary!,
+                          // Some summaries are several paragraphs; keep the
+                          // user count visible under one line of text.
+                          if (addon.summary != null)
+                            addon.summary!.replaceAll(RegExp(r'\s+'), ' '),
                           if (users != null) '${_compact(users)} users',
                         ].join('\n'),
                         maxLines: 3,

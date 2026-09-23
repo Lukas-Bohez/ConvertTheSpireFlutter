@@ -88,6 +88,22 @@ An extension whose `action`/`browser_action` has no `default_popup` reacts to
 toolbar and no API to send that event, so for those extensions the app shows
 a note instead of a button. Lofi Player is one of them.
 
+### Popups have no "current tab"
+
+Dark Reader's popup, opened in the app's own webview, works - on/off, mode,
+brightness and the rest all respond - but its site switch reads "about: -
+This page is protected by browser". In a browser the popup belongs to the
+active tab; WebView2 has no tab model to tell it which one that is, so
+per-site settings from a popup cannot target the page you are on. Global
+settings are unaffected.
+
+### Popups are sized like a browser sizes them
+
+`documentElement.scrollWidth` also counts panels a popup keeps off to the
+side, and opened Dark Reader's 410px popup 800px wide. The host now lays the
+page out at `max-content` for a moment and reads the width back, which is
+close to how a browser picks a popup's size (capped at 800 x 600).
+
 ### The environment option is fixed for the process, and shared
 
 The option has to be set before the environment exists, and WebView2 allows

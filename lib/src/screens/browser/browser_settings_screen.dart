@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../browser/adblock/adblock_service.dart';
+import '../../browser/extensions/extension_hosts.dart';
 import '../../data/browser_db.dart';
 import '../../services/ipfs_service.dart';
 import '../../utils/snack.dart';
+import 'extensions_screen.dart';
 
 /// Browser settings screen: search engine, ad-block, privacy, display.
 class BrowserSettingsScreen extends StatefulWidget {
@@ -72,6 +74,20 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
               subtitle: Text(_searchEngine),
               onTap: _pickSearchEngine,
             ),
+            if (ExtensionHosts.available)
+              ListTile(
+                leading: const Icon(Icons.extension_outlined),
+                title: const Text('Extensions'),
+                subtitle: const Text(
+                    'Chrome extensions and addons.mozilla.org add-ons'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        ExtensionsScreen(host: ExtensionHosts.current),
+                  ),
+                ),
+              ),
 
             // -- Privacy --
             const _SectionHeader(title: 'Privacy'),

@@ -124,13 +124,12 @@ class ExtensionManifest {
 
     // MV2 lists host patterns inside `permissions`; MV3 moved them out.
     final allPermissions = strings(m['permissions']);
-    final hostPatterns = RegExp(r'^(<all_urls>$|(\*|https?|wss?|file|ftp)://)');
     final hostPermissions = [
       ...strings(m['host_permissions']),
-      if (manifestVersion == 2) ...allPermissions.where(hostPatterns.hasMatch),
+      if (manifestVersion == 2) ...allPermissions.where(isHostPattern),
     ];
     final apiPermissions = manifestVersion == 2
-        ? allPermissions.where((p) => !hostPatterns.hasMatch(p)).toList()
+        ? allPermissions.where((p) => !isHostPattern(p)).toList()
         : allPermissions;
 
     final name = m['name'];
@@ -165,6 +164,14 @@ class ExtensionManifest {
   /// Whether [name] is a `__MSG_key__` placeholder resolved from `_locales`.
   bool get nameIsLocalised => name.startsWith('__MSG_') && name.endsWith('__');
 }
+
+/// Whether a permission string is a host pattern (`<all_urls>`,
+/// `https://example.com/*`) rather than an API permission (`tabs`).
+///
+/// Manifest V2 mixes both into `permissions`, and addons.mozilla.org passes
+/// them through that way for MV2 add-ons, so every reader has to split them.
+bool isHostPattern(String permission) =>
+    RegExp(r'^(<all_urls>$|(\*|https?|wss?|file|ftp)://)').hasMatch(permission);
 
 /// Why a Chromium engine (WebView2) cannot run this extension, or null when it
 /// is worth attempting.

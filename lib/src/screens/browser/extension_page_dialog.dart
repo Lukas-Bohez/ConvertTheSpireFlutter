@@ -52,6 +52,7 @@ class _ExtensionPageDialogState extends State<ExtensionPageDialog> {
 
   static const Size _minPopup = Size(240, 160);
   static const Size _maxPopup = Size(800, 600);
+  static const double _scrollbarAllowance = 18;
 
   @override
   void initState() {
@@ -78,16 +79,33 @@ class _ExtensionPageDialogState extends State<ExtensionPageDialog> {
   Future<void> _fit() async {
     if (widget.isOptionsPage || !mounted) return;
     try {
-      final measured = await _controller
-          .executeScript('[document.documentElement.scrollWidth,'
-              ' document.documentElement.scrollHeight]');
+      // The page's preferred width, the way a browser sizes a popup: lay the
+      // document out at max-content for a moment and read it back.
+      // documentElement.scrollWidth also counted panels a popup keeps off to
+      // the side, which opened Dark Reader's 410px popup 800px wide.
+      final measured = await _controller.executeScript('''
+          (() => {
+            const html = document.documentElement, body = document.body;
+            if (!body) return [0, 0];
+            const previous = html.style.width;
+            html.style.width = 'max-content';
+            const width = Math.ceil(html.getBoundingClientRect().width);
+            const height = Math.ceil(Math.max(body.scrollHeight,
+                                              html.scrollHeight));
+            html.style.width = previous;
+            return [width, height];
+          })()''');
       if (measured is! List || measured.length != 2) return;
       final width = (measured[0] as num).toDouble();
       final height = (measured[1] as num).toDouble();
       if (width <= 0 || height <= 0 || !mounted) return;
+      // A popup taller than the cap scrolls, and the vertical scrollbar
+      // takes width from the content; leave room so no horizontal bar appears.
+      final scrolls = height > _maxPopup.height;
       setState(() {
         _size = Size(
-          width.clamp(_minPopup.width, _maxPopup.width),
+          (width + (scrolls ? _scrollbarAllowance : 0))
+              .clamp(_minPopup.width, _maxPopup.width),
           height.clamp(_minPopup.height, _maxPopup.height),
         );
       });
@@ -112,56 +130,60 @@ class _ExtensionPageDialogState extends State<ExtensionPageDialog> {
 
     return Dialog(
       clipBehavior: Clip.antiAlias,
-      child: CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.escape): () =>
-              Navigator.of(context).maybePop(),
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Material(
-              color: scheme.surfaceContainerHigh,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.title,
-                        style: Theme.of(context).textTheme.titleSmall,
-                        overflow: TextOverflow.ellipsis,
+      // The title bar follows the page's width instead of stretching the
+      // dialog past it.
+      child: SizedBox(
+        width: width,
+        child: CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.escape): () =>
+                Navigator.of(context).maybePop(),
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Material(
+                color: scheme.surfaceContainerHigh,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.title,
+                          style: Theme.of(context).textTheme.titleSmall,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      // First in focus order, so Back/Escape and a remote's OK
-                      // on the close button always get out of the popup.
-                      autofocus: true,
-                      tooltip: 'Close',
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).maybePop(),
-                    ),
-                  ],
+                      IconButton(
+                        // First in focus order, so Back/Escape and a remote's OK
+                        // on the close button always get out of the popup.
+                        autofocus: true,
+                        tooltip: 'Close',
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).maybePop(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              curve: Curves.easeOut,
-              width: width,
-              height: height,
-              child: _error != null
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(_error!, textAlign: TextAlign.center),
-                      ),
-                    )
-                  : !_ready
-                      ? const Center(child: CircularProgressIndicator())
-                      : Webview(_controller),
-            ),
-          ],
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                curve: Curves.easeOut,
+                height: height,
+                child: _error != null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(_error!, textAlign: TextAlign.center),
+                        ),
+                      )
+                    : !_ready
+                        ? const Center(child: CircularProgressIndicator())
+                        : Webview(_controller),
+              ),
+            ],
+          ),
         ),
       ),
     );
