@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:webview_windows/webview_windows.dart';
 
 import 'browser_webview_controller.dart';
+import 'webview2_environment.dart';
 
 /// Windows implementation backed by `webview_windows` (WebView2).
 ///
@@ -33,8 +33,6 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
         _controllerFactory = controllerFactory ?? WebviewController.new {
     _native = _controllerFactory();
   }
-
-  static bool _environmentInitialized = false;
 
   /// Factory used to mint the [_native] controllers. Injectable from tests
   /// so the crash-recovery path can be exercised with a deterministic fake
@@ -118,22 +116,10 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   Future<void> _init() async {
     _initializing = true;
     try {
-      // The environment must be initialized before the first controller and
-      // can only be set once per process.
-      if (!_environmentInitialized) {
-        try {
-          // Keep the WebView2 profile in the same short-path location the app
-          // has always used (avoids long-path crashes).
-          final local = Platform.environment['LOCALAPPDATA'] ?? '';
-          if (local.isNotEmpty) {
-            await WebviewController.initializeEnvironment(
-                userDataPath: '$local\\ConvertTheSpireReborn\\WebView2');
-            _environmentInitialized = true;
-          }
-        } catch (_) {
-          // Fall back to the WebView2 default profile location.
-        }
-      }
+      // The environment must exist before the first controller, and there is
+      // only one per process. It is shared with the extension manager, which
+      // may have created it already.
+      await WebView2Environment.ensure();
 
       try {
         await _spawnAndInitializeController();
@@ -194,12 +180,10 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
         switch (state) {
           case LoadingState.loading:
             _progressEvents.add(0);
-            _pageEvents
-                .add(BrowserPageEvent(isStart: true, url: _lastUrl));
+            _pageEvents.add(BrowserPageEvent(isStart: true, url: _lastUrl));
           case LoadingState.navigationCompleted:
             _progressEvents.add(1);
-            _pageEvents
-                .add(BrowserPageEvent(isStart: false, url: _lastUrl));
+            _pageEvents.add(BrowserPageEvent(isStart: false, url: _lastUrl));
           default:
             break;
         }
@@ -219,9 +203,7 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
       _native.webMessage.listen(_handleWebMessage),
       _native.onLoadError.listen((status) {
         _errorEvents.add(BrowserErrorEvent(
-            url: _lastUrl,
-            description: status.toString(),
-            isMainFrame: true));
+            url: _lastUrl, description: status.toString(), isMainFrame: true));
       }),
     ];
     await _native.initialize();
@@ -231,8 +213,7 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
     try {
       dynamic decoded = message;
       if (decoded is String) decoded = jsonDecode(decoded);
-      if (decoded is Map &&
-          decoded.containsKey('handler')) {
+      if (decoded is Map && decoded.containsKey('handler')) {
         final payload = decoded['payload'];
         _jsMessages.add(BrowserJsMessage(
           handler: decoded['handler'].toString(),
@@ -491,9 +472,9 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
     _lastQuery = query;
     await _ensureReady();
     if (query.isEmpty) return 0;
-    final result = await _native.executeScript(
-        'document.body ? (document.body.innerText.match(/'
-        '${_escapeRegExp(query)}/gi) || []).length : 0');
+    final result = await _native
+        .executeScript('document.body ? (document.body.innerText.match(/'
+            '${_escapeRegExp(query)}/gi) || []).length : 0');
     return _toInt(result);
   }
 
@@ -503,9 +484,9 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
     await _ensureReady();
     // window.find() takes a literal string, not a regex, so we use
     // jsonEncode to produce a properly-escaped JS string literal.
-    await _native.executeScript(
-        'window.find(${jsonEncode(_lastQuery)}, false, false, '
-        'undefined, 0, false, $forward);');
+    await _native
+        .executeScript('window.find(${jsonEncode(_lastQuery)}, false, false, '
+            'undefined, 0, false, $forward);');
   }
 
   @override
@@ -561,7 +542,6 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   @override
   Stream<int> get scrollEvents => _scrollEvents.stream;
 
-  
   // --· visibleForTesting hooks for crash-recovery test ---------------------
 
   /// Exposed for testing the crash-recovery path. On success this is `true`;

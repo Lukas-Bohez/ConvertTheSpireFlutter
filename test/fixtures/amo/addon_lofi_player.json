@@ -1,0 +1,40 @@
+{
+ "guid": "lofi-player@quizthespire.com",
+ "slug": "lofi-player",
+ "name": {
+  "nl": "Lofi Player",
+  "en-US": null,
+  "_default": "nl"
+ },
+ "summary": {
+  "nl": "Play lofi music and videos in a standalone window with video support, album art, and full keyboard controls",
+  "en-US": null,
+  "_default": "nl"
+ },
+ "icon_url": "https://addons.mozilla.org/user-media/addon_icons/2967/2967356-64.png?modified=019d1b97",
+ "average_daily_users": 4,
+ "ratings": {
+  "average": 0.0
+ },
+ "promoted": [],
+ "url": "https://addons.mozilla.org/en-US/firefox/addon/lofi-player/",
+ "current_version": {
+  "version": "1.0.1",
+  "compatibility": {
+   "firefox": {
+    "min": "142.0",
+    "max": "*"
+   }
+  },
+  "file": {
+   "url": "https://addons.mozilla.org/firefox/downloads/file/4658253/lofi_player-1.0.1.xpi",
+   "hash": "sha256:f38650fa8a6e32f2e06c946fc28eae0865c0c3785569dca266dba1386084f246",
+   "size": 46294140,
+   "permissions": [
+    "storage"
+   ],
+   "host_permissions": []
+  }
+ },
+ "default_locale": "nl"
+}

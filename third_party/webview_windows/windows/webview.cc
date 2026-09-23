@@ -1,5 +1,6 @@
 #include "webview.h"
 
+#include <wil/resource.h>
 #include <wrl.h>
 
 #include <format>
@@ -794,4 +795,188 @@ bool Webview::ClearVirtualHostNameMapping(const std::string& hostName) {
 
   return webview->ClearVirtualHostNameToFolderMapping(
       util::Utf16FromUtf8(hostName).c_str());
+}
+
+
+// --------------------------------------------------------------------------
+// Browser extensions (issue #10)
+//
+// WebView2 hosts real Chromium extensions, but only in an environment created
+// with AreBrowserExtensionsEnabled and only through the profile. There is no
+// browser chrome, so everything the user sees (list, toggles, popups) is
+// built by the app on top of these calls.
+// --------------------------------------------------------------------------
+
+namespace {
+
+WebviewBrowserExtension DescribeExtension(
+    ICoreWebView2BrowserExtension* extension) {
+  WebviewBrowserExtension result;
+  wil::unique_cotaskmem_string id;
+  if (SUCCEEDED(extension->get_Id(&id)) && id) {
+    result.id = util::Utf8FromUtf16(id.get());
+  }
+  wil::unique_cotaskmem_string name;
+  if (SUCCEEDED(extension->get_Name(&name)) && name) {
+    result.name = util::Utf8FromUtf16(name.get());
+  }
+  BOOL enabled = FALSE;
+  if (SUCCEEDED(extension->get_IsEnabled(&enabled))) {
+    result.enabled = enabled == TRUE;
+  }
+  return result;
+}
+
+}  // namespace
+
+wil::com_ptr<ICoreWebView2Profile7> Webview::GetExtensionProfile() {
+  if (!IsValid()) {
+    return nullptr;
+  }
+  auto webview13 = webview_.try_query<ICoreWebView2_13>();
+  if (!webview13) {
+    return nullptr;
+  }
+  wil::com_ptr<ICoreWebView2Profile> profile;
+  if (FAILED(webview13->get_Profile(&profile)) || !profile) {
+    return nullptr;
+  }
+  return profile.try_query<ICoreWebView2Profile7>();
+}
+
+void Webview::AddBrowserExtension(const std::string& folder_path,
+                                  BrowserExtensionCallback callback) {
+  auto profile = GetExtensionProfile();
+  if (!profile) {
+    callback(E_NOINTERFACE, std::nullopt);
+    return;
+  }
+  const HRESULT hr = profile->AddBrowserExtension(
+      util::Utf16FromUtf8(folder_path).c_str(),
+      Callback<ICoreWebView2ProfileAddBrowserExtensionCompletedHandler>(
+          [callback](HRESULT result,
+                     ICoreWebView2BrowserExtension* extension) -> HRESULT {
+            if (FAILED(result) || !extension) {
+              callback(FAILED(result) ? result : E_FAIL, std::nullopt);
+            } else {
+              callback(S_OK, DescribeExtension(extension));
+            }
+            return S_OK;
+          })
+          .Get());
+  if (FAILED(hr)) {
+    callback(hr, std::nullopt);
+  }
+}
+
+void Webview::GetBrowserExtensions(BrowserExtensionListCallback callback) {
+  auto profile = GetExtensionProfile();
+  if (!profile) {
+    callback(E_NOINTERFACE, {});
+    return;
+  }
+  const HRESULT hr = profile->GetBrowserExtensions(
+      Callback<ICoreWebView2ProfileGetBrowserExtensionsCompletedHandler>(
+          [callback](HRESULT result,
+                     ICoreWebView2BrowserExtensionList* list) -> HRESULT {
+            std::vector<WebviewBrowserExtension> extensions;
+            if (FAILED(result) || !list) {
+              callback(FAILED(result) ? result : E_FAIL, extensions);
+              return S_OK;
+            }
+            UINT count = 0;
+            list->get_Count(&count);
+            for (UINT i = 0; i < count; ++i) {
+              wil::com_ptr<ICoreWebView2BrowserExtension> extension;
+              if (SUCCEEDED(list->GetValueAtIndex(i, &extension)) &&
+                  extension) {
+                extensions.push_back(DescribeExtension(extension.get()));
+              }
+            }
+            callback(S_OK, extensions);
+            return S_OK;
+          })
+          .Get());
+  if (FAILED(hr)) {
+    callback(hr, {});
+  }
+}
+
+void Webview::WithBrowserExtension(
+    const std::string& id,
+    std::function<void(wil::com_ptr<ICoreWebView2BrowserExtension>)> action,
+    BrowserExtensionResultCallback callback) {
+  auto profile = GetExtensionProfile();
+  if (!profile) {
+    callback(E_NOINTERFACE);
+    return;
+  }
+  const HRESULT hr = profile->GetBrowserExtensions(
+      Callback<ICoreWebView2ProfileGetBrowserExtensionsCompletedHandler>(
+          [id, action, callback](
+              HRESULT result,
+              ICoreWebView2BrowserExtensionList* list) -> HRESULT {
+            if (FAILED(result) || !list) {
+              callback(FAILED(result) ? result : E_FAIL);
+              return S_OK;
+            }
+            UINT count = 0;
+            list->get_Count(&count);
+            for (UINT i = 0; i < count; ++i) {
+              wil::com_ptr<ICoreWebView2BrowserExtension> extension;
+              if (SUCCEEDED(list->GetValueAtIndex(i, &extension)) &&
+                  extension &&
+                  DescribeExtension(extension.get()).id == id) {
+                action(extension);
+                return S_OK;
+              }
+            }
+            callback(E_INVALIDARG);
+            return S_OK;
+          })
+          .Get());
+  if (FAILED(hr)) {
+    callback(hr);
+  }
+}
+
+void Webview::SetBrowserExtensionEnabled(
+    const std::string& id, bool enabled,
+    BrowserExtensionResultCallback callback) {
+  WithBrowserExtension(
+      id,
+      [enabled, callback](
+          wil::com_ptr<ICoreWebView2BrowserExtension> extension) {
+        const HRESULT hr = extension->Enable(
+            enabled ? TRUE : FALSE,
+            Callback<ICoreWebView2BrowserExtensionEnableCompletedHandler>(
+                [callback](HRESULT result) -> HRESULT {
+                  callback(result);
+                  return S_OK;
+                })
+                .Get());
+        if (FAILED(hr)) {
+          callback(hr);
+        }
+      },
+      callback);
+}
+
+void Webview::RemoveBrowserExtension(const std::string& id,
+                                     BrowserExtensionResultCallback callback) {
+  WithBrowserExtension(
+      id,
+      [callback](wil::com_ptr<ICoreWebView2BrowserExtension> extension) {
+        const HRESULT hr = extension->Remove(
+            Callback<ICoreWebView2BrowserExtensionRemoveCompletedHandler>(
+                [callback](HRESULT result) -> HRESULT {
+                  callback(result);
+                  return S_OK;
+                })
+                .Get());
+        if (FAILED(hr)) {
+          callback(hr);
+        }
+      },
+      callback);
 }

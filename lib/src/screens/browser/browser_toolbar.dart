@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../browser/extensions/extension_hosts.dart';
+import '../../browser/extensions/web_extension_host.dart';
 import '../../config/build_flags.dart';
 import 'browser_chrome.dart';
+import 'extension_page_dialog.dart';
 
 /// Top toolbar for the browser with URL bar, navigation, cast button, and menu.
 class BrowserToolbar extends StatelessWidget {
@@ -287,6 +292,12 @@ class BrowserToolbar extends StatelessWidget {
                               ),
                             ),
                     ),
+                  if (ExtensionHosts.available)
+                    _ExtensionActionsButton(
+                      onManage: () => onMenuAction('extensions'),
+                      onReleaseWebViewFocus: onReleaseWebViewFocus,
+                      compact: compact,
+                    ),
                   // Overflow menu
                   _OverflowMenuButton(
                     onMenuAction: onMenuAction,
@@ -438,6 +449,118 @@ class _TabsButton extends StatelessWidget {
   }
 }
 
+/// The toolbar's extension button: opens an installed extension's popup.
+///
+/// WebView2 has no browser chrome, so the app draws this itself (issue #10).
+/// It stays hidden until an enabled extension has a popup to show, so people
+/// who never install one never see it.
+class _ExtensionActionsButton extends StatefulWidget {
+  const _ExtensionActionsButton({
+    required this.onManage,
+    this.onReleaseWebViewFocus,
+    this.compact = false,
+  });
+
+  final VoidCallback onManage;
+  final VoidCallback? onReleaseWebViewFocus;
+  final bool compact;
+
+  @override
+  State<_ExtensionActionsButton> createState() =>
+      _ExtensionActionsButtonState();
+}
+
+class _ExtensionActionsButtonState extends State<_ExtensionActionsButton> {
+  StreamSubscription<ExtensionEvent>? _events;
+  List<InstalledExtension> _withPopups = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _events = ExtensionHosts.current.events.listen((_) => _load());
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _events?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final all = await ExtensionHosts.current.list();
+      if (!mounted) return;
+      setState(() {
+        _withPopups =
+            all.where((e) => e.enabled && e.popupPath != null).toList();
+      });
+    } catch (_) {
+      // No list, no button; the Extensions screen reports the problem.
+    }
+  }
+
+  Future<void> _open(BuildContext buttonContext) async {
+    widget.onReleaseWebViewFocus?.call();
+    final button = buttonContext.findRenderObject() as RenderBox;
+    final overlay =
+        Overlay.of(buttonContext).context.findRenderObject() as RenderBox;
+    final position = RelativeRect.fromRect(
+      button.localToGlobal(Offset.zero) & button.size,
+      Offset.zero & overlay.size,
+    );
+    final choice = await showMenu<String>(
+      context: buttonContext,
+      position: position,
+      items: [
+        for (final extension in _withPopups)
+          PopupMenuItem(
+            value: extension.id,
+            child: Row(children: [
+              const Icon(Icons.extension, size: 20),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(extension.name, overflow: TextOverflow.ellipsis),
+              ),
+            ]),
+          ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(
+          value: '__manage__',
+          child: Row(children: [
+            Icon(Icons.settings_outlined, size: 20),
+            SizedBox(width: 12),
+            Text('Manage extensions'),
+          ]),
+        ),
+      ],
+    );
+    if (choice == null || !mounted) return;
+    if (choice == '__manage__') {
+      widget.onManage();
+      return;
+    }
+    final extension = _withPopups.where((e) => e.id == choice).firstOrNull;
+    final url = extension == null
+        ? null
+        : ExtensionHosts.current.pageUrl(extension, extension.popupPath!);
+    if (url == null || !mounted) return;
+    await ExtensionPageDialog.show(context, url: url, title: extension!.name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_withPopups.isEmpty) return const SizedBox.shrink();
+    return Builder(
+      builder: (buttonContext) => IconButton(
+        icon: Icon(Icons.extension, size: widget.compact ? 18 : 20),
+        tooltip: 'Extensions',
+        onPressed: () => _open(buttonContext),
+      ),
+    );
+  }
+}
+
 class _OverflowMenuButton extends StatelessWidget {
   final ValueChanged<String> onMenuAction;
   final VoidCallback? onReleaseWebViewFocus;
@@ -535,10 +658,21 @@ class _OverflowMenuButton extends StatelessWidget {
                     const SizedBox(width: 12),
                     const Text('History'),
                   ])),
+              // The puzzle piece belongs to real extensions now; userscripts
+              // are code snippets, so they get a code icon.
+              if (ExtensionHosts.available)
+                PopupMenuItem(
+                    value: 'extensions',
+                    child: Row(children: [
+                      Icon(Icons.extension_outlined,
+                          color: Theme.of(context).colorScheme.onSurface),
+                      const SizedBox(width: 12),
+                      const Text('Extensions'),
+                    ])),
               PopupMenuItem(
                   value: 'userscripts',
                   child: Row(children: [
-                    Icon(Icons.extension_outlined,
+                    Icon(Icons.code,
                         color: Theme.of(context).colorScheme.onSurface),
                     const SizedBox(width: 12),
                     const Text('Userscripts'),

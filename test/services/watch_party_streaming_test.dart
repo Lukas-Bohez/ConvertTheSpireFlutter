@@ -100,12 +100,12 @@ void main() {
   test('leaving the room revokes the shared tokens', () async {
     await host.startHosting(displayName: 'Host');
     final path = host.shareMedia(media.path)!;
-    final port = host.boundPort;
     await host.leave();
 
-    // Host again on the same port; the old token must not resolve.
+    // Host again; the old token must not resolve on the new room's server.
+    // (Not asserting the same port: when test files run in parallel another
+    // suite can hold the default one, and both fall back to random ports.)
     await host.startHosting(displayName: 'Host');
-    expect(host.boundPort, port);
 
     final client = HttpClient();
     final response = await (await client

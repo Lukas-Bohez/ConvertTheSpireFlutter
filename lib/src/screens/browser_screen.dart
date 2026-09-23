@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../browser/adblock/adblock_service.dart';
 import '../browser/cast/cast_service.dart';
 import '../browser/cast/unified_cast_service.dart';
+import '../browser/extensions/extension_hosts.dart';
 import '../browser/js/js_bridge.dart';
 import '../browser/platform/browser_webview_controller.dart';
 import '../browser/platform/browser_webview_factory.dart';
@@ -34,6 +35,7 @@ import 'browser/browser_settings_screen.dart';
 import 'browser/browser_toolbar.dart';
 import 'browser/cast/cast_picker_sheet.dart';
 import 'browser/cast_mini_bar.dart';
+import 'browser/extensions_screen.dart';
 import 'browser/favourites_screen.dart';
 import 'browser/history_screen.dart';
 import 'browser/intent_url.dart';
@@ -1800,6 +1802,13 @@ class _BrowserScreenState extends State<BrowserScreen>
       if (!mounted) return;
       await Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => UserScriptsScreen(service: _userScripts),
+      ));
+      return;
+    }
+    if (action == 'extensions') {
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ExtensionsScreen(host: ExtensionHosts.current),
       ));
       return;
     }
