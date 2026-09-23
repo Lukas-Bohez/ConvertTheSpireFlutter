@@ -117,7 +117,9 @@ build_win_*.txt
 
 # Local QA and diagnostic output. These were committed by accident; they are
 # machine-specific and rewritten on every run (issue #7).
-results/
+results/*
+# ...except the extension compatibility study, which is research data (#10).
+!results/extensions/
 cursor_log_*.txt
 manifest_check*.txt
 build_log*.txt
