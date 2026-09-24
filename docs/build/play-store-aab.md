@@ -23,7 +23,7 @@ The GitHub release does not carry the AAB. The release workflow builds one too (
 ## Check before uploading
 
 ```bash
-python scripts/verify_play_aab.py aab/ConvertTheSpireReborn-v14.5.0+1298-play.aab \
+python scripts/verify_play_aab.py aab/ConvertTheSpireReborn-v15.0.0+1299-play.aab \
     --previous path/to/the-last-accepted.aab
 ```
 

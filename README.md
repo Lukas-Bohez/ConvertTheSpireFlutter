@@ -37,7 +37,7 @@ Most tools that download from YouTube and other sites expect you to do some asse
 
 * **One download, then it just runs.** On Windows there is no installer, no administrator rights and nothing to configure. On first start the app fetches [yt-dlp](https://github.com/yt-dlp/yt-dlp) and FFmpeg by itself and keeps yt-dlp up to date in the background, so sites that change their pages keep working.
 * **Nothing extra on Android.** FFmpeg is built into the APK. No root, no Termux, no Google account, no separate player. The same APK runs on phones, tablets and Android TV.
-* **Nothing to uninstall on Windows.** The zip holds the `.exe`, a `data` folder and a `dll` folder, and it runs from wherever you extract it. To remove the app, delete the folder.
+* **Nothing to uninstall on Windows.** The zip holds the `.exe`, a `data` folder and a `dll` folder, and it runs from wherever you extract it. It adds itself to "Open with" for your songs, videos, torrents and magnet links, for your Windows account only and without admin rights. To remove the app, delete the folder.
 * **Updates tell you what changed.** After an update the app shows what is new, including anything from releases you skipped.
 * **Native, not a web page in a box.** It is written in Flutter and compiled for each platform, so it starts quickly and stays light on memory next to Electron apps.
 
