@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/ad_service.dart';
+import '../../utils/l10n.dart';
 import 'colour_rarity.dart';
 import 'colour_reward_service.dart';
 
@@ -46,7 +47,7 @@ class _ColourCollectionGridState extends State<ColourCollectionGrid> {
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Text(
-                tier.label,
+                tier.labelIn(context.l10n),
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -90,7 +91,7 @@ class _ColourCollectionGridState extends State<ColourCollectionGrid> {
                         children: [
                           Center(
                             child: Text(
-                              c.displayName,
+                              c.nameIn(context.l10n),
                               textAlign: TextAlign.center,
                               style: const TextStyle(fontSize: 12),
                             ),

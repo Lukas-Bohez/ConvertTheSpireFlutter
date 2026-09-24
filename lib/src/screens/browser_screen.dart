@@ -22,13 +22,17 @@ import '../browser/tabs/tab_manager.dart';
 import '../browser/userscripts/userscript.dart';
 import '../browser/userscripts/userscript_service.dart';
 import '../browser/video/video_detector_service.dart';
+import '../config/build_flags.dart';
 import '../data/browser_db.dart';
 import '../models/search_result.dart';
 import '../services/download_service.dart';
+import '../utils/l10n.dart';
 import '../utils/screenshot_helper.dart';
 import '../utils/snack.dart';
+import '../utils/youtube_link.dart';
 import '../widgets/browser_shell.dart';
 import '../widgets/cursor_overlay.dart';
+import '../widgets/video_or_playlist_dialog.dart';
 import 'browser/browser_bottom_bar.dart';
 import 'browser/browser_chrome.dart';
 import 'browser/browser_settings_screen.dart';
@@ -39,6 +43,7 @@ import 'browser/extensions_screen.dart';
 import 'browser/favourites_screen.dart';
 import 'browser/history_screen.dart';
 import 'browser/intent_url.dart';
+import 'browser/mobile_addons_screen.dart';
 import 'browser/new_tab_page.dart';
 import 'browser/userscripts_screen.dart';
 
@@ -63,10 +68,16 @@ class BrowserScreen extends StatefulWidget {
   final String? initialUrl;
   final void Function(SearchResult result) onAddToQueue;
 
+  /// Opens a YouTube playlist in the Playlist Manager, which shows what is
+  /// already downloaded before fetching the rest. Null hides the choice, and
+  /// the download button then takes just the video.
+  final void Function(String playlistUrl)? onDownloadPlaylist;
+
   const BrowserScreen({
     super.key,
     this.initialUrl,
     void Function(SearchResult result)? onAddToQueue,
+    this.onDownloadPlaylist,
   }) : onAddToQueue = onAddToQueue ?? _noopOnAddToQueue;
 
   static void _noopOnAddToQueue(SearchResult result) {}
@@ -734,20 +745,20 @@ class _BrowserScreenState extends State<BrowserScreen>
   /// Asks before handing a link to another app. Never launches on its own.
   Future<void> _confirmExternalApp(String url, {String? package}) async {
     if (!mounted) return;
-    final target = package ?? Uri.tryParse(url)?.scheme ?? 'another app';
+    final target = package ?? Uri.tryParse(url)?.scheme ?? context.l10n.anotherApp;
     final open = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Open in another app?'),
-        content: Text('This link opens $target outside the browser.'),
+        title: Text(context.l10n.openAnotherApp),
+        content: Text(context.l10n.linkOpensOutsideBrowser(target)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Stay here'),
+            child: Text(context.l10n.stayHere),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Open'),
+            child: Text(context.l10n.actionOpen),
           ),
         ],
       ),
@@ -780,26 +791,25 @@ class _BrowserScreenState extends State<BrowserScreen>
     final install = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Install userscript?'),
+        title: Text(context.l10n.installUserscript),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(url, style: Theme.of(ctx).textTheme.bodySmall),
             const SizedBox(height: 12),
-            const Text(
-              'Userscripts run with full access to the pages they match. '
-              'Only install scripts from a source you trust.',
+            Text(
+              context.l10n.userscriptsRunFullAccessPages,
             ),
           ],
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.actionCancel)),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Install')),
+              child: Text(context.l10n.install)),
         ],
       ),
     );
@@ -807,7 +817,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
     final error = await _userScripts.installFromUrl(url);
     if (!mounted) return;
-    Snack.show(context, error ?? 'Userscript installed',
+    Snack.show(context, error ?? context.l10n.userscriptInstalled,
         level: error == null ? SnackLevel.success : SnackLevel.error);
   }
 
@@ -1096,7 +1106,7 @@ class _BrowserScreenState extends State<BrowserScreen>
             autofocus: true,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'Type here...',
+              hintText: context.l10n.typeHere,
               hintStyle: const TextStyle(color: Colors.white38),
               suffixIcon: IconButton(
                 icon: const Icon(Icons.arrow_forward, size: 18),
@@ -1109,7 +1119,7 @@ class _BrowserScreenState extends State<BrowserScreen>
             ElevatedButton.icon(
               onPressed: () async => submitInput(controller.text),
               icon: const Icon(Icons.arrow_forward),
-              label: const Text('Submit'),
+              label: Text(context.l10n.submit),
             ),
             TextButton(
               onPressed: () async {
@@ -1122,7 +1132,7 @@ class _BrowserScreenState extends State<BrowserScreen>
                 _resumeCursor();
               },
               child:
-                  const Text('Cancel', style: TextStyle(color: Colors.white70)),
+                  Text(context.l10n.actionCancel, style: const TextStyle(color: Colors.white70)),
             ),
           ],
         );
@@ -1217,9 +1227,9 @@ class _BrowserScreenState extends State<BrowserScreen>
       setState(() => _isFavourited = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Removed from favourites'),
-              duration: Duration(seconds: 1)),
+          SnackBar(
+              content: Text(context.l10n.removedFromFavourites),
+              duration: const Duration(seconds: 1)),
         );
       }
     } else {
@@ -1231,46 +1241,52 @@ class _BrowserScreenState extends State<BrowserScreen>
       setState(() => _isFavourited = true);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Added to favourites'),
-              duration: Duration(seconds: 1)),
+          SnackBar(
+              content: Text(context.l10n.addedFavourites),
+              duration: const Duration(seconds: 1)),
         );
       }
     }
   }
 
-  void _addCurrentToQueue() {
+  Future<void> _addCurrentToQueue() async {
     final url = _addressController.text.trim();
     if (url.isEmpty) return;
-    Uri? uri;
-    String? id;
-    try {
-      uri = Uri.parse(url);
-      final host = uri.host.toLowerCase();
-      if (host.contains('youtube.com') ||
-          host.contains('youtu.be') ||
-          host.contains('music.youtube.com')) {
-        id = uri.queryParameters['v'];
-        if (id == null && host == 'youtu.be' && uri.pathSegments.isNotEmpty) {
-          id = uri.pathSegments[0];
-        }
-        if (id == null &&
-            uri.pathSegments.length >= 2 &&
-            uri.pathSegments[0] == 'shorts') {
-          id = uri.pathSegments[1];
-        }
-        if (id == null &&
-            uri.pathSegments.length >= 2 &&
-            uri.pathSegments[0] == 'embed') {
-          id = uri.pathSegments[1];
-        }
-      }
-    } catch (_) {}
+    final uri = Uri.tryParse(url);
+    final youtube = YouTubeLink.parse(url);
 
+    if (youtube != null && !isYouTubeConversionEnabledInCurrentBuild) {
+      // The queue drops YouTube links in this build; saying "Added to queue"
+      // anyway left people waiting for a download that never came.
+      Snack.show(
+        context,
+        context.l10n.youtubeDownloadsNotPartPlay,
+        level: SnackLevel.warning,
+      );
+      return;
+    }
+
+    if (youtube != null &&
+        youtube.hasDownloadablePlaylist &&
+        widget.onDownloadPlaylist != null) {
+      var choice = VideoOrPlaylist.playlist;
+      if (youtube.hasVideo) {
+        final asked =
+            await askVideoOrPlaylist(context, videoTitle: _videoTitle());
+        if (asked == null || !mounted) return;
+        choice = asked;
+      }
+      if (choice == VideoOrPlaylist.playlist) {
+        widget.onDownloadPlaylist!(youtube.playlistUrl);
+        return;
+      }
+    }
+
+    final id = youtube?.videoId;
     if (id != null) {
       widget.onAddToQueue(SearchResult(
         id: id,
-        title: _pageTitle.isNotEmpty ? _pageTitle : url,
+        title: _videoTitle() ?? url,
         artist: 'YouTube',
         duration: Duration.zero,
         thumbnailUrl: 'https://img.youtube.com/vi/$id/default.jpg',
@@ -1288,10 +1304,19 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Added to queue'), duration: Duration(seconds: 1)),
+        SnackBar(
+            content: Text(context.l10n.addedQueue), duration: const Duration(seconds: 1)),
       );
     }
+  }
+
+  /// The page title without YouTube's " - YouTube" suffix, or null.
+  String? _videoTitle() {
+    final title = _pageTitle
+        .replaceFirst(RegExp(r'\s*[-–]\s*YouTube( Music)?\s*$'), '')
+        .replaceFirst(RegExp(r'^\(\d+\)\s*'), '')
+        .trim();
+    return title.isEmpty ? null : title;
   }
 
   void _openInExternal() async {
@@ -1549,7 +1574,7 @@ class _BrowserScreenState extends State<BrowserScreen>
                     heroTag: 'extract_download',
                     onPressed: _addCurrentToQueue,
                     icon: const Icon(Icons.download_rounded),
-                    label: const Text('Extract & Download'),
+                    label: Text(context.l10n.extractDownload),
                   ),
                 ),
             ],
@@ -1581,16 +1606,15 @@ class _BrowserScreenState extends State<BrowserScreen>
             Icon(Icons.public,
                 size: 64, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 16),
-            const Text(
-              'In-app browser is not available on this platform.\n'
-              'Use the button below to open in your default browser.',
+            Text(
+              context.l10n.appBrowserNotAvailablePlatform,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: _openInExternal,
               icon: const Icon(Icons.open_in_browser),
-              label: const Text('Open in External Browser'),
+              label: Text(context.l10n.openExternalBrowser),
             ),
           ],
         ),
@@ -1614,7 +1638,7 @@ class _BrowserScreenState extends State<BrowserScreen>
                 style: const TextStyle(fontSize: 14),
                 decoration: InputDecoration(
                   isDense: true,
-                  hintText: 'Find in page',
+                  hintText: context.l10n.findPage,
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   border: OutlineInputBorder(
@@ -1625,7 +1649,7 @@ class _BrowserScreenState extends State<BrowserScreen>
                   fillColor: cs.surfaceContainerHighest,
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.arrow_forward, size: 18),
-                    tooltip: 'Find next',
+                    tooltip: context.l10n.findNext,
                     onPressed: _findNext,
                   ),
                   suffixIconConstraints:
@@ -1697,7 +1721,7 @@ class _BrowserScreenState extends State<BrowserScreen>
             }
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Link copied to clipboard')),
+                SnackBar(content: Text(context.l10n.linkCopiedClipboard)),
               );
             }
           } catch (_) {}
@@ -1715,7 +1739,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       return;
     }
     if (action == 'download') {
-      _addCurrentToQueue();
+      unawaited(_addCurrentToQueue());
       return;
     }
     if (action == 'openExternal' || action == 'external') {
@@ -1729,7 +1753,7 @@ class _BrowserScreenState extends State<BrowserScreen>
           await Clipboard.setData(ClipboardData(text: url));
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Link copied to clipboard')),
+              SnackBar(content: Text(context.l10n.linkCopiedClipboard)),
             );
           }
         } catch (_) {}
@@ -1768,27 +1792,27 @@ class _BrowserScreenState extends State<BrowserScreen>
           await _webViewController!.clearSession();
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text('Browser data cleared'),
-                  duration: Duration(seconds: 3)),
+              SnackBar(
+                  content: Text(context.l10n.browserDataCleared),
+                  duration: const Duration(seconds: 3)),
             );
           }
         } catch (e) {
           debugPrint('[BROWSER] clear_session failed: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text('Could not clear browser data'),
-                  duration: Duration(seconds: 4)),
+              SnackBar(
+                  content: Text(context.l10n.couldNotClearBrowserData),
+                  duration: const Duration(seconds: 4)),
             );
           }
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Browsing history and quick links cleared'),
-              duration: Duration(seconds: 3),
+            SnackBar(
+              content: Text(context.l10n.browsingHistoryQuickLinksCleared),
+              duration: const Duration(seconds: 3),
             ),
           );
         }
@@ -1804,9 +1828,20 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
     if (action == 'extensions') {
       if (!mounted) return;
-      await Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: (_) => ExtensionsScreen(host: ExtensionHosts.current),
+      if (ExtensionHosts.available) {
+        await Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => ExtensionsScreen(host: ExtensionHosts.current),
+        ));
+        return;
+      }
+      // No extension engine here (Android, older macOS): show what does run.
+      final url = await Navigator.of(context).push<String>(MaterialPageRoute(
+        builder: (_) => MobileAddonsScreen(
+          userScripts: _userScripts,
+          adBlock: _adBlock,
+        ),
       ));
+      if (url != null && mounted) _navigateTo(url);
       return;
     }
     if (action == 'favourites') {
@@ -1994,7 +2029,7 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
-                      Text('Tabs (${widget.tabManager.tabCount})',
+                      Text(context.l10n.tabs2(widget.tabManager.tabCount),
                           style: Theme.of(context).textTheme.titleMedium),
                       const Spacer(),
                       IconButton(
@@ -2140,7 +2175,7 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                                             minWidth: 28,
                                           ),
                                           padding: EdgeInsets.zero,
-                                          tooltip: 'Close tab',
+                                          tooltip: context.l10n.closeTab,
                                         ),
                                       ],
                                     ),

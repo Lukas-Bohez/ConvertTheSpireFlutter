@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../browser/userscripts/userscript.dart';
 import '../../browser/userscripts/userscript_service.dart';
+import '../../utils/l10n.dart';
 import '../../utils/snack.dart';
 
 /// Install and manage userscripts (Tampermonkey-compatible).
@@ -38,7 +39,7 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
     final url = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Install from URL'),
+        title: Text(context.l10n.installFromUrl),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -50,10 +51,10 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: Text(context.l10n.actionCancel)),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
-            child: const Text('Install'),
+            child: Text(context.l10n.install),
           ),
         ],
       ),
@@ -64,7 +65,7 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
     final error = await widget.service.installFromUrl(url.trim());
     if (!mounted) return;
     setState(() => _busy = false);
-    Snack.show(context, error ?? 'Script installed',
+    Snack.show(context, error ?? context.l10n.scriptInstalled,
         level: error == null ? SnackLevel.success : SnackLevel.error);
   }
 
@@ -73,7 +74,7 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
     final source = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Paste a script'),
+        title: Text(context.l10n.pasteScript),
         content: SizedBox(
           width: 520,
           child: TextField(
@@ -81,18 +82,18 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
             autofocus: true,
             maxLines: 14,
             style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-            decoration: const InputDecoration(
-              hintText: '// ==UserScript==\n// @name  My script\n…',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              hintText: context.l10n.userscriptNameMyScript,
+              border: const OutlineInputBorder(),
             ),
           ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: Text(context.l10n.actionCancel)),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
-            child: const Text('Install'),
+            child: Text(context.l10n.install),
           ),
         ],
       ),
@@ -104,8 +105,8 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
     Snack.show(
       context,
       installed == null
-          ? 'That is not a userscript — it needs a // ==UserScript== header.'
-          : 'Installed "${installed.name}"',
+          ? context.l10n.notUserscriptNeedsUserscriptHeader
+          : context.l10n.installed3(installed.name),
       level: installed == null ? SnackLevel.error : SnackLevel.success,
     );
   }
@@ -114,15 +115,15 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Remove "${script.name}"?'),
-        content: const Text('The script will be deleted from this device.'),
+        title: Text(context.l10n.remove2(script.name)),
+        content: Text(context.l10n.scriptWillDeletedFromDevice),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.actionCancel)),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Remove')),
+              child: Text(context.l10n.actionRemove)),
         ],
       ),
     );
@@ -136,10 +137,10 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Userscripts'),
+        title: Text(context.l10n.userscripts),
         actions: [
           IconButton(
-            tooltip: 'Update all',
+            tooltip: context.l10n.updateAll,
             onPressed: _busy
                 ? null
                 : () async {
@@ -148,7 +149,7 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
                     if (!mounted) return;
                     setState(() => _busy = false);
                     Snack.show(context,
-                        n == 0 ? 'Nothing to update' : 'Updated $n script(s)',
+                        n == 0 ? context.l10n.nothingUpdate : context.l10n.updatedScriptS(n),
                         level: SnackLevel.info);
                   },
             icon: const Icon(Icons.refresh_rounded),
@@ -159,10 +160,10 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
         children: [
           if (_busy) const LinearProgressIndicator(minHeight: 2),
           SwitchListTile(
-            title: const Text('Run userscripts'),
+            title: Text(context.l10n.runUserscripts),
             subtitle: Text(scripts.isEmpty
-                ? 'Nothing installed yet'
-                : '${service.enabledCount} of ${scripts.length} switched on'),
+                ? context.l10n.nothingInstalledYet
+                : context.l10n.switched(service.enabledCount, scripts.length)),
             value: service.enabled,
             onChanged: (v) => service.setEnabled(v),
           ),
@@ -188,10 +189,10 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
                                   maxLines: 2, overflow: TextOverflow.ellipsis),
                             Text(
                               targets.isEmpty
-                                  ? 'No sites configured — this will never run'
+                                  ? context.l10n.noSitesConfiguredWillNever
                                   : targets.take(2).join(', ') +
                                       (targets.length > 2
-                                          ? ' +${targets.length - 2} more'
+                                          ? context.l10n.more4(targets.length - 2)
                                           : ''),
                               style: Theme.of(context).textTheme.bodySmall,
                               maxLines: 1,
@@ -200,7 +201,7 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
                           ],
                         ),
                         secondary: IconButton(
-                          tooltip: 'Remove',
+                          tooltip: context.l10n.actionRemove,
                           icon: const Icon(Icons.delete_outline),
                           onPressed: () => _confirmRemove(script),
                         ),
@@ -213,7 +214,7 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _busy ? null : _showAddSheet,
         icon: const Icon(Icons.add),
-        label: const Text('Add script'),
+        label: Text(context.l10n.addScript),
       ),
     );
   }
@@ -228,8 +229,8 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.link),
-              title: const Text('Install from URL'),
-              subtitle: const Text('Paste a link to a .user.js file'),
+              title: Text(context.l10n.installFromUrl),
+              subtitle: Text(context.l10n.pasteLinkUserJsFile),
               onTap: () {
                 Navigator.pop(ctx);
                 _installFromUrl();
@@ -237,8 +238,8 @@ class _UserScriptsScreenState extends State<UserScriptsScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.content_paste),
-              title: const Text('Paste the script'),
-              subtitle: const Text('Copy the code straight in'),
+              title: Text(context.l10n.pasteScript2),
+              subtitle: Text(context.l10n.copyCodeStraight),
               onTap: () {
                 Navigator.pop(ctx);
                 _installFromPaste();
@@ -264,13 +265,11 @@ class _EmptyState extends StatelessWidget {
           children: [
             const Icon(Icons.extension_outlined, size: 48),
             const SizedBox(height: 16),
-            Text('No userscripts yet',
+            Text(context.l10n.noUserscriptsYet,
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
-              'Userscripts change how websites look and behave. Most scripts '
-              'written for Tampermonkey or Greasemonkey work here unchanged — '
-              'find them on sites like Greasy Fork and install by URL.',
+              context.l10n.userscriptsChangeHowWebsitesLook,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall,
             ),

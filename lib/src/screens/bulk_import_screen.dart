@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/bulk_import_service.dart';
+import '../utils/l10n.dart';
 
 /// Screen for bulk-importing a track list from text or file.
 class BulkImportScreen extends StatefulWidget {
@@ -91,9 +92,9 @@ class _BulkImportScreenState extends State<BulkImportScreen>
             TextField(
               controller: _textController,
               maxLines: 10,
-              decoration: const InputDecoration(
-                hintText: 'Paste track list here\nFormat: Artist - Song',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: context.l10n.pasteTrackListHereFormat,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
@@ -106,7 +107,7 @@ class _BulkImportScreenState extends State<BulkImportScreen>
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('Format: '),
+                    Text(context.l10n.format),
                     DropdownButton<String>(
                       value: _selectedFormat,
                       items: const [
@@ -122,12 +123,12 @@ class _BulkImportScreenState extends State<BulkImportScreen>
                 ),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.text_fields),
-                  label: const Text('Import from Text'),
+                  label: Text(context.l10n.importFromText),
                   onPressed: _processing ? null : _importFromText,
                 ),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.file_upload),
-                  label: const Text('Import from File'),
+                  label: Text(context.l10n.importFromFile),
                   onPressed: _processing ? null : _importFromFile,
                 ),
               ],
@@ -142,7 +143,7 @@ class _BulkImportScreenState extends State<BulkImportScreen>
             ],
             if (_parsedQueries != null && !_processing) ...[
               const SizedBox(height: 16),
-              Text('Parsed ${_parsedQueries!.length} tracks',
+              Text(context.l10n.parsedTracks(_parsedQueries!.length),
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               Expanded(

@@ -1,10 +1,12 @@
 import 'dart:io';
 
+import 'package:convert_the_spire_reborn/src/utils/l10n.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../widgets/torrent_status_text.dart';
 
 String _fmtBytes(int bytes) {
   if (bytes <= 0) return '0 B';
@@ -25,13 +27,13 @@ String _fmtDuration(Duration duration) {
   return '$mins:$secs';
 }
 
-String _fmtLastEvent(DateTime? at) {
-  if (at == null) return 'Never';
+String _fmtLastEvent(BuildContext context, DateTime? at) {
+  if (at == null) return context.l10n.never;
   final diff = DateTime.now().difference(at);
-  if (diff.inSeconds < 5) return 'Just now';
-  if (diff.inMinutes < 1) return '${diff.inSeconds}s ago';
-  if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-  return '${diff.inHours}h ago';
+  if (diff.inSeconds < 5) return context.l10n.justNow;
+  if (diff.inMinutes < 1) return context.l10n.sAgo(diff.inSeconds);
+  if (diff.inHours < 1) return context.l10n.mAgo(diff.inMinutes);
+  return context.l10n.hAgo(diff.inHours);
 }
 
 class _StatPill extends StatelessWidget {
@@ -125,7 +127,9 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
       builder: (context, snapshot) {
         final view = snapshot.data;
         final torrent = view?.model ?? widget.torrent;
-        final statusLabel = view?.statusLabel ?? (torrent.status ?? 'Unknown');
+        final statusLabel = view == null
+            ? (torrent.status ?? context.l10n.unknown)
+            : localizedTorrentStatus(context, view.statusLabel);
         final retryCountdown =
             TorrentService.instance.metadataRetryRemaining(torrent.id);
         final lastAnnounce =
@@ -138,14 +142,14 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
             actions: [
               if (torrent.magnetLink != null)
                 IconButton(
-                  tooltip: 'Copy magnet link',
+                  tooltip: context.l10n.copyMagnetLink,
                   icon: const Icon(Icons.link),
                   onPressed: () async {
                     await Clipboard.setData(
                         ClipboardData(text: torrent.magnetLink!));
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Magnet link copied')));
+                        SnackBar(content: Text(context.l10n.magnetLinkCopied)));
                   },
                 ),
             ],
@@ -182,7 +186,7 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                       const SizedBox(height: 8),
                       if (view?.isSeeding == true)
                         Text(
-                          'Shared: ${_fmtBytes(view!.uploaded)}',
+                          context.l10n.shared(_fmtBytes(view!.uploaded)),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                     ]),
@@ -232,54 +236,54 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                     // which rendered with a different emphasis/color.
                     OutlinedButton.icon(
                       icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text('Force refresh'),
+                      label: Text(context.l10n.forceRefresh),
                       onPressed: () async {
                         await TorrentEngineService.instance
                             .forceRefresh(torrent.id);
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Connection refresh triggered')));
+                            SnackBar(
+                                content: Text(context.l10n.connectionRefreshTriggered)));
                       },
                     ),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.radar_outlined, size: 16),
-                      label: const Text('Force reannounce'),
+                      label: Text(context.l10n.forceReannounce),
                       onPressed: () async {
                         try {
                           await TorrentEngineService.instance
                               .forceTrackerReannounce(torrent.id);
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Tracker reannounce triggered'),
+                            SnackBar(
+                              content: Text(context.l10n.trackerReannounceTriggered),
                             ),
                           );
                         } catch (e) {
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Reannounce failed: $e')),
+                            SnackBar(content: Text(context.l10n.reannounceFailed(e))),
                           );
                         }
                       },
                     ),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.hub_outlined, size: 16),
-                      label: const Text('Force DHT refresh'),
+                      label: Text(context.l10n.forceDhtRefresh),
                       onPressed: () async {
                         try {
                           await TorrentEngineService.instance
                               .forceDhtRefresh(torrent.id);
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('DHT refresh triggered'),
+                            SnackBar(
+                              content: Text(context.l10n.dhtRefreshTriggered),
                             ),
                           );
                         } catch (e) {
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('DHT refresh failed: $e')),
+                            SnackBar(content: Text(context.l10n.dhtRefreshFailed(e))),
                           );
                         }
                       },
@@ -290,22 +294,22 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                       OutlinedButton.icon(
                         icon: const Icon(Icons.replay_circle_filled_outlined,
                             size: 16),
-                        label: const Text('Retry metadata now'),
+                        label: Text(context.l10n.retryMetadataNow),
                         onPressed: () async {
                           await TorrentService.instance.retryMetadataNow(
                             torrent.id,
                           );
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Metadata retry queued'),
+                            SnackBar(
+                              content: Text(context.l10n.metadataRetryQueued),
                             ),
                           );
                         },
                       ),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.replay, size: 16),
-                      label: const Text('Redownload'),
+                      label: Text(context.l10n.redownload),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: cs.error,
                         side: BorderSide(color: cs.error),
@@ -314,7 +318,7 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                     ),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.content_copy, size: 16),
-                      label: const Text('Copy logs'),
+                      label: Text(context.l10n.copyLogs),
                       onPressed: () async {
                         final logs =
                             TorrentEngineService.instance.getLogs(torrent.id);
@@ -322,28 +326,28 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
                             ClipboardData(text: logs.join('\n')));
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Logs copied to clipboard')));
+                            SnackBar(
+                                content: Text(context.l10n.logsCopiedClipboard)));
                       },
                     ),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.fact_check_outlined, size: 16),
-                      label: const Text('Verify files'),
+                      label: Text(context.l10n.verifyFiles),
                       onPressed: () async {
                         final messenger = ScaffoldMessenger.of(context);
-                        messenger.showSnackBar(const SnackBar(
+                        messenger.showSnackBar(SnackBar(
                             content: Text(
-                                'Verifying files on disk  -  this may take a moment…')));
+                                context.l10n.verifyingFilesDiskMayTake)));
                         try {
                           await TorrentEngineService.instance
                               .forceStateRecovery(torrent.id);
                           if (!mounted) return;
-                          messenger.showSnackBar(const SnackBar(
-                              content: Text('Verification complete.')));
+                          messenger.showSnackBar(SnackBar(
+                              content: Text(context.l10n.verificationComplete)));
                         } catch (e) {
                           if (!mounted) return;
                           messenger.showSnackBar(
-                              SnackBar(content: Text('Verify failed: $e')));
+                              SnackBar(content: Text(context.l10n.verifyFailed(e))));
                         }
                       },
                     ),
@@ -353,44 +357,42 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
 
                 // ── Info table ───────────────────────────────────
                 _InfoCard(children: [
-                  _InfoRow('Status', statusLabel),
+                  _InfoRow(context.l10n.status, statusLabel),
                   _InfoRow(
-                    'Type',
+                    context.l10n.typeLabel,
                     torrent.type == 'magnet_link'
-                        ? 'Magnet link'
-                        : 'Torrent file',
+                        ? context.l10n.magnetLink
+                        : context.l10n.torrentFile,
                   ),
-                  _InfoRow('Total size', _fmtBytes(torrent.totalSize ?? 0)),
+                  _InfoRow(context.l10n.totalSize2, _fmtBytes(torrent.totalSize ?? 0)),
                   _InfoRow(
-                    'Uploaded',
+                    context.l10n.uploaded,
                     _fmtBytes(view?.uploaded ?? torrent.bytesUp),
                   ),
                   if (torrent.totalPieces != null && torrent.totalPieces! > 0)
                     _InfoRow(
-                      'Pieces',
+                      context.l10n.pieces,
                       '${torrent.havePieces} / ${torrent.totalPieces}',
                     ),
                   if (view != null) ...[
                     _InfoRow(
-                      'Seeders',
-                      '${view.seeders} '
-                          '(DHT: ${view.dhtNodes}, '
-                          'Tracker: ${view.trackers})',
+                      context.l10n.seeders,
+                      context.l10n.dhtTracker(view.seeders, view.dhtNodes, view.trackers),
                     ),
-                    _InfoRow('Leechers', '${view.leechers}'),
+                    _InfoRow(context.l10n.leechers, '${view.leechers}'),
                     if (view.connectionMessage.isNotEmpty)
-                      _InfoRow('Connection', view.connectionMessage),
-                    _InfoRow('Last announce', _fmtLastEvent(lastAnnounce)),
+                      _InfoRow(context.l10n.connection, view.connectionMessage),
+                    _InfoRow(context.l10n.lastAnnounce, _fmtLastEvent(context, lastAnnounce)),
                     _InfoRow(
-                      'Metadata retry',
+                      context.l10n.metadataRetry,
                       retryCountdown == null
                           ? 'n/a'
                           : _fmtDuration(retryCountdown),
                     ),
                   ],
                   if (torrent.filePath != null && torrent.filePath!.isNotEmpty)
-                    _InfoRow('Save path', torrent.filePath!),
-                  _InfoRow('Info hash', torrent.id, mono: true, small: true),
+                    _InfoRow(context.l10n.savePath, torrent.filePath!),
+                  _InfoRow(context.l10n.infoHash, torrent.id, mono: true, small: true),
                 ]),
               ],
             ),
@@ -404,21 +406,20 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Redownload from scratch?'),
+        title: Text(context.l10n.redownloadFromScratch),
         // overflow-fix: dynamic torrent names can overflow dialog text layout.
         content: SingleChildScrollView(
           child: Text(
-            '"${torrent.name}" will be deleted from disk and downloaded '
-            'again from 0%. The .torrent source file is kept.',
+            context.l10n.willDeletedFromDiskDownloaded(torrent.name),
           ),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.actionCancel)),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Redownload')),
+              child: Text(context.l10n.redownload)),
         ],
       ),
     );
@@ -427,11 +428,11 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
       await TorrentEngineService.instance.forceRedownload(torrent.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Redownload started')));
+          .showSnackBar(SnackBar(content: Text(context.l10n.redownloadStarted)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Failed: $e')));
+          .showSnackBar(SnackBar(content: Text(context.l10n.failed2(e))));
     }
   }
 }

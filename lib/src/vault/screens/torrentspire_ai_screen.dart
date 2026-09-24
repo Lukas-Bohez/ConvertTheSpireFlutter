@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:convert_the_spire_reborn/src/config/full_mode_access.dart';
+import 'package:convert_the_spire_reborn/src/utils/l10n.dart';
 import 'package:convert_the_spire_reborn/src/vault/constants.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/ai_chat_entry.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
@@ -16,6 +17,7 @@ import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:provider/provider.dart';
+import '../widgets/torrent_status_text.dart';
 
 class TorrentSpireAiScreen extends StatefulWidget {
   const TorrentSpireAiScreen({super.key});
@@ -125,9 +127,9 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Download folder "$folder" no longer exists.'),
+              content: Text(context.l10n.downloadFolderNoLongerExists(folder)),
               action: SnackBarAction(
-                label: 'Change',
+                label: context.l10n.change,
                 onPressed: _showSetDownloadFolderDialog,
               ),
               duration: const Duration(seconds: 8),
@@ -141,9 +143,9 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Cannot access download folder: $e'),
+            content: Text(context.l10n.cannotAccessDownloadFolder(e)),
             action: SnackBarAction(
-              label: 'Change',
+              label: context.l10n.change,
               onPressed: _showSetDownloadFolderDialog,
             ),
             duration: const Duration(seconds: 8),
@@ -159,19 +161,17 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Set Download Folder'),
+        title: Text(context.l10n.setDownloadFolder2),
         // overflow-fix: keep long guidance text scroll-safe on compact devices.
-        content: const SingleChildScrollView(
+        content: SingleChildScrollView(
           child: Text(
-            'You must set a download folder before downloading torrents. '
-            'This prevents downloads from being stored in inaccessible app storage and causing file corruption. '
-            'Please navigate to Settings and select a folder on external storage.',
+            context.l10n.mustSetDownloadFolderBefore2,
           ),
         ),
         actions: [
           FilledButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Open Settings'),
+            child: Text(context.l10n.openSettings),
           ),
         ],
       ),
@@ -258,9 +258,9 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
             .timeout(const Duration(seconds: 30));
         if (outcome == MagnetAddOutcome.pendingMetadata && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                "Couldn't fetch torrent info yet - no peers responded. Added to queue and will retry metadata automatically.",
+                context.l10n.couldntFetchTorrentInfoYet,
               ),
             ),
           );
@@ -269,9 +269,9 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
       } on TimeoutException {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Resolving metadata timed out after 30 seconds. Please retry.',
+              context.l10n.resolvingMetadataTimedOutAfter,
             ),
           ),
         );
@@ -304,9 +304,9 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
         await TorrentService.instance.addTorrentFromMagnetLink(text);
     if (outcome == MagnetAddOutcome.pendingMetadata && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            "Couldn't fetch torrent info yet - no peers responded. Added to queue and will retry metadata automatically.",
+            context.l10n.couldntFetchTorrentInfoYet,
           ),
         ),
       );
@@ -323,9 +323,9 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
     );
     if (outcome == MagnetAddOutcome.pendingMetadata && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            "Couldn't fetch torrent info yet - no peers responded. Added to queue and will retry metadata automatically.",
+            context.l10n.couldntFetchTorrentInfoYet,
           ),
         ),
       );
@@ -550,8 +550,8 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
     if (!SettingsService.instance.enableAiCopilot) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('AI Copilot is disabled in Settings.'),
+        SnackBar(
+          content: Text(context.l10n.aiCopilotDisabledSettings),
         ),
       );
       return;
@@ -861,10 +861,10 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vault The Spire AI'),
+        title: Text(context.l10n.vaultSpireAi),
         actions: [
           IconButton(
-            tooltip: 'Focus mode',
+            tooltip: context.l10n.focusMode,
             onPressed: () => setState(() {
               _focusMode = !_focusMode;
               if (_focusMode) {
@@ -874,7 +874,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
             icon: Icon(_focusMode ? Icons.view_week : Icons.filter_none),
           ),
           IconButton(
-            tooltip: 'Chat mode',
+            tooltip: context.l10n.chatMode,
             onPressed: () {
               setState(() {
                 _chatMode = !_chatMode;
@@ -957,7 +957,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                       if (!mounted) return;
                       await _refreshTorrents();
                     },
-                    child: const Text('Create Torrent'),
+                    child: Text(context.l10n.createTorrent),
                   );
 
                   if (narrow) {
@@ -969,9 +969,9 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                             Expanded(
                               child: TextField(
                                 controller: _searchController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Search torrents',
-                                  prefixIcon: Icon(Icons.search),
+                                decoration: InputDecoration(
+                                  labelText: context.l10n.searchTorrents2,
+                                  prefixIcon: const Icon(Icons.search),
                                 ),
                                 onSubmitted: _performSearch,
                               ),
@@ -982,7 +982,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                                 _searchController.text,
                               ),
                               icon: const Icon(Icons.search),
-                              label: const Text('Search'),
+                              label: Text(context.l10n.tabSearch),
                             ),
                           ],
                         ),
@@ -1006,9 +1006,9 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                       Expanded(
                         child: TextField(
                           controller: _searchController,
-                          decoration: const InputDecoration(
-                            labelText: 'Search torrents',
-                            prefixIcon: Icon(Icons.search),
+                          decoration: InputDecoration(
+                            labelText: context.l10n.searchTorrents2,
+                            prefixIcon: const Icon(Icons.search),
                           ),
                           onSubmitted: _performSearch,
                         ),
@@ -1019,7 +1019,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                           _searchController.text,
                         ),
                         icon: const Icon(Icons.search),
-                        label: const Text('Search'),
+                        label: Text(context.l10n.tabSearch),
                       ),
                       const SizedBox(width: 8),
                       categoryPicker,
@@ -1031,17 +1031,17 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
               ),
               const SizedBox(height: 8),
               if (_resolvingMagnet)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 8),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
                     children: [
-                      SizedBox(
+                      const SizedBox(
                         width: 14,
                         height: 14,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
-                      SizedBox(width: 8),
-                      Text('Resolving metadata...'),
+                      const SizedBox(width: 8),
+                      Text(context.l10n.resolvingMetadata),
                     ],
                   ),
                 ),
@@ -1054,8 +1054,8 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                       children: [
                         TextField(
                           controller: _magnetController,
-                          decoration: const InputDecoration(
-                            hintText: 'Paste magnet link',
+                          decoration: InputDecoration(
+                            hintText: context.l10n.pasteMagnetLink,
                           ),
                           onSubmitted: (_) => _addMagnet(),
                         ),
@@ -1065,7 +1065,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                           child: FilledButton.tonalIcon(
                             onPressed: _addMagnet,
                             icon: const Icon(Icons.add_link),
-                            label: const Text('Add'),
+                            label: Text(context.l10n.actionAdd),
                           ),
                         ),
                       ],
@@ -1077,8 +1077,8 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                       Expanded(
                         child: TextField(
                           controller: _magnetController,
-                          decoration: const InputDecoration(
-                            hintText: 'Paste magnet link',
+                          decoration: InputDecoration(
+                            hintText: context.l10n.pasteMagnetLink,
                           ),
                           onSubmitted: (_) => _addMagnet(),
                         ),
@@ -1087,16 +1087,16 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                       FilledButton.tonalIcon(
                         onPressed: _addMagnet,
                         icon: const Icon(Icons.add_link),
-                        label: const Text('Add'),
+                        label: Text(context.l10n.actionAdd),
                       ),
                     ],
                   );
                 },
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Torrents',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Text(
+                context.l10n.tabTorrents,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               Expanded(
                 child: Container(
@@ -1106,9 +1106,9 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                     border: Border.all(color: cs.outlineVariant),
                   ),
                   child: activeDownloads.isEmpty && library.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
-                            'No active torrents yet. Add a magnet link or start one from search.',
+                            context.l10n.noActiveTorrentsYetAdd,
                             textAlign: TextAlign.center,
                           ),
                         )
@@ -1116,11 +1116,11 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           children: [
                             if (activeDownloads.isNotEmpty)
-                              const Padding(
-                                padding: EdgeInsets.fromLTRB(12, 4, 12, 6),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(12, 4, 12, 6),
                                 child: Text(
-                                  'Download queue',
-                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                  context.l10n.downloadQueue,
+                                  style: const TextStyle(fontWeight: FontWeight.w700),
                                 ),
                               ),
                             for (final item in activeDownloads)
@@ -1137,7 +1137,10 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                                       subtitle: Padding(
                                         padding: const EdgeInsets.only(top: 6),
                                         child: Text(
-                                          '${item.statusLabel} • ${item.peers} peers',
+                                          context.l10n.peers(
+                                              localizedTorrentStatus(
+                                                  context, item.statusLabel),
+                                              item.peers),
                                           style: const TextStyle(fontSize: 11),
                                         ),
                                       ),
@@ -1146,11 +1149,11 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                                 ),
                               ),
                             if (library.isNotEmpty)
-                              const Padding(
-                                padding: EdgeInsets.fromLTRB(12, 12, 12, 6),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
                                 child: Text(
-                                  'Completed',
-                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                  context.l10n.completed,
+                                  style: const TextStyle(fontWeight: FontWeight.w700),
                                 ),
                               ),
                             for (final item in library)
@@ -1168,7 +1171,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   subtitle: Text(
-                                    item.model.filePath ?? 'Completed',
+                                    item.model.filePath ?? context.l10n.completed,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(fontSize: 11),
@@ -1193,9 +1196,9 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
               ),
               if (hasSearchResults) ...[
                 const SizedBox(height: 10),
-                const Text(
-                  'Search results',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                Text(
+                  context.l10n.searchResults,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
                 SizedBox(
@@ -1289,9 +1292,9 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
         children: [
           Row(
             children: [
-              const Text(
-                'AI Info Card',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Text(
+                context.l10n.aiInfoCard,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const Spacer(),
               Container(
@@ -1324,7 +1327,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                       _chatController.text =
                           'Tell me more about ${_selected!.name}';
                     },
-              child: const Text('Tell me more'),
+              child: Text(context.l10n.tellMeMore),
             ),
           ),
         ],
@@ -1345,10 +1348,10 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
             color: _aiReady ? cs.tertiaryContainer : cs.errorContainer,
             child: Text(
               _aiReady
-                  ? 'AI Ready'
+                  ? context.l10n.aiReady
                   : aiEnabled
-                      ? 'AI copilot offline  -  check your Ollama connection in Settings'
-                      : 'AI Copilot disabled in Settings',
+                      ? context.l10n.aiCopilotOfflineCheckOllama
+                      : context.l10n.aiCopilotDisabledSettings2,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 color: _aiReady ? cs.onTertiaryContainer : cs.onErrorContainer,
@@ -1400,7 +1403,7 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'Auto',
+                                  context.l10n.auto,
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: cs.tertiary,
@@ -1447,8 +1450,8 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                   Expanded(
                     child: TextField(
                       controller: _chatController,
-                      decoration: const InputDecoration(
-                        hintText: 'Type a message...',
+                      decoration: InputDecoration(
+                        hintText: context.l10n.typeMessage,
                       ),
                       onSubmitted: (_) => _onUserSend(),
                     ),

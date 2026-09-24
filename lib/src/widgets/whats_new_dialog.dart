@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/whats_new_service.dart';
+import '../utils/l10n.dart';
 
 /// Shows a release's changelog entry after the app updates itself, followed
 /// by any releases the person skipped.
@@ -81,7 +82,7 @@ class WhatsNewDialog extends StatelessWidget {
     final theme = Theme.of(context);
     return AlertDialog(
       title: Text(
-          entry.title.isEmpty ? 'What’s new in ${entry.version}' : entry.title),
+          entry.title.isEmpty ? context.l10n.whatsNew(entry.version) : entry.title),
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
@@ -91,7 +92,7 @@ class WhatsNewDialog extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Version ${entry.version}',
+              Text(context.l10n.version(entry.version),
                   style: theme.textTheme.labelMedium),
               const SizedBox(height: 12),
               ..._content(context, entry.body),
@@ -99,12 +100,12 @@ class WhatsNewDialog extends StatelessWidget {
                 const Divider(height: 32),
                 Text(
                   older.title.isEmpty
-                      ? 'Version ${older.version}'
+                      ? context.l10n.version(older.version)
                       : older.title,
                   style: theme.textTheme.titleMedium,
                 ),
                 if (older.title.isNotEmpty)
-                  Text('Version ${older.version}',
+                  Text(context.l10n.version(older.version),
                       style: theme.textTheme.labelMedium),
                 const SizedBox(height: 8),
                 ..._content(context, older.body),
@@ -116,7 +117,7 @@ class WhatsNewDialog extends StatelessWidget {
       actions: [
         FilledButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Got it'),
+          child: Text(context.l10n.got),
         ),
       ],
     );

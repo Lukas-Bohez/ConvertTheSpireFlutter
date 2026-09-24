@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../browser/extensions/extension_hosts.dart';
 import '../../browser/extensions/web_extension_host.dart';
 import '../../config/build_flags.dart';
+import '../../utils/l10n.dart';
 import 'browser_chrome.dart';
 import 'extension_page_dialog.dart';
 
@@ -116,14 +117,14 @@ class BrowserToolbar extends StatelessWidget {
                   _ToolbarButton(
                     icon: Icons.arrow_back_rounded,
                     onPressed: canGoBack ? onBack : null,
-                    tooltip: 'Back',
+                    tooltip: context.l10n.back,
                     compact: compact,
                   ),
                   // Forward
                   _ToolbarButton(
                     icon: Icons.arrow_forward_rounded,
                     onPressed: canGoForward ? onForward : null,
-                    tooltip: 'Forward',
+                    tooltip: context.l10n.forward,
                     compact: compact,
                   ),
                   // Address bar
@@ -183,7 +184,7 @@ class BrowserToolbar extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      _siteDomain(currentUrl),
+                                      _siteDomain(context, currentUrl),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
@@ -195,7 +196,7 @@ class BrowserToolbar extends StatelessWidget {
                                       ),
                                     ),
                                     if (pageTitle.isNotEmpty &&
-                                        pageTitle != _siteDomain(currentUrl))
+                                        pageTitle != _siteDomain(context, currentUrl))
                                       Text(
                                         pageTitle,
                                         maxLines: 1,
@@ -212,7 +213,7 @@ class BrowserToolbar extends StatelessWidget {
                               ),
                               if (adBlockEnabled)
                                 Tooltip(
-                                  message: 'Ad blocker active',
+                                  message: context.l10n.adBlockerActive,
                                   child: Icon(
                                     Icons.shield_rounded,
                                     size: 16,
@@ -224,7 +225,7 @@ class BrowserToolbar extends StatelessWidget {
                                 _buildBadge(
                                   context,
                                   icon: Icons.desktop_windows_rounded,
-                                  label: 'Desktop',
+                                  label: context.l10n.desktop,
                                   active: true,
                                 ),
                               ],
@@ -248,7 +249,7 @@ class BrowserToolbar extends StatelessWidget {
                   _ToolbarButton(
                     icon: Icons.refresh_rounded,
                     onPressed: onReload,
-                    tooltip: 'Reload',
+                    tooltip: context.l10n.reload,
                     compact: compact,
                   ),
                   // Favourite
@@ -258,8 +259,8 @@ class BrowserToolbar extends StatelessWidget {
                         : Icons.star_border_rounded,
                     onPressed: onFavouriteTap,
                     tooltip: isFavourited
-                        ? 'Remove from favourites'
-                        : 'Add to favourites',
+                        ? context.l10n.removeFromFavourites
+                        : context.l10n.addFavourites,
                     compact: compact,
                     iconColor: isFavourited ? Colors.amber : null,
                   ),
@@ -289,7 +290,7 @@ class BrowserToolbar extends StatelessWidget {
                                       onDownload?.call();
                                     }
                                   : null,
-                              tooltip: 'Download',
+                              tooltip: context.l10n.actionDownload,
                               style: IconButton.styleFrom(
                                 backgroundColor:
                                     cs.primaryContainer.withValues(alpha: 0.8),
@@ -356,10 +357,10 @@ class BrowserToolbar extends StatelessWidget {
     );
   }
 
-  String _siteDomain(String url) {
+  String _siteDomain(BuildContext context, String url) {
     final uri = Uri.tryParse(url);
     final host = uri?.host.trim() ?? '';
-    if (host.isEmpty) return pageTitle.isNotEmpty ? pageTitle : 'New Tab';
+    if (host.isEmpty) return pageTitle.isNotEmpty ? pageTitle : context.l10n.newTab;
     return host.startsWith('www.') ? host.substring(4) : host;
   }
 }
@@ -410,7 +411,7 @@ class _TabsButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Tooltip(
-      message: 'Tabs',
+      message: context.l10n.tabs,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.center,
@@ -524,10 +525,10 @@ class _ExtensionActionsButtonState extends State<_ExtensionActionsButton> {
             child: _MenuRow(icon: Icons.extension, label: extension.name),
           ),
         const PopupMenuDivider(),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: '__manage__',
           child: _MenuRow(
-              icon: Icons.settings_outlined, label: 'Manage extensions'),
+              icon: Icons.settings_outlined, label: context.l10n.manageExtensions),
         ),
       ],
     );
@@ -550,7 +551,7 @@ class _ExtensionActionsButtonState extends State<_ExtensionActionsButton> {
     return Builder(
       builder: (buttonContext) => IconButton(
         icon: Icon(Icons.extension, size: widget.compact ? 18 : 20),
-        tooltip: 'Extensions',
+        tooltip: context.l10n.extensions,
         onPressed: () => _open(buttonContext),
       ),
     );
@@ -575,7 +576,7 @@ class _OverflowMenuButton extends StatelessWidget {
     return Builder(builder: (buttonContext) {
       return IconButton(
         icon: Icon(Icons.more_vert, size: compact ? 18 : 20),
-        tooltip: 'More options',
+        tooltip: context.l10n.moreOptions,
         onPressed: () async {
           onReleaseWebViewFocus?.call();
           try {
@@ -605,45 +606,49 @@ class _OverflowMenuButton extends StatelessWidget {
                     value: 'cast',
                     child: _MenuRow(
                       icon: Icons.cast,
-                      label: 'Cast to device',
+                      label: context.l10n.castToDevice,
                       trailing: isCastConnected
                           ? Icon(Icons.circle,
                               size: 8,
                               color: Theme.of(context).colorScheme.primary)
                           : null,
                     )),
-              const PopupMenuItem(
+              PopupMenuItem(
                   value: 'openExternal',
                   child: _MenuRow(
-                      icon: Icons.open_in_browser, label: 'Open in browser')),
-              const PopupMenuItem(
+                      icon: Icons.open_in_browser, label: context.l10n.openBrowser)),
+              PopupMenuItem(
                   value: 'copyLink',
-                  child: _MenuRow(icon: Icons.copy, label: 'Copy link')),
-              const PopupMenuItem(
+                  child: _MenuRow(icon: Icons.copy, label: context.l10n.copyLink)),
+              PopupMenuItem(
                   value: 'share',
-                  child: _MenuRow(icon: Icons.share, label: 'Share')),
-              const PopupMenuItem(
+                  child: _MenuRow(icon: Icons.share, label: context.l10n.actionShare)),
+              PopupMenuItem(
                   value: 'addCookies',
                   child: _MenuRow(
                       icon: Icons.cookie_outlined,
-                      label: 'Add cookies (for downloads)')),
-              const PopupMenuItem(
+                      label: context.l10n.addCookiesDownloads)),
+              PopupMenuItem(
                   value: 'history',
-                  child: _MenuRow(icon: Icons.history, label: 'History')),
-              // The puzzle piece belongs to real extensions now; userscripts
-              // are code snippets, so they get a code icon.
-              if (ExtensionHosts.available)
-                const PopupMenuItem(
+                  child: _MenuRow(icon: Icons.history, label: context.l10n.history)),
+              // The puzzle piece belongs to extensions; userscripts are code
+              // snippets, so they get a code icon. Outside the Play build,
+              // Extensions is listed even where no engine can run them: it
+              // then opens a page with what does run (ad blocking,
+              // userscripts), instead of leaving phone users to hunt the
+              // menu for something that is not there.
+              if (ExtensionHosts.available || !kPlayStoreBuild)
+                PopupMenuItem(
                     value: 'extensions',
                     child: _MenuRow(
-                        icon: Icons.extension_outlined, label: 'Extensions')),
-              const PopupMenuItem(
+                        icon: Icons.extension_outlined, label: context.l10n.extensions)),
+              PopupMenuItem(
                   value: 'userscripts',
-                  child: _MenuRow(icon: Icons.code, label: 'Userscripts')),
-              const PopupMenuItem(
+                  child: _MenuRow(icon: Icons.code, label: context.l10n.userscripts)),
+              PopupMenuItem(
                   value: 'clear_session',
                   child: _MenuRow(
-                      icon: Icons.delete_sweep, label: 'Clear browsing data')),
+                      icon: Icons.delete_sweep, label: context.l10n.clearBrowsingData2)),
             ],
           );
           if (selection != null) onMenuAction(selection);

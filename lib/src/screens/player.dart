@@ -39,6 +39,8 @@ import '../services/review_service.dart';
 import '../services/watch_party/watch_party_protocol.dart';
 import '../services/watch_party/watch_party_service.dart';
 import '../state/app_controller.dart';
+import '../utils/folder_label.dart';
+import '../utils/l10n.dart';
 import '../utils/lock.dart';
 import '../utils/snack.dart';
 import '../vault/platform/desktop_window.dart';
@@ -451,6 +453,9 @@ img.Image? _decodeByMagic(Uint8List raw) {
 //   Root cause: setVolume called on non-platform thread from stream listeners.
 //   FIX: All just_audio calls are wrapped in _runOnMainThread().
 
+/// A Watch Together notice, worded in the app's language when shown.
+typedef WatchPartyNotice = String Function(AppLocalizations l10n);
+
 class PlayerState with ChangeNotifier {
   static const String _playStatsPrefsKey = 'player_play_stats';
   // TODO(next): add first-class sleep timer state and countdown exposure for all player surfaces.
@@ -588,6 +593,10 @@ class PlayerState with ChangeNotifier {
   final _audioLock = Lock();
 
   // -------------------------------------------------------------------------
+
+  /// Set once the player has tried to reopen the last library folder this
+  /// session, so leaving and returning to the Player does not rescan it.
+  bool libraryRestoreAttempted = false;
 
   PlayerState(this.prefs) {
     if (_useMediaKit) {
@@ -2911,7 +2920,7 @@ class PlayerState with ChangeNotifier {
         final label = snapshot.title ?? snapshot.mediaKey;
         if (streamUrl == null) {
           _emitWatchPartyNotice(
-              'The room is watching "$label", which is not in your library.');
+              (l10n) => l10n.roomWatchingWhichNotLibrary(label));
           return;
         }
         _commitCurrentPlayStats();
@@ -2924,7 +2933,7 @@ class PlayerState with ChangeNotifier {
           type: _roomMediaType(snapshot.mediaKey),
         );
         notifyListeners();
-        _emitWatchPartyNotice('Streaming "$label" from the host.');
+        _emitWatchPartyNotice((l10n) => l10n.streamingFromHost(label));
         await playFileDirect(streamUrl, fromRoom: true);
       } else {
         await select(index);
@@ -2960,14 +2969,15 @@ class PlayerState with ChangeNotifier {
         : MediaType.audio;
   }
 
-  final StreamController<String> _watchPartyNotices =
-      StreamController<String>.broadcast();
+  final StreamController<WatchPartyNotice> _watchPartyNotices =
+      StreamController<WatchPartyNotice>.broadcast();
 
   /// Messages the UI should surface (for example: the room moved to a file
-  /// this device does not have).
-  Stream<String> get watchPartyNotices => _watchPartyNotices.stream;
+  /// this device does not have). Each is worded by the screen that shows
+  /// it, in the app's language; this state has no BuildContext.
+  Stream<WatchPartyNotice> get watchPartyNotices => _watchPartyNotices.stream;
 
-  void _emitWatchPartyNotice(String message) {
+  void _emitWatchPartyNotice(WatchPartyNotice message) {
     if (!_watchPartyNotices.isClosed) _watchPartyNotices.add(message);
   }
 
@@ -4131,8 +4141,8 @@ class _VideoPaneState extends State<_VideoPane> {
                           color: Colors.white.withOpacity(0.85),
                         ),
                         tooltip: widget.isFullScreen
-                            ? 'Exit fullscreen'
-                            : 'Fullscreen',
+                            ? context.l10n.exitFullscreen
+                            : context.l10n.fullscreen,
                         onPressed: widget.onToggleFullScreen,
                       ),
                     ),
@@ -4193,7 +4203,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _isFullScreen = false;
   bool _searchEditing = false;
   AppController? _appController;
-  StreamSubscription<String>? _watchPartyNoticeSub;
+  StreamSubscription<WatchPartyNotice>? _watchPartyNoticeSub;
 
   bool get _usesNativeWindowFullscreen =>
       !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
@@ -4240,6 +4250,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     };
     _activeGenres
         .addAll(prefs.getStringList('player_filter_genres') ?? const []);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_restoreLibraryFolder());
+    });
   }
 
   @override
@@ -4255,7 +4268,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     _watchPartyNoticeSub?.cancel();
     _watchPartyNoticeSub = player.watchPartyNotices.listen((message) {
       if (mounted) {
-        Snack.show(context, message, level: SnackLevel.warning);
+        Snack.show(context, message(context.l10n), level: SnackLevel.warning);
       }
     });
   }
@@ -4442,7 +4455,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             item.type == MediaType.audio && item.resolvedArtist.isEmpty)
         .toList();
     if (targets.isEmpty) {
-      Snack.show(context, 'No songs need metadata fixes',
+      Snack.show(context, context.l10n.noSongsNeedMetadataFixes,
           level: SnackLevel.info);
       return;
     }
@@ -4453,7 +4466,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       barrierDismissible: false,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Fixing metadata'),
+          title: Text(context.l10n.fixingMetadata),
           content: ValueListenableBuilder<int>(
             valueListenable: progress,
             builder: (context, done, _) {
@@ -4466,7 +4479,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                     value: total == 0 ? null : done / total,
                   ),
                   const SizedBox(height: 12),
-                  Text('$done of $total songs processed'),
+                  Text(context.l10n.songsProcessed(done, total)),
                 ],
               );
             },
@@ -4488,9 +4501,17 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
     await dialogFuture;
     if (mounted) {
-      Snack.show(context, 'Metadata fixes complete', level: SnackLevel.info);
+      Snack.show(context, context.l10n.metadataFixesComplete, level: SnackLevel.info);
     }
   }
+
+  /// Remembered so the library is back the next time the app opens. It used
+  /// to start empty on every launch, and on a phone the button to open the
+  /// folder again was tucked away in a menu.
+  static const String _libraryFolderPrefsKey = 'player_library_folder';
+
+  /// The folder being reopened quietly at startup, for the empty state.
+  String? _restoringFolder;
 
   Future<void> _pickFolder() async {
     if (kIsWeb) return;
@@ -4498,30 +4519,60 @@ class _PlayerScreenState extends State<PlayerScreen>
     try {
       dirPath = await pickDirectoryPath(
         context,
-        dialogTitle: 'Select media folder',
+        dialogTitle: context.l10n.selectMediaFolder,
       );
     } catch (e) {
       debugPrint('folder picker error: $e');
     }
     if (dirPath == null || !mounted) return;
+    await _openFolder(dirPath);
+  }
 
-    // Show loading dialog while scanning folder (prevents UI freeze on large folders)
-    if (!mounted) return;
-    unawaited(showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => const AlertDialog(
-        title: Text('Scanning folder'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Please wait...'),
-          ],
+  /// Reopens the last library folder once per session, when the library is
+  /// still empty. Silent: a folder that is gone or no longer readable simply
+  /// leaves the empty library with its Open folder button.
+  Future<void> _restoreLibraryFolder() async {
+    final state = context.read<PlayerState>();
+    if (state.libraryRestoreAttempted || state.library.isNotEmpty) return;
+    state.libraryRestoreAttempted = true;
+    final saved = state.prefs.getString(_libraryFolderPrefsKey)?.trim() ?? '';
+    if (saved.isEmpty) return;
+    await _openFolder(saved, quiet: true);
+  }
+
+  /// Scans [dirPath] into the library and remembers it. [quiet] is for the
+  /// startup restore: no blocking dialog and no warnings.
+  Future<bool> _openFolder(String dirPath, {bool quiet = false}) async {
+    if (!mounted) return false;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    if (quiet) {
+      setState(() => _restoringFolder = dirPath);
+    } else {
+      // Show loading dialog while scanning folder (prevents UI freeze on large folders)
+      unawaited(showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: Text(context.l10n.scanningFolder),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(context.l10n.pleaseWait),
+            ],
+          ),
         ),
-      ),
-    ));
+      ));
+    }
+
+    void finishLoading() {
+      if (quiet) {
+        if (mounted) setState(() => _restoringFolder = null);
+      } else if (navigator.canPop()) {
+        navigator.pop(); // Close loading dialog
+      }
+    }
 
     try {
       // Handle both regular filesystem paths and SAF URIs
@@ -4545,26 +4596,29 @@ class _PlayerScreenState extends State<PlayerScreen>
         items = await _scanFolderInBackground(dirPath);
       }
 
-      if (!mounted) return;
-      Navigator.pop(context); // Close loading dialog
+      finishLoading();
+      if (!mounted) return false;
 
       if (items.isEmpty) {
-        if (mounted) {
-          Snack.show(context, 'No media files found in folder',
+        if (!quiet) {
+          Snack.show(context, context.l10n.noMediaFilesFoundFolder,
               level: SnackLevel.warning);
         }
-        return;
+        return false;
       }
 
-      if (!mounted) return;
-      await context.read<PlayerState>().setLibrary(items);
+      final state = context.read<PlayerState>();
+      await state.setLibrary(items);
+      await state.prefs.setString(_libraryFolderPrefsKey, dirPath);
+      return true;
     } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        Snack.show(context, 'Error scanning folder: $e',
+      finishLoading();
+      if (mounted && !quiet) {
+        Snack.show(context, context.l10n.errorScanningFolder(e),
             level: SnackLevel.error);
       }
       debugPrint('folder scan error: $e');
+      return false;
     }
   }
 
@@ -4801,21 +4855,21 @@ class _PlayerScreenState extends State<PlayerScreen>
                                   Tab(
                                     icon: const Icon(Icons.library_music,
                                         size: 20),
-                                    text: 'All ($allCount)',
+                                    text: context.l10n.all(allCount),
                                   ),
                                   Tab(
                                     icon:
                                         const Icon(Icons.music_note, size: 20),
-                                    text: 'Songs ($songCount)',
+                                    text: context.l10n.songs(songCount),
                                   ),
                                   Tab(
                                     icon: const Icon(Icons.video_library,
                                         size: 20),
-                                    text: 'Videos ($videoCount)',
+                                    text: context.l10n.videos(videoCount),
                                   ),
                                   Tab(
                                     icon: const Icon(Icons.favorite, size: 20),
-                                    text: 'Fav ($favCount)',
+                                    text: context.l10n.fav(favCount),
                                   ),
                                 ],
                               ),
@@ -4834,6 +4888,8 @@ class _PlayerScreenState extends State<PlayerScreen>
               controller: _tabController,
               children: [
                 _AllTab(
+                  onOpenFolder: _pickFolder,
+                  restoringFolder: _restoringFolder,
                   entries: _sortAndFilterEntries(
                     state.library.asMap().entries.take(state.folderItemCount > 0
                         ? state.folderItemCount
@@ -4898,8 +4954,10 @@ class _PlayerScreenState extends State<PlayerScreen>
   /// Width below which the header stops being a row of bare icons.
   ///
   /// Seven icon buttons in one row is unusable on a phone (issue #7), so on
-  /// narrow screens only the two actions people reach for stay visible and
-  /// the rest move into an overflow menu that has readable labels.
+  /// narrow screens only the actions people reach for stay visible: opening
+  /// a folder and the queue. The rest, Watch Together included, move into an
+  /// overflow menu with readable labels. Watch Together comes back to the
+  /// header while a room is running, so leaving it is one tap away.
   static const double _compactHeaderWidth = 600;
 
   Widget _buildHeader() {
@@ -4914,7 +4972,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 color: _PlayerTheme.accent(context), size: 26),
             const SizedBox(width: 8),
             Text(
-              'Player',
+              context.l10n.tabPlayer,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -4923,24 +4981,24 @@ class _PlayerScreenState extends State<PlayerScreen>
               ),
             ),
             const Spacer(),
+            _headerIconButton(
+              icon: Icons.folder_open_rounded,
+              tooltip: context.l10n.openFolder,
+              onPressed: _pickFolder,
+            ),
             if (!compact) ...[
               _headerIconButton(
-                icon: Icons.folder_open_rounded,
-                tooltip: 'Open folder',
-                onPressed: _pickFolder,
-              ),
-              _headerIconButton(
                 icon: Icons.merge_type_rounded,
-                tooltip: 'Organize media',
+                tooltip: context.l10n.organizeMedia,
                 onPressed: () => unawaited(_showOrganizeDialog()),
               ),
               _headerIconButton(
                 icon: Icons.auto_fix_high_rounded,
-                tooltip: 'Fix missing metadata',
+                tooltip: context.l10n.fixMissingMetadata,
                 onPressed: _showFixAllMetadataDialog,
               ),
             ],
-            _buildWatchTogetherButton(),
+            if (!compact || _watchPartyActive) _buildWatchTogetherButton(),
             if (!compact) _buildVolumeLevelingButton(),
             _buildQueueMenu(),
             if (compact) _buildHeaderOverflowMenu(),
@@ -4965,14 +5023,17 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
+  bool get _watchPartyActive =>
+      context.watch<PlayerState>().watchParty.status.isActive;
+
   Widget _buildWatchTogetherButton() {
     final party = context.watch<PlayerState>().watchParty.status;
     return _headerIconButton(
       icon: Icons.groups_rounded,
       color: party.isActive ? Theme.of(context).colorScheme.primary : null,
       tooltip: party.isActive
-          ? 'Watch Together: ${party.roomCode}'
-          : 'Watch Together',
+          ? context.l10n.watchTogether(party.roomCode ?? '')
+          : context.l10n.watchTogether2,
       onPressed: () => WatchPartySheet.show(context),
     );
   }
@@ -4982,7 +5043,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     return _headerIconButton(
       icon: Icons.graphic_eq_rounded,
       color: on ? Theme.of(context).colorScheme.primary : null,
-      tooltip: on ? 'Volume leveling: on' : 'Volume leveling: off',
+      tooltip: on ? context.l10n.volumeLeveling : context.l10n.volumeLevelingOff,
       onPressed: _toggleVolumeLeveling,
     );
   }
@@ -4993,22 +5054,24 @@ class _PlayerScreenState extends State<PlayerScreen>
     Snack.show(
         context,
         state.volumeLeveling
-            ? 'Volume leveling on - every track plays at the same loudness'
-            : 'Volume leveling off',
+            ? context.l10n.volumeLevelingEveryTrackPlays
+            : context.l10n.volumeLevelingOff2,
         level: SnackLevel.info);
   }
 
   /// Everything that does not fit on a phone, with labels rather than icons.
   Widget _buildHeaderOverflowMenu() {
-    final levelingOn = context.watch<PlayerState>().volumeLeveling;
+    final player = context.watch<PlayerState>();
+    final levelingOn = player.volumeLeveling;
+    final party = player.watchParty.status;
     return PopupMenuButton<String>(
-      tooltip: 'More',
+      tooltip: context.l10n.more,
       icon:
           Icon(Icons.more_vert, color: Theme.of(context).colorScheme.onSurface),
       onSelected: (value) {
         switch (value) {
-          case 'folder':
-            _pickFolder();
+          case 'watch':
+            WatchPartySheet.show(context);
             break;
           case 'organize':
             unawaited(_showOrganizeDialog());
@@ -5022,27 +5085,31 @@ class _PlayerScreenState extends State<PlayerScreen>
         }
       },
       itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: 'folder',
+        PopupMenuItem(
+          value: 'watch',
           child: ListTile(
-            leading: Icon(Icons.folder_open_rounded),
-            title: Text('Open folder'),
+            leading: const Icon(Icons.groups_rounded),
+            title: Text(context.l10n.watchTogether2),
+            subtitle: party.isActive
+                ? Text(context.l10n.room(party.roomCode ?? ''))
+                : null,
             contentPadding: EdgeInsets.zero,
           ),
         ),
-        const PopupMenuItem(
+        const PopupMenuDivider(),
+        PopupMenuItem(
           value: 'organize',
           child: ListTile(
-            leading: Icon(Icons.merge_type_rounded),
-            title: Text('Organize media'),
+            leading: const Icon(Icons.merge_type_rounded),
+            title: Text(context.l10n.organizeMedia),
             contentPadding: EdgeInsets.zero,
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'metadata',
           child: ListTile(
-            leading: Icon(Icons.auto_fix_high_rounded),
-            title: Text('Fix missing metadata'),
+            leading: const Icon(Icons.auto_fix_high_rounded),
+            title: Text(context.l10n.fixMissingMetadata),
             contentPadding: EdgeInsets.zero,
           ),
         ),
@@ -5051,7 +5118,7 @@ class _PlayerScreenState extends State<PlayerScreen>
           value: 'leveling',
           child: ListTile(
             leading: const Icon(Icons.graphic_eq_rounded),
-            title: const Text('Volume leveling'),
+            title: Text(context.l10n.volumeLeveling2),
             trailing: levelingOn ? const Icon(Icons.check) : null,
             contentPadding: EdgeInsets.zero,
           ),
@@ -5062,7 +5129,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Widget _buildQueueMenu() {
     return PopupMenuButton<String>(
-      tooltip: 'Queue actions',
+      tooltip: context.l10n.queueActions,
       icon: Icon(Icons.queue_music_rounded,
           color: Theme.of(context).colorScheme.onSurface),
       onSelected: (value) {
@@ -5094,20 +5161,20 @@ class _PlayerScreenState extends State<PlayerScreen>
             break;
         }
         if (mounted) {
-          Snack.show(context, 'Queue updated', level: SnackLevel.info);
+          Snack.show(context, context.l10n.queueUpdated, level: SnackLevel.info);
         }
       },
-      itemBuilder: (context) => const [
-        PopupMenuItem(value: 'current', child: Text('Queue current tab')),
-        PopupMenuItem(value: 'all', child: Text('Queue all')),
-        PopupMenuItem(value: 'songs', child: Text('Queue songs')),
-        PopupMenuItem(value: 'videos', child: Text('Queue videos')),
-        PopupMenuItem(value: 'favourites', child: Text('Queue favourites')),
-        PopupMenuItem(value: 'favSongs', child: Text('Queue favourite songs')),
+      itemBuilder: (context) => [
+        PopupMenuItem(value: 'current', child: Text(context.l10n.queueCurrentTab)),
+        PopupMenuItem(value: 'all', child: Text(context.l10n.queueAll)),
+        PopupMenuItem(value: 'songs', child: Text(context.l10n.queueSongs)),
+        PopupMenuItem(value: 'videos', child: Text(context.l10n.queueVideos)),
+        PopupMenuItem(value: 'favourites', child: Text(context.l10n.queueFavourites)),
+        PopupMenuItem(value: 'favSongs', child: Text(context.l10n.queueFavouriteSongs)),
         PopupMenuItem(
-            value: 'favVideos', child: Text('Queue favourite videos')),
-        PopupMenuDivider(),
-        PopupMenuItem(value: 'clear', child: Text('Clear queue')),
+            value: 'favVideos', child: Text(context.l10n.queueFavouriteVideos)),
+        const PopupMenuDivider(),
+        PopupMenuItem(value: 'clear', child: Text(context.l10n.clearQueue2)),
       ],
     );
   }
@@ -5201,7 +5268,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         }
 
         return AlertDialog(
-          title: const Text('Organize media'),
+          title: Text(context.l10n.organizeMedia),
           content: SizedBox(
             width: 560,
             child: Column(
@@ -5210,11 +5277,11 @@ class _PlayerScreenState extends State<PlayerScreen>
                 if (scanning) ...[
                   const LinearProgressIndicator(),
                   const SizedBox(height: 12),
-                  const Text('Scanning common folders for media...')
+                  Text(context.l10n.scanningCommonFoldersMedia)
                 ] else ...[
                   Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('Discovered folders (${discovered.length})')),
+                      child: Text(context.l10n.discoveredFolders(discovered.length))),
                   const SizedBox(height: 8),
                   Expanded(
                     child: ListView.builder(
@@ -5239,14 +5306,14 @@ class _PlayerScreenState extends State<PlayerScreen>
                     FilledButton(
                       onPressed: () async {
                         final chosen = await pickDirectoryPath(context,
-                            dialogTitle: 'Select target folder');
+                            dialogTitle: context.l10n.selectTargetFolder);
                         if (chosen != null) setState(() => targetPath = chosen);
                       },
-                      child: const Text('Choose target folder'),
+                      child: Text(context.l10n.chooseTargetFolder),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                        child: Text(targetPath ?? 'No target selected',
+                        child: Text(targetPath ?? context.l10n.noTargetSelected,
                             maxLines: 1, overflow: TextOverflow.ellipsis)),
                   ]),
                   const SizedBox(height: 8),
@@ -5256,9 +5323,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                         onChanged: (v) =>
                             setState(() => createPlaylist = v ?? true)),
                     const SizedBox(width: 8),
-                    const Expanded(
+                    Expanded(
                         child: Text(
-                            'Create playlist in target folder after organizing')),
+                            context.l10n.createPlaylistTargetFolderAfter)),
                   ])
                 ]
               ],
@@ -5267,12 +5334,12 @@ class _PlayerScreenState extends State<PlayerScreen>
           actions: [
             TextButton(
                 onPressed: () => Navigator.of(dCtx).pop(),
-                child: const Text('Cancel')),
+                child: Text(context.l10n.actionCancel)),
             FilledButton(
               onPressed: () async {
                 if (targetPath == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Please choose a target folder')));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(context.l10n.pleaseChooseTargetFolder)));
                   return;
                 }
                 Navigator.of(dCtx).pop();
@@ -5314,16 +5381,16 @@ class _PlayerScreenState extends State<PlayerScreen>
                     }
                   }
                   Snack.show(context,
-                      'Organized: moved $moved files, deleted $deleted duplicates',
+                      context.l10n.organizedMovedFilesDeletedDuplicates(moved, deleted),
                       level: SnackLevel.info);
                 } catch (e) {
                   if (!mounted) return;
                   debugPrint('[Organize] Error: $e');
-                  Snack.show(context, 'Error during organization: $e',
+                  Snack.show(context, context.l10n.errorDuringOrganization(e),
                       level: SnackLevel.error);
                 }
               },
-              child: const Text('Organize'),
+              child: Text(context.l10n.organize),
             ),
           ],
         );
@@ -5338,33 +5405,33 @@ class _PlayerScreenState extends State<PlayerScreen>
 
     Widget sortButton() {
       return PopupMenuButton<MediaSortOrder>(
-        tooltip: 'Sort',
+        tooltip: context.l10n.sort,
         icon: const Icon(Icons.sort_rounded),
         initialValue: _sortOrder,
         onSelected: (value) {
           setState(() => _sortOrder = value);
           _saveUiPrefs(state);
         },
-        itemBuilder: (context) => const [
+        itemBuilder: (context) => [
           PopupMenuItem(
-              value: MediaSortOrder.newestFirst, child: Text('Newest first')),
+              value: MediaSortOrder.newestFirst, child: Text(context.l10n.newestFirst)),
           PopupMenuItem(
-              value: MediaSortOrder.oldestFirst, child: Text('Oldest first')),
+              value: MediaSortOrder.oldestFirst, child: Text(context.l10n.oldestFirst)),
           PopupMenuItem(
-              value: MediaSortOrder.titleAZ, child: Text('Title A-Z')),
+              value: MediaSortOrder.titleAZ, child: Text(context.l10n.titleZ)),
           PopupMenuItem(
-              value: MediaSortOrder.titleZA, child: Text('Title Z-A')),
+              value: MediaSortOrder.titleZA, child: Text(context.l10n.titleZ2)),
           PopupMenuItem(
               value: MediaSortOrder.shortestDuration,
-              child: Text('Shortest first')),
-          PopupMenuDivider(),
+              child: Text(context.l10n.shortestFirst)),
+          const PopupMenuDivider(),
           PopupMenuItem(
-              value: MediaSortOrder.mostPlayed, child: Text('Most played')),
+              value: MediaSortOrder.mostPlayed, child: Text(context.l10n.mostPlayed)),
           PopupMenuItem(
-              value: MediaSortOrder.leastPlayed, child: Text('Least played')),
+              value: MediaSortOrder.leastPlayed, child: Text(context.l10n.leastPlayed)),
           PopupMenuItem(
               value: MediaSortOrder.recentlyPlayed,
-              child: Text('Recently played')),
+              child: Text(context.l10n.recentlyPlayed)),
         ],
       );
     }
@@ -5416,7 +5483,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       showCursor: true,
       enableInteractiveSelection: true,
       decoration: InputDecoration(
-        hintText: 'Search…',
+        hintText: context.l10n.commonSearchHint,
         prefixIcon: const Icon(Icons.search, size: 20),
         suffixIcon: Row(
           mainAxisSize: MainAxisSize.min,
@@ -5432,7 +5499,7 @@ class _PlayerScreenState extends State<PlayerScreen>
               ),
             IconButton(
               icon: const Icon(Icons.arrow_forward, size: 18),
-              tooltip: 'Done',
+              tooltip: context.l10n.actionDone,
               onPressed: _stopSearchEditing,
             ),
           ],
@@ -5576,7 +5643,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                   if (!isMobile)
                     IconButton(
                       icon: const Icon(Icons.share),
-                      tooltip: 'Share',
+                      tooltip: context.l10n.actionShare,
                       visualDensity: VisualDensity.compact,
                       onPressed: () => _shareMediaItem(item),
                     ),
@@ -5592,8 +5659,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                       size: 24,
                     ),
                     tooltip: state.isFavourite(item.path)
-                        ? 'Remove favourite'
-                        : 'Add favourite',
+                        ? context.l10n.removeFavourite
+                        : context.l10n.addFavourite2,
                     visualDensity: VisualDensity.compact,
                     onPressed: () => state.toggleFavourite(item.path),
                   ),
@@ -5610,8 +5677,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                       size: 22,
                     ),
                     tooltip: state.isDisliked(item.path)
-                        ? 'Undo dislike'
-                        : 'Dislike',
+                        ? context.l10n.undoDislike
+                        : context.l10n.dislike,
                     visualDensity: VisualDensity.compact,
                     onPressed: () => state.toggleDislike(item.path),
                   ),
@@ -5637,7 +5704,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                   icon: Icons.shuffle_rounded,
                   active: state.shuffle,
                   onPressed: state.toggleShuffle,
-                  tooltip: 'Shuffle',
+                  tooltip: context.l10n.playerShuffle,
                   size: 22,
                 ),
                 _ControlButton(
@@ -5660,7 +5727,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       : Icons.repeat_rounded,
                   active: state.repeatMode != RepeatMode.off,
                   onPressed: state.cycleRepeat,
-                  tooltip: 'Repeat',
+                  tooltip: context.l10n.playerRepeat,
                   size: 22,
                 ),
               ],
@@ -5731,7 +5798,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Streaming from the Watch Together host',
+                        context.l10n.streamingFromWatchTogetherHost,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -6102,7 +6169,7 @@ class _TrackMenuButton extends StatelessWidget {
     final isDisliked = state.isDisliked(item.path);
 
     return PopupMenuButton<_TrackMenuAction>(
-      tooltip: 'Track actions',
+      tooltip: context.l10n.trackActions,
       icon: Icon(Icons.more_vert_rounded,
           color: Theme.of(context).colorScheme.onSurfaceVariant),
       onSelected: (action) async {
@@ -6124,7 +6191,7 @@ class _TrackMenuButton extends StatelessWidget {
             if (context.mounted) {
               Snack.show(
                 context,
-                ok ? 'Metadata fixed' : 'Could not fix metadata',
+                ok ? context.l10n.metadataFixed : context.l10n.couldNotFixMetadata,
                 level: ok ? SnackLevel.info : SnackLevel.error,
               );
             }
@@ -6133,21 +6200,21 @@ class _TrackMenuButton extends StatelessWidget {
             final confirmed = await showDialog<bool>(
               context: context,
               builder: (dialogContext) => AlertDialog(
-                title: const Text('Delete file?'),
+                title: Text(context.l10n.deleteFile),
                 // overflow-fix: long file names can overflow dialog content width.
                 content: SingleChildScrollView(
                   child: Text(
-                    'This permanently deletes "${item.title ?? p.basename(item.path)}" from disk.',
+                    context.l10n.permanentlyDeletesFromDisk(item.title ?? p.basename(item.path)),
                   ),
                 ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(dialogContext).pop(false),
-                    child: const Text('Cancel'),
+                    child: Text(context.l10n.actionCancel),
                   ),
                   FilledButton(
                     onPressed: () => Navigator.of(dialogContext).pop(true),
-                    child: const Text('Delete'),
+                    child: Text(context.l10n.actionDelete),
                   ),
                 ],
               ),
@@ -6157,7 +6224,7 @@ class _TrackMenuButton extends StatelessWidget {
               if (context.mounted) {
                 Snack.show(
                   context,
-                  deleted ? 'File deleted' : 'Could not delete file',
+                  deleted ? context.l10n.fileDeleted : context.l10n.couldNotDeleteFile,
                   level: deleted ? SnackLevel.info : SnackLevel.error,
                 );
               }
@@ -6166,19 +6233,19 @@ class _TrackMenuButton extends StatelessWidget {
         }
       },
       itemBuilder: (context) => [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: _TrackMenuAction.share,
           child: ListTile(
-            leading: Icon(Icons.share),
-            title: Text('Share'),
+            leading: const Icon(Icons.share),
+            title: Text(context.l10n.actionShare),
             contentPadding: EdgeInsets.zero,
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: _TrackMenuAction.queue,
           child: ListTile(
-            leading: Icon(Icons.queue_music_rounded),
-            title: Text('Add to queue'),
+            leading: const Icon(Icons.queue_music_rounded),
+            title: Text(context.l10n.addQueue),
             contentPadding: EdgeInsets.zero,
           ),
         ),
@@ -6187,7 +6254,7 @@ class _TrackMenuButton extends StatelessWidget {
           child: ListTile(
             leading: Icon(
                 isFavourite ? Icons.star_rounded : Icons.star_border_rounded),
-            title: Text(isFavourite ? 'Remove favourite' : 'Add favourite'),
+            title: Text(isFavourite ? context.l10n.removeFavourite : context.l10n.addFavourite2),
             contentPadding: EdgeInsets.zero,
           ),
         ),
@@ -6197,23 +6264,23 @@ class _TrackMenuButton extends StatelessWidget {
             leading: Icon(isDisliked
                 ? Icons.thumb_down_alt_rounded
                 : Icons.thumb_down_alt_outlined),
-            title: Text(isDisliked ? 'Undo dislike' : 'Dislike'),
+            title: Text(isDisliked ? context.l10n.undoDislike : context.l10n.dislike),
             contentPadding: EdgeInsets.zero,
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: _TrackMenuAction.fixMetadata,
           child: ListTile(
-            leading: Icon(Icons.auto_fix_high_rounded),
-            title: Text('Fix Metadata'),
+            leading: const Icon(Icons.auto_fix_high_rounded),
+            title: Text(context.l10n.fixMetadata),
             contentPadding: EdgeInsets.zero,
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: _TrackMenuAction.delete,
           child: ListTile(
-            leading: Icon(Icons.delete_outline_rounded),
-            title: Text('Delete file'),
+            leading: const Icon(Icons.delete_outline_rounded),
+            title: Text(context.l10n.deleteFile2),
             contentPadding: EdgeInsets.zero,
           ),
         ),
@@ -6232,21 +6299,35 @@ class _AllTab extends StatelessWidget {
   final PlayerState state;
   final ScrollController scrollCtl;
   final void Function(PlayerState, int) onTap;
+  final VoidCallback? onOpenFolder;
+
+  /// The remembered folder while it is being reopened at startup.
+  final String? restoringFolder;
 
   const _AllTab({
     required this.entries,
     required this.state,
     required this.scrollCtl,
     required this.onTap,
+    this.onOpenFolder,
+    this.restoringFolder,
   });
 
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
+      if (state.library.isEmpty && restoringFolder != null) {
+        return _EmptyTabScroll(
+          message: context.l10n.opening(friendlyFolderLabel(restoringFolder!)),
+          busy: true,
+        );
+      }
       return _EmptyTabScroll(
-          message: state.library.isEmpty
-              ? 'Your library is empty.\nTap the folder icon to open a folder or download media.'
-              : 'No results for this search.');
+        message: state.library.isEmpty
+            ? context.l10n.libraryEmptyOpenFolderMusic
+            : context.l10n.noResultsSearch,
+        action: state.library.isEmpty ? onOpenFolder : null,
+      );
     }
 
     // Keep visual parity with Songs/Videos/Fav by reusing the same grid widget.
@@ -6269,7 +6350,7 @@ class _SongsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
-      return const _EmptyTabScroll(message: 'No songs found.');
+      return _EmptyTabScroll(message: context.l10n.noSongsFound);
     }
     return _MediaGrid(entries: entries, state: state, onTap: onTap);
   }
@@ -6290,7 +6371,7 @@ class _VideosTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
-      return const _EmptyTabScroll(message: 'No videos found.');
+      return _EmptyTabScroll(message: context.l10n.noVideosFound);
     }
     return _MediaGrid(entries: entries, state: state, onTap: onTap);
   }
@@ -6311,8 +6392,8 @@ class _FavouritesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
-      return const _EmptyTabScroll(
-          message: 'No favourites yet.\nTap ☁Eon any track to add it here.');
+      return _EmptyTabScroll(
+          message: context.l10n.noFavouritesYetTapStar);
     }
     return _MediaGrid(entries: entries, state: state, onTap: onTap);
   }
@@ -6374,7 +6455,9 @@ class _MediaGrid extends StatelessWidget {
 /// same overlap-injector scroll view so it aligns below the pinned header.
 class _EmptyTabScroll extends StatelessWidget {
   final String message;
-  const _EmptyTabScroll({required this.message});
+  final VoidCallback? action;
+  final bool busy;
+  const _EmptyTabScroll({required this.message, this.action, this.busy = false});
 
   @override
   Widget build(BuildContext context) {
@@ -6385,7 +6468,7 @@ class _EmptyTabScroll extends StatelessWidget {
         ),
         SliverFillRemaining(
           hasScrollBody: false,
-          child: _EmptyHint(message: message),
+          child: _EmptyHint(message: message, action: action, busy: busy),
         ),
       ],
     );
@@ -6523,7 +6606,7 @@ class _MediaCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${item.playCount} plays • ${_formatPlayedDuration(item.totalPlayedDuration)}',
+                          context.l10n.plays(item.playCount, _formatPlayedDuration(item.totalPlayedDuration)),
                           style: TextStyle(
                               color: cs.onSurfaceVariant, fontSize: 11),
                           maxLines: 1,
@@ -6568,7 +6651,11 @@ class _MediaCard extends StatelessWidget {
 class _EmptyHint extends StatelessWidget {
   final String message;
 
-  const _EmptyHint({required this.message});
+  /// Opens a folder; shown as a button under the message.
+  final VoidCallback? action;
+  final bool busy;
+
+  const _EmptyHint({required this.message, this.action, this.busy = false});
 
   @override
   Widget build(BuildContext context) {
@@ -6579,7 +6666,14 @@ class _EmptyHint extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.music_note, size: 72, color: theme.disabledColor),
+            if (busy)
+              const SizedBox(
+                width: 48,
+                height: 48,
+                child: CircularProgressIndicator(),
+              )
+            else
+              Icon(Icons.music_note, size: 72, color: theme.disabledColor),
             const SizedBox(height: 16),
             Text(
               message,
@@ -6587,6 +6681,15 @@ class _EmptyHint extends StatelessWidget {
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: theme.disabledColor),
             ),
+            if (action != null) ...[
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                autofocus: true,
+                onPressed: action,
+                icon: const Icon(Icons.folder_open_rounded),
+                label: Text(context.l10n.openFolder),
+              ),
+            ],
           ],
         ),
       ),

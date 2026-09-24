@@ -1,16 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, debugPrint, visibleForTesting;
 import 'package:metadata_god/metadata_god.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
 
 import '../models/search_result.dart';
 import 'log_service.dart';
+import 'platform_dirs.dart';
 import 'yt_dlp_service.dart' show YtDlpService;
 
 /// Handles playlist fetching, M3U generation, and smart folder comparison.
@@ -1109,8 +1113,8 @@ class PlaylistService {
 
   // --─ M3U generation ------------------------------------------------------
 
-  Future<void> generateM3U(List<SearchResult> tracks, String outputPath,
-      {String format = 'mp3'}) async {
+  /// An M3U that lists each track under the name the app downloads it as.
+  String buildM3U(List<SearchResult> tracks, {String format = 'mp3'}) {
     final ext = format.toLowerCase();
     final buf = StringBuffer('#EXTM3U\n');
     for (final track in tracks) {
@@ -1118,36 +1122,28 @@ class PlaylistService {
           '#EXTINF:${track.duration.inSeconds},${track.artist} - ${track.title}');
       buf.writeln('${track.artist}/${track.title}.$ext');
     }
-    final file = File(outputPath);
-    await file.writeAsString(buf.toString());
+    return buf.toString();
   }
 
-  /// Generate an M3U using actual local file paths from `TrackMatch` results.
-  /// This ensures the M3U contains real file locations (with correct extensions)
-  /// when a playlist has been compared against a folder.
-  Future<void> generateM3UFromMatches(
-      List<TrackMatch> matches, String outputPath) async {
+  /// An M3U with the real local file of every matched track, so it plays
+  /// straight away when a playlist has been compared against a folder.
+  String buildM3UFromMatches(List<TrackMatch> matches) {
     final buf = StringBuffer('#EXTM3U\n');
     for (final m in matches) {
       buf.writeln(
           '#EXTINF:${m.track.duration.inSeconds},${m.track.artist} - ${m.track.title}');
       buf.writeln(m.filePath);
     }
-    final file = File(outputPath);
-    await file.writeAsString(buf.toString());
+    return buf.toString();
   }
 
-  /// Export a list of track titles to a plain text file (one per line).
-  Future<void> exportTrackList(
-    List<SearchResult> tracks,
-    String outputPath, {
-    bool includeArtist = true,
-  }) async {
+  /// Track names, one per line.
+  String buildTrackList(List<SearchResult> tracks, {bool includeArtist = true}) {
     final buf = StringBuffer();
     for (final t in tracks) {
       buf.writeln(includeArtist ? '${t.artist} - ${t.title}' : t.title);
     }
-    await File(outputPath).writeAsString(buf.toString());
+    return buf.toString();
   }
 
   // --─ Smart playlist ↔ folder comparison -----------------------------------
@@ -1166,17 +1162,6 @@ class PlaylistService {
     double matchThreshold = 0.55,
     bool recursive = true,
   }) async {
-    final dir = Directory(folderPath);
-    if (!await dir.exists()) {
-      return PlaylistFolderComparison(
-        total: playlistTracks.length,
-        matched: [],
-        missing: List.of(playlistTracks),
-        extras: [],
-        folderPath: folderPath,
-      );
-    }
-
     // -- 1. Index every file in the folder ---------------------------------
     // Composite of a broad "media-like" set (audio + video containers that
     // the app can download) plus a wide generic catch-all.  An extension that
@@ -1206,31 +1191,119 @@ class PlaylistService {
 
     final localFiles = <_LocalFile>[];
 
-    await for (final entity in dir.list(recursive: recursive)) {
-      if (entity is! File) continue;
-      final path = entity.path;
-      final ext = _extensionOf(path).toLowerCase();
+    // Files with no extension or only a temp infix (no real ext) are still
+    // indexed so they can be flagged as incomplete downloads.
+    bool indexed(String ext) =>
+        indexedExtensions.contains(ext) ||
+        _partialExtensions.contains(ext) ||
+        ext.isEmpty;
 
-      // Files with no extension or only a temp infix (no real ext) are still
-      // indexed so they can be flagged as incomplete downloads.
-      final hasRecognisedExtension = indexedExtensions.contains(ext) || ext.isEmpty;
-      if (!hasRecognisedExtension) continue;
+    if (folderPath.startsWith('content://')) {
+      // An Android folder from the system picker is a SAF tree, not a path:
+      // Directory() cannot see it, which used to make Compare report every
+      // track as missing on phones. The native side lists the tree instead.
+      // Matching uses file names; tags would need every file copied out
+      // first, and the app names its downloads "Artist - Title" anyway.
+      final entries = await listSafTree(folderPath);
+      for (final entry in entries) {
+        final uri = entry['uri'] ?? '';
+        final name = entry['name'] ?? '';
+        if (uri.isEmpty || name.isEmpty) continue;
+        final ext = _extensionOf(name).toLowerCase();
+        if (!indexed(ext)) continue;
+        localFiles.add(_localFileFor(
+          path: uri,
+          fileName: _fileNameWithoutExt(name),
+          metadataLabels: const [],
+          extension: ext.isEmpty ? _guessTempExt(name) : ext,
+        ));
+      }
+    } else {
+      final dir = Directory(folderPath);
+      if (!await dir.exists()) {
+        throw PlaylistCompareException(
+            'That folder does not exist: $folderPath');
+      }
+      // An unreadable subfolder (Android/data, a system folder on a USB
+      // drive) is an error event on the listing stream; skip it rather than
+      // abandoning the whole scan.
+      final listing = dir
+          .list(recursive: recursive, followLinks: false)
+          .handleError((Object e) => debugPrint('[Compare] skipped: $e'));
+      await for (final entity in listing) {
+        if (entity is! File) continue;
+        final path = entity.path;
+        final ext = _extensionOf(path).toLowerCase();
+        if (!indexed(ext)) continue;
 
-      final fileName = _fileNameWithoutExt(path);
-      final metadataLabels =
-          await _labelsFromMetadata(path, ext.isEmpty ? '.bin' : ext);
-      final labels = <String>[fileName, ...metadataLabels].toList();
-      localFiles.add(_LocalFile(
-        path: path,
-        baseName: fileName,
-        labels: labels,
-        normalised: _normalise(fileName),
-        tokens: {
-          ..._tokenise(fileName),
-          ...labels.expand(_tokenise),
-        },
-        extension: ext.isEmpty ? _guessTempExt(path) : ext,
-      ));
+        final metadataLabels =
+            await _labelsFromMetadata(path, ext.isEmpty ? '.bin' : ext);
+        localFiles.add(_localFileFor(
+          path: path,
+          fileName: _fileNameWithoutExt(path),
+          metadataLabels: metadataLabels,
+          extension: ext.isEmpty ? _guessTempExt(path) : ext,
+        ));
+      }
+    }
+
+    return _matchInBackground(
+      playlistTracks,
+      localFiles,
+      folderPath: folderPath,
+      threshold: matchThreshold,
+      mediaExtensions: mediaExtensions,
+    );
+  }
+
+  /// Track × file pairs above which matching runs on a background isolate,
+  /// so comparing a big playlist with a big folder does not freeze the
+  /// screen. Small compares stay inline, where an isolate costs more than it
+  /// saves.
+  static const int _backgroundMatchPairs = 20000;
+
+  // Static, so the isolate closure cannot capture the service (whose HTTP
+  // client could not be sent to another isolate).
+  static Future<PlaylistFolderComparison> _matchInBackground(
+    List<SearchResult> playlistTracks,
+    List<_LocalFile> localFiles, {
+    required String folderPath,
+    required double threshold,
+    required Set<String> mediaExtensions,
+  }) async {
+    PlaylistFolderComparison run() => _matchAndCategorise(
+          playlistTracks,
+          localFiles,
+          folderPath: folderPath,
+          threshold: threshold,
+          mediaExtensions: mediaExtensions,
+        );
+    if (!kIsWeb &&
+        playlistTracks.length * localFiles.length > _backgroundMatchPairs) {
+      return Isolate.run(run);
+    }
+    return run();
+  }
+
+  static PlaylistFolderComparison _matchAndCategorise(
+    List<SearchResult> playlistTracks,
+    List<_LocalFile> localFiles, {
+    required String folderPath,
+    required double threshold,
+    required Set<String> mediaExtensions,
+  }) {
+    final matchThreshold = threshold;
+    // Every label's normalised form, pointing at its files, so a file named
+    // exactly like the track (every file this app downloads) is found without
+    // scanning the folder.
+    final exactIndex = <String, List<int>>{};
+    for (var i = 0; i < localFiles.length; i++) {
+      final f = localFiles[i];
+      if (f.incomplete) continue;
+      for (final forms in f.labelForms) {
+        if (forms.agg.isEmpty) continue;
+        (exactIndex[forms.agg] ??= <int>[]).add(i);
+      }
     }
 
     // -- 2. Match each playlist track to the best local file ----------------
@@ -1240,7 +1313,7 @@ class PlaylistService {
 
     for (final track in playlistTracks) {
       final result = _findBestMatch(
-          track, localFiles, usedFileIndices, matchThreshold);
+          track, localFiles, usedFileIndices, matchThreshold, exactIndex);
       if (result != null) {
         matched.add(result);
         usedFileIndices.add(result._fileIndex);
@@ -1267,7 +1340,7 @@ class PlaylistService {
       // Incomplete download: the file name carries the app's in-progress temp
       // infix (e.g. `Song Name.temp.mp4`, `Song Name.temp.webm`,
       // `Song Name.temp.video.mp4`, `Song Name.temp.audio.opus`).
-      if (_isIncompleteDownload(f.baseName, f.extension)) {
+      if (f.incomplete) {
         extras.add(ExtraFile(
           filePath: f.path,
           fileName: f.baseName,
@@ -1307,6 +1380,35 @@ class PlaylistService {
       missing: missing,
       extras: extras,
       folderPath: folderPath,
+      filesScanned: localFiles.length,
+    );
+  }
+
+  /// Lists every file under an Android SAF tree as `uri`/`name` maps.
+  /// Replaced in tests, which have no platform channel.
+  @visibleForTesting
+  static Future<List<Map<String, String>>> Function(String treeUri)
+      listSafTree = PlatformDirs.listTree;
+
+  static _LocalFile _localFileFor({
+    required String path,
+    required String fileName,
+    required List<String> metadataLabels,
+    required String extension,
+  }) {
+    final labels = <String>[fileName, ...metadataLabels];
+    return _LocalFile(
+      path: path,
+      baseName: fileName,
+      labels: labels,
+      labelForms: [for (final label in labels) _TitleForms(label)],
+      normalised: _normalise(fileName),
+      tokens: {
+        ..._tokenise(fileName),
+        ...labels.expand(_tokenise),
+      },
+      extension: extension,
+      incomplete: _isIncompleteDownload(fileName, extension),
     );
   }
 
@@ -1314,15 +1416,40 @@ class PlaylistService {
 
   /// Tries multiple strategies (exact, normalised, token overlap, fuzzy) and
   /// returns the best match above [threshold], or null.
-  TrackMatch? _findBestMatch(
+  ///
+  /// Every normalised form of a file's labels is worked out once, when the
+  /// folder is indexed, not once per track: a playlist of a thousand songs
+  /// against a folder of a thousand files is a million comparisons.
+  static TrackMatch? _findBestMatch(
     SearchResult track,
     List<_LocalFile> files,
     Set<int> usedIndices,
     double threshold,
+    Map<String, List<int>> exactIndex,
   ) {
-    final trackTitle = _normalise(track.title);
+    final titleForms = _TitleForms(track.title);
+    final fullForms = _TitleForms('${track.artist} ${track.title}');
+    final artistNorm = _aggressiveNorm(_plainArtist(track.artist));
+
+    TrackMatch exact(int i) => TrackMatch(
+          track: track,
+          filePath: files[i].path,
+          fileName: files[i].baseName,
+          confidence: 1.0,
+          method: MatchMethod.exact,
+          fileIndex: i,
+        );
+
+    // The file is named exactly like the track.
+    for (final key in [titleForms.agg, fullForms.agg]) {
+      for (final i in exactIndex[key] ?? const <int>[]) {
+        if (!usedIndices.contains(i)) return exact(i);
+      }
+    }
+
+    final trackTitle = titleForms.plain;
     final trackArtist = _normalise(track.artist);
-    final trackFull = _normalise('${track.artist} ${track.title}');
+    final trackFull = fullForms.plain;
     final trackTokens = {..._tokenise(track.title), ..._tokenise(track.artist)};
     // Remove extremely common words that hurt matching accuracy
     trackTokens.removeAll(_stopWords);
@@ -1334,38 +1461,30 @@ class PlaylistService {
     for (var i = 0; i < files.length; i++) {
       if (usedIndices.contains(i)) continue;
       final f = files[i];
-      final labels = f.labels.isEmpty ? [f.baseName] : f.labels;
+      if (f.incomplete) continue;
 
-      for (final label in labels) {
-        final normalisedLabel = _normalise(label);
-
-        if (_titlesMatch(track.title, label) ||
-            _titlesMatch('${track.artist} ${track.title}', label)) {
-          return TrackMatch(
-            track: track,
-            filePath: f.path,
-            fileName: f.baseName,
-            confidence: 1.0,
-            method: MatchMethod.exact,
-            fileIndex: i,
-          );
+      for (final forms in f.labelForms) {
+        if (_formsMatch(titleForms, forms, artistNorm) ||
+            _formsMatch(fullForms, forms, artistNorm)) {
+          return exact(i);
         }
+
+        final normalisedLabel = forms.plain;
+        // A label that is nothing but noise ("(Official Video)") normalises
+        // to an empty string, which every title "contains".
+        if (normalisedLabel.length < 2) continue;
 
         // Strategy 1 - exact normalised match
-        if (normalisedLabel == trackFull || normalisedLabel == trackTitle) {
-          return TrackMatch(
-            track: track,
-            filePath: f.path,
-            fileName: f.baseName,
-            confidence: 1.0,
-            method: MatchMethod.exact,
-            fileIndex: i,
-          );
+        if (normalisedLabel == trackFull ||
+            (trackTitle.isNotEmpty && normalisedLabel == trackTitle)) {
+          return exact(i);
         }
 
-        // Strategy 2 - normalised containment (either direction)
-        if (normalisedLabel.contains(trackTitle) ||
-            trackTitle.contains(normalisedLabel)) {
+        // Strategy 2 - normalised containment (either direction), on word
+        // boundaries so "love" is not found inside "glove"
+        if (trackTitle.length >= 3 &&
+            (_containsPhrase(normalisedLabel, trackTitle) ||
+                _containsPhrase(trackTitle, normalisedLabel))) {
           final score = 0.90;
           if (score > bestScore) {
             bestScore = score;
@@ -1377,8 +1496,9 @@ class PlaylistService {
 
         // Strategy 3 - artist-title both found somewhere in filename/metadata
         if (trackArtist.isNotEmpty &&
-            normalisedLabel.contains(trackArtist) &&
-            normalisedLabel.contains(trackTitle)) {
+            trackTitle.isNotEmpty &&
+            _containsPhrase(normalisedLabel, trackArtist) &&
+            _containsPhrase(normalisedLabel, trackTitle)) {
           final score = 0.92;
           if (score > bestScore) {
             bestScore = score;
@@ -1390,8 +1510,11 @@ class PlaylistService {
 
         // Strategy 4 - token overlap (Jaccard similarity)
         if (trackTokens.isNotEmpty && f.tokens.isNotEmpty) {
-          final intersection = trackTokens.intersection(f.tokens).length;
-          final union = trackTokens.union(f.tokens).length;
+          var intersection = 0;
+          for (final token in trackTokens) {
+            if (f.tokens.contains(token)) intersection++;
+          }
+          final union = trackTokens.length + f.tokens.length - intersection;
           final jaccard = intersection / union;
           if (jaccard > bestScore) {
             bestScore = jaccard;
@@ -1400,7 +1523,14 @@ class PlaylistService {
           }
         }
 
-        // Strategy 5 - Levenshtein-based similarity
+        // Strategy 5 - Levenshtein-based similarity. The length difference
+        // alone caps the score it can reach; skip the expensive part when
+        // that cap cannot beat what is already found.
+        final la = trackFull.length, lb = normalisedLabel.length;
+        final longest = max(la, lb);
+        if (longest == 0) continue;
+        final cap = 1.0 - (la - lb).abs() / longest;
+        if (cap <= bestScore || cap < threshold) continue;
         final levSim = _levenshteinSimilarity(trackFull, normalisedLabel);
         if (levSim > bestScore) {
           bestScore = levSim;
@@ -1425,43 +1555,128 @@ class PlaylistService {
 
   // --─ String helpers ------------------------------------------------------─
 
-  static bool _titlesMatch(String playlistTitle, String localFilename) {
-    final a = _aggressiveNorm(playlistTitle);
-    final b = _aggressiveNorm(localFilename);
-    if (a.isNotEmpty &&
-        b.isNotEmpty &&
-        (a == b || a.contains(b) || b.contains(a))) {
-      return true;
-    }
+  /// Whether two titles name the same song closely enough to call it an
+  /// exact match (confidence 100%).
+  ///
+  /// This used to accept almost any pair: each title's own full text was one
+  /// of its "segments", so `a.contains(segment)` compared a title with itself,
+  /// and "Northern Lights" matched "Glass Harbour.mp3". Compare then paired
+  /// tracks with whatever files were left over and reported them as present.
+  /// Anything short of the strict rules below now goes to the scored
+  /// strategies in [_findBestMatch], whose confidence the Matched tab shows
+  /// and flags for review.
+  static bool _formsMatch(_TitleForms a, _TitleForms b, String artistNorm) {
+    if (a.agg.isEmpty || b.agg.isEmpty) return false;
+    if (a.agg == b.agg) return true;
 
-    final subtitles = <String>{
-      ..._titleSegments(playlistTitle),
-      ..._titleSegments(localFilename),
-    }.where((s) => s.length >= 4).toList();
-    for (final sa in subtitles) {
-      if (a.contains(sa) ||
-          b.contains(sa) ||
-          sa.contains(a) ||
-          sa.contains(b)) {
+    bool meaningful(String s) => s.runes.length >= 4 && s != artistNorm;
+    // Words that may surround a title without making it another song: the
+    // uploader, whatever sits in either title's artist slot, and video noise.
+    bool decoration(String w) =>
+        _decorationWords.contains(w) ||
+        a.artistSlotWords.contains(w) ||
+        b.artistSlotWords.contains(w) ||
+        (artistNorm.isNotEmpty && _containsPhrase(artistNorm, w));
+
+    // One side is the other plus decoration: "Artist - Title (Official
+    // Video)" against "Title", or a file name cut at the length limit. A
+    // short phrase only counts when everything around it is the artist or
+    // video noise, so "Love" does not claim "Love Story".
+    bool decoratedBy(String container, String phrase) {
+      if (!meaningful(phrase) || !_containsPhrase(container, phrase)) {
+        return false;
+      }
+      if (phrase.split(' ').length >= 3 || phrase.runes.length >= 15) {
         return true;
       }
+      final rest = ' $container '.replaceFirst(' $phrase ', ' ').trim();
+      return rest.isEmpty || rest.split(' ').every(decoration);
     }
 
-    final wordsA = a.split(' ').where((w) => w.length >= 3).toSet();
-    final wordsB = b.split(' ').where((w) => w.length >= 3).toSet();
-    if (wordsA.isNotEmpty && wordsB.isNotEmpty) {
-      final overlap = wordsA.intersection(wordsB).length;
-      final minLen =
-          wordsA.length < wordsB.length ? wordsA.length : wordsB.length;
-      if (minLen > 0 && overlap / minLen >= 0.6) return true;
+    if (decoratedBy(a.agg, b.agg) || decoratedBy(b.agg, a.agg)) return true;
+
+    // The song part agrees: "Artist - Title" against "Other - Title", or
+    // "Title / Artist" (a common Japanese layout) against "Title". Only the
+    // parts where the song name sits are compared, never the artist slot, so
+    // two different songs by one artist do not match each other.
+    for (final song in a.songs) {
+      if (!meaningful(song)) continue;
+      if (b.songs.contains(song) || decoratedBy(b.agg, song)) return true;
+    }
+    for (final song in b.songs) {
+      if (meaningful(song) && decoratedBy(a.agg, song)) return true;
     }
 
-    // Final fallback: character-bigram similarity works for scripts with
-    // no spaces between words (CJK, etc.), where the word-split above loses
-    // all tolerance.
-    if (_bigramSimilarity(a, b) >= 0.5) return true;
+    // Scripts written without spaces (Japanese, Chinese, Korean titles) have
+    // no words to compare, so character pairs stand in for them there.
+    if (a.cjk && _bigramSimilarity(a.agg, b.agg) >= 0.5) return true;
 
     return false;
+  }
+
+  /// Words that decorate a title without changing which song it is.
+  static const Set<String> _decorationWords = {
+    'official',
+    'video',
+    'audio',
+    'music',
+    'lyric',
+    'lyrics',
+    'mv',
+    'hd',
+    'hq',
+    '4k',
+    '1080p',
+    'visualizer',
+    'visualiser',
+    'topic',
+    'vevo',
+    'clip',
+    'officiel',
+  };
+
+  /// Channel names carry noise the artist's name does not: "Artist - Topic",
+  /// "ArtistVEVO", "Artist Official".
+  static String _plainArtist(String artist) => artist
+      .replaceAll(RegExp(r'\s*-\s*topic\s*$', caseSensitive: false), '')
+      .replaceAll(RegExp(r'vevo$', caseSensitive: false), '')
+      .replaceAll(RegExp(r'\bofficial\b', caseSensitive: false), '')
+      .trim();
+
+  /// The parts of a title where the artist usually sits: before the first
+  /// " - " and after the last " / ".
+  static Iterable<String> _artistParts(String input) sync* {
+    final dashed = input.split(' - ');
+    if (dashed.length >= 2) yield _aggressiveNorm(dashed.first);
+    final slashed = input.split(RegExp(r'\s+/\s+|／'));
+    if (slashed.length >= 2) yield _aggressiveNorm(slashed.last);
+  }
+
+  static bool _containsPhrase(String container, String phrase) =>
+      phrase.isNotEmpty && ' $container '.contains(' $phrase ');
+
+  static bool _hasCjk(String s) => RegExp(
+          r'[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]')
+      .hasMatch(s);
+
+  /// The parts of a title where the song name sits: after the first " - "
+  /// ("Artist - Title - Remastered") and before the last " / " ("Title /
+  /// Artist"). Noise such as "(Official Video)" is stripped.
+  static Iterable<String> _songParts(String input) sync* {
+    final dashed = input.split(' - ');
+    if (dashed.length >= 2) {
+      for (final part in dashed.skip(1)) {
+        final norm = _normalise(part);
+        if (norm.isNotEmpty) yield norm;
+      }
+    }
+    final slashed = input.split(RegExp(r'\s+/\s+|／'));
+    if (slashed.length >= 2) {
+      for (final part in slashed.take(slashed.length - 1)) {
+        final norm = _normalise(part);
+        if (norm.isNotEmpty) yield norm;
+      }
+    }
   }
 
   static double _bigramSimilarity(String a, String b) {
@@ -1476,29 +1691,14 @@ class PlaylistService {
     return (2 * overlap) / (ba.length + bb.length);
   }
 
-  static Iterable<String> _titleSegments(String input) sync* {
-    final parts = <String>[input];
-    if (input.contains('/')) {
-      parts.addAll(input.split('/'));
-    }
-    if (input.contains(' - ')) {
-      parts.addAll(input.split(' - '));
-    }
-    final paren = RegExp(r'\(([^)]+)\)').firstMatch(input)?.group(1);
-    if (paren != null && paren.isNotEmpty) {
-      parts.add(paren);
-    }
-    for (final part in parts) {
-      final norm = _aggressiveNorm(part);
-      if (norm.isNotEmpty) yield norm;
-    }
-  }
-
+  // Punctuation becomes a word break, so "YOASOBI「夜に駆ける」Official"
+  // keeps its words apart; apostrophes vanish, so "Don't" and "Dont" agree.
   static String _aggressiveNorm(String s) => s
       .toLowerCase()
       .replaceAll(RegExp(r'\.\w{2,5}$'), '')
       .replaceAll(RegExp(r'\s*\[[a-zA-Z0-9_\-]{11}\]'), '')
-      .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '')
+      .replaceAll(RegExp("['’`]"), '')
+      .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), ' ')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
 
@@ -1517,9 +1717,13 @@ class PlaylistService {
     s = s.replaceAll(RegExp(r'official\s*audio', caseSensitive: false), '');
     s = s.replaceAll(RegExp(r'lyrics?\s*video', caseSensitive: false), '');
     s = s.replaceAll(RegExp(r'visuali[sz]er', caseSensitive: false), '');
-    s = s.replaceAll(RegExp(r'hd|hq|4k|1080p', caseSensitive: false), '');
-    // Keep Unicode letters and digits so non-English titles still match.
-    s = s.replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), '');
+    // Whole words only: "shadow" and "birthday" keep their letters.
+    s = s.replaceAll(
+        RegExp(r'\b(hd|hq|4k|1080p)\b', caseSensitive: false), '');
+    // Keep Unicode letters and digits so non-English titles still match;
+    // other punctuation separates words, as in [_aggressiveNorm].
+    s = s.replaceAll(RegExp("['’`]"), '');
+    s = s.replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), ' ');
     // Collapse whitespace
     s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
     return s;
@@ -1573,18 +1777,25 @@ class PlaylistService {
   }
 
   static int _levenshtein(String a, String b) {
-    final la = a.length, lb = b.length;
-    var prev = List.generate(lb + 1, (i) => i);
-    var curr = List.filled(lb + 1, 0);
-    for (var i = 1; i <= la; i++) {
+    // Code units and two reusable rows: the old version built a list for
+    // every cell and a one-character string for every comparison.
+    final ca = a.codeUnits, cb = b.codeUnits;
+    final lb = cb.length;
+    var prev = Int32List(lb + 1);
+    var curr = Int32List(lb + 1);
+    for (var j = 0; j <= lb; j++) {
+      prev[j] = j;
+    }
+    for (var i = 1; i <= ca.length; i++) {
       curr[0] = i;
+      final ai = ca[i - 1];
       for (var j = 1; j <= lb; j++) {
-        final cost = a[i - 1] == b[j - 1] ? 0 : 1;
-        curr[j] = [
-          prev[j] + 1,
-          curr[j - 1] + 1,
-          prev[j - 1] + cost,
-        ].reduce(min);
+        final substitution = prev[j - 1] + (ai == cb[j - 1] ? 0 : 1);
+        final deletion = prev[j] + 1;
+        final insertion = curr[j - 1] + 1;
+        var best = substitution < deletion ? substitution : deletion;
+        if (insertion < best) best = insertion;
+        curr[j] = best;
       }
       final tmp = prev;
       prev = curr;
@@ -1598,9 +1809,17 @@ class PlaylistService {
   /// Recognises an incomplete download: the name carries the app's `.temp.`
   /// infix used for in-progress downloads (e.g. `Song.temp.mp4`,
   /// `Song.temp.webm`, `Song.temp.video.mp4`, `Song.temp.audio.opus`).
+  /// Partial files from a download that has not finished: the app's own
+  /// `Song.temp.mp4` / `Song.temp.audio.opus`, and yt-dlp's `.part` files.
   static bool _isIncompleteDownload(String fileName, String extension) {
-    return fileName.contains('.temp.') || extension.contains('.temp.');
+    final name = fileName.toLowerCase();
+    return name.contains('.temp.') ||
+        name.endsWith('.temp') ||
+        extension.contains('.temp.') ||
+        _partialExtensions.contains(extension);
   }
+
+  static const Set<String> _partialExtensions = {'.part', '.temp', '.ytdl'};
 
   /// Picks the dominant (most common) extension among [files]. Audio media
   /// extensions are preferred over video containers so a folder mixing e.g.
@@ -1654,21 +1873,55 @@ class PlaylistService {
 // ══════════════════════════════════════════════════════════════════════════════╁E
 
 /// Internal helper for indexing local files.
+/// Every normalised form a title is compared in, worked out once.
+class _TitleForms {
+  _TitleForms(String raw)
+      : agg = PlaylistService._aggressiveNorm(raw),
+        plain = PlaylistService._normalise(raw),
+        songs = PlaylistService._songParts(raw).toSet(),
+        artistSlotWords = {
+          for (final part in PlaylistService._artistParts(raw))
+            ...part.split(' ').where((w) => w.isNotEmpty),
+        };
+
+  /// Lower case, punctuation as spaces, bracket text kept.
+  final String agg;
+
+  /// As [agg], with "(Official Video)" style noise removed.
+  final String plain;
+
+  /// The parts of the title where the song name sits.
+  final Set<String> songs;
+
+  /// Words in the title's artist slot.
+  final Set<String> artistSlotWords;
+
+  late final bool cjk = PlaylistService._hasCjk(agg);
+}
+
 class _LocalFile {
   final String path;
   final String baseName;
   final List<String> labels;
+  final List<_TitleForms> labelForms;
   final String normalised;
   final Set<String> tokens;
   final String extension;
+
+  /// A download that never finished. It is listed under Extras so it can be
+  /// cleaned up, but never counts as having the track: "Song.temp" used to
+  /// match "Song" and hide the track from the Missing tab.
+  final bool incomplete;
 
   const _LocalFile({
     required this.path,
     required this.baseName,
     required this.labels,
+    required this.labelForms,
     required this.normalised,
     required this.tokens,
     required this.extension,
+    this.incomplete = false,
   });
 }
 
@@ -1715,8 +1968,10 @@ Future<List<String>> _labelsFromMetadata(String path, String ext) async {
     final labels = <String>[];
     final title = metadata.title?.trim() ?? '';
     final artist = metadata.artist?.trim() ?? '';
+    // No label for the artist on its own: as a "title" it matched every song
+    // by that artist. Its words still reach matching through the combined
+    // label below.
     if (title.isNotEmpty) labels.add(title);
-    if (artist.isNotEmpty) labels.add(artist);
     if (title.isNotEmpty && artist.isNotEmpty) {
       labels.add('$artist - $title');
     }
@@ -1796,6 +2051,15 @@ class ExtraFile {
 }
 
 /// Full result of cross-referencing a playlist against a local folder.
+/// A Compare that could not run, with a message fit to show the user.
+class PlaylistCompareException implements Exception {
+  final String message;
+  const PlaylistCompareException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 class PlaylistFolderComparison {
   final int total;
   final List<TrackMatch> matched;
@@ -1803,12 +2067,18 @@ class PlaylistFolderComparison {
   final List<ExtraFile> extras;
   final String folderPath;
 
+  /// Media files found in the folder. Zero with a non-empty playlist usually
+  /// means the wrong folder, or one the app can no longer read, so the screen
+  /// says so instead of just listing every track as missing.
+  final int filesScanned;
+
   const PlaylistFolderComparison({
     required this.total,
     required this.matched,
     required this.missing,
     required this.extras,
     required this.folderPath,
+    this.filesScanned = -1,
   });
 
   int get downloadedCount => matched.length;

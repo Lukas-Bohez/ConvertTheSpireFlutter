@@ -1,20 +1,58 @@
 # Convert the Spire Reborn
 
-## 📥 Quick Downloads
+**Download whole playlists, see which songs you are missing, and play, convert, cast and share them, in one free app with nothing else to install.**
 
-* **[Latest GitHub Release (v14.4.1)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest)**: Get the full-featured app for Windows, macOS, and Android (APK). The GitHub APK builds are ad-free and unlock all colours by default.
-* **[Official Website (quizthespire.com)](https://quizthespire.com/)**: An additional place to download the app and learn more.
-* **[Google Play Store (Convert The Spire Reborn)](https://play.google.com/store/apps/details?id=com.torrentspire.ai)**: The limited, App Store-compatible version featuring only the torrenting and media player functionality to comply with Play policies.
+[![Latest release](https://img.shields.io/github/v/release/Lukas-Bohez/ConvertTheSpireFlutter?label=latest%20release)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Lukas-Bohez/ConvertTheSpireFlutter/total)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases)
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue)](LICENSE)
+
+Windows · Android · Android TV · macOS · 18 languages · no account · no ads in the GitHub builds
+
+## 📥 Get it
+
+| | Download | Then |
+|---|---|---|
+| **Windows** | `ConvertTheSpireReborn-windows-x64.zip` from the [latest release](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest) | Extract it and double-click `convert_the_spire_reborn.exe`. That's it. |
+| **Android phone or TV** | `ConvertTheSpireReborn.apk` from the [latest release](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest) | Open the file and allow the install when Android asks. |
+| **macOS** | `ConvertTheSpireReborn-macOS.zip` from the [latest release](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest) | Unzip and open the app. If macOS says it cannot check the developer, right-click it and choose **Open**. |
+| **Google Play** | [The Play Store version](https://play.google.com/store/apps/details?id=com.torrentspire.ai) | Everything except the YouTube download features, which Play policy does not allow. |
+
+Also on the official site: [quizthespire.com](https://quizthespire.com/).
 
 ---
 
-**Browser extensions** — on Windows the built-in browser runs Chrome extensions and add-ons from addons.mozilla.org, with a catalog, permission prompts and popups right inside the app.
+## Why installing it is the easy part
 
-**Userscripts** — the built-in browser runs Tampermonkey/Greasemonkey scripts, on top of the ad and tracker blocking it already had.
+Most tools that download from YouTube and other sites expect you to do some assembly first: install Python, put FFmpeg on your PATH, learn command-line flags, or keep a browser tab of a converter site open, one song at a time. This app skips all of that.
 
-**Watch Together** — start a room, share a six-character code, and everyone watches in step across phone, PC, Mac and TV. No server, no account; it runs on your own network.
+* **One download, then it just runs.** On Windows there is no installer, no administrator rights and nothing to configure. On first start the app fetches [yt-dlp](https://github.com/yt-dlp/yt-dlp) and FFmpeg by itself and keeps yt-dlp up to date in the background, so sites that change their pages keep working.
+* **Nothing extra on Android.** FFmpeg is built into the APK. No root, no Termux, no Google account, no separate player.
+* **Nothing to uninstall on Windows.** The zip holds the `.exe`, a `data` folder and a `dll` folder, and it runs from wherever you extract it. To remove the app, delete the folder.
+* **Updates tell you what changed.** After an update the app shows what is new, including anything from releases you skipped.
+* **Native, not a web page in a box.** It is written in Flutter and compiled for each platform, so it starts quickly and stays light on memory next to Electron apps.
 
-**Available in 18 languages** — the app follows your device language, or pick one in Settings (Arabic, Dutch, English, French, German, Hindi, Indonesian, Italian, Japanese, Korean, Polish, Portuguese, Russian, Simplified Chinese, Spanish, Turkish, Ukrainian, Vietnamese). Translation files live in [`lib/l10n/`](lib/l10n/) — PRs welcome.
+> **macOS note:** yt-dlp installs itself on a Mac too. Converting to MP3 and M4A needs FFmpeg, which you add once with `brew install ffmpeg`.
+
+## Why it replaces a whole folder of apps
+
+Downloading is only the first step. Usually you then need something to check what you already have, a player, a converter, a way to get it onto the TV, and a browser that does not drown you in ads. Here it is all one app:
+
+| You want to… | The usual way | In Convert the Spire |
+|---|---|---|
+| Grab a 1,000-song playlist | A command-line tool and a script, or a converter site one song at a time | Paste the link. Large playlists load in full, on phones too. |
+| Know which songs you are still missing | Compare file names by hand | **Compare** lists what is in your folder, what is missing and what does not belong, then downloads only the missing songs. |
+| Keep a playlist up to date | Redo it every time the playlist grows | **Watched playlists** check for new songs and fetch them. |
+| Download while watching | Copy the link into another program | Press download in the built-in browser. Playing from a playlist? It asks whether you want the song or the whole playlist. |
+| Play your music and videos | A separate player app | Built-in player with queue, shuffle, favourites, statistics and volume leveling. |
+| Convert files | An upload-and-wait website | 27+ formats (audio, video, images, documents, archives), offline. |
+| Watch together | A service that needs everyone to sign up | Share a six-character code. Runs on your own Wi-Fi, no server, no account. |
+| Get it on the TV | Another casting app | DLNA/UPnP casting, and an Android TV version you can use with the remote. |
+| Browse without ads | A browser plus an ad-blocking extension | Built-in browser with ad and tracker blocking, userscripts, and on Windows real Chrome and Firefox extensions. |
+| Torrents | A separate torrent client | Built in, with its own queue and settings. |
+
+It works with YouTube and with every site yt-dlp supports, more than 1,800 of them, through the same pipeline.
+
+---
 
 ## ▶ Watch the demo
 
@@ -28,79 +66,54 @@
 
 Hey everyone! If you remember the old web-based Convert the Spire downloader, you probably know that YouTube eventually blocked our server's IP. To keep the project alive and better than ever, I built **Convert the Spire Reborn**.
 
-It is a fully native Flutter app that handles torrent management, media downloading, playlist importing, and playback right on your own device. It started out as a simple, ad-free tool to bulk-download massive playlists, but it has grown into a full media suite. You can now work with torrents and supported sources, cast to your TV, and easily manage your local library.
-
-Because it runs natively on Windows, Android, and macOS, there is no heavy Electron bloat and no browser overhead. Android Play builds ship with YouTube conversion disabled to match Play policy, while APK builds keep the full downloader available.
-
-## Repository Layout
-
-The main code lives in `lib/`, platform configuration is under `android/`, `windows/`, `linux/`, `macos/`, `ios/`, and `web/`, and the reorganized documentation hub now lives in `docs/`.
-
-Start here for docs:
-
-* [Documentation index](docs/README.md)
-* [Play AAB build guide](docs/build/play-store-aab.md)
-* [Latest release notes](docs/releases/latest.md)
-
----
+It is a fully native Flutter app that handles media downloading, playlist importing, torrents and playback right on your own device. It started out as a simple, ad-free tool to bulk-download massive playlists, and it has grown into a full media suite. Because everything runs on your device, there is no server in the middle to get blocked, and nothing you download passes through anyone else.
 
 ## Features
 
-### The Core Stuff
+### Downloading
 
-* **Torrent Manager & Downloads:** Add torrents and supported sources, manage queues, and download directly in the app. Play Store builds disable the legacy YouTube conversion features; side-loaded APKs keep them enabled.
-* **Massive Playlist Support:** The main reason this project exists! Paste a playlist link and bulk-download the whole thing, completely ad-free.
-* **Multi-Site Engine:** It is not just YouTube anymore. Anything yt-dlp supports (over 1,800 sites) goes through the same seamless pipeline.
-* **Built-in Media Player:** Play your audio and video directly in the app. It comes with playlists, queue management, and library tracking powered by `media_kit`.
-* **File Converter:** Convert between 27+ formats, covering documents, images, archives, and media files.
-* **DLNA & UPnP Casting:** Cast your downloaded media to any compatible smart TV or speaker on your local network.
-* **Smart Browser:** The built-in browser handles URLs effortlessly. Bare domains, IP addresses, and plain search queries all work without manual formatting.
+* **Whole playlists**, including very large ones, on desktop and on phones.
+* **Compare with a folder:** see Matched, Missing and Extras (half-finished downloads, files in the wrong format, songs that are not in the playlist), fix the extras in one tap, and download only what is missing, straight into that folder. Export the missing list or an M3U playlist.
+* **Watched playlists** that download new additions automatically.
+* **MP3, M4A and MP4**, with quality and bitrate settings, SponsorBlock, and per-format download folders.
+* **1,800+ sites** through yt-dlp, not only YouTube.
+* **Keeps going with the screen off** on Android, with progress in the notification.
 
----
+### Playing
 
-## Why Native?
+* **Media player** for audio and video: queue, shuffle, repeat, favourites, sorting and filters, play statistics.
+* **Remembers your library** and reopens it on the next start.
+* **Volume leveling** so every track plays at the same loudness.
+* **Fix metadata** and **organize media** tools for messy folders.
+* **Watch Together** across phone, PC, Mac and TV. A guest without the file streams it from the host.
+* **DLNA/UPnP casting** to smart TVs and speakers.
 
-If you are curious about the tech stack, the app is built to be fast, lightweight, and efficient:
+### Browsing
 
-* **Lightning Fast:** Flutter compiles directly to native code, meaning startup takes milliseconds compared to the heavy load times of Electron apps.
-* **Low Memory:** It uses around 80 MB of memory instead of hoarding hundreds of megabytes like a Chromium process.
-* **Network Power:** Raw UDP and TCP sockets allow for seamless DLNA casting and local device discovery, which web wrappers simply cannot do.
-* **Battery Smart:** The native battery plugins let the app throttle intense background tasks if your device is running low on juice.
+* **Built-in browser** with ad and tracker blocking, tabs, incognito, history and favourites.
+* **Userscripts** (Tampermonkey/Greasemonkey compatible) on every platform, with one-tap searches for popular ones such as dark mode, Return YouTube Dislike and SponsorBlock.
+* **Browser extensions on Windows:** Chrome extensions and add-ons from addons.mozilla.org, with a catalog, permission prompts, popups and options pages. Tested with uBlock Origin Lite and Dark Reader.
 
-### Architecture Highlights
+### Everything else
 
-A concise overview of the main layers:
+* **File converter** for 27+ formats.
+* **Torrents** with a full settings page.
+* **18 languages on every screen**, following your device or chosen in Settings: Arabic, Dutch, English, French, German, Hindi, Indonesian, Italian, Japanese, Korean, Polish, Portuguese, Russian, Simplified Chinese, Spanish, Turkish, Ukrainian, Vietnamese. Translations live in [`lib/l10n/`](lib/l10n/) and PRs are welcome.
+* **Report a bug** from Settings opens a GitHub issue with the app version, platform and recent log filled in. You see all of it before anything is sent.
 
-* **Flutter UI:** `HomeScreen` with ~13 named screens (Search, Player, Browser, etc.)
-* **State Management:** `AppController` (ChangeNotifier) wired via `Provider`.
-* **Core Services:** `YtDlpService`, `DownloadService`, `ConvertService`, `PlaylistService`, `DlnaDiscovery`, `CoordinatorService`, `ComputationService`.
-* **Platform / Native:** `dart:io`, `media_kit`, `battery_plus`, native WebView bindings, raw sockets and isolates for background work.
+## On phones and TVs
 
----
+The Android app is the full app, not a cut-down companion: downloads, Compare, the player, the file converter, Watch Together, casting, torrents and the browser all work there. Some things differ because of Android itself:
 
-## How to Get It
+* **Folders:** pick a download folder once in Settings and the app keeps it. Without one, downloads go to your phone's Downloads folder, where every music player can find them.
+* **Extensions:** Chrome and Firefox extensions need a desktop browser engine, which Android's web view does not have. In the browser menu, **Extensions** shows what runs on the phone instead: the built-in ad blocker and userscripts, which cover what most people install extensions for.
+* **Android TV:** the same APK, laid out for a TV and its remote, with a file browser made for the D-pad.
 
-You can download the app directly from our site at [quizthespire.com](https://quizthespire.com/) or head over to the [GitHub Releases](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases) page for the pre-built binaries and Play-ready AABs. *(See the Quick Downloads section at the top of this page for direct links!)*
+## Privacy
 
-* **Windows:** Download the `.zip`, extract it, and run `convert_the_spire_reborn.exe`. The folder is kept tidy: just the `.exe`, `data/` and a `dll/` folder that holds every library.
-* **Android:** Grab the `.apk` for direct install, or upload the `.aab` to Google Play.
-* **Android TV:** Uses the same Android build; UI is adaptive, but it is not separately certified for every TV model.
-* **Linux:** No longer distributed as of v14.3.1 (the build could not be kept reliable). The source is still in the repo if you want to build it yourself.
-* **macOS:** Download the macOS release package or build from source.
-
----
-
-## Support & Funding
-
-If you find this app useful, the easiest way to support development is a one-time donation or recurring sponsorship. You can donate via [Buy Me a Coffee](https://buymeacoffee.com/orokaconner) or become a GitHub Sponsor.
-
-This app is open source, privacy-focused, and does not track what you download.
-
----
+No account, no sign-up, and the app does not track what you download. The GitHub builds have no ads and no advertising ID. The Play Store build shows ads, and its [data safety details](docs/publishing/play-data-safety.md) say exactly what that involves.
 
 ## Screenshots
-
-Some screens from the v13.2.1 build:
 
 ![Media player with volume boosting and full audio control](screenshots/media-player-audio-controls.webp)
 ![Search songs and download them](screenshots/search-and-download-songs.webp)
@@ -115,20 +128,43 @@ Some screens from the v13.2.1 build:
 ![Full torrent settings](screenshots/full-torrent-settings.webp)
 ![Torrents and Ollama safety checks](screenshots/torrents-and-ollama-safety-checks.webp)
 
-## Contributing
+## Questions
 
-I would love your help! Feel free to open an issue or submit a pull request.
+**Windows shows a blue "Windows protected your PC" screen.** The app is not signed with a paid certificate, so SmartScreen does not know it yet. Choose **More info**, then **Run anyway**. When updating, extract into a new folder rather than over the old one.
 
-1. Fork the repo.
-2. Create your feature branch.
-3. Make sure your code passes: `flutter analyse`.
-4. Commit and open a PR!
+**Android says the app is from an unknown source.** Android asks this for any app that does not come from the Play Store. Allow it for the app you opened the APK from (your browser or file manager).
 
-## License & Support
+**Why does the Play Store version have no YouTube downloads?** Google Play does not allow them. The APK and desktop builds here have everything.
+
+**Where do my downloads go?** Wherever you set in Settings. On a phone with nothing set, into `Download/mp3`, `Download/m4a` or `Download/mp4`.
+
+**Something broke.** Use **Report a bug** in Settings, or [open an issue](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/issues).
+
+## For developers
+
+The main code lives in `lib/`; platform configuration is under `android/`, `windows/`, `macos/`, `linux/`, `ios/` and `web/`; documentation is in [`docs/`](docs/README.md). Start with the [documentation index](docs/README.md), the [Play AAB build guide](docs/build/play-store-aab.md) and the [latest release notes](docs/releases/latest.md).
+
+* **UI:** Flutter, with `HomeScreen` hosting the main screens (Search, Player, Browser, Playlists and more).
+* **State:** `AppController` (a `ChangeNotifier`) wired through `Provider`.
+* **Services:** `YtDlpService`, `DownloadService`, `ConvertService`, `PlaylistService`, `DlnaDiscovery`, `WatchPartyService` and friends.
+* **Platform:** `dart:io`, `media_kit`, native WebView bindings (WebView2 on Windows), raw sockets for DLNA and Watch Together, and isolates for background work.
+
+Linux builds are no longer distributed (since v14.3.1 the build could not be kept reliable), but the source is here if you want to build it yourself.
+
+### Contributing
+
+I would love your help! Open an issue or a pull request.
+
+1. Fork the repo and create a feature branch.
+2. Make sure `flutter analyze` and `flutter test` pass.
+3. Open a PR.
+
+## Support & license
 
 This project is licensed under the GNU General Public License v3.0.
 
-If this tool has saved you time and you want to support me:
+If this app has saved you time, the easiest way to support it is a one-time donation or a sponsorship:
 
 * Buy me a coffee: [Oroka Conner](https://buymeacoffee.com/orokaconner)
+* Become a GitHub Sponsor
 * Website: [Convert the Spire](https://quizthespire.com/)

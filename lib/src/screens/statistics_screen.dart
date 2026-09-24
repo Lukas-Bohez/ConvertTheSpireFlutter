@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/download_stats.dart';
 import '../services/ad_service.dart';
 import '../services/statistics_service.dart';
+import '../utils/l10n.dart';
 
 /// Dashboard screen showing download statistics with charts.
 class StatisticsScreen extends StatefulWidget {
@@ -47,11 +48,11 @@ class _StatisticsScreenState extends State<StatisticsScreen>
           children: [
             Icon(Icons.bar_chart, size: 80, color: cs.outline),
             const SizedBox(height: 16),
-            Text('No download data yet',
+            Text(context.l10n.noDownloadDataYet,
                 style: theme.textTheme.titleLarge
                     ?.copyWith(color: cs.onSurfaceVariant)),
             const SizedBox(height: 8),
-            Text('Statistics will appear here after your first download.',
+            Text(context.l10n.statisticsWillAppearHereAfter,
                 style: theme.textTheme.bodyMedium?.copyWith(color: cs.outline)),
           ],
         ),
@@ -69,7 +70,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
 
           // -- Downloads over time --------------------------------
           if (_stats.downloadsByDate.length > 1) ...[
-            _sectionHeader(theme, Icons.show_chart, 'Downloads Over Time'),
+            _sectionHeader(theme, Icons.show_chart, context.l10n.downloadsOverTime),
             const SizedBox(height: 12),
             _buildTimelineChart(cs),
             const SizedBox(height: 24),
@@ -80,13 +81,13 @@ class _StatisticsScreenState extends State<StatisticsScreen>
               _stats.downloadsBySource.isNotEmpty) ...[
             if (narrow) ...[
               if (_stats.downloadsByFormat.isNotEmpty) ...[
-                _sectionHeader(theme, Icons.audio_file, 'Formats'),
+                _sectionHeader(theme, Icons.audio_file, context.l10n.formats),
                 const SizedBox(height: 12),
                 _buildFormatChart(cs),
                 const SizedBox(height: 24),
               ],
               if (_stats.downloadsBySource.isNotEmpty) ...[
-                _sectionHeader(theme, Icons.cloud_download, 'Sources'),
+                _sectionHeader(theme, Icons.cloud_download, context.l10n.sources),
                 const SizedBox(height: 12),
                 _buildSourceChart(cs),
                 const SizedBox(height: 24),
@@ -100,7 +101,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _sectionHeader(theme, Icons.audio_file, 'Formats'),
+                          _sectionHeader(theme, Icons.audio_file, context.l10n.formats),
                           const SizedBox(height: 12),
                           _buildFormatChart(cs),
                         ],
@@ -115,7 +116,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _sectionHeader(
-                              theme, Icons.cloud_download, 'Sources'),
+                              theme, Icons.cloud_download, context.l10n.sources),
                           const SizedBox(height: 12),
                           _buildSourceChart(cs),
                         ],
@@ -129,7 +130,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
 
           // -- Top artists ----------------------------------------
           if (_stats.downloadsByArtist.isNotEmpty) ...[
-            _sectionHeader(theme, Icons.person, 'Top Artists'),
+            _sectionHeader(theme, Icons.person, context.l10n.topArtists),
             const SizedBox(height: 12),
             _buildTopArtists(cs),
             const SizedBox(height: 24),
@@ -139,7 +140,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
           Center(
             child: OutlinedButton.icon(
               icon: const Icon(Icons.delete_outline),
-              label: const Text('Reset Statistics'),
+              label: Text(context.l10n.resetStatistics),
               style: OutlinedButton.styleFrom(
                 foregroundColor: cs.error,
                 side: BorderSide(color: cs.error.withValues(alpha: 0.5)),
@@ -178,7 +179,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     final cards = [
       _OverviewCard(
         icon: Icons.download,
-        label: 'Total',
+        label: context.l10n.total,
         value: _stats.totalDownloads.toString(),
         color: cs.primary,
         bgColor: cs.primaryContainer,
@@ -186,7 +187,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
       ),
       _OverviewCard(
         icon: Icons.check_circle,
-        label: 'Successful',
+        label: context.l10n.successful,
         value: _stats.successfulDownloads.toString(),
         color: Colors.green,
         bgColor: Colors.green.withValues(alpha: 0.22),
@@ -194,7 +195,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
       ),
       _OverviewCard(
         icon: Icons.error,
-        label: 'Failed',
+        label: context.l10n.failed,
         value: _stats.failedDownloads.toString(),
         color: cs.error,
         bgColor: cs.errorContainer,
@@ -202,7 +203,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
       ),
       _OverviewCard(
         icon: Icons.percent,
-        label: 'Success Rate',
+        label: context.l10n.successRate,
         value: '${_stats.successRate.toStringAsFixed(1)}%',
         color: _stats.successRate > 80
             ? Colors.green
@@ -554,24 +555,24 @@ class _StatisticsScreenState extends State<StatisticsScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         icon: Icon(Icons.warning_amber, color: Theme.of(ctx).colorScheme.error),
-        title: const Text('Reset Statistics?'),
+        title: Text(context.l10n.resetStatistics2),
         // overflow-fix: keep long warning text scroll-safe in constrained dialog heights.
-        content: const SingleChildScrollView(
+        content: SingleChildScrollView(
           child: Text(
-            'This will permanently delete all download statistics. This action cannot be undone.',
+            context.l10n.willPermanentlyDeleteAllDownload,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
-            child: const Text('Reset'),
+            child: Text(context.l10n.reset),
           ),
         ],
       ),

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../config/build_flags.dart';
+import '../utils/l10n.dart';
 import 'onboarding_screen.dart';
 
 /// In-app guide covering usage instructions, supported platforms,
@@ -73,7 +74,7 @@ class GuideScreen extends StatelessWidget {
                             onThemeChanged: onThemeChanged,
                           )));
                 },
-                child: const Text('Show onboarding'),
+                child: Text(context.l10n.showOnboarding),
               ),
             ),
             const SizedBox(height: 16),
@@ -81,49 +82,49 @@ class GuideScreen extends StatelessWidget {
             // -- Platform support ----------------------------------─
             _SectionCard(
               icon: Icons.devices,
-              title: 'Supported Platforms',
+              title: context.l10n.supportedPlatforms,
               cs: cs,
-              child: const Column(
+              child: Column(
                 children: [
                   _PlatformRow(
                     icon: Icons.desktop_windows,
-                    name: 'Windows',
-                    status: 'Full support',
+                    name: context.l10n.windows,
+                    status: context.l10n.fullSupport,
                     detail:
-                        'Downloads, conversion, notifications, file converter',
+                        context.l10n.downloadsConversionNotificationsFileConv,
                     supported: true,
                   ),
-                  Divider(height: 1),
+                  const Divider(height: 1),
                   _PlatformRow(
                     icon: Icons.android,
-                    name: 'Android',
-                    status: 'Full support',
+                    name: context.l10n.android,
+                    status: context.l10n.fullSupport,
                     detail:
-                        'Downloads, conversion, notifications, SAF folder picker',
+                        context.l10n.downloadsConversionNotificationsSafFolde,
                     supported: true,
                   ),
-                  Divider(height: 1),
+                  const Divider(height: 1),
                   _PlatformRow(
                     icon: Icons.desktop_mac,
-                    name: 'Linux',
-                    status: 'Discontinued',
-                    detail: 'Official Linux builds ended with v14.0.0',
+                    name: context.l10n.linux,
+                    status: context.l10n.discontinued,
+                    detail: context.l10n.officialLinuxBuildsEndedV14,
                     supported: false,
                   ),
-                  Divider(height: 1),
+                  const Divider(height: 1),
                   _PlatformRow(
                     icon: Icons.apple,
-                    name: 'macOS / iOS',
-                    status: 'Untested',
-                    detail: 'May work but not officially supported',
+                    name: context.l10n.macosIos,
+                    status: context.l10n.untested,
+                    detail: context.l10n.mayWorkButNotOfficially,
                     supported: false,
                   ),
-                  Divider(height: 1),
+                  const Divider(height: 1),
                   _PlatformRow(
                     icon: Icons.web,
-                    name: 'Web',
-                    status: 'Not supported',
-                    detail: 'Cannot download or run FFmpeg in a browser',
+                    name: context.l10n.web,
+                    status: context.l10n.notSupported,
+                    detail: context.l10n.cannotDownloadRunFfmpegBrowser,
                     supported: false,
                   ),
                 ],
@@ -134,29 +135,29 @@ class GuideScreen extends StatelessWidget {
             // -- Requirements --------------------------------------
             _SectionCard(
               icon: Icons.checklist,
-              title: 'Requirements',
+              title: context.l10n.requirements,
               cs: cs,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (!kPlayStoreBuild)
-                    const _RequirementRow(
-                      text: 'FFmpeg',
+                    _RequirementRow(
+                      text: context.l10n.ffmpeg,
                       detail:
-                          'Required for audio conversion. On Windows it is installed automatically on first launch. On Linux, install via your package manager (e.g. sudo apt install ffmpeg).',
+                          context.l10n.requiredAudioConversionWindowsInstalled,
                     ),
                   if (!kPlayStoreBuild) const SizedBox(height: 8),
                   const SizedBox(height: 8),
-                  const _RequirementRow(
-                    text: 'Internet connection',
+                  _RequirementRow(
+                    text: context.l10n.internetConnection,
                     detail:
-                        'Needed to fetch torrent metadata and download sources.',
+                        context.l10n.neededFetchTorrentMetadataDownload,
                   ),
                   const SizedBox(height: 8),
-                  const _RequirementRow(
-                    text: 'Storage space',
+                  _RequirementRow(
+                    text: context.l10n.storageSpace,
                     detail:
-                        'Downloaded files are saved to your chosen download folder. Videos can be large before conversion.',
+                        context.l10n.downloadedFilesSavedChosenDownload,
                   ),
                 ],
               ),
@@ -166,35 +167,35 @@ class GuideScreen extends StatelessWidget {
             // -- Quick start --------------------------------------─
             _SectionCard(
               icon: Icons.rocket_launch,
-              title: 'Quick Start',
+              title: context.l10n.quickStart,
               cs: cs,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _StepRow(
+                  _StepRow(
                       number: '1',
-                      title: 'Set download folder',
+                      title: context.l10n.setDownloadFolder,
                       detail:
-                          'Go to Settings and pick where files should be saved.'),
+                          context.l10n.goSettingsPickWhereFiles),
                   const SizedBox(height: 12),
-                  const _StepRow(
+                  _StepRow(
                       number: '2',
-                      title: 'Browse & open links',
+                      title: context.l10n.browseOpenLinks,
                       detail:
-                          'Use the Browser tab to open pages, magnet links, and .torrent links safely inside the app.'),
+                          context.l10n.useBrowserTabOpenPages),
                   const SizedBox(height: 12),
-                  const _StepRow(
+                  _StepRow(
                       number: '3',
-                      title: 'Add to queue',
+                      title: context.l10n.addQueue,
                       detail:
-                          'Choose your destination and add items to the download queue.'),
+                          context.l10n.chooseDestinationAddItemsDownload),
                   const SizedBox(height: 12),
                   _StepRow(
                       number: '4',
-                      title: 'Download',
+                      title: context.l10n.actionDownload,
                       detail: kPlayStoreBuild
-                          ? 'Go to the Torrents tab to monitor progress, pause/resume, and manage completed files.'
-                          : 'Go to the Queue tab and press "Download All". The app fetches the selected content and processes it with FFmpeg when needed.'),
+                          ? context.l10n.goTorrentsTabMonitorProgress
+                          : context.l10n.goQueueTabPressDownload),
                 ],
               ),
             ),
@@ -203,119 +204,119 @@ class GuideScreen extends StatelessWidget {
             // -- Tab guide ----------------------------------------─
             _SectionCard(
               icon: Icons.tab,
-              title: 'Tabs Explained',
+              title: context.l10n.tabsExplained,
               cs: cs,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: kPlayStoreBuild
-                    ? const [
+                    ? [
                         _FeatureRow(
                             icon: Icons.open_in_browser,
-                            name: 'Browser',
+                            name: context.l10n.tabBrowser,
                             detail:
-                                'Browse pages and open magnet or torrent links in-app.'),
-                        SizedBox(height: 8),
+                                context.l10n.browsePagesOpenMagnetTorrent),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.settings,
-                            name: 'Settings',
+                            name: context.l10n.tabSettings,
                             detail:
-                                'Configure download folder, appearance, and app behavior.'),
-                        SizedBox(height: 8),
+                                context.l10n.configureDownloadFolderAppearanceApp),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.volunteer_activism,
-                            name: 'Support',
-                            detail: 'Support links and project information.'),
-                        SizedBox(height: 8),
+                            name: context.l10n.tabSupport,
+                            detail: context.l10n.supportLinksProjectInformation),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.menu_book,
-                            name: 'Guide',
+                            name: context.l10n.tabGuide,
                             detail:
-                                'Instructions, supported platforms, and tips.'),
-                        SizedBox(height: 8),
+                                context.l10n.instructionsSupportedPlatformsTips),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.music_note,
-                            name: 'Player',
+                            name: context.l10n.tabPlayer,
                             detail:
-                                'Built-in media player for local files with shuffle and repeat.'),
-                        SizedBox(height: 8),
+                                context.l10n.builtMediaPlayerLocalFiles),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.download,
-                            name: 'Vault',
+                            name: context.l10n.vault,
                             detail:
-                                'Torrent manager and download control center.'),
+                                context.l10n.torrentManagerDownloadControlCenter),
                       ]
-                    : const [
+                    : [
                         _FeatureRow(
                             icon: Icons.search,
-                            name: 'Search',
+                            name: context.l10n.tabSearch,
                             detail:
-                                'Search by keyword or paste a magnet / torrent link. Preview results and add them to the queue.'),
-                        SizedBox(height: 8),
+                                context.l10n.searchByKeywordPasteMagnet),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.travel_explore,
-                            name: 'Multi-Search',
+                            name: context.l10n.multiSearch,
                             detail:
-                                'Search across multiple sources at once and compare results side by side.'),
-                        SizedBox(height: 8),
+                                context.l10n.searchAcrossMultipleSourcesOnce),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.open_in_browser,
-                            name: 'Browser',
+                            name: context.l10n.tabBrowser,
                             detail:
-                                'Use an integrated web view to browse supported sites and open magnet or torrent links directly.'),
-                        SizedBox(height: 8),
+                                context.l10n.useIntegratedWebViewBrowse),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.queue_music,
-                            name: 'Queue',
+                            name: context.l10n.tabQueue,
                             detail:
-                                'View and manage downloads. Start all, cancel, retry failed, or remove items.'),
-                        SizedBox(height: 8),
+                                context.l10n.viewManageDownloadsStartAll),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.playlist_play,
-                            name: 'Playlists',
+                            name: context.l10n.tabPlaylists,
                             detail:
-                                'Load a collection, compare against a local folder to find missing items, and batch-download them.'),
-                        SizedBox(height: 8),
+                                context.l10n.loadCollectionCompareAgainstLocal),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.upload_file,
-                            name: 'Bulk Import',
+                            name: context.l10n.bulkImport,
                             detail:
-                                'Paste a list of links or import from a text/CSV file to add many items to the queue at once.'),
-                        SizedBox(height: 8),
+                                context.l10n.pasteListLinksImportFrom),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.bar_chart,
-                            name: 'Stats',
+                            name: context.l10n.stats,
                             detail:
-                                'View download statistics: totals, success rate, format breakdown, top artists, and trends over time.'),
-                        SizedBox(height: 8),
+                                context.l10n.viewDownloadStatisticsTotalsSuccess),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.settings,
-                            name: 'Settings',
+                            name: context.l10n.tabSettings,
                             detail:
-                                'Configure download folders, parallel workers, FFmpeg, retry behavior, and notifications.'),
-                        SizedBox(height: 8),
+                                context.l10n.configureDownloadFoldersParallelWorkers),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.transform,
-                            name: 'Convert',
+                            name: context.l10n.tabConvert,
                             detail:
-                                'Convert any local audio/video file between formats using FFmpeg.'),
-                        SizedBox(height: 8),
+                                context.l10n.convertAnyLocalAudioVideo),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.list_alt,
-                            name: 'Logs',
+                            name: context.l10n.tabLogs,
                             detail:
-                                'View detailed application logs for debugging. Copy or clear the log history.'),
-                        SizedBox(height: 8),
+                                context.l10n.viewDetailedApplicationLogsDebugging),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.menu_book,
-                            name: 'Guide',
+                            name: context.l10n.tabGuide,
                             detail:
-                                'This screen! Instructions, supported platforms, and tips.'),
-                        SizedBox(height: 8),
+                                context.l10n.screenInstructionsSupportedPlatformsTips),
+                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.music_note,
-                            name: 'Player',
+                            name: context.l10n.tabPlayer,
                             detail:
-                                'Built‑in media player for your local files; control playback, shuffle, repeat and manage a library.'),
+                                context.l10n.builtMediaPlayerLocalFiles2),
                       ],
               ),
             ),
@@ -325,44 +326,44 @@ class GuideScreen extends StatelessWidget {
               // -- Tips ----------------------------------------------
               _SectionCard(
                 icon: Icons.lightbulb_outline,
-                title: 'Tips & Troubleshooting',
+                title: context.l10n.tipsTroubleshooting,
                 cs: cs,
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _TipRow(
-                      title: 'Downloads fail at 0%',
+                      title: context.l10n.downloadsFail0,
                       detail:
-                          'This usually means FFmpeg is missing. On Windows the app installs it automatically; on Linux run: sudo apt install ffmpeg (or dnf install ffmpeg on Fedora).',
+                          context.l10n.usuallyMeansFfmpegMissingWindows,
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     _TipRow(
-                      title: 'Source sites block requests',
+                      title: context.l10n.sourceSitesBlockRequests,
                       detail:
-                          'Some source sites may temporarily block rapid requests. The app will automatically retry with backoff. You can increase retry count in Settings.',
+                          context.l10n.someSourceSitesMayTemporarily,
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     _TipRow(
-                        title: 'Large libraries are slow',
+                        title: context.l10n.largeLibrariesSlow,
                         detail:
-                            'When loading large collections, use the preview limit to load just 10-50 items first. You can always load more.'),
-                    SizedBox(height: 10),
+                            context.l10n.whenLoadingLargeCollectionsUse),
+                    const SizedBox(height: 10),
                     _TipRow(
-                      title: 'Android: choose a writable folder',
+                      title: context.l10n.androidChooseWritableFolder,
                       detail:
-                          'On Android you must pick a download folder through the system file picker so the app gets write permission.',
+                          context.l10n.androidMustPickDownloadFolder,
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     _TipRow(
-                      title: 'Parallel workers',
+                      title: context.l10n.parallelWorkers,
                       detail:
-                          'More workers means faster batch downloads but uses more bandwidth and may trigger rate limits. 2-3 is recommended.',
+                          context.l10n.moreWorkersMeansFasterBatch,
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     _TipRow(
-                      title: 'Need a refresher?',
+                      title: context.l10n.needRefresher,
                       detail:
-                          'Tap "Show onboarding" at the top of this screen to walk through every tab again.',
+                          context.l10n.tapShowOnboardingTopScreen,
                     ),
                   ],
                 ),
@@ -374,25 +375,25 @@ class GuideScreen extends StatelessWidget {
             if (!kPlayStoreBuild) ...[
               _SectionCard(
                 icon: Icons.audio_file,
-                title: 'Supported Formats',
+                title: context.l10n.supportedFormats,
                 cs: cs,
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _FormatRow(
                         format: 'MP3',
                         detail:
-                            'Universal audio format. Best compatibility across all devices and players.'),
-                    SizedBox(height: 6),
+                            context.l10n.universalAudioFormatBestCompatibility),
+                    const SizedBox(height: 6),
                     _FormatRow(
                         format: 'M4A',
                         detail:
-                            'AAC audio in MP4 container. Better quality than MP3 at same bitrate. Works on Apple devices and modern players.'),
-                    SizedBox(height: 6),
+                            context.l10n.aacAudioMp4ContainerBetter),
+                    const SizedBox(height: 6),
                     _FormatRow(
                         format: 'MP4',
                         detail:
-                            'Video with audio. Keeps the video track intact when that is the selected target format.'),
+                            context.l10n.videoAudioKeepsVideoTrack),
                   ],
                 ),
               ),
@@ -402,15 +403,15 @@ class GuideScreen extends StatelessWidget {
             // -- Current platform info ----------------------------─
             _SectionCard(
               icon: Icons.info_outline,
-              title: 'Your Environment',
+              title: context.l10n.environment,
               cs: cs,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _InfoRow(label: 'Platform', value: _platformName()),
+                  _InfoRow(label: context.l10n.platform, value: _platformName(context)),
                   const SizedBox(height: 4),
                   _InfoRow(
-                      label: 'Dart version',
+                      label: context.l10n.dartVersion,
                       value:
                           kIsWeb ? 'N/A' : Platform.version.split(' ').first),
                 ],
@@ -423,14 +424,14 @@ class GuideScreen extends StatelessWidget {
     );
   }
 
-  static String _platformName() {
-    if (kIsWeb) return 'Web';
-    if (Platform.isWindows) return 'Windows';
-    if (Platform.isAndroid) return 'Android';
-    if (Platform.isLinux) return 'Linux';
-    if (Platform.isMacOS) return 'macOS';
-    if (Platform.isIOS) return 'iOS';
-    return 'Unknown';
+  static String _platformName(BuildContext context) {
+    if (kIsWeb) return context.l10n.web;
+    if (Platform.isWindows) return context.l10n.windows;
+    if (Platform.isAndroid) return context.l10n.android;
+    if (Platform.isLinux) return context.l10n.linux;
+    if (Platform.isMacOS) return context.l10n.macos;
+    if (Platform.isIOS) return context.l10n.ios;
+    return context.l10n.unknown;
   }
 }
 

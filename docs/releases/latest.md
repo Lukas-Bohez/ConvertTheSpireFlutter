@@ -1,49 +1,36 @@
-# Release Notes - v14.4.1
+# Release Notes - v14.5.0
 
-## Startup fix and a smaller Windows download
+## Every screen in your language, magnets that start, Compare on phones
 
 ### Fixed
 
-* **The app opens again.** 14.4.0 stayed on its loading spinner and never got any further, on every platform. Nothing you had was touched: your library, downloads and settings are all there once it opens.
-* **Windows Defender no longer flags the Windows download** (issue #12). The Windows version carried about a hundred conversion libraries that only the Android and iOS versions use, and Defender flagged one of them, avdevice. They are gone from Windows, which also halves the download, from about 86 MB to about 41 MB. Converting on Windows works as before. When you update, extract into a new folder rather than over the old one, so the flagged file does not stay behind.
-* **Closing the app on Windows no longer crashes it** on the way out.
+* **The app speaks your language, all of it.** Choosing a language in Settings used to change little more than the tab names; almost every screen, dialog and message stayed in English. All 18 languages now cover the whole app: Arabic, Dutch, English, French, German, Hindi, Indonesian, Italian, Japanese, Korean, Polish, Portuguese, Russian, Simplified Chinese, Spanish, Turkish, Ukrainian and Vietnamese. A check in the build now fails if a screen slips back into English.
+* **Magnet links no longer sit at "Stalled 0.0%".** A magnet first has to get its file list from other people before anything can download, and three things kept that from happening. The app threw away the trackers listed in the link and asked only its own backup list, so a nyaa release never reached the tracker most of its swarm uses. One peer that stopped answering could hold up the file list for good. And links with a base32 hash, which nyaa uses, were saved in a form that broke resuming. The app now uses the link's own trackers, moves on to fresh peers when the file list stops coming, and saves every magnet under its standard hash. If nobody sends the file list within ten minutes, the torrent waits and tries again by itself instead of staying stuck.
+* **Your settings stay put on Android.** Every setting, the download folder included, was forgotten each time the app closed: the app asked Android where to keep its settings and never got an answer. It keeps them now, so you choose a download folder once.
+* **Compare works on phones.** A folder picked on a phone is an Android document address that the scan could not open, so every song showed as missing. The app now reads those folders, and asks Android for a whole folder at a time instead of file by file, so big music folders also open quicker in the player.
+* **Compare no longer calls different songs a match.** A title check compared each title with itself, so almost any song "matched" whatever file was left over, on every platform, and the Missing tab came up short. Exact matches are strict now; anything less certain shows its real confidence in the Matched tab.
+* **A half-finished download no longer counts as downloaded.** Files like `Song.temp.mp4` and yt-dlp's `.part` files are listed under Extras as incomplete, ready to delete, instead of hiding the song from Missing.
+* **Export missing list and Export as M3U work on Android.** Both did nothing on phones.
+* **Saving a converted file tells you where it went,** or why it could not be saved. The Save button used to give no sign either way.
+* **Compare fits a phone.** The confidence filters, the Missing tab buttons and the Extras headings ran off the edge of the screen; they wrap now. The Quick Download card no longer overflows with larger text.
+
+### New
+
+* **This video or the whole playlist?** Press download while a video plays from a playlist, in the browser or in Quick Download, and the app asks which one you meant. On a playlist page, download takes the playlist. Either way the playlist opens in the Playlist Manager, which first shows the songs you already have. Before, you got only the video, and a playlist page failed. Mixes, Watch Later and Liked videos still download just the video.
+* **Open folder is back on the phone player's top bar,** where Watch Together was. Watch Together moves into the ⋮ menu, and returns to the bar while you are in a room. An empty library has its own Open folder button.
+* **The player remembers your library.** The folder you open comes back by itself the next time you start the app.
+* **The file converter is on Android,** in the Play version too. It was hidden on every Android phone and TV, but the Android app carries FFmpeg, so audio, video, image, document and archive conversions all work there. Converted files go to Downloads/Converted unless you picked a download folder.
+* **Extensions on phones.** The browser menu has Extensions on Android too. Full Chrome and Firefox extensions still need the Windows app, so on a phone it shows what does run: the built-in ad blocker, your userscripts, and one-tap searches for popular userscripts such as dark mode, Return YouTube Dislike and SponsorBlock.
 
 ### Improved
 
-* **What's new shows what you missed.** If you skipped a release, as nearly everyone did with 14.4.0, its notes now follow this one's.
-
-### Also new since 14.3.1: everything from 14.4.0
-
-14.4.0 did not get past its loading screen, so for most people these arrive with this release. They are the same as in [14.4.0's own notes](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v14.4.0).
-
-#### New
-
-* **Browser extensions on Windows.** Install Chrome extensions, and add-ons from addons.mozilla.org that also support Chromium, from Extensions in the browser menu or in Browser Settings. Search the add-ons catalog inside the app, see what an extension will be able to do before anything installs, switch extensions on and off, and open their popups and options, update or remove them. Downloads from addons.mozilla.org are checked against the checksum it publishes. Tested with Dark Reader and uBlock Origin Lite. Windows only for now.
-
-#### Fixed
-
-* **Downloads keep going when the phone is locked.** Android was freezing the app shortly after the screen went off, so downloads and torrents stalled until you opened it again. While anything is downloading, the app now keeps itself running with a notification that shows progress, and its Stop button pauses everything.
-* **Watch Together no longer opens to a grey screen.** The room sheet could not reach the player, which showed up as a blank grey box on every platform.
-* **Searching from the browser searches the web.** The address bar now uses your chosen search engine, the same as the new tab page, and links that used to throw you into the YouTube app open in the browser instead. Anything that really needs another app asks first.
-* **Refresh no longer spins forever on Windows.** It finishes within a few seconds; checking your watched playlists now happens in the background.
-* **Your support colour now reaches the whole app,** including the player bar, sliders, progress indicators and the incognito toolbar.
-* **Userscripts now run in the Windows browser.** Since they arrived in 14.3.0 they installed and showed up in the list on Windows, but never actually ran on the page.
-* **The browser toolbar fits larger text.** With a bigger system text size the address bar was cut off on every screen size; it now grows to fit, and long menu entries wrap instead of spilling over.
-
-#### Improved
-
-* **A less crowded player on phones.** Watch Together and the queue stay in the header, and open folder, organize, fix metadata and volume leveling move into a menu with proper labels. The video takes a sensible share of the screen instead of a fixed height, and the track title gets more room.
-* **Watch Together without the file.** A guest that does not have the host's file, like a TV, now streams it from the host over your network, seeking included.
-* **Choose the app language in Settings.** Any of the 18 translations, or automatic.
-* **Report a bug** from Settings opens a GitHub issue with your app version, platform and recent log already filled in. You see all of it before anything is sent.
-* **What's new** appears once after each update. The intro tour now only runs on a first install instead of after every update.
-* If a screen ever fails to load, you get a readable message with Copy details and Report buttons instead of an empty grey box.
-* A smaller download: several libraries the app no longer used have been removed.
-
-### Build Notes
-
-* Android Play AAB built with `--flavor play` (version 14.4.1+1297).
-* The Windows zip no longer contains FFmpegKit's DLLs; the release workflow now fails if they reappear.
-* `flutter analyze` clean; all tests pass, including a new test that starts the real app and requires it to get past the loading screen.
-* GitHub release tag: v14.4.1
-* Release page: [v14.4.1](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/tag/v14.4.1)
+* While a magnet is getting its file list, it says "Fetching metadata" instead of "Stalled". Torrent statuses are now in your language too.
+* Adding a magnet from the browser or a link opens the Torrents tab right away, instead of after the file list arrives. When the app starts, other torrents no longer wait behind a magnet that is still getting its file list.
+* Converting shows that it is working, and says why when a conversion fails, instead of leaving the reason in the log.
+* Compare remembers the last folder, starts from your download folder, and asks for a folder instead of doing nothing when none is set. Phone folders read "Phone storage/Music" instead of a content:// address, in Compare and in Settings.
+* Downloading the missing songs saves them into the folder you compared, next to the rest of the playlist.
+* In the Missing tab, tap anywhere on a row to select it.
+* A playlist sent from Quick Download keeps the format you chose there.
+* A folder with no music in it says so, instead of listing every song as missing.
+* Compare skips folders it is not allowed to read, such as Android/data, instead of stopping.
+* The Play Store version says that YouTube downloads are not part of it, instead of "Added to queue".

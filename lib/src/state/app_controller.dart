@@ -979,10 +979,14 @@ class AppController extends ChangeNotifier {
     await saveSettings(settings.copyWith(ffmpegPath: path));
   }
 
-  Future<void> convert(File file, String target) async {
+  /// Converts [file] to [target] and adds the result to [convertResults].
+  /// Returns why it failed, or null when it worked, so the Convert tab can
+  /// say so instead of leaving the reason in the log (which the Play build
+  /// does not show).
+  Future<String?> convert(File file, String target) async {
     final settings = _settings;
     if (settings == null) {
-      return;
+      return 'Settings are still loading. Try again in a moment.';
     }
     try {
       final ffmpegPath = await _ensureFfmpegPath(settings, target);
@@ -991,18 +995,26 @@ class AppController extends ChangeNotifier {
       convertResults.add(result);
       logs.add('Conversion complete: ${result.name}');
       scheduleNotify();
+      return null;
     } catch (e) {
       logs.add('Conversion failed: $e');
       scheduleNotify();
+      return '$e'.replaceFirst('Exception: ', '');
     }
   }
 
-  Future<void> saveConvertedResult(ConvertResult result) async {
+  /// Saves a converted file. [location] says where it went and is null when
+  /// nothing was saved; [cancelled] is true when the user closed the save
+  /// dialog, which is not an error. The Convert tab shows the outcome, so a
+  /// failed save is no longer silent.
+  Future<({String? location, bool cancelled})> saveConvertedResult(
+      ConvertResult result) async {
     if (kIsWeb) {
       logs.add('Saving files is not supported on web.');
-      return;
+      return (location: null, cancelled: false);
     }
     final settings = _settings;
+    final mime = _mimeForExtension(result.name.split('.').last);
     // On Android, if the configured download folder is a SAF tree (content://)
     // use the native channel to copy the file into the tree so it's visible
     // to other apps. Otherwise fall back to writing to the resolved path.
@@ -1010,13 +1022,8 @@ class AppController extends ChangeNotifier {
         settings != null &&
         settings.downloadDir.startsWith('content://')) {
       try {
-        final cache = await PlatformDirs.getCacheDir();
-        final tmp =
-            File('${cache.path}${Platform.pathSeparator}${result.name}');
-        await tmp.writeAsBytes(result.bytes, flush: true);
-        final saf = AndroidSaf();
-        final mime = _mimeForExtension(result.name.split('.').last);
-        final dest = await saf.copyToTree(
+        final tmp = await _writeConvertedToCache(result);
+        final dest = await AndroidSaf().copyToTree(
           treeUri: settings.downloadDir,
           sourcePath: tmp.path,
           displayName: result.name,
@@ -1027,26 +1034,65 @@ class AppController extends ChangeNotifier {
         } catch (_) {}
         if (dest != null && dest.isNotEmpty) {
           logs.add('Saved converted file: $dest');
-          return;
+          return (location: 'your download folder', cancelled: false);
         }
       } catch (e) {
         logs.add('SAF save failed: $e');
-        // fall through to legacy path
+        // fall through to the public Downloads folder
       }
+    }
+
+    // No folder picked on Android: the public Downloads folder, the same
+    // place downloads go. Writing into the app's private storage (what this
+    // used to attempt, and which failed outright) would hide the file from
+    // the Files app.
+    if (Platform.isAndroid) {
+      try {
+        final tmp = await _writeConvertedToCache(result);
+        final dest = await AndroidSaf().copyToDownloads(
+          sourcePath: tmp.path,
+          displayName: result.name,
+          mimeType: mime,
+          subdir: 'Converted',
+        );
+        try {
+          await tmp.delete();
+        } catch (_) {}
+        if (dest != null && dest.isNotEmpty) {
+          logs.add('Saved converted file: $dest');
+          return (location: 'Downloads/Converted', cancelled: false);
+        }
+      } catch (e) {
+        logs.add('Saving to Downloads failed: $e');
+      }
+      return (location: null, cancelled: false);
     }
 
     final path = await _resolveSavePath(result.name);
     if (path == null) {
-      return;
+      // iOS has no fallback folder; on desktop this is a closed dialog.
+      return (location: null, cancelled: !Platform.isIOS);
     }
-    final file = File(path);
-    await file.writeAsBytes(result.bytes, flush: true);
+    try {
+      await File(path).writeAsBytes(result.bytes, flush: true);
+    } catch (e) {
+      logs.add('Saving converted file failed: $e');
+      return (location: null, cancelled: false);
+    }
     logs.add('Saved converted file: $path');
+    return (location: path, cancelled: false);
+  }
+
+  Future<File> _writeConvertedToCache(ConvertResult result) async {
+    final cache = await PlatformDirs.getCacheDir();
+    final tmp = File('${cache.path}${Platform.pathSeparator}${result.name}');
+    await tmp.writeAsBytes(result.bytes, flush: true);
+    return tmp;
   }
 
   Future<String?> _resolveSavePath(String filename) async {
     if (kIsWeb) return null;
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (Platform.isIOS) {
       final extDir = await PlatformDirs.getExternalDir();
       if (extDir != null) {
         return '${extDir.path}${Platform.pathSeparator}$filename';

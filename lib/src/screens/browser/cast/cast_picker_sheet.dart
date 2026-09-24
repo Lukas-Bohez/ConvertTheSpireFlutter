@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../browser/cast/cast_service.dart';
 import '../../../browser/cast/unified_cast_service.dart';
+import '../../../utils/l10n.dart';
 
 /// Bottom sheet picker showing detected video URLs and discovered cast devices.
 class CastPickerSheet extends StatefulWidget {
@@ -70,7 +71,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              Text('Cast Media',
+              Text(context.l10n.castMedia,
                   style: Theme.of(context).textTheme.titleMedium),
               const Divider(),
 
@@ -91,14 +92,14 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                                   color: cs.onSurfaceVariant
                                       .withValues(alpha: 0.5)),
                               const SizedBox(height: 8),
-                              Text('No video streams detected',
+                              Text(context.l10n.noVideoStreamsDetected,
                                   style: TextStyle(color: cs.onSurfaceVariant)),
                             ],
                           ),
                         ),
                       )
                     else ...[
-                      Text('Detected Videos',
+                      Text(context.l10n.detectedVideos,
                           style: Theme.of(context).textTheme.labelLarge),
                       const SizedBox(height: 4),
                       ...urls.map((url) {
@@ -134,7 +135,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                     const Divider(height: 24),
 
                     // -- Devices --
-                    Text('Cast Devices',
+                    Text(context.l10n.castDevices,
                         style: Theme.of(context).textTheme.labelLarge),
                     const SizedBox(height: 4),
 
@@ -150,7 +151,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                             const SizedBox(width: 12),
-                            Text('Searching for devices…',
+                            Text(context.l10n.searchingDevices,
                                 style: TextStyle(color: cs.onSurfaceVariant)),
                           ],
                         ),
@@ -170,8 +171,8 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                           title: Text(device.name),
                           subtitle: Text(
                             device.type == CastDeviceType.chromecast
-                                ? 'Chromecast'
-                                : 'DLNA / UPnP',
+                                ? context.l10n.chromecast
+                                : context.l10n.dlnaUpnp,
                             style: TextStyle(
                               fontSize: 12,
                               color:
@@ -201,7 +202,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                         ? () => widget.onCast(_selectedDevice!, _selectedUrl!)
                         : null,
                     icon: const Icon(Icons.cast),
-                    label: const Text('Cast Selected Video'),
+                    label: Text(context.l10n.castSelectedVideo),
                   ),
                 ),
               ),
@@ -219,11 +220,11 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
 
   String _mediaTypeLabel(String url) {
     final lower = url.toLowerCase();
-    if (lower.contains('.m3u8')) return 'HLS Stream';
-    if (lower.contains('.mpd')) return 'DASH Stream';
-    if (lower.contains('.mp4')) return 'MP4 Video';
-    if (lower.contains('.webm')) return 'WebM Video';
-    if (lower.contains('.mkv')) return 'MKV Video';
-    return 'Video Stream';
+    if (lower.contains('.m3u8')) return context.l10n.hlsStream;
+    if (lower.contains('.mpd')) return context.l10n.dashStream;
+    if (lower.contains('.mp4')) return context.l10n.mp4Video2;
+    if (lower.contains('.webm')) return context.l10n.webmVideo2;
+    if (lower.contains('.mkv')) return context.l10n.mkvVideo2;
+    return context.l10n.videoStream;
   }
 }

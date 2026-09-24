@@ -8,15 +8,17 @@ import 'package:win32/win32.dart' as win32;
 
 import '../services/android_saf.dart';
 import '../services/folder_history_service.dart';
+import '../utils/l10n.dart';
 
 enum TvFileBrowserMode { file, folder }
 
 Future<String?> pickSingleFilePath(
   BuildContext context, {
-  String dialogTitle = 'Select file',
+  String? dialogTitle,
   List<String>? allowedExtensions,
   String? initialDirectory,
 }) async {
+  dialogTitle ??= context.l10n.selectFile;
   if (kIsWeb) {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: false,
@@ -54,10 +56,11 @@ Future<String?> pickSingleFilePath(
 
 Future<List<String>> pickMultipleFilePaths(
   BuildContext context, {
-  String dialogTitle = 'Select files',
+  String? dialogTitle,
   List<String>? allowedExtensions,
   String? initialDirectory,
 }) async {
+  dialogTitle ??= context.l10n.selectFiles;
   if (kIsWeb) {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
@@ -91,9 +94,10 @@ Future<List<String>> pickMultipleFilePaths(
 
 Future<String?> pickDirectoryPath(
   BuildContext context, {
-  String dialogTitle = 'Select folder',
+  String? dialogTitle,
   String? initialDirectory,
 }) async {
+  dialogTitle ??= context.l10n.selectFolder;
   if (kIsWeb) {
     return FilePicker.platform.getDirectoryPath(dialogTitle: dialogTitle);
   }
@@ -178,14 +182,15 @@ class TvFileBrowser extends StatefulWidget {
   static Future<String?> pickFile({
     required BuildContext context,
     required List<String> allowedExtensions,
-    String title = 'Select file',
+    String? title,
     String? initialDirectory,
   }) {
+  final heading = title ?? context.l10n.selectFile;
     return Navigator.of(context).push<String>(
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (_) => TvFileBrowser(
-          title: title,
+          title: heading,
           allowedExtensions: allowedExtensions,
           initialDirectory: initialDirectory,
           mode: TvFileBrowserMode.file,
@@ -196,14 +201,15 @@ class TvFileBrowser extends StatefulWidget {
 
   static Future<String?> pickFolder({
     required BuildContext context,
-    String title = 'Select folder',
+    String? title,
     String? initialDirectory,
   }) {
+  final heading = title ?? context.l10n.selectFolder;
     return Navigator.of(context).push<String>(
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (_) => TvFileBrowser(
-          title: title,
+          title: heading,
           allowedExtensions: const [],
           initialDirectory: initialDirectory,
           mode: TvFileBrowserMode.folder,
@@ -314,7 +320,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not open ${_currentDir.path}: $e';
+        _error = context.l10n.couldNotOpen(_currentDir.path, e);
         _entries = const [];
       });
     } finally {
@@ -339,7 +345,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
           final path = volume['path']?.trim() ?? '';
           final label = volume['label']?.trim().isNotEmpty == true
               ? volume['label']!.trim()
-              : 'USB Drive';
+              : context.l10n.usbDrive;
           locations.add(_StorageLocation(
             label: label,
             path: path,
@@ -377,7 +383,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
 
     if (Platform.isMacOS) {
       locations
-          .add(const _StorageLocation(label: 'Mac', path: '/', icon: Icons.storage));
+          .add(_StorageLocation(label: context.l10n.mac, path: '/', icon: Icons.storage));
       final volumes = Directory('/Volumes');
       if (volumes.existsSync()) {
         final children = volumes
@@ -399,7 +405,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
 
     if (Platform.isLinux) {
       locations
-          .add(const _StorageLocation(label: 'Root', path: '/', icon: Icons.storage));
+          .add(_StorageLocation(label: context.l10n.root, path: '/', icon: Icons.storage));
       for (final mountRoot in ['/mnt', '/media', '/run/media']) {
         final root = Directory(mountRoot);
         if (!root.existsSync()) continue;
@@ -429,16 +435,20 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
     final locations = <_StorageLocation>[];
     final candidates = <Map<String, Object>>[
       {
-        'label': 'Device storage',
+        'label': context.l10n.storageDevice,
         'path': '/storage/emulated/0',
         'icon': Icons.phone_android
       },
       {
-        'label': 'Primary storage',
+        'label': context.l10n.storagePrimary,
         'path': '/storage/self/primary',
         'icon': Icons.phone_android
       },
-      {'label': 'SD card', 'path': '/sdcard', 'icon': Icons.sd_storage},
+      {
+        'label': context.l10n.storageSdCard,
+        'path': '/sdcard',
+        'icon': Icons.sd_storage
+      },
     ];
 
     for (final candidate in candidates) {
@@ -535,7 +545,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
       }
       if (mounted) {
         setState(() {
-          _error = 'Storage location not available: ${location.label}';
+          _error = context.l10n.storageLocationNotAvailable(location.label);
         });
       }
       return;
@@ -597,7 +607,7 @@ class _TvFileBrowserState extends State<TvFileBrowser> {
                 child: FilledButton.icon(
                   onPressed: () => Navigator.of(context).pop(_currentDir.path),
                   icon: const Icon(Icons.folder_open, size: 18),
-                  label: Text(isWide ? 'Use this folder' : 'Select',
+                  label: Text(isWide ? context.l10n.useFolder : context.l10n.select,
                       overflow: TextOverflow.ellipsis),
                 ),
               ),

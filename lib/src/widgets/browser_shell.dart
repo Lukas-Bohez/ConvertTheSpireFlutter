@@ -11,6 +11,7 @@ import '../config/build_flags.dart';
 import '../screens/browser_screen.dart';
 import '../screens/player.dart'
     show PlayerState, PositionUiState, MediaItem, MediaType;
+import '../utils/l10n.dart';
 import '../vault/services/torrent_service.dart';
 import '../widgets/quick_links_service.dart';
 
@@ -95,6 +96,28 @@ const _kRoutes = {
     route: 'torrents.tab'
   ),
 };
+
+/// A page's name in the app's language. The route table above stays
+/// const, in English, because typed English names keep working too.
+String _routeLabel(AppLocalizations l, String keyword) {
+  return switch (keyword) {
+    'search' => l.tabSearch,
+    'multisearch' => l.tabMultiSearch,
+    'browser' => l.tabBrowser,
+    'queue' => l.tabQueue,
+    'playlists' => l.tabPlaylists,
+    'files' => l.tabFiles,
+    'stats' => l.stats,
+    'settings' => l.tabSettings,
+    'support' => l.tabSupport,
+    'convert' => l.tabConvert,
+    'logs' => l.tabLogs,
+    'guide' => l.tabGuide,
+    'player' => l.tabPlayer,
+    'torrents' => l.tabTorrents,
+    _ => _kRoutes[keyword]?.label ?? keyword,
+  };
+}
 
 /// Persistent browser-like shell that wraps all app content.
 class BrowserShell extends StatefulWidget {
@@ -348,7 +371,8 @@ class _BrowserShellState extends State<BrowserShell> {
     }
 
     await _loadSearchEngine();
-    final decision = _resolveBrowserSubmission(trimmed, engine: _searchEngine);
+    final decision = _resolveBrowserSubmission(trimmed,
+        engine: _searchEngine, l10n: context.l10n);
 
     switch (decision.kind) {
       case BrowserSubmissionKind.internalRoute:
@@ -503,9 +527,9 @@ class _BrowserShellState extends State<BrowserShell> {
             padding: const EdgeInsets.symmetric(horizontal: 6),
             child: Row(
               children: [
-                _navButton(Icons.arrow_back_ios_new_rounded, 'Back',
+                _navButton(Icons.arrow_back_ios_new_rounded, context.l10n.back,
                     widget.canGoBack ? widget.onBack : null, cs),
-                _navButton(Icons.arrow_forward_ios_rounded, 'Forward',
+                _navButton(Icons.arrow_forward_ios_rounded, context.l10n.forward,
                     widget.canGoForward ? widget.onForward : null, cs),
                 widget.isRefreshing
                     ? SizedBox(
@@ -523,11 +547,11 @@ class _BrowserShellState extends State<BrowserShell> {
                       )
                     : _navButton(
                         Icons.refresh_rounded,
-                        'Refresh',
+                        context.l10n.actionRefresh,
                         widget.onRefresh,
                         cs,
                       ),
-                _navButton(Icons.home_rounded, 'Home', widget.onHome, cs),
+                _navButton(Icons.home_rounded, context.l10n.tabHome, widget.onHome, cs),
                 const SizedBox(width: 6),
                 Expanded(child: _buildUrlBar(cs)),
                 const SizedBox(width: 6),
@@ -582,7 +606,7 @@ class _BrowserShellState extends State<BrowserShell> {
               onPressed: isDesktop
                   ? () => setState(() => _showQueueDesktop = !_showQueueDesktop)
                   : _toggleQueue,
-              tooltip: isDesktop ? 'Toggle queue panel' : 'Open queue',
+              tooltip: isDesktop ? context.l10n.toggleQueuePanel : context.l10n.openQueue,
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               style: IconButton.styleFrom(
@@ -774,7 +798,7 @@ class _BrowserShellState extends State<BrowserShell> {
                                         : Icons.play_arrow_rounded,
                                     size: 20,
                                   ),
-                                  tooltip: isPlaying ? 'Pause' : 'Play',
+                                  tooltip: isPlaying ? context.l10n.actionPause : context.l10n.actionPlay,
                                   splashRadius: 18,
                                 ),
                                 const SizedBox(width: 4),
@@ -799,8 +823,8 @@ class _BrowserShellState extends State<BrowserShell> {
                                       size: 20,
                                     ),
                                     tooltip: collapsed
-                                        ? 'Expand player'
-                                        : 'Collapse player',
+                                        ? context.l10n.expandPlayer
+                                        : context.l10n.collapsePlayer,
                                     splashRadius: 18,
                                   ),
                                 ),
@@ -810,7 +834,7 @@ class _BrowserShellState extends State<BrowserShell> {
                                       ? Icons.pause_rounded
                                       : Icons.play_arrow_rounded,
                                   onPressed: state.togglePlay,
-                                  tooltip: isPlaying ? 'Pause' : 'Play',
+                                  tooltip: isPlaying ? context.l10n.actionPause : context.l10n.actionPlay,
                                   cs: cs,
                                   emphasize: true,
                                 ),
@@ -825,8 +849,8 @@ class _BrowserShellState extends State<BrowserShell> {
                                     size: 24,
                                   ),
                                   tooltip: collapsed
-                                      ? 'Expand player'
-                                      : 'Collapse player',
+                                      ? context.l10n.expandPlayer
+                                      : context.l10n.collapsePlayer,
                                   splashRadius: 20,
                                 ),
                               ],
@@ -903,7 +927,7 @@ class _BrowserShellState extends State<BrowserShell> {
                                       icon: Icons.skip_previous_rounded,
                                       onPressed: () => state.previous(
                                           only: state.activeTabFilter),
-                                      tooltip: 'Previous',
+                                      tooltip: context.l10n.previous,
                                       cs: cs,
                                     ),
                                     _buildTransportButton(
@@ -918,7 +942,7 @@ class _BrowserShellState extends State<BrowserShell> {
                                                       nextMs < 0 ? 0 : nextMs));
                                             }
                                           : null,
-                                      tooltip: 'Back 10s',
+                                      tooltip: context.l10n.back10s,
                                       cs: cs,
                                     ),
                                     _buildTransportButton(
@@ -926,7 +950,7 @@ class _BrowserShellState extends State<BrowserShell> {
                                           ? Icons.pause_rounded
                                           : Icons.play_arrow_rounded,
                                       onPressed: state.togglePlay,
-                                      tooltip: isPlaying ? 'Pause' : 'Play',
+                                      tooltip: isPlaying ? context.l10n.actionPause : context.l10n.actionPlay,
                                       cs: cs,
                                       emphasize: true,
                                     ),
@@ -945,14 +969,14 @@ class _BrowserShellState extends State<BrowserShell> {
                                                       : nextMs));
                                             }
                                           : null,
-                                      tooltip: 'Forward 10s',
+                                      tooltip: context.l10n.forward10s,
                                       cs: cs,
                                     ),
                                     _buildTransportButton(
                                       icon: Icons.skip_next_rounded,
                                       onPressed: () => state.next(
                                           only: state.activeTabFilter),
-                                      tooltip: 'Next',
+                                      tooltip: context.l10n.next,
                                       cs: cs,
                                     ),
                                   ],
@@ -965,7 +989,7 @@ class _BrowserShellState extends State<BrowserShell> {
                                       icon: Icons.skip_previous_rounded,
                                       onPressed: () => state.previous(
                                           only: state.activeTabFilter),
-                                      tooltip: 'Previous',
+                                      tooltip: context.l10n.previous,
                                       cs: cs,
                                     ),
                                     _buildTransportButton(
@@ -980,7 +1004,7 @@ class _BrowserShellState extends State<BrowserShell> {
                                                       nextMs < 0 ? 0 : nextMs));
                                             }
                                           : null,
-                                      tooltip: 'Back 10s',
+                                      tooltip: context.l10n.back10s,
                                       cs: cs,
                                     ),
                                     _buildTransportButton(
@@ -988,7 +1012,7 @@ class _BrowserShellState extends State<BrowserShell> {
                                           ? Icons.pause_rounded
                                           : Icons.play_arrow_rounded,
                                       onPressed: state.togglePlay,
-                                      tooltip: isPlaying ? 'Pause' : 'Play',
+                                      tooltip: isPlaying ? context.l10n.actionPause : context.l10n.actionPlay,
                                       cs: cs,
                                       emphasize: true,
                                     ),
@@ -1007,14 +1031,14 @@ class _BrowserShellState extends State<BrowserShell> {
                                                       : nextMs));
                                             }
                                           : null,
-                                      tooltip: 'Forward 10s',
+                                      tooltip: context.l10n.forward10s,
                                       cs: cs,
                                     ),
                                     _buildTransportButton(
                                       icon: Icons.skip_next_rounded,
                                       onPressed: () => state.next(
                                           only: state.activeTabFilter),
-                                      tooltip: 'Next',
+                                      tooltip: context.l10n.next,
                                       cs: cs,
                                     ),
                                   ],
@@ -1137,7 +1161,7 @@ class _BrowserShellState extends State<BrowserShell> {
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
-                hintText: 'Search pages or enter web address...',
+                hintText: context.l10n.searchPagesEnterWebAddress,
                 hintStyle: TextStyle(
                   fontSize: 13,
                   color: cs.onSurfaceVariant.withValues(alpha: 0.5),
@@ -1145,7 +1169,7 @@ class _BrowserShellState extends State<BrowserShell> {
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 suffixIcon: IconButton(
-                  tooltip: 'Open',
+                  tooltip: context.l10n.actionOpen,
                   icon: const Icon(Icons.arrow_forward, size: 18),
                   onPressed: () => _handleSubmit(_urlEditController.text),
                 ),
@@ -1220,12 +1244,23 @@ class _BrowserShellState extends State<BrowserShell> {
     // Regression check: when the browser tab itself is focused, empty input
     // must still show these internal chips because _startEditing() no longer
     // short-circuits on browser.tab.
+    final l10n = context.l10n;
     for (final destination in _browserDestinations) {
+      final label = _routeLabel(l10n, destination.keyword);
       if (lower.isEmpty ||
           destination.keyword.startsWith(lower) ||
           destination.label.toLowerCase().startsWith(lower) ||
+          label.toLowerCase().startsWith(lower) ||
           destination.value.toLowerCase().startsWith(lower)) {
-        internal.add(destination);
+        internal.add(_BrowserSuggestion(
+          kind: destination.kind,
+          label: label,
+          value: destination.value,
+          subtitle: label,
+          icon: destination.icon,
+          keyword: destination.keyword,
+          aliases: destination.aliases,
+        ));
       }
     }
 
@@ -1237,9 +1272,9 @@ class _BrowserShellState extends State<BrowserShell> {
         external.add(
           _BrowserSuggestion(
             kind: _BrowserSuggestionKind.url,
-            label: 'Open $normalized',
+            label: context.l10n.open(normalized),
             value: normalized,
-            subtitle: 'Navigate directly to the site',
+            subtitle: context.l10n.navigateDirectlySite,
             icon: Icons.language,
             keyword: normalized,
             aliases: const [],
@@ -1251,9 +1286,9 @@ class _BrowserShellState extends State<BrowserShell> {
       external.add(
         _BrowserSuggestion(
           kind: _BrowserSuggestionKind.search,
-          label: 'Search $_searchEngine for "$trimmed"',
+          label: context.l10n.search(_searchEngine, trimmed),
           value: searchUrl,
-          subtitle: 'Plain text falls back to search',
+          subtitle: context.l10n.plainTextFallsBackSearch,
           icon: Icons.search,
           keyword: searchUrl,
           aliases: const [],
@@ -1414,6 +1449,7 @@ class _SuggestionTile extends StatelessWidget {
 BrowserSubmissionDecision _resolveBrowserSubmission(
   String input, {
   String engine = 'DuckDuckGo',
+  AppLocalizations? l10n,
 }) {
   final trimmed = input.trim();
   final lower = trimmed.toLowerCase();
@@ -1422,6 +1458,8 @@ BrowserSubmissionDecision _resolveBrowserSubmission(
     final route = entry.value.route;
     if (lower == entry.key ||
         lower == entry.value.label.toLowerCase() ||
+        (l10n != null &&
+            lower == _routeLabel(l10n, entry.key).toLowerCase()) ||
         lower == route) {
       return BrowserSubmissionDecision(
         BrowserSubmissionKind.internalRoute,

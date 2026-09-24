@@ -12,6 +12,7 @@ import '../features/colour_rewards/watch_ad_card.dart';
 import '../services/ad_service.dart';
 import '../services/purchase_service.dart';
 import '../state/app_controller.dart';
+import '../utils/l10n.dart';
 import '../utils/snack.dart';
 import '../widgets/monetization_widgets.dart';
 
@@ -54,7 +55,7 @@ class _SupportScreenState extends State<SupportScreen> {
     if (!mounted) return;
     if (purchaseService.isAdFree && !_lastAdFree) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Remove Ads unlocked. All ads are off.')),
+        SnackBar(content: Text(context.l10n.removeAdsUnlockedAllAds)),
       );
     }
     _lastAdFree = purchaseService.isAdFree;
@@ -74,7 +75,7 @@ class _SupportScreenState extends State<SupportScreen> {
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (mounted) {
-        Snack.show(context, 'Could not launch $url', level: SnackLevel.error);
+        Snack.show(context, context.l10n.couldNotLaunch(url), level: SnackLevel.error);
       }
     }
   }
@@ -85,7 +86,7 @@ class _SupportScreenState extends State<SupportScreen> {
     if (!purchase.storeAvailable) {
       Snack.show(
         context,
-        'Remove Ads purchases are only available on Android Play builds.',
+        context.l10n.removeAdsPurchasesOnlyAvailable,
         level: SnackLevel.error,
       );
       return;
@@ -95,7 +96,7 @@ class _SupportScreenState extends State<SupportScreen> {
     if (mounted) {
       Snack.show(
         context,
-        'Opening the Play purchase flow…',
+        context.l10n.openingPlayPurchaseFlow,
         level: SnackLevel.info,
       );
     }
@@ -105,7 +106,7 @@ class _SupportScreenState extends State<SupportScreen> {
     AdService.instance.registerInteraction();
     await PurchaseService.instance.restorePurchases();
     if (mounted) {
-      Snack.show(context, 'Restore request sent.', level: SnackLevel.info);
+      Snack.show(context, context.l10n.restoreRequestSent, level: SnackLevel.info);
     }
   }
 
@@ -123,11 +124,11 @@ class _SupportScreenState extends State<SupportScreen> {
   String _themeLabel(String? mode) {
     switch (mode) {
       case 'light':
-        return 'Light';
+        return context.l10n.light;
       case 'dark':
-        return 'Dark';
+        return context.l10n.dark;
       default:
-        return 'System';
+        return context.l10n.system;
     }
   }
 
@@ -146,7 +147,7 @@ class _SupportScreenState extends State<SupportScreen> {
                 const Icon(Icons.palette_outlined),
                 const SizedBox(width: 8),
                 Text(
-                  'Appearance',
+                  context.l10n.appearance,
                   style: theme.textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
@@ -154,26 +155,26 @@ class _SupportScreenState extends State<SupportScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Choose the app theme used across the desktop and mobile UI.',
+              context.l10n.chooseAppThemeUsedAcross,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 12),
             SegmentedButton<String>(
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: 'system',
-                  label: Text('System'),
-                  icon: Icon(Icons.brightness_auto),
+                  label: Text(context.l10n.system),
+                  icon: const Icon(Icons.brightness_auto),
                 ),
                 ButtonSegment(
                   value: 'light',
-                  label: Text('Light'),
-                  icon: Icon(Icons.light_mode),
+                  label: Text(context.l10n.light),
+                  icon: const Icon(Icons.light_mode),
                 ),
                 ButtonSegment(
                   value: 'dark',
-                  label: Text('Dark'),
-                  icon: Icon(Icons.dark_mode),
+                  label: Text(context.l10n.dark),
+                  icon: const Icon(Icons.dark_mode),
                 ),
               ],
               selected: {currentMode},
@@ -183,7 +184,7 @@ class _SupportScreenState extends State<SupportScreen> {
                 if (!mounted) return;
                 Snack.show(
                   context,
-                  'Theme set to ${_themeLabel(nextMode)}',
+                  context.l10n.themeSet(_themeLabel(nextMode)),
                   level: SnackLevel.success,
                 );
               },
@@ -213,19 +214,19 @@ class _SupportScreenState extends State<SupportScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Ad Preferences',
+                  context.l10n.adPreferences,
                   style: theme.textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Manage your ad personalisation consent.',
+                  context.l10n.manageAdPersonalisationConsent,
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   icon: const Icon(Icons.settings),
-                  label: const Text('Manage Ad Preferences'),
+                  label: Text(context.l10n.manageAdPreferences),
                   onPressed: () {
                     ConsentForm.showPrivacyOptionsForm((formError) {
                       if (formError != null) {
@@ -258,13 +259,13 @@ class _SupportScreenState extends State<SupportScreen> {
     if (rewardEarned) {
       Snack.show(
         context,
-        'Dankjewel! Advertenties staan 30 minuten uit.',
+        context.l10n.adsOffFor30MinutesThanks,
         level: SnackLevel.success,
       );
     } else {
       Snack.show(
         context,
-        'Geen reward geregistreerd. Advertenties blijven aan.',
+        context.l10n.noRewardRecordedAdsStayOn,
         level: SnackLevel.info,
       );
     }
@@ -285,13 +286,13 @@ class _SupportScreenState extends State<SupportScreen> {
     if (rewardEarned) {
       Snack.show(
         context,
-        'Top! Bedankt voor je support. Advertenties blijven aan.',
+        context.l10n.thanksForSupportAdsStayOn,
         level: SnackLevel.success,
       );
     } else {
       Snack.show(
         context,
-        'Geen reward geregistreerd. Probeer opnieuw als je wil supporten.',
+        context.l10n.noRewardRecordedTryAgain,
         level: SnackLevel.info,
       );
     }
@@ -354,8 +355,8 @@ class _SupportScreenState extends State<SupportScreen> {
     Snack.show(
       context,
       removed > 0
-          ? 'Favourites cleaned: removed $removed invalid or duplicate entries.'
-          : 'No invalid or duplicate favourites found.',
+          ? context.l10n.favouritesCleanedRemovedInvalidDuplicate(removed)
+          : context.l10n.noInvalidDuplicateFavouritesFound,
       level: SnackLevel.success,
     );
   }
@@ -382,13 +383,13 @@ class _SupportScreenState extends State<SupportScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Support ${getAppTitle()}',
+                  context.l10n.support(getAppTitle()),
                   style: theme.textTheme.titleLarge
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'If you enjoy using ${getAppTitle()}, the best way to support continued development is via donations or the one-time Remove Ads unlock.',
+                  context.l10n.ifEnjoyUsingBestWay(getAppTitle()),
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 12),
@@ -406,7 +407,7 @@ class _SupportScreenState extends State<SupportScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Ads watched by supporters: $_adsWatchedCount',
+                          context.l10n.adsWatchedBySupporters(_adsWatchedCount),
                           style: theme.textTheme.bodyMedium
                               ?.copyWith(fontWeight: FontWeight.w600),
                         ),
@@ -429,7 +430,7 @@ class _SupportScreenState extends State<SupportScreen> {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        'Ads paused: ${_formatDuration(adBreakRemaining)} remaining',
+                        context.l10n.adsPausedRemaining(_formatDuration(adBreakRemaining)),
                         style: theme.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -449,15 +450,15 @@ class _SupportScreenState extends State<SupportScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Remove Ads',
+                  context.l10n.removeAds,
                   style: theme.textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   purchase.isAdFree
-                      ? 'Ads are already removed on this device.'
-                      : 'One-time unlock that suppresses every ad placement in the app.',
+                      ? context.l10n.adsAlreadyRemovedDevice
+                      : context.l10n.oneTimeUnlockSuppressesEvery,
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 12),
@@ -471,8 +472,8 @@ class _SupportScreenState extends State<SupportScreen> {
                       ),
                       label: Text(
                         purchase.isAdFree
-                            ? 'Ads removed'
-                            : 'Remove Ads — ${purchase.removeAdsPriceLabel}',
+                            ? context.l10n.adsRemoved
+                            : context.l10n.removeAds2(purchase.removeAdsPriceLabel),
                       ),
                       onPressed: purchase.storeAvailable && !purchase.isAdFree
                           ? _buyRemoveAds
@@ -480,7 +481,7 @@ class _SupportScreenState extends State<SupportScreen> {
                     ),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.restore),
-                      label: const Text('Restore Purchase'),
+                      label: Text(context.l10n.restorePurchase),
                       onPressed:
                           purchase.storeAvailable ? _restorePurchases : null,
                     ),
@@ -490,7 +491,7 @@ class _SupportScreenState extends State<SupportScreen> {
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
-                      'Purchases are only available on Android Play builds.',
+                      context.l10n.purchasesOnlyAvailableAndroidPlay,
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
@@ -509,20 +510,20 @@ class _SupportScreenState extends State<SupportScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Player Favourites',
+                  context.l10n.playerFavourites2,
                   style: theme.textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Remove ghost entries and deduplicate favourites by path, URL, or content id.',
+                  context.l10n.removeGhostEntriesDeduplicateFavourites,
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   onPressed: _cleanupPlayerFavourites,
                   icon: const Icon(Icons.cleaning_services),
-                  label: const Text('Clean Up Favourites'),
+                  label: Text(context.l10n.cleanUpFavourites),
                 ),
               ],
             ),
@@ -539,13 +540,13 @@ class _SupportScreenState extends State<SupportScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Goodwill Support Ads',
+                    context.l10n.goodwillSupportAds,
                     style: theme.textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'No fake promises: these actions are exactly what they claim.',
+                    context.l10n.noFakePromisesTheseActions,
                     style: theme.textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 12),
@@ -566,14 +567,14 @@ class _SupportScreenState extends State<SupportScreen> {
                                 ),
                               )
                             : const Icon(Icons.pause_circle_filled),
-                        label: const Text('Turn ads off for 30 min'),
+                        label: Text(context.l10n.turnAdsOff30Min),
                       ),
                       OutlinedButton.icon(
                         onPressed: adActionsEnabled && !_isRunningAdAction
                             ? _watchAdToSupportWithoutAdPause
                             : null,
                         icon: const Icon(Icons.favorite),
-                        label: const Text('Support me (ads stay on)'),
+                        label: Text(context.l10n.supportMeAdsStay),
                       ),
                     ],
                   ),
@@ -581,8 +582,8 @@ class _SupportScreenState extends State<SupportScreen> {
                     const SizedBox(height: 8),
                     Text(
                       hasAdBreak
-                          ? 'Ad pause active. Rewarded ads are temporarily hidden.'
-                          : 'Rewarded ads are currently unavailable.',
+                          ? context.l10n.adPauseActiveRewardedAds
+                          : context.l10n.rewardedAdsCurrentlyUnavailable,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -601,8 +602,8 @@ class _SupportScreenState extends State<SupportScreen> {
         Card(
           child: ListTile(
             leading: const Icon(Icons.play_circle_fill, color: Colors.red),
-            title: const Text('Watch the demo video'),
-            subtitle: const Text('A quick tour of the app on YouTube'),
+            title: Text(context.l10n.watchDemoVideo),
+            subtitle: Text(context.l10n.quickTourAppYoutube),
             trailing: const Icon(Icons.open_in_new),
             onTap: () => _openUrl('https://youtu.be/66Rx8PDY_r0'),
           ),
@@ -611,8 +612,8 @@ class _SupportScreenState extends State<SupportScreen> {
         Card(
           child: ListTile(
             leading: const Icon(Icons.coffee, color: Colors.brown),
-            title: const Text('Buy Me a Coffee'),
-            subtitle: const Text('Help keep this project free & open-source'),
+            title: Text(context.l10n.buyMeCoffee),
+            subtitle: Text(context.l10n.helpKeepProjectFreeOpen),
             trailing: const Icon(Icons.open_in_new),
             onTap: () => _openUrl('https://buymeacoffee.com/orokaconner'),
           ),
@@ -623,9 +624,9 @@ class _SupportScreenState extends State<SupportScreen> {
             child: ListTile(
               leading: Icon(Icons.open_in_browser,
                   color: Theme.of(context).colorScheme.primary),
-              title: const Text('Advanced build on GitHub'),
+              title: Text(context.l10n.advancedBuildGithub),
               subtitle:
-                  const Text('Open-source build with all features enabled'),
+                  Text(context.l10n.openSourceBuildAllFeatures),
               trailing: const Icon(Icons.open_in_new),
               onTap: () => _openUrl(
                   'https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases'),
@@ -635,9 +636,9 @@ class _SupportScreenState extends State<SupportScreen> {
         Card(
           child: ListTile(
             leading: const Icon(Icons.favorite, color: Colors.pink),
-            title: const Text('GitHub Sponsors'),
+            title: Text(context.l10n.githubSponsors),
             subtitle:
-                const Text('Support ongoing development and feature work'),
+                Text(context.l10n.supportOngoingDevelopmentFeatureWork),
             trailing: const Icon(Icons.open_in_new),
             onTap: () => _openUrl('https://github.com/sponsors/Lukas-Bohez'),
           ),
@@ -652,20 +653,15 @@ class _SupportScreenState extends State<SupportScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Privacy First',
+                  context.l10n.privacyFirst,
                   style: theme.textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   kPlayStoreBuild
-                      ? 'This app does not collect analytics or track what you '
-                          'download, and all processing happens locally on your '
-                          'device. Ads are served by Google AdMob, which uses '
-                          'your device advertising ID.'
-                      : 'This app does not collect analytics or track what you '
-                          'download. All processing happens locally on your '
-                          'device.',
+                      ? context.l10n.appDoesNotCollectAnalytics
+                      : context.l10n.appDoesNotCollectAnalytics2,
                 ),
               ],
             ),

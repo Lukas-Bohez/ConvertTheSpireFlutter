@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/update_service.dart';
+import '../utils/l10n.dart';
 
 class UpdateBanner extends StatelessWidget {
   final UpdateInfo info;
@@ -31,7 +32,7 @@ class UpdateBanner extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'v${info.latestVersion} available',
+                    context.l10n.vAvailable(info.latestVersion),
                     style: TextStyle(
                       color: cs.onPrimaryContainer,
                       fontWeight: FontWeight.bold,
@@ -56,14 +57,14 @@ class UpdateBanner extends StatelessWidget {
               onPressed: onDownload,
               style:
                   TextButton.styleFrom(foregroundColor: cs.onPrimaryContainer),
-              child: const Text('Download'),
+              child: Text(context.l10n.actionDownload),
             ),
             IconButton(
               icon: Icon(Icons.close, color: cs.onPrimaryContainer, size: 18),
               onPressed: onDismiss,
               padding: EdgeInsets.zero,
               visualDensity: VisualDensity.compact,
-              tooltip: 'Dismiss',
+              tooltip: context.l10n.dismiss,
             ),
           ],
         ),

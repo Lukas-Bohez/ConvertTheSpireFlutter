@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/l10n.dart';
+
 /// Manages progressive onboarding tooltips.
 ///
 /// Steps:
@@ -52,29 +54,26 @@ class OnboardingTooltipService {
     await _prefs?.setStringList(_visitedScreensKey, []);
   }
 
-  /// Descriptions shown as a banner on first visit to each screen.
-  static const Map<String, String> screenDescriptions = {
-    'search.tab':
-        'Add a torrent, magnet link, or supported source to the queue.',
-    'multisearch.tab':
-        'Search multiple sources simultaneously and add results to your queue.',
-    'browser.tab':
-        'Browse the web with built-in ad blocking and link detection.',
-    'queue.tab': 'Track and manage your downloads here.',
-    'playlists.tab':
-        'Load collections, compare with local folders, and download missing items.',
-    'bulkimport.tab': 'Paste a list of links or items to bulk-download them.',
-    'stats.tab': 'View your download statistics and trends.',
-    'settings.tab': 'Configure download directory, format, quality, and tools.',
-    'support.tab':
-        'Support the project via donations or by contributing feedback.',
-    'convert.tab':
-        'Convert audio and video files between formats using FFmpeg.',
-    'logs.tab': 'View the activity log for debugging and monitoring.',
-    'guide.tab': 'Documentation, tips, and troubleshooting.',
-    'player.tab':
-        'Play your downloaded music and videos with the built-in media player.',
-  };
+  /// Description shown as a banner on the first visit to [route], in the
+  /// app's language, or null for screens without one.
+  static String? screenDescription(AppLocalizations l, String route) {
+    return switch (route) {
+      'search.tab' => l.bannerSearch,
+      'multisearch.tab' => l.bannerMultiSearch,
+      'browser.tab' => l.bannerBrowser,
+      'queue.tab' => l.bannerQueue,
+      'playlists.tab' => l.bannerPlaylists,
+      'bulkimport.tab' => l.bannerBulkImport,
+      'stats.tab' => l.bannerStats,
+      'settings.tab' => l.bannerSettings,
+      'support.tab' => l.bannerSupport,
+      'convert.tab' => l.bannerConvert,
+      'logs.tab' => l.bannerLogs,
+      'guide.tab' => l.bannerGuide,
+      'player.tab' => l.bannerPlayer,
+      _ => null,
+    };
+  }
 }
 
 /// A small dismissible banner shown at the top of a screen on first visit.

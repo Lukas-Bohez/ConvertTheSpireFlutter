@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:convert_the_spire_reborn/src/browser/extensions/extension_hosts.dart';
 import 'package:convert_the_spire_reborn/src/browser/extensions/web_extension_host.dart';
+import 'package:convert_the_spire_reborn/src/config/build_flags.dart';
 import 'package:convert_the_spire_reborn/src/screens/browser/browser_toolbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -112,10 +113,12 @@ void main() {
       expect(find.byTooltip('Extensions'), findsNothing);
     });
 
-    testWidgets('platforms without extensions get no button and no menu item',
+    testWidgets('the Play build without extensions gets no button or item',
         (tester) async {
       ExtensionHosts.current =
           const UnsupportedExtensionHost('Windows only for now.');
+      setPlayStoreBuildFlag(true);
+      addTearDown(() => setPlayStoreBuildFlag(false));
       await tester.pumpWidget(_toolbar());
       await tester.pumpAndSettle();
 
@@ -125,6 +128,24 @@ void main() {
       expect(find.text('Extensions'), findsNothing,
           reason: 'the Play build must not grow an Extensions entry');
       expect(find.text('Userscripts'), findsOneWidget);
+    });
+
+    testWidgets(
+        'phones without an extension engine still find Extensions in the menu',
+        (tester) async {
+      ExtensionHosts.current =
+          const UnsupportedExtensionHost('Windows only for now.');
+      final actions = <String>[];
+      await tester.pumpWidget(_toolbar(onMenuAction: actions.add));
+      await tester.pumpAndSettle();
+
+      // No toolbar button: there are no popups to open.
+      expect(find.byTooltip('Extensions'), findsNothing);
+      await tester.tap(find.byTooltip('More options'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Extensions'));
+      await tester.pumpAndSettle();
+      expect(actions.last, 'extensions');
     });
 
     testWidgets('the menu offers Extensions where they are supported',

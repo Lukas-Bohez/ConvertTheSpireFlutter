@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/unified_download_task.dart';
+import '../utils/l10n.dart';
 
 /// TrackSpire Downloads — the one and only place a downloaded file gets
 /// deleted from disk. UnifiedDownloadService.deleteFile() is only ever
@@ -23,7 +24,7 @@ Future<bool?> showDeleteDownloadDialog(
   return showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Delete this file?'),
+      title: Text(context.l10n.deleteFile3),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -34,23 +35,22 @@ Future<bool?> showDeleteDownloadDialog(
             Text(task.savePath!, style: Theme.of(context).textTheme.bodySmall),
           ],
           const SizedBox(height: 12),
-          const Text(
-            'This will permanently delete the file from your device. '
-            'This can\'t be undone.',
+          Text(
+            context.l10n.willPermanentlyDeleteFileFrom,
           ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          child: Text(context.l10n.actionCancel),
         ),
         FilledButton.tonal(
           style: FilledButton.styleFrom(
             foregroundColor: Theme.of(context).colorScheme.error,
           ),
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Delete'),
+          child: Text(context.l10n.actionDelete),
         ),
       ],
     ),

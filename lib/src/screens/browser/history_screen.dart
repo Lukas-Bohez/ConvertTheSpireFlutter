@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../data/browser_db.dart';
+import '../../utils/l10n.dart';
 import '../../widgets/empty_state.dart';
 
 /// History screen with date-grouped entries, search, swipe-to-delete,
@@ -93,30 +95,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
       canPop: true,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('History'),
+          title: Text(context.l10n.history),
           actions: [
             IconButton(
               icon: const Icon(Icons.delete_sweep_rounded),
-              tooltip: 'Clear all history',
+              tooltip: context.l10n.clearAllHistory,
               onPressed: _items.isEmpty
                   ? null
                   : () async {
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (_) => AlertDialog(
-                          title: const Text('Clear history?'),
+                          title: Text(context.l10n.clearHistory),
                           // overflow-fix: make dialog content scroll-safe on very small screens.
-                          content: const SingleChildScrollView(
+                          content: SingleChildScrollView(
                             child:
-                                Text('All browsing history will be deleted.'),
+                                Text(context.l10n.allBrowsingHistoryWillDeleted),
                           ),
                           actions: [
                             TextButton(
                                 onPressed: () => Navigator.pop(_, false),
-                                child: const Text('Cancel')),
+                                child: Text(context.l10n.actionCancel)),
                             FilledButton(
                                 onPressed: () => Navigator.pop(_, true),
-                                child: const Text('Clear')),
+                                child: Text(context.l10n.actionClear)),
                           ],
                         ),
                       );
@@ -128,11 +130,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
             PopupMenuButton<String>(
               onSelected: _handleClearAction,
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'hour', child: Text('Last hour')),
-                PopupMenuItem(value: 'day', child: Text('Last 24 hours')),
-                PopupMenuItem(value: 'week', child: Text('Last 7 days')),
-                PopupMenuItem(value: 'all', child: Text('All time')),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'hour', child: Text(context.l10n.lastHour)),
+                PopupMenuItem(value: 'day', child: Text(context.l10n.last24Hours)),
+                PopupMenuItem(value: 'week', child: Text(context.l10n.last7Days)),
+                PopupMenuItem(value: 'all', child: Text(context.l10n.allTime)),
               ],
               icon: const Icon(Icons.more_vert),
             ),
@@ -146,7 +148,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               child: TextField(
                 controller: _historySearchController,
                 decoration: InputDecoration(
-                  hintText: 'Search history…',
+                  hintText: context.l10n.searchHistory,
                   prefixIcon: const Icon(Icons.search, size: 20),
                   suffixIcon: _search.isNotEmpty
                       ? IconButton(
@@ -177,10 +179,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
             // -- List --
             Expanded(
               child: _items.isEmpty && !_loading
-                  ? const EmptyState(
+                  ? EmptyState(
                       icon: Icons.history,
-                      title: 'No history',
-                      subtitle: 'Your browsing history will appear here',
+                      title: context.l10n.noHistory,
+                      subtitle: context.l10n.browsingHistoryWillAppearHere,
                     )
                   : ListView.builder(
                       controller: _scrollController,
@@ -237,41 +239,36 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final day = DateTime(dt.year, dt.month, dt.day);
-    if (day == today) return 'Today';
-    if (day == today.subtract(const Duration(days: 1))) return 'Yesterday';
-    if (now.difference(dt).inDays < 7) return _weekday(dt.weekday);
-    return '${dt.day}/${dt.month}/${dt.year}';
-  }
-
-  String _weekday(int w) {
-    const names = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday'
-    ];
-    return names[w - 1];
+    if (day == today) return context.l10n.today;
+    if (day == today.subtract(const Duration(days: 1))) return context.l10n.yesterday;
+    // Weekday names and dates in the app's language.
+    final locale = context.l10n.localeName;
+    try {
+      if (now.difference(dt).inDays < 7) return DateFormat.EEEE(locale).format(dt);
+      return DateFormat.yMd(locale).format(dt);
+    } catch (_) {
+      // Date symbols not loaded for this locale (e.g. in a bare test app).
+      if (now.difference(dt).inDays < 7) return DateFormat.EEEE().format(dt);
+      return DateFormat.yMd().format(dt);
+    }
   }
 
   void _handleClearAction(String range) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Clear history?'),
+        title: Text(context.l10n.clearHistory),
         // overflow-fix: keep dynamic range text scroll-safe inside dialog.
         content: SingleChildScrollView(
-          child: Text('Clear browsing history for $range?'),
+          child: Text(context.l10n.clearBrowsingHistory(range)),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.actionCancel)),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Clear')),
+              child: Text(context.l10n.actionClear)),
         ],
       ),
     );

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../config/build_flags.dart';
 import '../theme/motion_tokens.dart';
+import '../utils/l10n.dart';
 import '../widgets/tv_safe_area.dart';
 
 /// A multi-page onboarding flow that introduces the app's features.
@@ -18,7 +19,7 @@ import '../widgets/tv_safe_area.dart';
 /// [TvSafeArea]. See ONBOARDING_UX_REDESIGN.md for the full write-up and
 /// the old-page -> new-page content mapping. Pages are no longer dropped
 /// wholesale for the Play Store build the way they used to be - see
-/// `_buildPages()` below - only the bullets inside a page that don't apply
+/// `_buildPages(context)` below - only the bullets inside a page that don't apply
 /// to the current build/platform are hidden, so every flavour still gets
 /// all 5 pages.
 class OnboardingScreen extends StatefulWidget {
@@ -44,24 +45,20 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
   late ThemeMode _themeMode;
-  late final List<_OnboardingPage> _pages;
+  List<_OnboardingPage> _pages = const [];
   int _page = 0;
 
   // --- Page content --------------------------------------------------------
 
-  static List<_OnboardingPage> _buildPages() => <_OnboardingPage>[
+  static List<_OnboardingPage> _buildPages(BuildContext context) =>
+      <_OnboardingPage>[
         // Welcome (was page 1 of 14: Welcome)
         _OnboardingPage(
           icon: Icons.download_rounded,
-          title: 'Welcome',
+          title: context.l10n.welcome,
           detail: kPlayStoreBuild
-              ? '${getAppTitle()} is a torrent vault and media hub. Add '
-                  'magnet links and .torrent files, manage downloads, and '
-                  'keep everything organized from one app.'
-              : '${getAppTitle()} is a cross-platform torrent and media '
-                  'toolkit. Add magnet links and .torrent files, manage '
-                  'downloads, convert formats, cast to your TV, and more '
-                  '- all from one app.',
+              ? context.l10n.torrentVaultMediaHubAdd(getAppTitle())
+              : context.l10n.crossPlatformTorrentMediaToolkit(getAppTitle()),
           color: const Color(0xFF00897B),
           preview: const _WelcomePreview(),
         ),
@@ -70,41 +67,37 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         // Multi-Search, Browser, Bulk Import - 5 of the old 14 pages)
         _OnboardingPage(
           icon: Icons.travel_explore_rounded,
-          title: 'Find & Add Content',
+          title: context.l10n.findAddContent,
           detail: kPlayStoreBuild
-              ? 'Browse the web in the built-in view and open magnet or '
-                  'torrent links directly, without leaving the app.'
-              : 'Add torrent files, magnet links, browser links, or local '
-                  'files. Search by keyword, compare results from more '
-                  'than one source, browse the web for links, or paste a '
-                  'whole list to import at once.',
+              ? context.l10n.browseWebBuiltViewOpen
+              : context.l10n.addTorrentFilesMagnetLinks,
           color: const Color(0xFF6C63FF),
           preview: _FeatureListPreview(items: [
             _FeatureItem(
               icon: Icons.search_rounded,
               color: const Color(0xFF6C63FF),
-              label: 'Search',
-              blurb: 'Preview a result before you download it',
+              label: context.l10n.tabSearch,
+              blurb: context.l10n.previewResultBeforeDownload,
               visible: !kPlayStoreBuild,
             ),
             _FeatureItem(
               icon: Icons.travel_explore_rounded,
               color: const Color(0xFF43CFBB),
-              label: 'Multi-Search',
-              blurb: 'Compare results from several sources at once',
+              label: context.l10n.multiSearch,
+              blurb: context.l10n.compareResultsFromSeveralSources,
               visible: !kPlayStoreBuild,
             ),
-            const _FeatureItem(
+            _FeatureItem(
               icon: Icons.open_in_browser_rounded,
-              color: Color(0xFF4A90D9),
-              label: 'Browser',
-              blurb: 'Browse the web and open links in-app',
+              color: const Color(0xFF4A90D9),
+              label: context.l10n.tabBrowser,
+              blurb: context.l10n.browseWebOpenLinksApp,
             ),
             _FeatureItem(
               icon: Icons.upload_file_rounded,
               color: const Color(0xFF5BA85A),
-              label: 'Bulk Import',
-              blurb: 'Paste or import a list of links at once',
+              label: context.l10n.bulkImport,
+              blurb: context.l10n.pasteImportListLinksOnce,
               visible: !kPlayStoreBuild,
             ),
           ]),
@@ -113,26 +106,23 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         // Manage Your Downloads (was: Queue, Stats)
         _OnboardingPage(
           icon: Icons.queue_music_rounded,
-          title: 'Manage Your Downloads',
+          title: context.l10n.manageDownloads,
           detail: kPlayStoreBuild
-              ? 'Manage your downloads: start, retry, or cancel, and find '
-                  'finished files in your file manager.'
-              : 'Manage your downloads: start, retry, cancel, or cast to '
-                  'your TV. Check totals, success rate, and trends any '
-                  'time in Stats.',
+              ? context.l10n.manageDownloadsStartRetryCancel
+              : context.l10n.manageDownloadsStartRetryCancel2,
           color: const Color(0xFFE07B54),
           preview: _FeatureListPreview(items: [
-            const _FeatureItem(
+            _FeatureItem(
               icon: Icons.queue_music_rounded,
-              color: Color(0xFFE07B54),
-              label: 'Queue',
-              blurb: 'Start, retry, cancel, and track status',
+              color: const Color(0xFFE07B54),
+              label: context.l10n.tabQueue,
+              blurb: context.l10n.startRetryCancelTrackStatus,
             ),
             _FeatureItem(
               icon: Icons.bar_chart_rounded,
               color: const Color(0xFFD4A017),
-              label: 'Stats',
-              blurb: 'Totals, success rate, and trends over time',
+              label: context.l10n.stats,
+              blurb: context.l10n.totalsSuccessRateTrendsOver,
               visible: !kPlayStoreBuild,
             ),
           ]),
@@ -141,38 +131,32 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         // Play, Convert & Customize (was: Player, Convert, Settings)
         _OnboardingPage(
           icon: Icons.tune_rounded,
-          title: 'Play, Convert & Customize',
-          // Convert tab is hidden on all Android builds, not just Play
-          // Store - see isTabVisibleInCurrentBuild(9) in build_flags.dart.
-          // The old onboarding described Convert unconditionally, so
-          // Android users were being told about a feature they had no way
-          // to reach. Tying this page to the same flag fixes that.
+          title: context.l10n.playConvertCustomize,
+          // Tied to the tab's visibility, so the tour never describes a
+          // screen someone has no way to reach.
           detail: isTabVisibleInCurrentBuild(9)
-              ? 'Play your files in the built-in player, convert between '
-                  'formats with FFmpeg, and set folders, defaults, and '
-                  'appearance in Settings.'
-              : 'Play your files in the built-in player, and set folders, '
-                  'format defaults, and appearance in Settings.',
+              ? context.l10n.playFilesBuiltPlayerConvert
+              : context.l10n.playFilesBuiltPlayerSet,
           color: const Color(0xFF7E57C2),
           preview: _FeatureListPreview(items: [
-            const _FeatureItem(
+            _FeatureItem(
               icon: Icons.music_note_rounded,
-              color: Color(0xFF7E57C2),
-              label: 'Player',
-              blurb: 'Playback, shuffle, repeat, and a simple library',
+              color: const Color(0xFF7E57C2),
+              label: context.l10n.tabPlayer,
+              blurb: context.l10n.playbackShuffleRepeatSimpleLibrary,
             ),
             _FeatureItem(
               icon: Icons.transform_rounded,
               color: const Color(0xFFE57373),
-              label: 'Convert',
-              blurb: 'Convert audio/video between formats with FFmpeg',
+              label: context.l10n.tabConvert,
+              blurb: context.l10n.convertAudioVideoBetweenFormats,
               visible: isTabVisibleInCurrentBuild(9),
             ),
-            const _FeatureItem(
+            _FeatureItem(
               icon: Icons.settings_rounded,
-              color: Color(0xFF607D8B),
-              label: 'Settings',
-              blurb: 'Folders, format defaults, retry behaviour, and more',
+              color: const Color(0xFF607D8B),
+              label: context.l10n.tabSettings,
+              blurb: context.l10n.foldersFormatDefaultsRetryBehaviour,
             ),
           ]),
         ),
@@ -180,13 +164,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         // Help & Support (was: Guide, Logs, Support Us)
         _OnboardingPage(
           icon: Icons.favorite_rounded,
-          title: 'Help & Support',
+          title: context.l10n.helpSupport,
           detail: kPlayStoreBuild
-              ? 'Revisit the Guide any time you need a refresher, and '
-                  'help keep the project going with a donation.'
-              : 'Revisit the Guide any time, check the internal Logs if '
-                  'something goes wrong, and help keep the project '
-                  'open-source and ad-free with a donation.',
+              ? context.l10n.revisitGuideAnyTimeNeed
+              : context.l10n.revisitGuideAnyTimeCheck,
           color: const Color(0xFFE91E63),
           preview: const _HelpSupportPreview(),
         ),
@@ -194,10 +175,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   // --- Lifecycle ------------------------------------------------------------
 
+  // Built here rather than in initState: the text comes from the app's
+  // localizations, which initState cannot read, and it follows a language
+  // change.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _pages = _buildPages(context);
+  }
+
   @override
   void initState() {
     super.initState();
-    _pages = _buildPages();
     _themeMode = widget.themeMode;
     _controller = PageController();
         _animController = AnimationController(
@@ -280,9 +269,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       };
 
   String get _themeLabel => switch (_themeMode) {
-        ThemeMode.light => 'Light',
-        ThemeMode.dark => 'Dark',
-        ThemeMode.system => 'Auto',
+        ThemeMode.light => context.l10n.light,
+        ThemeMode.dark => context.l10n.dark,
+        ThemeMode.system => context.l10n.auto,
       };
 
   // --- Sub-builders -----------------------------------------------------
@@ -324,7 +313,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Step ${_page + 1} of ${_pages.length}',
+                context.l10n.step(_page + 1, _pages.length),
                 style: theme.textTheme.labelMedium?.copyWith(color: subtle),
               ),
               Text(
@@ -382,7 +371,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildThemeToggle(ThemeData theme) {
     final pageColor = _pages[_page].color;
     return Tooltip(
-      message: 'Theme: $_themeLabel \u2014 tap to cycle',
+      message: context.l10n.themeTapCycle(_themeLabel),
       child: InkWell(
         onTap: _cycleTheme,
         borderRadius: BorderRadius.circular(20),
@@ -436,9 +425,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       horizontal: 12, vertical: 12),
                 ),
                 icon: const Icon(Icons.arrow_back_ios_rounded, size: 15),
-                label: const Text(
-                  'Back',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                label: Text(
+                  context.l10n.back,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
               ),
             if (!isLast)
@@ -450,9 +439,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   padding: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 12),
                 ),
-                child: const Text(
-                  'Skip',
-                  style: TextStyle(
+                child: Text(
+                  context.l10n.skip,
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                     decoration: TextDecoration.underline,
@@ -480,7 +469,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                   icon: const Icon(Icons.check_rounded, size: 18),
-                  label: const Text("Let's Go!"),
+                  label: Text(context.l10n.letsGo),
                 )
               : ElevatedButton.icon(
                   key: const ValueKey('next'),
@@ -497,7 +486,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                   icon: const Icon(Icons.arrow_forward_ios_rounded, size: 15),
-                  label: const Text('Next'),
+                  label: Text(context.l10n.next),
                 ),
         ),
       ],
@@ -725,17 +714,18 @@ class _WelcomePreview extends StatelessWidget {
     final bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final border = isDark ? const Color(0xFF3A3A3A) : const Color(0xFFDDDDDD);
 
+    final l10n = context.l10n;
     final features = kPlayStoreBuild
-        ? const [
-            (Icons.download_rounded, 'Torrent downloads'),
-            (Icons.folder_copy_rounded, 'Queue & library'),
-            (Icons.favorite_outline, 'Support via donations'),
+        ? [
+            (Icons.download_rounded, l10n.featureTorrentDownloads),
+            (Icons.folder_copy_rounded, l10n.featureQueueLibrary),
+            (Icons.favorite_outline, l10n.supportViaDonations),
           ]
-        : const [
-            (Icons.download_rounded, 'Torrent downloads'),
-            (Icons.transform_rounded, 'Format conversion'),
-            (Icons.cast_rounded, 'DLNA / Cast to TV'),
-            (Icons.favorite_outline, 'Support via donations'),
+        : [
+            (Icons.download_rounded, l10n.featureTorrentDownloads),
+            (Icons.transform_rounded, l10n.featureFormatConversion),
+            (Icons.cast_rounded, l10n.featureDlnaCast),
+            (Icons.favorite_outline, l10n.supportViaDonations),
           ];
 
     return Container(
@@ -866,17 +856,17 @@ class _HelpSupportPreview extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _FeatureListPreview(items: [
-          const _FeatureItem(
+          _FeatureItem(
             icon: Icons.menu_book_rounded,
-            color: Color(0xFF26A69A),
-            label: 'Guide',
-            blurb: 'A help screen you can revisit any time',
+            color: const Color(0xFF26A69A),
+            label: context.l10n.tabGuide,
+            blurb: context.l10n.helpScreenCanRevisitAny,
           ),
           _FeatureItem(
             icon: Icons.list_alt_rounded,
             color: const Color(0xFF78909C),
-            label: 'Logs',
-            blurb: 'Inspect, copy, or clear the internal app log',
+            label: context.l10n.tabLogs,
+            blurb: context.l10n.inspectCopyClearInternalApp,
             visible: !kPlayStoreBuild,
           ),
         ]),
@@ -914,9 +904,9 @@ class _SupportPreview extends StatelessWidget {
               Icon(Icons.favorite_outline,
                   size: 18, color: Colors.green.shade600),
               const SizedBox(width: 8),
-              const Expanded(
-                child: Text('Support with a donation',
-                    style: TextStyle(fontSize: 12)),
+              Expanded(
+                child: Text(context.l10n.supportDonation,
+                    style: const TextStyle(fontSize: 12)),
               ),
             ],
           ),
@@ -926,9 +916,9 @@ class _SupportPreview extends StatelessWidget {
               Icon(Icons.coffee_outlined,
                   size: 18, color: Colors.green.shade600),
               const SizedBox(width: 8),
-              const Expanded(
-                child: Text('Buy Me a Coffee or sponsor on GitHub',
-                    style: TextStyle(fontSize: 12)),
+              Expanded(
+                child: Text(context.l10n.buyMeCoffeeSponsorGithub,
+                    style: const TextStyle(fontSize: 12)),
               ),
             ],
           ),
@@ -941,9 +931,8 @@ class _SupportPreview extends StatelessWidget {
               Expanded(
                 child: Text(
                     kPlayStoreBuild
-                        ? 'No analytics - everything runs locally '
-                            '(ads use your advertising ID)'
-                        : 'No analytics - everything runs locally',
+                        ? context.l10n.noAnalyticsEverythingRunsLocally
+                        : context.l10n.noAnalyticsEverythingRunsLocally2,
                     style: const TextStyle(fontSize: 12)),
               ),
             ],
@@ -956,10 +945,10 @@ class _SupportPreview extends StatelessWidget {
               color: accent.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'Go to Settings \u2192 Support to donate',
-                style: TextStyle(
+                context.l10n.goSettingsSupportDonate,
+                style: const TextStyle(
                     fontSize: 12, fontWeight: FontWeight.w600, color: accent),
               ),
             ),
