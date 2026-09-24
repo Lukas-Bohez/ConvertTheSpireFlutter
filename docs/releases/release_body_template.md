@@ -12,7 +12,26 @@
   <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/screenshots/custom-file-explorer-tv.webp" width="32%" alt="custom file explorer tv">
 </p>
 
+**Nothing to set up.** Download one file below, open it, and it runs: no installer, no Python, no command line, no account.
+
 {{NOTES}}
+
+## Install in a minute
+
+Pick your file under **Assets** just below.
+
+| | Download | Then |
+|---|---|---|
+| **Windows** | `ConvertTheSpireReborn-windows-x64.zip` | Extract it and double-click `convert_the_spire_reborn.exe`. That's it. |
+| **Android phone or TV** | `ConvertTheSpireReborn.apk` | Open the file and allow the install when Android asks. |
+| **macOS** | `ConvertTheSpireReborn-macOS.zip` | Unzip and open the app. If macOS says it cannot check the developer, right-click it and choose **Open**. |
+| **Google Play** | [The Play Store version](https://play.google.com/store/apps/details?id=com.torrentspire.ai) | Everything except the YouTube download features, which Play policy does not allow. |
+
+- **No installer and no admin rights on Windows.** On first start the app fetches yt-dlp and FFmpeg by itself and keeps yt-dlp up to date, so sites that change keep working. To remove it, delete the folder.
+- **Nothing extra on Android.** FFmpeg is built into the APK. No root, no Termux, no Google account. The same APK runs on Android TV.
+- **On a Mac,** yt-dlp installs itself too; converting to MP3 and M4A needs FFmpeg, which you add once with `brew install ffmpeg`.
+- **Updating?** On Android, open the new APK and it installs over the old one. On Windows, extract into a new folder rather than over the old one.
+- **Windows shows "Windows protected your PC"?** The app is not signed with a paid certificate yet. Choose **More info**, then **Run anyway**.
 
 ---
 

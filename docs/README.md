@@ -5,6 +5,7 @@ This folder is the main entry point for repo documentation. It keeps release not
 ## Start Here
 
 * [Latest release notes](releases/latest.md)
+* [How a release goes out](releases/how-to-release.md)
 * [Play AAB build guide](build/play-store-aab.md)
 * [Split-per-ABI guidance](build/split-per-abi.md)
 
