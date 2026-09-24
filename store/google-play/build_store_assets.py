@@ -21,6 +21,11 @@ What it writes
   android/app/src/play/res/             launcher icons (adaptive fg + legacy),
                                         icon background colour, and the in-app
                                         Android TV banner (android:banner)
+
+The in-app TV banner and launcher icons follow Google's Android TV sizes
+(developer.android.com/design/ui/tv/guides/system/tv-app-icon-guidelines):
+banner 320x180 px and icon 160x160 px at xhdpi, in mipmap-<density>/. Play
+review rejects the app ("no full-size app banner and/or icon") without them.
 """
 from pathlib import Path
 
@@ -206,6 +211,33 @@ def tv_banner(w, h):
     return bg.convert("RGB")
 
 
+def launcher_banner(w, h):
+    """In-app Android TV banner: logo + app name, centred and well inside the
+    edges, since the launcher rounds and zooms the tile. No tagline: it is
+    unreadable at this size, and Google's banner rules ask for the name only."""
+    bg = gradient(w, h)
+    d = ImageDraw.Draw(bg)
+    s = h / 360.0
+    logo_px, font_px, gap = 190 * s, 92 * s, 30 * s
+    title_font = font(BOLD, round(font_px))
+    text_w = d.textlength(TITLE, font=title_font)
+    # Keep the whole group within the middle 78% of the width.
+    fit = min(1.0, (w * 0.78) / (logo_px + gap + text_w))
+    if fit < 1.0:
+        logo_px, font_px, gap = logo_px * fit, font_px * fit, gap * fit
+        title_font = font(BOLD, round(font_px))
+        text_w = d.textlength(TITLE, font=title_font)
+    logo = logo_fit(round(logo_px))
+    x0 = (w - (logo.width + gap + text_w)) / 2
+    paste_center(bg, logo, x0 + logo.width / 2, h / 2)
+    # Centre the capital height on the logo, so the descender of "y" does not
+    # push the name up.
+    _, cap_top, _, cap_bottom = title_font.getbbox("B")
+    d.text((x0 + logo.width + gap, h / 2 - (cap_top + cap_bottom) / 2), TITLE,
+           font=title_font, fill="white")
+    return bg.convert("RGB")
+
+
 def store_icon(size):
     """Opaque square icon (Play Console 512x512)."""
     im = Image.new("RGBA", (size, size), ICON_BG + (255,))
@@ -232,13 +264,14 @@ def launcher_icons():
         paste_center(fg, logo_fit(round(fg_size * 0.58)), fg_size / 2, fg_size / 2)
         fg.save(d_dir / "ic_launcher_foreground.png", optimize=True)
 
-        # Legacy (pre-Android 8) icon: opaque rounded square, no see-through bits.
-        size = round(48 * scale)
-        legacy = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-        tile = Image.new("RGBA", (size, size), ICON_BG + (255,))
-        legacy.paste(tile, (0, 0), rounded_mask((size, size), round(size * 0.22)))
-        paste_center(legacy, logo_fit(round(size * 0.72)), size / 2, size / 2)
-        legacy.save(d_dir / "ic_launcher.png", optimize=True)
+        # Legacy icon, at the Android TV size of 80dp (160x160 px at xhdpi)
+        # rather than the phone's 48dp: Android TV requires at least that.
+        # Opaque edge to edge, so it is a full-size icon with no see-through
+        # corners; launchers apply their own shape.
+        size = round(80 * scale)
+        legacy = Image.new("RGBA", (size, size), ICON_BG + (255,))
+        paste_center(legacy, logo_fit(round(size * 0.68)), size / 2, size / 2)
+        legacy.convert("RGB").save(d_dir / "ic_launcher.png", optimize=True)
 
     any_dir = PLAY_RES / "mipmap-anydpi-v26"
     any_dir.mkdir(parents=True, exist_ok=True)
@@ -250,7 +283,9 @@ def launcher_icons():
         '</adaptive-icon>\n'
     )
     (any_dir / "ic_launcher.xml").write_text(xml, encoding="utf-8")
-    (any_dir / "ic_launcher_round.xml").write_text(xml, encoding="utf-8")
+    # android:roundIcon is not used (Android TV's guidelines deprecate it in
+    # favour of the adaptive icon above).
+    (any_dir / "ic_launcher_round.xml").unlink(missing_ok=True)
 
     colors = (
         '<?xml version="1.0" encoding="utf-8"?>\n'
@@ -262,15 +297,22 @@ def launcher_icons():
     (PLAY_RES / "values/colors.xml").write_text(colors, encoding="utf-8")
 
 
+BANNER_SIZES = {"mdpi": (160, 90), "hdpi": (240, 135), "xhdpi": (320, 180),
+                "xxhdpi": (480, 270), "xxxhdpi": (640, 360)}
+
+
 def android_tv_banner():
-    """android:banner drawable (320x180dp). 640x360 for xhdpi, 320x180 default."""
-    for sub, (w, h) in {"drawable-xhdpi": (640, 360), "drawable": (320, 180)}.items():
-        img = tv_banner(w, h)
+    """android:banner = @mipmap/banner: 160x90dp, i.e. 320x180 px at xhdpi."""
+    for res in (PLAY_RES, MAIN_RES):
         # play/ overrides main/, but the GitHub (full) flavor uses main/.
-        for res in (PLAY_RES, MAIN_RES):
-            out = res / sub
+        for density, (w, h) in BANNER_SIZES.items():
+            out = res / f"mipmap-{density}"
             out.mkdir(parents=True, exist_ok=True)
-            img.save(out / "banner.png", optimize=True)
+            launcher_banner(w, h).save(out / "banner.png", optimize=True)
+        # The banner used to be a drawable twice this size; a stale copy
+        # would be a second, conflicting banner resource.
+        for sub in ("drawable", "drawable-xhdpi"):
+            (res / sub / "banner.png").unlink(missing_ok=True)
 
 
 # --------------------------------------------------------------------------

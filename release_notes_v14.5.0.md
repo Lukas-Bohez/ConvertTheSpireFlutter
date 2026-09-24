@@ -13,6 +13,7 @@
 - **Export missing list and Export as M3U work on Android.** Both did nothing on phones.
 - **Saving a converted file tells you where it went,** or why it could not be saved. The Save button used to give no sign either way.
 - **Compare fits a phone.** The confidence filters, the Missing tab buttons and the Extras headings ran off the edge of the screen; they wrap now. The Quick Download card no longer overflows with larger text.
+- **A full-size tile on Android TV.** The app's banner and icon now come in the sizes Android TV asks for, and the banner shows just the logo and the name, big enough to read from the couch, instead of a tagline too small to read. Google Play's TV review had flagged the old ones.
 
 ### New
 
@@ -38,5 +39,6 @@
 ### Build Notes
 
 - Version 14.5.0+1298. Build the Play AAB with `--flavor play` as usual.
-- `flutter analyze` is clean. `flutter test`: 492 of 493 pass without internet access; the other is the YouTube diagnostic test, which needs it.
+- `flutter analyze` is clean; CI had failed on one warning in `torrent_engine_service.dart`, now fixed. All 493 tests pass.
+- Android TV: `android:banner` is now `@mipmap/banner`, 320x180 at xhdpi (160x90 to 640x360 across mdpi to xxxhdpi), and the Play flavor's legacy launcher icons are 160x160 at xhdpi, as Google's TV guidelines require. `android:roundIcon` is gone; the adaptive icon covers it. All of it comes from `store/google-play/build_store_assets.py`.
 - New native Android methods on the `convert_the_spire/saf` channel: `getFilesDir`, `getCacheDir`, `getExternalFilesDir` (the Dart side already called these) and `getPublicDownloadsDir`. `listTree` now queries `DocumentsContract` once per folder and falls back to the old `DocumentFile` walk if a provider refuses.
