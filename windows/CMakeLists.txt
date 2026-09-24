@@ -126,6 +126,16 @@ set_target_properties(${BINARY_NAME} flutter_wrapper_app PROPERTIES
 # from the install list.
 list(FILTER PLUGIN_BUNDLED_LIBRARIES EXCLUDE REGEX "zlib\\.dll$")
 
+# FFmpegKit's prebuilt FFmpeg (libffmpegkit.dll plus ~100 MinGW DLLs, about
+# 117 MB) is only ever called on Android and iOS; on Windows the app converts
+# with a separate ffmpeg.exe. Its build step also turns ASLR off in every one
+# of those DLLs to dodge a MinGW relocation crash, and unsigned DLLs without
+# ASLR - avdevice, FFmpeg's screen and camera capture library, first among
+# them - get flagged by Windows Defender (issue #12). The plugin loads
+# libffmpegkit.dll with LoadLibrary and carries on without it, so leave all
+# of them out of the Windows bundle.
+list(FILTER PLUGIN_BUNDLED_LIBRARIES EXCLUDE REGEX "/ffmpeg_kit_flutter_new/ffmpeg-kit/bin/")
+
 
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can
