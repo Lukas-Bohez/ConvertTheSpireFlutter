@@ -37,12 +37,18 @@ void main() {
       final version = RegExp(r'^version:\s*(\S+)', multiLine: true)
           .firstMatch(File('pubspec.yaml').readAsStringSync())!
           .group(1)!;
-      final entry = WhatsNewService.entryFor(
-          File('CHANGELOG.md').readAsStringSync(), version)!;
+      // As somebody coming from 14.3.1 sees it: this release and the ones
+      // they skipped, which is the longest the dialog gets.
+      final entry = WhatsNewService.entrySince(
+          File('CHANGELOG.md').readAsStringSync(), version,
+          lastSeen: '14.3.1')!;
 
       await pumpAt(tester, size, Scaffold(body: WhatsNewDialog(entry: entry)));
 
       expect(find.text('Got it'), findsOneWidget);
+      for (final older in entry.earlier) {
+        expect(find.text('Version ${older.version}'), findsOneWidget);
+      }
       expect(tester.takeException(), isNull);
     });
 

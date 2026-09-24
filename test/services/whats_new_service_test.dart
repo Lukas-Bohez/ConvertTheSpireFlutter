@@ -74,6 +74,83 @@ void main() {
     });
   });
 
+  group('entrySince', () {
+    const skipped = '''
+## 14.10.0 — Ten
+
+- Ten.
+
+## 14.9.0 — Nine
+
+- Nine.
+
+## 14.4.1+1297 — Starts again
+
+- Fixed the spinner.
+
+## 14.4.0+1296 — Extensions
+
+- Extensions.
+
+## 14.3.1+1295 — Polish
+
+- Polish.
+''';
+
+    List<String> earlierOf(WhatsNewEntry? entry) =>
+        entry!.earlier.map((e) => e.version).toList();
+
+    test('carries every release after the last one seen, newest first', () {
+      final entry =
+          WhatsNewService.entrySince(skipped, '14.4.1', lastSeen: '14.3.1');
+
+      expect(entry!.version, '14.4.1');
+      expect(entry.body, contains('Fixed the spinner'));
+      expect(earlierOf(entry), ['14.4.0']);
+      expect(entry.earlier.single.title, 'Extensions');
+    });
+
+    test('nothing skipped means nothing extra', () {
+      final entry =
+          WhatsNewService.entrySince(skipped, '14.4.1', lastSeen: '14.4.0');
+
+      expect(earlierOf(entry), isEmpty);
+    });
+
+    test('with no record, everything since the dialog arrived is new', () {
+      final entry = WhatsNewService.entrySince(skipped, '14.4.1');
+
+      expect(earlierOf(entry), ['14.4.0'],
+          reason: 'releases before ${WhatsNewService.firstVersionWithDialog} '
+              'predate the dialog, and the person saw them in the app');
+    });
+
+    test('versions compare as numbers, not text', () {
+      final entry =
+          WhatsNewService.entrySince(skipped, '14.10.0', lastSeen: '14.4.1');
+
+      expect(earlierOf(entry), ['14.9.0']);
+    });
+
+    test('never more than ${WhatsNewService.maxEntries} releases', () {
+      final many = StringBuffer();
+      for (var minor = 30; minor >= 10; minor--) {
+        many.writeln('## 15.$minor.0 — Release $minor\n\n- Item.\n');
+      }
+      final entry = WhatsNewService.entrySince(many.toString(), '15.30.0',
+          lastSeen: '15.10.0');
+
+      expect(entry!.earlier.length, WhatsNewService.maxEntries - 1);
+      expect(entry.earlier.first.version, '15.29.0',
+          reason: 'the most recent releases are the ones kept');
+    });
+
+    test('an unknown current version has no entry', () {
+      expect(WhatsNewService.entrySince(skipped, '99.0.0', lastSeen: '1.0.0'),
+          isNull);
+    });
+  });
+
   group('the real changelog', () {
     test('has an entry for the version in pubspec', () {
       final pubspec = File('pubspec.yaml').readAsStringSync();
@@ -88,6 +165,22 @@ void main() {
       expect(entry, isNotNull,
           reason: 'CHANGELOG.md has no section for $version, so the release '
               'would ship with nothing to show. Add one before releasing.');
+    });
+
+    test('someone updating from 14.3.1 hears about 14.4.0 as well', () {
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+      final version = RegExp(r'^version:\s*(\S+)', multiLine: true)
+          .firstMatch(pubspec)!
+          .group(1)!;
+
+      final entry = WhatsNewService.entrySince(
+          File('CHANGELOG.md').readAsStringSync(), version,
+          lastSeen: '14.3.1');
+
+      expect([entry!.version, ...entry.earlier.map((e) => e.version)],
+          contains('14.4.0'),
+          reason: '14.4.0 never got past its loading screen, so its notes '
+              '(browser extensions among them) were never seen');
     });
 
     test('is bundled, or the dialog would always be empty', () {

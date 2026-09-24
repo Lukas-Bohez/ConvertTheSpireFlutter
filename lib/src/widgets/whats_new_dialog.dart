@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../services/whats_new_service.dart';
 
-/// Shows a release's changelog entry after the app updates itself.
+/// Shows a release's changelog entry after the app updates itself, followed
+/// by any releases the person skipped.
 class WhatsNewDialog extends StatelessWidget {
   final WhatsNewEntry entry;
 
@@ -32,11 +33,11 @@ class WhatsNewDialog extends StatelessWidget {
   ///
   /// Deliberately not a Markdown renderer: the app does not ship one, and the
   /// entries are bullet lists with bold lead-ins, which read fine as text.
-  List<Widget> _content(BuildContext context) {
+  List<Widget> _content(BuildContext context, String body) {
     final theme = Theme.of(context);
     final widgets = <Widget>[];
 
-    for (final raw in entry.body.split('\n')) {
+    for (final raw in body.split('\n')) {
       final line = raw.trimRight();
       if (line.trim().isEmpty) {
         widgets.add(const SizedBox(height: 8));
@@ -77,20 +78,37 @@ class WhatsNewDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AlertDialog(
       title: Text(
           entry.title.isEmpty ? 'What’s new in ${entry.version}' : entry.title),
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
+          // Room for the desktop scrollbar, which otherwise sits on the text.
+          padding: const EdgeInsets.only(right: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('Version ${entry.version}',
-                  style: Theme.of(context).textTheme.labelMedium),
+                  style: theme.textTheme.labelMedium),
               const SizedBox(height: 12),
-              ..._content(context),
+              ..._content(context, entry.body),
+              for (final older in entry.earlier) ...[
+                const Divider(height: 32),
+                Text(
+                  older.title.isEmpty
+                      ? 'Version ${older.version}'
+                      : older.title,
+                  style: theme.textTheme.titleMedium,
+                ),
+                if (older.title.isNotEmpty)
+                  Text('Version ${older.version}',
+                      style: theme.textTheme.labelMedium),
+                const SizedBox(height: 8),
+                ..._content(context, older.body),
+              ],
             ],
           ),
         ),
