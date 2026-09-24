@@ -1365,5 +1365,13 @@
   "rarityEpic": "Sử thi",
   "rarityLegendary": "Huyền thoại",
   "rarityMythic": "Thần thoại",
-  "pieceSizeAuto": "Tự động (khuyên dùng)"
+  "pieceSizeAuto": "Tự động (khuyên dùng)",
+  "torrentStatusSeeding": "Đang seed",
+  "torrentStatusSeedingPartial": "Đang seed (một phần)",
+  "torrentStatusStalled": "Bị treo",
+  "torrentStatusChecking": "Đang kiểm tra",
+  "torrentStatusPendingMetadata": "Đang chờ siêu dữ liệu",
+  "torrentStatusFetchingMetadata": "Đang lấy siêu dữ liệu",
+  "torrentStatusFileInUse": "Tệp đang được dùng",
+  "torrentStatusMissingFiles": "Thiếu tệp"
 }

@@ -15,6 +15,7 @@ import 'package:convert_the_spire_reborn/src/widgets/tv_file_browser.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../widgets/torrent_status_text.dart';
 
 enum _SortMode {
   dateAdded,
@@ -347,7 +348,15 @@ class _TorrentsScreenState extends State<TorrentsScreen>
         if (TorrentEngineService.instance.isRunning(ts.model.id)) {
           TorrentEngineService.instance.resumeTorrent(ts.model.id);
         } else {
-          await TorrentEngineService.instance.startTorrent(ts.model.id);
+          // A magnet may need minutes to fetch its file list; the card shows
+          // that progress instead of the button waiting for it.
+          await TorrentService.instance.updateTorrentStatus(
+            ts.model.id,
+            'downloading',
+          );
+          unawaited(
+            TorrentService.instance.startTorrentInBackground(ts.model.id),
+          );
         }
       }
     } catch (e) {
@@ -1238,7 +1247,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          ts.statusLabel,
+                          localizedTorrentStatus(context, ts.statusLabel),
                           style: TextStyle(
                             fontSize: denseDesktop ? 10.5 : 11,
                             fontWeight: FontWeight.w700,

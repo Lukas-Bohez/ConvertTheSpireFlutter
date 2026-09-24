@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart';
+import 'package:convert_the_spire_reborn/src/vault/bittorrent/info_hash.dart';
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/magnet_link.dart';
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/torrent_file.dart';
 import 'package:convert_the_spire_reborn/src/vault/db/torrents_dao.dart';
@@ -557,11 +558,14 @@ class TorrentService {
         final seeders = runtime?.seeders ?? torrent.seeders;
         final leechers = runtime?.leechers ?? torrent.leechers;
 
+        final fetchingMetadata = runtime == null &&
+            TorrentEngineService.instance.isFetchingMetadata(torrent.id);
         final resolvedStatusLabel = _statusLabelForState(
           state,
           downloadSpeed: dlSpeed,
           uploadSpeed: ulSpeed,
           isComplete: isComplete,
+          fetchingMetadata: fetchingMetadata,
         );
 
         final mergedState = TorrentViewState(
@@ -576,7 +580,10 @@ class TorrentService {
                 state,
                 resolvedStatusLabel,
                 progress,
-                peers,
+                fetchingMetadata
+                    ? TorrentEngineService.instance
+                        .metadataPeerCount(torrent.id)
+                    : peers,
               ),
           connectionMessage: runtime?.connectionMessage ?? '',
           peers: peers,
@@ -750,11 +757,40 @@ class TorrentService {
     return persisted.isEmpty ? 'queued' : persisted;
   }
 
-  String _statusLabelForState(
+  /// Status label while a magnet is still getting its file list.
+  static const String fetchingMetadataLabel = 'Fetching Metadata';
+
+  @visibleForTesting
+  static String statusMessageForTesting(
+    String state,
+    String statusLabel, {
+    double progress = 0,
+    int peers = 0,
+  }) =>
+      _fallbackStatusMessage(state, statusLabel, progress, peers);
+
+  @visibleForTesting
+  static String statusLabelForTesting(
+    String state, {
+    double downloadSpeed = 0,
+    double uploadSpeed = 0,
+    bool isComplete = false,
+    bool fetchingMetadata = false,
+  }) =>
+      _statusLabelForState(
+        state,
+        downloadSpeed: downloadSpeed,
+        uploadSpeed: uploadSpeed,
+        isComplete: isComplete,
+        fetchingMetadata: fetchingMetadata,
+      );
+
+  static String _statusLabelForState(
     String state, {
     required double downloadSpeed,
     required double uploadSpeed,
     required bool isComplete,
+    bool fetchingMetadata = false,
   }) {
     final normalized = state.toLowerCase();
     if (normalized.contains('error_file_in_use')) return 'File In Use';
@@ -767,6 +803,9 @@ class TorrentService {
     if (normalized.contains('error')) return 'Error';
 
     if (normalized.contains('download')) {
+      // Nothing can download before the file list arrives; that is not a
+      // stall, and calling it one made healthy magnets look broken.
+      if (fetchingMetadata) return fetchingMetadataLabel;
       if (downloadSpeed > 512) return 'Downloading';
       if (uploadSpeed > 512) return 'Seeding partial';
       return 'Stalled';
@@ -783,7 +822,7 @@ class TorrentService {
     return state;
   }
 
-  String _fallbackStatusMessage(
+  static String _fallbackStatusMessage(
     String state,
     String statusLabel,
     double progress,
@@ -798,6 +837,11 @@ class TorrentService {
     }
     if (normalized.contains('pending_metadata')) {
       return 'Waiting for peers to provide metadata...';
+    }
+    if (statusLabel == fetchingMetadataLabel) {
+      return peers > 0
+          ? 'Getting the file list from $peers peer${peers == 1 ? '' : 's'}...'
+          : 'Looking for peers that have this torrent...';
     }
     if (statusLabel == 'Stalled') {
       return 'No download/upload activity detected. Keeping peer discovery active.';
@@ -849,6 +893,42 @@ class TorrentService {
         _pendingMetadataRetryInFlight.remove(torrent.id);
       }
     }());
+  }
+
+  /// Starts [torrentId] without making the caller wait for its metadata.
+  ///
+  /// A start that fails - no metadata within the engine's budget, the
+  /// network gone - parks the torrent as pending_metadata, which is retried
+  /// with backoff. Before, a failure left it marked as downloading with
+  /// nothing running: "Stalled 0.0%" for good.
+  Future<void> startTorrentInBackground(String torrentId) {
+    final done = () async {
+      try {
+        await TorrentEngineService.instance.startTorrent(torrentId);
+        _resetMetadataRetry(torrentId);
+      } catch (e) {
+        debugPrint('Background start failed for $torrentId: $e');
+        try {
+          final current = await TorrentsDao.instance.getTorrentById(torrentId);
+          final status = current?.status?.toLowerCase() ?? '';
+          final userStopped =
+              status.contains('pause') || status.contains('stop');
+          if (current != null &&
+              !userStopped &&
+              !status.contains('error') &&
+              !TorrentEngineService.instance.isRunning(torrentId)) {
+            await updateTorrentStatus(torrentId, 'pending_metadata');
+            _scheduleNextMetadataRetry(torrentId);
+          }
+        } catch (e) {
+          debugPrint('Could not park $torrentId as pending metadata: $e');
+        }
+      } finally {
+        _queueStateRefresh(force: true);
+      }
+    }();
+    unawaited(done);
+    return done;
   }
 
   void _scheduleNextMetadataRetry(String torrentId) {
@@ -1070,6 +1150,14 @@ class TorrentService {
       await Future.wait(
         batch.map((torrent) async {
           try {
+            // A magnet without metadata yet can take minutes to start. Let it
+            // finish in the background instead of holding up every torrent
+            // after it in the resume queue.
+            if ((torrent.totalSize ?? 0) <= 0 &&
+                (torrent.magnetLink?.trim().isNotEmpty ?? false)) {
+              unawaited(startTorrentInBackground(torrent.id));
+              return;
+            }
             await TorrentEngineService.instance.startTorrent(torrent.id);
             await TorrentEngineService.instance.forceRefresh(torrent.id);
           } on TimeoutException catch (e, st) {
@@ -1445,7 +1533,15 @@ class TorrentService {
       displayName,
     );
 
-    final existing = await TorrentsDao.instance.getTorrentById(infoHash);
+    // Versions before 14.5 stored base32 magnets under their base32 spelling.
+    final legacyBase32Id = RegExp(
+      r'urn:btih:([A-Za-z2-7]{32})(?![A-Za-z0-9])',
+      caseSensitive: false,
+    ).firstMatch(magnetUri)?.group(1)?.toUpperCase();
+    final existing = await TorrentsDao.instance.getTorrentById(infoHash) ??
+        (legacyBase32Id == null
+            ? null
+            : await TorrentsDao.instance.getTorrentById(legacyBase32Id));
     if (existing != null) {
       await TorrentEngineService.instance.forceRefresh(existing.id);
       throw TorrentAlreadyExistsException(existing.id);
@@ -1474,17 +1570,12 @@ class TorrentService {
     await TorrentsDao.instance.insertTorrent(torrent);
     if (SettingsService.instance.autoStartOnAdd) {
       await updateTorrent(torrent.copyWith(status: 'downloading'));
-      try {
-        await TorrentEngineService.instance.startTorrent(infoHash);
-        _resetMetadataRetry(infoHash);
-        _queueStateRefresh(force: true);
-        return MagnetAddOutcome.started;
-      } on TimeoutException {
-        await updateTorrentStatus(infoHash, 'pending_metadata');
-        _scheduleNextMetadataRetry(infoHash);
-        _queueStateRefresh(force: true);
-        return MagnetAddOutcome.pendingMetadata;
-      }
+      // Getting the file list from the swarm can take minutes. The torrent
+      // shows as "Fetching metadata" meanwhile; callers get control back at
+      // once instead of after the whole fetch.
+      unawaited(startTorrentInBackground(infoHash));
+      _queueStateRefresh(force: true);
+      return MagnetAddOutcome.started;
     }
 
     await updateTorrent(torrent.copyWith(status: 'queued'));
@@ -1547,13 +1638,8 @@ class TorrentService {
       caseSensitive: false,
     ).firstMatch(source);
     if (urnMatch != null) {
-      final token = urnMatch.group(1)!;
-      if (RegExp(r'^[A-Fa-f0-9]{40}$').hasMatch(token)) {
-        return token.toLowerCase();
-      }
-      if (RegExp(r'^[A-Za-z2-7]{32}$').hasMatch(token)) {
-        return token.toUpperCase();
-      }
+      final normalized = InfoHash.normalizeBtih(urnMatch.group(1)!);
+      if (normalized != null) return normalized;
     }
 
     final exactHex = RegExp(r'^[A-Fa-f0-9]{40}$').firstMatch(source.trim());

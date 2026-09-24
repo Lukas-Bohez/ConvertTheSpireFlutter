@@ -17,6 +17,7 @@ import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:provider/provider.dart';
+import '../widgets/torrent_status_text.dart';
 
 class TorrentSpireAiScreen extends StatefulWidget {
   const TorrentSpireAiScreen({super.key});
@@ -1136,7 +1137,10 @@ class _TorrentSpireAiScreenState extends State<TorrentSpireAiScreen>
                                       subtitle: Padding(
                                         padding: const EdgeInsets.only(top: 6),
                                         child: Text(
-                                          context.l10n.peers(item.statusLabel, item.peers),
+                                          context.l10n.peers(
+                                              localizedTorrentStatus(
+                                                  context, item.statusLabel),
+                                              item.peers),
                                           style: const TextStyle(fontSize: 11),
                                         ),
                                       ),

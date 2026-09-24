@@ -1,10 +1,11 @@
 # Release Notes - v14.5.0
 
-## Compare that works on phones, and download the whole playlist
+## Every screen in your language, magnets that start, Compare on phones
 
 ### Fixed
 
 * **The app speaks your language, all of it.** Choosing a language in Settings used to change little more than the tab names; almost every screen, dialog and message stayed in English. All 18 languages now cover the whole app: Arabic, Dutch, English, French, German, Hindi, Indonesian, Italian, Japanese, Korean, Polish, Portuguese, Russian, Simplified Chinese, Spanish, Turkish, Ukrainian and Vietnamese. A check in the build now fails if a screen slips back into English.
+* **Magnet links no longer sit at "Stalled 0.0%".** A magnet first has to get its file list from other people before anything can download, and three things kept that from happening. The app threw away the trackers listed in the link and asked only its own backup list, so a nyaa release never reached the tracker most of its swarm uses. One peer that stopped answering could hold up the file list for good. And links with a base32 hash, which nyaa uses, were saved in a form that broke resuming. The app now uses the link's own trackers, moves on to fresh peers when the file list stops coming, and saves every magnet under its standard hash. If nobody sends the file list within ten minutes, the torrent waits and tries again by itself instead of staying stuck.
 * **Your settings stay put on Android.** Every setting, the download folder included, was forgotten each time the app closed: the app asked Android where to keep its settings and never got an answer. It keeps them now, so you choose a download folder once.
 * **Compare works on phones.** A folder picked on a phone is an Android document address that the scan could not open, so every song showed as missing. The app now reads those folders, and asks Android for a whole folder at a time instead of file by file, so big music folders also open quicker in the player.
 * **Compare no longer calls different songs a match.** A title check compared each title with itself, so almost any song "matched" whatever file was left over, on every platform, and the Missing tab came up short. Exact matches are strict now; anything less certain shows its real confidence in the Matched tab.
@@ -23,6 +24,8 @@
 
 ### Improved
 
+* While a magnet is getting its file list, it says "Fetching metadata" instead of "Stalled". Torrent statuses are now in your language too.
+* Adding a magnet from the browser or a link opens the Torrents tab right away, instead of after the file list arrives. When the app starts, other torrents no longer wait behind a magnet that is still getting its file list.
 * Converting shows that it is working, and says why when a conversion fails, instead of leaving the reason in the log.
 * Compare remembers the last folder, starts from your download folder, and asks for a folder instead of doing nothing when none is set. Phone folders read "Phone storage/Music" instead of a content:// address, in Compare and in Settings.
 * Downloading the missing songs saves them into the folder you compared, next to the rest of the playlist.

@@ -4694,4 +4694,28 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pieceSizeAuto => 'Tự động (khuyên dùng)';
+
+  @override
+  String get torrentStatusSeeding => 'Đang seed';
+
+  @override
+  String get torrentStatusSeedingPartial => 'Đang seed (một phần)';
+
+  @override
+  String get torrentStatusStalled => 'Bị treo';
+
+  @override
+  String get torrentStatusChecking => 'Đang kiểm tra';
+
+  @override
+  String get torrentStatusPendingMetadata => 'Đang chờ siêu dữ liệu';
+
+  @override
+  String get torrentStatusFetchingMetadata => 'Đang lấy siêu dữ liệu';
+
+  @override
+  String get torrentStatusFileInUse => 'Tệp đang được dùng';
+
+  @override
+  String get torrentStatusMissingFiles => 'Thiếu tệp';
 }

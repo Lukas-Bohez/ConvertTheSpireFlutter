@@ -1365,5 +1365,13 @@
   "rarityEpic": "Эпический",
   "rarityLegendary": "Легендарный",
   "rarityMythic": "Мифический",
-  "pieceSizeAuto": "Авто (рекомендуется)"
+  "pieceSizeAuto": "Авто (рекомендуется)",
+  "torrentStatusSeeding": "Раздача",
+  "torrentStatusSeedingPartial": "Раздача (частично)",
+  "torrentStatusStalled": "Застрял",
+  "torrentStatusChecking": "Проверка",
+  "torrentStatusPendingMetadata": "Ожидание метаданных",
+  "torrentStatusFetchingMetadata": "Получение метаданных",
+  "torrentStatusFileInUse": "Файл используется",
+  "torrentStatusMissingFiles": "Файлы отсутствуют"
 }

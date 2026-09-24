@@ -4720,4 +4720,28 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get pieceSizeAuto => 'Automatisch (aanbevolen)';
+
+  @override
+  String get torrentStatusSeeding => 'Seeden';
+
+  @override
+  String get torrentStatusSeedingPartial => 'Seeden (gedeeltelijk)';
+
+  @override
+  String get torrentStatusStalled => 'Vastgelopen';
+
+  @override
+  String get torrentStatusChecking => 'Controleren';
+
+  @override
+  String get torrentStatusPendingMetadata => 'Wachten op metadata';
+
+  @override
+  String get torrentStatusFetchingMetadata => 'Metadata ophalen';
+
+  @override
+  String get torrentStatusFileInUse => 'Bestand in gebruik';
+
+  @override
+  String get torrentStatusMissingFiles => 'Bestanden ontbreken';
 }

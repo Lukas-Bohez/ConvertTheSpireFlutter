@@ -1365,5 +1365,13 @@
   "rarityEpic": "영웅",
   "rarityLegendary": "전설",
   "rarityMythic": "신화",
-  "pieceSizeAuto": "자동(권장)"
+  "pieceSizeAuto": "자동(권장)",
+  "torrentStatusSeeding": "시딩 중",
+  "torrentStatusSeedingPartial": "시딩 중(일부)",
+  "torrentStatusStalled": "정체됨",
+  "torrentStatusChecking": "확인 중",
+  "torrentStatusPendingMetadata": "메타데이터 대기 중",
+  "torrentStatusFetchingMetadata": "메타데이터 가져오는 중",
+  "torrentStatusFileInUse": "파일 사용 중",
+  "torrentStatusMissingFiles": "파일 없음"
 }

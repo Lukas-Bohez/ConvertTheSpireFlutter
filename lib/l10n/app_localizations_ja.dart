@@ -4582,4 +4582,28 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get pieceSizeAuto => '自動（推奨）';
+
+  @override
+  String get torrentStatusSeeding => 'シード中';
+
+  @override
+  String get torrentStatusSeedingPartial => 'シード中（一部）';
+
+  @override
+  String get torrentStatusStalled => '停滞';
+
+  @override
+  String get torrentStatusChecking => '確認中';
+
+  @override
+  String get torrentStatusPendingMetadata => 'メタデータを待機中';
+
+  @override
+  String get torrentStatusFetchingMetadata => 'メタデータを取得中';
+
+  @override
+  String get torrentStatusFileInUse => 'ファイル使用中';
+
+  @override
+  String get torrentStatusMissingFiles => 'ファイルがありません';
 }

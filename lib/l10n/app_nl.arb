@@ -1365,5 +1365,13 @@
   "rarityEpic": "Episch",
   "rarityLegendary": "Legendarisch",
   "rarityMythic": "Mythisch",
-  "pieceSizeAuto": "Automatisch (aanbevolen)"
+  "pieceSizeAuto": "Automatisch (aanbevolen)",
+  "torrentStatusSeeding": "Seeden",
+  "torrentStatusSeedingPartial": "Seeden (gedeeltelijk)",
+  "torrentStatusStalled": "Vastgelopen",
+  "torrentStatusChecking": "Controleren",
+  "torrentStatusPendingMetadata": "Wachten op metadata",
+  "torrentStatusFetchingMetadata": "Metadata ophalen",
+  "torrentStatusFileInUse": "Bestand in gebruik",
+  "torrentStatusMissingFiles": "Bestanden ontbreken"
 }

@@ -4695,4 +4695,28 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get pieceSizeAuto => 'अपने आप (सुझाया गया)';
+
+  @override
+  String get torrentStatusSeeding => 'सीडिंग';
+
+  @override
+  String get torrentStatusSeedingPartial => 'सीडिंग (आंशिक)';
+
+  @override
+  String get torrentStatusStalled => 'रुका हुआ';
+
+  @override
+  String get torrentStatusChecking => 'जाँच हो रही है';
+
+  @override
+  String get torrentStatusPendingMetadata => 'मेटाडेटा की प्रतीक्षा';
+
+  @override
+  String get torrentStatusFetchingMetadata => 'मेटाडेटा लाया जा रहा है';
+
+  @override
+  String get torrentStatusFileInUse => 'फ़ाइल उपयोग में है';
+
+  @override
+  String get torrentStatusMissingFiles => 'फ़ाइलें गायब हैं';
 }

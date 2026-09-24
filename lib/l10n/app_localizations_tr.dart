@@ -4713,4 +4713,28 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get pieceSizeAuto => 'Otomatik (önerilen)';
+
+  @override
+  String get torrentStatusSeeding => 'Paylaşılıyor';
+
+  @override
+  String get torrentStatusSeedingPartial => 'Paylaşılıyor (kısmi)';
+
+  @override
+  String get torrentStatusStalled => 'Durdu';
+
+  @override
+  String get torrentStatusChecking => 'Denetleniyor';
+
+  @override
+  String get torrentStatusPendingMetadata => 'Meta veriler bekleniyor';
+
+  @override
+  String get torrentStatusFetchingMetadata => 'Meta veriler alınıyor';
+
+  @override
+  String get torrentStatusFileInUse => 'Dosya kullanımda';
+
+  @override
+  String get torrentStatusMissingFiles => 'Dosyalar eksik';
 }

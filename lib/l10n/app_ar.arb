@@ -1365,5 +1365,13 @@
   "rarityEpic": "ملحمي",
   "rarityLegendary": "أسطوري",
   "rarityMythic": "خرافي",
-  "pieceSizeAuto": "تلقائي (مستحسن)"
+  "pieceSizeAuto": "تلقائي (مستحسن)",
+  "torrentStatusSeeding": "يزرع",
+  "torrentStatusSeedingPartial": "يزرع (جزئيًا)",
+  "torrentStatusStalled": "متوقف",
+  "torrentStatusChecking": "جارٍ التحقق",
+  "torrentStatusPendingMetadata": "بانتظار البيانات الوصفية",
+  "torrentStatusFetchingMetadata": "جارٍ جلب البيانات الوصفية",
+  "torrentStatusFileInUse": "الملف قيد الاستخدام",
+  "torrentStatusMissingFiles": "ملفات مفقودة"
 }

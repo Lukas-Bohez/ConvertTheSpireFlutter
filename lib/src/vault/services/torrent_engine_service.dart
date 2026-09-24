@@ -8,6 +8,7 @@ import 'package:bittorrent_dht/bittorrent_dht.dart';
 import 'package:convert_the_spire_reborn/src/services/network_proxy_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart'
     as vault_bencode;
+import 'package:convert_the_spire_reborn/src/vault/bittorrent/info_hash.dart';
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/magnet_link.dart';
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/torrent_file.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
@@ -21,6 +22,13 @@ import 'package:dtorrent_task_v2/src/piece/sequential_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+/// Metadata from the swarm, plus the peers that served it.
+typedef _FetchedMetadata = ({
+  dt.TorrentModel model,
+  Uint8List bytes,
+  List<dt.Peer> peers,
+});
 
 class TorrentEngineStatus {
   final String torrentId;
@@ -1263,7 +1271,12 @@ class TorrentEngineService {
   Future<void> startTorrent(String torrentId, {String? destinationPath}) async {
     // If already running, do nothing
     if (isRunning(torrentId)) return;
-    if (_startingTorrentIds.contains(torrentId)) return;
+    if (_startingTorrentIds.contains(torrentId)) {
+      // Resumed while still fetching metadata: let that start carry on
+      // instead of pausing the task once the file list arrives.
+      _pausedTorrentIds.remove(torrentId);
+      return;
+    }
 
     _startingTorrentIds.add(torrentId);
     try {
@@ -1438,7 +1451,7 @@ class TorrentEngineService {
       );
     }
 
-    final expectedInfoHash = _hexToBytes(torrent.id);
+    final expectedInfoHash = InfoHash.bytesOf(torrent.id);
     if (expectedInfoHash != null && expectedInfoHash.length == 20) {
       final parsedInfoHash = Uint8List.fromList(dtModel.infoHashBuffer);
       if (!listEquals(parsedInfoHash, expectedInfoHash)) {
@@ -1494,8 +1507,12 @@ class TorrentEngineService {
     _tasks[torrent.id] = task;
     _wireEvents(torrent.id, task);
     await _configureTask(task);
-    _torrentTrackers[torrent.id] =
-        dtModel.announces.map<Uri>((u) => Uri.parse(u.toString())).toList();
+    // A magnet resumed from its cached metadata has no announce list of its
+    // own: the trackers only exist in the magnet link.
+    _torrentTrackers[torrent.id] = <Uri>{
+      ...dtModel.announces.map<Uri>((u) => Uri.parse(u.toString())),
+      ...InfoHash.magnetTrackers(torrent.magnetLink ?? '').map(Uri.parse),
+    }.toList();
     _startHealthCheckTimer(torrent.id, task);
 
     // Attach DHT listeners BEFORE starting task to capture all events
@@ -1626,6 +1643,128 @@ class TorrentEngineService {
     await TorrentService.instance.updateTorrentStatus(torrent.id, status);
   }
 
+  /// How long one metadata downloader may go without receiving a piece
+  /// before a fresh one takes over.
+  ///
+  /// dtorrent_task_v2's downloader keeps a peer that has disconnected in its
+  /// list of metadata sources and sends every retry to the first peer in that
+  /// list, so one dead peer can stall it for good - the "stuck at 0%" on a
+  /// new magnet. A fresh downloader starts with fresh peers.
+  static const Duration metadataRoundLength = Duration(seconds: 90);
+
+  /// Total time spent asking for metadata before the torrent is parked as
+  /// pending_metadata, which TorrentService retries with backoff.
+  static const Duration metadataBudget = Duration(minutes: 10);
+
+  final Map<String, int> _metadataPeers = {};
+  final Set<String> _fetchingMetadataIds = {};
+
+  /// Whether [torrentId] is still getting its file list from the swarm.
+  bool isFetchingMetadata(String torrentId) =>
+      _fetchingMetadataIds.contains(torrentId);
+
+  /// Peers the metadata downloader for [torrentId] is connected to.
+  int metadataPeerCount(String torrentId) => _metadataPeers[torrentId] ?? 0;
+
+  Future<_FetchedMetadata> _fetchMetadata(
+    String torrentId,
+    String magnetUri,
+  ) async {
+    final deadline = DateTime.now().add(metadataBudget);
+    Object? lastError;
+    var round = 0;
+    _fetchingMetadataIds.add(torrentId);
+    try {
+      while (DateTime.now().isBefore(deadline)) {
+        if (!_startingTorrentIds.contains(torrentId)) {
+          throw StateError('Stopped while fetching metadata');
+        }
+        round++;
+        final downloader = dt.MetadataDownloader.fromMagnet(magnetUri);
+        final result = Completer<_FetchedMetadata>();
+        // Handled here so a failure after the round has moved on is not an
+        // unhandled error.
+        final settled = result.future.then<void>((_) {}, onError: (_) {});
+        var lastPieceAt = DateTime.now();
+
+        final listener = downloader.createListener()
+          ..on<dt.MetaDataDownloadProgress>((_) {
+            lastPieceAt = DateTime.now();
+          })
+          ..on<dt.MetaDataDownloadComplete>((event) async {
+            if (result.isCompleted) return;
+            try {
+              final bytes = Uint8List.fromList(event.data);
+              final model = await _parseTorrentModelFromRawBencode(
+                _decodeTorrentBencode(bytes),
+              );
+              if (!result.isCompleted) {
+                // The peers that just served the metadata have the torrent;
+                // they are handed to the download so it starts straight away.
+                result.complete((
+                  model: model,
+                  bytes: bytes,
+                  peers: downloader.activePeers.toList(),
+                ));
+              }
+            } catch (e) {
+              if (!result.isCompleted) result.completeError(e);
+            }
+          })
+          ..on<dt.MetaDataDownloadFailed>((event) {
+            if (!result.isCompleted) {
+              result.completeError(StateError(event.error));
+            }
+          });
+
+        unawaited(downloader.startDownload().then<void>((_) {},
+            onError: (Object e) {
+          if (!result.isCompleted) result.completeError(e);
+        }));
+
+        try {
+          while (!result.isCompleted) {
+            await Future.any<void>([
+              settled,
+              Future<void>.delayed(const Duration(seconds: 3)),
+            ]);
+            if (result.isCompleted) break;
+            _metadataPeers[torrentId] = downloader.activePeers.length;
+            final now = DateTime.now();
+            if (now.difference(lastPieceAt) >= metadataRoundLength ||
+                now.isAfter(deadline) ||
+                !_startingTorrentIds.contains(torrentId)) {
+              break;
+            }
+          }
+          if (result.isCompleted) {
+            final fetched = await result.future;
+            _log(torrentId, 'Metadata downloaded (round $round).');
+            return fetched;
+          }
+          _log(
+            torrentId,
+            'No metadata after round $round; retrying with fresh peers.',
+          );
+        } catch (e) {
+          lastError = e;
+          _log(torrentId, 'Metadata round $round failed: $e');
+          await Future<void>.delayed(const Duration(seconds: 2));
+        } finally {
+          unawaited(listener.dispose().catchError((_) {}));
+          unawaited(downloader.stop().catchError((_) {}));
+        }
+      }
+    } finally {
+      _fetchingMetadataIds.remove(torrentId);
+      _metadataPeers.remove(torrentId);
+    }
+    throw TimeoutException(
+      'Failed to fetch metadata for $torrentId after $round round(s)'
+      '${lastError == null ? '' : ': $lastError'}',
+    );
+  }
+
   Future<void> _startFromMagnet(
     TorrentModel torrent, {
     String? destinationPath,
@@ -1655,9 +1794,7 @@ class TorrentEngineService {
 
     // Step 1: fetch metadata from the swarm with caching and retry logic.
     dt.TorrentModel? dtModel;
-    dt.MetadataDownloader? downloader;
     Uint8List? downloadedMetadataBytes;
-    String errorMessage = '';
 
     // First, try to load from cache (fastest path for resuming torrents)
     try {
@@ -1675,74 +1812,18 @@ class TorrentEngineService {
       _log(torrent.id, 'Cache lookup failed (this is OK): $e');
     }
 
-    // If cache miss, try to download with retry logic
+    // Cache miss: ask the swarm.
+    var metadataPeers = const <dt.Peer>[];
     if (dtModel == null) {
-      for (int attempt = 1; attempt <= 2; attempt++) {
-        try {
-          downloader = dt.MetadataDownloader.fromMagnet(effectiveMagnet);
-          final completer = Completer<dt.TorrentModel>();
-
-          downloader.createListener()
-            ..on<dt.MetaDataDownloadComplete>((event) async {
-              if (completer.isCompleted) return;
-              try {
-                final Uint8List rawData = Uint8List.fromList(event.data);
-                downloadedMetadataBytes = rawData;
-                final msg = _decodeTorrentBencode(rawData);
-
-                final model = await _parseTorrentModelFromRawBencode(msg);
-                completer.complete(model);
-              } catch (e) {
-                completer.completeError(e);
-              }
-            })
-            ..on<dt.MetaDataDownloadFailed>((event) {
-              if (!completer.isCompleted) {
-                completer.completeError(StateError(event.error));
-              }
-            });
-
-          unawaited(downloader.startDownload());
-
-          // First attempt: 10 minutes timeout, retry attempt: 3 minutes
-          final timeout = attempt == 1
-              ? const Duration(minutes: 10)
-              : const Duration(minutes: 3);
-
-          dtModel = await completer.future.timeout(
-            timeout,
-            onTimeout: () =>
-                throw TimeoutException('Metadata download timed out'),
-          );
-
-          // Success - break out of retry loop
-          _log(
-            torrent.id,
-            'Metadata downloaded successfully on attempt $attempt',
-          );
-          break;
-        } catch (e) {
-          errorMessage = e.toString();
-          _log(torrent.id, 'Metadata download attempt $attempt failed: $e');
-
-          if (attempt < 2) {
-            // Wait before retrying
-            await Future.delayed(const Duration(seconds: 2));
-          }
-        }
-      }
-    }
-
-    if (dtModel == null) {
-      // Metadata download failed after all attempts - this is a hard error
-      throw TimeoutException(
-        'Failed to fetch metadata for ${torrent.id}: $errorMessage',
-      );
+      final fetched = await _fetchMetadata(torrent.id, effectiveMagnet);
+      dtModel = fetched.model;
+      downloadedMetadataBytes = fetched.bytes;
+      metadataPeers = fetched.peers;
     }
 
     if (downloadedMetadataBytes != null &&
-        downloadedMetadataBytes!.isNotEmpty) {
-      await cacheTorrentSource(torrent.id, downloadedMetadataBytes!);
+        downloadedMetadataBytes.isNotEmpty) {
+      await cacheTorrentSource(torrent.id, downloadedMetadataBytes);
     }
 
     final resolvedName = dtModel.name.trim();
@@ -1858,14 +1939,21 @@ class TorrentEngineService {
       rethrow;
     }
 
-    // Ensure tasks are running
-    try {
-      (task as dynamic).resume();
-    } catch (_) {}
-    try {
-      (task as dynamic).unpause();
-    } catch (_) {}
-    _ensureTaskRunningMode(torrent.id, task);
+    if (_pausedTorrentIds.contains(torrent.id)) {
+      // Paused while the file list was still being fetched: keep the
+      // metadata, but do not start downloading behind the user's back.
+      task.pause();
+      await TorrentService.instance.updateTorrentStatus(torrent.id, 'paused');
+    } else {
+      // Ensure tasks are running
+      try {
+        (task as dynamic).resume();
+      } catch (_) {}
+      try {
+        (task as dynamic).unpause();
+      } catch (_) {}
+      _ensureTaskRunningMode(torrent.id, task);
+    }
 
     _progressTimers[torrent.id]?.cancel();
     _progressTimers[torrent.id] = Timer.periodic(const Duration(seconds: 5), (
@@ -1878,15 +1966,12 @@ class TorrentEngineService {
     _announceTrackers(torrent.id, task, force: true);
     _kickoffPeerDiscovery(torrent.id, task);
 
-    // Hand off peers from metadata fetch so download starts immediately (if downloader exists).
-    if (downloader != null) {
-      for (final peer in downloader.activePeers) {
-        try {
-          task.addPeer(peer.address, dt.PeerSource.manual, type: peer.type);
-        } catch (e, st) {
-          debugPrint('Peer add error: ${peer.address} $e');
-          debugPrint(st.toString());
-        }
+    // Hand off peers from the metadata fetch so the download starts at once.
+    for (final peer in metadataPeers) {
+      try {
+        task.addPeer(peer.address, dt.PeerSource.manual, type: peer.type);
+      } catch (e) {
+        debugPrint('Peer add error: ${peer.address} $e');
       }
     }
 
@@ -1903,7 +1988,9 @@ class TorrentEngineService {
       debugPrint(st.toString());
     }
 
-    final status = _isTaskComplete(task) ? 'seeding' : 'downloading';
+    final status = _pausedTorrentIds.contains(torrent.id)
+        ? 'paused'
+        : (_isTaskComplete(task) ? 'seeding' : 'downloading');
     await TorrentService.instance.updateTorrentStatus(torrent.id, status);
     _startPollTimer(torrent.id, task);
     _startScrapeTimer(torrent.id, task);
@@ -3577,16 +3664,26 @@ class TorrentEngineService {
     return '';
   }
 
+  /// The magnet the engine runs: the info-hash plus the link's own trackers
+  /// and web seeds. The display name is left out so an odd character in it
+  /// cannot make the parser reject the link.
+  ///
+  /// This used to drop the trackers as well, so a torrent only ever asked
+  /// the built-in fallback list and DHT for peers. For nyaa releases the
+  /// tracker in the link is where most of the swarm is.
   String _canonicalMagnetForDtParser(String sourceMagnet, String fallbackId) {
     final btih = _extractBtihCandidate(sourceMagnet) ??
         _extractBtihCandidate(fallbackId);
     if (btih != null) {
-      return 'magnet:?xt=urn:btih:$btih';
+      return InfoHash.engineMagnet(btih, sourceMagnet: sourceMagnet);
     }
     final btmh = _extractBtmhCandidate(sourceMagnet) ??
         _extractBtmhCandidate(fallbackId);
     if (btmh != null) {
-      return 'magnet:?xt=urn:btmh:1220$btmh';
+      final trackers = InfoHash.magnetTrackers(sourceMagnet)
+          .map((t) => '&tr=${Uri.encodeComponent(t)}')
+          .join();
+      return 'magnet:?xt=urn:btmh:1220$btmh$trackers';
     }
     return sourceMagnet;
   }
@@ -3637,9 +3734,11 @@ class TorrentEngineService {
       return source.toLowerCase();
     }
 
+    // Base32 hashes (and ids saved from them by older versions) come back
+    // as hex, which is what the engine and the metadata cache use.
     final exactBase32 = RegExp(r'^[A-Za-z2-7]{32}$').firstMatch(source);
     if (exactBase32 != null) {
-      return source.toUpperCase();
+      return InfoHash.normalizeBtih(source);
     }
 
     final urnMatch = RegExp(
@@ -3647,13 +3746,8 @@ class TorrentEngineService {
       caseSensitive: false,
     ).firstMatch(source);
     if (urnMatch != null) {
-      final token = urnMatch.group(1)!;
-      if (RegExp(r'^[A-Fa-f0-9]{40}$').hasMatch(token)) {
-        return token.toLowerCase();
-      }
-      if (RegExp(r'^[A-Za-z2-7]{32}$').hasMatch(token)) {
-        return token.toUpperCase();
-      }
+      final normalized = InfoHash.normalizeBtih(urnMatch.group(1)!);
+      if (normalized != null) return normalized;
     }
 
     final hexInText = RegExp(r'([A-Fa-f0-9]{40})').firstMatch(source);
@@ -3663,7 +3757,7 @@ class TorrentEngineService {
 
     final base32InText = RegExp(r'([A-Za-z2-7]{32})').firstMatch(source);
     if (base32InText != null) {
-      return base32InText.group(1)!.toUpperCase();
+      return InfoHash.normalizeBtih(base32InText.group(1)!);
     }
 
     return null;

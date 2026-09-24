@@ -4736,4 +4736,28 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get pieceSizeAuto => 'Automático (recomendado)';
+
+  @override
+  String get torrentStatusSeeding => 'Compartiendo';
+
+  @override
+  String get torrentStatusSeedingPartial => 'Compartiendo (parcial)';
+
+  @override
+  String get torrentStatusStalled => 'Detenido';
+
+  @override
+  String get torrentStatusChecking => 'Comprobando';
+
+  @override
+  String get torrentStatusPendingMetadata => 'Esperando metadatos';
+
+  @override
+  String get torrentStatusFetchingMetadata => 'Obteniendo metadatos';
+
+  @override
+  String get torrentStatusFileInUse => 'Archivo en uso';
+
+  @override
+  String get torrentStatusMissingFiles => 'Faltan archivos';
 }

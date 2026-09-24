@@ -4701,4 +4701,28 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get pieceSizeAuto => 'Авто (рекомендуется)';
+
+  @override
+  String get torrentStatusSeeding => 'Раздача';
+
+  @override
+  String get torrentStatusSeedingPartial => 'Раздача (частично)';
+
+  @override
+  String get torrentStatusStalled => 'Застрял';
+
+  @override
+  String get torrentStatusChecking => 'Проверка';
+
+  @override
+  String get torrentStatusPendingMetadata => 'Ожидание метаданных';
+
+  @override
+  String get torrentStatusFetchingMetadata => 'Получение метаданных';
+
+  @override
+  String get torrentStatusFileInUse => 'Файл используется';
+
+  @override
+  String get torrentStatusMissingFiles => 'Файлы отсутствуют';
 }

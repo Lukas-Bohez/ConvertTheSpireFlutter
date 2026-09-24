@@ -6,6 +6,7 @@ import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_servi
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../widgets/torrent_status_text.dart';
 
 String _fmtBytes(int bytes) {
   if (bytes <= 0) return '0 B';
@@ -126,7 +127,9 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
       builder: (context, snapshot) {
         final view = snapshot.data;
         final torrent = view?.model ?? widget.torrent;
-        final statusLabel = view?.statusLabel ?? (torrent.status ?? context.l10n.unknown);
+        final statusLabel = view == null
+            ? (torrent.status ?? context.l10n.unknown)
+            : localizedTorrentStatus(context, view.statusLabel);
         final retryCountdown =
             TorrentService.instance.metadataRetryRemaining(torrent.id);
         final lastAnnounce =

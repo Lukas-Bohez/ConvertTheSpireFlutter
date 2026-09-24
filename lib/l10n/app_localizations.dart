@@ -8328,6 +8328,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Auto (recommended)'**
   String get pieceSizeAuto;
+
+  /// No description provided for @torrentStatusSeeding.
+  ///
+  /// In en, this message translates to:
+  /// **'Seeding'**
+  String get torrentStatusSeeding;
+
+  /// No description provided for @torrentStatusSeedingPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Seeding (partial)'**
+  String get torrentStatusSeedingPartial;
+
+  /// No description provided for @torrentStatusStalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Stalled'**
+  String get torrentStatusStalled;
+
+  /// No description provided for @torrentStatusChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking'**
+  String get torrentStatusChecking;
+
+  /// No description provided for @torrentStatusPendingMetadata.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for metadata'**
+  String get torrentStatusPendingMetadata;
+
+  /// No description provided for @torrentStatusFetchingMetadata.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetching metadata'**
+  String get torrentStatusFetchingMetadata;
+
+  /// No description provided for @torrentStatusFileInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'File in use'**
+  String get torrentStatusFileInUse;
+
+  /// No description provided for @torrentStatusMissingFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Files missing'**
+  String get torrentStatusMissingFiles;
 }
 
 class _AppLocalizationsDelegate

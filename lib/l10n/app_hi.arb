@@ -1365,5 +1365,13 @@
   "rarityEpic": "महाकाव्य",
   "rarityLegendary": "पौराणिक",
   "rarityMythic": "मिथकीय",
-  "pieceSizeAuto": "अपने आप (सुझाया गया)"
+  "pieceSizeAuto": "अपने आप (सुझाया गया)",
+  "torrentStatusSeeding": "सीडिंग",
+  "torrentStatusSeedingPartial": "सीडिंग (आंशिक)",
+  "torrentStatusStalled": "रुका हुआ",
+  "torrentStatusChecking": "जाँच हो रही है",
+  "torrentStatusPendingMetadata": "मेटाडेटा की प्रतीक्षा",
+  "torrentStatusFetchingMetadata": "मेटाडेटा लाया जा रहा है",
+  "torrentStatusFileInUse": "फ़ाइल उपयोग में है",
+  "torrentStatusMissingFiles": "फ़ाइलें गायब हैं"
 }

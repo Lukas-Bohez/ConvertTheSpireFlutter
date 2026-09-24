@@ -4582,4 +4582,28 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get pieceSizeAuto => '자동(권장)';
+
+  @override
+  String get torrentStatusSeeding => '시딩 중';
+
+  @override
+  String get torrentStatusSeedingPartial => '시딩 중(일부)';
+
+  @override
+  String get torrentStatusStalled => '정체됨';
+
+  @override
+  String get torrentStatusChecking => '확인 중';
+
+  @override
+  String get torrentStatusPendingMetadata => '메타데이터 대기 중';
+
+  @override
+  String get torrentStatusFetchingMetadata => '메타데이터 가져오는 중';
+
+  @override
+  String get torrentStatusFileInUse => '파일 사용 중';
+
+  @override
+  String get torrentStatusMissingFiles => '파일 없음';
 }

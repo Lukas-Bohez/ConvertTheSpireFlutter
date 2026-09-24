@@ -1365,5 +1365,13 @@
   "rarityEpic": "エピック",
   "rarityLegendary": "レジェンダリー",
   "rarityMythic": "ミシック",
-  "pieceSizeAuto": "自動（推奨）"
+  "pieceSizeAuto": "自動（推奨）",
+  "torrentStatusSeeding": "シード中",
+  "torrentStatusSeedingPartial": "シード中（一部）",
+  "torrentStatusStalled": "停滞",
+  "torrentStatusChecking": "確認中",
+  "torrentStatusPendingMetadata": "メタデータを待機中",
+  "torrentStatusFetchingMetadata": "メタデータを取得中",
+  "torrentStatusFileInUse": "ファイル使用中",
+  "torrentStatusMissingFiles": "ファイルがありません"
 }

@@ -4709,4 +4709,28 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get pieceSizeAuto => 'Авто (рекомендовано)';
+
+  @override
+  String get torrentStatusSeeding => 'Роздача';
+
+  @override
+  String get torrentStatusSeedingPartial => 'Роздача (частково)';
+
+  @override
+  String get torrentStatusStalled => 'Застряг';
+
+  @override
+  String get torrentStatusChecking => 'Перевірка';
+
+  @override
+  String get torrentStatusPendingMetadata => 'Очікування метаданих';
+
+  @override
+  String get torrentStatusFetchingMetadata => 'Отримання метаданих';
+
+  @override
+  String get torrentStatusFileInUse => 'Файл використовується';
+
+  @override
+  String get torrentStatusMissingFiles => 'Файли відсутні';
 }

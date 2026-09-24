@@ -1365,5 +1365,13 @@
   "rarityEpic": "Epico",
   "rarityLegendary": "Leggendario",
   "rarityMythic": "Mitico",
-  "pieceSizeAuto": "Automatica (consigliata)"
+  "pieceSizeAuto": "Automatica (consigliata)",
+  "torrentStatusSeeding": "In condivisione",
+  "torrentStatusSeedingPartial": "In condivisione (parziale)",
+  "torrentStatusStalled": "Bloccato",
+  "torrentStatusChecking": "Verifica",
+  "torrentStatusPendingMetadata": "In attesa dei metadati",
+  "torrentStatusFetchingMetadata": "Recupero metadati",
+  "torrentStatusFileInUse": "File in uso",
+  "torrentStatusMissingFiles": "File mancanti"
 }

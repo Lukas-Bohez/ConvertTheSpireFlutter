@@ -1365,5 +1365,13 @@
   "rarityEpic": "Epik",
   "rarityLegendary": "Legendaris",
   "rarityMythic": "Mitos",
-  "pieceSizeAuto": "Otomatis (disarankan)"
+  "pieceSizeAuto": "Otomatis (disarankan)",
+  "torrentStatusSeeding": "Seeding",
+  "torrentStatusSeedingPartial": "Seeding (sebagian)",
+  "torrentStatusStalled": "Macet",
+  "torrentStatusChecking": "Memeriksa",
+  "torrentStatusPendingMetadata": "Menunggu metadata",
+  "torrentStatusFetchingMetadata": "Mengambil metadata",
+  "torrentStatusFileInUse": "File sedang dipakai",
+  "torrentStatusMissingFiles": "File hilang"
 }

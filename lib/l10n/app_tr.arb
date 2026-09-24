@@ -1365,5 +1365,13 @@
   "rarityEpic": "Destansı",
   "rarityLegendary": "Efsanevi",
   "rarityMythic": "Mitik",
-  "pieceSizeAuto": "Otomatik (önerilen)"
+  "pieceSizeAuto": "Otomatik (önerilen)",
+  "torrentStatusSeeding": "Paylaşılıyor",
+  "torrentStatusSeedingPartial": "Paylaşılıyor (kısmi)",
+  "torrentStatusStalled": "Durdu",
+  "torrentStatusChecking": "Denetleniyor",
+  "torrentStatusPendingMetadata": "Meta veriler bekleniyor",
+  "torrentStatusFetchingMetadata": "Meta veriler alınıyor",
+  "torrentStatusFileInUse": "Dosya kullanımda",
+  "torrentStatusMissingFiles": "Dosyalar eksik"
 }

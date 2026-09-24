@@ -4670,4 +4670,28 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get pieceSizeAuto => 'تلقائي (مستحسن)';
+
+  @override
+  String get torrentStatusSeeding => 'يزرع';
+
+  @override
+  String get torrentStatusSeedingPartial => 'يزرع (جزئيًا)';
+
+  @override
+  String get torrentStatusStalled => 'متوقف';
+
+  @override
+  String get torrentStatusChecking => 'جارٍ التحقق';
+
+  @override
+  String get torrentStatusPendingMetadata => 'بانتظار البيانات الوصفية';
+
+  @override
+  String get torrentStatusFetchingMetadata => 'جارٍ جلب البيانات الوصفية';
+
+  @override
+  String get torrentStatusFileInUse => 'الملف قيد الاستخدام';
+
+  @override
+  String get torrentStatusMissingFiles => 'ملفات مفقودة';
 }

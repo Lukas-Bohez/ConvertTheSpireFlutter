@@ -4711,4 +4711,28 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get pieceSizeAuto => 'Otomatis (disarankan)';
+
+  @override
+  String get torrentStatusSeeding => 'Seeding';
+
+  @override
+  String get torrentStatusSeedingPartial => 'Seeding (sebagian)';
+
+  @override
+  String get torrentStatusStalled => 'Macet';
+
+  @override
+  String get torrentStatusChecking => 'Memeriksa';
+
+  @override
+  String get torrentStatusPendingMetadata => 'Menunggu metadata';
+
+  @override
+  String get torrentStatusFetchingMetadata => 'Mengambil metadata';
+
+  @override
+  String get torrentStatusFileInUse => 'File sedang dipakai';
+
+  @override
+  String get torrentStatusMissingFiles => 'File hilang';
 }

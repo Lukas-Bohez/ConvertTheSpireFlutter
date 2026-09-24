@@ -1,5 +1,7 @@
 import 'dart:core';
 
+import 'info_hash.dart';
+
 class MagnetLink {
   final String? infoHashV1;
   final String? infoHashV2;
@@ -130,15 +132,9 @@ class MagnetLink {
     return value;
   }
 
-  static String? _normalizeBtih(String token) {
-    if (RegExp(r'^[A-Fa-f0-9]{40}$').hasMatch(token)) {
-      return token.toLowerCase();
-    }
-    if (RegExp(r'^[A-Za-z2-7]{32}$').hasMatch(token)) {
-      return token.toUpperCase();
-    }
-    return null;
-  }
+  /// Always the lowercase hex form: a base32 hash (common on nyaa) is
+  /// converted, so the same torrent gets the same id however it was written.
+  static String? _normalizeBtih(String token) => InfoHash.normalizeBtih(token);
 
   static String? _normalizeBtmh(String token) {
     final hexOnly = token.trim().toLowerCase();

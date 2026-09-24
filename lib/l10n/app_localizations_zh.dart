@@ -4529,4 +4529,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get pieceSizeAuto => '自动（推荐）';
+
+  @override
+  String get torrentStatusSeeding => '做种中';
+
+  @override
+  String get torrentStatusSeedingPartial => '做种中（部分）';
+
+  @override
+  String get torrentStatusStalled => '停滞';
+
+  @override
+  String get torrentStatusChecking => '正在检查';
+
+  @override
+  String get torrentStatusPendingMetadata => '等待元数据';
+
+  @override
+  String get torrentStatusFetchingMetadata => '正在获取元数据';
+
+  @override
+  String get torrentStatusFileInUse => '文件被占用';
+
+  @override
+  String get torrentStatusMissingFiles => '文件缺失';
 }
