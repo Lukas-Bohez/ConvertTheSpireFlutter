@@ -2184,6 +2184,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Diffusé depuis l\'hôte de Regarder ensemble';
 
   @override
+  String get openedFileNotInLibrary =>
+      'Fichier ouvert, absent de votre bibliothèque';
+
+  @override
   String get trackActions => 'Actions sur le titre';
 
   @override

@@ -2180,6 +2180,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Wird vom Gastgeber von „Gemeinsam schauen“ gestreamt';
 
   @override
+  String get openedFileNotInLibrary =>
+      'Geöffnete Datei, nicht in deiner Mediathek';
+
+  @override
   String get trackActions => 'Titelaktionen';
 
   @override

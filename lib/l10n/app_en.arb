@@ -1210,6 +1210,7 @@
   "undoDislike": "Undo dislike",
   "dislike": "Dislike",
   "streamingFromWatchTogetherHost": "Streaming from the Watch Together host",
+  "openedFileNotInLibrary": "Opened file, not in your library",
   "trackActions": "Track actions",
   "metadataFixed": "Metadata fixed",
   "couldNotFixMetadata": "Could not fix metadata",

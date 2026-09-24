@@ -2166,6 +2166,9 @@ class AppLocalizationsHi extends AppLocalizations {
       'साथ में देखें के होस्ट से स्ट्रीम हो रहा है';
 
   @override
+  String get openedFileNotInLibrary => 'खोली गई फ़ाइल, आपकी लाइब्रेरी में नहीं';
+
+  @override
   String get trackActions => 'ट्रैक के विकल्प';
 
   @override

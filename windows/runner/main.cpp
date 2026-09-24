@@ -7,6 +7,7 @@
 #include <string>
 
 #include "flutter_window.h"
+#include "open_requests.h"
 #include "utils.h"
 
 namespace {
@@ -72,6 +73,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   }
   ::SetUnhandledExceptionFilter(WriteNativeCrashDump);
 
+  // A file or link to open: "Open with", a double-click, a magnet link in a
+  // browser. Windows starts a new copy of the app for each; when one is
+  // already running, it gets the request instead and this copy quits.
+  std::vector<std::string> command_line_arguments = GetCommandLineArguments();
+  if (open_requests::ForwardToRunningInstance(command_line_arguments)) {
+    return EXIT_SUCCESS;
+  }
+  open_requests::RegisterAssociations();
+
   // All DLLs live in a "dll" folder next to the executable so the release
   // root only contains the exe, data/ and dll/. The exe delay-loads
   // flutter_windows.dll and every plugin DLL (see windows/CMakeLists.txt), so
@@ -105,12 +115,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   flutter::DartProject project(L"data");
 
-  std::vector<std::string> command_line_arguments =
-      GetCommandLineArguments();
-
-  project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
+  project.set_dart_entrypoint_arguments(command_line_arguments);
 
   FlutterWindow window(project);
+  window.QueueOpenRequests(command_line_arguments);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
   if (!window.Create(L"Convert The Spire Reborn", origin, size)) {

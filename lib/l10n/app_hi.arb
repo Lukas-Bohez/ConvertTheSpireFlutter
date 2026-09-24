@@ -639,6 +639,7 @@
   "undoDislike": "नापसंद वापस लें",
   "dislike": "नापसंद",
   "streamingFromWatchTogetherHost": "साथ में देखें के होस्ट से स्ट्रीम हो रहा है",
+  "openedFileNotInLibrary": "खोली गई फ़ाइल, आपकी लाइब्रेरी में नहीं",
   "trackActions": "ट्रैक के विकल्प",
   "metadataFixed": "मेटाडेटा ठीक हो गया",
   "couldNotFixMetadata": "मेटाडेटा ठीक नहीं हो सका",

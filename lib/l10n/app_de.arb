@@ -639,6 +639,7 @@
   "undoDislike": "„Gefällt nicht“ zurücknehmen",
   "dislike": "Gefällt nicht",
   "streamingFromWatchTogetherHost": "Wird vom Gastgeber von „Gemeinsam schauen“ gestreamt",
+  "openedFileNotInLibrary": "Geöffnete Datei, nicht in deiner Mediathek",
   "trackActions": "Titelaktionen",
   "metadataFixed": "Metadaten korrigiert",
   "couldNotFixMetadata": "Metadaten konnten nicht korrigiert werden",

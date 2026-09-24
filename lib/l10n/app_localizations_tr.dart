@@ -2165,6 +2165,9 @@ class AppLocalizationsTr extends AppLocalizations {
       'Birlikte İzle ev sahibinden yayınlanıyor';
 
   @override
+  String get openedFileNotInLibrary => 'Açılan dosya, kitaplığında değil';
+
+  @override
   String get trackActions => 'Parça işlemleri';
 
   @override

@@ -639,6 +639,7 @@
   "undoDislike": "Annuler « Je n'aime pas »",
   "dislike": "Je n'aime pas",
   "streamingFromWatchTogetherHost": "Diffusé depuis l'hôte de Regarder ensemble",
+  "openedFileNotInLibrary": "Fichier ouvert, absent de votre bibliothèque",
   "trackActions": "Actions sur le titre",
   "metadataFixed": "Métadonnées corrigées",
   "couldNotFixMetadata": "Impossible de corriger les métadonnées",

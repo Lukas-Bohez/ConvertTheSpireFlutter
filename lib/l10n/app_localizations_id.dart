@@ -2164,6 +2164,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Diputar dari host Nonton Bareng';
 
   @override
+  String get openedFileNotInLibrary =>
+      'File yang dibuka, tidak ada di pustaka Anda';
+
+  @override
   String get trackActions => 'Tindakan lagu';
 
   @override

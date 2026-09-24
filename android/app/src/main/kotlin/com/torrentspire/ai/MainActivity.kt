@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.DocumentsContract
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.os.Environment
 import android.media.MediaScannerConnection
 import android.util.Rational
@@ -41,6 +42,9 @@ import java.io.OutputStream
 import java.util.ArrayList
 
 
+/** Marks a VIEW intent whose file or link was already queued for Dart. */
+private const val EXTRA_OPEN_REQUEST_TAKEN = "com.torrentspire.ai.OPEN_REQUEST_TAKEN"
+
 class MainActivity : AudioServiceActivity() {
     private val channelName = "convert_the_spire/saf"
     private val webviewChannel = "com.yourapp/webview_input"
@@ -49,6 +53,13 @@ class MainActivity : AudioServiceActivity() {
     private var pendingResult: MethodChannel.Result? = null
     private var browserWebView: WebView? = null
     private var keyEventChannel: MethodChannel? = null
+
+    // Files and links the app was asked to open: a video or song from a file
+    // manager, a .torrent, a magnet link from a browser. Dart takes them with
+    // takePending when it starts, whenever the app resumes, and when
+    // "pending" says new ones arrived.
+    private var openChannel: MethodChannel? = null
+    private val pendingOpenRequests = ArrayList<Map<String, String?>>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Android 15+ mandatory edge-to-edge support
@@ -65,6 +76,19 @@ class MainActivity : AudioServiceActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        openChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "convert_the_spire/open").also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "takePending" -> {
+                        result.success(ArrayList(pendingOpenRequests))
+                        pendingOpenRequests.clear()
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
+        queueOpenRequest(intent)
 
         keyEventChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, cursorKeysChannel)
         keyEventChannel?.setMethodCallHandler { _, result ->
@@ -866,6 +890,48 @@ class MainActivity : AudioServiceActivity() {
         } catch (e: Exception) {
             null
         }
+    }
+
+    // With launchMode singleTask, a file or link opened while the app is
+    // running arrives here instead of starting a second copy.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (queueOpenRequest(intent)) {
+            openChannel?.invokeMethod("pending", null)
+        }
+    }
+
+    /** Queues what [intent] asks to open, if anything. Returns true if it did. */
+    private fun queueOpenRequest(intent: Intent?): Boolean {
+        if (intent == null || intent.action != Intent.ACTION_VIEW) return false
+        // Reopening the app from Recents replays the intent that started it.
+        if ((intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) return false
+        if (intent.getBooleanExtra(EXTRA_OPEN_REQUEST_TAKEN, false)) return false
+        val uri = intent.data ?: return false
+        intent.putExtra(EXTRA_OPEN_REQUEST_TAKEN, true)
+
+        // A content:// address rarely shows the file name, which Dart needs
+        // to tell a video from a song or a .torrent.
+        var name: String? = null
+        if (uri.scheme == "content") {
+            try {
+                contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst() && !cursor.isNull(0)) name = cursor.getString(0)
+                }
+            } catch (e: Exception) {
+                Log.w("OpenRequest", "No file name for $uri: $e")
+            }
+        } else if (uri.scheme == "file") {
+            name = uri.lastPathSegment
+        }
+        val mimeType = intent.type ?: try {
+            contentResolver.getType(uri)
+        } catch (e: Exception) {
+            null
+        }
+        pendingOpenRequests.add(mapOf("uri" to uri.toString(), "name" to name, "mimeType" to mimeType))
+        return true
     }
 
     // Picture-in-Picture support: called when user navigates away while video is playing

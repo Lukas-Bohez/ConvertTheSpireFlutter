@@ -2176,6 +2176,9 @@ class AppLocalizationsPt extends AppLocalizations {
       'Transmitindo a partir do anfitrião do Assistir juntos';
 
   @override
+  String get openedFileNotInLibrary => 'Arquivo aberto, fora da sua biblioteca';
+
+  @override
   String get trackActions => 'Ações da faixa';
 
   @override

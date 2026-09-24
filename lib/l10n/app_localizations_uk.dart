@@ -2168,6 +2168,9 @@ class AppLocalizationsUk extends AppLocalizations {
       'Трансляція від ведучого «Дивитися разом»';
 
   @override
+  String get openedFileNotInLibrary => 'Відкритий файл, не з медіатеки';
+
+  @override
   String get trackActions => 'Дії з треком';
 
   @override

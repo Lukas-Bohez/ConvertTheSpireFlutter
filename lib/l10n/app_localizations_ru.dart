@@ -2164,6 +2164,9 @@ class AppLocalizationsRu extends AppLocalizations {
       'Трансляция от ведущего «Смотреть вместе»';
 
   @override
+  String get openedFileNotInLibrary => 'Открытый файл, не из медиатеки';
+
+  @override
   String get trackActions => 'Действия с треком';
 
   @override

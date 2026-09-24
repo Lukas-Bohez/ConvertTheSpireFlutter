@@ -639,6 +639,7 @@
   "undoDislike": "Niet leuk ongedaan maken",
   "dislike": "Niet leuk",
   "streamingFromWatchTogetherHost": "Gestreamd vanaf de host van Samen kijken",
+  "openedFileNotInLibrary": "Geopend bestand, niet in je bibliotheek",
   "trackActions": "Nummeracties",
   "metadataFixed": "Metadata gecorrigeerd",
   "couldNotFixMetadata": "Kon metadata niet corrigeren",

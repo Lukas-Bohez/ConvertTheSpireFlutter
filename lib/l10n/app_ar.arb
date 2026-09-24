@@ -639,6 +639,7 @@
   "undoDislike": "التراجع عن عدم الإعجاب",
   "dislike": "لم يعجبني",
   "streamingFromWatchTogetherHost": "يُبث من مضيف المشاهدة معًا",
+  "openedFileNotInLibrary": "ملف مفتوح، ليس في مكتبتك",
   "trackActions": "إجراءات المقطع",
   "metadataFixed": "تم تصحيح البيانات الوصفية",
   "couldNotFixMetadata": "تعذّر تصحيح البيانات الوصفية",

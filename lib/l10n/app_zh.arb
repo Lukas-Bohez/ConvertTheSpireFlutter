@@ -639,6 +639,7 @@
   "undoDislike": "撤销不喜欢",
   "dislike": "不喜欢",
   "streamingFromWatchTogetherHost": "正在从“一起看”的房主处串流",
+  "openedFileNotInLibrary": "已打开的文件，不在你的媒体库中",
   "trackActions": "曲目操作",
   "metadataFixed": "元数据已修复",
   "couldNotFixMetadata": "无法修复元数据",

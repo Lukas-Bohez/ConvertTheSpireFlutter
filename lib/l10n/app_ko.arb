@@ -639,6 +639,7 @@
   "undoDislike": "싫어요 취소",
   "dislike": "싫어요",
   "streamingFromWatchTogetherHost": "함께 보기 호스트에서 스트리밍 중",
+  "openedFileNotInLibrary": "연 파일, 라이브러리에 없음",
   "trackActions": "곡 작업",
   "metadataFixed": "메타데이터를 수정했습니다",
   "couldNotFixMetadata": "메타데이터를 수정하지 못했습니다",

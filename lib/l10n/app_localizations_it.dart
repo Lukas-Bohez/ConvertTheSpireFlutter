@@ -2174,6 +2174,9 @@ class AppLocalizationsIt extends AppLocalizations {
       'In streaming dall\'host di Guarda insieme';
 
   @override
+  String get openedFileNotInLibrary => 'File aperto, non è nella tua libreria';
+
+  @override
   String get trackActions => 'Azioni del brano';
 
   @override

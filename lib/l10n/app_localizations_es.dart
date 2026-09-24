@@ -2180,6 +2180,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Transmitiendo desde el anfitrión de Ver juntos';
 
   @override
+  String get openedFileNotInLibrary =>
+      'Archivo abierto, no está en tu biblioteca';
+
+  @override
   String get trackActions => 'Acciones de la pista';
 
   @override

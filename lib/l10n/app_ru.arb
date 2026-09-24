@@ -639,6 +639,7 @@
   "undoDislike": "Отменить «Не нравится»",
   "dislike": "Не нравится",
   "streamingFromWatchTogetherHost": "Трансляция от ведущего «Смотреть вместе»",
+  "openedFileNotInLibrary": "Открытый файл, не из медиатеки",
   "trackActions": "Действия с треком",
   "metadataFixed": "Метаданные исправлены",
   "couldNotFixMetadata": "Не удалось исправить метаданные",

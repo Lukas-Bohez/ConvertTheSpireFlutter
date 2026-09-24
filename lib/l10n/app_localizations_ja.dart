@@ -2100,6 +2100,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get streamingFromWatchTogetherHost => '「一緒に見る」のホストからストリーミング中';
 
   @override
+  String get openedFileNotInLibrary => '開いたファイル（ライブラリにはありません）';
+
+  @override
   String get trackActions => '曲の操作';
 
   @override

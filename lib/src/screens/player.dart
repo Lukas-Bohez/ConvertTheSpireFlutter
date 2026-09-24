@@ -125,13 +125,15 @@ class _PlaybackStats {
 }
 
 /// The host's stream a Watch Together guest is playing because it does not
-/// have the file itself. Not a library item: nothing is saved for it.
+/// have the file itself, or a file opened from outside the app that is not in
+/// the library ([openedFile]). Not a library item: nothing is saved for it.
 class RoomStream {
   RoomStream({
     required this.mediaKey,
     required this.url,
     required this.title,
     required this.type,
+    this.openedFile = false,
   }) : item = MediaItem(url, type, title: title);
 
   /// The room's identifier for the media (the host's file name).
@@ -139,6 +141,10 @@ class RoomStream {
   final String url;
   final String title;
   final MediaType type;
+
+  /// True for a file opened from outside the app ("Open with", a
+  /// double-click, a file manager), false for a Watch Together stream.
+  final bool openedFile;
 
   /// A stand-in for display only (title and type). Never added to the
   /// library, so no file action can reach it.
@@ -567,6 +573,9 @@ class PlayerState with ChangeNotifier {
   // Keep Windows on media_kit for playback. Windows remains excluded from
   // thumbnail screenshot generation elsewhere to avoid native instability.
   final bool _useMediaKit = kIsWeb || !Platform.isAndroid;
+
+  /// Completes once the media_kit players exist (desktop only).
+  Future<void>? _mkPlayersReady;
   Player? _mkPlayer;
   VideoController? _mkController;
   // Dedicated media_kit player for audio-only playback on desktop so that
@@ -600,7 +609,7 @@ class PlayerState with ChangeNotifier {
 
   PlayerState(this.prefs) {
     if (_useMediaKit) {
-      _initMkPlayers();
+      _mkPlayersReady = _initMkPlayers();
     }
 
     if (!kIsWeb && Platform.isAndroid) {
@@ -1323,22 +1332,28 @@ class PlayerState with ChangeNotifier {
     _historyCursor = -1;
     _modifiedAtCache.clear();
 
-    if (_audio != null) {
-      try {
-        await _safeStopAudio();
-      } catch (_) {}
+    // A file opened from outside the app keeps playing: the player loads
+    // the remembered folder when it first opens, which is right after an
+    // opened file sends the app to the player.
+    final keepPlaying = _roomStream?.openedFile ?? false;
+    if (!keepPlaying) {
+      if (_audio != null) {
+        try {
+          await _safeStopAudio();
+        } catch (_) {}
+      }
+      if (_audioMkPlayer != null) {
+        try {
+          await _audioMkPlayer!.stop();
+        } catch (_) {}
+      }
+      if (_useMediaKit && _mkPlayer != null) {
+        try {
+          await _mkPlayer!.stop();
+        } catch (_) {}
+      }
+      await _disposeAndroidController();
     }
-    if (_audioMkPlayer != null) {
-      try {
-        await _audioMkPlayer!.stop();
-      } catch (_) {}
-    }
-    if (_useMediaKit && _mkPlayer != null) {
-      try {
-        await _mkPlayer!.stop();
-      } catch (_) {}
-    }
-    await _disposeAndroidController();
 
     final hydratedItems = await _hydrateModifiedAt(items);
     if (_loadVersion != version) return;
@@ -1346,8 +1361,10 @@ class PlayerState with ChangeNotifier {
     library = List.from(hydratedItems);
     _applyStatsToLibrary();
     currentIndex = 0;
-    position = Duration.zero;
-    duration = null;
+    if (!keepPlaying) {
+      position = Duration.zero;
+      duration = null;
+    }
     notifyListeners();
 
     // Fast pass: title + artist only, no images, batched.
@@ -2814,7 +2831,7 @@ class PlayerState with ChangeNotifier {
   /// Stops the host's stream when the room is gone. It would only fail once
   /// the host's server closes, so it is ended cleanly instead.
   Future<void> _endRoomStream() async {
-    if (_roomStream == null) return;
+    if (_roomStream == null || _roomStream!.openedFile) return;
     _roomStream = null;
     await _stopPlaybackBestEffort();
     position = Duration.zero;
@@ -2830,7 +2847,9 @@ class PlayerState with ChangeNotifier {
     // it - a TV, or a friend - can still watch along (issue #7).
     // Only real files can be served; a content:// URI from a system-picked
     // folder has no path the room's server could open.
-    final localPath = currentItem?.path;
+    // What is really playing: an opened file when there is one.
+    final item = nowPlayingItem;
+    final localPath = item?.path;
     final sourcePath = localPath != null && _isServableFile(localPath)
         ? watchParty.shareMedia(localPath)
         : null;
@@ -2838,7 +2857,7 @@ class PlayerState with ChangeNotifier {
       mediaKey: key,
       position: position,
       playing: isPlaying,
-      title: currentItem?.title,
+      title: item?.title,
       sourcePath: sourcePath,
     );
   }
@@ -3857,6 +3876,33 @@ class PlayerState with ChangeNotifier {
     }
     _disposeAndroidController();
     super.dispose();
+  }
+
+  /// Plays a file opened from outside the app: "Open with" or a double-click
+  /// in Explorer or Finder, or a file manager on a phone. A file in the
+  /// library plays from there. Any other plays without being added to it,
+  /// shown the way a Watch Together stream is. [path] may be an Android
+  /// content:// address; [name] is then its file name.
+  Future<void> openExternalFile(String path,
+      {required String name, required bool isVideo}) async {
+    await _mkPlayersReady;
+    if (_disposed) return;
+    final index = library.indexWhere((item) => item.path == path);
+    if (index >= 0) {
+      await select(index);
+      return;
+    }
+    _commitCurrentPlayStats();
+    final fileName = name.isNotEmpty ? name : p.basename(path);
+    _roomStream = RoomStream(
+      mediaKey: fileName,
+      url: path,
+      title: p.basenameWithoutExtension(fileName),
+      type: isVideo ? MediaType.video : MediaType.audio,
+      openedFile: true,
+    );
+    notifyListeners();
+    await playFileDirect(path, fromRoom: true);
   }
 
   /// Immediately play a file by its filesystem path. This bypasses any
@@ -5780,7 +5826,12 @@ class _PlayerScreenState extends State<PlayerScreen>
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
             child: Row(
               children: [
-                Icon(Icons.groups_rounded, color: cs.primary, size: 28),
+                Icon(
+                    stream.openedFile
+                        ? Icons.play_circle_outline_rounded
+                        : Icons.groups_rounded,
+                    color: cs.primary,
+                    size: 28),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -5798,7 +5849,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        context.l10n.streamingFromWatchTogetherHost,
+                        stream.openedFile
+                            ? context.l10n.openedFileNotInLibrary
+                            : context.l10n.streamingFromWatchTogetherHost,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

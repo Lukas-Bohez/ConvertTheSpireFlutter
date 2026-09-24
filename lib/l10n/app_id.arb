@@ -639,6 +639,7 @@
   "undoDislike": "Batalkan tidak suka",
   "dislike": "Tidak suka",
   "streamingFromWatchTogetherHost": "Diputar dari host Nonton Bareng",
+  "openedFileNotInLibrary": "File yang dibuka, tidak ada di pustaka Anda",
   "trackActions": "Tindakan lagu",
   "metadataFixed": "Metadata diperbaiki",
   "couldNotFixMetadata": "Tidak dapat memperbaiki metadata",

@@ -2157,6 +2157,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Streaming from the Watch Together host';
 
   @override
+  String get openedFileNotInLibrary => 'Opened file, not in your library';
+
+  @override
   String get trackActions => 'Track actions';
 
   @override
