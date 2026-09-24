@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/l10n.dart';
+
 enum RarityTier { common, uncommon, rare, epic, legendary, mythic }
 
 extension RarityTierX on RarityTier {
   String get label => name[0].toUpperCase() + name.substring(1);
+
+  /// [label] in the app's language.
+  String labelIn(AppLocalizations l) => switch (this) {
+        RarityTier.common => l.rarityCommon,
+        RarityTier.uncommon => l.rarityUncommon,
+        RarityTier.rare => l.rarityRare,
+        RarityTier.epic => l.rarityEpic,
+        RarityTier.legendary => l.rarityLegendary,
+        RarityTier.mythic => l.rarityMythic,
+      };
 
   Color get glowColor => const {
         RarityTier.common: Color(0xFF607D8B),
@@ -43,6 +55,39 @@ class ColourReward {
   final String displayName;
   final Color color;
   final RarityTier rarity;
+
+  /// [displayName] in the app's language.
+  String nameIn(AppLocalizations l) => switch (id) {
+        'slate' => l.colourSlate,
+        'steel' => l.colourSteel,
+        'graphite' => l.colourGraphite,
+        'mist' => l.colourMist,
+        'ash' => l.colourAsh,
+        'ocean_blue' => l.colourOceanBlue,
+        'deep_teal' => l.colourDeepTeal,
+        'indigo' => l.colourIndigo,
+        'burnt_sienna' => l.colourBurntSienna,
+        'bark' => l.colourBark,
+        'ruby' => l.colourRuby,
+        'berry' => l.colourBerry,
+        'cyan_depth' => l.colourCyanDepth,
+        'fern' => l.colourFern,
+        'saffron' => l.colourSaffron,
+        'void_purple' => l.colourVoidPurple,
+        'crimson_rose' => l.colourCrimsonRose,
+        'abyss' => l.colourAbyss,
+        'forest_king' => l.colourForestKing,
+        'ember' => l.colourEmber,
+        'dark_gold' => l.colourDarkGold,
+        'royal_amethyst' => l.colourRoyalAmethyst,
+        'dragon_teal' => l.colourDragonTeal,
+        'wine_crest' => l.colourWineCrest,
+        'mythic_red' => l.colourMythicRed,
+        'mango_passion' => l.colourMangoPassion,
+        'obsidian_black' => l.colourObsidianBlack,
+        'ivory_prime' => l.colourIvoryPrime,
+        _ => displayName,
+      };
 }
 
 const List<ColourReward> kAllColours = [

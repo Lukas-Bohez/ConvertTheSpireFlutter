@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../config/build_flags.dart';
 import '../../services/ad_service.dart';
 import '../../services/purchase_service.dart';
+import '../../utils/l10n.dart';
 import 'colour_collection_grid.dart';
 import 'colour_rarity.dart';
 import 'colour_reward_service.dart';
@@ -135,25 +136,26 @@ class _WatchAdCardState extends State<WatchAdCard> {
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            const Expanded(
+            Expanded(
               child: Text(
-                'Watch an ad → unlock a colour',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                context.l10n.watchAdUnlockColour,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
             TextButton(
               onPressed: _openCollection,
-              child: const Text('My collection'),
+              child: Text(context.l10n.myCollection),
             ),
           ]),
           const SizedBox(height: 8),
           Wrap(spacing: 8, children: [
-            _oddsPill('Mythic', '0.1', Colors.redAccent),
-            _oddsPill('Legendary', '1.9', Colors.amber),
-            _oddsPill('Epic', '6', Colors.purple),
-            _oddsPill('Rare', '12', Colors.red),
-            _oddsPill('Uncommon', '25', Colors.blue),
-            _oddsPill('Common', '55', Colors.grey),
+            _oddsPill(context.l10n.mythic, '0.1', Colors.redAccent),
+            _oddsPill(context.l10n.legendary, '1.9', Colors.amber),
+            _oddsPill(context.l10n.epic, '6', Colors.purple),
+            _oddsPill(context.l10n.rare, '12', Colors.red),
+            _oddsPill(context.l10n.uncommon, '25', Colors.blue),
+            _oddsPill(context.l10n.common, '55', Colors.grey),
           ]),
           const SizedBox(height: 12),
           if (hasAllThemes)
@@ -168,11 +170,11 @@ class _WatchAdCardState extends State<WatchAdCard> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.green.withValues(alpha: 0.45)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green),
-                  SizedBox(width: 10),
-                  Text('All colours unlocked!'),
+                  const Icon(Icons.check_circle, color: Colors.green),
+                  const SizedBox(width: 10),
+                  Text(context.l10n.allColoursUnlocked),
                 ],
               ),
             )
@@ -210,7 +212,7 @@ class _WatchAdCardState extends State<WatchAdCard> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'Unlock All 28 Colours',
+                              context.l10n.unlockAll28Colours,
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
@@ -219,7 +221,7 @@ class _WatchAdCardState extends State<WatchAdCard> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'One-time purchase · No ads needed',
+                              context.l10n.oneTimePurchaseNoAds,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Theme.of(context)
@@ -232,8 +234,8 @@ class _WatchAdCardState extends State<WatchAdCard> {
                               purchase.storeAvailable
                                   ? (hasPrice
                                       ? purchase.getAllThemesPriceLabel
-                                      : 'Loading price…')
-                                  : 'See price in store',
+                                      : context.l10n.loadingPrice)
+                                  : context.l10n.seePriceStore,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Theme.of(context)
@@ -270,7 +272,9 @@ class _WatchAdCardState extends State<WatchAdCard> {
                     : const Icon(kIsGithubRelease
                         ? Icons.auto_awesome
                         : Icons.ondemand_video),
-                label: const Text(kIsGithubRelease ? 'Spin for Colour' : 'Watch Ad'),
+                label: Text(kIsGithubRelease
+                    ? context.l10n.spinColour
+                    : context.l10n.watchAd),
                 onPressed: _loading
                     ? null
                     : (kIsGithubRelease ? _spinDirectly : _showAdAndReward),

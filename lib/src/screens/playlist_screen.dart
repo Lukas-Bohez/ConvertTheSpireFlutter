@@ -20,6 +20,7 @@ import '../services/platform_dirs.dart';
 import '../services/playlist_service.dart';
 import '../state/app_controller.dart';
 import '../utils/folder_label.dart';
+import '../utils/l10n.dart';
 import '../utils/snack.dart';
 import '../widgets/tv_file_browser.dart';
 
@@ -180,7 +181,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
     setState(() {
       _loading = true;
-      _loadingMessage = 'Fetching playlist…';
+      _loadingMessage = context.l10n.fetchingPlaylist;
       _error = null;
       _comparison = null;
       _playlistInfo = null;
@@ -216,7 +217,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     AdService.instance.registerInteraction();
     final result = await pickDirectoryPath(
       context,
-      dialogTitle: 'Select music folder to compare',
+      dialogTitle: context.l10n.selectMusicFolderCompare,
     );
     if (result == null || result.isEmpty || !mounted) return false;
     setState(() => _folderController.text = result);
@@ -244,7 +245,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     setState(() {
       _loading = true;
       _error = null;
-      _loadingMessage = 'Scanning folder & matching…';
+      _loadingMessage = context.l10n.scanningFolderMatching;
     });
 
     try {
@@ -510,7 +511,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
           staging.deleteSync();
         } catch (_) {}
         if (mounted) {
-          Snack.show(context, 'No files could be moved',
+          Snack.show(context, context.l10n.noFilesCouldMoved,
               level: SnackLevel.error);
         }
         return;
@@ -547,14 +548,14 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
       if (mounted) {
         Snack.show(
-            context, '$label: moved $moved files, deleted $deleted duplicates',
+            context, context.l10n.movedFilesDeletedDuplicates(label, moved, deleted),
             level: moved > 0 ? SnackLevel.success : SnackLevel.info);
       }
       await _compareToFolder(jumpToBestTab: false);
     } catch (e) {
       debugPrint('[Extras] Auto-resolve failed: $e');
       if (mounted) {
-        Snack.show(context, 'Auto-resolve failed: $e', level: SnackLevel.error);
+        Snack.show(context, context.l10n.autoResolveFailed(e), level: SnackLevel.error);
       }
     } finally {
       if (mounted) setState(() => _extrasBusy = false);
@@ -581,7 +582,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       }
       debugPrint('[Extras] Deleted $removed/${extras.length} incomplete');
       if (mounted) {
-        Snack.show(context, 'Deleted $removed incomplete download files',
+        Snack.show(context, context.l10n.deletedIncompleteDownloadFiles(removed),
             level: removed > 0 ? SnackLevel.success : SnackLevel.info);
       }
       await _compareToFolder(jumpToBestTab: false);
@@ -604,11 +605,11 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       if (!mounted) return;
       var target = _formatTargetFor(entry.key);
       if (target.isEmpty) {
-        await _chooseExtrasTarget('Choose a folder for ${entry.key} files');
+        await _chooseExtrasTarget(context.l10n.chooseFolderFiles(entry.key));
         target = _extrasTargetFolder ?? '';
       }
       await _moveExtrasToTarget(entry.value, target,
-          'Moved ${entry.value.length} ${entry.key} files');
+          context.l10n.movedFiles(entry.value.length, entry.key));
     }
   }
 
@@ -619,10 +620,10 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     if (extras.isEmpty || _extrasBusy) return;
 
     if (_extrasTargetFolder == null || _extrasTargetFolder!.trim().isEmpty) {
-      await _chooseExtrasTarget('Choose folder to move extra files into');
+      await _chooseExtrasTarget(context.l10n.chooseFolderMoveExtraFiles);
     }
     await _moveExtrasToTarget(extras, _extrasTargetFolder?.trim() ?? '',
-        'Moved ${extras.length} files not in playlist');
+        context.l10n.movedFilesNotPlaylist(extras.length));
   }
 
   /// Resolves a single extra file according to its category.
@@ -633,7 +634,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         setState(() => _extrasBusy = true);
         try {
           if (await _deleteExtraFile(f) && mounted) {
-            Snack.show(context, 'Deleted ${f.fileName}',
+            Snack.show(context, context.l10n.deleted(f.fileName),
                 level: SnackLevel.success);
           }
           await _compareToFolder(jumpToBestTab: false);
@@ -644,18 +645,18 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       case PlaylistExtraKind.wrongFormat:
         var target = _formatTargetFor(f.extension);
         if (target.isEmpty) {
-          await _chooseExtrasTarget('Choose a folder for ${f.extension} files');
+          await _chooseExtrasTarget(context.l10n.chooseFolderFiles2(f.extension));
           target = _extrasTargetFolder ?? '';
         }
-        await _moveExtrasToTarget([f], target, 'Moved ${f.fileName}');
+        await _moveExtrasToTarget([f], target, context.l10n.moved(f.fileName));
         break;
       case PlaylistExtraKind.notInPlaylist:
         if (_extrasTargetFolder == null ||
             _extrasTargetFolder!.trim().isEmpty) {
-          await _chooseExtrasTarget('Choose folder to move extra files into');
+          await _chooseExtrasTarget(context.l10n.chooseFolderMoveExtraFiles);
         }
         await _moveExtrasToTarget(
-            [f], _extrasTargetFolder?.trim() ?? '', 'Moved ${f.fileName}');
+            [f], _extrasTargetFolder?.trim() ?? '', context.l10n.moved(f.fileName));
         break;
     }
   }
@@ -663,10 +664,10 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   /// Short human label for a category's per-item action.
   String _extrasItemActionLabel(ExtraFile f) {
     return switch (f.kind) {
-      PlaylistExtraKind.incompleteDownload => 'Delete this file',
+      PlaylistExtraKind.incompleteDownload => context.l10n.deleteFile4,
       PlaylistExtraKind.wrongFormat =>
-        'Move ${f.extension} file to format folder',
-      PlaylistExtraKind.notInPlaylist => 'Move to target folder',
+        context.l10n.moveFileFormatFolder(f.extension),
+      PlaylistExtraKind.notInPlaylist => context.l10n.moveTargetFolder,
     };
   }
 
@@ -674,9 +675,9 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   String _extrasItemSubtitle(ExtraFile f) {
     return switch (f.kind) {
       PlaylistExtraKind.incompleteDownload =>
-        'Incomplete download  •  ${f.extension}',
+        context.l10n.incompleteDownload(f.extension),
       PlaylistExtraKind.wrongFormat =>
-        '${f.extension}  •  different from folder format',
+        context.l10n.differentFromFolderFormat(f.extension),
       PlaylistExtraKind.notInPlaylist => f.extension,
     };
   }
@@ -690,11 +691,11 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     if (missing.isEmpty) return;
     final text = widget.playlistService.buildTrackList(missing);
     await _saveExport(
-      dialogTitle: 'Export missing tracks',
+      dialogTitle: context.l10n.exportMissingTracks,
       fileName: 'missing_tracks.txt',
       extension: 'txt',
       content: text,
-      doneMessage: 'Exported ${missing.length} tracks',
+      doneMessage: context.l10n.exportedTracks(missing.length),
     );
   }
 
@@ -708,11 +709,11 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     final safeTitle = (_playlistInfo?.title ?? 'playlist')
         .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
     await _saveExport(
-      dialogTitle: 'Save M3U playlist',
+      dialogTitle: context.l10n.saveM3uPlaylist,
       fileName: '$safeTitle.m3u',
       extension: 'm3u',
       content: text,
-      doneMessage: 'Saved the M3U playlist',
+      doneMessage: context.l10n.savedM3uPlaylist,
     );
   }
 
@@ -735,7 +736,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       Snack.show(context, doneMessage, level: SnackLevel.success);
     } catch (e) {
       if (!mounted) return;
-      Snack.show(context, 'Could not save the file: $e',
+      Snack.show(context, context.l10n.couldNotSaveFile(e),
           level: SnackLevel.error);
     }
   }
@@ -759,8 +760,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     Snack.show(
       context,
       tracks.length == 1
-          ? 'Downloading "${tracks.first.title}"'
-          : 'Downloading ${tracks.length} tracks',
+          ? context.l10n.downloading2(tracks.first.title)
+          : context.l10n.downloadingTracks(tracks.length),
       level: SnackLevel.info,
     );
   }
@@ -827,15 +828,15 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     final compareButton = FilledButton.tonalIcon(
       onPressed: _loading ? null : () => _compareToFolder(),
       icon: const Icon(Icons.compare_arrows, size: 20),
-      label: const Text('Compare'),
+      label: Text(context.l10n.compare),
     );
 
     final Widget folderField = pickedOnPhone
         ? InputDecorator(
-            decoration: const InputDecoration(
-              labelText: 'Folder to compare',
-              prefixIcon: Icon(Icons.folder),
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: context.l10n.folderCompare,
+              prefixIcon: const Icon(Icons.folder),
+              border: const OutlineInputBorder(),
               isDense: true,
             ),
             child: Text(
@@ -846,10 +847,10 @@ class _PlaylistScreenState extends State<PlaylistScreen>
           )
         : TextField(
             controller: _folderController,
-            decoration: const InputDecoration(
-              hintText: 'Local music folder path',
-              prefixIcon: Icon(Icons.folder),
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              hintText: context.l10n.localMusicFolderPath,
+              prefixIcon: const Icon(Icons.folder),
+              border: const OutlineInputBorder(),
               isDense: true,
             ),
             onChanged: (_) => setState(() {}),
@@ -868,10 +869,10 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                 Expanded(
                   child: TextField(
                     controller: _urlController,
-                    decoration: const InputDecoration(
-                      hintText: 'YouTube playlist URL',
-                      prefixIcon: Icon(Icons.link),
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      hintText: context.l10n.youtubePlaylistUrl,
+                      prefixIcon: const Icon(Icons.link),
+                      border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                     onSubmitted: (_) => _loadPlaylist(),
@@ -881,7 +882,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                 FilledButton.icon(
                   onPressed: _loading ? null : _loadPlaylist,
                   icon: const Icon(Icons.playlist_play, size: 20),
-                  label: const Text('Load'),
+                  label: Text(context.l10n.load),
                 ),
               ],
             ),
@@ -894,7 +895,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                   IconButton.outlined(
                     onPressed: _loading ? null : _pickFolderAndCompare,
                     icon: const Icon(Icons.folder_open),
-                    tooltip: pickedOnPhone ? 'Change folder' : 'Browse…',
+                    tooltip: pickedOnPhone ? context.l10n.changeFolder : context.l10n.browse2,
                   ),
                   if (!narrow) ...[
                     const SizedBox(width: 4),
@@ -911,7 +912,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                 crossAxisAlignment: WrapCrossAlignment.center,
                 spacing: 8,
                 children: [
-                  const Text('Download format:'),
+                  Text(context.l10n.downloadFormat),
                   DropdownButton<String>(
                     value: _selectedFormat,
                     isDense: true,
@@ -987,10 +988,10 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       isScrollable: narrow,
       tabAlignment: narrow ? TabAlignment.start : null,
       tabs: [
-        const Tab(text: 'Overview'),
-        Tab(child: _tabLabel('Matched', matched, Colors.green)),
-        Tab(child: _tabLabel('Missing', missing, Colors.orange)),
-        Tab(child: _tabLabel('Extras', extras, cs.primary)),
+        Tab(text: context.l10n.overview),
+        Tab(child: _tabLabel(context.l10n.matched, matched, Colors.green)),
+        Tab(child: _tabLabel(context.l10n.missing, missing, Colors.orange)),
+        Tab(child: _tabLabel(context.l10n.extras, extras, cs.primary)),
       ],
     );
   }
@@ -1038,8 +1039,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                 title: Text(_playlistInfo!.title,
                     style: theme.textTheme.titleMedium),
                 subtitle: Text(
-                  '${_playlistInfo!.author}  •  ${_tracks!.length} tracks  •  '
-                  '${_formatTotalDuration(_tracks!)}',
+                  context.l10n.tracks(_playlistInfo!.author, _tracks!.length, _formatTotalDuration(_tracks!)),
                 ),
                 trailing: PopupMenuButton<String>(
                   onSelected: (v) {
@@ -1047,11 +1047,11 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                     if (v == 'missing') _exportMissing();
                   },
                   itemBuilder: (_) => [
-                    const PopupMenuItem(
-                        value: 'm3u', child: Text('Export as M3U')),
+                    PopupMenuItem(
+                        value: 'm3u', child: Text(context.l10n.exportM3u)),
                     if (_comparison != null && _comparison!.missing.isNotEmpty)
-                      const PopupMenuItem(
-                          value: 'missing', child: Text('Export missing list')),
+                      PopupMenuItem(
+                          value: 'missing', child: Text(context.l10n.exportMissingList)),
                   ],
                   icon: const Icon(Icons.more_vert),
                 ),
@@ -1100,14 +1100,13 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          '${_comparison!.uncertainMatches().length} tracks matched with '
-                          'low confidence - review them in the Matched tab.',
+                          context.l10n.tracksMatchedLowConfidenceReview(_comparison!.uncertainMatches().length),
                           style: theme.textTheme.bodyMedium,
                         ),
                       ),
                       TextButton(
                         onPressed: () => _tabController.animateTo(1),
-                        child: const Text('Review'),
+                        child: Text(context.l10n.review),
                       ),
                     ],
                   ),
@@ -1120,14 +1119,13 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                 onPressed: () => _downloadMissing(_comparison!.missing),
                 icon: const Icon(Icons.download),
                 label: Text(
-                    'Download All ${_comparison!.missingCount} Missing Tracks'),
+                    context.l10n.downloadAllMissingTracks(_comparison!.missingCount)),
               ),
               const SizedBox(height: 6),
               Text(
                 _downloadFolderForMissing == null
-                    ? 'They go to your download folder.'
-                    : 'They go into ${friendlyFolderLabel(_downloadFolderForMissing!)}, '
-                        'next to the rest of the playlist.',
+                    ? context.l10n.theyGoDownloadFolder
+                    : context.l10n.theyGoIntoNextRest(friendlyFolderLabel(_downloadFolderForMissing!)),
                 style: theme.textTheme.bodySmall,
                 textAlign: TextAlign.center,
               ),
@@ -1137,8 +1135,8 @@ class _PlaylistScreenState extends State<PlaylistScreen>
             const SizedBox(height: 8),
             Text(
                 _folderController.text.trim().isEmpty
-                    ? '${_tracks!.length} tracks loaded. Choose a folder above to see which you already have.'
-                    : '${_tracks!.length} tracks loaded. Press Compare to see which are already in the folder.',
+                    ? context.l10n.tracksLoadedChooseFolderAbove(_tracks!.length)
+                    : context.l10n.tracksLoadedPressCompareSee(_tracks!.length),
                 style:
                     theme.textTheme.bodyMedium?.copyWith(color: Colors.grey)),
             const SizedBox(height: 12),
@@ -1168,12 +1166,12 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     return Row(
       children: [
         _summaryCard(
-            'Total', '${c.total}', Icons.queue_music, cs.primary, theme),
-        _summaryCard('Matched', '${c.downloadedCount}', Icons.check_circle,
+            context.l10n.total, '${c.total}', Icons.queue_music, cs.primary, theme),
+        _summaryCard(context.l10n.matched, '${c.downloadedCount}', Icons.check_circle,
             Colors.green, theme),
         _summaryCard(
-            'Missing', '${c.missingCount}', Icons.cancel, Colors.orange, theme),
-        _summaryCard('Extras', '${c.extraCount}', Icons.library_music,
+            context.l10n.missing, '${c.missingCount}', Icons.cancel, Colors.orange, theme),
+        _summaryCard(context.l10n.extras, '${c.extraCount}', Icons.library_music,
             cs.primary, theme),
       ],
     );
@@ -1211,7 +1209,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Completion', style: theme.textTheme.titleSmall),
+                Text(context.l10n.completion, style: theme.textTheme.titleSmall),
                 Text('${c.completionPercentage.toStringAsFixed(1)}%',
                     style: theme.textTheme.titleSmall
                         ?.copyWith(fontWeight: FontWeight.bold)),
@@ -1277,9 +1275,9 @@ class _PlaylistScreenState extends State<PlaylistScreen>
             runSpacing: 4,
             children: [
               // Confidence filter chips
-              const Text('Min confidence: '),
+              Text(context.l10n.minConfidence),
               ...[0.0, 0.55, 0.70, 0.85].map((v) => ChoiceChip(
-                    label: Text(v == 0 ? 'All' : '${(v * 100).toInt()}%'),
+                    label: Text(v == 0 ? context.l10n.playerAll : '${(v * 100).toInt()}%'),
                     selected: _confidenceFilter == v,
                     onSelected: (_) => setState(() => _confidenceFilter = v),
                     visualDensity: VisualDensity.compact,
@@ -1290,13 +1288,13 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                 value: _sortMode,
                 underline: const SizedBox(),
                 isDense: true,
-                items: const [
+                items: [
                   DropdownMenuItem(
-                      value: _SortMode.original, child: Text('Playlist order')),
+                      value: _SortMode.original, child: Text(context.l10n.playlistOrder)),
                   DropdownMenuItem(
-                      value: _SortMode.title, child: Text('Title A-Z')),
+                      value: _SortMode.title, child: Text(context.l10n.titleZ)),
                   DropdownMenuItem(
-                      value: _SortMode.confidence, child: Text('Confidence ↑')),
+                      value: _SortMode.confidence, child: Text(context.l10n.confidence)),
                 ],
                 onChanged: (v) =>
                     setState(() => _sortMode = v ?? _SortMode.original),
@@ -1307,7 +1305,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         // List
         Expanded(
           child: matches.isEmpty
-              ? const Center(child: Text('No matches at this confidence level'))
+              ? Center(child: Text(context.l10n.noMatchesConfidenceLevel))
               : NotificationListener<ScrollEndNotification>(
                   onNotification: (_) {
                     AdService.instance.registerInteraction();
@@ -1340,7 +1338,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
             Icon(Icons.check_circle_outline,
                 size: 56, color: Colors.green.shade300),
             const SizedBox(height: 12),
-            Text('All playlist tracks are in the folder!',
+            Text(context.l10n.allPlaylistTracksFolder,
                 style: theme.textTheme.titleMedium),
           ],
         ),
@@ -1363,7 +1361,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                     : () => _downloadMissing(_missingSelection.toList()),
                 icon: const Icon(Icons.download, size: 18),
                 label: Text(
-                    'Download Selected (${_missingSelection.length}/${_comparison!.missingCount})'),
+                    context.l10n.downloadSelected(_missingSelection.length, _comparison!.missingCount)),
               ),
               OutlinedButton.icon(
                 onPressed: () {
@@ -1378,13 +1376,13 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                 icon: const Icon(Icons.check_box, size: 18),
                 label: Text(
                     _missingSelection.length == _comparison!.missingCount
-                        ? 'Clear Selection'
-                        : 'Select All'),
+                        ? context.l10n.clearSelection2
+                        : context.l10n.selectAll),
               ),
               OutlinedButton.icon(
                 onPressed: _exportMissing,
                 icon: const Icon(Icons.save_alt, size: 18),
-                label: const Text('Export List'),
+                label: Text(context.l10n.exportList),
               ),
             ],
           ),
@@ -1406,11 +1404,11 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                     setState(() {
                       _lastMissingSelectedIndex = i;
                     });
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text(
-                        'Range select started. Tap another item to select a range.',
+                        context.l10n.rangeSelectStartedTapAnother,
                       ),
-                      duration: Duration(seconds: 2),
+                      duration: const Duration(seconds: 2),
                     ));
                   },
                   // The whole row toggles, not just the small checkbox, which
@@ -1428,7 +1426,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                       Text('${t.artist}  •  ${_formatDuration(t.duration)}'),
                   trailing: IconButton(
                     icon: const Icon(Icons.download, size: 20),
-                    tooltip: 'Download this track',
+                    tooltip: context.l10n.downloadTrack,
                     onPressed: () => _downloadMissing([t]),
                   ),
                 );
@@ -1486,8 +1484,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'No music files in '
-                    '${friendlyFolderLabel(_comparison!.folderPath)}.',
+                    context.l10n.noMusicFiles(friendlyFolderLabel(_comparison!.folderPath)),
                     style: theme.textTheme.titleSmall?.copyWith(
                         color: theme.colorScheme.onErrorContainer),
                   ),
@@ -1496,8 +1493,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
             ),
             const SizedBox(height: 6),
             Text(
-              'That is why every track shows as missing. Pick the folder your '
-              'songs are in; subfolders are included.',
+              context.l10n.whyEveryTrackShowsMissing,
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onErrorContainer),
             ),
@@ -1507,7 +1503,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
               child: FilledButton.tonalIcon(
                 onPressed: _loading ? null : _pickFolderAndCompare,
                 icon: const Icon(Icons.folder_open, size: 18),
-                label: const Text('Choose another folder'),
+                label: Text(context.l10n.chooseAnotherFolder),
               ),
             ),
           ],
@@ -1528,9 +1524,9 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         children: [
           Icon(Icons.folder_open, size: 56, color: Colors.grey.shade300),
           const SizedBox(height: 12),
-          Text('Run a comparison first', style: theme.textTheme.titleMedium),
+          Text(context.l10n.runComparisonFirst, style: theme.textTheme.titleMedium),
           if (folder.isNotEmpty)
-            Text('Folder: ${friendlyFolderLabel(folder)}',
+            Text(context.l10n.folder2(friendlyFolderLabel(folder)),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
@@ -1539,14 +1535,14 @@ class _PlaylistScreenState extends State<PlaylistScreen>
             FilledButton.icon(
               onPressed: _loading ? null : () => _compareToFolder(),
               icon: const Icon(Icons.compare_arrows, size: 18),
-              label: const Text('Compare Now'),
+              label: Text(context.l10n.compareNow),
             ),
           ] else if (hasTracks) ...[
             const SizedBox(height: 12),
             FilledButton.icon(
               onPressed: _loading ? null : _pickFolderAndCompare,
               icon: const Icon(Icons.folder_open, size: 18),
-              label: const Text('Choose a folder'),
+              label: Text(context.l10n.chooseFolder2),
             ),
           ],
         ],
@@ -1568,7 +1564,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
           children: [
             Icon(Icons.folder_off, size: 56, color: Colors.grey.shade300),
             const SizedBox(height: 12),
-            Text('No extra files - folder matches the playlist perfectly',
+            Text(context.l10n.noExtraFilesFolderMatches,
                 style: theme.textTheme.titleMedium),
           ],
         ),
@@ -1580,41 +1576,41 @@ class _PlaylistScreenState extends State<PlaylistScreen>
       children: [
         _buildExtrasSection(
           theme,
-          title: 'Incomplete downloads',
-          subtitle: 'Partially-downloaded temp artifacts - safe to delete',
+          title: context.l10n.incompleteDownloads,
+          subtitle: context.l10n.partiallyDownloadedTempArtifactsSafe,
           icon: Icons.warning_amber,
           color: Colors.orange,
           files: incomplete,
           actionIcon: Icons.delete_outline,
           onItemAction: _resolveExtra,
-          resolveAllLabel: 'Delete all',
+          resolveAllLabel: context.l10n.deleteAll,
           onResolveAll: _autoResolveIncomplete,
         ),
         const SizedBox(height: 8),
         _buildExtrasSection(
           theme,
-          title: 'Wrong format',
+          title: context.l10n.wrongFormat,
           subtitle:
-              "Files whose format differs from the folder's dominant format",
+              context.l10n.filesWhoseFormatDiffersFrom,
           icon: Icons.audio_file,
           color: Colors.amber,
           files: wrongFormat,
           actionIcon: Icons.insert_drive_file,
           onItemAction: _resolveExtra,
-          resolveAllLabel: 'Move all',
+          resolveAllLabel: context.l10n.moveAll,
           onResolveAll: _autoResolveWrongFormat,
         ),
         const SizedBox(height: 8),
         _buildExtrasSection(
           theme,
-          title: 'Not in playlist',
-          subtitle: 'Right-format files that no playlist track matches',
+          title: context.l10n.notPlaylist,
+          subtitle: context.l10n.rightFormatFilesNoPlaylist,
           icon: Icons.library_music,
           color: theme.colorScheme.primary,
           files: notInPlaylist,
           actionIcon: Icons.insert_drive_file,
           onItemAction: _resolveExtra,
-          resolveAllLabel: 'Move all',
+          resolveAllLabel: context.l10n.moveAll,
           onResolveAll: _autoResolveNotInPlaylist,
         ),
       ],
@@ -1731,7 +1727,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
           if (files.length > shown.length)
             Padding(
               padding: const EdgeInsets.all(8),
-              child: Text('…and ${files.length - shown.length} more',
+              child: Text(context.l10n.more2(files.length - shown.length),
                   style:
                       theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
             ),
@@ -1849,7 +1845,7 @@ class _MatchedTile extends StatelessWidget {
             ),
             // Match method chip
             Chip(
-              label: Text(_methodLabel(match.method),
+              label: Text(_methodLabel(context, match.method),
                   style: const TextStyle(fontSize: 10)),
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
@@ -1861,13 +1857,13 @@ class _MatchedTile extends StatelessWidget {
     );
   }
 
-  String _methodLabel(MatchMethod m) {
+  String _methodLabel(BuildContext context, MatchMethod m) {
     return switch (m) {
-      MatchMethod.exact => 'Exact',
-      MatchMethod.contains => 'Contains',
-      MatchMethod.artistTitle => 'Artist+Title',
-      MatchMethod.tokenOverlap => 'Tokens',
-      MatchMethod.fuzzy => 'Fuzzy',
+      MatchMethod.exact => context.l10n.exact,
+      MatchMethod.contains => context.l10n.contains,
+      MatchMethod.artistTitle => context.l10n.artistTitle,
+      MatchMethod.tokenOverlap => context.l10n.tokens,
+      MatchMethod.fuzzy => context.l10n.fuzzy,
     };
   }
 }

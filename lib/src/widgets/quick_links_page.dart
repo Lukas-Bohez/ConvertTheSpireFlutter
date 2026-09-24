@@ -8,6 +8,7 @@ import '../config/build_flags.dart';
 import '../config/full_mode_access.dart';
 import '../models/search_result.dart';
 import '../services/folder_access_service.dart';
+import '../utils/l10n.dart';
 import 'quick_download_card.dart';
 import 'quick_links_service.dart';
 
@@ -73,7 +74,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
 
   String _formatFolderLabel(String path) {
     final p = path.trim();
-    if (p.isEmpty) return 'Not set';
+    if (p.isEmpty) return context.l10n.notSet;
     const maxLength = 44;
     if (p.length <= maxLength) return p;
     const segment = 18;
@@ -178,7 +179,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Paste a video or playlist URL below to start downloading.',
+                    context.l10n.pasteVideoPlaylistUrlBelow,
                     style: TextStyle(
                       fontSize: 18,
                       color: cs.onSurfaceVariant.withValues(alpha: 0.7),
@@ -197,7 +198,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
     Widget buildDownloadSection() {
       final hasFolder = (widget.downloadFolder?.trim().isNotEmpty ?? false);
       final folderLabel =
-          _formatFolderLabel(widget.downloadFolder ?? 'Not set');
+          _formatFolderLabel(widget.downloadFolder ?? '');
 
       final showAndroidReminder = Platform.isAndroid && !hasFolder;
 
@@ -228,7 +229,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                   ),
                 ),
                 child: Text(
-                  'Android: please select your download folder once so permissions remain valid.',
+                  context.l10n.androidPleaseSelectDownloadFolder,
                   style: TextStyle(
                     fontSize: 13,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -249,7 +250,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
-                  'Download folder became unreachable, please pick it again.',
+                  context.l10n.downloadFolderBecameUnreachablePlease,
                   style: TextStyle(
                     fontSize: 13,
                     color: Theme.of(context).colorScheme.onErrorContainer,
@@ -284,7 +285,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                         await HapticFeedback.selectionClick();
                         await widget.onPickDownloadFolder?.call();
                       },
-                      child: Text(hasFolder ? 'Change' : 'Choose'),
+                      child: Text(hasFolder ? context.l10n.change : context.l10n.choose),
                     ),
                   ],
                 ),
@@ -312,11 +313,11 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                   const SizedBox(width: 8),
                   Text(
                     _ytDlpChecking
-                        ? 'Checking engine...'
+                        ? context.l10n.checkingEngine
                         : _ytDlpTransientError
-                            ? 'Engine check interrupted — retrying...'
+                            ? context.l10n.engineCheckInterruptedRetrying
                             : _ytDlpFailed
-                                ? 'yt-dlp not available (click Settings)'
+                                ? context.l10n.ytDlpNotAvailableClick
                                 : 'yt-dlp ${_ytDlpVersion ?? 'unknown'}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
@@ -324,7 +325,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                   if (_ytDlpFailed || _ytDlpTransientError)
                     TextButton(
                       onPressed: _checkYtDlpVersion,
-                      child: const Text('Retry'),
+                      child: Text(context.l10n.actionRetry),
                     ),
                 ],
               ),
@@ -389,11 +390,11 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
             children: [
               Icon(Icons.library_music, size: 64, color: cs.outline),
               const SizedBox(height: 12),
-              Text('No media yet',
+              Text(context.l10n.noMediaYet,
                   style: TextStyle(color: cs.onSurfaceVariant)),
               const SizedBox(height: 8),
               FilledButton(
-                  onPressed: _loadLinks, child: const Text('Scan library')),
+                  onPressed: _loadLinks, child: Text(context.l10n.scanLibrary)),
             ],
           ),
         ),
@@ -478,7 +479,7 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    widget.link.name,
+                    quickLinkName(context, widget.link),
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 18,
@@ -491,7 +492,7 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
                   if (widget.link.description.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      widget.link.description,
+                      quickLinkDescription(context, widget.link),
                       style: TextStyle(
                         fontSize: 15,
                         color: cs.onSurfaceVariant.withValues(alpha: 0.7),
@@ -509,4 +510,57 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
       ),
     );
   }
+}
+
+/// A built-in quick link's name and description, as keys into the app's
+/// text. Links are saved with the user's layout in English; they are shown
+/// in the app's language unless the user renamed them.
+({String name, String description})? _builtInQuickLink(
+    AppLocalizations l, String route) {
+  return switch (route) {
+    'search.tab' => (name: l.tabSearch, description: l.downloadFromYoutubeUrl),
+    'multisearch.tab' => (
+        name: l.multiSearch,
+        description: l.searchYoutubeSoundcloud
+      ),
+    'browser.tab' => (name: l.tabBrowser, description: l.appWebBrowser),
+    'playlists.tab' => (
+        name: l.tabPlaylists,
+        description: l.youtubePlaylistsFolders
+      ),
+    'bulkimport.tab' => (name: l.bulkImport, description: l.importTrackLists),
+    'stats.tab' => (name: l.stats, description: l.downloadStatistics),
+    'settings.tab' => (name: l.tabSettings, description: l.appConfiguration),
+    'support.tab' => (name: l.tabSupport, description: l.supportViaDonations),
+    'rate.app' => (name: l.rate, description: l.leaveReview),
+    'convert.tab' => (
+        name: l.tabConvert,
+        description: l.convertAudioVideoFiles
+      ),
+    'logs.tab' => (name: l.tabLogs, description: l.activityLogViewer),
+    'guide.tab' => (name: l.tabGuide, description: l.helpDocumentation),
+    'player.tab' => (name: l.tabPlayer, description: l.mediaPlayerLibrary),
+    'torrents.tab' => (
+        name: l.tabTorrents,
+        description: l.vaultTorrentManager
+      ),
+    _ => null,
+  };
+}
+
+final AppLocalizations _englishText =
+    lookupAppLocalizations(const Locale('en'));
+
+String quickLinkName(BuildContext context, QuickLink link) {
+  final english = _builtInQuickLink(_englishText, link.route);
+  if (english == null || link.name != english.name) return link.name;
+  return _builtInQuickLink(context.l10n, link.route)!.name;
+}
+
+String quickLinkDescription(BuildContext context, QuickLink link) {
+  final english = _builtInQuickLink(_englishText, link.route);
+  if (english == null || link.description != english.description) {
+    return link.description;
+  }
+  return _builtInQuickLink(context.l10n, link.route)!.description;
 }

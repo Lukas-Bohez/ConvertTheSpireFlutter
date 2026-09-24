@@ -15,6 +15,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/build_flags.dart';
+import '../../utils/l10n.dart';
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
@@ -53,7 +54,8 @@ class _AboutScreenState extends State<AboutScreen>
   String _modelStatus = '';
   bool _savingNetwork = false;
   bool _pickerBusy = false;
-  String _appVersionLabel = 'Loading...';
+  // Null until the version is read; shown as "Loading..." meanwhile.
+  String? _appVersionLabel;
   bool _proxyEnabled = false;
   bool _proxyForTrackers = true;
   bool _proxyForPeers = true;
@@ -152,7 +154,7 @@ class _AboutScreenState extends State<AboutScreen>
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _appVersionLabel = 'Unknown';
+        _appVersionLabel = context.l10n.unknown;
       });
     }
   }
@@ -193,7 +195,7 @@ class _AboutScreenState extends State<AboutScreen>
     if (_androidTorrentOnly) return;
     setState(() {
       _loadingModels = true;
-      _modelStatus = 'Fetching models...';
+      _modelStatus = context.l10n.fetchingModels;
     });
 
     try {
@@ -203,9 +205,9 @@ class _AboutScreenState extends State<AboutScreen>
         _availableModels = models;
         _loadingModels = false;
         if (models.isEmpty) {
-          _modelStatus = 'No models detected from host.';
+          _modelStatus = context.l10n.noModelsDetectedFromHost;
         } else {
-          _modelStatus = 'Successfully fetched ${models.length} model(s)';
+          _modelStatus = context.l10n.successfullyFetchedModelS(models.length);
           if (_selectedModel == null ||
               !_availableModels.contains(_selectedModel)) {
             _selectedModel = _availableModels.contains(kDefaultAiModel)
@@ -219,7 +221,7 @@ class _AboutScreenState extends State<AboutScreen>
       setState(() {
         _availableModels = <String>[];
         _loadingModels = false;
-        _modelStatus = 'Failed to fetch models: $e';
+        _modelStatus = context.l10n.failedFetchModels(e);
       });
     }
   }
@@ -240,7 +242,7 @@ class _AboutScreenState extends State<AboutScreen>
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('AI settings saved')));
+    ).showSnackBar(SnackBar(content: Text(context.l10n.aiSettingsSaved)));
   }
 
   Future<void> _downloadRecommendedModel() async {
@@ -248,7 +250,7 @@ class _AboutScreenState extends State<AboutScreen>
     if (_downloadingRecommended) return;
     setState(() {
       _downloadingRecommended = true;
-      _modelStatus = 'Downloading recommended model $kDefaultAiModel...';
+      _modelStatus = context.l10n.downloadingRecommendedModel2(kDefaultAiModel);
     });
 
     try {
@@ -269,12 +271,12 @@ class _AboutScreenState extends State<AboutScreen>
       await _settings.setAiDefaultModel(kDefaultAiModel);
       if (!mounted) return;
       setState(() {
-        _modelStatus = 'Recommended model is ready and selected.';
+        _modelStatus = context.l10n.recommendedModelReadySelected;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _modelStatus = 'Recommended model download failed: $e';
+        _modelStatus = context.l10n.recommendedModelDownloadFailed(e);
       });
     } finally {
       if (!mounted) return;
@@ -290,7 +292,7 @@ class _AboutScreenState extends State<AboutScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('No download folder set.')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.noDownloadFolderSet)));
       return;
     }
 
@@ -303,7 +305,7 @@ class _AboutScreenState extends State<AboutScreen>
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Download folder does not exist.')),
+        SnackBar(content: Text(context.l10n.downloadFolderDoesNotExist)),
       );
       return;
     }
@@ -315,7 +317,7 @@ class _AboutScreenState extends State<AboutScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Unable to open folder automatically. Files saved to: $directoryPath',
+            context.l10n.unableOpenFolderAutomaticallyFiles(directoryPath),
           ),
           duration: const Duration(seconds: 6),
         ),
@@ -333,7 +335,7 @@ class _AboutScreenState extends State<AboutScreen>
       } catch (_) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to open folder.')),
+          SnackBar(content: Text(context.l10n.failedOpenFolder)),
         );
       }
       return;
@@ -344,7 +346,7 @@ class _AboutScreenState extends State<AboutScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to open folder.')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.failedOpenFolder)));
     }
   }
 
@@ -395,7 +397,7 @@ class _AboutScreenState extends State<AboutScreen>
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Connection settings saved')),
+        SnackBar(content: Text(context.l10n.connectionSettingsSaved)),
       );
     } finally {
       if (!mounted) return;
@@ -410,7 +412,7 @@ class _AboutScreenState extends State<AboutScreen>
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Download folder saved')));
+    ).showSnackBar(SnackBar(content: Text(context.l10n.downloadFolderSaved)));
   }
 
   Future<void> _openPrivacyPolicy() async {
@@ -418,7 +420,7 @@ class _AboutScreenState extends State<AboutScreen>
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open privacy policy link.')),
+        SnackBar(content: Text(context.l10n.unableOpenPrivacyPolicyLink)),
       );
     }
   }
@@ -442,7 +444,7 @@ class _AboutScreenState extends State<AboutScreen>
     if (path == null || path.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Diagnostics export cancelled.')),
+        SnackBar(content: Text(context.l10n.diagnosticsExportCancelled)),
       );
       return;
     }
@@ -484,7 +486,7 @@ class _AboutScreenState extends State<AboutScreen>
     if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Diagnostics exported: $path')),
+      SnackBar(content: Text(context.l10n.diagnosticsExported(path))),
     );
   }
 
@@ -523,7 +525,7 @@ class _AboutScreenState extends State<AboutScreen>
     final width = MediaQuery.of(context).size.width;
     final maxContentWidth = width > 1700 ? 1280.0 : 1120.0;
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(context.l10n.tabSettings)),
       body: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
@@ -534,13 +536,13 @@ class _AboutScreenState extends State<AboutScreen>
             child: ListView(
               children: [
                 _sectionCard(
-                  title: 'Downloads',
+                  title: context.l10n.downloads,
                   children: [
                     TextField(
                       controller: _downloadDirController,
-                      decoration: const InputDecoration(
-                        labelText: 'Default download folder',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.defaultDownloadFolder,
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -551,7 +553,7 @@ class _AboutScreenState extends State<AboutScreen>
                         ElevatedButton.icon(
                           onPressed: _openDownloadFolder,
                           icon: const Icon(Icons.folder_open),
-                          label: const Text('Browse'),
+                          label: Text(context.l10n.browse),
                         ),
                         if (Platform.isAndroid)
                           FilledButton.icon(
@@ -561,7 +563,7 @@ class _AboutScreenState extends State<AboutScreen>
                               try {
                                 final result = await pickDirectoryPath(
                                   context,
-                                  dialogTitle: 'Select download folder',
+                                  dialogTitle: context.l10n.selectDownloadFolder,
                                 );
                                 if (result != null) {
                                   _downloadDirController.text = result;
@@ -571,7 +573,7 @@ class _AboutScreenState extends State<AboutScreen>
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content:
-                                          Text('Download folder set: $result'),
+                                          Text(context.l10n.downloadFolderSet(result)),
                                     ),
                                   );
                                   setState(() {});
@@ -581,16 +583,16 @@ class _AboutScreenState extends State<AboutScreen>
                               }
                             },
                             icon: const Icon(Icons.folder_open),
-                            label: const Text('Choose download folder'),
+                            label: Text(context.l10n.chooseDownloadFolder),
                           ),
                         OutlinedButton(
                           onPressed: _saveDownloadDestination,
-                          child: const Text('Save Folder'),
+                          child: Text(context.l10n.saveFolder),
                         ),
                       ],
                     ),
                     SwitchListTile(
-                      title: const Text('Auto-start when added'),
+                      title: Text(context.l10n.autoStartWhenAdded),
                       contentPadding: EdgeInsets.zero,
                       value: _settings.autoStartOnAdd,
                       onChanged: (v) async {
@@ -603,7 +605,7 @@ class _AboutScreenState extends State<AboutScreen>
                 ),
                 const SizedBox(height: 10),
                 _sectionCard(
-                  title: 'Connection',
+                  title: context.l10n.connection,
                   children: [
                     Wrap(
                       spacing: 8,
@@ -614,9 +616,9 @@ class _AboutScreenState extends State<AboutScreen>
                           child: TextField(
                             controller: _listenPortController,
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Listen port',
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              labelText: context.l10n.listenPort,
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                         ),
@@ -625,9 +627,9 @@ class _AboutScreenState extends State<AboutScreen>
                           child: TextField(
                             controller: _maxGlobalController,
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Max global connections',
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              labelText: context.l10n.maxGlobalConnections,
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                         ),
@@ -636,9 +638,9 @@ class _AboutScreenState extends State<AboutScreen>
                           child: TextField(
                             controller: _maxPerTorrentController,
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Max connections per torrent',
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              labelText: context.l10n.maxConnectionsPerTorrent,
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                         ),
@@ -647,9 +649,9 @@ class _AboutScreenState extends State<AboutScreen>
                           child: TextField(
                             controller: _maxActiveController,
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Max active downloads',
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              labelText: context.l10n.maxActiveDownloads,
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                         ),
@@ -658,10 +660,10 @@ class _AboutScreenState extends State<AboutScreen>
                           child: TextField(
                             controller: _downloadRateController,
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText:
-                                  'Download rate limit (KiB/s, 0 = unlimited)',
-                              border: OutlineInputBorder(),
+                                  context.l10n.downloadRateLimitKibS,
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                         ),
@@ -670,10 +672,10 @@ class _AboutScreenState extends State<AboutScreen>
                           child: TextField(
                             controller: _uploadRateController,
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText:
-                                  'Upload rate limit (KiB/s, 0 = unlimited)',
-                              border: OutlineInputBorder(),
+                                  context.l10n.uploadRateLimitKibS,
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                         ),
@@ -683,19 +685,19 @@ class _AboutScreenState extends State<AboutScreen>
                             controller: _seedingRatioController,
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true),
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText:
-                                  'Seeding ratio cap (e.g. 1.50, 0 = unlimited)',
-                              border: OutlineInputBorder(),
+                                  context.l10n.seedingRatioCapEG,
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                         ),
                       ],
                     ),
                     SwitchListTile(
-                      title: const Text('Allow seeding after completion'),
-                      subtitle: const Text(
-                        'Disable to auto-pause torrents as soon as download completes.',
+                      title: Text(context.l10n.allowSeedingAfterCompletion),
+                      subtitle: Text(
+                        context.l10n.disableAutoPauseTorrentsSoon,
                       ),
                       contentPadding: EdgeInsets.zero,
                       value: _settings.allowSeedingAfterComplete,
@@ -706,7 +708,7 @@ class _AboutScreenState extends State<AboutScreen>
                       },
                     ),
                     SwitchListTile(
-                      title: const Text('Enable DHT'),
+                      title: Text(context.l10n.enableDht),
                       contentPadding: EdgeInsets.zero,
                       value: _settings.useDht,
                       onChanged: (v) async {
@@ -716,7 +718,7 @@ class _AboutScreenState extends State<AboutScreen>
                       },
                     ),
                     SwitchListTile(
-                      title: const Text('Enable Peer Exchange (PEX)'),
+                      title: Text(context.l10n.enablePeerExchangePex),
                       contentPadding: EdgeInsets.zero,
                       value: _settings.usePex,
                       onChanged: (v) async {
@@ -726,7 +728,7 @@ class _AboutScreenState extends State<AboutScreen>
                       },
                     ),
                     SwitchListTile(
-                      title: const Text('Enable Local Peer Discovery (LPD)'),
+                      title: Text(context.l10n.enableLocalPeerDiscoveryLpd),
                       contentPadding: EdgeInsets.zero,
                       value: _settings.useLpd,
                       onChanged: (v) async {
@@ -737,7 +739,7 @@ class _AboutScreenState extends State<AboutScreen>
                     ),
                     const Divider(height: 20),
                     SwitchListTile(
-                      title: const Text('Enable proxy'),
+                      title: Text(context.l10n.enableProxy),
                       contentPadding: EdgeInsets.zero,
                       value: _proxyEnabled,
                       onChanged: (v) => setState(() => _proxyEnabled = v),
@@ -750,9 +752,9 @@ class _AboutScreenState extends State<AboutScreen>
                           width: 220,
                           child: TextField(
                             controller: _proxyHostController,
-                            decoration: const InputDecoration(
-                              labelText: 'Proxy host',
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              labelText: context.l10n.proxyHost,
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                         ),
@@ -761,9 +763,9 @@ class _AboutScreenState extends State<AboutScreen>
                           child: TextField(
                             controller: _proxyPortController,
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Proxy port',
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              labelText: context.l10n.proxyPort,
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                         ),
@@ -771,9 +773,9 @@ class _AboutScreenState extends State<AboutScreen>
                           width: 220,
                           child: TextField(
                             controller: _proxyUsernameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Proxy username',
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              labelText: context.l10n.proxyUsername,
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                         ),
@@ -782,22 +784,22 @@ class _AboutScreenState extends State<AboutScreen>
                           child: TextField(
                             controller: _proxyPasswordController,
                             obscureText: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Proxy password',
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              labelText: context.l10n.proxyPassword,
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                         ),
                       ],
                     ),
                     SwitchListTile(
-                      title: const Text('Use proxy for trackers'),
+                      title: Text(context.l10n.useProxyTrackers),
                       contentPadding: EdgeInsets.zero,
                       value: _proxyForTrackers,
                       onChanged: (v) => setState(() => _proxyForTrackers = v),
                     ),
                     SwitchListTile(
-                      title: const Text('Use proxy for peers'),
+                      title: Text(context.l10n.useProxyPeers),
                       contentPadding: EdgeInsets.zero,
                       value: _proxyForPeers,
                       onChanged: (v) => setState(() => _proxyForPeers = v),
@@ -814,8 +816,8 @@ class _AboutScreenState extends State<AboutScreen>
                                 SnackBar(
                                   content: Text(
                                     ok
-                                        ? 'Proxy connection successful'
-                                        : 'Proxy test failed',
+                                        ? context.l10n.proxyConnectionSuccessful
+                                        : context.l10n.proxyTestFailed,
                                   ),
                                 ),
                               );
@@ -823,17 +825,17 @@ class _AboutScreenState extends State<AboutScreen>
                               if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                    content: Text('Proxy test failed: $e')),
+                                    content: Text(context.l10n.proxyTestFailed2(e))),
                               );
                             }
                           },
                           icon: const Icon(Icons.network_check),
-                          label: const Text('Test proxy'),
+                          label: Text(context.l10n.testProxy),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'SOCKS5 proxy settings are shared by torrent tasks and yt-dlp downloads.',
+                            context.l10n.socks5ProxySettingsSharedBy,
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ),
@@ -845,8 +847,8 @@ class _AboutScreenState extends State<AboutScreen>
                         onPressed: _savingNetwork ? null : _saveNetworkSettings,
                         child: Text(
                           _savingNetwork
-                              ? 'Saving...'
-                              : 'Save Connection Settings',
+                              ? context.l10n.saving
+                              : context.l10n.saveConnectionSettings,
                         ),
                       ),
                     ),
@@ -858,7 +860,7 @@ class _AboutScreenState extends State<AboutScreen>
                     title: 'AI',
                     children: [
                       SwitchListTile(
-                        title: const Text('Enable AI Copilot'),
+                        title: Text(context.l10n.enableAiCopilot),
                         contentPadding: EdgeInsets.zero,
                         value: _settings.enableAiCopilot,
                         onChanged: (v) async {
@@ -868,7 +870,7 @@ class _AboutScreenState extends State<AboutScreen>
                         },
                       ),
                       SwitchListTile(
-                        title: const Text('Enable smart suggestions'),
+                        title: Text(context.l10n.enableSmartSuggestions),
                         contentPadding: EdgeInsets.zero,
                         value: _settings.enableSmartSuggestions,
                         onChanged: (v) async {
@@ -881,7 +883,7 @@ class _AboutScreenState extends State<AboutScreen>
                         controller: _ollamaUrlController,
                         onChanged: (_) => _onUrlChanged(),
                         decoration: InputDecoration(
-                          labelText: 'Ollama Host URL',
+                          labelText: context.l10n.ollamaHostUrl,
                           hintText: _settings.aiOllamaUrl,
                           border: const OutlineInputBorder(),
                         ),
@@ -903,8 +905,7 @@ class _AboutScreenState extends State<AboutScreen>
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
-                                    'Recommended model: $kDefaultAiModel\n'
-                                    'Detected local models: ${_availableModels.length}',
+                                    context.l10n.recommendedModelDetectedLocalModels(kDefaultAiModel, _availableModels.length),
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -913,9 +914,9 @@ class _AboutScreenState extends State<AboutScreen>
                                       _availableModels.contains(_selectedModel)
                                           ? _selectedModel
                                           : null,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Model to use',
-                                    border: OutlineInputBorder(),
+                                  decoration: InputDecoration(
+                                    labelText: context.l10n.modelUse,
+                                    border: const OutlineInputBorder(),
                                   ),
                                   items: _availableModels
                                       .map(
@@ -958,7 +959,7 @@ class _AboutScreenState extends State<AboutScreen>
                             onPressed:
                                 _loadingModels ? null : _fetchAvailableModels,
                             icon: const Icon(Icons.refresh),
-                            tooltip: 'Refresh available models',
+                            tooltip: context.l10n.refreshAvailableModels,
                           ),
                         ],
                       ),
@@ -972,8 +973,8 @@ class _AboutScreenState extends State<AboutScreen>
                           icon: const Icon(Icons.download_for_offline_outlined),
                           label: Text(
                             _downloadingRecommended
-                                ? 'Downloading recommended model...'
-                                : 'Download Recommended Model',
+                                ? context.l10n.downloadingRecommendedModel
+                                : context.l10n.downloadRecommendedModel,
                           ),
                         ),
                       ),
@@ -981,53 +982,52 @@ class _AboutScreenState extends State<AboutScreen>
                         alignment: Alignment.centerRight,
                         child: ElevatedButton(
                           onPressed: _saveAiSettings,
-                          child: const Text('Save AI Settings'),
+                          child: Text(context.l10n.saveAiSettings),
                         ),
                       ),
                     ],
                   ),
                 if (!_androidTorrentOnly) const SizedBox(height: 10),
                 _sectionCard(
-                  title: 'General Settings',
+                  title: context.l10n.generalSettings,
                   children: [
-                    const Text(
-                      'General app settings are centralized in the main app Settings tab. '
-                      'This screen now contains torrent-specific configuration only.',
+                    Text(
+                      context.l10n.generalAppSettingsCentralizedMain,
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
                 _sectionCard(
-                  title: 'About and Diagnostics',
+                  title: context.l10n.aboutDiagnostics,
                   children: [
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.info_outline),
-                      title: const Text('Vault The Spire'),
+                      title: Text(context.l10n.vaultSpire),
                       subtitle: Text(
                         _androidTorrentOnly
-                            ? 'Torrent manager for Android'
-                            : 'Torrent manager with built-in AI copilot',
+                            ? context.l10n.torrentManagerAndroid
+                            : context.l10n.torrentManagerBuiltAiCopilot,
                       ),
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.calendar_month),
-                      title: const Text('App version'),
-                      subtitle: Text(_appVersionLabel),
+                      title: Text(context.l10n.appVersion),
+                      subtitle: Text(_appVersionLabel ?? context.l10n.loading),
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.security),
-                      title: const Text('Privacy policy'),
+                      title: Text(context.l10n.privacyPolicy),
                       subtitle: const Text(kPrivacyPolicyUrl),
                       onTap: _openPrivacyPolicy,
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.star_rate_outlined),
-                      title: const Text('Rate Convert The Spire Reborn'),
-                      subtitle: const Text('Leave a rating on the Play Store'),
+                      title: Text(context.l10n.rateConvertSpireReborn),
+                      subtitle: Text(context.l10n.leaveRatingPlayStore),
                       onTap: () async {
                         await ReviewService.openStoreListing();
                       },
@@ -1039,7 +1039,7 @@ class _AboutScreenState extends State<AboutScreen>
                           OutlinedButton.icon(
                             onPressed: _exportDiagnostics,
                             icon: const Icon(Icons.bug_report_outlined),
-                            label: const Text('Export Diagnostics'),
+                            label: Text(context.l10n.exportDiagnostics),
                           ),
                           OutlinedButton(
                             onPressed: () async {
@@ -1047,7 +1047,7 @@ class _AboutScreenState extends State<AboutScreen>
                               if (!mounted) return;
                               setState(() {});
                             },
-                            child: const Text('Clear Browser History'),
+                            child: Text(context.l10n.clearBrowserHistory),
                           ),
                         ];
 
@@ -1072,24 +1072,14 @@ class _AboutScreenState extends State<AboutScreen>
                     const SizedBox(height: 8),
                     Text(
                       _settings.lastDiagnosticsExport.isEmpty
-                          ? 'Last diagnostics export: never'
-                          : 'Last diagnostics export: ${_settings.lastDiagnosticsExport}',
+                          ? context.l10n.lastDiagnosticsExportNever
+                          : context.l10n.lastDiagnosticsExport(_settings.lastDiagnosticsExport),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       kPlayStoreBuild
-                          ? 'Data Safety:\n'
-                              '- No personal data collection\n'
-                              '- No location data\n'
-                              '- No analytics; downloads and browsing stay '
-                              'on your device\n'
-                              '- Ads are served by Google AdMob, which uses '
-                              'your device advertising ID'
-                          : 'Data Safety:\n'
-                              '- No personal data collection\n'
-                              '- No location data\n'
-                              '- No identifiers shared\n'
-                              '- No advertising or analytics',
+                          ? context.l10n.dataSafetyNoPersonalData
+                          : context.l10n.dataSafetyNoPersonalData2,
                     ),
                   ],
                 ),

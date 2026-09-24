@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/browser_db.dart';
+import '../../utils/l10n.dart';
 import '../../widgets/empty_state.dart';
 
 /// Full favourites manager with folders, search, grid/list toggle,
@@ -69,7 +70,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
       canPop: true,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Favourites'),
+          title: Text(context.l10n.playerFavourites),
           actions: [
             IconButton(
               icon: Icon(_gridView ? Icons.list : Icons.grid_view),
@@ -84,7 +85,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
               child: TextField(
                 decoration: InputDecoration(
-                  hintText: 'Search favourites',
+                  hintText: context.l10n.searchFavourites,
                   prefixIcon: const Icon(Icons.search, size: 20),
                   isDense: true,
                   filled: true,
@@ -109,7 +110,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: FilterChip(
-                        label: const Text('All'),
+                        label: Text(context.l10n.playerAll),
                         selected: _activeFolder == null,
                         onSelected: (_) {
                           setState(() => _activeFolder = null);
@@ -136,11 +137,11 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
             // -- List / Grid --
             Expanded(
               child: items.isEmpty
-                  ? const EmptyState(
+                  ? EmptyState(
                       icon: Icons.star_border,
-                      title: 'No favourites yet',
+                      title: context.l10n.playerNoFavourites,
                       subtitle:
-                          'Add pages to your favourites using the star icon',
+                          context.l10n.addPagesFavouritesUsingStar,
                     )
                   : _gridView
                       ? _buildGrid(items)
@@ -274,7 +275,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Favourite'),
+        title: Text(context.l10n.addFavourite),
         // overflow-fix: keep form usable when keyboard reduces available dialog height.
         content: SingleChildScrollView(
           child: Column(
@@ -288,14 +289,14 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
               TextField(
                 controller: titleC,
                 decoration:
-                    const InputDecoration(labelText: 'Title (optional)'),
+                    InputDecoration(labelText: context.l10n.titleOptional),
               ),
             ],
           ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: Text(context.l10n.actionCancel)),
           FilledButton(
             onPressed: () {
               final url = urlC.text.trim();
@@ -304,7 +305,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
                 Navigator.pop(ctx);
               }
             },
-            child: const Text('Add'),
+            child: Text(context.l10n.actionAdd),
           ),
         ],
       ),
@@ -320,7 +321,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Edit Favourite'),
+        title: Text(context.l10n.editFavourite),
         // overflow-fix: keep multi-field edit form scrollable on compact screens.
         content: SingleChildScrollView(
           child: Column(
@@ -333,12 +334,12 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
               const SizedBox(height: 8),
               TextField(
                 controller: titleC,
-                decoration: const InputDecoration(labelText: 'Title'),
+                decoration: InputDecoration(labelText: context.l10n.title),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: folderC,
-                decoration: const InputDecoration(labelText: 'Folder'),
+                decoration: InputDecoration(labelText: context.l10n.folder),
               ),
             ],
           ),
@@ -350,7 +351,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
               Navigator.pop(ctx);
             },
             child: Text(
-              'Delete',
+              context.l10n.actionDelete,
               style: TextStyle(color: Theme.of(ctx).colorScheme.error),
             ),
           ),
@@ -364,7 +365,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
               );
               Navigator.pop(ctx);
             },
-            child: const Text('Save'),
+            child: Text(context.l10n.actionSave),
           ),
         ],
       ),

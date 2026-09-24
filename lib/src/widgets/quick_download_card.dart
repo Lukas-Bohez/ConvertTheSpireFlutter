@@ -7,6 +7,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart'
 import '../models/search_result.dart';
 import '../services/playlist_service.dart';
 import '../services/yt_dlp_service.dart';
+import '../utils/l10n.dart';
 import '../utils/youtube_link.dart';
 import 'video_or_playlist_dialog.dart';
 
@@ -39,7 +40,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
     final url = _controller.text.trim();
     if (url.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Paste a URL first.')),
+        SnackBar(content: Text(context.l10n.pasteUrlFirst)),
       );
       return;
     }
@@ -95,7 +96,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                   content:
-                      Text('Queued ${selected.length} tracks for download')),
+                      Text(context.l10n.queuedTracksDownload(selected.length))),
             );
             _controller.clear();
           }
@@ -150,13 +151,13 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
         if (confirmed == true) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Queued for download')),
+              SnackBar(content: Text(context.l10n.queuedDownload)),
             );
           }
           await widget.onDownload(result, _format, _quality);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Download started')),
+              SnackBar(content: Text(context.l10n.downloadStarted)),
             );
             _controller.clear();
           }
@@ -165,7 +166,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not fetch video info.')),
+          SnackBar(content: Text(context.l10n.couldNotFetchVideoInfo)),
         );
       }
     } finally {
@@ -192,7 +193,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Quick Download',
+            Text(context.l10n.quickDownload,
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 10),
             Row(
@@ -201,12 +202,12 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                   child: TextField(
                     controller: _controller,
                     decoration: InputDecoration(
-                      labelText: 'Paste URL',
+                      labelText: context.l10n.pasteUrl,
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.link),
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.content_paste),
-                        tooltip: 'Paste from clipboard',
+                        tooltip: context.l10n.pasteFromClipboard,
                         onPressed: () async {
                           final clip = await Clipboard.getData('text/plain');
                           if (clip?.text != null) {
@@ -232,9 +233,9 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                               // Lets the choice shrink to the half-width slot on a phone.
                               isExpanded: true,
                               initialValue: _format,
-                              decoration: const InputDecoration(
-                                labelText: 'Format',
-                                border: OutlineInputBorder(),
+                              decoration: InputDecoration(
+                                labelText: context.l10n.format2,
+                                border: const OutlineInputBorder(),
                               ),
                               items: const [
                                 DropdownMenuItem(
@@ -256,27 +257,27 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                             child: DropdownButtonFormField<String>(
                               isExpanded: true,
                               initialValue: _quality,
-                              decoration: const InputDecoration(
-                                labelText: 'Quality',
-                                border: OutlineInputBorder(),
+                              decoration: InputDecoration(
+                                labelText: context.l10n.quality,
+                                border: const OutlineInputBorder(),
                               ),
-                              items: const [
-                                DropdownMenuItem(
+                              items: [
+                                const DropdownMenuItem(
                                     value: '360p', child: Text('360p')),
-                                DropdownMenuItem(
+                                const DropdownMenuItem(
                                     value: '480p', child: Text('480p')),
-                                DropdownMenuItem(
+                                const DropdownMenuItem(
                                     value: '720p', child: Text('720p')),
-                                DropdownMenuItem(
+                                const DropdownMenuItem(
                                     value: '1080p', child: Text('1080p')),
-                                DropdownMenuItem(
+                                const DropdownMenuItem(
                                     value: '1440p', child: Text('1440p')),
-                                DropdownMenuItem(
+                                const DropdownMenuItem(
                                     value: '2160p', child: Text('2160p')),
-                                DropdownMenuItem(
+                                const DropdownMenuItem(
                                     value: '4320p', child: Text('4320p')),
                                 DropdownMenuItem(
-                                    value: 'best', child: Text('Best')),
+                                    value: 'best', child: Text(context.l10n.best)),
                               ],
                               onChanged: (value) {
                                 if (value != null) {
@@ -299,7 +300,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                                       CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : const Icon(Icons.download),
-                          label: const Text('Download'),
+                          label: Text(context.l10n.actionDownload),
                           onPressed: _isLoading ? null : _doDownload,
                         ),
                       ),
@@ -312,9 +313,9 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                         child: DropdownButtonFormField<String>(
                           isExpanded: true,
                           initialValue: _format,
-                          decoration: const InputDecoration(
-                            labelText: 'Format',
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            labelText: context.l10n.format2,
+                            border: const OutlineInputBorder(),
                           ),
                           items: const [
                             DropdownMenuItem(value: 'mp3', child: Text('MP3')),
@@ -332,27 +333,27 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                         child: DropdownButtonFormField<String>(
                           isExpanded: true,
                           initialValue: _quality,
-                          decoration: const InputDecoration(
-                            labelText: 'Quality',
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            labelText: context.l10n.quality,
+                            border: const OutlineInputBorder(),
                           ),
-                          items: const [
-                            DropdownMenuItem(
+                          items: [
+                            const DropdownMenuItem(
                                 value: '360p', child: Text('360p')),
-                            DropdownMenuItem(
+                            const DropdownMenuItem(
                                 value: '480p', child: Text('480p')),
-                            DropdownMenuItem(
+                            const DropdownMenuItem(
                                 value: '720p', child: Text('720p')),
-                            DropdownMenuItem(
+                            const DropdownMenuItem(
                                 value: '1080p', child: Text('1080p')),
-                            DropdownMenuItem(
+                            const DropdownMenuItem(
                                 value: '1440p', child: Text('1440p')),
-                            DropdownMenuItem(
+                            const DropdownMenuItem(
                                 value: '2160p', child: Text('2160p')),
-                            DropdownMenuItem(
+                            const DropdownMenuItem(
                                 value: '4320p', child: Text('4320p')),
                             DropdownMenuItem(
-                                value: 'best', child: Text('Best')),
+                                value: 'best', child: Text(context.l10n.best)),
                           ],
                           onChanged: (value) {
                             if (value != null) setState(() => _quality = value);
@@ -371,7 +372,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                                       CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : const Icon(Icons.download),
-                          label: const Text('Download'),
+                          label: Text(context.l10n.actionDownload),
                           onPressed: _isLoading ? null : _doDownload,
                         ),
                       ),
@@ -379,7 +380,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                   ),
             const SizedBox(height: 8),
             Text(
-              'Enter a video or playlist URL to preview it and add to the download queue.',
+              context.l10n.enterVideoPlaylistUrlPreview,
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
@@ -418,7 +419,7 @@ class _PlaylistChecklistSheetState extends State<_PlaylistChecklistSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Select tracks to download',
+          Text(context.l10n.selectTracksDownload,
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           SizedBox(
@@ -462,7 +463,7 @@ class _PlaylistChecklistSheetState extends State<_PlaylistChecklistSheet> {
               }
               Navigator.pop(context, selected);
             },
-            child: const Text('Download Selected'),
+            child: Text(context.l10n.downloadSelected2),
           ),
         ],
       ),
@@ -534,14 +535,14 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Could not fetch size';
+        _error = context.l10n.couldNotFetchSize;
         _loading = false;
       });
     }
   }
 
   String _formatSize(int? bytes) {
-    if (bytes == null) return 'Unknown';
+    if (bytes == null) return context.l10n.unknown;
     if (bytes < 1024 * 1024) {
       return '${(bytes / 1024).toStringAsFixed(1)} KB';
     } else if (bytes < 1024 * 1024 * 1024) {
@@ -610,39 +611,39 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
             ],
           ),
           const SizedBox(height: 12),
-          Text('Format: ${widget.format}',
+          Text(context.l10n.format3(widget.format),
               style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 4),
-          Text('Quality: ${widget.quality}',
+          Text(context.l10n.quality2(widget.quality),
               style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 4),
           _loading
-              ? const Row(
+              ? Row(
                   children: [
-                    SizedBox(
+                    const SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
-                    SizedBox(width: 8),
-                    Text('Fetching estimated size...'),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.fetchingEstimatedSize),
                   ],
                 )
               : _error != null
                   ? Text(_error!, style: TextStyle(color: cs.error))
-                  : Text('Estimated size: ${_formatSize(_estimatedSize)}',
+                  : Text(context.l10n.estimatedSize(_formatSize(_estimatedSize)),
                       style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Add to queue'),
+              child: Text(context.l10n.addQueue),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'The download will be enqueued using your settings (quality, destination, etc.).',
+            context.l10n.downloadWillEnqueuedUsingSettings,
             style: Theme.of(context)
                 .textTheme
                 .bodySmall

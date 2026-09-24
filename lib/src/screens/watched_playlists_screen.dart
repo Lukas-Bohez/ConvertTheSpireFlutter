@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/download_service.dart';
 import '../services/watched_playlist_service.dart';
+import '../utils/l10n.dart';
 import '../utils/snack.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/monetization_widgets.dart';
@@ -55,7 +56,7 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
     if (url.isEmpty) return;
     if (!_isPlaylistUrl(url)) {
       if (mounted) {
-        Snack.show(context, 'Please enter a valid YouTube playlist URL',
+        Snack.show(context, context.l10n.pleaseEnterValidYoutubePlaylist,
             level: SnackLevel.warning);
       }
       return;
@@ -97,18 +98,18 @@ class _WatchedPlaylistsScreenState extends State<WatchedPlaylistsScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remove Playlist'),
+        title: Text(context.l10n.removePlaylist),
         // overflow-fix: keep confirmation text scroll-safe on compact devices.
-        content: const SingleChildScrollView(
-          child: Text('Stop watching this playlist? You can re-add it later.'),
+        content: SingleChildScrollView(
+          child: Text(context.l10n.stopWatchingPlaylistCanRe),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.actionCancel)),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Remove')),
+              child: Text(context.l10n.actionRemove)),
         ],
       ),
     );
@@ -122,13 +123,13 @@ Future<void> _checkNow() async {
       final found = await widget.watchedService.checkAllPlaylists();
       if (mounted) {
         setState(() => _checking = false);
-        Snack.show(context, '$found new track(s) queued for download',
+        Snack.show(context, context.l10n.newTrackSQueuedDownload(found),
             level: SnackLevel.info);
       }
     } catch (e) {
       if (mounted) {
         setState(() => _checking = false);
-        Snack.show(context, 'Failed to check playlists: $e',
+        Snack.show(context, context.l10n.failedCheckPlaylists(e),
             level: SnackLevel.error);
       }
     }
@@ -158,8 +159,7 @@ Future<void> _checkNow() async {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Watched playlists are checked periodically, and any new '
-                    'tracks are automatically downloaded.',
+                    context.l10n.watchedPlaylistsCheckedPeriodicallyAny,
                     style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
                   ),
                 ),
@@ -176,10 +176,10 @@ Future<void> _checkNow() async {
                     Expanded(
                       child: TextField(
                         controller: _urlController,
-                        decoration: const InputDecoration(
-                          hintText: 'Paste YouTube playlist URL',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.link),
+                        decoration: InputDecoration(
+                          hintText: context.l10n.pasteYoutubePlaylistUrl,
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.link),
                           isDense: true,
                         ),
                         onSubmitted: (_) => _addPlaylist(),
@@ -192,13 +192,13 @@ Future<void> _checkNow() async {
                       style: IconButton.styleFrom(
                         backgroundColor: Theme.of(context).colorScheme.primary,
                       ),
-                      tooltip: 'Add playlist',
+                      tooltip: context.l10n.addPlaylist,
                       onPressed: _addPlaylist,
                     ),
                     const SizedBox(width: 8),
                     IconButton.outlined(
                       icon: const Icon(Icons.refresh),
-                      tooltip: 'Check all for new tracks',
+                      tooltip: context.l10n.checkAllNewTracks,
                       onPressed: _checking ? null : _checkNow,
                     ),
                   ],
@@ -209,11 +209,11 @@ Future<void> _checkNow() async {
           if (_checking) const LinearProgressIndicator(),
           Expanded(
             child: _entries.isEmpty
-                ? const EmptyState(
+                ? EmptyState(
                     icon: Icons.playlist_add,
-                    title: 'No watched playlists yet',
+                    title: context.l10n.noWatchedPlaylistsYet,
                     subtitle:
-                        'Add a YouTube playlist URL above to track new tracks',
+                        context.l10n.addYoutubePlaylistUrlAbove,
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -240,12 +240,12 @@ Future<void> _checkNow() async {
 Widget _buildEntryCard(ColorScheme cs, WatchedPlaylistEntry entry) {
     final format = entry.format?.trim().toUpperCase();
     final formatLabel = (format == null || format.isEmpty)
-        ? 'Format: app default'
-        : 'Format: $format';
+        ? context.l10n.formatAppDefault
+        : context.l10n.watchedFormat(format);
     final folder = entry.folder;
     final folderLabel = (folder == null || folder.trim().isEmpty)
-        ? 'Folder: (default)'
-        : 'Folder: ${folder.split(RegExp(r'[/\\]')).last}';
+        ? context.l10n.folderDefault
+        : context.l10n.watchedFolder(folder.split(RegExp(r'[/\\]')).last);
 
     // Format is always shown so two entries watching the same URL (but
     // different destinations) are clearly distinct even when folders match.
@@ -276,12 +276,12 @@ Widget _buildEntryCard(ColorScheme cs, WatchedPlaylistEntry entry) {
           children: [
             IconButton(
               icon: const Icon(Icons.edit_outlined),
-              tooltip: 'Edit watch settings',
+              tooltip: context.l10n.editWatchSettings,
               onPressed: () => _editEntry(entry),
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline),
-              tooltip: 'Remove playlist',
+              tooltip: context.l10n.removePlaylist2,
               onPressed: () => _removeEntry(entry),
             ),
           ],
@@ -332,7 +332,7 @@ class _WatchedEntryDialogState extends State<_WatchedEntryDialog> {
   Future<void> _pickFolder() async {
     final directory = await pickDirectoryPath(
       context,
-      dialogTitle: 'Select watched folder',
+      dialogTitle: context.l10n.selectWatchedFolder,
     );
     if (directory == null || !mounted) return;
     setState(() => _folder = directory);
@@ -343,7 +343,7 @@ class _WatchedEntryDialogState extends State<_WatchedEntryDialog> {
     if (!widget.isEdit) {
       if (url.isEmpty ||
           (!url.contains('youtube.com/playlist') && !url.contains('youtu.be'))) {
-        Snack.show(context, 'Please enter a valid YouTube playlist URL',
+        Snack.show(context, context.l10n.pleaseEnterValidYoutubePlaylist,
             level: SnackLevel.warning);
         return;
       }
@@ -365,7 +365,7 @@ class _WatchedEntryDialogState extends State<_WatchedEntryDialog> {
     final formats = DownloadService.supportedFormats.toList()..sort();
     return AlertDialog(
       title: Text(
-          widget.isEdit ? 'Edit watched playlist' : 'Add watched playlist'),
+          widget.isEdit ? context.l10n.editWatchedPlaylist : context.l10n.addWatchedPlaylist),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -374,10 +374,10 @@ class _WatchedEntryDialogState extends State<_WatchedEntryDialog> {
             TextField(
               controller: _urlController,
               enabled: !widget.isEdit,
-              decoration: const InputDecoration(
-                hintText: 'Paste YouTube playlist URL',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.link),
+              decoration: InputDecoration(
+                hintText: context.l10n.pasteYoutubePlaylistUrl,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.link),
                 isDense: true,
               ),
               onSubmitted: (_) => _submit(),
@@ -387,14 +387,14 @@ class _WatchedEntryDialogState extends State<_WatchedEntryDialog> {
               key: ValueKey('wp-format-'
                   '${widget.isEdit ? (widget.initialFormat ?? 'default') : 'new'}'),
               initialValue: _format ?? '',
-              decoration: const InputDecoration(
-                labelText: 'Download format',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.audio_file),
+              decoration: InputDecoration(
+                labelText: context.l10n.downloadFormat2,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.audio_file),
               ),
               items: [
-                const DropdownMenuItem<String>(
-                    value: '', child: Text('App default')),
+                DropdownMenuItem<String>(
+                    value: '', child: Text(context.l10n.appDefault)),
                 for (final fmt in formats)
                   DropdownMenuItem<String>(
                       value: fmt, child: Text(fmt.toUpperCase())),
@@ -409,7 +409,7 @@ class _WatchedEntryDialogState extends State<_WatchedEntryDialog> {
               children: [
                 OutlinedButton.icon(
                   icon: const Icon(Icons.folder_open),
-                  label: const Text('Choose folder'),
+                  label: Text(context.l10n.chooseFolder),
                   onPressed: _pickFolder,
                 ),
                 if (_folder != null) ...[
@@ -424,7 +424,7 @@ class _WatchedEntryDialogState extends State<_WatchedEntryDialog> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.cancel),
-                    tooltip: 'Use default folder',
+                    tooltip: context.l10n.useDefaultFolder,
                     onPressed: () => setState(() => _folder = null),
                   ),
                 ],
@@ -436,11 +436,11 @@ class _WatchedEntryDialogState extends State<_WatchedEntryDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(context.l10n.actionCancel),
         ),
         FilledButton(
           onPressed: _submit,
-          child: Text(widget.isEdit ? 'Update' : 'Add'),
+          child: Text(widget.isEdit ? context.l10n.update : context.l10n.actionAdd),
         ),
       ],
     );

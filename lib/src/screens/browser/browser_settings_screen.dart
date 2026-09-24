@@ -5,6 +5,7 @@ import '../../browser/adblock/adblock_service.dart';
 import '../../browser/extensions/extension_hosts.dart';
 import '../../data/browser_db.dart';
 import '../../services/ipfs_service.dart';
+import '../../utils/l10n.dart';
 import '../../utils/snack.dart';
 import 'extensions_screen.dart';
 
@@ -63,23 +64,23 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
     return PopScope(
       canPop: true,
       child: Scaffold(
-        appBar: AppBar(title: const Text('Browser Settings')),
+        appBar: AppBar(title: Text(context.l10n.browserSettings)),
         body: ListView(
           children: [
             // -- General --
-            const _SectionHeader(title: 'General'),
+            _SectionHeader(title: context.l10n.general),
             ListTile(
               leading: const Icon(Icons.search),
-              title: const Text('Search Engine'),
+              title: Text(context.l10n.searchEngine),
               subtitle: Text(_searchEngine),
               onTap: _pickSearchEngine,
             ),
             if (ExtensionHosts.available)
               ListTile(
                 leading: const Icon(Icons.extension_outlined),
-                title: const Text('Extensions'),
-                subtitle: const Text(
-                    'Chrome extensions and addons.mozilla.org add-ons'),
+                title: Text(context.l10n.extensions),
+                subtitle: Text(
+                    context.l10n.chromeExtensionsAddonsMozillaOrg),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -90,13 +91,13 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
               ),
 
             // -- Privacy --
-            const _SectionHeader(title: 'Privacy'),
+            _SectionHeader(title: context.l10n.privacy),
             SwitchListTile(
               secondary: const Icon(Icons.block),
-              title: const Text('Ad Blocker'),
+              title: Text(context.l10n.adBlocker),
               subtitle: Text(widget.adBlockService.adBlockEnabled
-                  ? 'Enabled'
-                  : 'Disabled'),
+                  ? context.l10n.enabled
+                  : context.l10n.disabled),
               value: widget.adBlockService.adBlockEnabled,
               onChanged: (v) {
                 widget.adBlockService.setEnabled(v);
@@ -105,7 +106,7 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
             ),
             SwitchListTile(
               secondary: const Icon(Icons.web_asset_off),
-              title: const Text('Block Pop-ups'),
+              title: Text(context.l10n.blockPopUps),
               value: _blockPopups,
               onChanged: (v) {
                 setState(() => _blockPopups = v);
@@ -114,7 +115,7 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
             ),
             SwitchListTile(
               secondary: const Icon(Icons.do_not_disturb_on),
-              title: const Text('Do Not Track'),
+              title: Text(context.l10n.doNotTrack),
               value: _doNotTrack,
               onChanged: (v) {
                 setState(() => _doNotTrack = v);
@@ -123,37 +124,37 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.update),
-              title: const Text('Update Blocklist'),
-              subtitle: const Text('Re-download EasyList rules'),
+              title: Text(context.l10n.updateBlocklist),
+              subtitle: Text(context.l10n.reDownloadEasylistRules),
               onTap: () async {
                 await widget.adBlockService.updateBlocklist();
                 if (mounted) {
-                  Snack.show(context, 'Blocklist updated',
+                  Snack.show(context, context.l10n.blocklistUpdated,
                       level: SnackLevel.info);
                 }
               },
             ),
             ListTile(
               leading: Icon(Icons.delete_forever, color: cs.error),
-              title: const Text('Clear Browsing Data'),
+              title: Text(context.l10n.clearBrowsingData),
               onTap: _showClearDataDialog,
             ),
 
             ListTile(
               leading: const Icon(Icons.cloud_outlined),
-              title: const Text('IPFS Gateway'),
+              title: Text(context.l10n.ipfsGateway),
               subtitle: Text(
-                _ipfsGateway.isEmpty ? 'Default gateway chain' : _ipfsGateway,
+                _ipfsGateway.isEmpty ? context.l10n.defaultGatewayChain : _ipfsGateway,
               ),
               onTap: _editIpfsGateway,
             ),
 
             // -- Display --
-            const _SectionHeader(title: 'Display'),
+            _SectionHeader(title: context.l10n.display),
             SwitchListTile(
               secondary: const Icon(Icons.desktop_windows),
-              title: const Text('Desktop Mode'),
-              subtitle: const Text('Request desktop version of websites'),
+              title: Text(context.l10n.desktopMode),
+              subtitle: Text(context.l10n.requestDesktopVersionWebsites),
               value: _desktopMode,
               onChanged: (v) {
                 setState(() => _desktopMode = v);
@@ -172,30 +173,30 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('IPFS Gateway'),
+          title: Text(context.l10n.ipfsGateway),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(
-              labelText: 'Custom gateway URL',
-              helperText: 'Leave empty to use the built-in public gateways.',
+            decoration: InputDecoration(
+              labelText: context.l10n.customGatewayUrl,
+              helperText: context.l10n.leaveEmptyUseBuiltPublic,
             ),
             keyboardType: TextInputType.url,
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: Text(context.l10n.actionCancel),
             ),
             TextButton(
               onPressed: () {
                 controller.clear();
                 Navigator.pop(ctx, true);
               },
-              child: const Text('Reset'),
+              child: Text(context.l10n.reset),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Save'),
+              child: Text(context.l10n.actionSave),
             ),
           ],
         );
@@ -219,7 +220,7 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
     });
 
     if (mounted) {
-      Snack.show(context, 'IPFS gateway updated', level: SnackLevel.info);
+      Snack.show(context, context.l10n.ipfsGatewayUpdated, level: SnackLevel.info);
     }
   }
 
@@ -230,7 +231,7 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
         return SimpleDialog(
-          title: const Text('Search Engine'),
+          title: Text(context.l10n.searchEngine),
           children: engines
               .map((e) => ListTile(
                     title: Text(e),
@@ -253,26 +254,26 @@ class _BrowserSettingsScreenState extends State<BrowserSettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Clear Browsing Data'),
+        title: Text(context.l10n.clearBrowsingData),
         // overflow-fix: ensure clear-data prompt remains readable on short screens.
-        content: const SingleChildScrollView(
+        content: SingleChildScrollView(
           child: Text(
-            'This will clear your browsing history and recent sites. Favourites will not be affected.',
+            context.l10n.willClearBrowsingHistoryRecent,
           ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: Text(context.l10n.actionCancel)),
           FilledButton(
             onPressed: () async {
               await widget.repo.clearBrowsingData();
               if (ctx.mounted) Navigator.pop(ctx);
               if (mounted) {
-                Snack.show(context, 'Browsing data cleared',
+                Snack.show(context, context.l10n.browsingDataCleared,
                     level: SnackLevel.info);
               }
             },
-            child: const Text('Clear'),
+            child: Text(context.l10n.actionClear),
           ),
         ],
       ),

@@ -11,6 +11,7 @@ import '../../browser/extensions/extension_package.dart';
 import '../../browser/extensions/web_extension_host.dart';
 import '../../browser/extensions/webview2_extension_host.dart';
 import '../../browser/platform/webview2_environment.dart';
+import '../../utils/l10n.dart';
 import '../../utils/snack.dart';
 import 'extension_page_dialog.dart';
 
@@ -70,9 +71,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
         !await WebView2Environment.extensionsEnabled()) {
       if (!mounted) return;
       setState(() {
-        _problem = 'Extensions are unavailable in this session: another copy '
-            'of the app had the browser open first. Close every copy and '
-            'start the app again.';
+        _problem = context.l10n.extensionsUnavailableSessionAnotherCopy;
         _loading = false;
       });
       return;
@@ -131,7 +130,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
 
   Future<void> _installFromFile() async {
     final picked = await FilePicker.platform.pickFiles(
-      dialogTitle: 'Choose an extension package',
+      dialogTitle: context.l10n.chooseExtensionPackage,
       type: FileType.custom,
       allowedExtensions: const ['crx', 'zip', 'xpi'],
     );
@@ -142,7 +141,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
 
   Future<void> _installFromFolder() async {
     final path = await FilePicker.platform
-        .getDirectoryPath(dialogTitle: 'Choose an unpacked extension folder');
+        .getDirectoryPath(dialogTitle: context.l10n.chooseUnpackedExtensionFolder);
     if (path == null) return;
     await _installLocal(path);
   }
@@ -162,7 +161,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
     }
     if (!mounted) return;
     final allowed = await _confirmInstall(
-      name: manifest.nameIsLocalised ? 'this extension' : manifest.name,
+      name: manifest.nameIsLocalised ? context.l10n.extensionLabel : manifest.name,
       permissions: manifest.permissions,
       hostPermissions: manifest.hostPermissions,
     );
@@ -190,8 +189,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
       permissions: addon.permissions,
       hostPermissions: addon.hostPermissions,
       note: _host.runsChromiumPackages
-          ? 'Firefox extensions run here when they also support Chromium. '
-              'The app checks after downloading and tells you if not.'
+          ? context.l10n.firefoxExtensionsRunHereWhen
           : null,
     );
     if (allowed != true) return;
@@ -210,7 +208,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
       final installed = await _host.install(source);
       if (!mounted) return;
       _updates.remove(installed.id);
-      Snack.show(context, '${installed.name} is installed',
+      Snack.show(context, context.l10n.installed(installed.name),
           level: SnackLevel.info);
       await _reload();
     } catch (e) {
@@ -228,11 +226,12 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
     required List<String> hostPermissions,
     String? note,
   }) {
-    final lines = describePermissions(permissions, hostPermissions);
+    final lines =
+        describePermissions(permissions, hostPermissions, context.l10n);
     return showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Add $name?'),
+        title: Text(context.l10n.add(name)),
         content: SizedBox(
           width: 420,
           child: SingleChildScrollView(
@@ -241,8 +240,8 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(lines.isEmpty
-                    ? 'It asks for no special permissions.'
-                    : 'It will be able to:'),
+                    ? context.l10n.asksNoSpecialPermissions
+                    : context.l10n.willAble),
                 const SizedBox(height: 8),
                 for (final line in lines)
                   Padding(
@@ -271,11 +270,11 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
           TextButton(
             autofocus: true,
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Add extension'),
+            child: Text(context.l10n.addExtension),
           ),
         ],
       ),
@@ -306,18 +305,18 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Remove ${extension.name}?'),
-        content: const Text(
-            'Its settings are deleted too. You can install it again later.'),
+        title: Text(context.l10n.remove(extension.name)),
+        content: Text(
+            context.l10n.itsSettingsDeletedTooCan),
         actions: [
           TextButton(
             autofocus: true,
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Remove'),
+            child: Text(context.l10n.actionRemove),
           ),
         ],
       ),
@@ -368,25 +367,25 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Extensions'),
+          title: Text(context.l10n.extensions),
           actions: [
             if (supported) ...[
               IconButton(
-                tooltip: 'Install from a file (.crx, .zip, .xpi)',
+                tooltip: context.l10n.installFromFileCrxZip,
                 icon: const Icon(Icons.upload_file),
                 onPressed: _installing ? null : _installFromFile,
               ),
               IconButton(
-                tooltip: 'Install an unpacked folder',
+                tooltip: context.l10n.installUnpackedFolder,
                 icon: const Icon(Icons.folder_open),
                 onPressed: _installing ? null : _installFromFolder,
               ),
             ],
           ],
           bottom: supported
-              ? const TabBar(tabs: [
-                  Tab(text: 'Installed'),
-                  Tab(text: 'Get extensions'),
+              ? TabBar(tabs: [
+                  Tab(text: context.l10n.installed2),
+                  Tab(text: context.l10n.getExtensions),
                 ])
               : null,
         ),
@@ -397,7 +396,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
               child: !supported
                   ? _Message(
                       icon: Icons.extension_off_outlined,
-                      text: _problem ?? 'Extensions are not available here.')
+                      text: _problem ?? context.l10n.extensionsNotAvailableHere)
                   : TabBarView(children: [
                       _buildInstalled(),
                       _CatalogTab(
@@ -417,11 +416,9 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
   Widget _buildInstalled() {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_installed.isEmpty) {
-      return const _Message(
+      return _Message(
         icon: Icons.extension_outlined,
-        text: 'No extensions yet.\n\nFind one under Get extensions, or install '
-            'a .crx, .zip or .xpi file with the buttons at the top. Chrome '
-            'extensions and cross-browser Firefox extensions both work here.',
+        text: context.l10n.noExtensionsYetFindOne,
       );
     }
     return ListView.separated(
@@ -458,56 +455,13 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
 /// Only the permissions worth a second thought get a sentence; the rest are
 /// listed by name, so nothing the extension asks for is hidden.
 List<String> describePermissions(
-    List<String> permissions, List<String> hostPermissions) {
+    List<String> permissions, List<String> hostPermissions,
+    [AppLocalizations? l]) {
+  l ??= lookupAppLocalizations(const Locale('en'));
   // MV2 add-ons carry host patterns inside `permissions`; AMO passes them
   // through that way. Sort them into the right bucket first.
   hostPermissions = [...hostPermissions, ...permissions.where(isHostPattern)];
   permissions = permissions.where((p) => !isHostPattern(p)).toList();
-  const readable = {
-    'tabs': 'See the address and title of your open tabs',
-    'history': 'Read and change your browsing history',
-    'bookmarks': 'Read and change your bookmarks',
-    'cookies': 'Read and change cookies',
-    'downloads': 'Manage your downloads',
-    'clipboardRead': 'Read what you copy',
-    'clipboardWrite': 'Change what is on your clipboard',
-    'geolocation': 'Know your location',
-    'nativeMessaging': 'Talk to other programs on your computer',
-    'webRequest': 'Watch the requests pages make',
-    'webRequestBlocking': 'Block or change the requests pages make',
-    'declarativeNetRequest': 'Block or change the requests pages make',
-    'declarativeNetRequestWithHostAccess':
-        'Block or change the requests pages make',
-    'scripting': 'Run scripts on pages it has access to',
-    'privacy': 'Change privacy settings',
-    'management': 'Manage your other extensions',
-    'proxy': 'Control your proxy settings',
-    'notifications': 'Show notifications',
-    'storage': 'Store its own data',
-    'unlimitedStorage': 'Store an unlimited amount of its own data',
-    'contextMenus': 'Add items to right-click menus',
-    'menus': 'Add items to right-click menus',
-    'alarms': 'Run on a schedule',
-    'activeTab': 'Access the current page when you use it',
-    'theme': 'Change the browser’s colours',
-    'webNavigation': 'See which pages you visit',
-    'topSites': 'See your most visited sites',
-    'sessions': 'See recently closed tabs',
-    'browsingData': 'Clear your browsing data',
-    'search': 'Use your search engine',
-    'identity': 'Sign you in to its own service',
-    'fontSettings': 'Read your font settings',
-    'userScripts': 'Run user scripts on pages',
-    'idle': 'Know when you are away from the computer',
-    'sidePanel': 'Show a side panel',
-    'offscreen': 'Run hidden pages in the background',
-    'dns': 'Look up web addresses',
-    'pageCapture': 'Save pages',
-    'tabGroups': 'Organise your tab groups',
-    'debugger': 'Inspect and control pages as a debugger',
-    'desktopCapture': 'Capture your screen',
-    'tabCapture': 'Capture a tab’s sound and picture',
-  };
   final lines = <String>{};
   final allSites = hostPermissions.any((h) =>
       h == '<all_urls>' ||
@@ -515,7 +469,7 @@ List<String> describePermissions(
       h == 'http://*/*' ||
       h == 'https://*/*');
   if (allSites) {
-    lines.add('Read and change everything on every website');
+    lines.add(l.permEveryWebsite);
   } else if (hostPermissions.isNotEmpty) {
     final hosts = hostPermissions
         .map((h) => Uri.tryParse(h.replaceAll('*.', ''))?.host ?? h)
@@ -523,13 +477,61 @@ List<String> describePermissions(
         .toSet()
         .take(4)
         .join(', ');
-    final more = hostPermissions.length > 4 ? ' and more' : '';
-    lines.add('Read and change data on $hosts$more');
+    final more = hostPermissions.length > 4 ? l.more3 : '';
+    lines.add(l.permSomeWebsites(hosts, more));
   }
   for (final permission in permissions) {
-    lines.add(readable[permission] ?? 'Use "$permission"');
+    lines.add(_readablePermission(l, permission) ?? l.permUnknown(permission));
   }
   return lines.toList();
+}
+
+String? _readablePermission(AppLocalizations l, String permission) {
+  return switch (permission) {
+    'tabs' => l.permTabs,
+    'history' => l.permHistory,
+    'bookmarks' => l.permBookmarks,
+    'cookies' => l.permCookies,
+    'downloads' => l.permDownloads,
+    'clipboardRead' => l.permClipboardRead,
+    'clipboardWrite' => l.permClipboardWrite,
+    'geolocation' => l.permGeolocation,
+    'nativeMessaging' => l.permNativeMessaging,
+    'webRequest' => l.permWebRequest,
+    'webRequestBlocking' => l.permWebRequestBlocking,
+    'declarativeNetRequest' => l.permWebRequestBlocking,
+    'declarativeNetRequestWithHostAccess' => l.permWebRequestBlocking,
+    'scripting' => l.permScripting,
+    'privacy' => l.permPrivacy,
+    'management' => l.permManagement,
+    'proxy' => l.permProxy,
+    'notifications' => l.permNotifications,
+    'storage' => l.permStorage,
+    'unlimitedStorage' => l.permUnlimitedStorage,
+    'contextMenus' => l.permContextMenus,
+    'menus' => l.permContextMenus,
+    'alarms' => l.permAlarms,
+    'activeTab' => l.permActiveTab,
+    'theme' => l.permTheme,
+    'webNavigation' => l.permWebNavigation,
+    'topSites' => l.permTopSites,
+    'sessions' => l.permSessions,
+    'browsingData' => l.permBrowsingData,
+    'search' => l.permSearch,
+    'identity' => l.permIdentity,
+    'fontSettings' => l.permFontSettings,
+    'userScripts' => l.permUserScripts,
+    'idle' => l.permIdle,
+    'sidePanel' => l.permSidePanel,
+    'offscreen' => l.permOffscreen,
+    'dns' => l.permDns,
+    'pageCapture' => l.permPageCapture,
+    'tabGroups' => l.permTabGroups,
+    'debugger' => l.permDebugger,
+    'desktopCapture' => l.permDesktopCapture,
+    'tabCapture' => l.permTabCapture,
+    _ => null,
+  };
 }
 
 class _InstalledTile extends StatelessWidget {
@@ -558,7 +560,7 @@ class _InstalledTile extends StatelessWidget {
     final theme = Theme.of(context);
     final origin = extension.origin == ExtensionOrigin.amo
         ? 'addons.mozilla.org'
-        : 'installed from a file';
+        : context.l10n.installedFromFile;
     // A toolbar button with no popup fires an event only a browser toolbar
     // can send; WebView2 has no toolbar and no way to press it for us.
     final buttonOnly = extension.hasAction && extension.popupPath == null;
@@ -576,15 +578,15 @@ class _InstalledTile extends StatelessWidget {
             subtitle: Text([
               if (extension.version.isNotEmpty) extension.version,
               origin,
-              if (update != null) 'update to ${update!.version} available',
+              if (update != null)
+                context.l10n.extensionUpdateAvailable(update!.version),
             ].join(' · ')),
           ),
           if (buttonOnly)
             Padding(
               padding: const EdgeInsets.fromLTRB(72, 0, 16, 4),
               child: Text(
-                'Its toolbar button runs a background action that WebView2 '
-                'cannot trigger, so it has no popup here.',
+                context.l10n.itsToolbarButtonRunsBackground,
                 style: theme.textTheme.bodySmall,
               ),
             ),
@@ -597,19 +599,19 @@ class _InstalledTile extends StatelessWidget {
                   TextButton.icon(
                     onPressed: extension.enabled ? onOpenPopup : null,
                     icon: const Icon(Icons.open_in_new, size: 18),
-                    label: const Text('Open'),
+                    label: Text(context.l10n.actionOpen),
                   ),
                 if (onOpenOptions != null)
                   TextButton.icon(
                     onPressed: extension.enabled ? onOpenOptions : null,
                     icon: const Icon(Icons.tune, size: 18),
-                    label: const Text('Options'),
+                    label: Text(context.l10n.options),
                   ),
                 if (onUpdate != null)
                   TextButton.icon(
                     onPressed: busy ? null : onUpdate,
                     icon: const Icon(Icons.system_update_alt, size: 18),
-                    label: const Text('Update'),
+                    label: Text(context.l10n.update),
                   ),
                 if (extension.amoSlug != null)
                   TextButton.icon(
@@ -619,12 +621,12 @@ class _InstalledTile extends StatelessWidget {
                       mode: LaunchMode.externalApplication,
                     ),
                     icon: const Icon(Icons.info_outline, size: 18),
-                    label: const Text('Details'),
+                    label: Text(context.l10n.details),
                   ),
                 TextButton.icon(
                   onPressed: busy ? null : onRemove,
                   icon: const Icon(Icons.delete_outline, size: 18),
-                  label: const Text('Remove'),
+                  label: Text(context.l10n.actionRemove),
                 ),
               ],
             ),
@@ -749,10 +751,10 @@ class _CatalogTabState extends State<_CatalogTab>
             textInputAction: TextInputAction.search,
             onSubmitted: (_) => _search(),
             decoration: InputDecoration(
-              hintText: 'Search addons.mozilla.org',
+              hintText: context.l10n.searchAddonsMozillaOrg,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: IconButton(
-                tooltip: 'Search',
+                tooltip: context.l10n.tabSearch,
                 icon: const Icon(Icons.arrow_forward),
                 onPressed: _search,
               ),
@@ -774,9 +776,9 @@ class _CatalogTabState extends State<_CatalogTab>
                         );
                       }
                       if (_results.isEmpty) {
-                        return const _Message(
+                        return _Message(
                             icon: Icons.search_off,
-                            text: 'Nothing found. Try another search.');
+                            text: context.l10n.nothingFoundTryAnotherSearch);
                       }
                       if (!_hasMore) return const SizedBox(height: 24);
                       return Padding(
@@ -784,7 +786,7 @@ class _CatalogTabState extends State<_CatalogTab>
                         child: Center(
                           child: OutlinedButton(
                             onPressed: () => _search(more: true),
-                            child: const Text('Load more'),
+                            child: Text(context.l10n.loadMore),
                           ),
                         ),
                       );
@@ -803,7 +805,7 @@ class _CatalogTabState extends State<_CatalogTab>
                           if (addon.recommended) ...[
                             const SizedBox(width: 6),
                             Tooltip(
-                              message: 'Recommended by Mozilla',
+                              message: context.l10n.recommendedByMozilla,
                               child: Icon(Icons.verified,
                                   size: 16, color: theme.colorScheme.primary),
                             ),
@@ -823,12 +825,12 @@ class _CatalogTabState extends State<_CatalogTab>
                       ),
                       isThreeLine: addon.summary != null,
                       trailing: installed
-                          ? const Chip(label: Text('Installed'))
+                          ? Chip(label: Text(context.l10n.installed2))
                           : FilledButton.tonal(
                               onPressed: widget.onInstall == null
                                   ? null
                                   : () => widget.onInstall!(addon),
-                              child: const Text('Add'),
+                              child: Text(context.l10n.actionAdd),
                             ),
                     );
                   },
@@ -871,7 +873,7 @@ class _Message extends StatelessWidget {
               if (onRetry != null) ...[
                 const SizedBox(height: 16),
                 OutlinedButton(
-                    onPressed: onRetry, child: const Text('Try again')),
+                    onPressed: onRetry, child: Text(context.l10n.tryAgain)),
               ],
             ],
           ),

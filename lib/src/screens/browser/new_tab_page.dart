@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../../data/browser_db.dart';
+import '../../utils/l10n.dart';
 import '../../utils/screenshot_helper.dart';
 
 /// Premium "New Tab" page with search bar, quick-access tiles,
@@ -96,7 +97,7 @@ class _NewTabPageState extends State<NewTabPage> {
                 Expanded(
                   child: Text(
                     _searchController.text.trim().isEmpty
-                        ? 'Search or enter URL'
+                        ? context.l10n.searchEnterUrl
                         : _searchController.text.trim(),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -118,7 +119,7 @@ class _NewTabPageState extends State<NewTabPage> {
       controller: _searchController,
       focusNode: _searchFocusNode,
       decoration: InputDecoration(
-        hintText: 'Search or enter URL',
+        hintText: context.l10n.searchEnterUrl,
         prefixIcon: const Icon(Icons.search),
         filled: true,
         fillColor: cs.surfaceContainerHighest,
@@ -128,7 +129,7 @@ class _NewTabPageState extends State<NewTabPage> {
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 14),
         suffixIcon: IconButton(
-          tooltip: 'Go',
+          tooltip: context.l10n.go,
           icon: const Icon(Icons.arrow_forward, size: 18),
           onPressed: () {
             final trimmed = _searchController.text.trim();
@@ -247,8 +248,8 @@ class _NewTabPageState extends State<NewTabPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
                     _recentSites.isNotEmpty
-                        ? 'Quick Access'
-                        : 'Suggested Sites',
+                        ? context.l10n.quickAccess
+                        : context.l10n.suggestedSites,
                     style: Theme.of(context).textTheme.titleSmall),
               ),
             ),
@@ -291,7 +292,7 @@ class _NewTabPageState extends State<NewTabPage> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Text('Favourites',
+                  child: Text(context.l10n.playerFavourites,
                       style: Theme.of(context).textTheme.titleSmall),
                 ),
               ),
@@ -385,7 +386,7 @@ class _NewTabPageState extends State<NewTabPage> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Text('Recent',
+                  child: Text(context.l10n.recent,
                       style: Theme.of(context).textTheme.titleSmall),
                 ),
               ),
@@ -440,10 +441,10 @@ class _NewTabPageState extends State<NewTabPage> {
   String _formatTime(DateTime dt) {
     final now = DateTime.now();
     final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
+    if (diff.inMinutes < 1) return context.l10n.justNow;
+    if (diff.inMinutes < 60) return context.l10n.mAgo(diff.inMinutes);
+    if (diff.inHours < 24) return context.l10n.hAgo(diff.inHours);
+    return context.l10n.dAgo(diff.inDays);
   }
 }
 

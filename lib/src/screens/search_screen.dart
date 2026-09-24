@@ -12,6 +12,7 @@ import '../models/search_result.dart';
 import '../services/multi_source_search_service.dart';
 import '../services/preview_player_service.dart';
 import '../state/app_controller.dart';
+import '../utils/l10n.dart';
 import '../widgets/monetization_widgets.dart';
 // Fix: use an explicit show clause so the analyzer knows exactly which
 // symbol is needed.  This resolves both the unused_import warning (the
@@ -218,7 +219,7 @@ class _SearchScreenState extends State<SearchScreen>
 
     if (showSnack && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Download folder scan complete')),
+        SnackBar(content: Text(context.l10n.downloadFolderScanComplete)),
       );
     }
   }
@@ -227,7 +228,7 @@ class _SearchScreenState extends State<SearchScreen>
     final query = _controller.text.trim();
     if (query.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a search term first.')),
+        SnackBar(content: Text(context.l10n.enterSearchTermFirst)),
       );
       return;
     }
@@ -281,10 +282,10 @@ class _SearchScreenState extends State<SearchScreen>
                 final searchField = Expanded(
                   child: TextField(
                     controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: 'Search for music across sources…',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      hintText: context.l10n.searchMusicAcrossSources,
+                      prefixIcon: const Icon(Icons.search),
+                      border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                     onSubmitted: (_) => _search(),
@@ -303,7 +304,7 @@ class _SearchScreenState extends State<SearchScreen>
                 );
                 final searchButton = ElevatedButton(
                   onPressed: _loading ? null : _search,
-                  child: const Text('Search'),
+                  child: Text(context.l10n.tabSearch),
                 );
                 final refreshButton = IconButton(
                   icon: _scanningDownloadFolder
@@ -314,8 +315,8 @@ class _SearchScreenState extends State<SearchScreen>
                         )
                       : const Icon(Icons.refresh),
                   tooltip: _scanningDownloadFolder
-                      ? 'Scanning download folder…'
-                      : 'Refresh downloaded file status',
+                      ? context.l10n.scanningDownloadFolder
+                      : context.l10n.refreshDownloadedFileStatus,
                   onPressed: _scanningDownloadFolder
                       ? null
                       : () => _refreshDownloadedFiles(),
@@ -355,7 +356,7 @@ class _SearchScreenState extends State<SearchScreen>
           if (_loading)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              child: Text('Searching across all sources\u2026',
+              child: Text(context.l10n.searchingAcrossAllSources,
                   style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.onSurfaceVariant)),
@@ -370,7 +371,7 @@ class _SearchScreenState extends State<SearchScreen>
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               child: Text(
-                'Last scan: ${TimeOfDay.fromDateTime(_lastDownloadFolderScan!).format(context)}',
+                context.l10n.lastScan(TimeOfDay.fromDateTime(_lastDownloadFolderScan!).format(context)),
                 style: TextStyle(
                   fontSize: 11,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -393,16 +394,16 @@ class _SearchScreenState extends State<SearchScreen>
                           const SizedBox(height: 12),
                           Text(
                             _hasSearched
-                                ? 'No results found'
-                                : 'Search for music across sources',
+                                ? context.l10n.noResultsFound
+                                : context.l10n.searchMusicAcrossSources2,
                             style: Theme.of(context).textTheme.titleMedium,
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
                           Text(
                             _hasSearched
-                                ? 'Try a different artist, title, or source.'
-                                : 'Enter a query above to start searching.',
+                                ? context.l10n.tryDifferentArtistTitleSource
+                                : context.l10n.enterQueryAboveStartSearching,
                             style: TextStyle(
                               color: Theme.of(context)
                                   .colorScheme
@@ -516,12 +517,12 @@ class _SearchScreenState extends State<SearchScreen>
                                   ],
                                   IconButton(
                                     icon: const Icon(Icons.play_arrow),
-                                    tooltip: 'Preview in browser',
+                                    tooltip: context.l10n.previewBrowser,
                                     onPressed: () => _launchPreview(r.id),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.download),
-                                    tooltip: 'Download',
+                                    tooltip: context.l10n.actionDownload,
                                     onPressed: () =>
                                         widget.onDownload(r, _selectedFormat),
                                   ),

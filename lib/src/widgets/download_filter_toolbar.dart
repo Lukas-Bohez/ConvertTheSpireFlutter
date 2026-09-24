@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/unified_download_task.dart';
+import '../utils/l10n.dart';
 
 enum DownloadProtocolFilter { all, torrents, directHttp }
 
@@ -63,11 +64,11 @@ class _DownloadFilterToolbarState extends State<DownloadFilterToolbar> {
             // unasked-for on screen entry is exactly the "search bar
             // grabs focus automatically" complaint already raised about
             // the browser's own address bar.
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search),
-              hintText: 'Search downloads…',
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: context.l10n.searchDownloads,
               isDense: true,
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             onChanged: widget.onQueryChanged,
           ),
@@ -76,11 +77,11 @@ class _DownloadFilterToolbarState extends State<DownloadFilterToolbar> {
             spacing: 8,
             runSpacing: 4,
             children: [
-              _chip('All protocols', widget.protocol == DownloadProtocolFilter.all,
+              _chip(context.l10n.allProtocols, widget.protocol == DownloadProtocolFilter.all,
                   () => widget.onProtocolChanged(DownloadProtocolFilter.all)),
-              _chip('Torrents', widget.protocol == DownloadProtocolFilter.torrents,
+              _chip(context.l10n.tabTorrents, widget.protocol == DownloadProtocolFilter.torrents,
                   () => widget.onProtocolChanged(DownloadProtocolFilter.torrents)),
-              _chip('Direct HTTP', widget.protocol == DownloadProtocolFilter.directHttp,
+              _chip(context.l10n.directHttp, widget.protocol == DownloadProtocolFilter.directHttp,
                   () => widget.onProtocolChanged(DownloadProtocolFilter.directHttp)),
             ],
           ),
@@ -89,13 +90,13 @@ class _DownloadFilterToolbarState extends State<DownloadFilterToolbar> {
             spacing: 8,
             runSpacing: 4,
             children: [
-              _chip('All statuses', widget.status == DownloadStatusFilter.all,
+              _chip(context.l10n.allStatuses, widget.status == DownloadStatusFilter.all,
                   () => widget.onStatusChanged(DownloadStatusFilter.all)),
-              _chip('Active', widget.status == DownloadStatusFilter.active,
+              _chip(context.l10n.active, widget.status == DownloadStatusFilter.active,
                   () => widget.onStatusChanged(DownloadStatusFilter.active)),
-              _chip('Paused', widget.status == DownloadStatusFilter.paused,
+              _chip(context.l10n.paused, widget.status == DownloadStatusFilter.paused,
                   () => widget.onStatusChanged(DownloadStatusFilter.paused)),
-              _chip('Completed', widget.status == DownloadStatusFilter.completed,
+              _chip(context.l10n.completed, widget.status == DownloadStatusFilter.completed,
                   () => widget.onStatusChanged(DownloadStatusFilter.completed)),
             ],
           ),
@@ -104,13 +105,13 @@ class _DownloadFilterToolbarState extends State<DownloadFilterToolbar> {
             spacing: 8,
             runSpacing: 4,
             children: [
-              _chip('All categories', widget.category == null,
+              _chip(context.l10n.allCategories, widget.category == null,
                   () => widget.onCategoryChanged(null)),
-              _chip('Media', widget.category == UnifiedDownloadCategory.media,
+              _chip(context.l10n.media, widget.category == UnifiedDownloadCategory.media,
                   () => widget.onCategoryChanged(UnifiedDownloadCategory.media)),
-              _chip('App updates', widget.category == UnifiedDownloadCategory.appUpdate,
+              _chip(context.l10n.appUpdates, widget.category == UnifiedDownloadCategory.appUpdate,
                   () => widget.onCategoryChanged(UnifiedDownloadCategory.appUpdate)),
-              _chip('Archives', widget.category == UnifiedDownloadCategory.archive,
+              _chip(context.l10n.archives, widget.category == UnifiedDownloadCategory.archive,
                   () => widget.onCategoryChanged(UnifiedDownloadCategory.archive)),
             ],
           ),

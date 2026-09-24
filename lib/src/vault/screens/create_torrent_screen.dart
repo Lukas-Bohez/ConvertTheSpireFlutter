@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:convert_the_spire_reborn/src/utils/l10n.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_creator_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
@@ -61,7 +62,7 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
     try {
       final selectedPaths = await pickMultipleFilePaths(
         context,
-        dialogTitle: 'Select files',
+        dialogTitle: context.l10n.selectFiles,
       );
       if (selectedPaths.isEmpty) return;
       setState(() {
@@ -83,7 +84,7 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
     try {
       final path = await pickDirectoryPath(
         context,
-        dialogTitle: 'Select folder',
+        dialogTitle: context.l10n.selectFolder,
       );
       if (path == null) return;
       setState(() {
@@ -103,7 +104,7 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
     try {
       final path = await pickDirectoryPath(
         context,
-        dialogTitle: 'Select output folder',
+        dialogTitle: context.l10n.selectOutputFolder,
       );
       if (path == null) return;
       setState(() {
@@ -146,19 +147,19 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
   Future<void> _createTorrent() async {
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Torrent name is required.')),
+        SnackBar(content: Text(context.l10n.torrentNameRequired)),
       );
       return;
     }
     if (_files.isEmpty && _folders.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select files or a folder first.')),
+        SnackBar(content: Text(context.l10n.selectFilesFolderFirst)),
       );
       return;
     }
     if (_outputPath.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Output location is required.')),
+        SnackBar(content: Text(context.l10n.outputLocationRequired)),
       );
       return;
     }
@@ -166,7 +167,7 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
     setState(() {
       _isCreating = true;
       _progress = 0.0;
-      _progressText = 'Preparing...';
+      _progressText = context.l10n.preparing;
     });
 
     try {
@@ -203,21 +204,21 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
             context: context,
             builder: (context) {
               return AlertDialog(
-                title: const Text('Torrent Created'),
+                title: Text(context.l10n.torrentCreated),
                 // overflow-fix: saved path can be long and overflow dialog body.
                 content: SingleChildScrollView(
                   child: Text(
-                    'Saved to:\n${result.torrentPath}\n\nAdd to downloads now?',
+                    context.l10n.savedAddDownloadsNow(result.torrentPath),
                   ),
                 ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('No'),
+                    child: Text(context.l10n.commonNo),
                   ),
                   FilledButton(
                     onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('Add'),
+                    child: Text(context.l10n.actionAdd),
                   ),
                 ],
               );
@@ -236,7 +237,7 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Torrent file created, but failed to add to downloads: $e',
+                context.l10n.torrentFileCreatedButFailed(e),
               ),
             ),
           );
@@ -245,13 +246,13 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Created ${p.basename(result.torrentPath)}')),
+        SnackBar(content: Text(context.l10n.created(p.basename(result.torrentPath)))),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed to create torrent: $e')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.failedCreateTorrent(e))));
     } finally {
       if (!mounted) return;
       setState(() {
@@ -263,15 +264,15 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Torrent')),
+      appBar: AppBar(title: Text(context.l10n.createTorrent)),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: ListView(
             children: [
-              const Text(
-                'Source',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Text(
+                context.l10n.source,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -281,12 +282,12 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
                   OutlinedButton.icon(
                     onPressed: _isCreating ? null : _addFiles,
                     icon: const Icon(Icons.add),
-                    label: const Text('Add Files'),
+                    label: Text(context.l10n.addFiles),
                   ),
                   OutlinedButton.icon(
                     onPressed: _isCreating ? null : _addFolder,
                     icon: const Icon(Icons.folder_open),
-                    label: const Text('Add Folder'),
+                    label: Text(context.l10n.addFolder),
                   ),
                 ],
               ),
@@ -326,15 +327,15 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
                 future: _totalSize(),
                 builder: (context, snapshot) {
                   final size = snapshot.data ?? 0;
-                  return Text('Total size: ${_humanSize(size)}');
+                  return Text(context.l10n.totalSize(_humanSize(size)));
                 },
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Torrent Name',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: context.l10n.torrentName,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
@@ -342,23 +343,26 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
                 controller: _trackersController,
                 minLines: 4,
                 maxLines: 8,
-                decoration: const InputDecoration(
-                  labelText: 'Trackers (one per line)',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: context.l10n.trackersOnePerLine,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<int?>(
                 initialValue: _pieceSize,
-                decoration: const InputDecoration(
-                  labelText: 'Piece Size',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: context.l10n.pieceSize,
+                  border: const OutlineInputBorder(),
                 ),
                 items: _pieceOptions.entries
                     .map(
                       (e) => DropdownMenuItem<int?>(
                         value: e.value,
-                        child: Text(e.key),
+                        // Sizes read the same everywhere; only "Auto" is words.
+                        child: Text(e.value == null
+                            ? context.l10n.pieceSizeAuto
+                            : e.key),
                       ),
                     )
                     .toList(),
@@ -369,9 +373,9 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
               const SizedBox(height: 12),
               TextField(
                 controller: _commentController,
-                decoration: const InputDecoration(
-                  labelText: 'Comment (optional)',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: context.l10n.commentOptional,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               SwitchListTile(
@@ -379,18 +383,18 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
                 onChanged: _isCreating
                     ? null
                     : (value) => setState(() => _isPrivate = value),
-                title: const Text('Private Torrent'),
-                subtitle: const Text(
-                  'Disables DHT and PEX for private trackers',
+                title: Text(context.l10n.privateTorrent),
+                subtitle: Text(
+                  context.l10n.disablesDhtPexPrivateTrackers,
                 ),
               ),
               const SizedBox(height: 8),
               ListTile(
-                title: const Text('Output Location'),
-                subtitle: Text(_outputPath.isEmpty ? 'Not set' : _outputPath),
+                title: Text(context.l10n.outputLocation),
+                subtitle: Text(_outputPath.isEmpty ? context.l10n.notSet : _outputPath),
                 trailing: TextButton(
                   onPressed: _isCreating ? null : _changeOutputPath,
-                  child: const Text('Change'),
+                  child: Text(context.l10n.change),
                 ),
               ),
               if (_isCreating) ...[
@@ -404,7 +408,7 @@ class _CreateTorrentScreenState extends State<CreateTorrentScreen> {
               const SizedBox(height: 12),
               FilledButton(
                 onPressed: _isCreating ? null : _createTorrent,
-                child: Text(_isCreating ? 'Creating...' : 'Create Torrent'),
+                child: Text(_isCreating ? context.l10n.creating : context.l10n.createTorrent),
               ),
             ],
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/l10n.dart';
 import 'shimmer_grid.dart';
 
 /// A reusable Material 3 home grid showing media cards.
@@ -27,9 +28,9 @@ class M3HomeGrid<T> extends StatelessWidget {
           children: [
             Icon(Icons.library_music, size: 64, color: cs.outline),
             const SizedBox(height: 12),
-            Text('No media yet', style: TextStyle(color: cs.onSurfaceVariant)),
+            Text(context.l10n.noMediaYet, style: TextStyle(color: cs.onSurfaceVariant)),
             const SizedBox(height: 8),
-            FilledButton(onPressed: onRetry, child: const Text('Scan library')),
+            FilledButton(onPressed: onRetry, child: Text(context.l10n.scanLibrary)),
           ],
         ),
       );

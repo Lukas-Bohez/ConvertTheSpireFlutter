@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../browser/adblock/adblock_service.dart';
 import '../../browser/userscripts/userscript_service.dart';
+import '../../utils/l10n.dart';
 import 'userscripts_screen.dart';
 
 /// Extensions, for a browser engine that cannot run them.
@@ -32,39 +33,41 @@ class MobileAddonsScreen extends StatefulWidget {
         'sort': 'total_installs',
       }).toString();
 
-  /// Things people install extensions for, as userscript searches.
-  static const List<AddonIdea> ideas = [
-    AddonIdea(
-      icon: Icons.dark_mode_outlined,
-      title: 'Dark mode for every site',
-      query: 'dark mode',
-    ),
-    AddonIdea(
-      icon: Icons.thumb_down_alt_outlined,
-      title: 'See YouTube dislikes again',
-      query: 'Return YouTube Dislike',
-    ),
-    AddonIdea(
-      icon: Icons.fast_forward_outlined,
-      title: 'Skip sponsor segments on YouTube',
-      query: 'SponsorBlock',
-    ),
-    AddonIdea(
-      icon: Icons.tune,
-      title: 'YouTube tweaks and cleanups',
-      query: 'YouTube enhancer',
-    ),
-    AddonIdea(
-      icon: Icons.translate,
-      title: 'Translate pages',
-      query: 'translate',
-    ),
-    AddonIdea(
-      icon: Icons.forum_outlined,
-      title: 'Cleaner Reddit',
-      query: 'reddit',
-    ),
-  ];
+  /// Things people install extensions for, as userscript searches. The
+  /// searches stay in English: that is the language most scripts are
+  /// described in.
+  static List<AddonIdea> ideas(AppLocalizations l) => [
+        AddonIdea(
+          icon: Icons.dark_mode_outlined,
+          title: l.addonDarkMode,
+          query: 'dark mode',
+        ),
+        AddonIdea(
+          icon: Icons.thumb_down_alt_outlined,
+          title: l.addonYoutubeDislikes,
+          query: 'Return YouTube Dislike',
+        ),
+        AddonIdea(
+          icon: Icons.fast_forward_outlined,
+          title: l.addonSponsorBlock,
+          query: 'SponsorBlock',
+        ),
+        AddonIdea(
+          icon: Icons.tune,
+          title: l.addonYoutubeTweaks,
+          query: 'YouTube enhancer',
+        ),
+        AddonIdea(
+          icon: Icons.translate,
+          title: l.addonTranslate,
+          query: 'translate',
+        ),
+        AddonIdea(
+          icon: Icons.forum_outlined,
+          title: l.addonReddit,
+          query: 'reddit',
+        ),
+      ];
 
   @override
   State<MobileAddonsScreen> createState() => _MobileAddonsScreenState();
@@ -117,7 +120,7 @@ class _MobileAddonsScreenState extends State<MobileAddonsScreen> {
     final scripts = widget.userScripts.scripts;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Extensions')),
+      appBar: AppBar(title: Text(context.l10n.extensions)),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
@@ -128,39 +131,34 @@ class _MobileAddonsScreenState extends State<MobileAddonsScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'Chrome and Firefox extensions need a desktop browser '
-                  'engine, and the web view on this device cannot load '
-                  'them. What most people install extensions for works '
-                  'here anyway: ad blocking is built in, and userscripts '
-                  'add dark mode, YouTube tweaks and much more.',
+                  context.l10n.chromeFirefoxExtensionsNeedDesktop,
                   style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSecondaryContainer),
                 ),
               ),
             ),
           ),
-          const _Heading('On this device'),
+          _Heading(context.l10n.device),
           SwitchListTile(
             secondary: const Icon(Icons.block),
-            title: const Text('Ad and tracker blocking'),
-            subtitle: const Text('Built in, nothing to install'),
+            title: Text(context.l10n.adTrackerBlocking),
+            subtitle: Text(context.l10n.builtNothingInstall),
             value: widget.adBlock.adBlockEnabled,
             onChanged: (v) => widget.adBlock.setEnabled(v),
           ),
           ListTile(
             leading: const Icon(Icons.code),
-            title: const Text('Userscripts'),
+            title: Text(context.l10n.userscripts),
             subtitle: Text(scripts.isEmpty
-                ? 'Tampermonkey-compatible. None installed yet'
-                : '${widget.userScripts.enabledCount} of ${scripts.length} '
-                    'switched on'),
+                ? context.l10n.tampermonkeyCompatibleNoneInstalledYet
+                : context.l10n.switched(widget.userScripts.enabledCount, scripts.length)),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
               builder: (_) => UserScriptsScreen(service: widget.userScripts),
             )),
           ),
-          const _Heading('Find add-ons'),
-          for (final idea in MobileAddonsScreen.ideas)
+          _Heading(context.l10n.findAddOns),
+          for (final idea in MobileAddonsScreen.ideas(context.l10n))
             ListTile(
               leading: Icon(idea.icon),
               title: Text(idea.title),
@@ -173,12 +171,12 @@ class _MobileAddonsScreenState extends State<MobileAddonsScreen> {
               controller: _search,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                labelText: 'Search userscripts',
-                hintText: 'A site or what you want to change',
+                labelText: context.l10n.searchUserscripts,
+                hintText: context.l10n.siteWhatWantChange,
                 border: const OutlineInputBorder(),
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: IconButton(
-                  tooltip: 'Search',
+                  tooltip: context.l10n.tabSearch,
                   icon: const Icon(Icons.arrow_forward),
                   onPressed: () => _open(_search.text),
                 ),
@@ -189,20 +187,15 @@ class _MobileAddonsScreenState extends State<MobileAddonsScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Text(
-              'These open Greasy Fork in the browser. On a script’s '
-              'page, tap Install: the app shows where the script comes from '
-              'and asks before installing it. A userscript can read and '
-              'change the sites it runs on, so install only ones you trust.',
+              context.l10n.theseOpenGreasyForkBrowser,
               style: theme.textTheme.bodySmall,
             ),
           ),
-          const _Heading('Full extensions'),
+          _Heading(context.l10n.fullExtensions),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'The Windows app runs Chrome extensions and add-ons from '
-              'addons.mozilla.org, such as uBlock Origin Lite and Dark '
-              'Reader, with their buttons and settings pages.',
+              context.l10n.windowsAppRunsChromeExtensions,
               style: theme.textTheme.bodyMedium,
             ),
           ),

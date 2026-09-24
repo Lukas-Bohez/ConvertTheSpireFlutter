@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/l10n.dart';
+
 /// Persistent mini bar shown at the bottom of the browser when casting is active.
 /// Slides in from the bottom with an animated transition.
 class CastMiniBar extends StatelessWidget {
@@ -39,7 +41,7 @@ class CastMiniBar extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Casting to $deviceName',
+                      context.l10n.casting(deviceName),
                       style: TextStyle(
                         color: cs.onPrimaryContainer,
                         fontWeight: FontWeight.w600,
@@ -48,7 +50,7 @@ class CastMiniBar extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      isPlaying ? 'Playing' : 'Paused',
+                      isPlaying ? context.l10n.playing : context.l10n.paused,
                       style: TextStyle(
                         color: cs.onPrimaryContainer.withValues(alpha: 0.7),
                         fontSize: 11,

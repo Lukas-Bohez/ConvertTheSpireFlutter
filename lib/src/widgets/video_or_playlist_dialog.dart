@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/l10n.dart';
+
 /// The answer to "this video, or the playlist it is playing from?".
 enum VideoOrPlaylist { video, playlist }
 
@@ -18,7 +20,7 @@ Future<VideoOrPlaylist?> askVideoOrPlaylist(
       final theme = Theme.of(ctx);
       final title = videoTitle?.trim() ?? '';
       return AlertDialog(
-        title: const Text('Download what?'),
+        title: Text(context.l10n.downloadWhat),
         contentPadding: const EdgeInsets.fromLTRB(8, 16, 8, 0),
         content: SingleChildScrollView(
           child: Column(
@@ -28,7 +30,7 @@ Future<VideoOrPlaylist?> askVideoOrPlaylist(
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'This video is playing from a playlist.',
+                  context.l10n.videoPlayingFromPlaylist,
                   style: theme.textTheme.bodyMedium,
                 ),
               ),
@@ -36,7 +38,7 @@ Future<VideoOrPlaylist?> askVideoOrPlaylist(
               ListTile(
                 autofocus: true,
                 leading: const Icon(Icons.music_video_outlined),
-                title: const Text('Just this video'),
+                title: Text(context.l10n.justVideo),
                 subtitle: title.isEmpty
                     ? null
                     : Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -44,9 +46,9 @@ Future<VideoOrPlaylist?> askVideoOrPlaylist(
               ),
               ListTile(
                 leading: const Icon(Icons.playlist_play),
-                title: const Text('The whole playlist'),
-                subtitle: const Text(
-                    'See which songs you already have, then get the rest'),
+                title: Text(context.l10n.wholePlaylist),
+                subtitle: Text(
+                    context.l10n.seeWhichSongsAlreadyHave),
                 onTap: () => Navigator.pop(ctx, VideoOrPlaylist.playlist),
               ),
             ],
@@ -55,7 +57,7 @@ Future<VideoOrPlaylist?> askVideoOrPlaylist(
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
         ],
       );

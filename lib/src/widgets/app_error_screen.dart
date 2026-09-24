@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../services/bug_report_service.dart';
 import '../services/session_log_service.dart';
+import '../utils/l10n.dart';
 
 /// What the app shows when a widget fails to build.
 ///
@@ -54,7 +55,7 @@ class AppErrorScreen extends StatelessWidget {
     try {
       await Clipboard.setData(ClipboardData(text: buildReport()));
       messenger?.showSnackBar(
-        const SnackBar(content: Text('Details copied to clipboard')),
+        SnackBar(content: Text(buttonContext.l10n.detailsCopiedClipboard)),
       );
     } catch (e, st) {
       SessionLogService.instance.logSwallowed(e, st, 'error_screen_copy');
@@ -98,15 +99,15 @@ class AppErrorScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.error_outline, color: Color(0xFFFFB4AB)),
-                    SizedBox(width: 8),
+                    const Icon(Icons.error_outline, color: Color(0xFFFFB4AB)),
+                    const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        'Something broke here',
-                        style: TextStyle(
+                        context.l10n.somethingBrokeHere,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -137,12 +138,12 @@ class AppErrorScreen extends StatelessWidget {
                       FilledButton.icon(
                         onPressed: () => _copyDetails(buttonContext),
                         icon: const Icon(Icons.copy_all),
-                        label: const Text('Copy details'),
+                        label: Text(context.l10n.copyDetails),
                       ),
                       OutlinedButton.icon(
                         onPressed: _report,
                         icon: const Icon(Icons.bug_report_outlined),
-                        label: const Text('Report this'),
+                        label: Text(context.l10n.report),
                       ),
                     ],
                   ),

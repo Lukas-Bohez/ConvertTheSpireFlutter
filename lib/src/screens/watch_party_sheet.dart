@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../services/foreground_service.dart';
 import '../services/watch_party/watch_party_service.dart';
+import '../utils/l10n.dart';
 import '../utils/snack.dart';
 import 'player.dart' show PlayerState;
 
@@ -69,7 +70,7 @@ class _WatchPartySheetState extends State<WatchPartySheet> {
     } catch (e) {
       debugPrint('watch party: host name unavailable: $e');
     }
-    return 'This device';
+    return context.l10n.device2;
   }
 
   @override
@@ -88,7 +89,7 @@ class _WatchPartySheetState extends State<WatchPartySheet> {
     try {
       await player.startWatchParty(displayName: _nameController.text.trim());
     } catch (e) {
-      setState(() => _error = 'Could not start the room: $e');
+      setState(() => _error = context.l10n.couldNotStartRoom(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -134,13 +135,12 @@ class _WatchPartySheetState extends State<WatchPartySheet> {
               children: [
                 const Icon(Icons.groups_rounded),
                 const SizedBox(width: 10),
-                Text('Watch Together', style: theme.textTheme.titleLarge),
+                Text(context.l10n.watchTogether2, style: theme.textTheme.titleLarge),
               ],
             ),
             const SizedBox(height: 6),
             Text(
-              'Everyone on the same wifi stays in step — play, pause and seek '
-              'together.',
+              context.l10n.everyoneSameWifiStaysStep,
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 18),
@@ -206,9 +206,9 @@ class _JoinOrHost extends StatelessWidget {
         TextField(
           controller: nameController,
           textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(
-            labelText: 'Your name',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: context.l10n.name,
+            border: const OutlineInputBorder(),
             isDense: true,
           ),
         ),
@@ -216,7 +216,7 @@ class _JoinOrHost extends StatelessWidget {
         FilledButton.icon(
           onPressed: busy ? null : onHost,
           icon: const Icon(Icons.play_circle_outline),
-          label: const Text('Start a room'),
+          label: Text(context.l10n.startRoom),
         ),
         const SizedBox(height: 18),
         Row(
@@ -224,7 +224,7 @@ class _JoinOrHost extends StatelessWidget {
             const Expanded(child: Divider()),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text('or join one',
+              child: Text(context.l10n.joinOne,
                   style: Theme.of(context).textTheme.bodySmall),
             ),
             const Expanded(child: Divider()),
@@ -237,10 +237,10 @@ class _JoinOrHost extends StatelessWidget {
           textCapitalization: TextCapitalization.characters,
           maxLength: 8,
           onSubmitted: busy ? null : (_) => onJoin(),
-          decoration: const InputDecoration(
-            labelText: 'Room code',
+          decoration: InputDecoration(
+            labelText: context.l10n.roomCode,
             hintText: 'ABC234',
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
             isDense: true,
             counterText: '',
           ),
@@ -254,7 +254,7 @@ class _JoinOrHost extends StatelessWidget {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.login_rounded),
-          label: Text(busy ? 'Looking for the room…' : 'Join'),
+          label: Text(busy ? context.l10n.lookingRoom : context.l10n.join),
         ),
       ],
     );
@@ -285,7 +285,7 @@ class _ActiveRoom extends StatelessWidget {
           child: Column(
             children: [
               Text(
-                isHost ? 'Your room code' : 'In room',
+                isHost ? context.l10n.roomCode2 : context.l10n.room2,
                 style: TextStyle(color: theme.colorScheme.onPrimaryContainer),
               ),
               const SizedBox(height: 8),
@@ -303,12 +303,12 @@ class _ActiveRoom extends StatelessWidget {
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: code));
                     if (context.mounted) {
-                      Snack.show(context, 'Room code copied',
+                      Snack.show(context, context.l10n.roomCodeCopied,
                           level: SnackLevel.success);
                     }
                   },
                   icon: const Icon(Icons.copy_rounded, size: 18),
-                  label: const Text('Copy code'),
+                  label: Text(context.l10n.copyCode),
                 ),
               ],
             ],
@@ -332,7 +332,7 @@ class _ActiveRoom extends StatelessWidget {
         OutlinedButton.icon(
           onPressed: onLeave,
           icon: const Icon(Icons.logout_rounded),
-          label: Text(isHost ? 'Close the room' : 'Leave the room'),
+          label: Text(isHost ? context.l10n.closeRoom : context.l10n.leaveRoom),
         ),
       ],
     );

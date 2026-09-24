@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../utils/l10n.dart';
 import 'colour_rarity.dart';
 
 class ColourRewardSessionDialog extends StatefulWidget {
@@ -118,8 +119,8 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
         _showFinalReveal ? reward.rarity : _previewTiers[_previewStep];
     final stageColor = stage.glowColor;
     final progressText = _showFinalReveal
-        ? 'Revealed ${_rewardIndex + 1} of ${widget.rewards.length}'
-        : 'Pull ${_rewardIndex + 1} of ${widget.rewards.length}';
+        ? context.l10n.revealed(_rewardIndex + 1, widget.rewards.length)
+        : context.l10n.pull(_rewardIndex + 1, widget.rewards.length);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -128,7 +129,7 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
           children: [
             Expanded(
               child: Text(
-                'Colour pull session',
+                context.l10n.colourPullSession,
                 style: Theme.of(context)
                     .textTheme
                     .titleLarge
@@ -152,13 +153,14 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
           ),
           child: _showFinalReveal
               ? _buildFinalCard(reward, stageColor)
-              : _buildQuestionCard(stage.label, stageColor, reward.displayName),
+              : _buildQuestionCard(stage.labelIn(context.l10n), stageColor,
+                  reward.nameIn(context.l10n)),
         ),
         const SizedBox(height: 14),
         Text(
           _showFinalReveal
-              ? 'That one is yours. Press Next to continue.'
-              : 'Press Next to step through the near-miss pull.',
+              ? context.l10n.oneYoursPressNextContinue
+              : context.l10n.pressNextStepThroughNear,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
@@ -167,7 +169,8 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
           width: double.infinity,
           child: FilledButton(
             onPressed: _advance,
-            child: Text(_showFinalReveal ? 'Next' : 'Next'),
+            child:
+                Text(_showFinalReveal ? context.l10n.next : context.l10n.next),
           ),
         ),
       ],
@@ -258,7 +261,7 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
           ),
           const SizedBox(height: 14),
           Text(
-            reward.displayName,
+            reward.nameIn(context.l10n),
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
@@ -267,7 +270,7 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
           ),
           const SizedBox(height: 6),
           Chip(
-            label: Text(reward.rarity.label),
+            label: Text(reward.rarity.labelIn(context.l10n)),
             avatar: const Icon(Icons.auto_awesome, size: 16),
             backgroundColor: stageColor.withValues(alpha: 0.14),
           ),
@@ -285,7 +288,7 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
         mainAxisSize: MainAxisSize.max,
         children: [
           Text(
-            'All colours pulled',
+            context.l10n.allColoursPulled,
             style: Theme.of(context)
                 .textTheme
                 .titleLarge
@@ -293,7 +296,7 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Everything that dropped this time, popping in one by one.',
+            context.l10n.everythingDroppedTimePoppingOne,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
@@ -337,7 +340,7 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
             child: FilledButton.icon(
               onPressed: summaryReady ? _advance : null,
               icon: const Icon(Icons.check_circle),
-              label: const Text('Claim'),
+              label: Text(context.l10n.claim),
             ),
           ),
         ],
@@ -372,13 +375,13 @@ class _ColourRewardSessionDialogState extends State<ColourRewardSessionDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  reward.displayName,
+                  reward.nameIn(context.l10n),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 4),
-                Text(reward.rarity.label),
+                Text(reward.rarity.labelIn(context.l10n)),
               ],
             ),
           ),

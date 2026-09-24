@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:convert_the_spire_reborn/l10n/app_localizations.dart';
+import 'package:convert_the_spire_reborn/src/utils/l10n.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -68,6 +68,31 @@ void main() {
         expect(arb['@@locale'], expected);
       });
 
+      test('is actually translated, not English copied across', () {
+        // Brand names, file formats and cognates ("Status", "Chromecast",
+        // "MP3 (Audio)") legitimately match English; whole screens of English
+        // do not. Only words that read as English prose count.
+        final prose = RegExp(r'[a-z]{4,}');
+        final copied = keys
+            .where((k) => template[k] is String && prose.hasMatch(template[k]))
+            .where((k) => arb[k] == template[k])
+            .toList();
+        expect(copied.length, lessThan(templateKeys.length * 0.05),
+            reason: '$name leaves ${copied.length} strings in English, '
+                'e.g. ${copied.take(10).join(', ')}');
+      });
+
+      test('keeps the same placeholders as English', () {
+        final placeholder = RegExp(r'\{(\w+)\}');
+        Set<String> names(String s) =>
+            placeholder.allMatches(s).map((m) => m.group(1)!).toSet();
+        for (final key in keys) {
+          if (template[key] is! String) continue;
+          expect(names(arb[key] as String), names(template[key] as String),
+              reason: '$key in $name');
+        }
+      });
+
       test('has no blank or untranslated-placeholder values', () {
         for (final key in keys) {
           final value = arb[key];
@@ -97,5 +122,27 @@ void main() {
     test('ships a meaningful number of languages', () {
       expect(AppLocalizations.supportedLocales.length, greaterThanOrEqualTo(15));
     });
+  });
+
+  testWidgets('screens read the chosen language through context.l10n',
+      (tester) async {
+    Future<String> labelIn(Locale locale) async {
+      late String label;
+      await tester.pumpWidget(Localizations(
+        locale: locale,
+        delegates: AppLocalizations.localizationsDelegates,
+        child: Builder(builder: (context) {
+          label = context.l10n.tabSettings;
+          return const SizedBox();
+        }),
+      ));
+      await tester.pumpAndSettle();
+      return label;
+    }
+
+    expect(await labelIn(const Locale('en')), 'Settings');
+    expect(await labelIn(const Locale('de')), isNot('Settings'));
+    expect(await labelIn(const Locale('nl')), isNot('Settings'));
+    expect(await labelIn(const Locale('zh')), isNot('Settings'));
   });
 }

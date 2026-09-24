@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:webview_windows/webview_windows.dart';
 
 import '../../browser/platform/webview2_environment.dart';
+import '../../utils/l10n.dart';
 
 /// Shows an extension's own page - its toolbar popup or its options page.
 ///
@@ -88,7 +89,7 @@ class _ExtensionPageDialogState extends State<ExtensionPageDialog> {
       await _controller.loadUrl(widget.url);
       if (mounted) setState(() => _ready = true);
     } catch (e) {
-      if (mounted) setState(() => _error = 'Could not open this page: $e');
+      if (mounted) setState(() => _error = context.l10n.couldNotOpenPage(e));
     }
   }
 
@@ -196,7 +197,7 @@ class _ExtensionPageDialogState extends State<ExtensionPageDialog> {
                         // First in focus order, so Back/Escape and a remote's OK
                         // on the close button always get out of the popup.
                         autofocus: true,
-                        tooltip: 'Close',
+                        tooltip: context.l10n.actionClose,
                         icon: const Icon(Icons.close),
                         onPressed: () => Navigator.of(context).maybePop(),
                       ),

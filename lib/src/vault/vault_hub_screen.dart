@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:convert_the_spire_reborn/src/screens/browser_screen.dart';
+import 'package:convert_the_spire_reborn/src/utils/l10n.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/about_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/ai_chat_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/guide_screen.dart';
@@ -35,33 +36,33 @@ class _VaultHubScreenState extends State<VaultHubScreen>
     final hideAi = !kIsWeb && Platform.isAndroid;
     return [
       _VaultEntry(
-        tab: const _VaultTab(label: 'Torrents', icon: Icons.download_outlined),
+        tab: _VaultTab(label: context.l10n.tabTorrents, icon: Icons.download_outlined),
         page: TorrentsScreen(
           key: const ValueKey('vault-hub-torrents'),
           onOpenSettingsTab: _openSettingsTab,
         ),
       ),
       if (!hideAi)
-        const _VaultEntry(
-          tab: _VaultTab(label: 'Copilot', icon: Icons.auto_awesome),
-          page: TorrentSpireAiScreen(key: ValueKey('vault-hub-copilot')),
+        _VaultEntry(
+          tab: _VaultTab(label: context.l10n.copilot, icon: Icons.auto_awesome),
+          page: const TorrentSpireAiScreen(key: ValueKey('vault-hub-copilot')),
         ),
       if (!hideAi)
-        const _VaultEntry(
-          tab: _VaultTab(label: 'AI Chat', icon: Icons.chat_bubble_outline),
-          page: AiChatScreen(key: ValueKey('vault-hub-ai-chat')),
+        _VaultEntry(
+          tab: _VaultTab(label: context.l10n.aiChat, icon: Icons.chat_bubble_outline),
+          page: const AiChatScreen(key: ValueKey('vault-hub-ai-chat')),
         ),
-      const _VaultEntry(
-        tab: _VaultTab(label: 'Browser', icon: Icons.language),
-        page: BrowserScreen(key: ValueKey('vault-hub-browser')),
+      _VaultEntry(
+        tab: _VaultTab(label: context.l10n.tabBrowser, icon: Icons.language),
+        page: const BrowserScreen(key: ValueKey('vault-hub-browser')),
       ),
-      const _VaultEntry(
-        tab: _VaultTab(label: 'Guide', icon: Icons.menu_book_outlined),
-        page: GuideScreen(key: ValueKey('vault-hub-guide')),
+      _VaultEntry(
+        tab: _VaultTab(label: context.l10n.tabGuide, icon: Icons.menu_book_outlined),
+        page: const GuideScreen(key: ValueKey('vault-hub-guide')),
       ),
-      const _VaultEntry(
-        tab: _VaultTab(label: 'Settings', icon: Icons.settings_outlined),
-        page: AboutScreen(key: ValueKey('vault-hub-about')),
+      _VaultEntry(
+        tab: _VaultTab(label: context.l10n.tabSettings, icon: Icons.settings_outlined),
+        page: const AboutScreen(key: ValueKey('vault-hub-about')),
       ),
     ];
   }

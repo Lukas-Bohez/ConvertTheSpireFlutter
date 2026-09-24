@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:convert_the_spire_reborn/src/utils/l10n.dart';
 import 'package:convert_the_spire_reborn/src/utils/process_runner.dart';
 import 'package:convert_the_spire_reborn/src/vault/constants.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
@@ -41,7 +42,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
   bool _sending = false;
   bool _pulling = false;
   bool _ollamaInstalled = false;
-  String _status = 'Not connected';
+  // Null until the first connection attempt: "Not connected".
+  String? _status;
   String _activeModel = kDefaultAiModel;
   Timer? _streamPaintTimer;
   DateTime _lastStreamPaint = DateTime.fromMillisecondsSinceEpoch(0);
@@ -126,7 +128,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     setState(() {
       _checking = true;
-      _status = 'Connecting to $trimmed ...';
+      _status = context.l10n.connecting(trimmed);
     });
 
     _aiService.setBaseUrl(trimmed);
@@ -136,13 +138,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
     setState(() {
       _checking = false;
       if (ok) {
-        _status = 'Connected to Ollama at $trimmed';
+        _status = context.l10n.connectedOllama(trimmed);
       } else if (_isAndroid) {
-        _status = 'Can\'t reach that address. Make sure Ollama is running on '
-            'your computer with OLLAMA_HOST=0.0.0.0 set, and that your phone '
-            'is on the same Wi-Fi network.';
+        _status = context.l10n.cantReachAddressMakeSure;
       } else {
-        _status = 'Cannot reach Ollama at $trimmed';
+        _status = context.l10n.cannotReachOllama(trimmed);
       }
     });
 
@@ -163,15 +163,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
         _models = models;
         if (_models.isEmpty) {
           _status =
-              'Connected. No local models found, fallback set to $kDefaultAiModel';
+              context.l10n.connectedNoLocalModelsFound(kDefaultAiModel);
         } else if (_models.contains(_activeModel)) {
-          _status = 'Connected. Selected model: $_activeModel';
+          _status = context.l10n.connectedSelectedModel(_activeModel);
         } else if (_models.contains(kDefaultAiModel)) {
           _status =
-              'Connected. Selected model not installed; recommended model is available.';
+              context.l10n.connectedSelectedModelNotInstalled;
         } else {
           _status =
-              'Connected. Selected model not installed; choose one from the list.';
+              context.l10n.connectedSelectedModelNotInstalled2;
         }
       });
     } catch (_) {
@@ -192,7 +192,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
   Future<void> _selectModel(String model) async {
     setState(() {
       _activeModel = model;
-      _status = 'Selected model: $model';
+      _status = context.l10n.selectedModel(model);
     });
     await SettingsService.instance.setAiDefaultModel(model);
   }
@@ -202,7 +202,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     setState(() {
       _pulling = true;
-      _status = 'Downloading recommended model $kDefaultAiModel ...';
+      _status = context.l10n.downloadingRecommendedModel3(kDefaultAiModel);
     });
 
     try {
@@ -217,10 +217,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
         setState(() {
           if (progress > 0) {
             _status =
-                '$status (${progress.toStringAsFixed(1)}%) for $kDefaultAiModel';
+                context.l10n.forLabel(status, progress.toStringAsFixed(1), kDefaultAiModel);
           } else {
             _status =
-                status.isEmpty ? 'Downloading $kDefaultAiModel ...' : status;
+                status.isEmpty ? context.l10n.downloading3(kDefaultAiModel) : status;
           }
         });
       }
@@ -228,12 +228,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
       await _selectModel(kDefaultAiModel);
       if (!mounted) return;
       setState(() {
-        _status = 'Recommended model $kDefaultAiModel is ready.';
+        _status = context.l10n.recommendedModelReady(kDefaultAiModel);
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _status = 'Model download failed: $e';
+        _status = context.l10n.modelDownloadFailed(e);
       });
     } finally {
       if (mounted) {
@@ -257,14 +257,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
       );
       if (!mounted) return;
       setState(() {
-        _status = 'Started local Ollama server.';
+        _status = context.l10n.startedLocalOllamaServer;
       });
       await Future<void>.delayed(const Duration(seconds: 1));
       await _connect();
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _status = 'Failed to start Ollama server: $e';
+        _status = context.l10n.failedStartOllamaServer(e);
       });
     }
   }
@@ -275,7 +275,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     }
 
     setState(() {
-      _status = 'Installing Ollama...';
+      _status = context.l10n.installingOllama;
     });
 
     try {
@@ -313,8 +313,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
     if (!mounted) return;
     setState(() {
       _status = _ollamaInstalled
-          ? 'Ollama installed locally.'
-          : 'Installer launched. Complete install then reconnect.';
+          ? context.l10n.ollamaInstalledLocally
+          : context.l10n.installerLaunchedCompleteInstallThen;
     });
   }
 
@@ -396,12 +396,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Local AI Chat (Ollama)'),
+        title: Text(context.l10n.localAiChatOllama),
         actions: [
           IconButton(
             onPressed: _checking ? null : _refreshModels,
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh model status',
+            tooltip: context.l10n.refreshModelStatus,
           ),
         ],
       ),
@@ -439,20 +439,18 @@ class _AiChatScreenState extends State<AiChatScreen> {
         if (_isAndroid) ...[
           const Icon(Icons.wifi, size: 32),
           const SizedBox(height: 8),
-          const Text(
-            'Connect to Ollama on your network',
-            style: TextStyle(fontWeight: FontWeight.w700),
+          Text(
+            context.l10n.connectOllamaNetwork,
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(
-            'Ollama needs to run on a computer on the same Wi-Fi network '
-            'as this device. On that computer, expose Ollama to the network '
-            'with:',
+            context.l10n.ollamaNeedsRunComputerSame,
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 8),
           SelectableText(
-            'OLLAMA_HOST=0.0.0.0 ollama serve',
+            context.l10n.ollamaHost000,
             style: TextStyle(
               fontFamily: 'monospace',
               fontSize: 12,
@@ -461,8 +459,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Then enter your computer\'s IP address below. Note: this only '
-            'works on trusted local networks — Ollama has no built-in auth.',
+            context.l10n.thenEnterComputersIpAddress,
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 12),
@@ -470,7 +467,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         TextField(
           controller: _baseUrlController,
           decoration: InputDecoration(
-            labelText: 'Ollama URL',
+            labelText: context.l10n.ollamaUrl,
             hintText: _isAndroid
                 ? 'http://192.168.1.x:11434'
                 : 'http://localhost:11434',
@@ -481,7 +478,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         ElevatedButton.icon(
           onPressed: _checking ? null : _connect,
           icon: const Icon(Icons.link),
-          label: const Text('Connect'),
+          label: Text(context.l10n.connect),
         ),
         if (!_isAndroid) ...[
           const SizedBox(height: 8),
@@ -491,7 +488,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _startOllamaServer,
                   icon: const Icon(Icons.play_arrow),
-                  label: const Text('Start Local'),
+                  label: Text(context.l10n.startLocal),
                 ),
               ),
             ],
@@ -503,7 +500,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 child: OutlinedButton.icon(
                   onPressed: _installOllama,
                   icon: const Icon(Icons.download),
-                  label: const Text('Install Ollama'),
+                  label: Text(context.l10n.installOllama),
                 ),
               ),
             ],
@@ -511,7 +508,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         ],
         const SizedBox(height: 8),
         Text(
-          _ollamaInstalled ? 'Ollama CLI detected' : 'Ollama CLI not detected',
+          _ollamaInstalled ? context.l10n.ollamaCliDetected : context.l10n.ollamaCliNotDetected,
           style: TextStyle(
             color: _ollamaInstalled
                 ? Theme.of(context).colorScheme.tertiary
@@ -520,11 +517,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        Text(_status, style: Theme.of(context).textTheme.bodySmall),
+        Text(_status ?? context.l10n.notConnected,
+            style: Theme.of(context).textTheme.bodySmall),
         const Divider(height: 24),
-        const Text(
-          'Model routing',
-          style: TextStyle(fontWeight: FontWeight.w700),
+        Text(
+          context.l10n.modelRouting,
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
         Container(
@@ -536,14 +534,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Recommended model: $kDefaultAiModel'),
+              Text(context.l10n.recommendedModel(kDefaultAiModel)),
               const SizedBox(height: 6),
-              Text('Active model: $_activeModel'),
+              Text(context.l10n.activeModel(_activeModel)),
               const SizedBox(height: 6),
               Text(
                 _models.isEmpty
-                    ? 'No local model list returned. The app will still try the recommended model.'
-                    : 'Detected ${_models.length} installed model(s).',
+                    ? context.l10n.noLocalModelListReturned
+                    : context.l10n.detectedInstalledModelS(_models.length),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               if (_models.isNotEmpty) ...[
@@ -551,9 +549,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 DropdownButtonFormField<String>(
                   initialValue:
                       _models.contains(_activeModel) ? _activeModel : null,
-                  decoration: const InputDecoration(
-                    labelText: 'Select model to use',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: context.l10n.selectModelUse,
+                    border: const OutlineInputBorder(),
                   ),
                   items: _models
                       .map(
@@ -575,8 +573,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 icon: const Icon(Icons.download_for_offline_outlined),
                 label: Text(
                   _pulling
-                      ? 'Downloading recommended model...'
-                      : 'Download Recommended Model',
+                      ? context.l10n.downloadingRecommendedModel
+                      : context.l10n.downloadRecommendedModel,
                 ),
               ),
             ],
@@ -591,7 +589,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       children: [
         Expanded(
           child: _messages.isEmpty
-              ? const Center(child: Text('Ask your local model anything.'))
+              ? Center(child: Text(context.l10n.askLocalModelAnything))
               : ListView.builder(
                   controller: _chatScrollController,
                   padding: const EdgeInsets.all(12),
@@ -634,9 +632,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   controller: _chatController,
                   minLines: 1,
                   maxLines: 6,
-                  decoration: const InputDecoration(
-                    hintText: 'Type a message to your local AI...',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    hintText: context.l10n.typeMessageLocalAi,
+                    border: const OutlineInputBorder(),
                   ),
                   onSubmitted: (_) => _sendChat(),
                 ),

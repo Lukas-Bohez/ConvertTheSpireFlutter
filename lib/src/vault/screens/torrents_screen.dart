@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:convert_the_spire_reborn/src/utils/l10n.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
 import 'package:convert_the_spire_reborn/src/vault/platform/drag_drop.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/create_torrent_screen.dart';
@@ -26,22 +27,22 @@ enum _SortMode {
 }
 
 extension _SortLabel on _SortMode {
-  String get label {
+  String label(BuildContext context) {
     switch (this) {
       case _SortMode.dateAdded:
-        return 'Date added';
+        return context.l10n.dateAdded;
       case _SortMode.nameAZ:
-        return 'Name A → Z';
+        return context.l10n.nameZ;
       case _SortMode.nameZA:
-        return 'Name Z → A';
+        return context.l10n.nameZ2;
       case _SortMode.sizeAsc:
-        return 'Size smallest';
+        return context.l10n.sizeSmallest;
       case _SortMode.sizeDesc:
-        return 'Size largest';
+        return context.l10n.sizeLargest;
       case _SortMode.progress:
-        return 'Progress';
+        return context.l10n.progress;
       case _SortMode.status:
-        return 'Status';
+        return context.l10n.status;
     }
   }
 
@@ -202,9 +203,9 @@ class _TorrentsScreenState extends State<TorrentsScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Download folder "$folder" no longer exists.'),
+              content: Text(context.l10n.downloadFolderNoLongerExists(folder)),
               action: SnackBarAction(
-                label: 'Change',
+                label: context.l10n.change,
                 onPressed: _showSetDownloadFolderDialog,
               ),
               duration: const Duration(seconds: 8),
@@ -218,9 +219,9 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Cannot access download folder: $e'),
+            content: Text(context.l10n.cannotAccessDownloadFolder(e)),
             action: SnackBarAction(
-              label: 'Change',
+              label: context.l10n.change,
               onPressed: _showSetDownloadFolderDialog,
             ),
             duration: const Duration(seconds: 8),
@@ -236,13 +237,11 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Set Download Folder'),
+        title: Text(context.l10n.setDownloadFolder2),
         // overflow-fix: keep long settings guidance readable in constrained dialogs.
-        content: const SingleChildScrollView(
+        content: SingleChildScrollView(
           child: Text(
-            'You must set a download folder before adding torrents. '
-            'This prevents downloads from being stored in inaccessible app storage. '
-            'Please go to Settings > Download Location and select a folder on external storage.',
+            context.l10n.mustSetDownloadFolderBefore,
           ),
         ),
         actions: [
@@ -251,7 +250,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
               Navigator.pop(ctx);
               widget.onOpenSettingsTab?.call();
             },
-            child: const Text('Open Settings'),
+            child: Text(context.l10n.openSettings),
           ),
         ],
       ),
@@ -278,8 +277,8 @@ class _TorrentsScreenState extends State<TorrentsScreen>
 
   String _fmtSpeed(double bps) {
     if (bps < 1024) return '${bps.round()} B/s';
-    if (bps < 1024 * 1024) return '${(bps / 1024).toStringAsFixed(1)} KB/s';
-    return '${(bps / (1024 * 1024)).toStringAsFixed(1)} MB/s';
+    if (bps < 1024 * 1024) return context.l10n.kbS((bps / 1024).toStringAsFixed(1));
+    return context.l10n.mbS((bps / (1024 * 1024)).toStringAsFixed(1));
   }
 
   String _fmtEta(double seconds) {
@@ -355,7 +354,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Unable to toggle: $e')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.unableToggle(e))));
     }
     await TorrentService.instance.refreshTorrentStates();
   }
@@ -364,22 +363,21 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Redownload from scratch?'),
+        title: Text(context.l10n.redownloadFromScratch),
         // overflow-fix: torrent names can be long; keep dialog content scroll-safe.
         content: SingleChildScrollView(
           child: Text(
-            '"${ts.model.name}" will be deleted from disk and downloaded again '
-            'from 0%. The .torrent source file is preserved.',
+            context.l10n.willDeletedFromDiskDownloaded2(ts.model.name),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Redownload'),
+            child: Text(context.l10n.redownload),
           ),
         ],
       ),
@@ -389,13 +387,13 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       await TorrentEngineService.instance.forceRedownload(ts.model.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"${ts.name}" restarted from scratch.')),
+        SnackBar(content: Text(context.l10n.restartedFromScratch(ts.name))),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Redownload failed: $e')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.redownloadFailed(e))));
     }
     await TorrentService.instance.refreshTorrentStates();
   }
@@ -406,7 +404,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Remove torrent?'),
+          title: Text(context.l10n.removeTorrent),
           // overflow-fix: keep dynamic torrent name prompts scroll-safe.
           content: SingleChildScrollView(
             child: Column(
@@ -414,7 +412,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '"${ts.name}" will be removed from the list.',
+                  context.l10n.willRemovedFromList(ts.name),
                 ),
                 const SizedBox(height: 8),
                 CheckboxListTile(
@@ -423,7 +421,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                   value: deleteFiles,
                   onChanged: (value) =>
                       setDialogState(() => deleteFiles = value ?? false),
-                  title: const Text('Also delete downloaded files'),
+                  title: Text(context.l10n.alsoDeleteDownloadedFiles),
                 ),
               ],
             ),
@@ -431,7 +429,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: Text(context.l10n.actionCancel),
             ),
             FilledButton(
               style: FilledButton.styleFrom(
@@ -439,7 +437,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                 foregroundColor: Theme.of(ctx).colorScheme.onError,
               ),
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text(deleteFiles ? 'Remove + Delete files' : 'Remove'),
+              child: Text(deleteFiles ? context.l10n.removeDeleteFiles : context.l10n.actionRemove),
             ),
           ],
         ),
@@ -459,8 +457,8 @@ class _TorrentsScreenState extends State<TorrentsScreen>
         SnackBar(
           content: Text(
             deleteFiles
-                ? 'Torrent removed and files deleted.'
-                : 'Torrent removed.',
+                ? context.l10n.torrentRemovedFilesDeleted
+                : context.l10n.torrentRemoved,
           ),
         ),
       );
@@ -468,7 +466,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Remove failed: $e')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.removeFailed(e))));
     }
   }
 
@@ -486,7 +484,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     if (pathToOpen.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No download folder configured.')),
+        SnackBar(content: Text(context.l10n.noDownloadFolderConfigured)),
       );
       return;
     }
@@ -500,7 +498,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Folder does not exist.')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.folderDoesNotExist)));
       return;
     }
 
@@ -512,7 +510,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Unable to open folder automatically. Files saved to:\n$directoryPath',
+            context.l10n.unableOpenFolderAutomaticallyFiles2(directoryPath),
           ),
           duration: const Duration(seconds: 6),
           action: SnackBarAction(label: 'OK', onPressed: () {}),
@@ -533,7 +531,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to open folder: $directoryPath'),
+              content: Text(context.l10n.failedOpenFolder2(directoryPath)),
             ),
           );
         }
@@ -546,14 +544,14 @@ class _TorrentsScreenState extends State<TorrentsScreen>
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(
-          SnackBar(content: Text('Failed to open folder: $directoryPath')),
+          SnackBar(content: Text(context.l10n.failedOpenFolder2(directoryPath))),
         );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Could not open folder: $e')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.couldNotOpenFolder(e))));
     }
   }
 
@@ -564,7 +562,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     try {
       final path = await pickSingleFilePath(
         context,
-        dialogTitle: 'Select torrent file',
+        dialogTitle: context.l10n.selectTorrentFile,
         allowedExtensions: const <String>['torrent'],
       );
       if (path == null || path.isEmpty) {
@@ -574,13 +572,13 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Torrent added from file.')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.torrentAddedFromFile)));
       await _refresh();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed to add torrent file: $e')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.failedAddTorrentFile(e))));
     } finally {
       _pickerBusy = false;
     }
@@ -603,14 +601,14 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Torrent added via drag & drop.')),
+        SnackBar(content: Text(context.l10n.torrentAddedViaDragDrop)),
       );
       await _refresh();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Import failed: $e')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.importFailed(e))));
     }
   }
 
@@ -620,25 +618,25 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add torrent'),
+        title: Text(context.l10n.addTorrent),
         content: TextField(
           controller: ctrl,
           minLines: 1,
           maxLines: 5,
-          decoration: const InputDecoration(
-            hintText: 'Paste magnet link (magnet:?xt=...)',
-            prefixIcon: Icon(Icons.link),
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            hintText: context.l10n.pasteMagnetLinkMagnetXt,
+            prefixIcon: const Icon(Icons.link),
+            border: const OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('Add'),
+            child: Text(context.l10n.actionAdd),
           ),
         ],
       ),
@@ -650,17 +648,17 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Torrent added!')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.torrentAdded)));
     } on TorrentAlreadyExistsException {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('This torrent is already in your list.')),
+        SnackBar(content: Text(context.l10n.torrentAlreadyList)),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed to add: $e')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.failedAdd(e))));
     }
   }
 
@@ -681,31 +679,31 @@ class _TorrentsScreenState extends State<TorrentsScreen>
   PopupMenuButton<String> _buildAddMenuButton() {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.add_circle_outline),
-      tooltip: 'Add or create torrent',
+      tooltip: context.l10n.addCreateTorrent,
       onSelected: (value) => unawaited(_handleAddAction(value)),
-      itemBuilder: (_) => const [
+      itemBuilder: (_) => [
         PopupMenuItem<String>(
           value: 'magnet',
           child: ListTile(
             dense: true,
-            leading: Icon(Icons.add_link),
-            title: Text('Add magnet link'),
+            leading: const Icon(Icons.add_link),
+            title: Text(context.l10n.addMagnetLink),
           ),
         ),
         PopupMenuItem<String>(
           value: 'file',
           child: ListTile(
             dense: true,
-            leading: Icon(Icons.file_open_outlined),
-            title: Text('Add .torrent file'),
+            leading: const Icon(Icons.file_open_outlined),
+            title: Text(context.l10n.addTorrentFile),
           ),
         ),
         PopupMenuItem<String>(
           value: 'create',
           child: ListTile(
             dense: true,
-            leading: Icon(Icons.create_new_folder_outlined),
-            title: Text('Create torrent'),
+            leading: const Icon(Icons.create_new_folder_outlined),
+            title: Text(context.l10n.createTorrent2),
           ),
         ),
       ],
@@ -726,14 +724,14 @@ class _TorrentsScreenState extends State<TorrentsScreen>
           FloatingActionButton.small(
             heroTag: 'create_torrent_fab',
             onPressed: _openCreateTorrent,
-            tooltip: 'Create torrent',
+            tooltip: context.l10n.createTorrent2,
             child: const Icon(Icons.create_new_folder_outlined),
           ),
           const SizedBox(height: 8),
           FloatingActionButton.small(
             heroTag: 'pick_torrent_fab',
             onPressed: _pickTorrentFile,
-            tooltip: 'Pick .torrent file',
+            tooltip: context.l10n.pickTorrentFile,
             child: const Icon(Icons.file_open_outlined),
           ),
           const SizedBox(height: 8),
@@ -741,14 +739,14 @@ class _TorrentsScreenState extends State<TorrentsScreen>
             heroTag: 'paste_magnet_fab',
             onPressed: _showAddMagnetDialog,
             icon: const Icon(Icons.add_link),
-            label: const Text('Paste magnet'),
+            label: Text(context.l10n.pasteMagnet),
           ),
           const SizedBox(height: 8),
         ],
         FloatingActionButton(
           heroTag: 'torrent_fab_toggle',
           onPressed: () => setState(() => _fabExpanded = !_fabExpanded),
-          tooltip: _fabExpanded ? 'Close actions' : 'Add torrent',
+          tooltip: _fabExpanded ? context.l10n.closeActions : context.l10n.addTorrent,
           child: Icon(_fabExpanded ? Icons.close : Icons.add),
         ),
       ],
@@ -838,7 +836,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
           ? TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search torrents…',
+                hintText: context.l10n.searchTorrents,
                 border: InputBorder.none,
                 hintStyle: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -847,13 +845,13 @@ class _TorrentsScreenState extends State<TorrentsScreen>
               style: Theme.of(context).textTheme.titleMedium,
               onChanged: _onSearchChanged,
             )
-          : const Text('Torrents'),
+          : Text(context.l10n.tabTorrents),
       actions: [
         _buildAddMenuButton(),
         // Search toggle
         IconButton(
           icon: Icon(_showSearch ? Icons.close : Icons.search),
-          tooltip: _showSearch ? 'Cancel search' : 'Search torrents',
+          tooltip: _showSearch ? context.l10n.cancelSearch : context.l10n.searchTorrents2,
           onPressed: () => setState(() {
             _showSearch = !_showSearch;
             if (!_showSearch) {
@@ -865,7 +863,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
         // Sort popup
         PopupMenuButton<_SortMode>(
           icon: const Icon(Icons.sort),
-          tooltip: 'Sort by',
+          tooltip: context.l10n.sortBy,
           onSelected: _setSortMode,
           itemBuilder: (ctx) => _SortMode.values
               .map(
@@ -883,7 +881,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                       const SizedBox(width: 10),
                       Flexible(
                         child: Text(
-                          m.label,
+                          m.label(context),
                           style: TextStyle(
                             fontWeight: _sortMode == m
                                 ? FontWeight.w700
@@ -912,7 +910,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
         if (!Platform.isAndroid)
           IconButton(
             icon: const Icon(Icons.folder_open),
-            tooltip: 'Open download folder',
+            tooltip: context.l10n.openDownloadFolder,
             onPressed: () async {
               final pseudo = TorrentModel(
                 id: '',
@@ -925,7 +923,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
           ),
         IconButton(
           icon: const Icon(Icons.refresh),
-          tooltip: 'Refresh',
+          tooltip: context.l10n.actionRefresh,
           onPressed: _refresh,
         ),
       ],
@@ -939,14 +937,14 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       icon: hasFolder
           ? Icons.download_for_offline_outlined
           : Icons.folder_open_outlined,
-      title: hasFolder ? 'No torrents yet' : 'Set Download Folder First',
+      title: hasFolder ? context.l10n.noTorrentsYet : context.l10n.setDownloadFolderFirst,
       subtitle: hasFolder
           ? (Platform.isAndroid
-              ? 'Tap + to add or create torrents'
+              ? context.l10n.tapAddCreateTorrents
               : Platform.isIOS
-                  ? 'Tap + to add or create torrents'
-                  : 'Use + in the top bar to add or create torrents\nYou can also drag and drop files')
-          : 'Go to Settings > Download Location and choose a folder on external storage to prevent file corruption from inaccessible app storage.',
+                  ? context.l10n.tapAddCreateTorrents
+                  : context.l10n.useTopBarAddCreate)
+          : context.l10n.goSettingsDownloadLocationChoose,
       action: hasFolder
           ? Wrap(
               spacing: 10,
@@ -956,17 +954,17 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                 OutlinedButton.icon(
                   onPressed: _showAddMagnetDialog,
                   icon: const Icon(Icons.add_link, size: 18),
-                  label: const Text('Add Magnet'),
+                  label: Text(context.l10n.addMagnet),
                 ),
                 OutlinedButton.icon(
                   onPressed: _pickTorrentFile,
                   icon: const Icon(Icons.file_open_outlined, size: 18),
-                  label: const Text('Add .torrent File'),
+                  label: Text(context.l10n.addTorrentFile2),
                 ),
                 OutlinedButton.icon(
                   onPressed: _openCreateTorrent,
                   icon: const Icon(Icons.create_new_folder_outlined, size: 18),
-                  label: const Text('Create Torrent'),
+                  label: Text(context.l10n.createTorrent),
                 ),
                 OutlinedButton.icon(
                   onPressed: () {
@@ -976,14 +974,14 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                     );
                   },
                   icon: const Icon(Icons.open_in_new, size: 18),
-                  label: const Text('Visit Quiz the Spire'),
+                  label: Text(context.l10n.visitQuizSpire),
                 ),
               ],
             )
           : FilledButton.icon(
               onPressed: _showSetDownloadFolderDialog,
               icon: const Icon(Icons.folder_open, size: 18),
-              label: const Text('Go to Settings'),
+              label: Text(context.l10n.goSettings),
             ),
     );
   }
@@ -1000,7 +998,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
           ),
           const SizedBox(height: 12),
           Text(
-            'No results for "$_searchQuery"',
+            context.l10n.noResults(_searchQuery),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -1012,7 +1010,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
               _searchController.clear();
               _showSearch = false;
             }),
-            child: const Text('Clear search'),
+            child: Text(context.l10n.clearSearch),
           ),
         ],
       ),
@@ -1043,10 +1041,10 @@ class _TorrentsScreenState extends State<TorrentsScreen>
         Clipboard.setData(ClipboardData(text: magnet));
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Magnet link copied')));
+        ).showSnackBar(SnackBar(content: Text(context.l10n.magnetLinkCopied)));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No magnet link available')),
+          SnackBar(content: Text(context.l10n.noMagnetLinkAvailable)),
         );
       }
     }
@@ -1062,17 +1060,17 @@ class _TorrentsScreenState extends State<TorrentsScreen>
             children: [
               ListTile(
                 leading: const Icon(Icons.link),
-                title: const Text('Copy magnet link'),
+                title: Text(context.l10n.copyMagnetLink),
                 onTap: () {
                   Navigator.pop(ctx);
                   if (magnet != null && magnet.isNotEmpty) {
                     Clipboard.setData(ClipboardData(text: magnet));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Magnet link copied')),
+                      SnackBar(content: Text(context.l10n.magnetLinkCopied)),
                     );
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('No magnet link available')),
+                      SnackBar(content: Text(context.l10n.noMagnetLinkAvailable)),
                     );
                   }
                 },
@@ -1080,7 +1078,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
               if (path.isNotEmpty)
                 ListTile(
                   leading: const Icon(Icons.folder_outlined),
-                  title: const Text('Copy file path'),
+                  title: Text(context.l10n.copyFilePath),
                   subtitle: Text(
                     path,
                     maxLines: 1,
@@ -1090,7 +1088,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                     Navigator.pop(ctx);
                     Clipboard.setData(ClipboardData(text: path));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('File path copied')),
+                      SnackBar(content: Text(context.l10n.filePathCopied)),
                     );
                   },
                 ),
@@ -1154,7 +1152,7 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_vert, size: 20),
                         splashRadius: 18,
-                        tooltip: 'More',
+                        tooltip: context.l10n.more,
                         onSelected: (v) {
                           switch (v) {
                             case 'toggle':
@@ -1184,40 +1182,40 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                                     ? Icons.pause_circle_outline
                                     : Icons.play_circle_outline,
                               ),
-                              title: Text(ts.isActive ? 'Pause' : 'Resume'),
+                              title: Text(ts.isActive ? context.l10n.actionPause : context.l10n.actionResume),
                             ),
                           ),
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'folder',
                             child: ListTile(
                               dense: true,
-                              leading: Icon(Icons.folder_open),
-                              title: Text('Open folder'),
+                              leading: const Icon(Icons.folder_open),
+                              title: Text(context.l10n.openFolder),
                             ),
                           ),
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'copy',
                             child: ListTile(
                               dense: true,
-                              leading: Icon(Icons.link),
-                              title: Text('Copy magnet link'),
+                              leading: const Icon(Icons.link),
+                              title: Text(context.l10n.copyMagnetLink),
                             ),
                           ),
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'redownload',
                             child: ListTile(
                               dense: true,
-                              leading: Icon(Icons.replay),
-                              title: Text('Redownload from scratch'),
+                              leading: const Icon(Icons.replay),
+                              title: Text(context.l10n.redownloadFromScratch2),
                             ),
                           ),
                           const PopupMenuDivider(),
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'delete',
                             child: ListTile(
                               dense: true,
-                              leading: Icon(Icons.delete_outline),
-                              title: Text('Remove'),
+                              leading: const Icon(Icons.delete_outline),
+                              title: Text(context.l10n.actionRemove),
                             ),
                           ),
                         ],
