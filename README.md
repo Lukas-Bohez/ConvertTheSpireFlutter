@@ -6,9 +6,11 @@
 [![Downloads](https://img.shields.io/github/downloads/Lukas-Bohez/ConvertTheSpireFlutter/total)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases)
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue)](LICENSE)
 
-Windows · Android · Android TV · macOS · 18 languages · no account · no ads in the GitHub builds
+Windows · Android · Android TV · macOS · 18 languages · no installer · no account · no ads in the GitHub builds
 
-## 📥 Get it
+## 📥 Install in a minute
+
+One file, then it runs. No installer, no Python, no command line, no account. Pick your platform:
 
 | | Download | Then |
 |---|---|---|
@@ -25,8 +27,16 @@ Also on the official site: [quizthespire.com](https://quizthespire.com/).
 
 Most tools that download from YouTube and other sites expect you to do some assembly first: install Python, put FFmpeg on your PATH, learn command-line flags, or keep a browser tab of a converter site open, one song at a time. This app skips all of that.
 
+| Getting set up | The usual way | Convert the Spire Reborn |
+|---|---|---|
+| The downloader | Install Python, then `pip install yt-dlp` | Built into the Android app. On Windows and macOS the app fetches a self-contained yt-dlp on first start and keeps it up to date |
+| The converter | Download FFmpeg and add it to your PATH | Built into the Android app, fetched by itself on Windows |
+| Installing on Windows | Run an installer with administrator rights | Extract the zip and double-click |
+| Your first playlist | Learn command-line flags, or a converter site one song at a time | Paste the link and press download |
+| Removing it | Run an uninstaller | Delete the folder |
+
 * **One download, then it just runs.** On Windows there is no installer, no administrator rights and nothing to configure. On first start the app fetches [yt-dlp](https://github.com/yt-dlp/yt-dlp) and FFmpeg by itself and keeps yt-dlp up to date in the background, so sites that change their pages keep working.
-* **Nothing extra on Android.** FFmpeg is built into the APK. No root, no Termux, no Google account, no separate player.
+* **Nothing extra on Android.** FFmpeg is built into the APK. No root, no Termux, no Google account, no separate player. The same APK runs on phones, tablets and Android TV.
 * **Nothing to uninstall on Windows.** The zip holds the `.exe`, a `data` folder and a `dll` folder, and it runs from wherever you extract it. To remove the app, delete the folder.
 * **Updates tell you what changed.** After an update the app shows what is new, including anything from releases you skipped.
 * **Native, not a web page in a box.** It is written in Flutter and compiled for each platform, so it starts quickly and stays light on memory next to Electron apps.
@@ -142,7 +152,7 @@ No account, no sign-up, and the app does not track what you download. The GitHub
 
 ## For developers
 
-The main code lives in `lib/`; platform configuration is under `android/`, `windows/`, `macos/`, `linux/`, `ios/` and `web/`; documentation is in [`docs/`](docs/README.md). Start with the [documentation index](docs/README.md), the [Play AAB build guide](docs/build/play-store-aab.md) and the [latest release notes](docs/releases/latest.md).
+The main code lives in `lib/`; platform configuration is under `android/`, `windows/`, `macos/`, `linux/`, `ios/` and `web/`; documentation is in [`docs/`](docs/README.md). Start with the [documentation index](docs/README.md), [how a release goes out](docs/releases/how-to-release.md), the [Play AAB build guide](docs/build/play-store-aab.md) and the [latest release notes](docs/releases/latest.md).
 
 * **UI:** Flutter, with `HomeScreen` hosting the main screens (Search, Player, Browser, Playlists and more).
 * **State:** `AppController` (a `ChangeNotifier`) wired through `Provider`.

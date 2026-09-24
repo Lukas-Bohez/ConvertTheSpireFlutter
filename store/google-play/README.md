@@ -35,7 +35,9 @@ the banner is `mipmap-<density>/banner.png` from 160x90 (mdpi) to 640x360
 review rejects the TV app as having "no full-size app banner and/or icon" when
 they are smaller, and the banner shows only the logo and the app name.
 
-Rebuild the AAB after running it so the new launcher icon/banner ship in the app.
+Rebuild the AAB after running it so the new launcher icon/banner ship in the app,
+then check it with `python scripts/verify_play_aab.py <aab>` (see the
+[Play AAB build guide](../../docs/build/play-store-aab.md)).
 
 ## Where the source material lives
 - **Logo (source of truth):** `assets/icons/bitplayer-source-1024.png`
