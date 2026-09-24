@@ -158,8 +158,16 @@ class _MyAppState extends State<MyApp>
         windowManager.removeListener(this);
       } catch (_) {}
     }
-    _ytExplode?.close();
-    _controller?.dispose();
+    // The controller's YouTube service closes the same YoutubeExplode. Closing
+    // it twice made its Deno solver delete its temp folder twice, and the
+    // second, unawaited delete failed after the app had gone - an unhandled
+    // error that wrote a crash dump on every exit.
+    final controller = _controller;
+    if (controller != null) {
+      controller.dispose();
+    } else {
+      _ytExplode?.close();
+    }
     try {
       BrowserDb.close();
     } catch (_) {}
@@ -580,10 +588,19 @@ class _MyAppState extends State<MyApp>
     // the provider rather than a descendant. Reading PlayerState from one
     // threw ProviderNotFoundException, which release builds render as a grey
     // ErrorWidget. That was the Watch Together grey screen in issue #7.
-    final app = _buildApp(context);
+    //
+    // The two branches below are different widget trees, so going from
+    // "starting" to "ready" builds a brand-new MaterialApp. Only the ready one
+    // gets the navigator key. When both had it, Flutter carried the starting
+    // app's Navigator - and its home route - into the new app, and that route
+    // still pointed at the discarded app, whose home was the spinner. Every
+    // launch of 14.4.0 stayed on that spinner forever.
     final prefs = _prefs;
     final controller = _controller;
-    if (prefs == null || controller == null) return app;
+    if (prefs == null || controller == null) {
+      return _buildApp(context, ready: false);
+    }
+    final app = _buildApp(context, ready: true);
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: PurchaseService.instance),
@@ -595,7 +612,10 @@ class _MyAppState extends State<MyApp>
     );
   }
 
-  Widget _buildApp(BuildContext context) {
+  /// The MaterialApp. [ready] is false while the controller and preferences
+  /// are still loading; that app shows the startup, error and loading screens
+  /// and must not take [_navigatorKey] (see [build]).
+  Widget _buildApp(BuildContext context, {required bool ready}) {
     final listenables = <Listenable>[
       FullModeAccess.instance,
       ColourRewardService.instance
@@ -680,7 +700,7 @@ class _MyAppState extends State<MyApp>
           child: FocusTraversalGroup(
             policy: const _DeadTraversalPolicy(),
             child: MaterialApp(
-              navigatorKey: _navigatorKey,
+              navigatorKey: ready ? _navigatorKey : null,
               title: getAppTitle(),
               // Follows the device language unless the user picked one in
               // Settings; falls back to English for any locale we do not
