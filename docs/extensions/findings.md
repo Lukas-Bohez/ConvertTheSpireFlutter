@@ -40,6 +40,14 @@ and from the restart run:
      "uBlock Origin Lite:true","Dark Reader:true","Microsoft Edge PDF Viewer:true"],
      "darkReaderActiveAfterRestart":true,"adBlockedAfterRestart":"blocked"}
 
+The Extensions screen on the same runtime, rendered from the app itself by
+`integration_test/extensions_screen_ui_test.dart` (nothing outside the app
+is captured):
+
+| Catalog | Permission prompt | Installed | Popup |
+|---|---|---|---|
+| ![AMO catalog](screenshots/catalog.png) | ![Permission prompt](screenshots/permission-prompt.png) | ![Installed list](screenshots/installed.png) | ![Dark Reader popup](screenshots/popup.png) |
+
 ### "The ad script loaded" did not mean the blocker failed
 
 The first probe was a `<script>` for `adsbygoogle.js`, and its `onload` fired

@@ -857,18 +857,24 @@ class _Message extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 48, color: Theme.of(context).colorScheme.outline),
-            const SizedBox(height: 16),
-            Text(text, textAlign: TextAlign.center),
-            if (onRetry != null) ...[
+        // A comfortable reading width; on a desktop the help text otherwise
+        // ran across the whole window in one line.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon,
+                  size: 48, color: Theme.of(context).colorScheme.outline),
               const SizedBox(height: 16),
-              OutlinedButton(
-                  onPressed: onRetry, child: const Text('Try again')),
+              Text(text, textAlign: TextAlign.center),
+              if (onRetry != null) ...[
+                const SizedBox(height: 16),
+                OutlinedButton(
+                    onPressed: onRetry, child: const Text('Try again')),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
