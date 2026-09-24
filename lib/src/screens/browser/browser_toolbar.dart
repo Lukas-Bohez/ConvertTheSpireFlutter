@@ -630,9 +630,13 @@ class _OverflowMenuButton extends StatelessWidget {
               const PopupMenuItem(
                   value: 'history',
                   child: _MenuRow(icon: Icons.history, label: 'History')),
-              // The puzzle piece belongs to real extensions now; userscripts
-              // are code snippets, so they get a code icon.
-              if (ExtensionHosts.available)
+              // The puzzle piece belongs to extensions; userscripts are code
+              // snippets, so they get a code icon. Outside the Play build,
+              // Extensions is listed even where no engine can run them: it
+              // then opens a page with what does run (ad blocking,
+              // userscripts), instead of leaving phone users to hunt the
+              // menu for something that is not there.
+              if (ExtensionHosts.available || !kPlayStoreBuild)
                 const PopupMenuItem(
                     value: 'extensions',
                     child: _MenuRow(

@@ -22,13 +22,16 @@ import '../browser/tabs/tab_manager.dart';
 import '../browser/userscripts/userscript.dart';
 import '../browser/userscripts/userscript_service.dart';
 import '../browser/video/video_detector_service.dart';
+import '../config/build_flags.dart';
 import '../data/browser_db.dart';
 import '../models/search_result.dart';
 import '../services/download_service.dart';
 import '../utils/screenshot_helper.dart';
 import '../utils/snack.dart';
+import '../utils/youtube_link.dart';
 import '../widgets/browser_shell.dart';
 import '../widgets/cursor_overlay.dart';
+import '../widgets/video_or_playlist_dialog.dart';
 import 'browser/browser_bottom_bar.dart';
 import 'browser/browser_chrome.dart';
 import 'browser/browser_settings_screen.dart';
@@ -39,6 +42,7 @@ import 'browser/extensions_screen.dart';
 import 'browser/favourites_screen.dart';
 import 'browser/history_screen.dart';
 import 'browser/intent_url.dart';
+import 'browser/mobile_addons_screen.dart';
 import 'browser/new_tab_page.dart';
 import 'browser/userscripts_screen.dart';
 
@@ -63,10 +67,16 @@ class BrowserScreen extends StatefulWidget {
   final String? initialUrl;
   final void Function(SearchResult result) onAddToQueue;
 
+  /// Opens a YouTube playlist in the Playlist Manager, which shows what is
+  /// already downloaded before fetching the rest. Null hides the choice, and
+  /// the download button then takes just the video.
+  final void Function(String playlistUrl)? onDownloadPlaylist;
+
   const BrowserScreen({
     super.key,
     this.initialUrl,
     void Function(SearchResult result)? onAddToQueue,
+    this.onDownloadPlaylist,
   }) : onAddToQueue = onAddToQueue ?? _noopOnAddToQueue;
 
   static void _noopOnAddToQueue(SearchResult result) {}
@@ -1239,38 +1249,44 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   }
 
-  void _addCurrentToQueue() {
+  Future<void> _addCurrentToQueue() async {
     final url = _addressController.text.trim();
     if (url.isEmpty) return;
-    Uri? uri;
-    String? id;
-    try {
-      uri = Uri.parse(url);
-      final host = uri.host.toLowerCase();
-      if (host.contains('youtube.com') ||
-          host.contains('youtu.be') ||
-          host.contains('music.youtube.com')) {
-        id = uri.queryParameters['v'];
-        if (id == null && host == 'youtu.be' && uri.pathSegments.isNotEmpty) {
-          id = uri.pathSegments[0];
-        }
-        if (id == null &&
-            uri.pathSegments.length >= 2 &&
-            uri.pathSegments[0] == 'shorts') {
-          id = uri.pathSegments[1];
-        }
-        if (id == null &&
-            uri.pathSegments.length >= 2 &&
-            uri.pathSegments[0] == 'embed') {
-          id = uri.pathSegments[1];
-        }
-      }
-    } catch (_) {}
+    final uri = Uri.tryParse(url);
+    final youtube = YouTubeLink.parse(url);
 
+    if (youtube != null && !isYouTubeConversionEnabledInCurrentBuild) {
+      // The queue drops YouTube links in this build; saying "Added to queue"
+      // anyway left people waiting for a download that never came.
+      Snack.show(
+        context,
+        'YouTube downloads are not part of the Play Store version.',
+        level: SnackLevel.warning,
+      );
+      return;
+    }
+
+    if (youtube != null &&
+        youtube.hasDownloadablePlaylist &&
+        widget.onDownloadPlaylist != null) {
+      var choice = VideoOrPlaylist.playlist;
+      if (youtube.hasVideo) {
+        final asked =
+            await askVideoOrPlaylist(context, videoTitle: _videoTitle());
+        if (asked == null || !mounted) return;
+        choice = asked;
+      }
+      if (choice == VideoOrPlaylist.playlist) {
+        widget.onDownloadPlaylist!(youtube.playlistUrl);
+        return;
+      }
+    }
+
+    final id = youtube?.videoId;
     if (id != null) {
       widget.onAddToQueue(SearchResult(
         id: id,
-        title: _pageTitle.isNotEmpty ? _pageTitle : url,
+        title: _videoTitle() ?? url,
         artist: 'YouTube',
         duration: Duration.zero,
         thumbnailUrl: 'https://img.youtube.com/vi/$id/default.jpg',
@@ -1292,6 +1308,15 @@ class _BrowserScreenState extends State<BrowserScreen>
             content: Text('Added to queue'), duration: Duration(seconds: 1)),
       );
     }
+  }
+
+  /// The page title without YouTube's " - YouTube" suffix, or null.
+  String? _videoTitle() {
+    final title = _pageTitle
+        .replaceFirst(RegExp(r'\s*[-–]\s*YouTube( Music)?\s*$'), '')
+        .replaceFirst(RegExp(r'^\(\d+\)\s*'), '')
+        .trim();
+    return title.isEmpty ? null : title;
   }
 
   void _openInExternal() async {
@@ -1715,7 +1740,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       return;
     }
     if (action == 'download') {
-      _addCurrentToQueue();
+      unawaited(_addCurrentToQueue());
       return;
     }
     if (action == 'openExternal' || action == 'external') {
@@ -1804,9 +1829,20 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
     if (action == 'extensions') {
       if (!mounted) return;
-      await Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: (_) => ExtensionsScreen(host: ExtensionHosts.current),
+      if (ExtensionHosts.available) {
+        await Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => ExtensionsScreen(host: ExtensionHosts.current),
+        ));
+        return;
+      }
+      // No extension engine here (Android, older macOS): show what does run.
+      final url = await Navigator.of(context).push<String>(MaterialPageRoute(
+        builder: (_) => MobileAddonsScreen(
+          userScripts: _userScripts,
+          adBlock: _adBlock,
+        ),
       ));
+      if (url != null && mounted) _navigateTo(url);
       return;
     }
     if (action == 'favourites') {

@@ -29,6 +29,7 @@ import '../services/tray_service.dart';
 import '../services/update_service.dart';
 import '../state/app_controller.dart';
 import '../theme/app_colors.dart';
+import '../utils/folder_label.dart';
 import '../utils/snack.dart';
 import '../vault/services/torrent_service.dart';
 import '../vault/vault_hub_screen.dart';
@@ -145,6 +146,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   File? _convertFile;
   String _convertTarget = 'mp4';
+  bool _converting = false;
   String _androidDownloadUri = '';
   int _selectedPageIndex = 13;
   DateTime? _lastLocalNavigation;
@@ -384,6 +386,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             widget.controller.addSearchResultToQueue(result);
             widget.controller.downloadAll();
           },
+          onDownloadPlaylist: (url) => _openPlaylistManager(url),
         );
       case 3:
         return _buildQueueTab();
@@ -440,18 +443,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             unawaited(widget.controller.downloadAll());
             _navigateToPage(3); // show queue
           },
-          onPlaylistDetected: (url, format, quality) {
-            final s = widget.controller.settings;
-            if (s != null && !_ensureDownloadFolder(s)) return;
-            widget.controller.pendingPlaylistRequest.value =
-                PendingPlaylistRequest(
-              url: url,
-              folder: s?.downloadDir ?? '',
-              format: format,
-              quality: quality,
-            );
-            _navigateToPage(4); // Playlists tab
-          },
+          onPlaylistDetected: (url, format, quality) =>
+              _openPlaylistManager(url, format: format, quality: quality),
           getYtDlpVersion: () async {
             final settings = widget.controller.settings;
             return await widget.controller.downloadService.ytDlp
@@ -474,6 +467,22 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       default:
         return _buildSearchTab(settings);
     }
+  }
+
+  /// Loads [url] in the Playlist Manager and compares it with the download
+  /// folder, so only the songs that are not there yet get downloaded.
+  void _openPlaylistManager(String url,
+      {String? format, String quality = 'best'}) {
+    final s = widget.controller.settings;
+    if (s != null && !_ensureDownloadFolder(s)) return;
+    widget.controller.pendingPlaylistRequest.value = PendingPlaylistRequest(
+      url: url,
+      folder: s?.downloadDir ?? '',
+      format: format ?? s?.defaultAudioFormat ?? 'mp3',
+      quality: quality,
+    );
+    _playlistTabController.index = 0; // Playlist Manager, not Watched
+    _navigateToPage(4); // Playlists tab
   }
 
   // -- Navigation helpers --------------------------------------------------
@@ -1061,14 +1070,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   String _formatAndroidFolderLabel(String uriString) {
     if (uriString.trim().isEmpty) return 'Not set';
-    if (!uriString.startsWith('content://')) return uriString;
-    final decoded = Uri.decodeComponent(uriString);
-    final treeIndex = decoded.indexOf('tree/');
-    if (treeIndex >= 0) {
-      final treePart = decoded.substring(treeIndex + 5);
-      return treePart.replaceAll(':', '/');
-    }
-    return uriString;
+    return friendlyFolderLabel(uriString);
   }
 
   bool get _hasAndroidFolder {
@@ -2907,9 +2909,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               PlaylistScreen(
                 playlistService: widget.controller.playlistService,
                 pendingRequest: widget.controller.pendingPlaylistRequest,
-                onDownloadMissing: (tracks, format) {
+                onDownloadMissing: (tracks, format, folder) {
                   for (final t in tracks) {
-                    widget.controller.addSearchResultToQueue(t, format: format);
+                    widget.controller.addSearchResultToQueue(t,
+                        format: format, outputFolder: folder);
                   }
                   widget.controller.downloadAll();
                 },
@@ -4904,14 +4907,31 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      icon: const Icon(Icons.sync_alt),
-                      label: const Text('Convert File'),
-                      onPressed: (_convertFile == null || settings == null)
+                      // Converting a video takes a while; without this the
+                      // button looked like it had done nothing.
+                      icon: _converting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.sync_alt),
+                      label: Text(_converting ? 'Converting…' : 'Convert File'),
+                      onPressed: (_convertFile == null ||
+                              settings == null ||
+                              _converting)
                           ? null
-                          : () {
+                          : () async {
                               AdService.instance.registerInteraction();
-                              widget.controller
+                              setState(() => _converting = true);
+                              final error = await widget.controller
                                   .convert(_convertFile!, _convertTarget);
+                              if (!mounted) return;
+                              setState(() => _converting = false);
+                              if (error != null) {
+                                Snack.show(context, 'Conversion failed: $error',
+                                    level: SnackLevel.error);
+                              }
                             },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -4956,8 +4976,21 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           trailing: ElevatedButton.icon(
                             icon: const Icon(Icons.save_alt, size: 18),
                             label: const Text('Save'),
-                            onPressed: () =>
-                                widget.controller.saveConvertedResult(result),
+                            onPressed: () async {
+                              final saved = await widget.controller
+                                  .saveConvertedResult(result);
+                              if (!context.mounted || saved.cancelled) return;
+                              final savedTo = saved.location;
+                              Snack.show(
+                                context,
+                                savedTo == null
+                                    ? 'Could not save ${result.name}. The Logs tab has the reason.'
+                                    : 'Saved ${result.name} to $savedTo',
+                                level: savedTo == null
+                                    ? SnackLevel.error
+                                    : SnackLevel.success,
+                              );
+                            },
                           ),
                         ),
                       ),

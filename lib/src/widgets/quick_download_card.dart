@@ -7,6 +7,8 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart'
 import '../models/search_result.dart';
 import '../services/playlist_service.dart';
 import '../services/yt_dlp_service.dart';
+import '../utils/youtube_link.dart';
+import 'video_or_playlist_dialog.dart';
 
 /// A small card used on the Home page for quickly pasting a URL and starting a download.
 ///
@@ -42,15 +44,23 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
       return;
     }
 
+    final link = YouTubeLink.parse(url);
+    final isYouTube = link != null;
+    var isPlaylist = link?.hasDownloadablePlaylist ?? false;
+    if (link != null && link.isVideoInPlaylist) {
+      // A link copied while a playlist plays carries both; ask which one.
+      final choice = await askVideoOrPlaylist(context);
+      if (choice == null || !mounted) return;
+      isPlaylist = choice == VideoOrPlaylist.playlist;
+    }
+
     setState(() => _isLoading = true);
     try {
-      final isYouTube = url.contains('youtube.com') || url.contains('youtu.be');
-      final isPlaylist = url.contains('list=');
       if (isYouTube && isPlaylist) {
         // Playlist detected - redirect to Playlist Manager if callback is set
         final cb = widget.onPlaylistDetected;
         if (cb != null) {
-          cb(url, _format, _quality);
+          cb(link.playlistUrl, _format, _quality);
           if (mounted) {
             _controller.clear();
           }
@@ -60,7 +70,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
         final yt = YoutubeExplode();
         final playlistService = PlaylistService(yt: yt);
         final List<SearchResult> tracks =
-            await playlistService.getYouTubePlaylistTracks(url);
+            await playlistService.getYouTubePlaylistTracks(link.playlistUrl);
         yt.close();
         if (!mounted) return;
         final selected = await showModalBottomSheet<List<SearchResult>>(
@@ -96,7 +106,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
         if (isYouTube) {
           final yt = YoutubeExplode();
           try {
-            final video = await yt.videos.get(url);
+            final video = await yt.videos.get(link.videoId ?? url);
             result = SearchResult(
               id: video.id.value,
               title: video.title,
@@ -219,6 +229,8 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<String>(
+                              // Lets the choice shrink to the half-width slot on a phone.
+                              isExpanded: true,
                               initialValue: _format,
                               decoration: const InputDecoration(
                                 labelText: 'Format',
@@ -242,6 +254,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: DropdownButtonFormField<String>(
+                              isExpanded: true,
                               initialValue: _quality,
                               decoration: const InputDecoration(
                                 labelText: 'Quality',
@@ -297,6 +310,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                       Expanded(
                         flex: 2,
                         child: DropdownButtonFormField<String>(
+                          isExpanded: true,
                           initialValue: _format,
                           decoration: const InputDecoration(
                             labelText: 'Format',
@@ -316,6 +330,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
                       Expanded(
                         flex: 2,
                         child: DropdownButtonFormField<String>(
+                          isExpanded: true,
                           initialValue: _quality,
                           decoration: const InputDecoration(
                             labelText: 'Quality',
