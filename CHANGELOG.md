@@ -1,6 +1,10 @@
 # Changelog
 
-## 14.4.0+1296 — Mobile fixes
+## 14.4.0+1296 — Mobile fixes and browser extensions
+
+### New
+
+- **Browser extensions on Windows.** Install Chrome extensions, and add-ons from addons.mozilla.org that also support Chromium, from Extensions in the browser menu or in Browser Settings. Search the add-ons catalog inside the app, see what an extension will be able to do before anything installs, switch extensions on and off, and open their popups and options, update or remove them. Downloads from addons.mozilla.org are checked against the checksum it publishes. Tested with Dark Reader and uBlock Origin Lite. Windows only for now.
 
 ### Fixed
 
@@ -9,6 +13,8 @@
 - **Searching from the browser searches the web.** The address bar now uses your chosen search engine, the same as the new tab page, and links that used to throw you into the YouTube app open in the browser instead. Anything that really needs another app asks first.
 - **Refresh no longer spins forever on Windows.** It finishes within a few seconds; checking your watched playlists now happens in the background.
 - **Your support colour now reaches the whole app,** including the player bar, sliders, progress indicators and the incognito toolbar.
+- **Userscripts now run in the Windows browser.** Since they arrived in 14.3.0 they installed and showed up in the list on Windows, but never actually ran on the page.
+- **The browser toolbar fits larger text.** With a bigger system text size the address bar was cut off on every screen size; it now grows to fit, and long menu entries wrap instead of spilling over.
 
 ### Improved
 
