@@ -52,9 +52,16 @@ class WebviewHost {
     return compositor_;
   }
 
+  // True when the environment was created with browser extensions switched
+  // on. False only if the runtime refused them and we fell back.
+  bool browser_extensions_enabled() const {
+    return browser_extensions_enabled_;
+  }
+
  private:
   winrt::com_ptr<ABI::Windows::UI::Composition::ICompositor> compositor_;
   wil::com_ptr<ICoreWebView2Environment3> webview_env_;
+  bool browser_extensions_enabled_ = false;
 
   WebviewHost(WebviewPlatform* platform,
               wil::com_ptr<ICoreWebView2Environment3> webview_env);

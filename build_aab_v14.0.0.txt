@@ -1,8 +1,0 @@
-Running Gradle task 'bundlePlayRelease'...                      
-INFO: Precompiled binaries are disabled
-INFO: Building metadata_god for armv7-linux-androideabi
-INFO: Building metadata_god for aarch64-linux-android
-INFO: Building metadata_god for x86_64-linux-android
-Running Gradle task 'bundlePlayRelease'...                        364.2s
-√ Built build\app\outputs\bundle\playRelease\app-play-release.aab (170.1MB)
-EXIT:0

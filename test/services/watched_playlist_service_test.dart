@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:convert_the_spire_reborn/src/models/search_result.dart';
 import 'package:convert_the_spire_reborn/src/services/watched_playlist_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,7 +20,8 @@ void main() {
   });
 
   group('WatchedPlaylistService entry model', () {
-    test('allows the same URL to be watched twice with different folders', () async {
+    test('allows the same URL to be watched twice with different folders',
+        () async {
       final fetches = <String>[];
       final service = WatchedPlaylistService(
         fetchPlaylistTracks: (url) async {
@@ -29,8 +32,10 @@ void main() {
       );
 
       const url = 'https://www.youtube.com/playlist?list=AAA';
-      final e1 = await service.addEntry(url: url, folder: '/mp3', format: 'mp3');
-      final e2 = await service.addEntry(url: url, folder: '/m4a', format: 'm4a');
+      final e1 =
+          await service.addEntry(url: url, folder: '/mp3', format: 'mp3');
+      final e2 =
+          await service.addEntry(url: url, folder: '/m4a', format: 'm4a');
 
       // Two distinct entries, both with unique ids.
       expect(e1.id, isNot(equals(e2.id)));
@@ -88,14 +93,12 @@ void main() {
       expect(await service.getEntries(), isEmpty);
     });
   });
-group('legacy migration', () {
+  group('legacy migration', () {
     test('converts URL list + per-format folder keys into entries', () async {
       SharedPreferences.setMockInitialValues({
         'watched_playlists': ['https://youtube.com/playlist?list=AAA'],
-        'pl_folder_https://youtube.com/playlist?list=AAA':
-            r'C:\music\default',
-        'pl_folder_mp3_https://youtube.com/playlist?list=AAA':
-            r'C:\music\mp3',
+        'pl_folder_https://youtube.com/playlist?list=AAA': r'C:\music\default',
+        'pl_folder_mp3_https://youtube.com/playlist?list=AAA': r'C:\music\mp3',
       });
       final service = WatchedPlaylistService(
         fetchPlaylistTracks: (url) async => [],
@@ -213,6 +216,78 @@ group('legacy migration', () {
       final newCount = await service.checkAllPlaylists();
       expect(newCount, 0);
       expect(deliveries, isEmpty);
+    });
+  });
+
+  group('checkAllPlaylists bounds', () {
+    test('a playlist that never answers does not hang the check', () async {
+      var stall = false;
+      final service = WatchedPlaylistService(
+        fetchPlaylistTracks: (url) async {
+          if (stall) return Completer<List<SearchResult>>().future;
+          return [makeTrack('a')];
+        },
+        onNewPlaylistTrack: (url, track, {folder, format}) async {},
+      )..perPlaylistTimeout = const Duration(milliseconds: 50);
+
+      // Adding seeds a snapshot, so only stall once it is watched.
+      await service.addEntry(url: 'STALLED');
+      stall = true;
+
+      final watch = Stopwatch()..start();
+      final found = await service.checkAllPlaylists();
+      watch.stop();
+
+      expect(found, 0);
+      expect(watch.elapsed, lessThan(const Duration(seconds: 2)),
+          reason: 'an unreachable playlist used to spin the refresh button '
+              'forever on Windows');
+    });
+
+    test('one slow playlist does not hold up the others', () async {
+      var stall = false;
+      final service = WatchedPlaylistService(
+        fetchPlaylistTracks: (url) async {
+          if (stall && url == 'SLOW') {
+            return Completer<List<SearchResult>>().future;
+          }
+          return [makeTrack('a')];
+        },
+        onNewPlaylistTrack: (url, track, {folder, format}) async {},
+      )..perPlaylistTimeout = const Duration(milliseconds: 50);
+
+      await service.addEntry(url: 'SLOW');
+      await service.addEntry(url: 'FAST');
+      stall = true;
+
+      final watch = Stopwatch()..start();
+      await service.checkAllPlaylists();
+      watch.stop();
+
+      expect(watch.elapsed, lessThan(const Duration(seconds: 2)));
+    });
+
+    test('a second call joins the run already in progress', () async {
+      var fetchCount = 0;
+      final service = WatchedPlaylistService(
+        fetchPlaylistTracks: (url) async {
+          fetchCount++;
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+          return [makeTrack('a')];
+        },
+        onNewPlaylistTrack: (url, track, {folder, format}) async {},
+      );
+      await service.addEntry(url: 'U1');
+      fetchCount = 0;
+
+      final first = service.checkAllPlaylists();
+      final second = service.checkAllPlaylists();
+      expect(service.isChecking, isTrue);
+      await Future.wait([first, second]);
+
+      expect(fetchCount, 1,
+          reason: 'the 3-hourly timer and a manual refresh must not overlap');
+      expect(service.isChecking, isFalse);
     });
   });
 }

@@ -42,7 +42,8 @@ class SessionLogService {
   /// Records a breadcrumb with the elapsed time since [start].
   void mark(String label) {
     if (!_started) return;
-    final entry = '${_uptime.elapsedMilliseconds.toString().padLeft(6)}ms  $label';
+    final entry =
+        '${_uptime.elapsedMilliseconds.toString().padLeft(6)}ms  $label';
     _entries.add(entry);
     if (kDebugMode) debugPrint('[PERF] $entry');
   }
@@ -55,14 +56,35 @@ class SessionLogService {
     mark(label);
   }
 
+  /// The most recent breadcrumbs, newest last.
+  ///
+  /// Used by the in-app bug report and the release error screen, so a report
+  /// arrives with the run-up to the failure attached.
+  List<String> recent({int limit = 50}) {
+    if (_entries.length <= limit) return List.unmodifiable(_entries);
+    return List.unmodifiable(_entries.sublist(_entries.length - limit));
+  }
+
+  /// Records an error that would otherwise be swallowed.
+  ///
+  /// `lib/` is full of empty `catch (_) {}` blocks; that is how the missing
+  /// foreground-service channel went unnoticed (issue #7). New code funnels
+  /// through here instead.
+  void logSwallowed(Object error, StackTrace stack, String where) {
+    mark('swallowed[$where]: $error');
+    if (kDebugMode) {
+      debugPrint('[SWALLOWED] $where: $error');
+      debugPrint(stack.toString());
+    }
+  }
+
   /// Writes all breadcrumbs to disk. Safe to call more than once (each
   /// flush appends). Returns the log file path, or null if unavailable.
   Future<String?> flush(String reason) async {
     if (!_started) return null;
     try {
       final dir = await getApplicationDocumentsDirectory();
-      final file = File(
-          '${dir.path}${_separator}session_log_$_sessionTag.log');
+      final file = File('${dir.path}${_separator}session_log_$_sessionTag.log');
       final sb = StringBuffer()
         ..writeln('=== flush: $reason ===')
         ..writeln('total: ${_uptime.elapsedMilliseconds}ms')

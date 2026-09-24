@@ -71,6 +71,11 @@ class MainActivity : AudioServiceActivity() {
             result.notImplemented()
         }
 
+        // Downloads keep-alive. Without a handler here, ForegroundService.start()
+        // threw MissingPluginException, which the Dart side swallowed - so
+        // downloads quietly died whenever the screen went off (issue #7).
+        ForegroundBridge(this, flutterEngine.dartExecutor.binaryMessenger)
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.torrentspire.ai/battery")
             .setMethodCallHandler { call, result ->
                 when (call.method) {

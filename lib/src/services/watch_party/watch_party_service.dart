@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import '../media_range.dart';
 import 'watch_party_protocol.dart';
 
 /// Watch Together: keeps playback in step across devices on the same network.
@@ -52,8 +54,14 @@ class WatchPartyService {
   String? _roomCode;
   int _boundPort = defaultSyncPort;
 
+  /// Files the host is streaming, keyed by an unguessable token. Guests that
+  /// do not have the file play it from here instead of being stuck (issue #7).
+  final Map<String, String> _sharedMedia = {};
+  final Map<String, String> _tokensByPath = {};
+
   // Guest state
   WebSocket? _hostSocket;
+  String? _hostEndpoint;
   Timer? _pingTimer;
   final ClockOffsetEstimator _offset = ClockOffsetEstimator();
   PlaybackSnapshot? _lastSnapshot;
@@ -131,6 +139,11 @@ class WatchPartyService {
   }
 
   Future<void> _onHttpRequest(HttpRequest request) async {
+    final path = request.uri.path;
+    if (path.startsWith('/media/')) {
+      await _serveSharedMedia(request, path.substring('/media/'.length));
+      return;
+    }
     if (!WebSocketTransformer.isUpgradeRequest(request)) {
       request.response
         ..statusCode = HttpStatus.badRequest
@@ -144,6 +157,59 @@ class WatchPartyService {
     } catch (e) {
       debugPrint('WatchParty upgrade failed: $e');
     }
+  }
+
+  /// Streams a file the host has explicitly shared for this room.
+  ///
+  /// Only tokens minted by [shareMedia] resolve, so hosting a room never turns
+  /// the device into an open file server.
+  Future<void> _serveSharedMedia(HttpRequest request, String token) async {
+    final path = _sharedMedia[token];
+    if (path == null) {
+      request.response.statusCode = HttpStatus.notFound;
+      await request.response.close();
+      return;
+    }
+    await serveFileWithRanges(
+      request,
+      File(path),
+      contentType: mediaContentTypeFor(path),
+    );
+  }
+
+  /// Host: offer [path] to the room, returning the relative URL for it.
+  ///
+  /// Returns null when not hosting. Calling it twice for the same file gives
+  /// back the same token, so a guest's stream is not broken by a re-publish.
+  String? shareMedia(String path) {
+    if (!isHosting || path.isEmpty) return null;
+    final existing = _tokensByPath[path];
+    if (existing != null) return '/media/$existing';
+
+    // The original extension is kept on the token so the guest's player can
+    // tell audio from video before a single byte arrives.
+    final dot = path.lastIndexOf('.');
+    final extension = dot > 0 && path.length - dot <= 6
+        ? path.substring(dot).toLowerCase()
+        : '';
+    final token = '${_mintToken()}$extension';
+    _sharedMedia[token] = path;
+    _tokensByPath[path] = token;
+    return '/media/$token';
+  }
+
+  String _mintToken() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  }
+
+  /// Guest: the absolute URL for the host's stream of [snapshot], if any.
+  String? hostStreamUrlFor(PlaybackSnapshot snapshot) {
+    final endpoint = _hostEndpoint;
+    final source = snapshot.source;
+    if (endpoint == null || source == null) return null;
+    return source.urlFor(endpoint);
   }
 
   void _handleGuestSocket(WebSocket socket) {
@@ -172,13 +238,16 @@ class WatchPartyService {
           _guests.add(socket);
           // A peer can vanish between the upgrade and the welcome; a failed
           // write must not take down the whole handler.
-          final welcomed = _safeSend(socket,
-              WatchPartyMessage.welcomeMessage(hostName: _displayName).encode());
+          final welcomed = _safeSend(
+              socket,
+              WatchPartyMessage.welcomeMessage(hostName: _displayName)
+                  .encode());
           // Send the current state immediately so a late joiner does not sit
           // on a black screen until the next periodic update.
           final snapshot = _lastSnapshot;
           if (welcomed && snapshot != null) {
-            _safeSend(socket, WatchPartyMessage.stateMessage(snapshot).encode());
+            _safeSend(
+                socket, WatchPartyMessage.stateMessage(snapshot).encode());
           }
           if (!welcomed) _guests.remove(socket);
           _broadcastPeerCount();
@@ -229,6 +298,7 @@ class WatchPartyService {
     required Duration position,
     required bool playing,
     String? title,
+    String? sourcePath,
   }) {
     if (!isHosting) return;
     final snapshot = PlaybackSnapshot(
@@ -237,6 +307,7 @@ class WatchPartyService {
       playing: playing,
       hostClockMs: nowMs,
       title: title,
+      source: sourcePath == null ? null : MediaSource(path: sourcePath),
     );
     _lastSnapshot = snapshot;
     final frame = WatchPartyMessage.stateMessage(snapshot).encode();
@@ -302,7 +373,8 @@ class WatchPartyService {
       // phones drops the first packet often enough to matter.
       final ticker = Timer.periodic(const Duration(milliseconds: 500), (_) {
         try {
-          socket!.send(query, InternetAddress('255.255.255.255'), discoveryPort);
+          socket!
+              .send(query, InternetAddress('255.255.255.255'), discoveryPort);
         } catch (_) {}
       });
       try {
@@ -360,18 +432,17 @@ class WatchPartyService {
       final socket = await WebSocket.connect('ws://$endpoint/')
           .timeout(const Duration(seconds: 8));
       _hostSocket = socket;
+      _hostEndpoint = endpoint;
       _roomCode = code;
       _offset.reset();
 
-      socket.add(
-          WatchPartyMessage.helloMessage(room: code, name: displayName).encode());
-      socket.listen(_onHostMessage,
-          onDone: _onHostDisconnected,
+      socket.add(WatchPartyMessage.helloMessage(room: code, name: displayName)
+          .encode());
+      socket.listen(_onHostMessage, onDone: _onHostDisconnected,
           onError: (Object e) {
-            debugPrint('WatchParty host socket error: $e');
-            _onHostDisconnected();
-          },
-          cancelOnError: true);
+        debugPrint('WatchParty host socket error: $e');
+        _onHostDisconnected();
+      }, cancelOnError: true);
 
       // Measure the clock offset promptly, then keep it fresh.
       _sendPing();
@@ -463,11 +534,15 @@ class WatchPartyService {
     final discovery = _discoverySocket;
 
     _hostSocket = null;
+    _hostEndpoint = null;
     _guests.clear();
     _server = null;
     _discoverySocket = null;
     _roomCode = null;
     _lastSnapshot = null;
+    // Shared-media tokens must not outlive the room that minted them.
+    _sharedMedia.clear();
+    _tokensByPath.clear();
     _offset.reset();
     if (_currentStatus.role != WatchPartyRole.idle) {
       _setStatus(const WatchPartyStatus.idle());

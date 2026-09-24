@@ -46,3 +46,125 @@ jobs:
           else
             echo "No test files found - skipping tests"
           fi
+
+  # The Windows refresh hang in #7 was Windows-only and shipped because
+  # nothing built or tested this app on Windows.
+  windows:
+    name: Windows build and tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Flutter
+        uses: flutter-actions/setup-flutter@v4
+        with:
+          channel: stable
+          version: '3.41.2'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+      # The same workarounds the release workflow applies before its Windows
+      # build; without them this job fails on problems the release build never
+      # sees.
+      # Set _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS at the
+      # CMake / environment level so all plugin targets inherit it.
+      - name: Set coroutine deprecation workaround
+        shell: pwsh
+        run: |
+          echo "CXXFLAGS=-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "CMAKE_CXX_FLAGS=-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Patch metadata_god resolve_symlinks for CI
+        shell: pwsh
+        run: |
+          $paths = @(
+            "$env:PUB_CACHE\hosted\pub.dev\metadata_god-*\cargokit\cmake\resolve_symlinks.ps1",
+            "$env:LOCALAPPDATA\Pub\Cache\hosted\pub.dev\metadata_god-*\cargokit\cmake\resolve_symlinks.ps1",
+            "windows\flutter\ephemeral\.plugin_symlinks\metadata_god\cargokit\cmake\resolve_symlinks.ps1"
+          )
+          foreach ($pattern in $paths) {
+            $files = Get-ChildItem -Path $pattern -ErrorAction SilentlyContinue
+            foreach ($file in $files) {
+              $text = Get-Content -Raw $file.FullName
+              if ($text -match 'Get-Item \$realPath') {
+                $text = $text -replace 'Get-Item \$realPath', 'Get-Item -ErrorAction SilentlyContinue $realPath'
+                Set-Content -Path $file.FullName -Value $text -NoNewline
+                Write-Host "Patched resolve_symlinks.ps1 at $($file.FullName)"
+              }
+            }
+          }
+          Write-Host "metadata_god patch check complete"
+
+      - name: Patch flutter_inappwebview Windows symbol mismatch
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "$env:PUB_CACHE\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows\custom_platform_view\custom_platform_view.cc",
+            "$env:LOCALAPPDATA\Pub\Cache\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows\custom_platform_view\custom_platform_view.cc",
+            "windows\flutter\ephemeral\.plugin_symlinks\flutter_inappwebview_windows\windows\custom_platform_view\custom_platform_view.cc"
+          )
+
+          $patched = 0
+          foreach ($file in $candidates) {
+            if (Test-Path $file) {
+              $text = Get-Content -Raw $file
+              $newText = $text -replace '\bwebview_\b', 'view'
+              if ($newText -ne $text) {
+                Set-Content -Path $file -Value $newText -NoNewline
+                Write-Host "Patched $file"
+                $patched++
+              }
+            }
+          }
+
+          if ($patched -eq 0) {
+            Write-Host "No symbol patch was needed."
+          }
+
+      - name: Build Windows
+        run: flutter build windows --debug
+
+  # Catches Kotlin and Gradle breakage before it reaches a release build.
+  android:
+    name: Android debug build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: flutter-actions/setup-flutter@v4
+        with:
+          channel: stable
+          version: '3.41.2'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Same workaround as the release workflow: video_thumbnail still lists
+      # jcenter, which CI runners cannot rely on.
+      - name: Patch video_thumbnail jcenter
+        shell: bash
+        run: |
+          set -euo pipefail
+          PLUGIN_DIR="${PUB_CACHE:-$HOME/.pub-cache}/hosted/pub.dev/video_thumbnail-0.5.6/android"
+          if [ -f "$PLUGIN_DIR/build.gradle" ]; then
+            sed -i 's/jcenter()/mavenCentral()/' "$PLUGIN_DIR/build.gradle"
+            echo "Patched video_thumbnail build.gradle"
+          else
+            echo "video_thumbnail build.gradle not found; skipping patch"
+          fi
+
+      - name: Build debug APK
+        run: flutter build apk --debug --flavor full

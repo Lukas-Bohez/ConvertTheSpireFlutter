@@ -1,7 +1,11 @@
+import 'dart:async';
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../services/foreground_service.dart';
 import '../services/watch_party/watch_party_service.dart';
 import '../utils/snack.dart';
 import 'player.dart' show PlayerState;
@@ -13,12 +17,24 @@ import 'player.dart' show PlayerState;
 class WatchPartySheet extends StatefulWidget {
   const WatchPartySheet({super.key});
 
-  static Future<void> show(BuildContext context) => showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        showDragHandle: true,
-        builder: (_) => const WatchPartySheet(),
-      );
+  /// Opens the sheet.
+  ///
+  /// [PlayerState] is re-provided explicitly so the sheet works no matter
+  /// which navigator it is pushed on. Providers now live above MaterialApp,
+  /// but a sheet that reaches for app state and finds none renders as a grey
+  /// error screen in release builds, so this stays belt and braces (issue #7).
+  static Future<void> show(BuildContext context) {
+    final player = context.read<PlayerState>();
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => ChangeNotifierProvider<PlayerState>.value(
+        value: player,
+        child: const WatchPartySheet(),
+      ),
+    );
+  }
 
   @override
   State<WatchPartySheet> createState() => _WatchPartySheetState();
@@ -26,10 +42,35 @@ class WatchPartySheet extends StatefulWidget {
 
 class _WatchPartySheetState extends State<WatchPartySheet> {
   final TextEditingController _codeController = TextEditingController();
-  final TextEditingController _nameController =
-      TextEditingController(text: 'Me');
+  final TextEditingController _nameController = TextEditingController();
   bool _busy = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_fillDefaultName());
+  }
+
+  /// Defaults the display name to the device's own name.
+  ///
+  /// Everybody in a room used to show up as "Me", which is useless when the
+  /// point is telling devices apart (issue #7).
+  Future<void> _fillDefaultName() async {
+    final name = await ForegroundService.deviceName() ?? _fallbackDeviceName();
+    if (!mounted || _nameController.text.isNotEmpty) return;
+    _nameController.text = name;
+  }
+
+  String _fallbackDeviceName() {
+    try {
+      final host = Platform.localHostname.trim();
+      if (host.isNotEmpty && host.toLowerCase() != 'localhost') return host;
+    } catch (e) {
+      debugPrint('watch party: host name unavailable: $e');
+    }
+    return 'This device';
+  }
 
   @override
   void dispose() {
@@ -79,60 +120,64 @@ class _WatchPartySheetState extends State<WatchPartySheet> {
     final status = player.watchParty.status;
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-          20, 4, 20, MediaQuery.of(context).viewInsets.bottom + 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.groups_rounded),
-              const SizedBox(width: 10),
-              Text('Watch Together', style: theme.textTheme.titleLarge),
+    // Scrollable so the sheet still fits with the keyboard up on a small
+    // phone, or on a phone held sideways.
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+            20, 4, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.groups_rounded),
+                const SizedBox(width: 10),
+                Text('Watch Together', style: theme.textTheme.titleLarge),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Everyone on the same wifi stays in step — play, pause and seek '
+              'together.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 18),
+            if (status.isActive)
+              _ActiveRoom(status: status, onLeave: _busy ? null : _leave)
+            else
+              _JoinOrHost(
+                nameController: _nameController,
+                codeController: _codeController,
+                busy: _busy,
+                onHost: _host,
+                onJoin: _join,
+              ),
+            if (_error != null) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline,
+                        size: 18, color: theme.colorScheme.onErrorContainer),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(_error!,
+                          style: TextStyle(
+                              color: theme.colorScheme.onErrorContainer)),
+                    ),
+                  ],
+                ),
+              ),
             ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Everyone on the same wifi stays in step — play, pause and seek '
-            'together.',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 18),
-          if (status.isActive)
-            _ActiveRoom(status: status, onLeave: _busy ? null : _leave)
-          else
-            _JoinOrHost(
-              nameController: _nameController,
-              codeController: _codeController,
-              busy: _busy,
-              onHost: _host,
-              onJoin: _join,
-            ),
-          if (_error != null) ...[
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline,
-                      size: 18, color: theme.colorScheme.onErrorContainer),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(_error!,
-                        style: TextStyle(
-                            color: theme.colorScheme.onErrorContainer)),
-                  ),
-                ],
-              ),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }

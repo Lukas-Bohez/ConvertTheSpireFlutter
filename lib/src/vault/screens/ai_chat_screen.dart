@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:convert_the_spire_reborn/src/utils/process_runner.dart';
 import 'package:convert_the_spire_reborn/src/vault/constants.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/ai_copilot_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
@@ -21,13 +22,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
   @override
   void initState() {
     super.initState();
-    final initialUrl = !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+    final initialUrl = !kIsWeb &&
+            defaultTargetPlatform == TargetPlatform.android
         ? '' // Real devices need the host PC's LAN IP; 10.0.2.2 only works in emulator
         : 'http://localhost:11434';
     _baseUrlController = TextEditingController(text: initialUrl);
     _aiService = AiCopilotService(baseUrl: initialUrl);
     _initialize();
   }
+
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
 
@@ -103,10 +106,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
       return;
     }
     try {
-      final result = await Process.run('ollama', const ['--version']);
+      final result = await runProcess('ollama', const ['--version'],
+          timeout: const Duration(seconds: 5));
       if (!mounted) return;
       setState(() {
-        _ollamaInstalled = result.exitCode == 0;
+        _ollamaInstalled = result.ok;
       });
     } catch (_) {
       if (!mounted) return;

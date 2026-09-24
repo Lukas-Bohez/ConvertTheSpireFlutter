@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:convert_the_spire_reborn/src/browser/platform/browser_webview_controller.dart';
 import 'package:convert_the_spire_reborn/src/browser/platform/browser_webview_windows.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:webview_windows/webview_windows.dart';
@@ -68,7 +69,7 @@ void main() {
       await adapter.dispose();
       expect(adapter.debugInitState, isTrue);
     });
-test(
+    test(
         'persistent failure sets state=false, clears future, and the next '
         'call retries cleanly without stream collisions', () async {
       final gate = _InitGate(failPersistently: true);
@@ -108,6 +109,52 @@ test(
       expect(adapter.debugHasPendingFuture, isFalse);
 
       await adapter.dispose();
+    });
+  });
+
+  group('BrowserWindowsWebViewAdapter userscripts', () {
+    test('runs matching userscripts at document start and end', () async {
+      // The adapter used to ignore this hook, so userscripts never ran on
+      // Windows at all (found while working on issue #10).
+      final factory = _FactoryCounter(_InitGate(failPersistently: false));
+      final hooks = BrowserWebViewHooks()
+        ..userScriptsFor = (url, {required atDocumentStart}) {
+          if (!url.contains('example.com')) return const [];
+          return [atDocumentStart ? 'START' : 'END'];
+        };
+      final adapter = BrowserWindowsWebViewAdapter(
+        blockedDomains: {},
+        controllerFactory: factory.make,
+        hooks: hooks,
+      );
+      await adapter.debugEnsureReady();
+      final controller = factory.controllers.last;
+      controller.executed.clear();
+
+      await controller.simulateNavigation('https://example.com/page');
+      await controller.simulateNavigation('https://other.org/');
+
+      expect(controller.executed.where((s) => s == 'START' || s == 'END'),
+          ['START', 'END'],
+          reason: 'start before end, and only on the page they match');
+    });
+
+    test('a userscript lookup that throws does not break navigation', () async {
+      final factory = _FactoryCounter(_InitGate(failPersistently: false));
+      final hooks = BrowserWebViewHooks()
+        ..userScriptsFor =
+            (url, {required atDocumentStart}) => throw StateError('bad');
+      final adapter = BrowserWindowsWebViewAdapter(
+        blockedDomains: {},
+        controllerFactory: factory.make,
+        hooks: hooks,
+      );
+      await adapter.debugEnsureReady();
+
+      await expectLater(
+        factory.controllers.last.simulateNavigation('https://example.com/'),
+        completes,
+      );
     });
   });
 }
@@ -204,7 +251,8 @@ class _FakeWebviewController extends WebviewController {
   }
 
   @override
-  Future<void> setPopupWindowPolicy(WebviewPopupWindowPolicy popupPolicy) async {}
+  Future<void> setPopupWindowPolicy(
+      WebviewPopupWindowPolicy popupPolicy) async {}
 
   @override
   Future<void> setUserAgent(String userAgent) async {}
@@ -212,4 +260,22 @@ class _FakeWebviewController extends WebviewController {
   @override
   Future<ScriptID?> addScriptToExecuteOnDocumentCreated(String script) async =>
       null;
+
+  /// Every script the adapter asked the page to run.
+  final List<String> executed = [];
+
+  @override
+  Future<dynamic> executeScript(String script) async {
+    executed.add(script);
+    return null;
+  }
+
+  /// Plays the event order WebView2 produces for a navigation.
+  Future<void> simulateNavigation(String url) async {
+    _url.add(url);
+    _loadingState.add(LoadingState.loading);
+    await Future<void>.delayed(Duration.zero);
+    _loadingState.add(LoadingState.navigationCompleted);
+    await Future<void>.delayed(Duration.zero);
+  }
 }

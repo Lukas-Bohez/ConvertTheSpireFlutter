@@ -53,6 +53,30 @@ bool isValidRoomCode(String code) =>
     code.length == kRoomCodeLength &&
     code.runes.every((r) => kRoomCodeAlphabet.contains(String.fromCharCode(r)));
 
+/// Where a guest can get the media if it does not have the file itself.
+///
+/// The path is relative to the host's own server (`/media/<token>`), not an
+/// absolute URL: the guest already knows the address it connected to, and the
+/// host cannot reliably guess which of its interfaces the guest can reach.
+class MediaSource {
+  const MediaSource({required this.path});
+
+  final String path;
+
+  Map<String, dynamic> toJson() => {'kind': 'file', 'path': path};
+
+  static MediaSource? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final path = json['path'];
+    if (path is! String || path.isEmpty) return null;
+    return MediaSource(path: path);
+  }
+
+  /// The absolute URL to play, given the `host:port` the guest is joined to.
+  String urlFor(String endpoint) =>
+      'http://$endpoint${path.startsWith('/') ? path : '/$path'}';
+}
+
 /// What the host is playing, sampled at [hostClockMs].
 class PlaybackSnapshot {
   const PlaybackSnapshot({
@@ -61,6 +85,7 @@ class PlaybackSnapshot {
     required this.playing,
     required this.hostClockMs,
     this.title,
+    this.source,
   });
 
   /// Identifies the media across devices. Uses the file name rather than a
@@ -74,12 +99,17 @@ class PlaybackSnapshot {
   final int hostClockMs;
   final String? title;
 
+  /// Where to stream the media from when the guest has no matching file.
+  /// Null when the host is not sharing it.
+  final MediaSource? source;
+
   Map<String, dynamic> toJson() => {
         'media': mediaKey,
         'pos': position.inMilliseconds,
         'playing': playing,
         'clock': hostClockMs,
         if (title != null) 'title': title,
+        if (source != null) 'source': source!.toJson(),
       };
 
   static PlaybackSnapshot? fromJson(Map<String, dynamic> json) {
@@ -96,11 +126,13 @@ class PlaybackSnapshot {
       playing: playing,
       hostClockMs: clock.round(),
       title: json['title'] is String ? json['title'] as String : null,
+      source: MediaSource.fromJson(json['source']),
     );
   }
 
   @override
-  String toString() => 'PlaybackSnapshot($mediaKey, ${position.inMilliseconds}ms, '
+  String toString() =>
+      'PlaybackSnapshot($mediaKey, ${position.inMilliseconds}ms, '
       'playing=$playing, clock=$hostClockMs)';
 }
 
@@ -276,8 +308,8 @@ class WatchPartyMessage {
 
   static WatchPartyMessage helloMessage(
           {required String room, required String name}) =>
-      WatchPartyMessage(hello,
-          {'room': room, 'name': name, 'v': kWatchPartyProtocolVersion});
+      WatchPartyMessage(
+          hello, {'room': room, 'name': name, 'v': kWatchPartyProtocolVersion});
 
   static WatchPartyMessage welcomeMessage({required String hostName}) =>
       WatchPartyMessage(

@@ -114,3 +114,20 @@ github-support-request.md
 # local build logs
 build_aab_*.txt
 build_win_*.txt
+
+# Local QA and diagnostic output. These were committed by accident; they are
+# machine-specific and rewritten on every run (issue #7).
+results/*
+# ...except the extension compatibility study, which is research data (#10).
+!results/extensions/
+cursor_log_*.txt
+manifest_check*.txt
+build_log*.txt
+build_play*.log
+gh_run_watch*.log
+release_watch*.log
+analyze_output.txt
+diag_output.txt
+full_diagnose_*.log
+screen_state.png
+tv-emulator*.png

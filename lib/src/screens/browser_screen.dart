@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../browser/adblock/adblock_service.dart';
 import '../browser/cast/cast_service.dart';
 import '../browser/cast/unified_cast_service.dart';
+import '../browser/extensions/extension_hosts.dart';
 import '../browser/js/js_bridge.dart';
 import '../browser/platform/browser_webview_controller.dart';
 import '../browser/platform/browser_webview_factory.dart';
@@ -29,12 +30,15 @@ import '../utils/snack.dart';
 import '../widgets/browser_shell.dart';
 import '../widgets/cursor_overlay.dart';
 import 'browser/browser_bottom_bar.dart';
+import 'browser/browser_chrome.dart';
 import 'browser/browser_settings_screen.dart';
 import 'browser/browser_toolbar.dart';
 import 'browser/cast/cast_picker_sheet.dart';
 import 'browser/cast_mini_bar.dart';
+import 'browser/extensions_screen.dart';
 import 'browser/favourites_screen.dart';
 import 'browser/history_screen.dart';
+import 'browser/intent_url.dart';
 import 'browser/new_tab_page.dart';
 import 'browser/userscripts_screen.dart';
 
@@ -114,11 +118,23 @@ class BrowserScreen extends StatefulWidget {
     };
   }
 
-
   // Public hooks for external widgets (e.g. BrowserShell) to pause/resume
   // cursor mode on this screen.
   static void pauseCursor() => browserKey.currentState?._pauseCursor();
   static void resumeCursor() => browserKey.currentState?._resumeCursor();
+
+  /// Reloads the page currently shown in the browser tab.
+  ///
+  /// Returns false when the browser is not mounted, so callers can fall back
+  /// to refreshing the app instead. The toolbar refresh button sits next to
+  /// Home in the browser shell, and people expect it to reload the page they
+  /// are looking at (issue #7).
+  static bool reloadPage() {
+    final state = browserKey.currentState;
+    if (state == null) return false;
+    state._reload();
+    return true;
+  }
 
   @override
   State<BrowserScreen> createState() => _BrowserScreenState();
@@ -683,21 +699,67 @@ class _BrowserScreenState extends State<BrowserScreen>
       unawaited(_offerUserScriptInstall(url));
       return false;
     }
+    // intent: URLs used to be launched externally with no prompt, which is
+    // how a search result could silently throw the user into the YouTube app
+    // (issue #7). Anything expressible as a web page stays in the browser.
+    if (url.startsWith('intent:')) {
+      final resolution = resolveIntentUrl(url);
+      if (resolution.canOpenInBrowser) {
+        unawaited(_webViewController?.loadUrl(resolution.webUrl!) ??
+            Future<void>.value());
+        return false;
+      }
+      unawaited(_confirmExternalApp(url, package: resolution.package));
+      return false;
+    }
+    // Phone numbers, email addresses and store links are unambiguous and the
+    // user tapped them on purpose, so they open straight away.
     if (url.startsWith('tel:') ||
         url.startsWith('mailto:') ||
-        url.startsWith('intent:') ||
         url.startsWith('market:')) {
-      try {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      } catch (_) {}
+      unawaited(_launchExternal(url));
       return false;
     }
     return true;
   }
 
-  /// Per-request resource filter (Android). Not supported on Windows -
-  /// there the Windows adapter embeds the same hardcoded blocklist in an
-  /// injected fetch/XHR hook instead.
+  Future<void> _launchExternal(String url) async {
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('external app launch failed: $e');
+    }
+  }
+
+  /// Asks before handing a link to another app. Never launches on its own.
+  Future<void> _confirmExternalApp(String url, {String? package}) async {
+    if (!mounted) return;
+    final target = package ?? Uri.tryParse(url)?.scheme ?? 'another app';
+    final open = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Open in another app?'),
+        content: Text('This link opens $target outside the browser.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Stay here'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Open'),
+          ),
+        ],
+      ),
+    );
+    if (open != true) return;
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('external app launch failed: $e');
+    }
+  }
+
   /// Userscripts to run on [url]. Document-start scripts go in before the
   /// page's own code; everything else waits for the DOM.
   List<String> _userScriptsFor(String url, {required bool atDocumentStart}) =>
@@ -979,8 +1041,8 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   Future<void> _blurWebViewInput() async {
     try {
-      await _webViewController
-          ?.evaluateJs('if (document.activeElement) document.activeElement.blur();');
+      await _webViewController?.evaluateJs(
+          'if (document.activeElement) document.activeElement.blur();');
     } catch (_) {}
   }
 
@@ -1740,6 +1802,13 @@ class _BrowserScreenState extends State<BrowserScreen>
       ));
       return;
     }
+    if (action == 'extensions') {
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ExtensionsScreen(host: ExtensionHosts.current),
+      ));
+      return;
+    }
     if (action == 'favourites') {
       _openFavourites();
       return;
@@ -1972,7 +2041,7 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                                 width: isActive ? 2 : 1,
                               ),
                               color: tab.isIncognito
-                                  ? const Color(0xFF1A1A2E)
+                                  ? incognitoSurface(cs)
                                   : cs.surfaceContainerLow,
                             ),
                             child: ClipRRect(
@@ -1987,8 +2056,7 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                                     child: Padding(
                                       padding: const EdgeInsets.all(6.0),
                                       child: ClipRRect(
-                                        borderRadius:
-                                            BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(8),
                                         child: () {
                                           final bytes = widget.tabManager
                                               .getScreenshotBytes(tab.id);
@@ -2001,8 +2069,7 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                                                           tab.id) ??
                                                   tab.screenshotPath),
                                               cacheHeight: 360,
-                                              filterQuality:
-                                                  FilterQuality.low,
+                                              filterQuality: FilterQuality.low,
                                               fit: BoxFit.cover,
                                               width: double.infinity,
                                               height: double.infinity,
@@ -2011,11 +2078,9 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
                                           if (tab.screenshotPath != null) {
                                             return Image.file(
                                               File(tab.screenshotPath!),
-                                              key: ValueKey(
-                                                  tab.screenshotPath),
+                                              key: ValueKey(tab.screenshotPath),
                                               cacheHeight: 360,
-                                              filterQuality:
-                                                  FilterQuality.low,
+                                              filterQuality: FilterQuality.low,
                                               fit: BoxFit.cover,
                                               width: double.infinity,
                                               height: double.infinity,

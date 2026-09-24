@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/build_flags.dart';
 import '../screens/browser_screen.dart';
@@ -155,12 +157,25 @@ class _BrowserShellState extends State<BrowserShell> {
   final LayerLink _urlBarLink = LayerLink();
   final GlobalKey _urlBarKey = GlobalKey();
   OverlayEntry? _suggestionOverlayEntry;
+  String _searchEngine = 'DuckDuckGo';
 
   @override
   void initState() {
     super.initState();
     _urlEditController = TextEditingController();
     _urlFocusNode.addListener(_handleUrlFocusChange);
+    unawaited(_loadSearchEngine());
+  }
+
+  Future<void> _loadSearchEngine() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final engine = prefs.getString('browser_search_engine');
+      if (!mounted || engine == null || engine.isEmpty) return;
+      setState(() => _searchEngine = engine);
+    } catch (e) {
+      debugPrint('browser shell: could not read search engine: $e');
+    }
   }
 
   @override
@@ -332,7 +347,8 @@ class _BrowserShellState extends State<BrowserShell> {
       return;
     }
 
-    final decision = _resolveBrowserSubmission(trimmed);
+    await _loadSearchEngine();
+    final decision = _resolveBrowserSubmission(trimmed, engine: _searchEngine);
 
     switch (decision.kind) {
       case BrowserSubmissionKind.internalRoute:
@@ -403,7 +419,7 @@ class _BrowserShellState extends State<BrowserShell> {
 
     // Only listen to the fields that actually affect the shell layout.
     final currentItem =
-        context.select<PlayerState, MediaItem?>((state) => state.currentItem);
+        context.select<PlayerState, MediaItem?>((state) => state.nowPlayingItem);
     final isPlaying =
         context.select<PlayerState, bool>((state) => state.isPlaying);
     final playerState = context.read<PlayerState>();
@@ -1230,22 +1246,25 @@ class _BrowserShellState extends State<BrowserShell> {
           ),
         );
       }
+      final searchUrl =
+          BrowserScreen.buildSearchUrl(trimmed, engine: _searchEngine);
       external.add(
         _BrowserSuggestion(
           kind: _BrowserSuggestionKind.search,
-          label: 'Search Google for "$trimmed"',
-          value:
-              'https://www.google.com/search?q=${Uri.encodeComponent(trimmed)}',
+          label: 'Search $_searchEngine for "$trimmed"',
+          value: searchUrl,
           subtitle: 'Plain text falls back to search',
           icon: Icons.search,
-          keyword:
-              'https://www.google.com/search?q=${Uri.encodeComponent(trimmed)}',
+          keyword: searchUrl,
           aliases: const [],
         ),
       );
     }
 
-    return [...internal, ...external];
+    // What the user typed comes first; app tabs go below it. The other way
+    // round, short input like "s" matched the internal Search chip before the
+    // web search they meant (issue #7).
+    return [...external, ...internal];
   }
 
   bool _looksLikeBrowserUrl(String text) {
@@ -1388,7 +1407,14 @@ class _SuggestionTile extends StatelessWidget {
   }
 }
 
-BrowserSubmissionDecision _resolveBrowserSubmission(String input) {
+/// Decides what pressing enter in the browser address bar should do.
+///
+/// [engine] is the user's configured search engine, read from the same
+/// preference the browser settings screen writes.
+BrowserSubmissionDecision _resolveBrowserSubmission(
+  String input, {
+  String engine = 'DuckDuckGo',
+}) {
   final trimmed = input.trim();
   final lower = trimmed.toLowerCase();
 
@@ -1430,20 +1456,12 @@ BrowserSubmissionDecision _resolveBrowserSubmission(String input) {
     return BrowserSubmissionDecision(BrowserSubmissionKind.openUrl, trimmed);
   }
 
-  final directUrlPattern = RegExp(
-    r'^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#].*)?$',
-  );
-  if (!trimmed.contains(' ') && directUrlPattern.hasMatch(lower)) {
-    return BrowserSubmissionDecision(
-      BrowserSubmissionKind.openUrl,
-      'https://$trimmed',
-    );
-  }
-
-  return BrowserSubmissionDecision(
-    BrowserSubmissionKind.openUrl,
-    'https://www.google.com/search?q=${Uri.encodeComponent(trimmed)}',
-  );
+  // Everything left - bare domains and real searches - goes through the
+  // browser's own resolver. There used to be a second copy of this logic here
+  // that hard-coded Google, so which engine you got depended on which box you
+  // typed into (issue #7).
+  final resolved = BrowserScreen.buildSearchUrl(trimmed, engine: engine);
+  return BrowserSubmissionDecision(BrowserSubmissionKind.openUrl, resolved);
 }
 
 enum BrowserSubmissionKind {

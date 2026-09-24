@@ -74,6 +74,7 @@ class _MyAppState extends State<MyApp>
   bool _dismissedMediaKitError = false;
   late final Future<SharedPreferences> _prefsFuture =
       SharedPreferences.getInstance();
+  SharedPreferences? _prefs;
 
   @override
   void initState() {
@@ -83,6 +84,9 @@ class _MyAppState extends State<MyApp>
     PaintingBinding.instance.imageCache.maximumSize = 80;
     PaintingBinding.instance.imageCache.maximumSizeBytes = 40 << 20;
     _initController();
+    unawaited(_prefsFuture.then((prefs) {
+      if (mounted) setState(() => _prefs = prefs);
+    }));
     HardwareKeyboard.instance.addHandler(_handleGlobalKey);
 
     // Only add the window-manager listener on supported desktop platforms.
@@ -569,6 +573,29 @@ class _MyAppState extends State<MyApp>
 
   @override
   Widget build(BuildContext context) {
+    // Providers sit ABOVE MaterialApp on purpose.
+    //
+    // They used to live inside MaterialApp's home:, which made every route
+    // pushed on the root navigator - modal sheets, dialogs - a *sibling* of
+    // the provider rather than a descendant. Reading PlayerState from one
+    // threw ProviderNotFoundException, which release builds render as a grey
+    // ErrorWidget. That was the Watch Together grey screen in issue #7.
+    final app = _buildApp(context);
+    final prefs = _prefs;
+    final controller = _controller;
+    if (prefs == null || controller == null) return app;
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: PurchaseService.instance),
+        ChangeNotifierProvider.value(value: FullModeAccess.instance),
+        ChangeNotifierProvider(create: (_) => PlayerState(prefs)),
+        ChangeNotifierProvider.value(value: controller),
+      ],
+      child: app,
+    );
+  }
+
+  Widget _buildApp(BuildContext context) {
     final listenables = <Listenable>[
       FullModeAccess.instance,
       ColourRewardService.instance
@@ -655,8 +682,10 @@ class _MyAppState extends State<MyApp>
             child: MaterialApp(
               navigatorKey: _navigatorKey,
               title: getAppTitle(),
-              // Follows the device language; falls back to English for any
-              // locale we do not ship yet.
+              // Follows the device language unless the user picked one in
+              // Settings; falls back to English for any locale we do not
+              // ship yet.
+              locale: _resolveLocale(_controller?.settings?.language),
               localizationsDelegates: const [
                 AppLocalizations.delegate,
                 GlobalMaterialLocalizations.delegate,
@@ -763,49 +792,43 @@ class _MyAppState extends State<MyApp>
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Ready - build the actual app.
-    return FutureBuilder<SharedPreferences>(
-      future: _prefsFuture,
-      builder: (context, snap) {
-        if (!snap.hasData) {
-          return const Scaffold(
-              body: Center(child: CircularProgressIndicator()));
-        }
+    // Providers are mounted in build(), above MaterialApp, and only once
+    // preferences have resolved. Until then there is nothing for HomeScreen
+    // to read, so keep showing the spinner.
+    if (_prefs == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
-        final prefs = snap.data!;
-        final controller = _controller!;
+    final controller = _controller!;
 
-        // First time the app UI is actually ready - the end of "startup"
-        // for slow-start measurements.
-        SessionLogService.instance
-            .markOnce('controller_ready', 'app_controller_ready_first_frame');
+    // First time the app UI is actually ready - the end of "startup"
+    // for slow-start measurements.
+    SessionLogService.instance
+        .markOnce('controller_ready', 'app_controller_ready_first_frame');
 
-        Widget contentChild;
-        if (!controller.onboardingChecked) {
-          contentChild = const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        } else if (controller.needsOnboarding) {
-          contentChild = OnboardingScreen(
-            onFinish: controller.completeOnboarding,
-            onThemeChanged: (mode) => controller.setThemeMode(mode),
-            themeMode: _resolveThemeMode(controller.settings?.themeMode),
-          );
-        } else {
-          contentChild = MultiProvider(
-            providers: [
-              ChangeNotifierProvider.value(value: PurchaseService.instance),
-              ChangeNotifierProvider.value(value: FullModeAccess.instance),
-              ChangeNotifierProvider(create: (_) => PlayerState(prefs)),
-              ChangeNotifierProvider.value(value: controller),
-            ],
-            child: HomeScreen(controller: controller),
-          );
-        }
+    if (!controller.onboardingChecked) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (controller.needsOnboarding) {
+      return OnboardingScreen(
+        onFinish: controller.completeOnboarding,
+        onThemeChanged: (mode) => controller.setThemeMode(mode),
+        themeMode: _resolveThemeMode(controller.settings?.themeMode),
+      );
+    }
+    return HomeScreen(controller: controller);
+  }
 
-        return contentChild;
-      },
-    );
+  /// Maps the stored `language` setting to a locale override.
+  ///
+  /// Returns null for 'system' (and for anything we do not ship), which leaves
+  /// MaterialApp following the device language.
+  static Locale? _resolveLocale(String? code) {
+    if (code == null || code.isEmpty || code == 'system') return null;
+    for (final locale in AppLocalizations.supportedLocales) {
+      if (locale.languageCode == code) return locale;
+    }
+    return null;
   }
 
   static ThemeMode _resolveThemeMode(String? mode) {

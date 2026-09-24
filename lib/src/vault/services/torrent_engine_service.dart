@@ -60,9 +60,18 @@ class TorrentEngineStatus {
 
 class TorrentEngineService {
   TorrentEngineService._() {
+    _created = this;
     _bootstrapDhtNetwork();
   }
   static final TorrentEngineService instance = TorrentEngineService._();
+
+  /// The engine if something has already created it, else null.
+  ///
+  /// Reading [instance] starts DHT bootstrapping, so code that only wants to
+  /// look (the Android download keep-alive) uses this instead and leaves the
+  /// network alone on devices that never open a torrent.
+  static TorrentEngineService? get existingInstance => _created;
+  static TorrentEngineService? _created;
 
   static const List<String> _defaultDhtBootstrapNodes = [
     'router.bittorrent.com:6881',
@@ -3211,6 +3220,39 @@ class TorrentEngineService {
     } catch (_) {
       return const [];
     }
+  }
+
+  /// Torrents that are still fetching data: running or starting, not paused,
+  /// not yet complete.
+  ///
+  /// Seeding is left out on purpose, so a finished torrent does not hold the
+  /// phone awake indefinitely.
+  List<String> get activeDownloadIds {
+    final ids = <String>[];
+    for (final entry in _tasks.entries) {
+      if (_pausedTorrentIds.contains(entry.key)) continue;
+      try {
+        if (_isTaskComplete(entry.value)) continue;
+      } catch (_) {
+        // A task that cannot report its state is treated as still working.
+      }
+      ids.add(entry.key);
+    }
+    for (final id in _startingTorrentIds) {
+      if (_tasks.containsKey(id) || _pausedTorrentIds.contains(id)) continue;
+      ids.add(id);
+    }
+    return ids;
+  }
+
+  /// Pauses every torrent in [activeDownloadIds]. Used when the user taps Stop
+  /// on the download notification, or Android ends the foreground service.
+  int pauseActiveDownloads() {
+    final ids = activeDownloadIds;
+    for (final id in ids) {
+      pauseTorrent(id);
+    }
+    return ids.length;
   }
 
   void pauseTorrent(String torrentId) {

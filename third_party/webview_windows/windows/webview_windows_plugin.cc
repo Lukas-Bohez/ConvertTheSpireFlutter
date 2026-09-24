@@ -24,6 +24,8 @@ constexpr auto kMethodDispose = "dispose";
 constexpr auto kMethodInitializeEnvironment = "initializeEnvironment";
 constexpr auto kMethodGetWebViewVersion = "getWebViewVersion";
 constexpr auto kMethodProbeCom = "probeCom";
+constexpr auto kMethodAreBrowserExtensionsEnabled =
+    "areBrowserExtensionsEnabled";
 
 constexpr auto kErrorCodeInvalidId = "invalid_id";
 constexpr auto kErrorCodeEnvironmentCreationFailed =
@@ -161,6 +163,14 @@ void WebviewWindowsPlugin::HandleMethodCall(
     } else {
       return result->Success();
     }
+  }
+
+  // Whether the environment accepted browser extensions (issue #10). False
+  // before the environment exists, and on runtimes that refused them.
+  if (method_call.method_name().compare(kMethodAreBrowserExtensionsEnabled) ==
+      0) {
+    return result->Success(flutter::EncodableValue(
+        webview_host_ && webview_host_->browser_extensions_enabled()));
   }
 
   if (method_call.method_name().compare(kMethodInitialize) == 0) {

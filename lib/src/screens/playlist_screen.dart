@@ -837,7 +837,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         const Tab(text: 'Overview'),
         Tab(child: _tabLabel('Matched', matched, Colors.green)),
         Tab(child: _tabLabel('Missing', missing, Colors.orange)),
-        Tab(child: _tabLabel('Extras', extras, Colors.blue)),
+        Tab(child: _tabLabel('Extras', extras, cs.primary)),
       ],
     );
   }
@@ -1006,7 +1006,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         _summaryCard(
             'Missing', '${c.missingCount}', Icons.cancel, Colors.orange, theme),
         _summaryCard('Extras', '${c.extraCount}', Icons.library_music,
-            Colors.blue, theme),
+            cs.primary, theme),
       ],
     );
   }
@@ -1387,7 +1387,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
           title: 'Not in playlist',
           subtitle: 'Right-format files that no playlist track matches',
           icon: Icons.library_music,
-          color: Colors.blue,
+          color: theme.colorScheme.primary,
           files: notInPlaylist,
           actionIcon: Icons.insert_drive_file,
           onItemAction: _resolveExtra,

@@ -25,6 +25,11 @@ constexpr auto kMethodAddScriptToExecuteOnDocumentCreated =
 constexpr auto kMethodRemoveScriptToExecuteOnDocumentCreated =
     "removeScriptToExecuteOnDocumentCreated";
 constexpr auto kMethodExecuteScript = "executeScript";
+constexpr auto kMethodAddBrowserExtension = "addBrowserExtension";
+constexpr auto kMethodGetBrowserExtensions = "getBrowserExtensions";
+constexpr auto kMethodSetBrowserExtensionEnabled = "setBrowserExtensionEnabled";
+constexpr auto kMethodRemoveBrowserExtension = "removeBrowserExtension";
+constexpr auto kErrorExtension = "extensionError";
 constexpr auto kMethodPostWebMessage = "postWebMessage";
 constexpr auto kMethodSetSize = "setSize";
 constexpr auto kMethodSetCursorPos = "setCursorPos";
@@ -82,6 +87,27 @@ GetPointAndScaleFactorFromArgs(const flutter::EncodableValue* args) {
     return std::nullopt;
   }
   return std::make_tuple(*x, *y, *z);
+}
+
+static flutter::EncodableMap ExtensionToMap(
+    const WebviewBrowserExtension& extension) {
+  return flutter::EncodableMap{
+      {flutter::EncodableValue("id"), flutter::EncodableValue(extension.id)},
+      {flutter::EncodableValue("name"),
+       flutter::EncodableValue(extension.name)},
+      {flutter::EncodableValue("enabled"),
+       flutter::EncodableValue(extension.enabled)},
+  };
+}
+
+// Reports a failed extension call with the HRESULT, so Dart can tell "runtime
+// too old" (E_NOINTERFACE) apart from "this folder is not an extension".
+static void ExtensionError(
+    const std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>&
+        result,
+    HRESULT hr) {
+  result->Error(kErrorExtension, std::format("0x{:08X}", static_cast<uint32_t>(hr)),
+                flutter::EncodableValue(static_cast<int64_t>(hr)));
 }
 
 static const std::string& GetCursorName(const HCURSOR cursor) {
@@ -572,6 +598,87 @@ void WebviewBridge::HandleMethodCall(
               shared_result->Error(kScriptFailed, "Executing script failed.");
             }
           });
+      return;
+    }
+    return result->Error(kErrorInvalidArgs);
+  }
+
+  // addBrowserExtension: string (unpacked extension folder)
+  if (method_name.compare(kMethodAddBrowserExtension) == 0) {
+    if (const auto path = std::get_if<std::string>(method_call.arguments())) {
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>
+          shared_result = std::move(result);
+      webview_->AddBrowserExtension(
+          *path, [shared_result](
+                     HRESULT hr,
+                     std::optional<WebviewBrowserExtension> extension) {
+            if (SUCCEEDED(hr) && extension) {
+              shared_result->Success(
+                  flutter::EncodableValue(ExtensionToMap(*extension)));
+            } else {
+              ExtensionError(shared_result, hr);
+            }
+          });
+      return;
+    }
+    return result->Error(kErrorInvalidArgs);
+  }
+
+  // getBrowserExtensions
+  if (method_name.compare(kMethodGetBrowserExtensions) == 0) {
+    std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>
+        shared_result = std::move(result);
+    webview_->GetBrowserExtensions(
+        [shared_result](HRESULT hr,
+                        std::vector<WebviewBrowserExtension> extensions) {
+          if (FAILED(hr)) {
+            ExtensionError(shared_result, hr);
+            return;
+          }
+          flutter::EncodableList list;
+          for (const auto& extension : extensions) {
+            list.push_back(flutter::EncodableValue(ExtensionToMap(extension)));
+          }
+          shared_result->Success(flutter::EncodableValue(list));
+        });
+    return;
+  }
+
+  // setBrowserExtensionEnabled: [string id, bool enabled]
+  if (method_name.compare(kMethodSetBrowserExtensionEnabled) == 0) {
+    const auto* args = std::get_if<flutter::EncodableList>(method_call.arguments());
+    if (args && args->size() == 2) {
+      const auto* id = std::get_if<std::string>(&(*args)[0]);
+      const auto* enabled = std::get_if<bool>(&(*args)[1]);
+      if (id && enabled) {
+        std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>
+            shared_result = std::move(result);
+        webview_->SetBrowserExtensionEnabled(
+            *id, *enabled, [shared_result](HRESULT hr) {
+              if (SUCCEEDED(hr)) {
+                shared_result->Success();
+              } else {
+                ExtensionError(shared_result, hr);
+              }
+            });
+        return;
+      }
+    }
+    return result->Error(kErrorInvalidArgs);
+  }
+
+  // removeBrowserExtension: string id
+  if (method_name.compare(kMethodRemoveBrowserExtension) == 0) {
+    if (const auto id = std::get_if<std::string>(method_call.arguments())) {
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>
+          shared_result = std::move(result);
+      webview_->RemoveBrowserExtension(*id, [shared_result](HRESULT hr) {
+        if (SUCCEEDED(hr)) {
+          shared_result->Success();
+        } else {
+          ExtensionError(shared_result, hr);
+        }
+      });
       return;
     }
     return result->Error(kErrorInvalidArgs);

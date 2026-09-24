@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:mime/mime.dart';
 
+import 'media_range.dart';
+
 /// A lightweight local HTTP server that serves media files to DLNA renderers
 /// on the local network.
 ///
@@ -90,72 +92,23 @@ class LocalMediaServer {
   }
 
   /// Handle a GET or HEAD request for the media file.
+  ///
+  /// Range support is what lets a TV seek. The logic lives in media_range.dart
+  /// now, shared with the Watch Together host stream; this copy did no
+  /// clamping, so a range past the end of the file was read as-is (issue #7).
   Future<void> _handleMediaRequest(HttpRequest request) async {
     try {
-      final file = File(_servingPath!);
-      if (!await file.exists()) {
-        request.response
-          ..statusCode = HttpStatus.notFound
-          ..write('File no longer available');
-        await request.response.close();
-        return;
-      }
-
-      final length = await file.length();
       final mime = _servingMime ?? 'application/octet-stream';
-
-      // Set headers that DLNA renderers expect
-      request.response.headers
-        ..contentType = ContentType.parse(mime)
-        ..contentLength = length
-        ..set('Accept-Ranges', 'bytes')
-        ..set('Connection', 'keep-alive')
-        ..set('transferMode.dlna.org', 'Streaming')
-        ..set('contentFeatures.dlna.org', _dlnaContentFeatures(mime));
-
-      // Handle Range requests (many TVs use these for seeking)
-      final rangeHeader = request.headers.value('range');
-      if (rangeHeader != null && request.method == 'GET') {
-        final rangeMatch = RegExp(r'bytes=(\d+)-(\d*)').firstMatch(rangeHeader);
-        if (rangeMatch != null) {
-          final start = int.parse(rangeMatch.group(1) ?? '0');
-          final endStr = rangeMatch.group(2) ?? '';
-          final end = endStr.isNotEmpty ? int.parse(endStr) : length - 1;
-          final rangeLength = end - start + 1;
-
-          request.response
-            ..statusCode = HttpStatus.partialContent
-            ..headers.set('Content-Range', 'bytes $start-$end/$length')
-            ..headers.contentLength = rangeLength;
-
-          try {
-            await file.openRead(start, end + 1).pipe(request.response);
-          } catch (e, st) {
-            debugPrint('LocalMediaServer: pipe error: $e');
-            debugPrint('$st');
-            try {
-              await request.response.close();
-            } catch (_) {}
-          }
-          return;
-        }
-      }
-
-      if (request.method == 'HEAD') {
-        await request.response.close();
-        return;
-      }
-
-      // Full file
-      try {
-        await file.openRead().pipe(request.response);
-      } catch (e, st) {
-        debugPrint('LocalMediaServer: pipe error: $e');
-        debugPrint('$st');
-        try {
-          await request.response.close();
-        } catch (_) {}
-      }
+      await serveFileWithRanges(
+        request,
+        File(_servingPath!),
+        contentType: mime,
+        extraHeaders: {
+          'Connection': 'keep-alive',
+          'transferMode.dlna.org': 'Streaming',
+          'contentFeatures.dlna.org': _dlnaContentFeatures(mime),
+        },
+      );
     } catch (e, st) {
       debugPrint('LocalMediaServer: request processing failed: $e');
       debugPrint('$st');

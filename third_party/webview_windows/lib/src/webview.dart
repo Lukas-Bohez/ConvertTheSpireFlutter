@@ -84,6 +84,17 @@ class WebviewController extends ValueNotifier<WebviewValue> {
     });
   }
 
+  /// Whether the shared environment accepted browser extensions.
+  ///
+  /// False before [initializeEnvironment] has run, and on WebView2 runtimes
+  /// that refused the option (the environment then falls back to running
+  /// without extensions rather than failing).
+  static Future<bool> areBrowserExtensionsEnabled() async {
+    final enabled =
+        await _pluginChannel.invokeMethod<bool>('areBrowserExtensionsEnabled');
+    return enabled ?? false;
+  }
+
   /// Get the browser version info including channel name if it is not the
   /// WebView2 Runtime.
   /// Returns [null] if the webview2 runtime is not installed.
@@ -368,6 +379,51 @@ class WebviewController extends ValueNotifier<WebviewValue> {
     final data = await _methodChannel.invokeMethod('executeScript', script);
     if (data == null) return null;
     return jsonDecode(data as String);
+  }
+
+  /// Installs the unpacked extension in [folderPath] into this webview's
+  /// profile. It runs immediately and stays installed across restarts.
+  ///
+  /// Throws a [PlatformException] with code `extensionError` when WebView2
+  /// rejects it; `details` carries the HRESULT.
+  Future<BrowserExtension> addBrowserExtension(String folderPath) async {
+    _assertUsable();
+    final data = await _methodChannel.invokeMapMethod<String, dynamic>(
+        'addBrowserExtension', folderPath);
+    return BrowserExtension._fromMap(data!);
+  }
+
+  /// The extensions installed in this webview's profile.
+  Future<List<BrowserExtension>> getBrowserExtensions() async {
+    _assertUsable();
+    final data =
+        await _methodChannel.invokeListMethod<dynamic>('getBrowserExtensions');
+    return (data ?? const [])
+        .whereType<Map<dynamic, dynamic>>()
+        .map((m) => BrowserExtension._fromMap(m.cast<String, dynamic>()))
+        .toList();
+  }
+
+  /// Turns an installed extension on or off without removing it.
+  Future<void> setBrowserExtensionEnabled(String id, bool enabled) async {
+    _assertUsable();
+    await _methodChannel
+        .invokeMethod('setBrowserExtensionEnabled', <dynamic>[id, enabled]);
+  }
+
+  /// Uninstalls an extension from this webview's profile.
+  Future<void> removeBrowserExtension(String id) async {
+    _assertUsable();
+    await _methodChannel.invokeMethod('removeBrowserExtension', id);
+  }
+
+  void _assertUsable() {
+    if (_isDisposed) {
+      throw StateError('WebviewController is disposed');
+    }
+    if (!value.isInitialized) {
+      throw StateError('WebviewController is not initialized');
+    }
   }
 
   /// Posts the given JSON-formatted message to the current document.
@@ -740,4 +796,28 @@ class _WebviewState extends State<Webview> {
     super.dispose();
     _cursorSubscription?.cancel();
   }
+}
+
+/// An extension installed in a WebView2 profile.
+class BrowserExtension {
+  const BrowserExtension({
+    required this.id,
+    required this.name,
+    required this.enabled,
+  });
+
+  /// The id WebView2 assigned. Stable across restarts for the same folder.
+  final String id;
+  final String name;
+  final bool enabled;
+
+  factory BrowserExtension._fromMap(Map<String, dynamic> map) =>
+      BrowserExtension(
+        id: map['id'] as String? ?? '',
+        name: map['name'] as String? ?? '',
+        enabled: map['enabled'] as bool? ?? false,
+      );
+
+  @override
+  String toString() => 'BrowserExtension($id, $name, enabled: $enabled)';
 }

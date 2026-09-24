@@ -5,6 +5,7 @@ import "package:flutter/foundation.dart" show debugPrint, kIsWeb;
 import "package:http/http.dart" as http;
 import "package:path/path.dart" as p;
 
+import "../utils/process_runner.dart";
 import "platform_dirs.dart";
 import "session_log_service.dart";
 
@@ -226,9 +227,9 @@ class DenoRuntimeService {
   /// not that the binary is executable on this CPU.
   static Future<bool> _verifyDenoRuns(String path) async {
     try {
-      final r = await Process.run(path, ["--version"])
-          .timeout(const Duration(seconds: 10));
-      if (r.exitCode == 0) {
+      final r = await runProcess(path, const ["--version"],
+          timeout: const Duration(seconds: 10));
+      if (r.ok) {
         debugPrint(
             "deno-runtime: verified Deno at $path: ${r.stdout.toString().trim()}");
         return true;

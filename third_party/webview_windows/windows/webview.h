@@ -7,6 +7,9 @@
 #include <winrt/base.h>
 
 #include <functional>
+#include <optional>
+#include <string>
+#include <vector>
 
 class WebviewHost;
 
@@ -31,6 +34,13 @@ enum class WebviewPermissionState { Default, Allow, Deny };
 enum class WebviewPopupWindowPolicy { Allow, Deny, ShowInSameWindow };
 
 enum class WebviewHostResourceAccessKind { Deny, Allow, DenyCors };
+
+// A browser extension installed in the WebView2 profile (issue #10).
+struct WebviewBrowserExtension {
+  std::string id;
+  std::string name;
+  bool enabled = false;
+};
 
 struct WebviewHistoryChanged {
   BOOL can_go_back;
@@ -107,6 +117,13 @@ class Webview {
   typedef std::function<void(bool, const std::string&)>
       AddScriptToExecuteOnDocumentCreatedCallback;
   typedef std::function<void(bool, const std::string&)> ScriptExecutedCallback;
+  // Browser extensions. The HRESULT is S_OK on success; E_NOINTERFACE means
+  // the installed WebView2 runtime is too old for extensions.
+  typedef std::function<void(HRESULT, std::optional<WebviewBrowserExtension>)>
+      BrowserExtensionCallback;
+  typedef std::function<void(HRESULT, std::vector<WebviewBrowserExtension>)>
+      BrowserExtensionListCallback;
+  typedef std::function<void(HRESULT)> BrowserExtensionResultCallback;
   typedef std::function<void(const std::string&)> WebMessageReceivedCallback;
   typedef std::function<void(WebviewPermissionState state)>
       WebviewPermissionRequestedCompleter;
@@ -159,6 +176,17 @@ class Webview {
                                  const std::string& path,
                                  WebviewHostResourceAccessKind accessKind);
   bool ClearVirtualHostNameMapping(const std::string& hostName);
+
+  // Browser extensions live in the profile, so every webview sharing the
+  // environment sees the same set. Requires the environment to have been
+  // created with AreBrowserExtensionsEnabled (see WebviewHost::Create).
+  void AddBrowserExtension(const std::string& folder_path,
+                           BrowserExtensionCallback callback);
+  void GetBrowserExtensions(BrowserExtensionListCallback callback);
+  void SetBrowserExtensionEnabled(const std::string& id, bool enabled,
+                                  BrowserExtensionResultCallback callback);
+  void RemoveBrowserExtension(const std::string& id,
+                              BrowserExtensionResultCallback callback);
 
   void OnUrlChanged(UrlChangedCallback callback) {
     url_changed_callback_ = std::move(callback);
@@ -255,5 +283,12 @@ class Webview {
       HWND hwnd, bool offscreen_only);
   void RegisterEventHandlers();
   void EnableSecurityUpdates();
+  wil::com_ptr<ICoreWebView2Profile7> GetExtensionProfile();
+  // Finds an installed extension by id and hands it to [action], or reports
+  // E_INVALIDARG through [callback] when there is none.
+  void WithBrowserExtension(
+      const std::string& id,
+      std::function<void(wil::com_ptr<ICoreWebView2BrowserExtension>)> action,
+      BrowserExtensionResultCallback callback);
   void SendScroll(double offset, bool horizontal);
 };

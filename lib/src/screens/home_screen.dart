@@ -13,11 +13,13 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config/build_flags.dart';
 import '../config/full_mode_access.dart';
+import '../models/app_languages.dart';
 import '../models/app_settings.dart';
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
 import '../services/ad_service.dart';
 import '../services/android_saf.dart';
+import '../services/bug_report_service.dart';
 import '../services/folder_access_service.dart';
 import '../services/ipfs_service.dart';
 import '../services/review_service.dart';
@@ -36,6 +38,7 @@ import '../widgets/quick_links_page.dart';
 import '../widgets/quick_links_service.dart';
 import '../widgets/tv_file_browser.dart';
 import '../widgets/update_banner.dart';
+import '../widgets/whats_new_dialog.dart';
 import 'browser_screen.dart';
 import 'bulk_import_screen.dart';
 import 'guide_screen.dart';
@@ -190,6 +193,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
 
     _initDesktopFeatures();
+
+    // Show what changed after the app updated itself under the user.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_maybeShowWhatsNew());
+    });
 
     try {
       _selectedPageIndex = widget.controller.activeTabIndex;
@@ -528,7 +536,45 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     } catch (_) {}
   }
 
+  /// Tab index of the browser, used to decide what the refresh button does.
+  static const int _browserTabIndex = 2;
+
+  Future<void> _maybeShowWhatsNew() async {
+    final version = widget.controller.currentAppVersion;
+    if (version == null || !mounted) return;
+    if (widget.controller.needsOnboarding) return;
+    await WhatsNewDialog.maybeShow(
+      context,
+      version,
+      freshInstall: widget.controller.isFreshInstall,
+    );
+  }
+
+  /// Opens a prefilled GitHub issue so reports arrive with a version,
+  /// a platform and the tail of the log already attached.
+  Future<void> _reportBug() async {
+    final url = await BugReportService.buildIssueUrl();
+    if (!mounted) return;
+    try {
+      final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
+      if (!opened && mounted) {
+        Snack.show(context, 'Could not open the browser',
+            level: SnackLevel.error);
+      }
+    } catch (e) {
+      if (mounted) {
+        Snack.show(context, 'Could not open the browser: $e',
+            level: SnackLevel.error);
+      }
+    }
+  }
+
   Future<void> _refreshApp() async {
+    // In the browser, refresh means "reload this page" - it is the same
+    // button people use in every other browser (issue #7).
+    if (_selectedPageIndex == _browserTabIndex && BrowserScreen.reloadPage()) {
+      return;
+    }
     if (_isRefreshing) return;
     setState(() => _isRefreshing = true);
     try {
@@ -2880,6 +2926,50 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // -- Settings tab -------------------------------------------------------
 
+  /// Language picker, shared by the simplified and the full Settings tab.
+  ///
+  /// The app shipped 18 translations with no way to choose one: it followed the
+  /// device language and nothing else. See issue #7.
+  Widget _buildLanguageTile(AppSettings settings) {
+    final current = appLanguageFor(settings.language);
+    return ListTile(
+      leading: const Icon(Icons.language),
+      title: const Text('Language'),
+      subtitle: Text(
+        current.code == 'system'
+            ? 'Automatic (device language)'
+            : '${current.nativeName} - ${current.englishName}',
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => _pickLanguage(settings),
+    );
+  }
+
+  Future<void> _pickLanguage(AppSettings settings) async {
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Language'),
+        children: [
+          for (final language in kAppLanguages)
+            ListTile(
+              title: Text(language.nativeName),
+              subtitle: Text(language.englishName),
+              trailing: language.code == settings.language
+                  ? Icon(
+                      Icons.check,
+                      color: Theme.of(dialogContext).colorScheme.primary,
+                    )
+                  : null,
+              onTap: () => Navigator.pop(dialogContext, language.code),
+            ),
+        ],
+      ),
+    );
+    if (chosen == null || chosen == settings.language) return;
+    await widget.controller.saveSettings(settings.copyWith(language: chosen));
+  }
+
   Widget _buildSimplifiedSettingsTab(AppSettings settings) {
     // Simplified settings for Play Store build: only torrent path and theme
     final isNarrow = _isNarrowLayout(context);
@@ -3086,6 +3176,15 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                       ],
                     ),
+                  ),
+                  _buildLanguageTile(settings),
+                  ListTile(
+                    leading: const Icon(Icons.bug_report_outlined),
+                    title: const Text('Report a bug'),
+                    subtitle: const Text(
+                        'Opens GitHub with your version and recent log filled in'),
+                    trailing: const Icon(Icons.open_in_new),
+                    onTap: () => unawaited(_reportBug()),
                   ),
                 ],
               ),
@@ -3888,7 +3987,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             'yt-dlp $versionText - Could not check for updates';
 
                         if (_ytDlpVersionChecking) {
-                          dotColor = Colors.blueGrey;
+                          dotColor = Theme.of(context).colorScheme.primary;
                           statusText =
                               'yt-dlp $versionText - Checking for updates...';
                         } else if (!_ytDlpVersionCheckFailed &&
@@ -4261,6 +4360,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       widget.controller.saveSettings(
                           settings.copyWith(themeMode: value.first));
                     },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildLanguageTile(settings),
+                  ListTile(
+                    leading: const Icon(Icons.bug_report_outlined),
+                    title: const Text('Report a bug'),
+                    subtitle: const Text(
+                        'Opens GitHub with your version and recent log filled in'),
+                    trailing: const Icon(Icons.open_in_new),
+                    onTap: () => unawaited(_reportBug()),
                   ),
                 ],
               ),

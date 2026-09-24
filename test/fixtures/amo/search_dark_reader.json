@@ -1,0 +1,147 @@
+{
+ "count": 717,
+ "next": "https://addons.mozilla.org/api/v5/addons/search/?app=firefox&lang=en-US&page=2&page_size=3&q=dark+reader&type=extension",
+ "previous": null,
+ "page_size": 3,
+ "page_count": 239,
+ "results": [
+  {
+   "guid": "addon@darkreader.org",
+   "slug": "darkreader",
+   "name": {
+    "en-US": "Dark Reader"
+   },
+   "summary": {
+    "en-US": "Dark mode for every website. Take care of your eyes, use dark theme for night and daily browsing."
+   },
+   "icon_url": "https://addons.mozilla.org/user-media/addon_icons/855/855413-64.png?modified=3f34e276",
+   "average_daily_users": 1324137,
+   "ratings": {
+    "average": 4.4843
+   },
+   "promoted": [
+    {
+     "category": "recommended",
+     "apps": [
+      "firefox",
+      "android"
+     ]
+    }
+   ],
+   "url": "https://addons.mozilla.org/en-US/firefox/addon/darkreader/",
+   "current_version": {
+    "version": "4.9.131",
+    "compatibility": {
+     "firefox": {
+      "min": "78.0",
+      "max": "*"
+     },
+     "android": {
+      "min": "113.0",
+      "max": "*"
+     }
+    },
+    "file": {
+     "url": "https://addons.mozilla.org/firefox/downloads/file/5029993/darkreader-4.9.131.xpi",
+     "hash": "sha256:8be2371a105c298d159180c623c1fc133ed10aef56ae2bf2c98e899bd0e39d20",
+     "size": 867675,
+     "permissions": [
+      "alarms",
+      "contextMenus",
+      "storage",
+      "tabs",
+      "theme",
+      "<all_urls>"
+     ],
+     "host_permissions": []
+    }
+   },
+   "default_locale": "en-US"
+  },
+  {
+   "guid": "{7c1078f8-8abe-432a-9cdb-442d6d313520}",
+   "slug": "soothing-dark-mode",
+   "name": {
+    "en-US": "Dark Reader Night Eye"
+   },
+   "summary": {
+    "en-US": "Dark Mode instantly transforms any website into a beautiful, easy-on-the-eyes dark theme. 🌙"
+   },
+   "icon_url": "https://addons.mozilla.org/user-media/addon_icons/3009/3009436-64.png?modified=373cb634",
+   "average_daily_users": 1279,
+   "ratings": {
+    "average": 4.7143
+   },
+   "promoted": [],
+   "url": "https://addons.mozilla.org/en-US/firefox/addon/soothing-dark-mode/",
+   "current_version": {
+    "version": "2.2",
+    "compatibility": {
+     "firefox": {
+      "min": "91.0",
+      "max": "*"
+     },
+     "android": {
+      "min": "120.0",
+      "max": "*"
+     }
+    },
+    "file": {
+     "url": "https://addons.mozilla.org/firefox/downloads/file/4792783/soothing_dark_mode-2.2.xpi",
+     "hash": "sha256:05db4783378477e66f9978c631eb630fda536b944323f8366139a5c6f301d4c5",
+     "size": 70317,
+     "permissions": [
+      "storage",
+      "tabs",
+      "<all_urls>",
+      "webRequest",
+      "webRequestBlocking"
+     ],
+     "host_permissions": []
+    }
+   },
+   "default_locale": "en-US"
+  },
+  {
+   "guid": "addon@phatphan.org",
+   "slug": "ext-lite",
+   "name": {
+    "en-US": "Ext Lite"
+   },
+   "summary": {
+    "en-US": "Ext lite for every website. Take care of your eyes, use dark theme for night and daily browsing."
+   },
+   "icon_url": "https://addons.mozilla.org/static-server/img/addon-icons/default-64.png",
+   "average_daily_users": 161,
+   "ratings": {
+    "average": 1.0
+   },
+   "promoted": [],
+   "url": "https://addons.mozilla.org/en-US/firefox/addon/ext-lite/",
+   "current_version": {
+    "version": "4.9.76",
+    "compatibility": {
+     "firefox": {
+      "min": "54.0",
+      "max": "*"
+     }
+    },
+    "file": {
+     "url": "https://addons.mozilla.org/firefox/downloads/file/4229456/ext_lite-4.9.76.xpi",
+     "hash": "sha256:dc8c4a7bfaef66b329e33c3303ed62a7538bc9d0a7ea6406b304cb8d44655cf0",
+     "size": 724083,
+     "permissions": [
+      "alarms",
+      "contextMenus",
+      "storage",
+      "tabs",
+      "theme",
+      "<all_urls>"
+     ],
+     "host_permissions": []
+    }
+   },
+   "default_locale": "en-US"
+  }
+ ]
+}

@@ -2,17 +2,19 @@
 
 ## 📥 Quick Downloads
 
-* **[Latest GitHub Release (v14.3.1)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest)**: Get the full-featured app for Windows, macOS, and Android (APK). The GitHub APK builds are ad-free and unlock all colours by default.
+* **[Latest GitHub Release (v14.4.0)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest)**: Get the full-featured app for Windows, macOS, and Android (APK). The GitHub APK builds are ad-free and unlock all colours by default.
 * **[Official Website (quizthespire.com)](https://quizthespire.com/)**: An additional place to download the app and learn more.
 * **[Google Play Store (Convert The Spire Reborn)](https://play.google.com/store/apps/details?id=com.torrentspire.ai)**: The limited, App Store-compatible version featuring only the torrenting and media player functionality to comply with Play policies.
 
 ---
 
+**Browser extensions** — on Windows the built-in browser runs Chrome extensions and add-ons from addons.mozilla.org, with a catalog, permission prompts and popups right inside the app.
+
 **Userscripts** — the built-in browser runs Tampermonkey/Greasemonkey scripts, on top of the ad and tracker blocking it already had.
 
 **Watch Together** — start a room, share a six-character code, and everyone watches in step across phone, PC, Mac and TV. No server, no account; it runs on your own network.
 
-**Available in 18 languages** — the app follows your device language automatically (Arabic, Dutch, English, French, German, Hindi, Indonesian, Italian, Japanese, Korean, Polish, Portuguese, Russian, Simplified Chinese, Spanish, Turkish, Ukrainian, Vietnamese). Translation files live in [`lib/l10n/`](lib/l10n/) — PRs welcome.
+**Available in 18 languages** — the app follows your device language, or pick one in Settings (Arabic, Dutch, English, French, German, Hindi, Indonesian, Italian, Japanese, Korean, Polish, Portuguese, Russian, Simplified Chinese, Spanish, Turkish, Ukrainian, Vietnamese). Translation files live in [`lib/l10n/`](lib/l10n/) — PRs welcome.
 
 ## ▶ Watch the demo
 

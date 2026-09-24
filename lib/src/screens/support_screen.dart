@@ -617,13 +617,15 @@ class _SupportScreenState extends State<SupportScreen> {
             onTap: () => _openUrl('https://buymeacoffee.com/orokaconner'),
           ),
         ),
-                const SizedBox(height: 12),
+        const SizedBox(height: 12),
         if (kPlayStoreBuild)
           Card(
             child: ListTile(
-              leading: const Icon(Icons.open_in_browser, color: Colors.blue),
+              leading: Icon(Icons.open_in_browser,
+                  color: Theme.of(context).colorScheme.primary),
               title: const Text('Advanced build on GitHub'),
-              subtitle: const Text('Open-source build with all features enabled'),
+              subtitle:
+                  const Text('Open-source build with all features enabled'),
               trailing: const Icon(Icons.open_in_new),
               onTap: () => _openUrl(
                   'https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases'),

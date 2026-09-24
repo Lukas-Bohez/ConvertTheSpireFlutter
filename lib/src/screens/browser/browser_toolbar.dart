@@ -1,6 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../browser/extensions/extension_hosts.dart';
+import '../../browser/extensions/web_extension_host.dart';
 import '../../config/build_flags.dart';
+import 'browser_chrome.dart';
+import 'extension_page_dialog.dart';
 
 /// Top toolbar for the browser with URL bar, navigation, cast button, and menu.
 class BrowserToolbar extends StatelessWidget {
@@ -73,10 +79,9 @@ class BrowserToolbar extends StatelessWidget {
 
     // Incognito gets a dark purple tint; normal mode uses a slightly elevated
     // surface so the toolbar doesn't blend into the page content.
-    final bgColor = isIncognito
-        ? const Color(0xFF1A1A2E)
-        : cs.surfaceContainerLowest;
-    final iconColor = isIncognito ? Colors.white : cs.onSurface;
+    final bgColor =
+        isIncognito ? incognitoSurface(cs) : cs.surfaceContainerLowest;
+    final iconColor = isIncognito ? onIncognitoSurface : cs.onSurface;
 
     return Material(
       elevation: 2,
@@ -126,12 +131,17 @@ class BrowserToolbar extends StatelessWidget {
                     child: GestureDetector(
                       onTap: onAddressBarTap,
                       child: Container(
-                        height: wide ? 42 : (compact ? 34 : 38),
+                        // A minimum, not a fixed height: the pill grows with
+                        // the user's text size and with scripts that need
+                        // taller lines (Devanagari, CJK). A fixed height
+                        // clipped both lines at 130% text on every width.
+                        constraints: BoxConstraints(
+                            minHeight: wide ? 42 : (compact ? 34 : 38)),
                         decoration: BoxDecoration(
                           color: isIncognito
                               ? Colors.white.withValues(alpha: 0.08)
-                              : cs.surfaceContainerHighest.withValues(
-                                  alpha: 0.7),
+                              : cs.surfaceContainerHighest
+                                  .withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: isIncognito
@@ -170,8 +180,7 @@ class BrowserToolbar extends StatelessWidget {
                               Expanded(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       _siteDomain(currentUrl),
@@ -266,14 +275,14 @@ class BrowserToolbar extends StatelessWidget {
                                 child: SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 ),
                               ),
                             )
                           : IconButton(
-                              icon: const Icon(Icons.download_rounded,
-                                  size: 20),
+                              icon:
+                                  const Icon(Icons.download_rounded, size: 20),
                               onPressed: downloadEnabled
                                   ? () {
                                       onReleaseWebViewFocus?.call();
@@ -286,8 +295,14 @@ class BrowserToolbar extends StatelessWidget {
                                     cs.primaryContainer.withValues(alpha: 0.8),
                                 foregroundColor: cs.onPrimaryContainer,
                               ),
-                              ),
                             ),
+                    ),
+                  if (ExtensionHosts.available)
+                    _ExtensionActionsButton(
+                      onManage: () => onMenuAction('extensions'),
+                      onReleaseWebViewFocus: onReleaseWebViewFocus,
+                      compact: compact,
+                    ),
                   // Overflow menu
                   _OverflowMenuButton(
                     onMenuAction: onMenuAction,
@@ -439,6 +454,109 @@ class _TabsButton extends StatelessWidget {
   }
 }
 
+/// The toolbar's extension button: opens an installed extension's popup.
+///
+/// WebView2 has no browser chrome, so the app draws this itself (issue #10).
+/// It stays hidden until an enabled extension has a popup to show, so people
+/// who never install one never see it.
+class _ExtensionActionsButton extends StatefulWidget {
+  const _ExtensionActionsButton({
+    required this.onManage,
+    this.onReleaseWebViewFocus,
+    this.compact = false,
+  });
+
+  final VoidCallback onManage;
+  final VoidCallback? onReleaseWebViewFocus;
+  final bool compact;
+
+  @override
+  State<_ExtensionActionsButton> createState() =>
+      _ExtensionActionsButtonState();
+}
+
+class _ExtensionActionsButtonState extends State<_ExtensionActionsButton> {
+  StreamSubscription<ExtensionEvent>? _events;
+  List<InstalledExtension> _withPopups = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _events = ExtensionHosts.current.events.listen((_) => _load());
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _events?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final all = await ExtensionHosts.current.list();
+      if (!mounted) return;
+      setState(() {
+        _withPopups =
+            all.where((e) => e.enabled && e.popupPath != null).toList();
+      });
+    } catch (_) {
+      // No list, no button; the Extensions screen reports the problem.
+    }
+  }
+
+  Future<void> _open(BuildContext buttonContext) async {
+    widget.onReleaseWebViewFocus?.call();
+    final button = buttonContext.findRenderObject() as RenderBox;
+    final overlay =
+        Overlay.of(buttonContext).context.findRenderObject() as RenderBox;
+    final position = RelativeRect.fromRect(
+      button.localToGlobal(Offset.zero) & button.size,
+      Offset.zero & overlay.size,
+    );
+    final choice = await showMenu<String>(
+      context: buttonContext,
+      position: position,
+      items: [
+        for (final extension in _withPopups)
+          PopupMenuItem(
+            value: extension.id,
+            child: _MenuRow(icon: Icons.extension, label: extension.name),
+          ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(
+          value: '__manage__',
+          child: _MenuRow(
+              icon: Icons.settings_outlined, label: 'Manage extensions'),
+        ),
+      ],
+    );
+    if (choice == null || !mounted) return;
+    if (choice == '__manage__') {
+      widget.onManage();
+      return;
+    }
+    final extension = _withPopups.where((e) => e.id == choice).firstOrNull;
+    final url = extension == null
+        ? null
+        : ExtensionHosts.current.pageUrl(extension, extension.popupPath!);
+    if (url == null || !mounted) return;
+    await ExtensionPageDialog.show(context, url: url, title: extension!.name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_withPopups.isEmpty) return const SizedBox.shrink();
+    return Builder(
+      builder: (buttonContext) => IconButton(
+        icon: Icon(Icons.extension, size: widget.compact ? 18 : 20),
+        tooltip: 'Extensions',
+        onPressed: () => _open(buttonContext),
+      ),
+    );
+  }
+}
+
 class _OverflowMenuButton extends StatelessWidget {
   final ValueChanged<String> onMenuAction;
   final VoidCallback? onReleaseWebViewFocus;
@@ -468,16 +586,15 @@ class _OverflowMenuButton extends StatelessWidget {
               buttonContext.findRenderObject() as RenderBox;
           final Offset buttonPos = button.localToGlobal(Offset.zero);
           final Size buttonSize = button.size;
-          final RenderBox overlay = Overlay.of(buttonContext)
-              .context
-              .findRenderObject() as RenderBox;
+          final RenderBox overlay =
+              Overlay.of(buttonContext).context.findRenderObject() as RenderBox;
 
           final selection = await showMenu<String>(
             context: buttonContext,
             color: Theme.of(buttonContext).colorScheme.surfaceContainerHigh,
             elevation: 8,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             position: RelativeRect.fromRect(
               buttonPos & buttonSize,
               Offset.zero & overlay.size,
@@ -486,78 +603,75 @@ class _OverflowMenuButton extends StatelessWidget {
               if (!kPlayStoreBuild)
                 PopupMenuItem(
                     value: 'cast',
-                    child: Row(children: [
-                      Icon(Icons.cast,
-                          color: Theme.of(context).colorScheme.onSurface),
-                      const SizedBox(width: 12),
-                      const Text('Cast to device'),
-                      const Spacer(),
-                      if (isCastConnected)
-                        Icon(Icons.circle,
-                            size: 8,
-                            color: Theme.of(context).colorScheme.primary),
-                    ])),
-              PopupMenuItem(
+                    child: _MenuRow(
+                      icon: Icons.cast,
+                      label: 'Cast to device',
+                      trailing: isCastConnected
+                          ? Icon(Icons.circle,
+                              size: 8,
+                              color: Theme.of(context).colorScheme.primary)
+                          : null,
+                    )),
+              const PopupMenuItem(
                   value: 'openExternal',
-                  child: Row(children: [
-                    Icon(Icons.open_in_browser,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    const SizedBox(width: 12),
-                    const Text('Open in browser'),
-                  ])),
-              PopupMenuItem(
+                  child: _MenuRow(
+                      icon: Icons.open_in_browser, label: 'Open in browser')),
+              const PopupMenuItem(
                   value: 'copyLink',
-                  child: Row(children: [
-                    Icon(Icons.copy,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    const SizedBox(width: 12),
-                    const Text('Copy link'),
-                  ])),
-              PopupMenuItem(
+                  child: _MenuRow(icon: Icons.copy, label: 'Copy link')),
+              const PopupMenuItem(
                   value: 'share',
-                  child: Row(children: [
-                    Icon(Icons.share,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    const SizedBox(width: 12),
-                    const Text('Share'),
-                  ])),
-              PopupMenuItem(
+                  child: _MenuRow(icon: Icons.share, label: 'Share')),
+              const PopupMenuItem(
                   value: 'addCookies',
-                  child: Row(children: [
-                    Icon(Icons.cookie_outlined,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    const SizedBox(width: 12),
-                    const Text('Add cookies (for downloads)'),
-                  ])),
-              PopupMenuItem(
+                  child: _MenuRow(
+                      icon: Icons.cookie_outlined,
+                      label: 'Add cookies (for downloads)')),
+              const PopupMenuItem(
                   value: 'history',
-                  child: Row(children: [
-                    Icon(Icons.history,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    const SizedBox(width: 12),
-                    const Text('History'),
-                  ])),
-              PopupMenuItem(
+                  child: _MenuRow(icon: Icons.history, label: 'History')),
+              // The puzzle piece belongs to real extensions now; userscripts
+              // are code snippets, so they get a code icon.
+              if (ExtensionHosts.available)
+                const PopupMenuItem(
+                    value: 'extensions',
+                    child: _MenuRow(
+                        icon: Icons.extension_outlined, label: 'Extensions')),
+              const PopupMenuItem(
                   value: 'userscripts',
-                  child: Row(children: [
-                    Icon(Icons.extension_outlined,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    const SizedBox(width: 12),
-                    const Text('Userscripts'),
-                  ])),
-              PopupMenuItem(
+                  child: _MenuRow(icon: Icons.code, label: 'Userscripts')),
+              const PopupMenuItem(
                   value: 'clear_session',
-                  child: Row(children: [
-                    Icon(Icons.delete_sweep,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    const SizedBox(width: 12),
-                    const Text('Clear browsing data'),
-                  ])),
+                  child: _MenuRow(
+                      icon: Icons.delete_sweep, label: 'Clear browsing data')),
             ],
           );
           if (selection != null) onMenuAction(selection);
         },
       );
     });
+  }
+}
+
+/// One row of a toolbar menu: icon, label, optional trailing marker.
+///
+/// The label wraps rather than overflowing. A popup menu is at most 256px
+/// wide inside, and at 130% system text size "Add cookies (for downloads)"
+/// alone is wider than that.
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({required this.icon, required this.label, this.trailing});
+
+  final IconData icon;
+  final String label;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Icon(icon, color: Theme.of(context).colorScheme.onSurface),
+      const SizedBox(width: 12),
+      Expanded(child: Text(label)),
+      if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+    ]);
   }
 }
