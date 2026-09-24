@@ -52,8 +52,6 @@ class AdService with WidgetsBindingObserver {
       'ca-app-pub-3940256099942544/1033173712';
   static const String _debugRewardedAdUnitId =
       'ca-app-pub-3940256099942544/5224354917';
-  static const String _debugRewardedInterstitialAdUnitId =
-      'ca-app-pub-3940256099942544/5354046379';
   static const String _debugNativeAdUnitId =
       'ca-app-pub-3940256099942544/2247696110';
 
@@ -63,8 +61,6 @@ class AdService with WidgetsBindingObserver {
       'ca-app-pub-8418485814964449/3401876348';
   static const String _releaseRewardedAdUnitId =
       'ca-app-pub-8418485814964449/6938316192';
-  static const String _releaseRewardedInterstitialAdUnitId =
-      'ca-app-pub-8418485814964449/7832075944';
   static const String _releaseNativeAdUnitId =
       'ca-app-pub-8418485814964449/7181339255';
 
@@ -80,13 +76,13 @@ class AdService with WidgetsBindingObserver {
   bool _adsInitialised = false;
   DateTime? _lastInterstitialShownAt;
   DateTime? _temporaryAdBreakUntil;
+  Timer? _adBreakEndTimer;
   int _adsWatchedCount = 0;
   final AdFrequencyGate _adFrequencyGate = AdFrequencyGate();
 
-  InterstitialAd? _interstitialAd;
   InterstitialAd? _preloadedInterstitial;
+  bool _interstitialLoadInFlight = false;
   RewardedAd? _rewardedAd;
-  RewardedInterstitialAd? _rewardedInterstitialAd;
 
   bool get hasTemporaryAdBreak =>
       _temporaryAdBreakUntil != null &&
@@ -109,9 +105,6 @@ class AdService with WidgetsBindingObserver {
       kDebugMode ? _debugInterstitialAdUnitId : _releaseInterstitialAdUnitId;
   String get rewardedAdUnitId =>
       kDebugMode ? _debugRewardedAdUnitId : _releaseRewardedAdUnitId;
-  String get rewardedInterstitialAdUnitId => kDebugMode
-      ? _debugRewardedInterstitialAdUnitId
-      : _releaseRewardedInterstitialAdUnitId;
   String get nativeAdUnitId =>
       kDebugMode ? _debugNativeAdUnitId : _releaseNativeAdUnitId;
 
@@ -145,9 +138,34 @@ class AdService with WidgetsBindingObserver {
       final until = DateTime.fromMillisecondsSinceEpoch(adBreakUntilMs);
       if (DateTime.now().isBefore(until)) {
         _temporaryAdBreakUntil = until;
+        _scheduleAdBreakEnd();
       }
     }
     _adsWatchedCount = prefs.getInt(_adsWatchedCountPrefsKey) ?? 0;
+  }
+
+  /// Arms a timer for the end of the current temporary ad break, so ads are
+  /// loaded again as soon as it runs out. Nothing else reloads the
+  /// interstitial while the app stays in the foreground, so without this the
+  /// break would last until the next time the app is backgrounded.
+  void _scheduleAdBreakEnd() {
+    _adBreakEndTimer?.cancel();
+    _adBreakEndTimer = null;
+    final remaining = temporaryAdBreakRemaining;
+    if (remaining == Duration.zero) return;
+    // One extra second so hasTemporaryAdBreak is surely false when it fires.
+    _adBreakEndTimer = Timer(
+      remaining + const Duration(seconds: 1),
+      _onAdBreakEnded,
+    );
+  }
+
+  void _onAdBreakEnded() {
+    _adBreakEndTimer = null;
+    // The loaders re-check every gate (SDK initialised, ad-free purchase,
+    // another break), so this is a no-op if ads must stay off.
+    _preloadNextInterstitial();
+    unawaited(loadRewarded());
   }
 
   Future<BannerAd?> loadBanner() async {
@@ -180,72 +198,58 @@ class AdService with WidgetsBindingObserver {
     );
   }
 
-  Future<InterstitialAd?> loadInterstitial() async {
-    if (!_adsInitialised) return null;
-    if (!_isSupportedPlatform || _adsSuppressed) return null;
-    if (_interstitialAd != null) return _interstitialAd;
-    final completer = Completer<InterstitialAd?>();
-    await InterstitialAd.load(
-      adUnitId: interstitialAdUnitId,
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) {
-              ad.dispose();
-              _interstitialAd = null;
-              unawaited(loadInterstitial());
-            },
-            onAdFailedToShowFullScreenContent: (ad, error) {
-              ad.dispose();
-              _interstitialAd = null;
-              unawaited(loadInterstitial());
-            },
-          );
-          _interstitialAd = ad;
-          if (!completer.isCompleted) completer.complete(ad);
-        },
-        onAdFailedToLoad: (error) {
-          if (kDebugMode) debugPrint('Interstitial failed to load: $error');
-          _interstitialAd = null;
-          if (!completer.isCompleted) completer.complete(null);
-        },
-      ),
-    );
-    return completer.future;
-  }
-
   void _preloadNextInterstitial() {
     if (!_adsInitialised) return;
     if (!_isSupportedPlatform || _adsSuppressed) return;
-    if (_preloadedInterstitial != null) return;
+    // One load at a time: the lifecycle observer, the dismiss callback and the
+    // ad-break timer can all ask for a preload while one is still running.
+    if (_preloadedInterstitial != null || _interstitialLoadInFlight) return;
+    _interstitialLoadInFlight = true;
 
     InterstitialAd.load(
       adUnitId: interstitialAdUnitId,
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
+          _interstitialLoadInFlight = false;
+          // Ads were switched off (purchase or ad break) while this loaded.
+          if (_adsSuppressed) {
+            ad.dispose();
+            return;
+          }
+          // The next ad may already be preloaded while this one is on screen
+          // (the app is paused then), so only clear the slot if it still
+          // holds this ad.
           ad.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
               ad.dispose();
-              _preloadedInterstitial = null;
+              if (identical(_preloadedInterstitial, ad)) {
+                _preloadedInterstitial = null;
+              }
               _preloadNextInterstitial();
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
               ad.dispose();
-              _preloadedInterstitial = null;
+              if (identical(_preloadedInterstitial, ad)) {
+                _preloadedInterstitial = null;
+              }
               _preloadNextInterstitial();
             },
           );
           _preloadedInterstitial = ad;
         },
         onAdFailedToLoad: (error) {
+          _interstitialLoadInFlight = false;
           if (kDebugMode) debugPrint('Interstitial preload failed: $error');
           _preloadedInterstitial = null;
           Future.delayed(const Duration(minutes: 2), _preloadNextInterstitial);
         },
       ),
-    );
+    ).catchError((Object error) {
+      // The platform call itself failed, so neither callback will run.
+      _interstitialLoadInFlight = false;
+      if (kDebugMode) debugPrint('Interstitial preload threw: $error');
+    });
   }
 
   Future<RewardedAd?> loadRewarded() async {
@@ -283,44 +287,10 @@ class AdService with WidgetsBindingObserver {
     return completer.future;
   }
 
-  Future<RewardedInterstitialAd?> loadRewardedInterstitial() async {
-    if (!_adsInitialised) return null;
-    if (!_isSupportedPlatform || _adsSuppressed) return null;
-    if (_rewardedInterstitialAd != null) return _rewardedInterstitialAd;
-    final completer = Completer<RewardedInterstitialAd?>();
-    await RewardedInterstitialAd.load(
-      adUnitId: rewardedInterstitialAdUnitId,
-      request: const AdRequest(),
-      rewardedInterstitialAdLoadCallback: RewardedInterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) {
-              ad.dispose();
-              _rewardedInterstitialAd = null;
-              unawaited(loadRewardedInterstitial());
-            },
-            onAdFailedToShowFullScreenContent: (ad, error) {
-              ad.dispose();
-              _rewardedInterstitialAd = null;
-              unawaited(loadRewardedInterstitial());
-            },
-          );
-          _rewardedInterstitialAd = ad;
-          if (!completer.isCompleted) completer.complete(ad);
-        },
-        onAdFailedToLoad: (error) {
-          if (kDebugMode) {
-            debugPrint('Rewarded interstitial failed to load: $error');
-          }
-          _rewardedInterstitialAd = null;
-          if (!completer.isCompleted) completer.complete(null);
-        },
-      ),
-    );
-    return completer.future;
-  }
-
   Future<NativeAd?> loadNativeAd({bool isDark = false}) async {
+    // Same gate as every other format: no request before consent has been
+    // checked and the SDK initialised.
+    if (!_adsInitialised) return null;
     if (!_isSupportedPlatform || _adsSuppressed) return null;
     final completer = Completer<NativeAd?>();
     late final NativeAd nativeAd;
@@ -381,6 +351,12 @@ class AdService with WidgetsBindingObserver {
   /// Shows an interstitial after a successful download, respecting cooldowns.
   Future<void> maybeShowInterstitialAfterSuccess() async {
     if (!_isSupportedPlatform || _adsSuppressed) return;
+    final ad = _preloadedInterstitial;
+    if (ad == null) {
+      // Nothing ready: start a load so the next opportunity has one.
+      _preloadNextInterstitial();
+      return;
+    }
     if (!isInForeground) return;
     final last = _lastInterstitialShownAt;
     if (last != null &&
@@ -388,8 +364,6 @@ class AdService with WidgetsBindingObserver {
       return;
     }
     if (!_adFrequencyGate.shouldShowAd()) return;
-    final ad = _preloadedInterstitial;
-    if (ad == null) return;
     _preloadedInterstitial = null;
     _lastInterstitialShownAt = DateTime.now();
     _adFrequencyGate.recordAdShown();
@@ -417,12 +391,31 @@ class AdService with WidgetsBindingObserver {
     if (ad == null) return false;
 
     _rewardedAd = null;
-    var rewardEarned = false;
+
+    // RewardedAd.show() completes as soon as the ad is on screen, before the
+    // user has watched it and before onUserEarnedReward fires. Reading the
+    // reward flag right after show() therefore always saw "not earned". Wait
+    // for the ad to close (or fail to show) instead, then report the result.
+    final closed = Completer<void>();
+    Future<void>? rewardAction;
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        unawaited(loadRewarded());
+        if (!closed.isCompleted) closed.complete();
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        if (kDebugMode) debugPrint('Rewarded ad failed to show: $error');
+        ad.dispose();
+        unawaited(loadRewarded());
+        if (!closed.isCompleted) closed.complete();
+      },
+    );
     try {
       await ad.show(
         onUserEarnedReward: (ad, reward) {
-          rewardEarned = true;
-          unawaited(onRewardEarned());
+          // Start the reward right away (as before); it is awaited below.
+          rewardAction ??= onRewardEarned();
         },
       );
     } catch (e) {
@@ -431,7 +424,22 @@ class AdService with WidgetsBindingObserver {
       unawaited(loadRewarded());
       return false;
     }
-    return rewardEarned;
+
+    await closed.future;
+    // Some mediation adapters report the reward just after the ad closes.
+    if (rewardAction == null) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
+    final action = rewardAction;
+    if (action == null) return false;
+    try {
+      // Let the reward finish (for example the ad break being saved) before
+      // the caller tells the user it was granted.
+      await action;
+    } catch (e) {
+      debugPrint('Rewarded ad reward action failed: $e');
+    }
+    return true;
   }
 
   Future<void> _incrementAdsWatchedCount() async {
@@ -447,6 +455,7 @@ class AdService with WidgetsBindingObserver {
       return;
     }
     _temporaryAdBreakUntil = until;
+    _scheduleAdBreakEnd();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_temporaryAdBreakPrefsKey, until.millisecondsSinceEpoch);
     disposeAllAds();
@@ -467,35 +476,43 @@ class AdService with WidgetsBindingObserver {
   Future<void> initWithConsent() async {
     if (!_isSupportedPlatform) return;
 
+    debugPrint('AdService: initWithConsent() start');
     try {
-      debugPrint('AdService: initWithConsent() start');
       await _updateConsentInfo();
       await _showConsentFormIfRequired();
-
-      final canRequest = await ConsentInformation.instance.canRequestAds();
-      debugPrint('AdService: canRequestAds = $canRequest');
-
-      if (canRequest) {
-        await MobileAds.instance.initialize();
-        _adsInitialised = true;
-        debugPrint('AdService: MobileAds initialised');
-        _preloadNextInterstitial();
-        unawaited(loadRewarded());
-        unawaited(loadRewardedInterstitial());
-      } else {
-        debugPrint('AdService: consent not obtained, ads not initialised');
-      }
     } catch (e) {
-      debugPrint('AdService: consent flow error, attempting fallback init: $e');
-      try {
-        await MobileAds.instance.initialize();
-        _adsInitialised = true;
-        _preloadNextInterstitial();
-        unawaited(loadRewarded());
-        unawaited(loadRewardedInterstitial());
-      } catch (e2) {
-        debugPrint('AdService: fallback init also failed: $e2');
-      }
+      // Do not initialise ads just because the consent flow broke. Fall
+      // through to canRequestAds(): it still reflects consent the user gave in
+      // an earlier session, and stays false if they never gave any.
+      debugPrint('AdService: consent flow error: $e');
+    }
+
+    final canRequest = await _canRequestAds();
+    debugPrint('AdService: canRequestAds = $canRequest');
+    if (!canRequest) {
+      debugPrint('AdService: consent not obtained, ads not initialised');
+      return;
+    }
+
+    try {
+      await MobileAds.instance.initialize();
+    } catch (e) {
+      debugPrint('AdService: MobileAds init failed, ads stay off: $e');
+      return;
+    }
+    _adsInitialised = true;
+    debugPrint('AdService: MobileAds initialised');
+    _preloadNextInterstitial();
+    unawaited(loadRewarded());
+  }
+
+  /// UMP's canRequestAds(), treating any error as "no consent".
+  Future<bool> _canRequestAds() async {
+    try {
+      return await ConsentInformation.instance.canRequestAds();
+    } catch (e) {
+      debugPrint('AdService: canRequestAds check failed: $e');
+      return false;
     }
   }
 
@@ -585,13 +602,9 @@ class AdService with WidgetsBindingObserver {
 
   /// Disposes any preloaded ad instances to free SDK resources.
   void disposeAllAds() {
-    _interstitialAd?.dispose();
-    _interstitialAd = null;
     _preloadedInterstitial?.dispose();
     _preloadedInterstitial = null;
     _rewardedAd?.dispose();
     _rewardedAd = null;
-    _rewardedInterstitialAd?.dispose();
-    _rewardedInterstitialAd = null;
   }
 }
