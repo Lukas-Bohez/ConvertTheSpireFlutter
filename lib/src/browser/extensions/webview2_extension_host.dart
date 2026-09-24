@@ -125,6 +125,10 @@ class WebView2ExtensionHost implements WebExtensionHost {
       }
       final controller = WebviewController();
       await controller.initialize();
+      // Nobody sees this webview. An extension that opens a tab on install
+      // (a welcome page, say) would otherwise pop up a bare window outside
+      // the app.
+      await controller.setPopupWindowPolicy(WebviewPopupWindowPolicy.deny);
       _controller = controller;
       return controller;
     }();

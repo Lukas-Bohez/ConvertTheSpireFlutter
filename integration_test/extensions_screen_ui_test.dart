@@ -108,11 +108,16 @@ void main() {
 
     await tester.tap(find.widgetWithText(Tab, 'Installed'));
     await waitFor(tester, find.text('Open'));
+    // Let the tab slide finish: a tap mid-animation does not reach the page.
+    await settle(tester, const Duration(seconds: 1));
     await screenshot(tester, 'installed');
 
     // Its popup, hosted in the app's own webview.
     await tester.tap(find.text('Open'));
-    await settle(tester, const Duration(seconds: 6));
+    // The popup starts its own WebView2, which can take a few seconds on a
+    // busy machine; then give the page time to render and be measured.
+    await waitFor(tester, find.byType(Webview));
+    await settle(tester, const Duration(seconds: 4));
     expect(find.byType(Webview), findsOneWidget);
     await screenshot(tester, 'popup');
 

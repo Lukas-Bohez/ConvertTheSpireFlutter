@@ -47,17 +47,22 @@ class _ExtensionPageDialogState extends State<ExtensionPageDialog> {
   bool _ready = false;
   String? _error;
 
-  /// Popups start at a typical size and then fit their content.
-  Size _size = const Size(380, 520);
+  /// The popup page's preferred size, once measured. Until then popups show
+  /// at a typical size.
+  Size? _content;
 
+  static const Size _defaultPopup = Size(380, 520);
+  static const Size _optionsPage = Size(900, 640);
   static const Size _minPopup = Size(240, 160);
   static const Size _maxPopup = Size(800, 600);
+
+  /// Room for a vertical scrollbar, so a popup that has to scroll does not
+  /// also grow a horizontal one.
   static const double _scrollbarAllowance = 18;
 
   @override
   void initState() {
     super.initState();
-    if (widget.isOptionsPage) _size = const Size(900, 640);
     unawaited(_open());
   }
 
@@ -65,8 +70,20 @@ class _ExtensionPageDialogState extends State<ExtensionPageDialog> {
     try {
       await WebView2Environment.ensure();
       await _controller.initialize();
+      // A popup's "open settings" link opens a tab; keep it in this dialog
+      // rather than a bare window outside the app.
+      await _controller
+          .setPopupWindowPolicy(WebviewPopupWindowPolicy.sameWindow);
       _loading = _controller.loadingState.listen((state) {
-        if (state == LoadingState.navigationCompleted) unawaited(_fit());
+        if (state != LoadingState.navigationCompleted) return;
+        // Popups often build their UI with script after "loaded" fires, so
+        // measure again as the page settles; the last measurement wins.
+        unawaited(_fit());
+        for (final delay in const [400, 1200]) {
+          Future<void>.delayed(Duration(milliseconds: delay), () {
+            if (mounted) unawaited(_fit());
+          });
+        }
       });
       await _controller.loadUrl(widget.url);
       if (mounted) setState(() => _ready = true);
@@ -99,16 +116,7 @@ class _ExtensionPageDialogState extends State<ExtensionPageDialog> {
       final width = (measured[0] as num).toDouble();
       final height = (measured[1] as num).toDouble();
       if (width <= 0 || height <= 0 || !mounted) return;
-      // A popup taller than the cap scrolls, and the vertical scrollbar
-      // takes width from the content; leave room so no horizontal bar appears.
-      final scrolls = height > _maxPopup.height;
-      setState(() {
-        _size = Size(
-          (width + (scrolls ? _scrollbarAllowance : 0))
-              .clamp(_minPopup.width, _maxPopup.width),
-          height.clamp(_minPopup.height, _maxPopup.height),
-        );
-      });
+      setState(() => _content = Size(width, height));
     } catch (_) {
       // Keep the default size; a page we cannot measure still works.
     }
@@ -121,12 +129,41 @@ class _ExtensionPageDialogState extends State<ExtensionPageDialog> {
     super.dispose();
   }
 
+  /// The size to show the page at, given the screen.
+  ///
+  /// The height limit is whichever is smaller, the 600px popup cap or what
+  /// fits in the window, and a popup taller than that scrolls. The scrollbar
+  /// allowance is decided against that real limit: checking only the 600px
+  /// cap missed popups that scroll because the window is short, and gave them
+  /// a horizontal scrollbar as well.
+  (double, double) _displaySize(Size screen) {
+    final maxWidth =
+        (screen.width - 48).clamp(_minPopup.width, double.infinity);
+    final maxHeight =
+        (screen.height - 140).clamp(_minPopup.height, double.infinity);
+
+    if (widget.isOptionsPage) {
+      return (
+        _optionsPage.width.clamp(_minPopup.width, maxWidth),
+        _optionsPage.height.clamp(_minPopup.height, maxHeight),
+      );
+    }
+    final content = _content ?? _defaultPopup;
+    final heightLimit =
+        _maxPopup.height < maxHeight ? _maxPopup.height : maxHeight;
+    final widthLimit = _maxPopup.width < maxWidth ? _maxPopup.width : maxWidth;
+    final scrolls = _content != null && content.height > heightLimit;
+    return (
+      (content.width + (scrolls ? _scrollbarAllowance : 0))
+          .clamp(_minPopup.width, widthLimit),
+      content.height.clamp(_minPopup.height, heightLimit),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final screen = MediaQuery.sizeOf(context);
-    final width = _size.width.clamp(200.0, screen.width - 48);
-    final height = _size.height.clamp(120.0, screen.height - 140);
+    final (width, height) = _displaySize(MediaQuery.sizeOf(context));
 
     return Dialog(
       clipBehavior: Clip.antiAlias,
