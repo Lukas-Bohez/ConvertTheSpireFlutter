@@ -1,9 +1,14 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/app_settings.dart';
 import '../models/queue_item.dart';
@@ -14,6 +19,7 @@ import '../services/media_organizer.dart';
 import '../services/platform_dirs.dart';
 import '../services/playlist_service.dart';
 import '../state/app_controller.dart';
+import '../utils/folder_label.dart';
 import '../utils/snack.dart';
 import '../widgets/tv_file_browser.dart';
 
@@ -21,7 +27,11 @@ import '../widgets/tv_file_browser.dart';
 /// and taking action on missing / matched / extra tracks.
 class PlaylistScreen extends StatefulWidget {
   final PlaylistService playlistService;
-  final void Function(List<SearchResult> tracks, String format)
+
+  /// Queues [tracks] for download. [folder] is the folder that was compared,
+  /// so missing tracks land next to the ones already there; null means the
+  /// usual download folder.
+  final void Function(List<SearchResult> tracks, String format, String? folder)
       onDownloadMissing;
   final ValueNotifier<PendingPlaylistRequest?>? pendingRequest;
 
@@ -93,7 +103,44 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         // AppController not in scope (widget used standalone) — the live
         // reconcile is unavailable; the Compare button still refreshes.
       }
+      unawaited(_restoreCompareFolder());
     });
+  }
+
+  static const String _compareFolderPrefsKey = 'playlist_compare_folder';
+
+  /// Fills in the folder so Compare works without a trip to the picker: the
+  /// last folder compared, else where this app saves downloads.
+  Future<void> _restoreCompareFolder() async {
+    if (_folderController.text.trim().isNotEmpty) return;
+    String? folder;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      folder = prefs.getString(_compareFolderPrefsKey);
+    } catch (_) {}
+    if (folder == null || folder.trim().isEmpty) {
+      folder = await _defaultCompareFolder();
+    }
+    if (!mounted || folder.trim().isEmpty) return;
+    if (_folderController.text.trim().isNotEmpty) return;
+    setState(() => _folderController.text = folder!);
+  }
+
+  /// The folder this app downloads [_selectedFormat] files into. On a phone
+  /// with no folder picked that is the shared `Download/<format>` folder.
+  Future<String> _defaultCompareFolder() async {
+    final configured = _formatTargetFor('.$_selectedFormat').trim();
+    if (configured.isNotEmpty) return configured;
+    final downloads = await PlatformDirs.getPublicDownloadsDir();
+    if (downloads == null || downloads.isEmpty) return '';
+    return p.join(downloads, _selectedFormat);
+  }
+
+  Future<void> _rememberCompareFolder(String folder) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_compareFolderPrefsKey, folder);
+    } catch (_) {}
   }
 
   void _onPendingRequest() {
@@ -108,9 +155,20 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     widget.pendingRequest?.value = null;
 
     _urlController.text = request.url;
+    // Keep the format chosen where the link was pasted; it used to fall
+    // back to MP3 here whatever was picked.
+    final format = request.format.toLowerCase();
+    if (const {'mp3', 'm4a', 'mp4'}.contains(format)) {
+      setState(() => _selectedFormat = format);
+    }
     await _loadPlaylist();
-    _folderController.text = request.folder;
-    await _compareToFolder();
+    if (request.folder.trim().isNotEmpty) {
+      _folderController.text = request.folder;
+    } else if (_folderController.text.trim().isEmpty) {
+      _folderController.text = await _defaultCompareFolder();
+    }
+    if (_folderController.text.trim().isEmpty) return;
+    await _compareToFolder(promptForFolder: false);
   }
 
   // --─ Actions --------------------------------------------------------------
@@ -153,25 +211,39 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     }
   }
 
-  Future<void> _pickFolder() async {
+  /// Returns true when a folder was chosen.
+  Future<bool> _pickFolder() async {
     AdService.instance.registerInteraction();
     final result = await pickDirectoryPath(
       context,
       dialogTitle: 'Select music folder to compare',
     );
-    if (result != null) {
-      _folderController.text = result;
+    if (result == null || result.isEmpty || !mounted) return false;
+    setState(() => _folderController.text = result);
+    return true;
+  }
+
+  /// Picks a folder, then compares against it straight away.
+  Future<void> _pickFolderAndCompare() async {
+    if (await _pickFolder() && _tracks != null && _tracks!.isNotEmpty) {
+      await _compareToFolder();
     }
   }
 
-  Future<void> _compareToFolder({bool jumpToBestTab = true}) async {
+  Future<void> _compareToFolder(
+      {bool jumpToBestTab = true, bool promptForFolder = true}) async {
     AdService.instance.registerInteraction();
     if (_tracks == null || _tracks!.isEmpty) return;
-    final folder = _folderController.text.trim();
-    if (folder.isEmpty) return;
+    var folder = _folderController.text.trim();
+    if (folder.isEmpty) {
+      // Pressing Compare with no folder used to do nothing at all.
+      if (!promptForFolder || !await _pickFolder()) return;
+      folder = _folderController.text.trim();
+    }
 
     setState(() {
       _loading = true;
+      _error = null;
       _loadingMessage = 'Scanning folder & matching…';
     });
 
@@ -180,6 +252,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         _tracks!,
         folder,
       );
+      unawaited(_rememberCompareFolder(folder));
       if (!mounted) return;
       setState(() {
         _comparison = comparison;
@@ -269,6 +342,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         missing: remaining,
         extras: comparison.extras,
         folderPath: comparison.folderPath,
+        filesScanned: comparison.filesScanned,
       );
       _missingSelection.removeAll(downloaded.keys);
     });
@@ -607,47 +681,88 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     };
   }
 
+  // The content goes to the picker as bytes: Android and iOS refuse a save
+  // dialog without them (it threw, so both exports did nothing on phones),
+  // and on desktop the picker writes them to the chosen path itself.
   Future<void> _exportMissing() async {
     AdService.instance.registerInteraction();
-    if (_comparison == null || _comparison!.missing.isEmpty) return;
-    final result = await FilePicker.platform.saveFile(
+    final missing = _comparison?.missing ?? const <SearchResult>[];
+    if (missing.isEmpty) return;
+    final text = widget.playlistService.buildTrackList(missing);
+    await _saveExport(
       dialogTitle: 'Export missing tracks',
       fileName: 'missing_tracks.txt',
-      allowedExtensions: ['txt'],
-      type: FileType.custom,
+      extension: 'txt',
+      content: text,
+      doneMessage: 'Exported ${missing.length} tracks',
     );
-    if (result != null) {
-      await widget.playlistService
-          .exportTrackList(_comparison!.missing, result);
-      if (mounted) {
-        Snack.show(context,
-            'Exported ${_comparison!.missing.length} tracks to $result',
-            level: SnackLevel.success);
-      }
-    }
   }
 
   Future<void> _exportM3U() async {
     AdService.instance.registerInteraction();
     if (_tracks == null || _tracks!.isEmpty) return;
-    final result = await FilePicker.platform.saveFile(
+    final matched = _comparison?.matched ?? const <TrackMatch>[];
+    final text = matched.isNotEmpty
+        ? widget.playlistService.buildM3UFromMatches(matched)
+        : widget.playlistService.buildM3U(_tracks!, format: _selectedFormat);
+    final safeTitle = (_playlistInfo?.title ?? 'playlist')
+        .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+    await _saveExport(
       dialogTitle: 'Save M3U playlist',
-      fileName: '${_playlistInfo?.title ?? 'playlist'}.m3u',
-      allowedExtensions: ['m3u'],
-      type: FileType.custom,
+      fileName: '$safeTitle.m3u',
+      extension: 'm3u',
+      content: text,
+      doneMessage: 'Saved the M3U playlist',
     );
-    if (result != null) {
-      if (_comparison != null && _comparison!.matched.isNotEmpty) {
-        await widget.playlistService
-            .generateM3UFromMatches(_comparison!.matched, result);
-      } else {
-        await widget.playlistService
-            .generateM3U(_tracks!, result, format: _selectedFormat);
-      }
-      if (mounted) {
-        Snack.show(context, 'Saved M3U to $result', level: SnackLevel.success);
-      }
+  }
+
+  Future<void> _saveExport({
+    required String dialogTitle,
+    required String fileName,
+    required String extension,
+    required String content,
+    required String doneMessage,
+  }) async {
+    try {
+      final result = await FilePicker.platform.saveFile(
+        dialogTitle: dialogTitle,
+        fileName: fileName,
+        allowedExtensions: [extension],
+        type: FileType.custom,
+        bytes: Uint8List.fromList(utf8.encode(content)),
+      );
+      if (result == null || !mounted) return;
+      Snack.show(context, doneMessage, level: SnackLevel.success);
+    } catch (e) {
+      if (!mounted) return;
+      Snack.show(context, 'Could not save the file: $e',
+          level: SnackLevel.error);
     }
+  }
+
+  /// Where "Download missing" saves: the compared folder, so the tracks end
+  /// up beside the rest of the playlist. On Android only a folder from the
+  /// picker can be written to; the prefilled shared Downloads path is where
+  /// downloads go anyway, so that one maps to the normal download folder.
+  String? get _downloadFolderForMissing {
+    final folder = _comparison?.folderPath.trim() ?? '';
+    if (folder.isEmpty) return null;
+    if (!kIsWeb && Platform.isAndroid && !folder.startsWith('content://')) {
+      return null;
+    }
+    return folder;
+  }
+
+  void _downloadMissing(List<SearchResult> tracks) {
+    if (tracks.isEmpty) return;
+    widget.onDownloadMissing(tracks, _selectedFormat, _downloadFolderForMissing);
+    Snack.show(
+      context,
+      tracks.length == 1
+          ? 'Downloading "${tracks.first.title}"'
+          : 'Downloading ${tracks.length} tracks',
+      level: SnackLevel.info,
+    );
   }
 
   @override
@@ -701,11 +816,52 @@ class _PlaylistScreenState extends State<PlaylistScreen>
   // --─ Input Section --------------------------------------------------------
 
   Widget _buildInputSection(ThemeData theme, ColorScheme cs) {
+    // Phones get the Compare button on its own row; beside a text field and
+    // a browse button it squeezed the folder path down to a few letters.
+    final narrow = MediaQuery.sizeOf(context).width < 600;
+    final folder = _folderController.text.trim();
+    // A folder from Android's picker is a content:// URI: show where it is
+    // rather than the URI, and change it with the picker, not the keyboard.
+    final pickedOnPhone = folder.startsWith('content://');
+
+    final compareButton = FilledButton.tonalIcon(
+      onPressed: _loading ? null : () => _compareToFolder(),
+      icon: const Icon(Icons.compare_arrows, size: 20),
+      label: const Text('Compare'),
+    );
+
+    final Widget folderField = pickedOnPhone
+        ? InputDecorator(
+            decoration: const InputDecoration(
+              labelText: 'Folder to compare',
+              prefixIcon: Icon(Icons.folder),
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            child: Text(
+              friendlyFolderLabel(folder),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          )
+        : TextField(
+            controller: _folderController,
+            decoration: const InputDecoration(
+              hintText: 'Local music folder path',
+              prefixIcon: Icon(Icons.folder),
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            onChanged: (_) => setState(() {}),
+            onSubmitted: (_) => _compareToFolder(),
+          );
+
     return Card(
       margin: const EdgeInsets.all(12),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
               children: [
@@ -733,36 +889,29 @@ class _PlaylistScreenState extends State<PlaylistScreen>
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _folderController,
-                      decoration: const InputDecoration(
-                        hintText: 'Local music folder path',
-                        prefixIcon: Icon(Icons.folder),
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      onSubmitted: (_) => _compareToFolder(),
-                    ),
-                  ),
+                  Expanded(child: folderField),
                   const SizedBox(width: 8),
                   IconButton.outlined(
-                    onPressed: _pickFolder,
+                    onPressed: _loading ? null : _pickFolderAndCompare,
                     icon: const Icon(Icons.folder_open),
-                    tooltip: 'Browse…',
+                    tooltip: pickedOnPhone ? 'Change folder' : 'Browse…',
                   ),
-                  const SizedBox(width: 4),
-                  FilledButton.tonalIcon(
-                    onPressed: _loading ? null : _compareToFolder,
-                    icon: const Icon(Icons.compare_arrows, size: 20),
-                    label: const Text('Compare'),
-                  ),
+                  if (!narrow) ...[
+                    const SizedBox(width: 4),
+                    compareButton,
+                  ],
                 ],
               ),
+              if (narrow) ...[
+                const SizedBox(height: 8),
+                compareButton,
+              ],
               const SizedBox(height: 8),
-              Row(
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
                 children: [
-                  const Text('Download format: '),
+                  const Text('Download format:'),
                   DropdownButton<String>(
                     value: _selectedFormat,
                     isDense: true,
@@ -831,8 +980,12 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     final missing = _comparison?.missingCount ?? 0;
     final extras = _comparison?.extraCount ?? 0;
 
+    // Four labelled tabs with count badges do not fit a phone's width.
+    final narrow = MediaQuery.sizeOf(context).width < 520;
     return TabBar(
       controller: _tabController,
+      isScrollable: narrow,
+      tabAlignment: narrow ? TabAlignment.start : null,
       tabs: [
         const Tab(text: 'Overview'),
         Tab(child: _tabLabel('Matched', matched, Colors.green)),
@@ -926,6 +1079,10 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
           // Comparison summary
           if (_comparison != null) ...[
+            if (_comparison!.filesScanned == 0) ...[
+              _buildNoFilesFoundCard(theme),
+              const SizedBox(height: 16),
+            ],
             _buildSummaryCards(theme, cs),
             const SizedBox(height: 16),
             // Completion bar
@@ -958,19 +1115,30 @@ class _PlaylistScreenState extends State<PlaylistScreen>
               ),
             const SizedBox(height: 12),
             // Quick actions
-            if (_comparison!.missing.isNotEmpty)
+            if (_comparison!.missing.isNotEmpty) ...[
               FilledButton.icon(
-                onPressed: () => widget.onDownloadMissing(
-                    _comparison!.missing, _selectedFormat),
+                onPressed: () => _downloadMissing(_comparison!.missing),
                 icon: const Icon(Icons.download),
                 label: Text(
                     'Download All ${_comparison!.missingCount} Missing Tracks'),
               ),
+              const SizedBox(height: 6),
+              Text(
+                _downloadFolderForMissing == null
+                    ? 'They go to your download folder.'
+                    : 'They go into ${friendlyFolderLabel(_downloadFolderForMissing!)}, '
+                        'next to the rest of the playlist.',
+                style: theme.textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+            ],
           ] else ...[
             // No comparison yet - show track list
             const SizedBox(height: 8),
             Text(
-                '${_tracks!.length} tracks loaded. Select a folder above to compare.',
+                _folderController.text.trim().isEmpty
+                    ? '${_tracks!.length} tracks loaded. Choose a folder above to see which you already have.'
+                    : '${_tracks!.length} tracks loaded. Press Compare to see which are already in the folder.',
                 style:
                     theme.textTheme.bodyMedium?.copyWith(color: Colors.grey)),
             const SizedBox(height: 12),
@@ -1099,23 +1267,24 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
     return Column(
       children: [
-        // Toolbar
+        // Toolbar. A Wrap, not a Row: the chips and the sort menu are wider
+        // than a phone and used to overflow off the right edge.
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 4,
+            runSpacing: 4,
             children: [
               // Confidence filter chips
               const Text('Min confidence: '),
-              ...[0.0, 0.55, 0.70, 0.85].map((v) => Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: ChoiceChip(
-                      label: Text(v == 0 ? 'All' : '${(v * 100).toInt()}%'),
-                      selected: _confidenceFilter == v,
-                      onSelected: (_) => setState(() => _confidenceFilter = v),
-                      visualDensity: VisualDensity.compact,
-                    ),
+              ...[0.0, 0.55, 0.70, 0.85].map((v) => ChoiceChip(
+                    label: Text(v == 0 ? 'All' : '${(v * 100).toInt()}%'),
+                    selected: _confidenceFilter == v,
+                    onSelected: (_) => setState(() => _confidenceFilter = v),
+                    visualDensity: VisualDensity.compact,
                   )),
-              const Spacer(),
+              const SizedBox(width: 8),
               // Sort dropdown
               DropdownButton<_SortMode>(
                 value: _sortMode,
@@ -1180,23 +1349,22 @@ class _PlaylistScreenState extends State<PlaylistScreen>
 
     return Column(
       children: [
-        // Action bar (selection + download)
+        // Action bar (selection + download). Wraps on phones, where three
+        // buttons side by side ran off the screen.
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 6,
             children: [
               FilledButton.icon(
                 onPressed: _missingSelection.isEmpty
                     ? null
-                    : () => widget.onDownloadMissing(
-                          _missingSelection.toList(),
-                          _selectedFormat,
-                        ),
+                    : () => _downloadMissing(_missingSelection.toList()),
                 icon: const Icon(Icons.download, size: 18),
                 label: Text(
                     'Download Selected (${_missingSelection.length}/${_comparison!.missingCount})'),
               ),
-              const SizedBox(width: 8),
               OutlinedButton.icon(
                 onPressed: () {
                   setState(() {
@@ -1213,7 +1381,6 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                         ? 'Clear Selection'
                         : 'Select All'),
               ),
-              const SizedBox(width: 8),
               OutlinedButton.icon(
                 onPressed: _exportMissing,
                 icon: const Icon(Icons.save_alt, size: 18),
@@ -1246,39 +1413,13 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                       duration: Duration(seconds: 2),
                     ));
                   },
+                  // The whole row toggles, not just the small checkbox, which
+                  // was hard to hit with a thumb.
+                  onTap: () => _setMissingSelected(i, !selected),
                   leading: Checkbox(
                     value: selected,
                     onChanged: (value) {
-                      setState(() {
-                        if (value == null) return;
-
-                        // Range selection (shift-click style): long-press to set a
-                        // starting point, then tap another item to select the range.
-                        if (_lastMissingSelectedIndex != null &&
-                            _lastMissingSelectedIndex != i) {
-                          final start = _lastMissingSelectedIndex!;
-                          final end = i;
-                          final range = start < end
-                              ? List.generate(end - start + 1, (j) => start + j)
-                              : List.generate(start - end + 1, (j) => end + j);
-                          for (final idx in range) {
-                            final item = _comparison!.missing[idx];
-                            if (value) {
-                              _missingSelection.add(item);
-                            } else {
-                              _missingSelection.remove(item);
-                            }
-                          }
-                          _lastMissingSelectedIndex = null;
-                        } else {
-                          if (value) {
-                            _missingSelection.add(t);
-                          } else {
-                            _missingSelection.remove(t);
-                          }
-                          _lastMissingSelectedIndex = i;
-                        }
-                      });
+                      if (value != null) _setMissingSelected(i, value);
                     },
                   ),
                   title: Text(t.title,
@@ -1288,8 +1429,7 @@ class _PlaylistScreenState extends State<PlaylistScreen>
                   trailing: IconButton(
                     icon: const Icon(Icons.download, size: 20),
                     tooltip: 'Download this track',
-                    onPressed: () =>
-                        widget.onDownloadMissing([t], _selectedFormat),
+                    onPressed: () => _downloadMissing([t]),
                   ),
                 );
               },
@@ -1300,12 +1440,88 @@ class _PlaylistScreenState extends State<PlaylistScreen>
     );
   }
 
+  /// Selects or clears Missing row [i]. After a long-press, the next row
+  /// selects everything in between (shift-click style).
+  void _setMissingSelected(int i, bool value) {
+    final missing = _comparison?.missing;
+    if (missing == null || i < 0 || i >= missing.length) return;
+    setState(() {
+      final anchor = _lastMissingSelectedIndex;
+      if (anchor != null && anchor != i && anchor < missing.length) {
+        final lo = anchor < i ? anchor : i;
+        final hi = anchor < i ? i : anchor;
+        for (var idx = lo; idx <= hi; idx++) {
+          if (value) {
+            _missingSelection.add(missing[idx]);
+          } else {
+            _missingSelection.remove(missing[idx]);
+          }
+        }
+        _lastMissingSelectedIndex = null;
+      } else {
+        if (value) {
+          _missingSelection.add(missing[i]);
+        } else {
+          _missingSelection.remove(missing[i]);
+        }
+        _lastMissingSelectedIndex = i;
+      }
+    });
+  }
+
+  /// Shown when the folder held no music at all, which almost always means
+  /// the wrong folder, or one the app can no longer read.
+  Widget _buildNoFilesFoundCard(ThemeData theme) {
+    return Card(
+      color: theme.colorScheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.folder_off_outlined,
+                    color: theme.colorScheme.onErrorContainer),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'No music files in '
+                    '${friendlyFolderLabel(_comparison!.folderPath)}.',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                        color: theme.colorScheme.onErrorContainer),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'That is why every track shows as missing. Pick the folder your '
+              'songs are in; subfolders are included.',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onErrorContainer),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: FilledButton.tonalIcon(
+                onPressed: _loading ? null : _pickFolderAndCompare,
+                icon: const Icon(Icons.folder_open, size: 18),
+                label: const Text('Choose another folder'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // --─ Extras Tab ----------------------------------------------------------─
 
   Widget _buildRunCompareHint(ThemeData theme) {
     final folder = _folderController.text.trim();
-    final canCompare =
-        _tracks != null && _tracks!.isNotEmpty && folder.isNotEmpty;
+    final hasTracks = _tracks != null && _tracks!.isNotEmpty;
+    final canCompare = hasTracks && folder.isNotEmpty;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1314,16 +1530,23 @@ class _PlaylistScreenState extends State<PlaylistScreen>
           const SizedBox(height: 12),
           Text('Run a comparison first', style: theme.textTheme.titleMedium),
           if (folder.isNotEmpty)
-            Text('Folder: $folder',
+            Text('Folder: ${friendlyFolderLabel(folder)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
           if (canCompare) ...[
             const SizedBox(height: 12),
             FilledButton.icon(
-              onPressed: _loading ? null : _compareToFolder,
+              onPressed: _loading ? null : () => _compareToFolder(),
               icon: const Icon(Icons.compare_arrows, size: 18),
               label: const Text('Compare Now'),
+            ),
+          ] else if (hasTracks) ...[
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: _loading ? null : _pickFolderAndCompare,
+              icon: const Icon(Icons.folder_open, size: 18),
+              label: const Text('Choose a folder'),
             ),
           ],
         ],
@@ -1419,49 +1642,70 @@ class _PlaylistScreenState extends State<PlaylistScreen>
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-            child: Row(
-              children: [
-                Icon(icon, color: color, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            // On a phone the resolve button goes under the heading; beside
+            // it, the title and its count ran off the edge of the card.
+            child: LayoutBuilder(builder: (context, constraints) {
+              final narrow = constraints.maxWidth < 480;
+              final heading = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(title, style: theme.textTheme.titleSmall),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text('${files.length}',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: color,
-                                    fontWeight: FontWeight.bold)),
-                          ),
-                        ],
+                      Text(title, style: theme.textTheme.titleSmall),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text('${files.length}',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: color,
+                                fontWeight: FontWeight.bold)),
                       ),
-                      Text(subtitle,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: Colors.grey)),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                if (files.isNotEmpty)
-                  FilledButton.tonalIcon(
-                    onPressed: _extrasBusy ? null : onResolveAll,
-                    icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
-                    label: Text(resolveAllLabel),
+                  Text(subtitle,
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: Colors.grey)),
+                ],
+              );
+              final resolveAll = files.isEmpty
+                  ? null
+                  : FilledButton.tonalIcon(
+                      onPressed: _extrasBusy ? null : onResolveAll,
+                      icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
+                      label: Text(resolveAllLabel),
+                    );
+              final headingRow = Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icon, color: color, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(child: heading),
+                  if (!narrow && resolveAll != null) ...[
+                    const SizedBox(width: 8),
+                    resolveAll,
+                  ],
+                ],
+              );
+              if (!narrow || resolveAll == null) return headingRow;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  headingRow,
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: resolveAll,
                   ),
-              ],
-            ),
+                ],
+              );
+            }),
           ),
           ...shown.map((f) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 1),
