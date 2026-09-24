@@ -20,27 +20,11 @@ class SettingsStore {
     if (kIsWeb) return '/downloads';
 
     if (Platform.isAndroid) {
-      // Try app-specific external storage (no permissions required)
-      final extDir = await PlatformDirs.getExternalDir();
-      if (extDir != null) {
-        final dlDir =
-            Directory('${extDir.path}${Platform.pathSeparator}downloads');
-        await dlDir.create(recursive: true);
-        return dlDir.path;
-      }
-
-      // Try internal files directory
-      final filesDir = await PlatformDirs.getFilesDir();
-      if (filesDir != null) {
-        final dlDir =
-            Directory('${filesDir.path}${Platform.pathSeparator}downloads');
-        await dlDir.create(recursive: true);
-        return dlDir.path;
-      }
-
-      // Native channel failed - return empty string;
-      // the user will need to configure a download directory manually.
-      _pathProviderBroken = true;
+      // Empty means the phone's public Downloads folder: DownloadService
+      // saves through MediaStore into Download/<format>/, where the Files
+      // app and every music player can see it. The app's own external
+      // folder (Android/data/...) would be hidden from both and wiped on
+      // uninstall, so it is never the default.
       return '';
     }
 

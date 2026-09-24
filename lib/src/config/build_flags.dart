@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// Compile-time flag: true when building for Play Store with ads enabled.
 /// Set via: --dart-define=PLAY_STORE_BUILD=true during Play build.
 /// Falls back to runtime-detected flavor if not provided.
@@ -40,14 +38,13 @@ String getDefaultDownloadFolderName() {
    return kPlayStoreBuild ? 'BitPlayer' : 'ConvertTheSpireReborn';
 }
 
-// Tab visibility -- hide/modify tabs for Play builds
+// Tab visibility -- hide tabs in Play builds only.
+//
+// A tab is hidden only when Play policy requires it: the YouTube download
+// features stay out of the Play build. Everything else, the file converter
+// included, is shown on every platform. Convert used to be hidden on all of
+// Android; FFmpegKit ships in the Android app, so it converts there too.
 bool isTabVisibleInCurrentBuild(int tabIndex) {
-  // Convert tab (tabIndex 9) is disabled on Android per platform limitations
-  if (!kIsWeb &&
-      defaultTargetPlatform == TargetPlatform.android &&
-      tabIndex == 9) {
-    return false;
-  }
   // In Play builds hide Search, Multi-Search, Playlists, Bulk Import, Stats, and Logs.
   if (kPlayStoreBuild &&
       (tabIndex == 0 ||

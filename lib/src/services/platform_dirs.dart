@@ -207,6 +207,17 @@ class PlatformDirs {
     }
   }
 
+  /// The phone's shared Downloads folder (Android only), where downloads go
+  /// through MediaStore when no download folder is picked.
+  static Future<String?> getPublicDownloadsDir() async {
+    if (kIsWeb || !Platform.isAndroid) return null;
+    try {
+      return await _channel.invokeMethod<String>('getPublicDownloadsDir');
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Downloads directory (desktop only).
   static Future<Directory?> getDownloadsDir() async {
     if (kIsWeb) return null;

@@ -142,11 +142,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         _OnboardingPage(
           icon: Icons.tune_rounded,
           title: 'Play, Convert & Customize',
-          // Convert tab is hidden on all Android builds, not just Play
-          // Store - see isTabVisibleInCurrentBuild(9) in build_flags.dart.
-          // The old onboarding described Convert unconditionally, so
-          // Android users were being told about a feature they had no way
-          // to reach. Tying this page to the same flag fixes that.
+          // Tied to the tab's visibility, so the tour never describes a
+          // screen someone has no way to reach.
           detail: isTabVisibleInCurrentBuild(9)
               ? 'Play your files in the built-in player, convert between '
                   'formats with FFmpeg, and set folders, defaults, and '

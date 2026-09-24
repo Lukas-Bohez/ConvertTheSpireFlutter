@@ -33,7 +33,7 @@ void main() {
 
       expect(
           isYouTubeConversionEnabledInCurrentBuild, equals(!kPlayStoreBuild));
-      expect(isTabVisibleInCurrentBuild(9), isFalse);
+      expect(isTabVisibleInCurrentBuild(9), isTrue);
 
       expect(
           await access.submitUnlockAttempt('full'), FullModeToggleState.none);
@@ -48,7 +48,7 @@ void main() {
       expect(access.isUnlocked, isTrue);
       expect(
           isYouTubeConversionEnabledInCurrentBuild, equals(!kPlayStoreBuild));
-      expect(isTabVisibleInCurrentBuild(9), isFalse);
+      expect(isTabVisibleInCurrentBuild(9), isTrue);
     });
 
     test('branding is consistent across builds', () async {

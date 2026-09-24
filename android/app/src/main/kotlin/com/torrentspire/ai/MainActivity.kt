@@ -374,6 +374,19 @@ class MainActivity : AudioServiceActivity() {
                             }
                         }.start()
                     }
+                    // PlatformDirs asks for these instead of going through
+                    // path_provider. With no handler every call failed, so
+                    // SettingsStore had nowhere to write config.json and every
+                    // setting, the download folder included, was forgotten on
+                    // the next launch.
+                    "getFilesDir" -> result.success(filesDir.absolutePath)
+                    "getCacheDir" -> result.success(cacheDir.absolutePath)
+                    "getExternalFilesDir" -> result.success(getExternalFilesDir(null)?.absolutePath)
+                    // Where downloads land when no folder is picked (MediaStore
+                    // Download/<format>/). Compare starts there.
+                    "getPublicDownloadsDir" -> result.success(
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)?.absolutePath
+                    )
                     "isAndroidTV" -> {
                         val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
                         val isTV = uiModeManager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
@@ -729,8 +742,76 @@ class MainActivity : AudioServiceActivity() {
         return target.absolutePath
     }
 
+    /**
+     * Every file under a SAF tree, recursively.
+     *
+     * One DocumentsContract query per folder, asking for exactly the columns
+     * needed. The DocumentFile walk it replaces made five or six provider
+     * calls per file (exists, isDirectory, isFile, name, type, length,
+     * lastModified), which took minutes on a phone for a large music folder
+     * and made Compare look hung. The URIs are built the same way
+     * DocumentFile builds them, so paths already stored (favourites, play
+     * stats) still match.
+     */
     private fun listTree(treeUriString: String): List<Map<String, String>> {
         val treeUri = Uri.parse(treeUriString)
+        return try {
+            queryTree(treeUri)
+        } catch (e: Exception) {
+            Log.w("SAF", "listTree query failed, walking with DocumentFile: ${e.message}")
+            walkTree(treeUri)
+        }
+    }
+
+    private fun queryTree(treeUri: Uri): List<Map<String, String>> {
+        val rootId = if (DocumentsContract.isDocumentUri(this, treeUri)) {
+            DocumentsContract.getDocumentId(treeUri)
+        } else {
+            DocumentsContract.getTreeDocumentId(treeUri)
+        }
+        val projection = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE,
+            DocumentsContract.Document.COLUMN_SIZE,
+            DocumentsContract.Document.COLUMN_LAST_MODIFIED,
+        )
+        val items = ArrayList<Map<String, String>>()
+        val pending = ArrayDeque<String>()
+        val seen = HashSet<String>()
+        pending.add(rootId)
+        while (pending.isNotEmpty()) {
+            val parentId = pending.removeFirst()
+            if (!seen.add(parentId)) continue
+            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentId)
+            val cursor = contentResolver.query(childrenUri, projection, null, null, null)
+                ?: throw IllegalStateException("provider returned no cursor for $parentId")
+            cursor.use { c ->
+                while (c.moveToNext()) {
+                    val id = c.getString(0) ?: continue
+                    val mime = c.getString(2) ?: ""
+                    if (mime == DocumentsContract.Document.MIME_TYPE_DIR) {
+                        pending.add(id)
+                        continue
+                    }
+                    val size = if (c.isNull(3)) 0L else c.getLong(3)
+                    val modified = if (c.isNull(4)) 0L else c.getLong(4)
+                    items.add(
+                        mapOf(
+                            "uri" to DocumentsContract.buildDocumentUriUsingTree(treeUri, id).toString(),
+                            "name" to (c.getString(1) ?: ""),
+                            "mimeType" to mime,
+                            "size" to size.toString(),
+                            "lastModified" to modified.toString(),
+                        )
+                    )
+                }
+            }
+        }
+        return items
+    }
+
+    private fun walkTree(treeUri: Uri): List<Map<String, String>> {
         val root = DocumentFile.fromTreeUri(this, treeUri) ?: return emptyList()
         val items = ArrayList<Map<String, String>>()
 
