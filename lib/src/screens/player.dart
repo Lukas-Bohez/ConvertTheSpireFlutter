@@ -39,6 +39,7 @@ import '../services/review_service.dart';
 import '../services/watch_party/watch_party_protocol.dart';
 import '../services/watch_party/watch_party_service.dart';
 import '../state/app_controller.dart';
+import '../utils/folder_label.dart';
 import '../utils/lock.dart';
 import '../utils/snack.dart';
 import '../vault/platform/desktop_window.dart';
@@ -588,6 +589,10 @@ class PlayerState with ChangeNotifier {
   final _audioLock = Lock();
 
   // -------------------------------------------------------------------------
+
+  /// Set once the player has tried to reopen the last library folder this
+  /// session, so leaving and returning to the Player does not rescan it.
+  bool libraryRestoreAttempted = false;
 
   PlayerState(this.prefs) {
     if (_useMediaKit) {
@@ -4240,6 +4245,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     };
     _activeGenres
         .addAll(prefs.getStringList('player_filter_genres') ?? const []);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_restoreLibraryFolder());
+    });
   }
 
   @override
@@ -4492,6 +4500,14 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
+  /// Remembered so the library is back the next time the app opens. It used
+  /// to start empty on every launch, and on a phone the button to open the
+  /// folder again was tucked away in a menu.
+  static const String _libraryFolderPrefsKey = 'player_library_folder';
+
+  /// The folder being reopened quietly at startup, for the empty state.
+  String? _restoringFolder;
+
   Future<void> _pickFolder() async {
     if (kIsWeb) return;
     String? dirPath;
@@ -4504,24 +4520,54 @@ class _PlayerScreenState extends State<PlayerScreen>
       debugPrint('folder picker error: $e');
     }
     if (dirPath == null || !mounted) return;
+    await _openFolder(dirPath);
+  }
 
-    // Show loading dialog while scanning folder (prevents UI freeze on large folders)
-    if (!mounted) return;
-    unawaited(showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => const AlertDialog(
-        title: Text('Scanning folder'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Please wait...'),
-          ],
+  /// Reopens the last library folder once per session, when the library is
+  /// still empty. Silent: a folder that is gone or no longer readable simply
+  /// leaves the empty library with its Open folder button.
+  Future<void> _restoreLibraryFolder() async {
+    final state = context.read<PlayerState>();
+    if (state.libraryRestoreAttempted || state.library.isNotEmpty) return;
+    state.libraryRestoreAttempted = true;
+    final saved = state.prefs.getString(_libraryFolderPrefsKey)?.trim() ?? '';
+    if (saved.isEmpty) return;
+    await _openFolder(saved, quiet: true);
+  }
+
+  /// Scans [dirPath] into the library and remembers it. [quiet] is for the
+  /// startup restore: no blocking dialog and no warnings.
+  Future<bool> _openFolder(String dirPath, {bool quiet = false}) async {
+    if (!mounted) return false;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    if (quiet) {
+      setState(() => _restoringFolder = dirPath);
+    } else {
+      // Show loading dialog while scanning folder (prevents UI freeze on large folders)
+      unawaited(showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const AlertDialog(
+          title: Text('Scanning folder'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Please wait...'),
+            ],
+          ),
         ),
-      ),
-    ));
+      ));
+    }
+
+    void finishLoading() {
+      if (quiet) {
+        if (mounted) setState(() => _restoringFolder = null);
+      } else if (navigator.canPop()) {
+        navigator.pop(); // Close loading dialog
+      }
+    }
 
     try {
       // Handle both regular filesystem paths and SAF URIs
@@ -4545,26 +4591,29 @@ class _PlayerScreenState extends State<PlayerScreen>
         items = await _scanFolderInBackground(dirPath);
       }
 
-      if (!mounted) return;
-      Navigator.pop(context); // Close loading dialog
+      finishLoading();
+      if (!mounted) return false;
 
       if (items.isEmpty) {
-        if (mounted) {
+        if (!quiet) {
           Snack.show(context, 'No media files found in folder',
               level: SnackLevel.warning);
         }
-        return;
+        return false;
       }
 
-      if (!mounted) return;
-      await context.read<PlayerState>().setLibrary(items);
+      final state = context.read<PlayerState>();
+      await state.setLibrary(items);
+      await state.prefs.setString(_libraryFolderPrefsKey, dirPath);
+      return true;
     } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
+      finishLoading();
+      if (mounted && !quiet) {
         Snack.show(context, 'Error scanning folder: $e',
             level: SnackLevel.error);
       }
       debugPrint('folder scan error: $e');
+      return false;
     }
   }
 
@@ -4834,6 +4883,8 @@ class _PlayerScreenState extends State<PlayerScreen>
               controller: _tabController,
               children: [
                 _AllTab(
+                  onOpenFolder: _pickFolder,
+                  restoringFolder: _restoringFolder,
                   entries: _sortAndFilterEntries(
                     state.library.asMap().entries.take(state.folderItemCount > 0
                         ? state.folderItemCount
@@ -4898,8 +4949,10 @@ class _PlayerScreenState extends State<PlayerScreen>
   /// Width below which the header stops being a row of bare icons.
   ///
   /// Seven icon buttons in one row is unusable on a phone (issue #7), so on
-  /// narrow screens only the two actions people reach for stay visible and
-  /// the rest move into an overflow menu that has readable labels.
+  /// narrow screens only the actions people reach for stay visible: opening
+  /// a folder and the queue. The rest, Watch Together included, move into an
+  /// overflow menu with readable labels. Watch Together comes back to the
+  /// header while a room is running, so leaving it is one tap away.
   static const double _compactHeaderWidth = 600;
 
   Widget _buildHeader() {
@@ -4923,12 +4976,12 @@ class _PlayerScreenState extends State<PlayerScreen>
               ),
             ),
             const Spacer(),
+            _headerIconButton(
+              icon: Icons.folder_open_rounded,
+              tooltip: 'Open folder',
+              onPressed: _pickFolder,
+            ),
             if (!compact) ...[
-              _headerIconButton(
-                icon: Icons.folder_open_rounded,
-                tooltip: 'Open folder',
-                onPressed: _pickFolder,
-              ),
               _headerIconButton(
                 icon: Icons.merge_type_rounded,
                 tooltip: 'Organize media',
@@ -4940,7 +4993,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 onPressed: _showFixAllMetadataDialog,
               ),
             ],
-            _buildWatchTogetherButton(),
+            if (!compact || _watchPartyActive) _buildWatchTogetherButton(),
             if (!compact) _buildVolumeLevelingButton(),
             _buildQueueMenu(),
             if (compact) _buildHeaderOverflowMenu(),
@@ -4964,6 +5017,9 @@ class _PlayerScreenState extends State<PlayerScreen>
       constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
     );
   }
+
+  bool get _watchPartyActive =>
+      context.watch<PlayerState>().watchParty.status.isActive;
 
   Widget _buildWatchTogetherButton() {
     final party = context.watch<PlayerState>().watchParty.status;
@@ -5000,15 +5056,17 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   /// Everything that does not fit on a phone, with labels rather than icons.
   Widget _buildHeaderOverflowMenu() {
-    final levelingOn = context.watch<PlayerState>().volumeLeveling;
+    final player = context.watch<PlayerState>();
+    final levelingOn = player.volumeLeveling;
+    final party = player.watchParty.status;
     return PopupMenuButton<String>(
       tooltip: 'More',
       icon:
           Icon(Icons.more_vert, color: Theme.of(context).colorScheme.onSurface),
       onSelected: (value) {
         switch (value) {
-          case 'folder':
-            _pickFolder();
+          case 'watch':
+            WatchPartySheet.show(context);
             break;
           case 'organize':
             unawaited(_showOrganizeDialog());
@@ -5022,14 +5080,16 @@ class _PlayerScreenState extends State<PlayerScreen>
         }
       },
       itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: 'folder',
+        PopupMenuItem(
+          value: 'watch',
           child: ListTile(
-            leading: Icon(Icons.folder_open_rounded),
-            title: Text('Open folder'),
+            leading: const Icon(Icons.groups_rounded),
+            title: const Text('Watch Together'),
+            subtitle: party.isActive ? Text('Room ${party.roomCode}') : null,
             contentPadding: EdgeInsets.zero,
           ),
         ),
+        const PopupMenuDivider(),
         const PopupMenuItem(
           value: 'organize',
           child: ListTile(
@@ -6232,21 +6292,36 @@ class _AllTab extends StatelessWidget {
   final PlayerState state;
   final ScrollController scrollCtl;
   final void Function(PlayerState, int) onTap;
+  final VoidCallback? onOpenFolder;
+
+  /// The remembered folder while it is being reopened at startup.
+  final String? restoringFolder;
 
   const _AllTab({
     required this.entries,
     required this.state,
     required this.scrollCtl,
     required this.onTap,
+    this.onOpenFolder,
+    this.restoringFolder,
   });
 
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
+      if (state.library.isEmpty && restoringFolder != null) {
+        return _EmptyTabScroll(
+          message: 'Opening ${friendlyFolderLabel(restoringFolder!)}…',
+          busy: true,
+        );
+      }
       return _EmptyTabScroll(
-          message: state.library.isEmpty
-              ? 'Your library is empty.\nTap the folder icon to open a folder or download media.'
-              : 'No results for this search.');
+        message: state.library.isEmpty
+            ? 'Your library is empty.\nOpen the folder your music and videos '
+                'are in. The app remembers it for next time.'
+            : 'No results for this search.',
+        action: state.library.isEmpty ? onOpenFolder : null,
+      );
     }
 
     // Keep visual parity with Songs/Videos/Fav by reusing the same grid widget.
@@ -6374,7 +6449,9 @@ class _MediaGrid extends StatelessWidget {
 /// same overlap-injector scroll view so it aligns below the pinned header.
 class _EmptyTabScroll extends StatelessWidget {
   final String message;
-  const _EmptyTabScroll({required this.message});
+  final VoidCallback? action;
+  final bool busy;
+  const _EmptyTabScroll({required this.message, this.action, this.busy = false});
 
   @override
   Widget build(BuildContext context) {
@@ -6385,7 +6462,7 @@ class _EmptyTabScroll extends StatelessWidget {
         ),
         SliverFillRemaining(
           hasScrollBody: false,
-          child: _EmptyHint(message: message),
+          child: _EmptyHint(message: message, action: action, busy: busy),
         ),
       ],
     );
@@ -6568,7 +6645,11 @@ class _MediaCard extends StatelessWidget {
 class _EmptyHint extends StatelessWidget {
   final String message;
 
-  const _EmptyHint({required this.message});
+  /// Opens a folder; shown as a button under the message.
+  final VoidCallback? action;
+  final bool busy;
+
+  const _EmptyHint({required this.message, this.action, this.busy = false});
 
   @override
   Widget build(BuildContext context) {
@@ -6579,7 +6660,14 @@ class _EmptyHint extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.music_note, size: 72, color: theme.disabledColor),
+            if (busy)
+              const SizedBox(
+                width: 48,
+                height: 48,
+                child: CircularProgressIndicator(),
+              )
+            else
+              Icon(Icons.music_note, size: 72, color: theme.disabledColor),
             const SizedBox(height: 16),
             Text(
               message,
@@ -6587,6 +6675,15 @@ class _EmptyHint extends StatelessWidget {
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: theme.disabledColor),
             ),
+            if (action != null) ...[
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                autofocus: true,
+                onPressed: action,
+                icon: const Icon(Icons.folder_open_rounded),
+                label: const Text('Open folder'),
+              ),
+            ],
           ],
         ),
       ),
