@@ -881,15 +881,17 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                             : null,
                       ),
                       const SizedBox(width: 10),
-                      Text(
-                        m.label,
-                        style: TextStyle(
-                          fontWeight: _sortMode == m
-                              ? FontWeight.w700
-                              : FontWeight.normal,
-                          color: _sortMode == m
-                              ? Theme.of(ctx).colorScheme.primary
-                              : null,
+                      Flexible(
+                        child: Text(
+                          m.label,
+                          style: TextStyle(
+                            fontWeight: _sortMode == m
+                                ? FontWeight.w700
+                                : FontWeight.normal,
+                            color: _sortMode == m
+                                ? Theme.of(ctx).colorScheme.primary
+                                : null,
+                          ),
                         ),
                       ),
                       if (_sortMode == m) ...[

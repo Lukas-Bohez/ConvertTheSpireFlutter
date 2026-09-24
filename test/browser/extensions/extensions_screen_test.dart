@@ -113,6 +113,44 @@ void main() {
         reason: 'the published checksum must travel with the download');
   });
 
+  for (final width in [360.0, 1280.0]) {
+    testWidgets('no overflow at ${width.toInt()}px with 130% text',
+        (tester) async {
+      tester.view.physicalSize = Size(width, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final host = _FakeHost([
+        _darkReader,
+        const InstalledExtension(
+          id: 'long',
+          name: 'An extension with a really quite long name indeed',
+          enabled: false,
+          version: '2026.920.1710',
+          origin: ExtensionOrigin.amo,
+          hasAction: true,
+          optionsPath: 'options.html',
+          amoSlug: 'long',
+        ),
+      ]);
+      await tester.pumpWidget(MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(
+              size: Size(width, 800), textScaler: const TextScaler.linear(1.3)),
+          child: ExtensionsScreen(host: host, catalog: catalog()),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Get extensions'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Add').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Add Dark Reader?'), findsOneWidget);
+
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   group('describePermissions', () {
     test('all sites reads as all sites', () {
       expect(describePermissions(const [], const ['<all_urls>']),

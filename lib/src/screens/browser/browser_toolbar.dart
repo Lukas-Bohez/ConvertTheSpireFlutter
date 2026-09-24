@@ -131,7 +131,12 @@ class BrowserToolbar extends StatelessWidget {
                     child: GestureDetector(
                       onTap: onAddressBarTap,
                       child: Container(
-                        height: wide ? 42 : (compact ? 34 : 38),
+                        // A minimum, not a fixed height: the pill grows with
+                        // the user's text size and with scripts that need
+                        // taller lines (Devanagari, CJK). A fixed height
+                        // clipped both lines at 130% text on every width.
+                        constraints: BoxConstraints(
+                            minHeight: wide ? 42 : (compact ? 34 : 38)),
                         decoration: BoxDecoration(
                           color: isIncognito
                               ? Colors.white.withValues(alpha: 0.08)
@@ -516,22 +521,13 @@ class _ExtensionActionsButtonState extends State<_ExtensionActionsButton> {
         for (final extension in _withPopups)
           PopupMenuItem(
             value: extension.id,
-            child: Row(children: [
-              const Icon(Icons.extension, size: 20),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Text(extension.name, overflow: TextOverflow.ellipsis),
-              ),
-            ]),
+            child: _MenuRow(icon: Icons.extension, label: extension.name),
           ),
         const PopupMenuDivider(),
         const PopupMenuItem(
           value: '__manage__',
-          child: Row(children: [
-            Icon(Icons.settings_outlined, size: 20),
-            SizedBox(width: 12),
-            Text('Manage extensions'),
-          ]),
+          child: _MenuRow(
+              icon: Icons.settings_outlined, label: 'Manage extensions'),
         ),
       ],
     );
@@ -607,89 +603,75 @@ class _OverflowMenuButton extends StatelessWidget {
               if (!kPlayStoreBuild)
                 PopupMenuItem(
                     value: 'cast',
-                    child: Row(children: [
-                      Icon(Icons.cast,
-                          color: Theme.of(context).colorScheme.onSurface),
-                      const SizedBox(width: 12),
-                      const Text('Cast to device'),
-                      const Spacer(),
-                      if (isCastConnected)
-                        Icon(Icons.circle,
-                            size: 8,
-                            color: Theme.of(context).colorScheme.primary),
-                    ])),
-              PopupMenuItem(
+                    child: _MenuRow(
+                      icon: Icons.cast,
+                      label: 'Cast to device',
+                      trailing: isCastConnected
+                          ? Icon(Icons.circle,
+                              size: 8,
+                              color: Theme.of(context).colorScheme.primary)
+                          : null,
+                    )),
+              const PopupMenuItem(
                   value: 'openExternal',
-                  child: Row(children: [
-                    Icon(Icons.open_in_browser,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    const SizedBox(width: 12),
-                    const Text('Open in browser'),
-                  ])),
-              PopupMenuItem(
+                  child: _MenuRow(
+                      icon: Icons.open_in_browser, label: 'Open in browser')),
+              const PopupMenuItem(
                   value: 'copyLink',
-                  child: Row(children: [
-                    Icon(Icons.copy,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    const SizedBox(width: 12),
-                    const Text('Copy link'),
-                  ])),
-              PopupMenuItem(
+                  child: _MenuRow(icon: Icons.copy, label: 'Copy link')),
+              const PopupMenuItem(
                   value: 'share',
-                  child: Row(children: [
-                    Icon(Icons.share,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    const SizedBox(width: 12),
-                    const Text('Share'),
-                  ])),
-              PopupMenuItem(
+                  child: _MenuRow(icon: Icons.share, label: 'Share')),
+              const PopupMenuItem(
                   value: 'addCookies',
-                  child: Row(children: [
-                    Icon(Icons.cookie_outlined,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    const SizedBox(width: 12),
-                    const Text('Add cookies (for downloads)'),
-                  ])),
-              PopupMenuItem(
+                  child: _MenuRow(
+                      icon: Icons.cookie_outlined,
+                      label: 'Add cookies (for downloads)')),
+              const PopupMenuItem(
                   value: 'history',
-                  child: Row(children: [
-                    Icon(Icons.history,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    const SizedBox(width: 12),
-                    const Text('History'),
-                  ])),
+                  child: _MenuRow(icon: Icons.history, label: 'History')),
               // The puzzle piece belongs to real extensions now; userscripts
               // are code snippets, so they get a code icon.
               if (ExtensionHosts.available)
-                PopupMenuItem(
+                const PopupMenuItem(
                     value: 'extensions',
-                    child: Row(children: [
-                      Icon(Icons.extension_outlined,
-                          color: Theme.of(context).colorScheme.onSurface),
-                      const SizedBox(width: 12),
-                      const Text('Extensions'),
-                    ])),
-              PopupMenuItem(
+                    child: _MenuRow(
+                        icon: Icons.extension_outlined, label: 'Extensions')),
+              const PopupMenuItem(
                   value: 'userscripts',
-                  child: Row(children: [
-                    Icon(Icons.code,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    const SizedBox(width: 12),
-                    const Text('Userscripts'),
-                  ])),
-              PopupMenuItem(
+                  child: _MenuRow(icon: Icons.code, label: 'Userscripts')),
+              const PopupMenuItem(
                   value: 'clear_session',
-                  child: Row(children: [
-                    Icon(Icons.delete_sweep,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    const SizedBox(width: 12),
-                    const Text('Clear browsing data'),
-                  ])),
+                  child: _MenuRow(
+                      icon: Icons.delete_sweep, label: 'Clear browsing data')),
             ],
           );
           if (selection != null) onMenuAction(selection);
         },
       );
     });
+  }
+}
+
+/// One row of a toolbar menu: icon, label, optional trailing marker.
+///
+/// The label wraps rather than overflowing. A popup menu is at most 256px
+/// wide inside, and at 130% system text size "Add cookies (for downloads)"
+/// alone is wider than that.
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({required this.icon, required this.label, this.trailing});
+
+  final IconData icon;
+  final String label;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Icon(icon, color: Theme.of(context).colorScheme.onSurface),
+      const SizedBox(width: 12),
+      Expanded(child: Text(label)),
+      if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+    ]);
   }
 }

@@ -28,6 +28,9 @@ import 'package:webview_windows/webview_windows.dart';
 ///     --dart-define=EXT_PROFILE=C:\path\to\profile
 ///     --dart-define=EXT_PHASE=install      (then again with EXT_PHASE=persisted)
 ///
+/// The app's own extension host is checked with EXT_PHASE=host, on a fresh
+/// profile.
+///
 /// Expected files in EXT_FIXTURES: darkreader-mv3.zip, ubol-edge.zip and,
 /// optionally, lofi.xpi and darkreader-firefox.xpi (Firefox builds, recorded
 /// but not required to work).
@@ -99,6 +102,7 @@ void main() {
   }
 
   testWidgets('WebView2 runs real extensions', (tester) async {
+    if (_phase == 'host') return;
     await WebviewController.initializeEnvironment(userDataPath: _profile);
     final enabled = await WebviewController.areBrowserExtensionsEnabled();
     results['environmentAcceptedExtensions'] = enabled;
@@ -234,8 +238,11 @@ void main() {
     await controller.dispose();
   });
 
+  // Run with EXT_PHASE=host on a fresh profile, so nothing the raw test
+  // installed can make these checks pass by accident.
   testWidgets('the app\u2019s extension host, end to end', (tester) async {
-    if (_phase != 'install') return;
+    if (_phase != 'host') return;
+    await WebviewController.initializeEnvironment(userDataPath: _profile);
     final root = Directory(p.join(_profile, '..', 'hostroot'));
     if (await root.exists()) await root.delete(recursive: true);
     final host = WebView2ExtensionHost(rootDirectory: () async => root);
@@ -265,10 +272,34 @@ void main() {
     expect(again.id, installed.id);
     expect((await host.list()).length, 1);
 
+    // What the manager installs has to reach the browser's own webview: a
+    // different controller that only shares the profile.
+    final browser = WebviewController();
+    await browser.initialize();
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: SizedBox(width: 900, height: 600, child: Webview(browser)),
+      ),
+    ));
+    await loadAndSettle(tester, browser, 'http://127.0.0.1:$port/page');
+    final inBrowser = await js(browser,
+        "document.documentElement.hasAttribute('data-darkreader-mode')");
+    results['managerInstallReachesBrowser'] = inBrowser;
+    expect(inBrowser, isTrue,
+        reason: 'an extension installed from the manager must run in the '
+            'browser tab');
+
     await host.setEnabled(installed.id, false);
     expect((await host.list()).single.enabled, isFalse);
     expect((await host.reconcile()).single.enabled, isFalse);
+    await loadAndSettle(tester, browser, 'http://127.0.0.1:$port/page');
+    final afterDisable = await js(browser,
+        "document.documentElement.hasAttribute('data-darkreader-mode')");
+    results['managerDisableReachesBrowser'] = afterDisable == false;
+    expect(afterDisable, isFalse,
+        reason: 'switching it off in the manager must stop it in the browser');
     await host.setEnabled(installed.id, true);
+    await browser.dispose();
 
     // From addons.mozilla.org, checksum-verified.
     final addon = await AmoCatalog().details('darkreader');
