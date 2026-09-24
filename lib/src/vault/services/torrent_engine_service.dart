@@ -18,7 +18,6 @@ import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart
 import 'package:dtorrent_common/dtorrent_common.dart';
 import 'package:dtorrent_task_v2/dtorrent_task_v2.dart' as dt;
 import 'package:dtorrent_task_v2/src/piece/piece.dart' as dt_piece;
-import 'package:dtorrent_task_v2/src/piece/sequential_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -346,71 +345,50 @@ class TorrentEngineService {
     }
   }
 
-  /// Returns the best SequentialConfig for this torrent:
-  /// - Video → streaming-optimised with moov-atom prioritisation
-  /// - Audio → streaming-optimised for audio
-  /// - Everything else (game installers, archives, etc.) → minimal sequential
-  ///   config that still prevents concurrent multi-file write races, which
-  ///   is the root cause of the bitfield-cache desync / stuck-at-99% bug.
+  /// The `stream` argument for TorrentTask.newTask: false picks pieces
+  /// rarest-first, true picks them in file order.
   ///
-  /// IMPORTANT: the caller must pass stream: seqConfig != null to newTask()
-  /// so the AdvancedSequentialPieceSelector is actually activated.
-  SequentialConfig _sequentialConfigFor(dt.TorrentModel dtModel) {
-    const videoExts = <String>{
-      '.mkv',
-      '.mp4',
-      '.avi',
-      '.mov',
-      '.m4v',
-      '.ts',
-      '.wmv',
-      '.flv',
-      '.webm',
-      '.mpg',
-      '.mpeg',
-    };
-    const audioExts = <String>{
-      '.mp3',
-      '.flac',
-      '.aac',
-      '.ogg',
-      '.wav',
-      '.m4a',
-      '.opus',
-    };
+  /// In-order picking was on for every torrent, but nothing in the app plays
+  /// a torrent while it downloads, and dtorrent_task_v2's in-order selector
+  /// (AdvancedSequentialPieceSelector) is slow: for every 16 KiB block it
+  /// walks the piece list from the start and checks each piece with a linear
+  /// search of the peer's piece list. That runs on the UI isolate, next to
+  /// all peer traffic. Measured on an 8000-piece torrent (2 GB): about 0.2 ms
+  /// per block on average, and 48 ms whenever a peer has nothing new for us,
+  /// which the library checks on every HAVE message. The rarest-first
+  /// selector needs 0.04 ms and 0.13 ms for the same work.
+  ///
+  /// Piece order does not matter for writes: every file queues its own
+  /// writes, and pieces finish concurrently in either order.
+  static const bool _streamPieceOrder = false;
 
-    final paths = [
-      ...dtModel.files.map((f) => f.path.toLowerCase()),
-      if (dtModel.isSingleFile) dtModel.name.toLowerCase(),
-    ];
-
-    if (paths.any((p) => videoExts.any(p.endsWith))) {
-      return const SequentialConfig(
-        lookAheadSize: 40,
-        criticalZoneSize: 512 * 1024,
-        adaptiveStrategy: false,
-        minSpeedForSequential: 0,
-        autoDetectMoovAtom: true,
-        seekLatencyTolerance: 3,
-        enablePeerPriority: true,
-        enableFastResumption: true,
-      );
-    }
-    if (paths.any((p) => audioExts.any(p.endsWith))) {
-      return SequentialConfig.forAudioStreaming();
-    }
-    // Non-media: use minimal sequential to reduce concurrent write races on
-    // large multi-file torrents. adaptiveStrategy=true lets the selector fall
-    // back to rarest-first if peers are slow, so download speed is preserved.
-    return const SequentialConfig(
-      lookAheadSize: 8,
-      criticalZoneSize: 2 * 1024 * 1024,
-      adaptiveStrategy: true,
-      minSpeedForSequential: 0,
-      autoDetectMoovAtom: false,
-      seekLatencyTolerance: 5,
-      enablePeerPriority: true,
-      enableFastResumption: true,
+  /// [model] with TorrentModel.length set to the total size.
+  ///
+  /// dtorrent_task_v2's parser sets length only for single-file torrents, but
+  /// the task reads it as the total size. For a multi-file torrent (a season
+  /// pack, an album, a game) the task therefore reported progress 0, told
+  /// trackers it had 0 bytes left (a finished download; negative once
+  /// anything had arrived), and threw in its file flush just before emitting
+  /// the download-complete event.
+  @visibleForTesting
+  static dt.TorrentModel withTotalLength(dt.TorrentModel model) {
+    if (model.length != null) return model;
+    return dt.TorrentModel(
+      name: model.name,
+      files: model.files,
+      infoHashBuffer: model.infoHashBuffer,
+      pieceLength: model.pieceLength,
+      pieces: model.pieces,
+      announces: model.announces,
+      nodes: model.nodes,
+      length: model.totalSize,
+      version: model.version,
+      metaVersion: model.metaVersion,
+      fileTree: model.fileTree,
+      pieceLayers: model.pieceLayers,
+      rootHash: model.rootHash,
+      infoDictBytes: model.infoDictBytes,
+      rawData: model.rawData,
     );
   }
 
@@ -863,7 +841,7 @@ class TorrentEngineService {
                 ),
               );
               unawaited(_forceStateRecovery(torrentId, task));
-              _requestMissingPieces(task);
+              _wakeIdlePeers(torrentId, task);
             }
           } else {
             _stagnantDownloadIntervals[torrentId] = 0;
@@ -918,7 +896,7 @@ class TorrentEngineService {
                 ),
               );
               unawaited(_forceStateRecovery(torrentId, task));
-              _requestMissingPieces(task);
+              _wakeIdlePeers(torrentId, task);
             } else if (cycle == 2) {
               // Cycle 2: retry DHT peer discovery + explicitly request missing pieces.
               try {
@@ -932,7 +910,7 @@ class TorrentEngineService {
                   reason: 'near_complete_cycle2_refresh',
                 ),
               );
-              _requestMissingPieces(task);
+              _wakeIdlePeers(torrentId, task);
               unawaited(_forceStateRecovery(torrentId, task));
             } else if (cycle >= 3) {
               if (stalledFor >= const Duration(minutes: 5)) {
@@ -960,7 +938,7 @@ class TorrentEngineService {
                   reason: 'near_complete_cycle3_refresh',
                 ),
               );
-              _requestMissingPieces(task);
+              _wakeIdlePeers(torrentId, task);
               unawaited(_forceStateRecovery(torrentId, task));
             }
           }
@@ -1492,17 +1470,11 @@ class TorrentEngineService {
       await TorrentService.instance.updateTorrent(torrent);
     }
 
-    // Aggressive peer connectivity: enable DHT, PEX, sequential video streaming,
-    // and use fallback trackers.
-    // stream: true activates AdvancedSequentialPieceSelector  -  required for
-    // the SequentialConfig to take effect. Without it the config is ignored.
+    // stream=false: rarest-first piece selection. See _streamPieceOrder.
     final task = dt.TorrentTask.newTask(
-      dtModel,
+      withTotalLength(dtModel),
       saveDir,
-      true, // stream=true activates sequential piece selection
-      null,
-      null,
-      _sequentialConfigFor(dtModel),
+      _streamPieceOrder,
     );
     _tasks[torrent.id] = task;
     _wireEvents(torrent.id, task);
@@ -1588,12 +1560,7 @@ class TorrentEngineService {
     } catch (_) {}
     _ensureTaskRunningMode(torrent.id, task);
 
-    _progressTimers[torrent.id]?.cancel();
-    _progressTimers[torrent.id] = Timer.periodic(const Duration(seconds: 5), (
-      _,
-    ) {
-      _logProgressThrottled(torrent.id, task);
-    });
+    _startProgressTimer(torrent.id, task);
 
     // Allow the DHT a short moment to bootstrap before firing many tracker requests
     await Future.delayed(const Duration(seconds: 2));
@@ -1641,6 +1608,17 @@ class TorrentEngineService {
 
     final status = _isTaskComplete(task) ? 'seeding' : 'downloading';
     await TorrentService.instance.updateTorrentStatus(torrent.id, status);
+  }
+
+  /// Every 5 s while the task runs: log progress and wake idle peers.
+  void _startProgressTimer(String torrentId, dt.TorrentTask task) {
+    _progressTimers[torrentId]?.cancel();
+    _progressTimers[torrentId] = Timer.periodic(const Duration(seconds: 5), (
+      _,
+    ) {
+      _logProgressThrottled(torrentId, task);
+      _wakeIdlePeers(torrentId, task);
+    });
   }
 
   /// How long one metadata downloader may go without receiving a piece
@@ -1875,17 +1853,13 @@ class TorrentEngineService {
       );
     }
 
-    // Aggressive peer connectivity: enable DHT, PEX, sequential video streaming,
-    // and use fallback trackers.
-    // stream: true activates AdvancedSequentialPieceSelector  -  required for
-    // the SequentialConfig to take effect. Without it the config is ignored.
+    // stream=false: rarest-first piece selection. See _streamPieceOrder.
     final task = dt.TorrentTask.newTask(
-      dtModel,
+      withTotalLength(dtModel),
       saveDir,
-      true, // stream=true activates sequential piece selection
+      _streamPieceOrder,
       magnet.webSeeds.isNotEmpty ? magnet.webSeeds : null,
       magnet.acceptableSources.isNotEmpty ? magnet.acceptableSources : null,
-      _sequentialConfigFor(dtModel),
     );
 
     // Do not auto-apply magnet `so` file selection hints.
@@ -1955,12 +1929,7 @@ class TorrentEngineService {
       _ensureTaskRunningMode(torrent.id, task);
     }
 
-    _progressTimers[torrent.id]?.cancel();
-    _progressTimers[torrent.id] = Timer.periodic(const Duration(seconds: 5), (
-      _,
-    ) {
-      _logProgressThrottled(torrent.id, task);
-    });
+    _startProgressTimer(torrent.id, task);
 
     // Announce to trackers in background without blocking UI
     _announceTrackers(torrent.id, task, force: true);
@@ -2264,25 +2233,36 @@ class TorrentEngineService {
     }
   }
 
-  void _requestMissingPieces(dt.TorrentTask task) {
-    try {
-      final dynamic t = task;
-      final piecesMap = t.pieceManager?.pieces as Map?;
-      if (piecesMap == null || piecesMap.isEmpty) return;
-
-      for (final entry in piecesMap.entries) {
-        final isComplete =
-            (entry.value.isCompletelyDownloaded as bool?) ?? false;
-        if (!isComplete) {
-          try {
-            t.requestPiece(entry.key);
-          } catch (_) {
-            // Ignore per-piece request failures and continue.
-          }
-        }
+  /// Asks every idle peer for blocks again.
+  ///
+  /// dtorrent_task_v2 only asks a peer for more blocks when something happens
+  /// on that peer's connection: a block arrives, it unchokes us, or it
+  /// announces a new piece. A peer that found nothing left to ask for goes
+  /// idle, and blocks that are freed later (a peer disconnected with requests
+  /// open, or a piece failed its hash check) are not offered to it again. A
+  /// seeder never announces new pieces, so it stays idle for good, and once
+  /// every connected peer is idle the download stalls, often just short of
+  /// 100 %.
+  ///
+  /// This replaces a call to TorrentTask.requestPiece, which does not exist:
+  /// it threw (and was ignored) once for every missing piece.
+  void _wakeIdlePeers(String torrentId, dt.TorrentTask task) {
+    if (_pausedTorrentIds.contains(torrentId)) return;
+    if (_isTaskComplete(task)) return;
+    final peers = task.activePeers?.toList();
+    if (peers == null || peers.isEmpty) return;
+    for (final peer in peers) {
+      // A peer that is choking us refuses requests, and a busy one asks for
+      // more by itself as its blocks arrive.
+      if (peer.isDisposed || peer.chokeMe || !peer.isSleeping) continue;
+      try {
+        (task as dynamic).requestPieces(peer);
+      } catch (e) {
+        // requestPieces is public on the task but not in the TorrentTask
+        // interface, so a library update could drop it.
+        _debugLog('[Peers] Could not wake idle peer for $torrentId: $e');
+        return;
       }
-    } catch (_) {
-      // Best-effort only.
     }
   }
 
@@ -2374,7 +2354,7 @@ class TorrentEngineService {
           torrentId,
           'Verification found missing/corrupt pieces; continuing download and requesting missing pieces.',
         );
-        _requestMissingPieces(task);
+        _wakeIdlePeers(torrentId, task);
         _ensureTaskRunningMode(torrentId, task);
         await TorrentService.instance
             .updateTorrentStatus(torrentId, 'downloading');
@@ -2755,7 +2735,7 @@ class TorrentEngineService {
           torrentId,
           'StateRecovery returned null  -  some pieces may need re-download.',
         );
-        _requestMissingPieces(task);
+        _wakeIdlePeers(torrentId, task);
         _ensureTaskRunningMode(torrentId, task);
         await TorrentService.instance.updateTorrentStatus(
           torrentId,
@@ -2833,7 +2813,7 @@ class TorrentEngineService {
           }
         }
 
-        _requestMissingPieces(task);
+        _wakeIdlePeers(torrentId, task);
         _ensureTaskRunningMode(torrentId, task);
         await TorrentService.instance.updateTorrentStatus(
           torrentId,
