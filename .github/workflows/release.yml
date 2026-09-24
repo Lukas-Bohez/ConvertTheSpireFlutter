@@ -188,6 +188,17 @@ jobs:
             Write-Error "dll\flutter_windows.dll is missing"
             exit 1
           }
+          # FFmpegKit's Windows DLLs are left out on purpose (issue #12:
+          # Defender flags them, and only Android and iOS use FFmpegKit). A
+          # plugin update that brings them back must not ship silently.
+          $ffmpegKit = @(Get-ChildItem -Path "$src\dll" -File -Include `
+            libffmpegkit*.dll, avdevice-*.dll, avcodec-*.dll, avformat-*.dll, `
+            avfilter-*.dll, avutil-*.dll, swscale-*.dll, swresample-*.dll `
+            -Recurse)
+          if ($ffmpegKit.Count -gt 0) {
+            Write-Error "FFmpegKit DLLs are back in the Windows build: $($ffmpegKit.Name -join ', ')"
+            exit 1
+          }
           # Change into the Release directory so Compress-Archive stores flat
           # paths (no long build\windows\x64\runner\Release prefix). This
           # avoids the Windows MAX_PATH limit when users extract with the

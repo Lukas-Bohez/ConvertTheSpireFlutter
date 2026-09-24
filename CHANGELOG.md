@@ -1,5 +1,17 @@
 # Changelog
 
+## 14.4.1+1297 — Startup fix and a smaller Windows download
+
+### Fixed
+
+- **The app opens again.** 14.4.0 stayed on its loading spinner and never got any further, on every platform. Nothing you had was touched: your library, downloads and settings are all there once it opens.
+- **Windows Defender no longer flags the Windows download** (issue #12). The Windows version carried about a hundred conversion libraries that only the Android and iOS versions use, and Defender flagged one of them, avdevice. They are gone from Windows, which also halves the download, from about 86 MB to about 41 MB. Converting on Windows works as before. When you update, extract into a new folder rather than over the old one, so the flagged file does not stay behind.
+- **Closing the app on Windows no longer crashes it** on the way out.
+
+### Improved
+
+- **What's new shows what you missed.** If you skipped a release, as nearly everyone did with 14.4.0, its notes now follow this one's.
+
 ## 14.4.0+1296 — Mobile fixes and browser extensions
 
 ### New

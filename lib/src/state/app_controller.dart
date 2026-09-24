@@ -185,7 +185,8 @@ class AppController extends ChangeNotifier {
     final count = engine == null ? 0 : engine.activeDownloadIds.length;
     DownloadKeepAlive.instance.report(
       active: count,
-      text: count == 1 ? '1 torrent downloading' : '$count torrents downloading',
+      text:
+          count == 1 ? '1 torrent downloading' : '$count torrents downloading',
       source: DownloadKeepAlive.torrentsSource,
     );
   }
@@ -1518,7 +1519,9 @@ class AppController extends ChangeNotifier {
     watchedPlaylistService.dispose();
     previewPlayer.dispose();
     TorrentService.instance.dispose();
-    TorrentEngineService.instance.dispose();
+    // `instance` would create the engine - and start DHT - just to dispose it
+    // on a device that never opened a torrent.
+    TorrentEngineService.existingInstance?.dispose();
     try {
       youtube.close();
     } catch (_) {}
