@@ -13,6 +13,7 @@
 - **Export missing list and Export as M3U work on Android.** Both did nothing on phones.
 - **Saving a converted file tells you where it went,** or why it could not be saved. The Save button used to give no sign either way.
 - **Compare fits a phone.** The confidence filters, the Missing tab buttons and the Extras headings ran off the edge of the screen; they wrap now. The Quick Download card no longer overflows with larger text.
+- **A full-size tile on Android TV.** The app's banner and icon now come in the sizes Android TV asks for, and the banner shows just the logo and the name, big enough to read from the couch, instead of a tagline too small to read. Google Play's TV review had flagged the old ones.
 
 ### New
 

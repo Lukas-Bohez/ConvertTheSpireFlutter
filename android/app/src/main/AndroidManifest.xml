@@ -59,8 +59,7 @@
         tools:replace="android:label"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:banner="@drawable/banner"
+        android:banner="@mipmap/banner"
         android:largeHeap="true"
         android:extractNativeLibs="false"
         android:usesCleartextTraffic="true">

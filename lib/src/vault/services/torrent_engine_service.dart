@@ -1751,7 +1751,7 @@ class TorrentEngineService {
           _log(torrentId, 'Metadata round $round failed: $e');
           await Future<void>.delayed(const Duration(seconds: 2));
         } finally {
-          unawaited(listener.dispose().catchError((_) {}));
+          unawaited(listener.dispose().catchError((_) => false));
           unawaited(downloader.stop().catchError((_) {}));
         }
       }
