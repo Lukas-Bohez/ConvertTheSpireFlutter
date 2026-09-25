@@ -1214,10 +1214,17 @@ abstract class Peer
     events.emit(PeerHandshakeEvent(this, _remotePeerId!, data));
   }
 
-  void _sendExtendedHandshake() async {
+  /// Sent synchronously, straight after the remote handshake is processed.
+  ///
+  /// BEP 10: the extension handshake comes before any other extended
+  /// message. It used to wait for a file read (the version string), so the
+  /// ut_metadata request that the remote's own extension handshake triggers
+  /// went out first, and libtorrent peers (qBittorrent, Deluge, most of any
+  /// swarm) dropped the connection as "invalid message": magnet links never
+  /// got their metadata.
+  void _sendExtendedHandshake() {
     if (localEnableExtended && remoteEnableExtended) {
-      var m = await _createExtendedHandshakeMessage();
-      sendMessage(ID_EXTENDED, m);
+      sendMessage(ID_EXTENDED, _createExtendedHandshakeMessage());
     }
   }
 
@@ -1307,14 +1314,14 @@ abstract class Peer
     _handShaked = true;
   }
 
-  Future<List<int>> _createExtendedHandshakeMessage() async {
+  List<int> _createExtendedHandshakeMessage() {
     var message = <int>[];
     message.add(0);
     var d = <String, dynamic>{};
     d['yourip'] = address.address.rawAddress;
-    var version = await getTorrentTaskVersion();
-    version ??= '0.0.0';
-    d['v'] = 'Dart BT v$version';
+    // getTorrentTaskVersion() reads pubspec.yaml from the working directory,
+    // which in an app is the app's own, or none.
+    d['v'] = 'Dart BT v$PACKAGE_VERSION';
     d['m'] = localExtended;
     d['reqq'] = reqq;
     var m = encode(d);

@@ -432,6 +432,26 @@ class MetadataDownloader
     _peersAddress.remove(peer.address);
     _incomingAddress.remove(peer.address.address);
     _activePeers.remove(peer);
+
+    // A peer that is gone can serve no more metadata. It used to stay in
+    // _availablePeers, so every retry went to the dead connection and its
+    // pieces only came back after their timeout. They are handed to the
+    // other peers straight away instead.
+    if (!_availablePeers.remove(peer)) return;
+    final prefix = '${peer.remotePeerId}_';
+    final orphaned = _requestTimeout.keys
+        .where((key) => key.startsWith(prefix))
+        .toList();
+    for (final key in orphaned) {
+      _requestTimeout.remove(key)?.cancel();
+      final piece = int.tryParse(key.substring(prefix.length));
+      if (piece != null &&
+          !_completedPieces.contains(piece) &&
+          !_metaDataPieces.contains(piece)) {
+        _metaDataPieces.add(piece);
+      }
+    }
+    _requestMetaData();
   }
 
   void _processPeerHandshake(dynamic source, String remotePeerId, data) {
