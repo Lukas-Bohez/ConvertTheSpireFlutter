@@ -25,15 +25,24 @@ The script also rewrites, in one go:
   deliberately do **not** show a banner; they open with the demo video.
 - `android/app/src/main/play_tv_assets/` - copies of the TV images.
 - `android/app/src/play/res/` - the **launcher icons** (adaptive foreground with
-  the logo inside the safe zone + opaque background colour + legacy icons) and the
-  in-app **Android TV banner** (`android:banner="@mipmap/banner"`). The TV banner
-  is also written to `android/app/src/main/res/` for the GitHub (full) flavor.
+  the logo in the centre 70dp + the banner's gradient as background + legacy icons)
+  and the in-app **Android TV banner** (`android:banner="@mipmap/banner"`). The TV
+  banner is also written to `android/app/src/main/res/` for the GitHub (full) flavor.
 
 Both follow Google's [Android TV icon and banner sizes](https://developer.android.com/design/ui/tv/guides/system/tv-app-icon-guidelines):
 the banner is `mipmap-<density>/banner.png` from 160x90 (mdpi) to 640x360
 (xxxhdpi), so 320x180 at xhdpi, and the legacy icon is 160x160 at xhdpi. Play
 review rejects the TV app as having "no full-size app banner and/or icon" when
 they are smaller, and the banner shows only the logo and the app name.
+
+The icons fill their whole square: the banner's navy-to-teal gradient edge to
+edge, with the logo as large as it goes without the music note being clipped by
+a round mask. Play review also turned down the logo on a pale square with a wide
+margin around it: "Your icon does not fill the entire icon space". The same goes
+for `app-icon-512.png`, so upload it in Play Console along with the new build.
+
+Only the banners and screenshots have text. The icons can be regenerated on any
+OS; the text needs the Windows fonts to look right.
 
 Rebuild the AAB after running it so the new launcher icon/banner ship in the app,
 then check it with `python scripts/verify_play_aab.py <aab>` (see the
