@@ -25,7 +25,7 @@ The script also rewrites, in one go:
   deliberately do **not** show a banner; they open with the demo video.
 - `android/app/src/main/play_tv_assets/` - copies of the TV images.
 - `android/app/src/play/res/` - the **launcher icons** (adaptive foreground with
-  the logo in the centre 70dp + the banner's gradient as background + legacy icons)
+  the logo in the centre 69dp + a white background colour + legacy icons)
   and the in-app **Android TV banner** (`android:banner="@mipmap/banner"`). The TV
   banner is also written to `android/app/src/main/res/` for the GitHub (full) flavor.
 
@@ -35,11 +35,12 @@ the banner is `mipmap-<density>/banner.png` from 160x90 (mdpi) to 640x360
 review rejects the TV app as having "no full-size app banner and/or icon" when
 they are smaller, and the banner shows only the logo and the app name.
 
-The icons fill their whole square: the banner's navy-to-teal gradient edge to
-edge, with the logo as large as it goes without the music note being clipped by
-a round mask. Play review also turned down the logo on a pale square with a wide
-margin around it: "Your icon does not fill the entire icon space". The same goes
-for `app-icon-512.png`, so upload it in Play Console along with the new build.
+The icons are the logo on white, as large as it goes without a round mask
+clipping the music note. The logo was drawn for white; on anything else it
+looked wrong on Android. Play review turned down the logo sitting small in a
+wide margin ("Your icon does not fill the entire icon space"), so it spans at
+least 80% of every icon; CI checks that. The same goes for `app-icon-512.png`,
+so upload it in Play Console along with the new build.
 
 Only the banners and screenshots have text. The icons can be regenerated on any
 OS; the text needs the Windows fonts to look right.
@@ -56,4 +57,6 @@ then check it with `python scripts/verify_play_aab.py <aab>` (see the
 - **Demo video:** https://youtu.be/66Rx8PDY_r0
 
 ## Not covered here
-The GitHub (full) flavor keeps its own launcher icon in `android/app/src/full/res/`.
+The GitHub (full) flavor keeps its own launcher icon, the orb of the Windows app,
+in `android/app/src/full/res/`; `python scripts/generate_full_icons.py` makes it,
+on white, from `assets/icons/app_icon.ico`.

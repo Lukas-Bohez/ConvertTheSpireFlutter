@@ -1,8 +1,8 @@
 """Android TV banner and launcher icon checks for the Play build.
 
 Play's TV review has turned the app down twice: once for the banner and
-icon sizes, once for an icon that "does not fill the entire icon space" (a
-round logo on a pale square). These checks catch both, on the built app:
+icon sizes, once for an icon that "does not fill the entire icon space" (the
+logo small in a wide margin). These checks catch both, on the built app:
 
   - scripts/verify_play_aab.py runs them on the release AAB before upload;
   - CI runs this file on the Play flavor's debug APK for every change:
@@ -31,26 +31,33 @@ BANNER_SIZES = {"mdpi": (160, 90), "hdpi": (240, 135), "xhdpi": (320, 180),
 ICON_SIZES = {"ldpi": 60, "mdpi": 80, "hdpi": 120, "xhdpi": 160,
               "xxhdpi": 240, "xxxhdpi": 320}
 
-# Share of an icon's outer ring that may be near-white. The rejected icon
-# had a pale margin all the way round (1.0); the current one has none.
-MAX_PALE_BORDER = 0.2
+# How much of the icon the logo must span, across and down. The rejected
+# icon's logo spanned 68% of it; the current one spans 85%.
+MIN_LOGO_SPAN = 0.8
 
 
-def pale_border_share(im):
-    """Share of the pixels in the outer 6% ring of [im] that are near-white."""
-    im = im.convert("RGB")
-    w, h = im.size
-    ring = max(1, round(min(w, h) * 0.06))
-    px = im.load()
-    pale = total = 0
-    for y in range(h):
-        for x in range(w):
-            if ring <= x < w - ring and ring <= y < h - ring:
-                continue
-            total += 1
-            if min(px[x, y]) > 225:
-                pale += 1
-    return pale / total
+def logo_span(im):
+    """How much of [im] the logo spans, across and down, as a share of its
+    size: the extent of what differs from the background (the top-left
+    pixel) or is not see-through."""
+    im = im.convert("RGBA")
+    background = im.getpixel((0, 0))
+    mask = Image.new("L", im.size, 0)
+    src, dst = im.load(), mask.load()
+    for y in range(im.height):
+        for x in range(im.width):
+            r, g, b, a = src[x, y]
+            if background[3] == 0:
+                differs = a > 40
+            else:
+                differs = max(abs(r - background[0]), abs(g - background[1]),
+                              abs(b - background[2])) > 40
+            if differs:
+                dst[x, y] = 255
+    box = mask.getbbox()
+    if box is None:
+        return 0.0, 0.0
+    return (box[2] - box[0]) / im.width, (box[3] - box[1]) / im.height
 
 
 def check_tv_graphics(z, res, check):
@@ -82,19 +89,26 @@ def check_tv_graphics(z, res, check):
         check(im.size == (n, n) and opaque,
               f"icon {density}: {im.size}, opaque={opaque}, want ({n}, {n}) opaque")
         if density == "xhdpi":
-            pale = pale_border_share(im)
-            check(pale <= MAX_PALE_BORDER,
-                  f"icon fills its square: {pale:.0%} of its edge is pale, "
-                  f"at most {MAX_PALE_BORDER:.0%}")
+            across, down = logo_span(im)
+            check(min(across, down) >= MIN_LOGO_SPAN,
+                  f"logo fills the icon: spans {across:.0%} x {down:.0%}, "
+                  f"at least {MIN_LOGO_SPAN:.0%}")
 
     check(f"{res}mipmap-anydpi-v26/ic_launcher.xml" in names,
           "adaptive icon present")
-    background = image(f"{res}mipmap-xhdpi-v4/ic_launcher_background.png")
-    check(background is not None, "adaptive icon background is an image")
-    if background is not None:
-        pale = pale_border_share(background)
-        check(pale <= MAX_PALE_BORDER,
-              f"adaptive icon background is not pale: {pale:.0%} of its edge is")
+    foreground = image(f"{res}mipmap-xhdpi-v4/ic_launcher_foreground.png")
+    check(foreground is not None, "adaptive icon foreground present")
+    if foreground is not None:
+        # Launchers show the centre 72dp of the 108dp layer.
+        visible = foreground.width * 72 / 108
+        across, down = (s * foreground.width / visible
+                        for s in logo_span(foreground))
+        check(min(across, down) >= MIN_LOGO_SPAN,
+              f"logo fills the adaptive icon: spans {across:.0%} x {down:.0%} "
+              f"of what shows, at least {MIN_LOGO_SPAN:.0%}")
+        check(max(across, down) <= 1.0,
+              f"logo is not cut off in the adaptive icon: spans "
+              f"{max(across, down):.0%} of what shows, at most 100%")
 
 
 def find_aapt2(explicit):

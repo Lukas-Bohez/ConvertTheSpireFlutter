@@ -18,16 +18,17 @@ What it writes
   docs/screenshots/banner.png         same promo image (kept for reference;
                                       GitHub releases do not show a banner)
   android/app/src/main/play_tv_assets/  copies of the three TV images above
-  android/app/src/play/res/             launcher icons (adaptive foreground and
-                                        background + legacy) and the in-app
+  android/app/src/play/res/             launcher icons (adaptive foreground, white
+                                        background colour, legacy) and the in-app
                                         Android TV banner (android:banner)
 
 The in-app TV banner and launcher icons follow Google's Android TV sizes
 (developer.android.com/design/ui/tv/guides/system/tv-app-icon-guidelines):
 banner 320x180 px and icon 160x160 px at xhdpi, in mipmap-<density>/. Play
 review rejects the app ("no full-size app banner and/or icon") without them,
-and also when the icon is the logo on a pale square ("Your icon does not fill
-the entire icon space"): the icons are the banner's gradient edge to edge.
+and also when the logo sits small in the icon with a wide margin around it
+("Your icon does not fill the entire icon space"): it is as large as the icon
+allows, on white.
 """
 import math
 import random
@@ -60,13 +61,17 @@ BADGE = "Designed for Android TV"
 
 # How much of the icon the logo takes up: the diameter of the smallest circle
 # around the whole logo (music note included), as a share of the icon's side.
-# The icons are the banner's gradient edge to edge with the logo on top. Play's
-# TV review turned down the logo on a pale square, with a wide margin around
-# it: "Your icon does not fill the entire icon space".
-ICON_LOGO = 0.88
-# Adaptive icon: 108dp layers. Android TV never clips the centre 72dp
-# (tv-app-icon-guidelines), so the logo takes 70dp of it.
-ADAPTIVE_LOGO_DP = 70
+# Play's TV review turned down the logo sitting small in a wide margin ("Your
+# icon does not fill the entire icon space"), so it is as large as it goes
+# without being cut off.
+ICON_LOGO = 0.96
+# Adaptive icon: 108dp layers, of which Android shows the centre 72dp; the
+# logo takes 69dp of it, so a round mask does not shave the music note.
+ADAPTIVE_LOGO_DP = 69
+# The logo was drawn for white: its white centre and edges belong on white,
+# and on Android the icon looked wrong on anything else.
+ICON_BG = (255, 255, 255)
+ICON_BG_HEX = "#FFFFFF"
 
 BOLD = ["bahnschrift.ttf", "segoeuib.ttf", "arialbd.ttf", "DejaVuSans-Bold.ttf"]
 REG = ["segoeui.ttf", "SegUIVar.ttf", "arial.ttf", "DejaVuSans.ttf"]
@@ -316,9 +321,9 @@ def launcher_banner(w, h):
 
 
 def store_icon(size):
-    """Opaque square icon, filled edge to edge (Play Console 512x512, and the
+    """Opaque square icon, the logo on white (Play Console 512x512, and the
     legacy launcher icon)."""
-    im = gradient(size, size)
+    im = Image.new("RGBA", (size, size), ICON_BG + (255,))
     paste_logo_round(im, size * ICON_LOGO)
     return im.convert("RGB")
 
@@ -335,11 +340,10 @@ def launcher_icons():
         d_dir = PLAY_RES / f"mipmap-{name}"
         d_dir.mkdir(parents=True, exist_ok=True)
 
-        # Adaptive icon: 108dp layers, the gradient behind and the logo in
-        # front, in the centre ADAPTIVE_LOGO_DP.
+        # Adaptive icon: 108dp layers, white behind (a colour, below) and the
+        # logo in front, in the centre ADAPTIVE_LOGO_DP.
         layer = round(108 * scale)
-        gradient(layer, layer).convert("RGB").save(
-            d_dir / "ic_launcher_background.png", optimize=True)
+        (d_dir / "ic_launcher_background.png").unlink(missing_ok=True)
         fg = Image.new("RGBA", (layer, layer), (0, 0, 0, 0))
         paste_logo_round(fg, layer * ADAPTIVE_LOGO_DP / 108)
         fg.save(d_dir / "ic_launcher_foreground.png", optimize=True)
@@ -355,7 +359,7 @@ def launcher_icons():
     xml = (
         '<?xml version="1.0" encoding="utf-8"?>\n'
         '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
-        '    <background android:drawable="@mipmap/ic_launcher_background" />\n'
+        '    <background android:drawable="@color/ic_launcher_background" />\n'
         '    <foreground android:drawable="@mipmap/ic_launcher_foreground" />\n'
         '</adaptive-icon>\n'
     )
@@ -363,8 +367,14 @@ def launcher_icons():
     # android:roundIcon is not used (Android TV's guidelines deprecate it in
     # favour of the adaptive icon above).
     (any_dir / "ic_launcher_round.xml").unlink(missing_ok=True)
-    # The background used to be a pale colour defined here.
-    (PLAY_RES / "values/colors.xml").unlink(missing_ok=True)
+    colors = (
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        '<resources>\n'
+        f'    <color name="ic_launcher_background">{ICON_BG_HEX}</color>\n'
+        '</resources>\n'
+    )
+    (PLAY_RES / "values").mkdir(parents=True, exist_ok=True)
+    (PLAY_RES / "values/colors.xml").write_text(colors, encoding="utf-8")
 
 
 BANNER_SIZES = {"mdpi": (160, 90), "hdpi": (240, 135), "xhdpi": (320, 180),
