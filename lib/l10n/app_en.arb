@@ -2011,10 +2011,12 @@
       }
     }
   },
-  "alsoDeleteDownloadedFiles": "Also delete downloaded files",
+  "alsoDeleteDownloadedFiles": "Also delete this torrent's files",
   "removeDeleteFiles": "Remove + Delete files",
   "torrentRemovedFilesDeleted": "Torrent removed and files deleted.",
   "torrentRemoved": "Torrent removed.",
+  "torrentRemovedNoFileList": "Torrent removed. No files were deleted: the app never got this torrent's file list.",
+  "torrentRemovedSomeFilesInUse": "Torrent removed, but some of its files are open in another app and were not deleted.",
   "removeFailed": "Remove failed: {e}",
   "@removeFailed": {
     "placeholders": {

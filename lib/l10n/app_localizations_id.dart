@@ -3412,7 +3412,7 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get alsoDeleteDownloadedFiles => 'Hapus juga file yang diunduh';
+  String get alsoDeleteDownloadedFiles => 'Hapus juga file torrent ini';
 
   @override
   String get removeDeleteFiles => 'Hapus + Hapus file';
@@ -3422,6 +3422,14 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get torrentRemoved => 'Torrent dihapus.';
+
+  @override
+  String get torrentRemovedNoFileList =>
+      'Torrent dihapus. Tidak ada file yang dihapus: aplikasi belum pernah menerima daftar file torrent ini.';
+
+  @override
+  String get torrentRemovedSomeFilesInUse =>
+      'Torrent dihapus, tetapi beberapa filenya sedang dibuka di aplikasi lain dan tidak dihapus.';
 
   @override
   String removeFailed(Object e) {
