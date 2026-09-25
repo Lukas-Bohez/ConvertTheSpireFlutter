@@ -10,14 +10,20 @@ Windows · Android · Android TV · macOS · 18 languages · no installer · no 
 
 ## 📥 Install in a minute
 
-One file, then it runs. No installer, no Python, no command line, no account. Pick your platform:
+One line or one file, then it runs. No admin rights, no Python, no account. Pick your platform:
 
 | | Download | Then |
 |---|---|---|
-| **Windows** | `ConvertTheSpireReborn-windows-x64.zip` from the [latest release](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest) | Extract it and double-click `convert_the_spire_reborn.exe`. That's it. |
+| **Windows** | Press <kbd>Win</kbd>+<kbd>R</kbd>, paste the line below and press Enter | It downloads the latest version, checks it and starts it. Run it again to update. |
 | **Android phone or TV** | `ConvertTheSpireReborn.apk` from the [latest release](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest) | Open the file and allow the install when Android asks. |
 | **macOS** | `ConvertTheSpireReborn-macOS.zip` from the [latest release](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest) | Unzip and open the app. If macOS says it cannot check the developer, right-click it and choose **Open**. |
 | **Google Play** | [The Play Store version](https://play.google.com/store/apps/details?id=com.torrentspire.ai) | Everything except the YouTube download features, which Play policy does not allow. |
+
+```powershell
+powershell -c "irm https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/main/install.ps1 | iex"
+```
+
+The line runs [install.ps1](install.ps1) from this repository: it installs to `%LOCALAPPDATA%\Programs\ConvertTheSpireReborn` for your account only, checks the download against the release's `SHA256SUMS.txt`, and adds the app to the Start menu. No blue "Windows protected your PC" screen. Rather have the zip? Take `ConvertTheSpireReborn-windows-x64.zip` from the [latest release](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest), extract it and double-click `convert_the_spire_reborn.exe`.
 
 Also on the official site: [quizthespire.com](https://quizthespire.com/).
 
@@ -31,13 +37,13 @@ Most tools that download from YouTube and other sites expect you to do some asse
 |---|---|---|
 | The downloader | Install Python, then `pip install yt-dlp` | Built into the Android app. On Windows and macOS the app fetches a self-contained yt-dlp on first start and keeps it up to date |
 | The converter | Download FFmpeg and add it to your PATH | Built into the Android app, fetched by itself on Windows |
-| Installing on Windows | Run an installer with administrator rights | Extract the zip and double-click |
+| Installing on Windows | Run an installer with administrator rights | Paste one line, or extract the zip and double-click |
 | Your first playlist | Learn command-line flags, or a converter site one song at a time | Paste the link and press download |
 | Removing it | Run an uninstaller | Delete the folder |
 
 * **One download, then it just runs.** On Windows there is no installer, no administrator rights and nothing to configure. On first start the app fetches [yt-dlp](https://github.com/yt-dlp/yt-dlp) and FFmpeg by itself and keeps yt-dlp up to date in the background, so sites that change their pages keep working.
 * **Nothing extra on Android.** FFmpeg is built into the APK. No root, no Termux, no Google account, no separate player. The same APK runs on phones, tablets and Android TV.
-* **Nothing to uninstall on Windows.** The zip holds the `.exe`, a `data` folder and a `dll` folder, and it runs from wherever you extract it. It adds itself to "Open with" for your songs, videos, torrents and magnet links, for your Windows account only and without admin rights. To remove the app, delete the folder.
+* **Nothing to uninstall on Windows.** The app is the `.exe`, a `data` folder and a `dll` folder, in `%LOCALAPPDATA%\Programs\ConvertTheSpireReborn` or wherever you extract the zip. It adds itself to "Open with" for your songs, videos, torrents and magnet links, for your Windows account only and without admin rights. To remove the app, delete the folder.
 * **Updates tell you what changed.** After an update the app shows what is new, including anything from releases you skipped.
 * **Native, not a web page in a box.** It is written in Flutter and compiled for each platform, so it starts quickly and stays light on memory next to Electron apps.
 
@@ -141,7 +147,7 @@ No account, no sign-up, and the app does not track what you download. The GitHub
 
 ## Questions
 
-**Windows shows a blue "Windows protected your PC" screen.** The app is not signed with a paid certificate, so SmartScreen does not know it yet. Choose **More info**, then **Run anyway**. When updating, extract into a new folder rather than over the old one.
+**Windows shows a blue "Windows protected your PC" screen.** That screen is SmartScreen checking a program your browser downloaded that is not signed with a paid certificate. Install with the [one line above](#-install-in-a-minute) instead and it does not appear; to update, run the same line again. With the zip, choose **More info**, then **Run anyway**, and when updating, extract into a new folder rather than over the old one.
 
 **Android says the app is from an unknown source.** Android asks this for any app that does not come from the Play Store. Allow it for the app you opened the APK from (your browser or file manager).
 
