@@ -14,13 +14,7 @@
 
 ## AI copilot (Ollama)
 
-- **[EXISTS]** `AiCopilotService` (`lib/src/vault/services/ai_copilot_service.dart`) is a real Ollama REST client — `/api/tags`, `/api/pull` with streaming, model listing/checking.
-- **[EXISTS]** The base URL is user-configurable and persisted via `SettingsService` (`aiOllamaUrl`, `setAiOllamaUrl`), with an Android-specific default constant (`kAndroidLocalOllamaUrl`) separate from the desktop `localhost:11434` default.
-- **[EXISTS — GAP] Android connectivity UX.** Ollama has no native Android app — on-device it only runs through Termux, which isn't something to bundle into a Play Store app. **The plumbing above already supports pointing the app at a remote Ollama host**, so the actual "Ollama for more platforms, like Android" ask is UX, not architecture:
-  - A settings surface for the Ollama connection (URL field, test-connection action using the existing `checkVersion()`, clear error/disconnected states) if one isn't fully built out yet.
-  - **LAN auto-discovery** so Android users don't hand-type an IP — `multicast_dns` is already a dependency for DLNA/Chromecast/AirPlay discovery; the same mDNS pattern could discover an Ollama host on the network.
-  - Make sure onboarding/docs tell desktop users to set `OLLAMA_HOST=0.0.0.0` so a phone on the same Wi-Fi can actually reach it (Ollama binds to localhost only by default).
-- **[NEW, optional]** True on-device inference as a fallback when no LAN host is reachable — a Flutter FFI plugin like `llamadart` (Android/iOS/macOS/Linux/Windows/web, wraps llama.cpp/GGUF) would let a small quantized model run directly on the phone. Lower priority than the LAN story above.
+- **[REMOVED]** The Ollama copilot and AI chat tabs, their settings and `AiCopilotService` were taken out: they did not fit the app. Torrents is one screen like the others; its settings are a card in Settings and its guide a section of the Guide.
 
 ---
 

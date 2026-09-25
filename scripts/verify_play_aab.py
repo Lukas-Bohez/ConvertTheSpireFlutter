@@ -9,8 +9,8 @@ It checks what Play review and the upload itself have rejected before:
   - version matches pubspec.yaml, package and label are the Play ones
   - Android TV: LEANBACK_LAUNCHER, leanback/touchscreen not required,
     android:banner = @mipmap/banner at 160x90 to 640x360 (320x180 at xhdpi),
-    launcher icon 160x160 at xhdpi and opaque ("no full-size app banner
-    and/or icon", TV-LB)
+    launcher icon 160x160 at xhdpi, opaque and filling its square ("no
+    full-size app banner and/or icon"); see play_tv_checks.py
   - the bundled CHANGELOG.md has this version, so What's new shows it
   - with --previous: signed with the same key as that earlier upload
 
@@ -20,7 +20,6 @@ BUNDLETOOL_JAR environment variable, or downloaded once with
 Exits non-zero when any check fails.
 """
 import argparse
-import io
 import os
 import re
 import shutil
@@ -29,13 +28,9 @@ import sys
 import zipfile
 from pathlib import Path
 
-from PIL import Image
+from play_tv_checks import check_tv_graphics
 
 ROOT = Path(__file__).resolve().parents[1]
-BANNER_SIZES = {"mdpi": (160, 90), "hdpi": (240, 135), "xhdpi": (320, 180),
-                "xxhdpi": (480, 270), "xxxhdpi": (640, 360)}
-ICON_SIZES = {"ldpi": 60, "mdpi": 80, "hdpi": 120, "xhdpi": 160,
-              "xxhdpi": 240, "xxxhdpi": 320}
 ANDROID_STUDIO_JBR = Path(r"C:\Program Files\Android\Android Studio\jbr")
 
 failures = 0
@@ -114,23 +109,7 @@ def main():
     check(feature_not_required("android.hardware.touchscreen"), "touchscreen not required")
 
     with zipfile.ZipFile(aab) as z:
-        names = set(z.namelist())
-        check(not any(re.match(r"base/res/drawable[^/]*/banner\.png$", n) for n in names),
-              "no leftover drawable banner")
-        for density, size in BANNER_SIZES.items():
-            path = f"base/res/mipmap-{density}-v4/banner.png"
-            got = Image.open(io.BytesIO(z.read(path))).size if path in names else None
-            check(got == size, f"banner {density}: {got}, want {size}")
-        for density, n in ICON_SIZES.items():
-            path = f"base/res/mipmap-{density}-v4/ic_launcher.png"
-            if path not in names:
-                check(False, f"icon {density}: missing")
-                continue
-            im = Image.open(io.BytesIO(z.read(path))).convert("RGBA")
-            opaque = im.getchannel("A").getextrema()[0] == 255
-            check(im.size == (n, n) and opaque,
-                  f"icon {density}: {im.size}, opaque={opaque}, want ({n}, {n}) opaque")
-        check("base/res/mipmap-anydpi-v26/ic_launcher.xml" in names, "adaptive icon present")
+        check_tv_graphics(z, "base/res/", check)
         changelog = z.read("base/assets/flutter_assets/CHANGELOG.md").decode("utf-8")
         check(f"## {name}+{code}" in changelog, f"bundled CHANGELOG.md has {name}+{code}")
 

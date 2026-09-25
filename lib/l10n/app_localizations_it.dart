@@ -3266,6 +3266,26 @@ class AppLocalizationsIt extends AppLocalizations {
   String get copyMagnetLink => 'Copia link magnet';
 
   @override
+  String get shareTorrentFile => 'Condividi file .torrent';
+
+  @override
+  String get saveTorrentFile => 'Salva file .torrent';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return 'Salvato in $path';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      'Nessun file .torrent per ora: l\'app sta ancora ricevendo l\'elenco dei file di questo torrent. Copia invece il suo link magnet.';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return 'Impossibile condividere il file .torrent: $error';
+  }
+
+  @override
   String get magnetLinkCopied => 'Link magnet copiato';
 
   @override
@@ -4322,8 +4342,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get preparing => 'Preparazione...';
 
   @override
-  String get vaultSpireDesignedExclusivelyLegal =>
-      'Vault The Spire è pensato esclusivamente per download legali, tra cui:\n\n- Software open source (distribuzioni Linux, strumenti di sviluppo, giochi pubblicati gratuitamente)\n- Musica, video e libri con licenza Creative Commons\n- Contenuti di pubblico dominio (vecchi film, registrazioni storiche, letteratura classica)\n- File di tua proprietà di cui hai fatto tu stesso una copia\n- Contenuti che gli autori condividono espressamente per la libera distribuzione\n\nScaricare o condividere materiale protetto da copyright senza autorizzazione è illegale nella maggior parte dei paesi. Gli sviluppatori di questa app non approvano né sostengono violazioni del diritto d\'autore.';
+  String vaultSpireDesignedExclusivelyLegal(String appName) {
+    return '$appName è pensato esclusivamente per download legali, tra cui:\n\n- Software open source (distribuzioni Linux, strumenti di sviluppo, giochi pubblicati gratuitamente)\n- Musica, video e libri con licenza Creative Commons\n- Contenuti di pubblico dominio (vecchi film, registrazioni storiche, letteratura classica)\n- File di tua proprietà di cui hai fatto tu stesso una copia\n- Contenuti che gli autori condividono espressamente per la libera distribuzione\n\nScaricare o condividere materiale protetto da copyright senza autorizzazione è illegale nella maggior parte dei paesi. Gli sviluppatori di questa app non approvano né sostengono violazioni del diritto d\'autore.';
+  }
 
   @override
   String get tapButtonPasteMagnetLink =>
@@ -4342,12 +4363,14 @@ class AppLocalizationsIt extends AppLocalizations {
       'Se un file scaricato sembra danneggiato o non si apre, tocca il torrent per aprirne i dettagli e poi \"Verifica file\". Ogni pezzo viene riletto dal disco e confrontato con i checksum originali; nessun dato viene eliminato.\n\nSe la verifica trova pezzi danneggiati, o se vuoi ricominciare da capo, tocca \"Scarica di nuovo\". La copia locale viene eliminata e tutto viene riscaricato dai peer.\n\nI repack grandi (archivi di installazione in più parti) a volte richiedono una verifica al termine, perché i pezzi possono arrivare in ordine sparso tra molti file.';
 
   @override
-  String get vaultSpireStoresAllData =>
-      'Vault The Spire salva tutti i dati in locale sul dispositivo. Cronologia dei torrent, statistiche di download e nomi dei file non vengono inviati a nessun server.\n\nIl tuo indirizzo IP è visibile agli altri peer di ogni swarm a cui ti unisci: è così che funziona BitTorrent. Una VPN nasconde il tuo IP se la privacy verso gli altri peer è importante per te.\n\nIl browser integrato non sincronizza la cronologia con nessun cloud. La cronologia resta solo sul dispositivo e si può cancellare nelle Impostazioni.';
+  String vaultSpireStoresAllData(String appName) {
+    return '$appName salva tutti i dati in locale sul dispositivo. Cronologia dei torrent, statistiche di download e nomi dei file non vengono inviati a nessun server.\n\nIl tuo indirizzo IP è visibile agli altri peer di ogni swarm a cui ti unisci: è così che funziona BitTorrent. Una VPN nasconde il tuo IP se la privacy verso gli altri peer è importante per te.\n\nIl browser integrato non sincronizza la cronologia con nessun cloud. La cronologia resta solo sul dispositivo e si può cancellare nelle Impostazioni.';
+  }
 
   @override
-  String get disableBatteryOptimisationVaultSpire =>
-      '- Disattiva l\'ottimizzazione della batteria per Vault The Spire in Impostazioni di Android -> App, così il sistema non mette in pausa i download attivi.\n\n- Se un torrent mostra \"File già in uso\", chiudi le altre app che hanno aperto il file e tocca Scarica di nuovo.\n\n- Trascina verso il basso l\'elenco dei torrent per forzare un aggiornamento se l\'avanzamento sembra bloccato.\n\n- Per risultati migliori su Android 12 e successivi, concedi il permesso di archiviazione quando viene richiesto al primo avvio.';
+  String disableBatteryOptimisationVaultSpire(String appName) {
+    return '- Disattiva l\'ottimizzazione della batteria per $appName in Impostazioni di Android -> App, così il sistema non mette in pausa i download attivi.\n\n- Se un torrent mostra \"File già in uso\", chiudi le altre app che hanno aperto il file e tocca Scarica di nuovo.\n\n- Trascina verso il basso l\'elenco dei torrent per forzare un aggiornamento se l\'avanzamento sembra bloccato.\n\n- Per risultati migliori su Android 12 e successivi, concedi il permesso di archiviazione quando viene richiesto al primo avvio.';
+  }
 
   @override
   String get appKeepsDownloadingWhenMinimised =>

@@ -3234,6 +3234,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get copyMagnetLink => 'Copy magnet link';
 
   @override
+  String get shareTorrentFile => 'Share .torrent file';
+
+  @override
+  String get saveTorrentFile => 'Save .torrent file';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return 'Saved to $path';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      'No .torrent file yet: the app is still getting this torrent\'s file list. Copy its magnet link instead.';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return 'Could not share the .torrent file: $error';
+  }
+
+  @override
   String get magnetLinkCopied => 'Magnet link copied';
 
   @override
@@ -4281,8 +4301,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get preparing => 'Preparing...';
 
   @override
-  String get vaultSpireDesignedExclusivelyLegal =>
-      'Vault The Spire is designed exclusively for legal downloading. This includes:\n\n- Open-source software (Linux distros, development tools, games released freely)\n- Creative Commons licensed music, video, and books\n- Public domain content (old films, historical recordings, classic literature)\n- Files you own and have backed up yourself\n- Content explicitly shared by creators for free distribution\n\nDownloading or sharing copyrighted material without permission is illegal in most countries. The developers of this app do not condone or support unauthorized copyright violations.';
+  String vaultSpireDesignedExclusivelyLegal(String appName) {
+    return '$appName is designed exclusively for legal downloading. This includes:\n\n- Open-source software (Linux distros, development tools, games released freely)\n- Creative Commons licensed music, video, and books\n- Public domain content (old films, historical recordings, classic literature)\n- Files you own and have backed up yourself\n- Content explicitly shared by creators for free distribution\n\nDownloading or sharing copyrighted material without permission is illegal in most countries. The developers of this app do not condone or support unauthorized copyright violations.';
+  }
 
   @override
   String get tapButtonPasteMagnetLink =>
@@ -4301,12 +4322,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'If a downloaded file seems corrupt or won\'t open, tap the torrent to open its detail view, then tap \"Verify files\". This re-reads every piece from disk and checks it against the original checksums - no data is deleted.\n\nIf verification finds bad pieces, or if you want to start completely fresh, tap \"Redownload\". This deletes the local copy and downloads everything again from peers.\n\nLarge repacks (multi-part installer archives) sometimes need a verify pass after completing because pieces can arrive out of order across many files.';
 
   @override
-  String get vaultSpireStoresAllData =>
-      'Vault The Spire stores all data locally on your device. No torrent history, download statistics, or file names are sent to any server.\n\nYour IP address is visible to other peers in any torrent swarm you join - this is how BitTorrent works. A VPN will mask your IP if privacy from other peers is important to you.\n\nThe built-in browser does not sync history to any cloud. History is stored only on-device and can be cleared in Settings.';
+  String vaultSpireStoresAllData(String appName) {
+    return '$appName stores all data locally on your device. No torrent history, download statistics, or file names are sent to any server.\n\nYour IP address is visible to other peers in any torrent swarm you join - this is how BitTorrent works. A VPN will mask your IP if privacy from other peers is important to you.\n\nThe built-in browser does not sync history to any cloud. History is stored only on-device and can be cleared in Settings.';
+  }
 
   @override
-  String get disableBatteryOptimisationVaultSpire =>
-      '- Disable battery optimisation for Vault The Spire in Android Settings -> Apps to prevent the OS from pausing active downloads.\n\n- If a torrent shows \"File already in use\", close any other app that has the file open, then tap Redownload.\n\n- Pull down on the Torrents list to force a refresh if progress looks frozen.\n\n- For best results on Android 12+, grant the app storage permission when prompted at first launch.';
+  String disableBatteryOptimisationVaultSpire(String appName) {
+    return '- Disable battery optimisation for $appName in Android Settings -> Apps to prevent the OS from pausing active downloads.\n\n- If a torrent shows \"File already in use\", close any other app that has the file open, then tap Redownload.\n\n- Pull down on the Torrents list to force a refresh if progress looks frozen.\n\n- For best results on Android 12+, grant the app storage permission when prompted at first launch.';
+  }
 
   @override
   String get appKeepsDownloadingWhenMinimised =>

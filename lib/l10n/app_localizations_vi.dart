@@ -3241,6 +3241,26 @@ class AppLocalizationsVi extends AppLocalizations {
   String get copyMagnetLink => 'Sao chép liên kết magnet';
 
   @override
+  String get shareTorrentFile => 'Chia sẻ tệp .torrent';
+
+  @override
+  String get saveTorrentFile => 'Lưu tệp .torrent';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return 'Đã lưu vào $path';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      'Chưa có tệp .torrent: ứng dụng vẫn đang lấy danh sách tệp của torrent này. Hãy sao chép liên kết magnet thay thế.';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return 'Không thể chia sẻ tệp .torrent: $error';
+  }
+
+  @override
   String get magnetLinkCopied => 'Đã sao chép liên kết magnet';
 
   @override
@@ -4289,8 +4309,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get preparing => 'Đang chuẩn bị...';
 
   @override
-  String get vaultSpireDesignedExclusivelyLegal =>
-      'Vault The Spire được thiết kế chỉ để tải xuống hợp pháp, bao gồm:\n\n- Phần mềm mã nguồn mở (bản phân phối Linux, công cụ lập trình, trò chơi phát hành miễn phí)\n- Nhạc, video và sách theo giấy phép Creative Commons\n- Nội dung thuộc phạm vi công cộng (phim cũ, bản ghi lịch sử, văn học cổ điển)\n- Tệp của chính bạn mà bạn đã tự sao lưu\n- Nội dung được tác giả chia sẻ rõ ràng để phân phối tự do\n\nTải xuống hoặc chia sẻ tài liệu có bản quyền mà không được phép là bất hợp pháp ở hầu hết các quốc gia. Nhà phát triển ứng dụng này không dung túng hay ủng hộ việc vi phạm bản quyền.';
+  String vaultSpireDesignedExclusivelyLegal(String appName) {
+    return '$appName được thiết kế chỉ để tải xuống hợp pháp, bao gồm:\n\n- Phần mềm mã nguồn mở (bản phân phối Linux, công cụ lập trình, trò chơi phát hành miễn phí)\n- Nhạc, video và sách theo giấy phép Creative Commons\n- Nội dung thuộc phạm vi công cộng (phim cũ, bản ghi lịch sử, văn học cổ điển)\n- Tệp của chính bạn mà bạn đã tự sao lưu\n- Nội dung được tác giả chia sẻ rõ ràng để phân phối tự do\n\nTải xuống hoặc chia sẻ tài liệu có bản quyền mà không được phép là bất hợp pháp ở hầu hết các quốc gia. Nhà phát triển ứng dụng này không dung túng hay ủng hộ việc vi phạm bản quyền.';
+  }
 
   @override
   String get tapButtonPasteMagnetLink =>
@@ -4309,12 +4330,14 @@ class AppLocalizationsVi extends AppLocalizations {
       'Nếu tệp đã tải có vẻ bị hỏng hoặc không mở được, hãy nhấn vào torrent để mở chi tiết, rồi nhấn \"Kiểm tra tệp\". Mọi mảnh sẽ được đọc lại từ ổ đĩa và đối chiếu với mã kiểm tra gốc - không dữ liệu nào bị xóa.\n\nNếu kiểm tra phát hiện mảnh hỏng, hoặc bạn muốn làm lại từ đầu, hãy nhấn \"Tải lại\". Bản trên máy sẽ bị xóa và mọi thứ được tải lại từ các peer.\n\nCác bản repack lớn (tệp cài đặt chia nhiều phần) đôi khi cần kiểm tra sau khi xong, vì các mảnh có thể đến lộn xộn giữa nhiều tệp.';
 
   @override
-  String get vaultSpireStoresAllData =>
-      'Vault The Spire lưu mọi dữ liệu ngay trên thiết bị của bạn. Lịch sử torrent, thống kê tải xuống hay tên tệp đều không được gửi tới máy chủ nào.\n\nĐịa chỉ IP của bạn hiển thị với các peer khác trong mọi swarm bạn tham gia - đó là cách BitTorrent hoạt động. VPN sẽ che IP của bạn nếu bạn coi trọng quyền riêng tư với các peer khác.\n\nTrình duyệt tích hợp không đồng bộ lịch sử lên đám mây nào. Lịch sử chỉ lưu trên thiết bị và có thể xóa trong Cài đặt.';
+  String vaultSpireStoresAllData(String appName) {
+    return '$appName lưu mọi dữ liệu ngay trên thiết bị của bạn. Lịch sử torrent, thống kê tải xuống hay tên tệp đều không được gửi tới máy chủ nào.\n\nĐịa chỉ IP của bạn hiển thị với các peer khác trong mọi swarm bạn tham gia - đó là cách BitTorrent hoạt động. VPN sẽ che IP của bạn nếu bạn coi trọng quyền riêng tư với các peer khác.\n\nTrình duyệt tích hợp không đồng bộ lịch sử lên đám mây nào. Lịch sử chỉ lưu trên thiết bị và có thể xóa trong Cài đặt.';
+  }
 
   @override
-  String get disableBatteryOptimisationVaultSpire =>
-      '- Tắt tối ưu hóa pin cho Vault The Spire trong Cài đặt Android -> Ứng dụng để hệ thống không tạm dừng các lượt tải đang chạy.\n\n- Nếu torrent hiện \"Tệp đang được sử dụng\", hãy đóng ứng dụng khác đang mở tệp đó rồi nhấn Tải lại.\n\n- Kéo danh sách Torrent xuống để buộc làm mới nếu tiến độ có vẻ đứng yên.\n\n- Để có kết quả tốt nhất trên Android 12 trở lên, hãy cấp quyền bộ nhớ khi được hỏi ở lần mở đầu tiên.';
+  String disableBatteryOptimisationVaultSpire(String appName) {
+    return '- Tắt tối ưu hóa pin cho $appName trong Cài đặt Android -> Ứng dụng để hệ thống không tạm dừng các lượt tải đang chạy.\n\n- Nếu torrent hiện \"Tệp đang được sử dụng\", hãy đóng ứng dụng khác đang mở tệp đó rồi nhấn Tải lại.\n\n- Kéo danh sách Torrent xuống để buộc làm mới nếu tiến độ có vẻ đứng yên.\n\n- Để có kết quả tốt nhất trên Android 12 trở lên, hãy cấp quyền bộ nhớ khi được hỏi ở lần mở đầu tiên.';
+  }
 
   @override
   String get appKeepsDownloadingWhenMinimised =>

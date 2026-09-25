@@ -3149,6 +3149,26 @@ class AppLocalizationsKo extends AppLocalizations {
   String get copyMagnetLink => '마그넷 링크 복사';
 
   @override
+  String get shareTorrentFile => '.torrent 파일 공유';
+
+  @override
+  String get saveTorrentFile => '.torrent 파일 저장';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return '$path에 저장했습니다';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      '아직 .torrent 파일이 없습니다. 이 토렌트의 파일 목록을 받는 중입니다. 대신 마그넷 링크를 복사하세요.';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return '.torrent 파일을 공유하지 못했습니다: $error';
+  }
+
+  @override
   String get magnetLinkCopied => '마그넷 링크를 복사했습니다';
 
   @override
@@ -4188,8 +4208,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get preparing => '준비 중...';
 
   @override
-  String get vaultSpireDesignedExclusivelyLegal =>
-      'Vault The Spire는 합법적인 다운로드만을 위해 만들어졌습니다. 다음이 포함됩니다:\n\n- 오픈 소스 소프트웨어(Linux 배포판, 개발 도구, 무료로 공개된 게임)\n- 크리에이티브 커먼즈 라이선스 음악, 동영상, 책\n- 퍼블릭 도메인 콘텐츠(옛날 영화, 역사적 녹음, 고전 문학)\n- 본인이 소유하고 직접 백업한 파일\n- 창작자가 자유 배포를 명시하고 공유한 콘텐츠\n\n저작권이 있는 자료를 허락 없이 다운로드하거나 공유하는 것은 대부분의 국가에서 불법입니다. 이 앱의 개발자는 무단 저작권 침해를 용인하거나 지지하지 않습니다.';
+  String vaultSpireDesignedExclusivelyLegal(String appName) {
+    return '$appName는 합법적인 다운로드만을 위해 만들어졌습니다. 다음이 포함됩니다:\n\n- 오픈 소스 소프트웨어(Linux 배포판, 개발 도구, 무료로 공개된 게임)\n- 크리에이티브 커먼즈 라이선스 음악, 동영상, 책\n- 퍼블릭 도메인 콘텐츠(옛날 영화, 역사적 녹음, 고전 문학)\n- 본인이 소유하고 직접 백업한 파일\n- 창작자가 자유 배포를 명시하고 공유한 콘텐츠\n\n저작권이 있는 자료를 허락 없이 다운로드하거나 공유하는 것은 대부분의 국가에서 불법입니다. 이 앱의 개발자는 무단 저작권 침해를 용인하거나 지지하지 않습니다.';
+  }
 
   @override
   String get tapButtonPasteMagnetLink =>
@@ -4208,12 +4229,14 @@ class AppLocalizationsKo extends AppLocalizations {
       '다운로드한 파일이 손상된 것 같거나 열리지 않으면, 토렌트를 눌러 세부 정보를 열고 \"파일 검사\"를 누르세요. 모든 조각을 디스크에서 다시 읽어 원래 체크섬과 비교합니다. 데이터는 삭제되지 않습니다.\n\n검사에서 손상된 조각이 발견되거나 완전히 새로 시작하고 싶다면 \"다시 다운로드\"를 누르세요. 로컬 사본을 지우고 피어로부터 모두 다시 받습니다.\n\n큰 리팩(여러 부분으로 나뉜 설치 파일 압축본)은 여러 파일에 걸쳐 조각이 순서 없이 도착할 수 있어 완료 후 검사가 필요할 때가 있습니다.';
 
   @override
-  String get vaultSpireStoresAllData =>
-      'Vault The Spire는 모든 데이터를 기기에만 저장합니다. 토렌트 기록, 다운로드 통계, 파일 이름은 어떤 서버로도 전송되지 않습니다.\n\n참여한 토렌트 스웜의 다른 피어에게는 내 IP 주소가 보입니다. 이것이 BitTorrent의 작동 방식입니다. 다른 피어로부터 개인정보를 지키고 싶다면 VPN으로 IP를 가릴 수 있습니다.\n\n내장 브라우저는 기록을 어떤 클라우드와도 동기화하지 않습니다. 기록은 기기에만 저장되며 설정에서 지울 수 있습니다.';
+  String vaultSpireStoresAllData(String appName) {
+    return '$appName는 모든 데이터를 기기에만 저장합니다. 토렌트 기록, 다운로드 통계, 파일 이름은 어떤 서버로도 전송되지 않습니다.\n\n참여한 토렌트 스웜의 다른 피어에게는 내 IP 주소가 보입니다. 이것이 BitTorrent의 작동 방식입니다. 다른 피어로부터 개인정보를 지키고 싶다면 VPN으로 IP를 가릴 수 있습니다.\n\n내장 브라우저는 기록을 어떤 클라우드와도 동기화하지 않습니다. 기록은 기기에만 저장되며 설정에서 지울 수 있습니다.';
+  }
 
   @override
-  String get disableBatteryOptimisationVaultSpire =>
-      '- Android 설정 -> 앱에서 Vault The Spire의 배터리 최적화를 끄면 시스템이 진행 중인 다운로드를 멈추지 않습니다.\n\n- 토렌트에 \"파일이 이미 사용 중\"이라고 표시되면 그 파일을 연 다른 앱을 닫고 다시 다운로드를 누르세요.\n\n- 진행이 멈춘 것 같으면 토렌트 목록을 아래로 당겨 강제로 새로 고치세요.\n\n- Android 12 이상에서는 처음 실행할 때 저장공간 권한을 요청하면 허용하는 것이 가장 좋습니다.';
+  String disableBatteryOptimisationVaultSpire(String appName) {
+    return '- Android 설정 -> 앱에서 $appName의 배터리 최적화를 끄면 시스템이 진행 중인 다운로드를 멈추지 않습니다.\n\n- 토렌트에 \"파일이 이미 사용 중\"이라고 표시되면 그 파일을 연 다른 앱을 닫고 다시 다운로드를 누르세요.\n\n- 진행이 멈춘 것 같으면 토렌트 목록을 아래로 당겨 강제로 새로 고치세요.\n\n- Android 12 이상에서는 처음 실행할 때 저장공간 권한을 요청하면 허용하는 것이 가장 좋습니다.';
+  }
 
   @override
   String get appKeepsDownloadingWhenMinimised =>

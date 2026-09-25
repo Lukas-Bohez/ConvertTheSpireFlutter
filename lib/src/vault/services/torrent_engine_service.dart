@@ -15,6 +15,7 @@ import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/notification_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_content_deleter.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/torrent_file_export.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
 import 'package:dtorrent_common/dtorrent_common.dart';
 import 'package:dtorrent_task_v2/dtorrent_task_v2.dart' as dt;
@@ -2986,6 +2987,47 @@ class TorrentEngineService {
       '${result.skipped.length} skipped.',
     );
     return result;
+  }
+
+  /// A .torrent file of [torrentId] to share, or null while its metadata is
+  /// not known (a magnet that has not got its file list yet).
+  ///
+  /// Taken from the copy the engine keeps or the .torrent it was added from,
+  /// or built around the metadata a magnet fetched. Whatever the source, its
+  /// info dictionary must hash to the torrent's own info-hash.
+  Future<Uint8List?> torrentFileFor(String torrentId) async {
+    final torrent = await TorrentService.instance.getTorrentById(torrentId);
+    if (torrent == null) return null;
+    final hash = torrent.id.trim().toLowerCase();
+    bool isThisTorrent(Uint8List info) =>
+        !RegExp(r'^[0-9a-f]{40}$').hasMatch(hash) ||
+        TorrentFileExport.matches(info, hash);
+
+    final files = [
+      (await _tryGetManagedTorrentSource(torrent.id))?.path,
+      _sourceTorrentPath(torrent),
+    ];
+    for (final path in files) {
+      if (path == null) continue;
+      try {
+        final bytes = await File(path).readAsBytes();
+        final info = TorrentFileExport.infoOf(bytes);
+        if (info != null && isThisTorrent(info)) return bytes;
+      } catch (e) {
+        debugPrint('torrentFileFor: could not read $path: $e');
+      }
+    }
+    final cached = await dt.MetadataDownloader.loadFromCache(hash);
+    if (cached != null) {
+      final info = Uint8List.fromList(cached);
+      if (isThisTorrent(info)) {
+        return TorrentFileExport.build(
+          info,
+          trackers: TorrentFileExport.trackersOf(torrent.magnetLink),
+        );
+      }
+    }
+    return null;
   }
 
   /// The torrent's file list from what is kept on disk: the .torrent it was
