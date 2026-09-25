@@ -3107,6 +3107,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get copyMagnetLink => '复制磁力链接';
 
   @override
+  String get shareTorrentFile => '分享 .torrent 文件';
+
+  @override
+  String get saveTorrentFile => '保存 .torrent 文件';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return '已保存到 $path';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      '还没有 .torrent 文件：应用仍在获取此种子的文件列表。请改为复制它的磁力链接。';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return '无法分享 .torrent 文件：$error';
+  }
+
+  @override
   String get magnetLinkCopied => '磁力链接已复制';
 
   @override

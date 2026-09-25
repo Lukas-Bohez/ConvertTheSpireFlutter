@@ -3244,6 +3244,26 @@ class AppLocalizationsRu extends AppLocalizations {
   String get copyMagnetLink => 'Копировать magnet-ссылку';
 
   @override
+  String get shareTorrentFile => 'Поделиться файлом .torrent';
+
+  @override
+  String get saveTorrentFile => 'Сохранить файл .torrent';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return 'Сохранено в $path';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      'Файла .torrent пока нет: приложение ещё получает список файлов этого торрента. Скопируйте magnet-ссылку.';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return 'Не удалось поделиться файлом .torrent: $error';
+  }
+
+  @override
   String get magnetLinkCopied => 'Magnet-ссылка скопирована';
 
   @override

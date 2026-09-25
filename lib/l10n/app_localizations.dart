@@ -5815,6 +5815,36 @@ abstract class AppLocalizations {
   /// **'Copy magnet link'**
   String get copyMagnetLink;
 
+  /// No description provided for @shareTorrentFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Share .torrent file'**
+  String get shareTorrentFile;
+
+  /// No description provided for @saveTorrentFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Save .torrent file'**
+  String get saveTorrentFile;
+
+  /// No description provided for @torrentFileSavedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to {path}'**
+  String torrentFileSavedTo(String path);
+
+  /// No description provided for @torrentFileNotReady.
+  ///
+  /// In en, this message translates to:
+  /// **'No .torrent file yet: the app is still getting this torrent\'s file list. Copy its magnet link instead.'**
+  String get torrentFileNotReady;
+
+  /// No description provided for @torrentFileExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not share the .torrent file: {error}'**
+  String torrentFileExportFailed(String error);
+
   /// No description provided for @magnetLinkCopied.
   ///
   /// In en, this message translates to:

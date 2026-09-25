@@ -3241,6 +3241,26 @@ class AppLocalizationsVi extends AppLocalizations {
   String get copyMagnetLink => 'Sao chép liên kết magnet';
 
   @override
+  String get shareTorrentFile => 'Chia sẻ tệp .torrent';
+
+  @override
+  String get saveTorrentFile => 'Lưu tệp .torrent';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return 'Đã lưu vào $path';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      'Chưa có tệp .torrent: ứng dụng vẫn đang lấy danh sách tệp của torrent này. Hãy sao chép liên kết magnet thay thế.';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return 'Không thể chia sẻ tệp .torrent: $error';
+  }
+
+  @override
   String get magnetLinkCopied => 'Đã sao chép liên kết magnet';
 
   @override

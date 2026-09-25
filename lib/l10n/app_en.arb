@@ -1875,6 +1875,25 @@
   "proTipSeedRatioMatters": "Pro tip: Seed ratio matters. Keeping a torrent seeding after download helps other users get the same file. A ratio of 1.0 means you've shared back as much as you downloaded.",
   "proTipBittorrentProtocolPeer": "Pro tip: The BitTorrent protocol is peer-to-peer - every downloader also uploads to others. Leaving seeding on after your download benefits the whole community and keeps rare files alive.",
   "copyMagnetLink": "Copy magnet link",
+  "shareTorrentFile": "Share .torrent file",
+  "saveTorrentFile": "Save .torrent file",
+  "torrentFileSavedTo": "Saved to {path}",
+  "@torrentFileSavedTo": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "torrentFileNotReady": "No .torrent file yet: the app is still getting this torrent's file list. Copy its magnet link instead.",
+  "torrentFileExportFailed": "Could not share the .torrent file: {error}",
+  "@torrentFileExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "magnetLinkCopied": "Magnet link copied",
   "shared": "Shared: {view}",
   "@shared": {

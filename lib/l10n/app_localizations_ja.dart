@@ -3149,6 +3149,26 @@ class AppLocalizationsJa extends AppLocalizations {
   String get copyMagnetLink => 'マグネットリンクをコピー';
 
   @override
+  String get shareTorrentFile => '.torrentファイルを共有';
+
+  @override
+  String get saveTorrentFile => '.torrentファイルを保存';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return '$path に保存しました';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      'まだ.torrentファイルはありません。このトレントのファイル一覧を取得中です。代わりにマグネットリンクをコピーしてください。';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return '.torrentファイルを共有できませんでした: $error';
+  }
+
+  @override
   String get magnetLinkCopied => 'マグネットリンクをコピーしました';
 
   @override

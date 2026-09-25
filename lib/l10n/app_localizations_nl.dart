@@ -3257,6 +3257,26 @@ class AppLocalizationsNl extends AppLocalizations {
   String get copyMagnetLink => 'Magnetlink kopiëren';
 
   @override
+  String get shareTorrentFile => '.torrent-bestand delen';
+
+  @override
+  String get saveTorrentFile => '.torrent-bestand opslaan';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return 'Opgeslagen in $path';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      'Nog geen .torrent-bestand: de app haalt de bestandenlijst van deze torrent nog op. Kopieer in plaats daarvan de magnetlink.';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return 'Kon het .torrent-bestand niet delen: $error';
+  }
+
+  @override
   String get magnetLinkCopied => 'Magnetlink gekopieerd';
 
   @override
