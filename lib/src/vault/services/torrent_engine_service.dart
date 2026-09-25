@@ -148,7 +148,6 @@ class TorrentEngineService {
   final Map<String, Map<String, DateTime>> _trackerBackoffUntilByTorrent = {};
   final Set<String> _refreshInFlight = <String>{};
   final Set<String> _forceRedownloadInFlight = <String>{};
-  bool _runtimePubspecEnsured = false;
   DateTime _lastPollingRestartAt = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastPeerLogTime = DateTime.fromMillisecondsSinceEpoch(0);
   int _peerEventsSinceLastLog = 0;
@@ -286,7 +285,6 @@ class TorrentEngineService {
   }
 
   Future<void> _configureTask(dt.TorrentTask task) async {
-    await _ensureRuntimePubspecForDtorrent();
     // dtorrent_task_v2 applies the SOCKS5 proxy at the task layer, so the
     // configured peer/tracker sockets share the same transport settings.
     // CLI-level DHT/PEX mutators are not exposed in this API surface.
@@ -304,28 +302,6 @@ class TorrentEngineService {
       (task as dynamic).setProxyConfig(proxy);
     } catch (e) {
       _debugLog('Proxy configuration skipped for torrent task: $e');
-    }
-  }
-
-  Future<void> _ensureRuntimePubspecForDtorrent() async {
-    if (_runtimePubspecEnsured) return;
-    _runtimePubspecEnsured = true;
-
-    try {
-      final cwd = Directory.current;
-      final pubspecFile = File(p.join(cwd.path, 'pubspec.yaml'));
-      if (await pubspecFile.exists()) {
-        return;
-      }
-
-      const fallback = 'name: convert_the_spire_reborn\nversion: 0.0.0\n';
-      await pubspecFile.writeAsString(fallback, flush: true);
-      debugPrint(
-        'Created runtime pubspec.yaml for dtorrent_task_v2 at ${pubspecFile.path}',
-      );
-    } catch (e) {
-      debugPrint(
-          'Failed to create runtime pubspec.yaml for dtorrent_task_v2: $e');
     }
   }
 
@@ -1623,12 +1599,11 @@ class TorrentEngineService {
   }
 
   /// How long one metadata downloader may go without receiving a piece
-  /// before a fresh one takes over.
+  /// before a fresh one takes over, asking the trackers and the DHT for
+  /// peers again.
   ///
-  /// dtorrent_task_v2's downloader keeps a peer that has disconnected in its
-  /// list of metadata sources and sends every retry to the first peer in that
-  /// list, so one dead peer can stall it for good - the "stuck at 0%" on a
-  /// new magnet. A fresh downloader starts with fresh peers.
+  /// The downloader itself used to stall for good on one dead peer; that is
+  /// fixed in third_party/dtorrent_task_v2, and this stays as a safety net.
   static const Duration metadataRoundLength = Duration(seconds: 90);
 
   /// Total time spent asking for metadata before the torrent is parked as
