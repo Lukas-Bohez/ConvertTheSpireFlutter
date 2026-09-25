@@ -291,6 +291,7 @@ class AppController extends ChangeNotifier {
       if (saved != null) {
         var selected = saved;
         if (selected == 2) selected = 13; // never restore directly into browser
+        if (!isTabVisibleInCurrentBuild(selected)) selected = 13;
         _activeTabIndex = selected;
         if (kDebugMode) {
           debugPrint('[AppController] restored last_tab -> $_activeTabIndex');

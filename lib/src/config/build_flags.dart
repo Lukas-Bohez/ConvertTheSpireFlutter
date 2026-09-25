@@ -44,11 +44,17 @@ String getDefaultDownloadFolderName() {
 // features stay out of the Play build. Everything else, the file converter
 // included, is shown on every platform. Convert used to be hidden on all of
 // Android; FFmpegKit ships in the Android app, so it converts there too.
+/// The page index the old Search page had; nothing shows it any more.
+const int kRemovedSearchTab = 0;
+
 bool isTabVisibleInCurrentBuild(int tabIndex) {
-  // In Play builds hide Search, Multi-Search, Playlists, Bulk Import, Stats, and Logs.
+  // Search (0) is gone from every build: Quick Download on Home and the
+  // Playlist Manager do what it did. Multi-Search stays. The page numbers
+  // are kept, so every other page keeps its index.
+  if (tabIndex == kRemovedSearchTab) return false;
+  // In Play builds hide Multi-Search, Playlists, Bulk Import, Stats, and Logs.
   if (kPlayStoreBuild &&
-      (tabIndex == 0 ||
-          tabIndex == 1 ||
+      (tabIndex == 1 ||
           tabIndex == 4 ||
           tabIndex == 5 ||
           tabIndex == 6 ||

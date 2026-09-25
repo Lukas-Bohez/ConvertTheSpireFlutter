@@ -241,18 +241,12 @@ class GuideScreen extends StatelessWidget {
                                 context.l10n.builtMediaPlayerLocalFiles),
                         const SizedBox(height: 8),
                         _FeatureRow(
-                            icon: Icons.download,
-                            name: context.l10n.vault,
+                            icon: Icons.swap_vert,
+                            name: context.l10n.tabTorrents,
                             detail:
                                 context.l10n.torrentManagerDownloadControlCenter),
                       ]
                     : [
-                        _FeatureRow(
-                            icon: Icons.search,
-                            name: context.l10n.tabSearch,
-                            detail:
-                                context.l10n.searchByKeywordPasteMagnet),
-                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.travel_explore,
                             name: context.l10n.multiSearch,
