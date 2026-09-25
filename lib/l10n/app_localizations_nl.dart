@@ -3257,6 +3257,26 @@ class AppLocalizationsNl extends AppLocalizations {
   String get copyMagnetLink => 'Magnetlink kopiëren';
 
   @override
+  String get shareTorrentFile => '.torrent-bestand delen';
+
+  @override
+  String get saveTorrentFile => '.torrent-bestand opslaan';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return 'Opgeslagen in $path';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      'Nog geen .torrent-bestand: de app haalt de bestandenlijst van deze torrent nog op. Kopieer in plaats daarvan de magnetlink.';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return 'Kon het .torrent-bestand niet delen: $error';
+  }
+
+  @override
   String get magnetLinkCopied => 'Magnetlink gekopieerd';
 
   @override
@@ -4312,8 +4332,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get preparing => 'Voorbereiden...';
 
   @override
-  String get vaultSpireDesignedExclusivelyLegal =>
-      'Vault The Spire is uitsluitend bedoeld voor legaal downloaden. Denk aan:\n\n- Opensourcesoftware (Linux-distributies, ontwikkeltools, gratis uitgebrachte games)\n- Muziek, video\'s en boeken met een Creative Commons-licentie\n- Werk uit het publieke domein (oude films, historische opnamen, klassieke literatuur)\n- Bestanden die van jou zijn en waarvan je zelf een back-up hebt gemaakt\n- Inhoud die makers uitdrukkelijk delen om vrij te verspreiden\n\nAuteursrechtelijk beschermd materiaal downloaden of delen zonder toestemming is in de meeste landen illegaal. De ontwikkelaars van deze app keuren inbreuk op auteursrecht niet goed en ondersteunen die niet.';
+  String vaultSpireDesignedExclusivelyLegal(String appName) {
+    return '$appName is uitsluitend bedoeld voor legaal downloaden. Denk aan:\n\n- Opensourcesoftware (Linux-distributies, ontwikkeltools, gratis uitgebrachte games)\n- Muziek, video\'s en boeken met een Creative Commons-licentie\n- Werk uit het publieke domein (oude films, historische opnamen, klassieke literatuur)\n- Bestanden die van jou zijn en waarvan je zelf een back-up hebt gemaakt\n- Inhoud die makers uitdrukkelijk delen om vrij te verspreiden\n\nAuteursrechtelijk beschermd materiaal downloaden of delen zonder toestemming is in de meeste landen illegaal. De ontwikkelaars van deze app keuren inbreuk op auteursrecht niet goed en ondersteunen die niet.';
+  }
 
   @override
   String get tapButtonPasteMagnetLink =>
@@ -4332,12 +4353,14 @@ class AppLocalizationsNl extends AppLocalizations {
       'Lijkt een gedownload bestand beschadigd of opent het niet, tik dan op de torrent om de details te openen en daarna op \"Bestanden controleren\". Elk stuk wordt opnieuw van de schijf gelezen en vergeleken met de oorspronkelijke controlesommen; er wordt niets verwijderd.\n\nVindt de controle beschadigde stukken, of wil je helemaal opnieuw beginnen, tik dan op \"Opnieuw downloaden\". De lokale kopie wordt verwijderd en alles wordt opnieuw van peers gedownload.\n\nGrote repacks (installatiearchieven in meerdere delen) hebben na afloop soms een controle nodig, omdat stukken over veel bestanden in willekeurige volgorde kunnen binnenkomen.';
 
   @override
-  String get vaultSpireStoresAllData =>
-      'Vault The Spire slaat alle gegevens lokaal op je apparaat op. Er wordt geen torrentgeschiedenis, downloadstatistiek of bestandsnaam naar een server gestuurd.\n\nJe IP-adres is zichtbaar voor andere peers in elke swarm waaraan je deelneemt; zo werkt BitTorrent. Een VPN verbergt je IP als privacy tegenover andere peers belangrijk voor je is.\n\nDe ingebouwde browser synchroniseert de geschiedenis met geen enkele cloud. De geschiedenis staat alleen op je apparaat en kan worden gewist in Instellingen.';
+  String vaultSpireStoresAllData(String appName) {
+    return '$appName slaat alle gegevens lokaal op je apparaat op. Er wordt geen torrentgeschiedenis, downloadstatistiek of bestandsnaam naar een server gestuurd.\n\nJe IP-adres is zichtbaar voor andere peers in elke swarm waaraan je deelneemt; zo werkt BitTorrent. Een VPN verbergt je IP als privacy tegenover andere peers belangrijk voor je is.\n\nDe ingebouwde browser synchroniseert de geschiedenis met geen enkele cloud. De geschiedenis staat alleen op je apparaat en kan worden gewist in Instellingen.';
+  }
 
   @override
-  String get disableBatteryOptimisationVaultSpire =>
-      '- Schakel batterijoptimalisatie voor Vault The Spire uit via Android-instellingen -> Apps, zodat het systeem actieve downloads niet pauzeert.\n\n- Toont een torrent \"Bestand al in gebruik\", sluit dan andere apps die het bestand open hebben en tik op Opnieuw downloaden.\n\n- Trek de lijst met torrents omlaag om te vernieuwen als de voortgang lijkt vast te staan.\n\n- Geef voor het beste resultaat op Android 12+ de opslagtoestemming als daarom wordt gevraagd bij de eerste start.';
+  String disableBatteryOptimisationVaultSpire(String appName) {
+    return '- Schakel batterijoptimalisatie voor $appName uit via Android-instellingen -> Apps, zodat het systeem actieve downloads niet pauzeert.\n\n- Toont een torrent \"Bestand al in gebruik\", sluit dan andere apps die het bestand open hebben en tik op Opnieuw downloaden.\n\n- Trek de lijst met torrents omlaag om te vernieuwen als de voortgang lijkt vast te staan.\n\n- Geef voor het beste resultaat op Android 12+ de opslagtoestemming als daarom wordt gevraagd bij de eerste start.';
+  }
 
   @override
   String get appKeepsDownloadingWhenMinimised =>

@@ -4,11 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:convert_the_spire_reborn/src/config/build_flags.dart';
 
 /// A tab is hidden only where Play policy requires it: the YouTube download
-/// features in the Play build. File conversion is shown everywhere.
+/// features in the Play build. File conversion is shown everywhere. The old
+/// Search page (0) is gone from every build.
 void main() {
   const convert = 9;
-  // Search, Multi-Search, Playlists, Bulk Import, Statistics, Logs.
-  const playOnlyHidden = [0, 1, 4, 5, 6, 10];
+  // Multi-Search, Playlists, Bulk Import, Statistics, Logs.
+  const playOnlyHidden = [1, 4, 5, 6, 10];
 
   tearDown(() {
     debugDefaultTargetPlatformOverride = null;
@@ -28,17 +29,20 @@ void main() {
     });
   }
 
-  test('the GitHub build shows every tab', () {
+  test('the GitHub build shows every tab but the old Search', () {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     for (var i = 0; i <= 14; i++) {
-      expect(isTabVisibleInCurrentBuild(i), isTrue, reason: 'tab $i');
+      expect(isTabVisibleInCurrentBuild(i), i != kRemovedSearchTab,
+          reason: 'tab $i');
     }
   });
 
   test('the Play build hides only the tabs it lists', () {
     setPlayStoreBuildFlag(true);
     for (var i = 0; i <= 14; i++) {
-      expect(isTabVisibleInCurrentBuild(i), !playOnlyHidden.contains(i),
+      expect(
+          isTabVisibleInCurrentBuild(i),
+          i != kRemovedSearchTab && !playOnlyHidden.contains(i),
           reason: 'tab $i');
     }
   });

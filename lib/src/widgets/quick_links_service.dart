@@ -69,12 +69,6 @@ class QuickLinksService {
 
   static List<QuickLink> _allDefaults() => [
         const QuickLink(
-          name: 'Search',
-          icon: Icons.search,
-          route: 'search.tab',
-          description: 'Download from YouTube URL',
-        ),
-        const QuickLink(
           name: 'Multi-Search',
           icon: Icons.travel_explore,
           route: 'multisearch.tab',
@@ -156,7 +150,6 @@ class QuickLinksService {
 
   /// Route string → tab index mapping.
   static const Map<String, int> routeToIndex = {
-    'search.tab': 0,
     'multisearch.tab': 1,
     'browser.tab': 2,
     'queue.tab': 3,
@@ -175,7 +168,6 @@ class QuickLinksService {
 
   /// Tab index → route string mapping.
   static const Map<int, String> indexToRoute = {
-    0: 'search.tab',
     1: 'multisearch.tab',
     2: 'browser.tab',
     3: 'queue.tab',
@@ -194,7 +186,6 @@ class QuickLinksService {
 
   /// Tab index → page title for the fake URL bar.
   static const Map<int, String> indexToTitle = {
-    0: 'Search',
     1: 'Search+',
     2: 'Browser',
     3: 'Queue',
@@ -213,16 +204,7 @@ class QuickLinksService {
 
   /// Play-aware title mapping for shell URL bar and page suggestions.
   static String titleForIndex(int index) {
-    final base = indexToTitle[index] ?? 'Home';
-    if (!kPlayStoreBuild) return base;
-    switch (index) {
-      case 11:
-        return 'Vault Guide';
-      case 14:
-        return 'Vault';
-      default:
-        return base;
-    }
+    return indexToTitle[index] ?? 'Home';
   }
 
   /// Tab index → favicon icon.

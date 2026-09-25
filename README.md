@@ -143,7 +143,6 @@ No account, no sign-up, and the app does not track what you download. The GitHub
 ![Includes a guide on how to use the app](screenshots/built-in-guide.webp)
 ![Full logs so you know what's happening](screenshots/full-logs.webp)
 ![Full torrent settings](screenshots/full-torrent-settings.webp)
-![Torrents and Ollama safety checks](screenshots/torrents-and-ollama-safety-checks.webp)
 
 ## Questions
 
@@ -161,7 +160,7 @@ No account, no sign-up, and the app does not track what you download. The GitHub
 
 The main code lives in `lib/`; platform configuration is under `android/`, `windows/`, `macos/`, `linux/`, `ios/` and `web/`; documentation is in [`docs/`](docs/README.md). Start with the [documentation index](docs/README.md), [how a release goes out](docs/releases/how-to-release.md), the [Play AAB build guide](docs/build/play-store-aab.md) and the [latest release notes](docs/releases/latest.md).
 
-* **UI:** Flutter, with `HomeScreen` hosting the main screens (Search, Player, Browser, Playlists and more).
+* **UI:** Flutter, with `HomeScreen` hosting the main screens (Home, Multi-Search, Player, Browser, Playlists, Torrents and more).
 * **State:** `AppController` (a `ChangeNotifier`) wired through `Provider`.
 * **Services:** `YtDlpService`, `DownloadService`, `ConvertService`, `PlaylistService`, `DlnaDiscovery`, `WatchPartyService` and friends.
 * **Platform:** `dart:io`, `media_kit`, native WebView bindings (WebView2 on Windows), raw sockets for DLNA and Watch Together, and isolates for background work.
