@@ -3412,7 +3412,7 @@ class AppLocalizationsUk extends AppLocalizations {
   }
 
   @override
-  String get alsoDeleteDownloadedFiles => 'Видалити й завантажені файли';
+  String get alsoDeleteDownloadedFiles => 'Видалити й файли цього торента';
 
   @override
   String get removeDeleteFiles => 'Видалити разом із файлами';
@@ -3422,6 +3422,14 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get torrentRemoved => 'Торент видалено.';
+
+  @override
+  String get torrentRemovedNoFileList =>
+      'Торент видалено. Файли не видалено: застосунок так і не отримав список файлів цього торента.';
+
+  @override
+  String get torrentRemovedSomeFilesInUse =>
+      'Торент видалено, але деякі його файли відкриті в іншому застосунку й не були видалені.';
 
   @override
   String removeFailed(Object e) {

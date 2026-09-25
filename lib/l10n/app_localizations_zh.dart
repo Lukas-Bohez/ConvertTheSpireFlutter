@@ -3269,7 +3269,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get alsoDeleteDownloadedFiles => '同时删除已下载的文件';
+  String get alsoDeleteDownloadedFiles => '同时删除此种子的文件';
 
   @override
   String get removeDeleteFiles => '移除并删除文件';
@@ -3279,6 +3279,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get torrentRemoved => '种子已移除。';
+
+  @override
+  String get torrentRemovedNoFileList => '已移除种子。未删除任何文件：应用从未获得此种子的文件列表。';
+
+  @override
+  String get torrentRemovedSomeFilesInUse => '已移除种子，但部分文件正在其他应用中打开，未被删除。';
 
   @override
   String removeFailed(Object e) {

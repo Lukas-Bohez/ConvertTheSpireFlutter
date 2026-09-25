@@ -12,13 +12,19 @@
   <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/screenshots/custom-file-explorer-tv.webp" width="32%" alt="custom file explorer tv">
 </p>
 
-**Nothing to set up.** Download one file below, open it, and it runs: no installer, no Python, no command line, no account.
+**Nothing to set up.** One line on Windows, one file everywhere else, and it runs: no admin rights, no Python, no account.
 
 {{NOTES}}
 
 ## Install in a minute
 
-Pick your file under **Assets** just below.
+**Windows:** press <kbd>Win</kbd>+<kbd>R</kbd>, paste this line and press Enter. It installs this release for your account, checks it against `SHA256SUMS.txt` and starts it, with no "Windows protected your PC" screen. Run it again to update.
+
+```powershell
+powershell -c "irm https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/main/install.ps1 | iex"
+```
+
+Or pick your file under **Assets** just below.
 
 | | Download | Then |
 |---|---|---|
@@ -30,8 +36,8 @@ Pick your file under **Assets** just below.
 - **No installer and no admin rights on Windows.** On first start the app fetches yt-dlp and FFmpeg by itself and keeps yt-dlp up to date, so sites that change keep working, and it adds itself to "Open with" for your songs, videos, torrents and magnet links. To remove it, delete the folder.
 - **Nothing extra on Android.** FFmpeg is built into the APK. No root, no Termux, no Google account. The same APK runs on Android TV.
 - **On a Mac,** yt-dlp installs itself too; converting to MP3 and M4A needs FFmpeg, which you add once with `brew install ffmpeg`.
-- **Updating?** On Android, open the new APK and it installs over the old one. On Windows, extract into a new folder rather than over the old one.
-- **Windows shows "Windows protected your PC"?** The app is not signed with a paid certificate yet. Choose **More info**, then **Run anyway**.
+- **Updating?** On Android, open the new APK and it installs over the old one. On Windows, run the line above again; with the zip, extract into a new folder rather than over the old one.
+- **Windows shows "Windows protected your PC"?** That is SmartScreen checking the zip your browser downloaded, which is not signed with a paid certificate. The one-line install above does not show it. With the zip, choose **More info**, then **Run anyway**.
 
 ---
 
