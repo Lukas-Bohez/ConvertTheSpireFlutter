@@ -535,7 +535,6 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
 ({String name, String description})? _builtInQuickLink(
     AppLocalizations l, String route) {
   return switch (route) {
-    'search.tab' => (name: l.tabSearch, description: l.downloadFromYoutubeUrl),
     'multisearch.tab' => (
         name: l.multiSearch,
         description: l.searchYoutubeSoundcloud

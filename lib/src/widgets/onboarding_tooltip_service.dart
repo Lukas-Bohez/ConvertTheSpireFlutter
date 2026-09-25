@@ -58,7 +58,6 @@ class OnboardingTooltipService {
   /// app's language, or null for screens without one.
   static String? screenDescription(AppLocalizations l, String route) {
     return switch (route) {
-      'search.tab' => l.bannerSearch,
       'multisearch.tab' => l.bannerMultiSearch,
       'browser.tab' => l.bannerBrowser,
       'queue.tab' => l.bannerQueue,

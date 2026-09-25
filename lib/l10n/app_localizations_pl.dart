@@ -3254,6 +3254,26 @@ class AppLocalizationsPl extends AppLocalizations {
   String get copyMagnetLink => 'Kopiuj link magnet';
 
   @override
+  String get shareTorrentFile => 'Udostępnij plik .torrent';
+
+  @override
+  String get saveTorrentFile => 'Zapisz plik .torrent';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return 'Zapisano w $path';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      'Brak jeszcze pliku .torrent: aplikacja wciąż pobiera listę plików tego torrenta. Skopiuj zamiast tego jego link magnet.';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return 'Nie udało się udostępnić pliku .torrent: $error';
+  }
+
+  @override
   String get magnetLinkCopied => 'Skopiowano link magnet';
 
   @override
@@ -4307,8 +4327,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get preparing => 'Przygotowywanie...';
 
   @override
-  String get vaultSpireDesignedExclusivelyLegal =>
-      'Vault The Spire służy wyłącznie do legalnego pobierania. Obejmuje to:\n\n- Oprogramowanie open source (dystrybucje Linuksa, narzędzia programistyczne, gry udostępnione za darmo)\n- Muzykę, filmy i książki na licencji Creative Commons\n- Treści z domeny publicznej (stare filmy, nagrania historyczne, literatura klasyczna)\n- Pliki, które należą do ciebie i których kopię zapasową zrobiłeś sam\n- Treści, które twórcy wprost udostępniają do swobodnego rozpowszechniania\n\nPobieranie lub udostępnianie materiałów chronionych prawem autorskim bez zgody jest nielegalne w większości krajów. Twórcy tej aplikacji nie popierają naruszeń praw autorskich.';
+  String vaultSpireDesignedExclusivelyLegal(String appName) {
+    return '$appName służy wyłącznie do legalnego pobierania. Obejmuje to:\n\n- Oprogramowanie open source (dystrybucje Linuksa, narzędzia programistyczne, gry udostępnione za darmo)\n- Muzykę, filmy i książki na licencji Creative Commons\n- Treści z domeny publicznej (stare filmy, nagrania historyczne, literatura klasyczna)\n- Pliki, które należą do ciebie i których kopię zapasową zrobiłeś sam\n- Treści, które twórcy wprost udostępniają do swobodnego rozpowszechniania\n\nPobieranie lub udostępnianie materiałów chronionych prawem autorskim bez zgody jest nielegalne w większości krajów. Twórcy tej aplikacji nie popierają naruszeń praw autorskich.';
+  }
 
   @override
   String get tapButtonPasteMagnetLink =>
@@ -4327,12 +4348,14 @@ class AppLocalizationsPl extends AppLocalizations {
       'Jeśli pobrany plik wydaje się uszkodzony lub się nie otwiera, stuknij torrent, aby otworzyć szczegóły, a potem „Zweryfikuj pliki”. Każda część zostanie ponownie odczytana z dysku i porównana z oryginalnymi sumami kontrolnymi – nic nie zostanie usunięte.\n\nJeśli weryfikacja znajdzie uszkodzone części albo chcesz zacząć od zera, stuknij „Pobierz ponownie”. Lokalna kopia zostanie usunięta, a wszystko pobierze się ponownie od peerów.\n\nDuże repacki (wieloczęściowe archiwa instalacyjne) czasem wymagają weryfikacji po zakończeniu, bo części mogą przychodzić w losowej kolejności do wielu plików.';
 
   @override
-  String get vaultSpireStoresAllData =>
-      'Vault The Spire przechowuje wszystkie dane lokalnie na urządzeniu. Historia torrentów, statystyki pobierania ani nazwy plików nie są wysyłane na żaden serwer.\n\nTwój adres IP jest widoczny dla innych peerów w każdym roju, do którego dołączasz – tak działa BitTorrent. VPN ukryje twój adres IP, jeśli zależy ci na prywatności wobec innych peerów.\n\nWbudowana przeglądarka nie synchronizuje historii z żadną chmurą. Historia jest przechowywana tylko na urządzeniu i można ją wyczyścić w Ustawieniach.';
+  String vaultSpireStoresAllData(String appName) {
+    return '$appName przechowuje wszystkie dane lokalnie na urządzeniu. Historia torrentów, statystyki pobierania ani nazwy plików nie są wysyłane na żaden serwer.\n\nTwój adres IP jest widoczny dla innych peerów w każdym roju, do którego dołączasz – tak działa BitTorrent. VPN ukryje twój adres IP, jeśli zależy ci na prywatności wobec innych peerów.\n\nWbudowana przeglądarka nie synchronizuje historii z żadną chmurą. Historia jest przechowywana tylko na urządzeniu i można ją wyczyścić w Ustawieniach.';
+  }
 
   @override
-  String get disableBatteryOptimisationVaultSpire =>
-      '- Wyłącz optymalizację baterii dla Vault The Spire w Ustawieniach Androida -> Aplikacje, aby system nie wstrzymywał aktywnych pobrań.\n\n- Jeśli torrent pokazuje „Plik jest już używany”, zamknij inne aplikacje, które mają ten plik otwarty, i stuknij Pobierz ponownie.\n\n- Przeciągnij listę torrentów w dół, aby wymusić odświeżenie, gdy postęp wygląda na zamrożony.\n\n- Na Androidzie 12+ najlepiej przy pierwszym uruchomieniu przyznać uprawnienie do pamięci, gdy aplikacja o nie poprosi.';
+  String disableBatteryOptimisationVaultSpire(String appName) {
+    return '- Wyłącz optymalizację baterii dla $appName w Ustawieniach Androida -> Aplikacje, aby system nie wstrzymywał aktywnych pobrań.\n\n- Jeśli torrent pokazuje „Plik jest już używany”, zamknij inne aplikacje, które mają ten plik otwarty, i stuknij Pobierz ponownie.\n\n- Przeciągnij listę torrentów w dół, aby wymusić odświeżenie, gdy postęp wygląda na zamrożony.\n\n- Na Androidzie 12+ najlepiej przy pierwszym uruchomieniu przyznać uprawnienie do pamięci, gdy aplikacja o nie poprosi.';
+  }
 
   @override
   String get appKeepsDownloadingWhenMinimised =>

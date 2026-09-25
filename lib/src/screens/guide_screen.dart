@@ -27,6 +27,7 @@ class GuideScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final isAndroid = !kIsWeb && Platform.isAndroid;
 
     return PopScope(
       canPop: true,
@@ -240,18 +241,12 @@ class GuideScreen extends StatelessWidget {
                                 context.l10n.builtMediaPlayerLocalFiles),
                         const SizedBox(height: 8),
                         _FeatureRow(
-                            icon: Icons.download,
-                            name: context.l10n.vault,
+                            icon: Icons.swap_vert,
+                            name: context.l10n.tabTorrents,
                             detail:
                                 context.l10n.torrentManagerDownloadControlCenter),
                       ]
                     : [
-                        _FeatureRow(
-                            icon: Icons.search,
-                            name: context.l10n.tabSearch,
-                            detail:
-                                context.l10n.searchByKeywordPasteMagnet),
-                        const SizedBox(height: 8),
                         _FeatureRow(
                             icon: Icons.travel_explore,
                             name: context.l10n.multiSearch,
@@ -318,6 +313,65 @@ class GuideScreen extends StatelessWidget {
                             detail:
                                 context.l10n.builtMediaPlayerLocalFiles2),
                       ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // -- Torrents: this used to be a guide of its own inside
+            // the Torrents section.
+            _SectionCard(
+              icon: Icons.swap_vert,
+              title: context.l10n.tabTorrents,
+              cs: cs,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _TipRow(
+                    title: context.l10n.gettingStarted,
+                    detail: isAndroid
+                        ? context.l10n.tapButtonPasteMagnetLink
+                        : context.l10n.dragTorrentFileOntoWindow,
+                  ),
+                  const SizedBox(height: 10),
+                  _TipRow(
+                    title: context.l10n.understandingDownloadProgress,
+                    detail: context.l10n.downloadingPiecesBeingReceivedFrom,
+                  ),
+                  const SizedBox(height: 10),
+                  _TipRow(
+                    title: context.l10n.verifyingRedownloading,
+                    detail: context.l10n.ifDownloadedFileSeemsCorrupt,
+                  ),
+                  const SizedBox(height: 10),
+                  _TipRow(
+                    title: isAndroid
+                        ? context.l10n.androidTips
+                        : context.l10n.desktopTips,
+                    detail: isAndroid
+                        ? context.l10n
+                            .disableBatteryOptimisationVaultSpire(getAppTitle())
+                        : context.l10n.appKeepsDownloadingWhenMinimised,
+                  ),
+                  const SizedBox(height: 10),
+                  _TipRow(
+                    title: context.l10n.privacyData,
+                    detail:
+                        context.l10n.vaultSpireStoresAllData(getAppTitle()),
+                  ),
+                  const SizedBox(height: 10),
+                  _TipRow(
+                    title: context.l10n.legalUseOnly,
+                    detail: context.l10n
+                        .vaultSpireDesignedExclusivelyLegal(getAppTitle()),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    isAndroid
+                        ? context.l10n.proTipSeedRatioMatters
+                        : context.l10n.proTipBittorrentProtocolPeer,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 12),

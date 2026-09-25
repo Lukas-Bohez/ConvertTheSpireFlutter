@@ -3248,6 +3248,26 @@ class AppLocalizationsId extends AppLocalizations {
   String get copyMagnetLink => 'Salin tautan magnet';
 
   @override
+  String get shareTorrentFile => 'Bagikan file .torrent';
+
+  @override
+  String get saveTorrentFile => 'Simpan file .torrent';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return 'Disimpan ke $path';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      'Belum ada file .torrent: aplikasi masih mengambil daftar file torrent ini. Salin tautan magnet-nya saja.';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return 'Tidak dapat membagikan file .torrent: $error';
+  }
+
+  @override
   String get magnetLinkCopied => 'Tautan magnet disalin';
 
   @override
@@ -4300,8 +4320,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get preparing => 'Menyiapkan...';
 
   @override
-  String get vaultSpireDesignedExclusivelyLegal =>
-      'Vault The Spire dirancang khusus untuk unduhan legal. Ini mencakup:\n\n- Perangkat lunak sumber terbuka (distro Linux, alat pengembangan, game yang dirilis gratis)\n- Musik, video, dan buku berlisensi Creative Commons\n- Konten domain publik (film lama, rekaman bersejarah, sastra klasik)\n- File milik Anda yang Anda cadangkan sendiri\n- Konten yang secara tegas dibagikan kreatornya untuk distribusi gratis\n\nMengunduh atau membagikan materi berhak cipta tanpa izin adalah ilegal di sebagian besar negara. Pengembang aplikasi ini tidak membenarkan atau mendukung pelanggaran hak cipta.';
+  String vaultSpireDesignedExclusivelyLegal(String appName) {
+    return '$appName dirancang khusus untuk unduhan legal. Ini mencakup:\n\n- Perangkat lunak sumber terbuka (distro Linux, alat pengembangan, game yang dirilis gratis)\n- Musik, video, dan buku berlisensi Creative Commons\n- Konten domain publik (film lama, rekaman bersejarah, sastra klasik)\n- File milik Anda yang Anda cadangkan sendiri\n- Konten yang secara tegas dibagikan kreatornya untuk distribusi gratis\n\nMengunduh atau membagikan materi berhak cipta tanpa izin adalah ilegal di sebagian besar negara. Pengembang aplikasi ini tidak membenarkan atau mendukung pelanggaran hak cipta.';
+  }
 
   @override
   String get tapButtonPasteMagnetLink =>
@@ -4320,12 +4341,14 @@ class AppLocalizationsId extends AppLocalizations {
       'Jika file yang diunduh tampak rusak atau tidak mau terbuka, ketuk torrent untuk membuka detailnya, lalu ketuk \"Verifikasi file\". Setiap potongan dibaca ulang dari disk dan dicocokkan dengan checksum aslinya - tidak ada data yang dihapus.\n\nJika verifikasi menemukan potongan rusak, atau Anda ingin mulai benar-benar dari awal, ketuk \"Unduh ulang\". Salinan lokal dihapus dan semuanya diunduh lagi dari peer.\n\nRepack besar (arsip pemasang multi-bagian) terkadang perlu diverifikasi setelah selesai karena potongan bisa tiba tidak berurutan di banyak file.';
 
   @override
-  String get vaultSpireStoresAllData =>
-      'Vault The Spire menyimpan semua data secara lokal di perangkat Anda. Riwayat torrent, statistik unduhan, dan nama file tidak dikirim ke server mana pun.\n\nAlamat IP Anda terlihat oleh peer lain di setiap swarm torrent yang Anda ikuti - begitulah BitTorrent bekerja. VPN akan menyamarkan IP Anda jika privasi dari peer lain penting bagi Anda.\n\nPeramban bawaan tidak menyinkronkan riwayat ke cloud mana pun. Riwayat hanya disimpan di perangkat dan bisa dihapus di Pengaturan.';
+  String vaultSpireStoresAllData(String appName) {
+    return '$appName menyimpan semua data secara lokal di perangkat Anda. Riwayat torrent, statistik unduhan, dan nama file tidak dikirim ke server mana pun.\n\nAlamat IP Anda terlihat oleh peer lain di setiap swarm torrent yang Anda ikuti - begitulah BitTorrent bekerja. VPN akan menyamarkan IP Anda jika privasi dari peer lain penting bagi Anda.\n\nPeramban bawaan tidak menyinkronkan riwayat ke cloud mana pun. Riwayat hanya disimpan di perangkat dan bisa dihapus di Pengaturan.';
+  }
 
   @override
-  String get disableBatteryOptimisationVaultSpire =>
-      '- Matikan optimasi baterai untuk Vault The Spire di Pengaturan Android -> Aplikasi agar sistem tidak menjeda unduhan yang aktif.\n\n- Jika torrent menampilkan \"File sedang digunakan\", tutup aplikasi lain yang membuka file tersebut, lalu ketuk Unduh ulang.\n\n- Tarik daftar Torrent ke bawah untuk memaksa penyegaran jika progres tampak macet.\n\n- Untuk hasil terbaik di Android 12+, berikan izin penyimpanan saat diminta pada pembukaan pertama.';
+  String disableBatteryOptimisationVaultSpire(String appName) {
+    return '- Matikan optimasi baterai untuk $appName di Pengaturan Android -> Aplikasi agar sistem tidak menjeda unduhan yang aktif.\n\n- Jika torrent menampilkan \"File sedang digunakan\", tutup aplikasi lain yang membuka file tersebut, lalu ketuk Unduh ulang.\n\n- Tarik daftar Torrent ke bawah untuk memaksa penyegaran jika progres tampak macet.\n\n- Untuk hasil terbaik di Android 12+, berikan izin penyimpanan saat diminta pada pembukaan pertama.';
+  }
 
   @override
   String get appKeepsDownloadingWhenMinimised =>

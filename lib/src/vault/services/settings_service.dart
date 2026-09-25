@@ -1,17 +1,9 @@
-import 'package:convert_the_spire_reborn/src/vault/constants.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsService {
   static final ValueNotifier<bool> persistentSidebarListenable =
       ValueNotifier<bool>(false);
-
-  static String _defaultOllamaUrl() {
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return kAndroidLocalOllamaUrl;
-    }
-    return 'http://localhost:11434';
-  }
 
   static const _kUseSystemTray = 'use_system_tray';
   static const _kMinimizeToTrayOnClose = 'minimize_to_tray_on_close';
@@ -29,8 +21,6 @@ class SettingsService {
   static const _kBrowserFavorites = 'browser_favorites';
   static const _kBrowserLastUrl = 'browser_last_url';
   static const _kBrowserHistory = 'browser_history';
-  static const _kAiOllamaUrl = 'ai_ollama_url';
-  static const _kAiDefaultModel = 'ai_default_model';
   static const _kAutoStartOnAdd = 'auto_start_on_add';
   static const _kUseDht = 'use_dht';
   static const _kUsePex = 'use_pex';
@@ -43,8 +33,6 @@ class SettingsService {
   static const _kUploadRateLimitKib = 'upload_rate_limit_kib';
   static const _kAllowSeedingAfterComplete = 'allow_seeding_after_complete';
   static const _kMaxSeedingRatio = 'max_seeding_ratio';
-  static const _kEnableAiCopilot = 'enable_ai_copilot';
-  static const _kEnableSmartSuggestions = 'enable_smart_suggestions';
   static const _kCompactTorrentRows = 'compact_torrent_rows';
   static const _kConfirmOnExit = 'confirm_on_exit';
   static const _kLastDiagnosticsExport = 'last_diagnostics_export';
@@ -72,8 +60,6 @@ class SettingsService {
   double windowH = 0.0;
   String browserLastUrl = '';
   List<String> browserHistory = <String>[];
-  String aiOllamaUrl = _defaultOllamaUrl();
-  String aiDefaultModel = kDefaultAiModel;
   bool autoStartOnAdd = true;
   bool useDht = true;
   bool usePex = true;
@@ -86,8 +72,6 @@ class SettingsService {
   int uploadRateLimitKib = 0;
   bool allowSeedingAfterComplete = true;
   double maxSeedingRatio = 1.5;
-  bool enableAiCopilot = true;
-  bool enableSmartSuggestions = true;
   bool compactTorrentRows = false;
   bool confirmOnExit = true;
   String lastDiagnosticsExport = '';
@@ -113,8 +97,6 @@ class SettingsService {
           prefs.getStringList(_kBrowserFavorites) ?? browserFavorites;
       browserLastUrl = prefs.getString(_kBrowserLastUrl) ?? '';
       browserHistory = prefs.getStringList(_kBrowserHistory) ?? <String>[];
-      aiOllamaUrl = prefs.getString(_kAiOllamaUrl) ?? _defaultOllamaUrl();
-      aiDefaultModel = prefs.getString(_kAiDefaultModel) ?? kDefaultAiModel;
       autoStartOnAdd = prefs.getBool(_kAutoStartOnAdd) ?? true;
       useDht = prefs.getBool(_kUseDht) ?? true;
       usePex = prefs.getBool(_kUsePex) ?? true;
@@ -128,8 +110,6 @@ class SettingsService {
       allowSeedingAfterComplete =
           prefs.getBool(_kAllowSeedingAfterComplete) ?? true;
       maxSeedingRatio = prefs.getDouble(_kMaxSeedingRatio) ?? 1.5;
-      enableAiCopilot = prefs.getBool(_kEnableAiCopilot) ?? true;
-      enableSmartSuggestions = prefs.getBool(_kEnableSmartSuggestions) ?? true;
       compactTorrentRows = prefs.getBool(_kCompactTorrentRows) ?? false;
       confirmOnExit = prefs.getBool(_kConfirmOnExit) ?? true;
       lastDiagnosticsExport = prefs.getString(_kLastDiagnosticsExport) ?? '';
@@ -223,17 +203,7 @@ class SettingsService {
     await prefs.setStringList(_kBrowserHistory, trimmed);
   }
 
-  Future<void> setAiOllamaUrl(String url) async {
-    aiOllamaUrl = url.trim().isEmpty ? _defaultOllamaUrl() : url.trim();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kAiOllamaUrl, aiOllamaUrl);
-  }
 
-  Future<void> setAiDefaultModel(String model) async {
-    aiDefaultModel = model.trim().isEmpty ? kDefaultAiModel : model.trim();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kAiDefaultModel, aiDefaultModel);
-  }
 
   Future<void> setAutoStartOnAdd(bool value) async {
     autoStartOnAdd = value;
@@ -307,17 +277,7 @@ class SettingsService {
     await prefs.setDouble(_kMaxSeedingRatio, maxSeedingRatio);
   }
 
-  Future<void> setEnableAiCopilot(bool value) async {
-    enableAiCopilot = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_kEnableAiCopilot, value);
-  }
 
-  Future<void> setEnableSmartSuggestions(bool value) async {
-    enableSmartSuggestions = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_kEnableSmartSuggestions, value);
-  }
 
   Future<void> setCompactTorrentRows(bool value) async {
     compactTorrentRows = value;

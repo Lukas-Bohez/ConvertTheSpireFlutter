@@ -16,12 +16,6 @@ import '../vault/services/torrent_service.dart';
 import '../widgets/quick_links_service.dart';
 
 const _kRoutes = {
-  'search': (
-    index: 0,
-    icon: Icons.search,
-    label: 'Search',
-    route: 'search.tab'
-  ),
   'multisearch': (
     index: 1,
     icon: Icons.travel_explore,
