@@ -2147,6 +2147,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get streamingFromWatchTogetherHost => 'يُبث من مضيف المشاهدة معًا';
 
   @override
+  String get openedFileNotInLibrary => 'ملف مفتوح، ليس في مكتبتك';
+
+  @override
   String get trackActions => 'إجراءات المقطع';
 
   @override

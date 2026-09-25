@@ -2171,6 +2171,9 @@ class AppLocalizationsPl extends AppLocalizations {
       'Strumieniowanie od gospodarza Oglądaj razem';
 
   @override
+  String get openedFileNotInLibrary => 'Otwarty plik, spoza Twojej biblioteki';
+
+  @override
   String get trackActions => 'Działania na utworze';
 
   @override

@@ -639,6 +639,7 @@
   "undoDislike": "Desfazer \"Não gostei\"",
   "dislike": "Não gostei",
   "streamingFromWatchTogetherHost": "Transmitindo a partir do anfitrião do Assistir juntos",
+  "openedFileNotInLibrary": "Arquivo aberto, fora da sua biblioteca",
   "trackActions": "Ações da faixa",
   "metadataFixed": "Metadados corrigidos",
   "couldNotFixMetadata": "Não foi possível corrigir os metadados",

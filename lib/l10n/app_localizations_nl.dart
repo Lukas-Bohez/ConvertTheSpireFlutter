@@ -2173,6 +2173,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Gestreamd vanaf de host van Samen kijken';
 
   @override
+  String get openedFileNotInLibrary =>
+      'Geopend bestand, niet in je bibliotheek';
+
+  @override
   String get trackActions => 'Nummeracties';
 
   @override

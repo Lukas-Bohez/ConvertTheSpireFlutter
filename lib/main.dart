@@ -16,6 +16,7 @@ import 'src/config/build_flags.dart';
 import 'src/config/flavor.dart';
 import 'src/config/full_mode_access.dart';
 import 'src/services/ad_service.dart';
+import 'src/services/open_request_service.dart';
 import 'src/services/purchase_service.dart';
 import 'src/services/review_service.dart';
 import 'src/services/session_log_service.dart';
@@ -62,6 +63,10 @@ Future<void> main() async {
     // Ensure bindings are initialized in the same zone that runs runApp.
     // This avoids `Zone mismatch` errors from Flutter.
     WidgetsFlutterBinding.ensureInitialized();
+
+    // Files and links the app was started for (or is sent later): taken
+    // from the platform now, handled by the home screen once it is up.
+    OpenRequestService.instance.start();
 
     // Startup/shutdown breadcrumbs: written to session_log_*.log on close
     // or on error, to diagnose slow starts on low-end hardware.

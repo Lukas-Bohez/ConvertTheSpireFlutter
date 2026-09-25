@@ -639,6 +639,7 @@
   "undoDislike": "Bỏ không thích",
   "dislike": "Không thích",
   "streamingFromWatchTogetherHost": "Đang phát từ chủ phòng Xem cùng nhau",
+  "openedFileNotInLibrary": "Tệp đã mở, không có trong thư viện của bạn",
   "trackActions": "Thao tác bài hát",
   "metadataFixed": "Đã sửa siêu dữ liệu",
   "couldNotFixMetadata": "Không sửa được siêu dữ liệu",

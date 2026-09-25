@@ -639,6 +639,7 @@
   "undoDislike": "Cofnij „Nie podoba mi się”",
   "dislike": "Nie podoba mi się",
   "streamingFromWatchTogetherHost": "Strumieniowanie od gospodarza Oglądaj razem",
+  "openedFileNotInLibrary": "Otwarty plik, spoza Twojej biblioteki",
   "trackActions": "Działania na utworze",
   "metadataFixed": "Poprawiono metadane",
   "couldNotFixMetadata": "Nie udało się poprawić metadanych",

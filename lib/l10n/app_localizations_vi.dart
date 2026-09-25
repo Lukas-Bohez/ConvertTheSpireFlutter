@@ -2158,6 +2158,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đang phát từ chủ phòng Xem cùng nhau';
 
   @override
+  String get openedFileNotInLibrary =>
+      'Tệp đã mở, không có trong thư viện của bạn';
+
+  @override
   String get trackActions => 'Thao tác bài hát';
 
   @override

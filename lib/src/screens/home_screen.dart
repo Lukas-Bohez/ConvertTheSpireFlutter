@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../config/build_flags.dart';
 import '../config/full_mode_access.dart';
@@ -22,6 +23,7 @@ import '../services/android_saf.dart';
 import '../services/bug_report_service.dart';
 import '../services/folder_access_service.dart';
 import '../services/ipfs_service.dart';
+import '../services/open_request_service.dart';
 import '../services/review_service.dart';
 import '../services/session_log_service.dart';
 import '../services/shortcut_service.dart';
@@ -174,6 +176,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   TrayService? _trayService;
 
+  StreamSubscription<void>? _openRequestSub;
+
   String _previewPreset = '25';
   bool get _isAndroid => !kIsWeb && Platform.isAndroid;
   bool get _isDesktopPlatform =>
@@ -200,6 +204,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     // Show what changed after the app updated itself under the user.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_maybeShowWhatsNew());
+    });
+
+    // Files and links opened with the app. Those it was started for are
+    // already waiting; later ones announce themselves.
+    _openRequestSub = OpenRequestService.instance.onArrived
+        .listen((_) => unawaited(_handleOpenRequests(bringToFront: true)));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_handleOpenRequests());
     });
 
     try {
@@ -347,6 +359,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _openRequestSub?.cancel();
     _trayService?.destroy();
     _playlistTabController.dispose();
     _urlController.dispose();
@@ -960,6 +973,60 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     _navigateToPage(2);
     BrowserScreen.navigate(trimmed);
+  }
+
+  /// Opens what the app was asked to open from outside: a magnet link or a
+  /// .torrent in Torrents, a song or a video in the player. [bringToFront]
+  /// is for a request sent while the app runs, possibly hidden in the tray.
+  Future<void> _handleOpenRequests({bool bringToFront = false}) async {
+    if (!mounted) return;
+    if (bringToFront && _isDesktopPlatform) {
+      unawaited(_bringWindowToFront());
+    }
+    final player = context.read<PlayerState>();
+    for (final request in OpenRequestService.instance.takeAll()) {
+      if (!mounted) return;
+      switch (request.kind) {
+        case OpenRequestKind.magnet:
+          _navigateToPage(14);
+          await _openTorrentLink(request.target);
+        case OpenRequestKind.torrentFile:
+          _navigateToPage(14);
+          var path = request.target;
+          if (path.startsWith('content://')) {
+            // A .torrent from a file manager: read it through Android.
+            String? copied;
+            try {
+              copied = await _androidSaf.copyToTemp(uri: path);
+            } catch (e) {
+              debugPrint('Could not read opened torrent $path: $e');
+            }
+            if (copied == null) {
+              if (mounted) {
+                Snack.show(context, context.l10n.unsupportedTorrentLink,
+                    level: SnackLevel.warning);
+              }
+              continue;
+            }
+            path = copied;
+          }
+          await _openTorrentLink(path);
+        case OpenRequestKind.media:
+          _navigateToPage(12);
+          await player.openExternalFile(request.target,
+              name: request.name, isVideo: request.isVideo);
+      }
+    }
+  }
+
+  Future<void> _bringWindowToFront() async {
+    try {
+      if (await windowManager.isMinimized()) await windowManager.restore();
+      await windowManager.show();
+      await windowManager.focus();
+    } catch (e) {
+      debugPrint('Could not bring the window forward: $e');
+    }
   }
 
   Future<void> _openTorrentLink(String url) async {

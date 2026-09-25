@@ -2102,6 +2102,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get streamingFromWatchTogetherHost => '함께 보기 호스트에서 스트리밍 중';
 
   @override
+  String get openedFileNotInLibrary => '연 파일, 라이브러리에 없음';
+
+  @override
   String get trackActions => '곡 작업';
 
   @override

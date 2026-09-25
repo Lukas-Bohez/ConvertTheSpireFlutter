@@ -3965,6 +3965,12 @@ abstract class AppLocalizations {
   /// **'Streaming from the Watch Together host'**
   String get streamingFromWatchTogetherHost;
 
+  /// No description provided for @openedFileNotInLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened file, not in your library'**
+  String get openedFileNotInLibrary;
+
   /// No description provided for @trackActions.
   ///
   /// In en, this message translates to:

@@ -639,6 +639,7 @@
   "undoDislike": "Beğenmemeyi geri al",
   "dislike": "Beğenme",
   "streamingFromWatchTogetherHost": "Birlikte İzle ev sahibinden yayınlanıyor",
+  "openedFileNotInLibrary": "Açılan dosya, kitaplığında değil",
   "trackActions": "Parça işlemleri",
   "metadataFixed": "Meta veriler düzeltildi",
   "couldNotFixMetadata": "Meta veriler düzeltilemedi",

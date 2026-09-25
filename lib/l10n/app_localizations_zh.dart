@@ -2072,6 +2072,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get streamingFromWatchTogetherHost => '正在从“一起看”的房主处串流';
 
   @override
+  String get openedFileNotInLibrary => '已打开的文件，不在你的媒体库中';
+
+  @override
   String get trackActions => '曲目操作';
 
   @override

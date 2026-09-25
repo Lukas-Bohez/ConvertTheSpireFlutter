@@ -639,6 +639,7 @@
   "undoDislike": "Annulla \"Non mi piace\"",
   "dislike": "Non mi piace",
   "streamingFromWatchTogetherHost": "In streaming dall'host di Guarda insieme",
+  "openedFileNotInLibrary": "File aperto, non è nella tua libreria",
   "trackActions": "Azioni del brano",
   "metadataFixed": "Metadati corretti",
   "couldNotFixMetadata": "Impossibile correggere i metadati",

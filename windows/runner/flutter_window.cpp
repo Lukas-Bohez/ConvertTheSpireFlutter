@@ -1,8 +1,11 @@
 #include "flutter_window.h"
 
+#include <flutter/standard_method_codec.h>
+
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "open_requests.h"
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -27,6 +30,28 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  open_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(), "convert_the_spire/open",
+          &flutter::StandardMethodCodec::GetInstance());
+  open_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) {
+        if (call.method_name() != "takePending") {
+          result->NotImplemented();
+          return;
+        }
+        flutter::EncodableList targets;
+        for (const auto& target : pending_open_requests_) {
+          targets.push_back(flutter::EncodableValue(target));
+        }
+        pending_open_requests_.clear();
+        result->Success(flutter::EncodableValue(targets));
+      });
+  // Only now can a second copy of the app hand requests to this window.
+  open_requests::MarkMainWindow(GetHandle());
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });
@@ -39,7 +64,19 @@ bool FlutterWindow::OnCreate() {
   return true;
 }
 
+void FlutterWindow::QueueOpenRequests(const std::vector<std::string>& targets) {
+  pending_open_requests_.insert(pending_open_requests_.end(), targets.begin(),
+                                targets.end());
+  // Also sent when there is nothing to open: a plain second start brings
+  // the window forward. Dart asks for the list itself at startup, so a
+  // nudge sent before it listens is not needed.
+  if (open_channel_) {
+    open_channel_->InvokeMethod("pending", nullptr);
+  }
+}
+
 void FlutterWindow::OnDestroy() {
+  open_channel_ = nullptr;
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -51,6 +88,15 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  if (message == WM_COPYDATA) {
+    std::vector<std::string> targets;
+    if (open_requests::DecodeForwarded(
+            reinterpret_cast<const COPYDATASTRUCT*>(lparam), &targets)) {
+      QueueOpenRequests(targets);
+      return TRUE;
+    }
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =

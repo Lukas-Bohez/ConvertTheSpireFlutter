@@ -639,6 +639,7 @@
   "undoDislike": "低評価を取り消す",
   "dislike": "低評価",
   "streamingFromWatchTogetherHost": "「一緒に見る」のホストからストリーミング中",
+  "openedFileNotInLibrary": "開いたファイル（ライブラリにはありません）",
   "trackActions": "曲の操作",
   "metadataFixed": "メタデータを修正しました",
   "couldNotFixMetadata": "メタデータを修正できませんでした",
