@@ -132,23 +132,33 @@ class PieceManager
     }
   }
 
+  /// Pieces whose hash is being checked.
+  final Set<int> _validating = <int>{};
+
   /// After completing a piece, some processing is required:
-  /// - Validate piece
+  /// - Validate piece, on a background isolate (piece_hasher.dart)
   /// - Remove it from the _downloadingPieces list.
   /// - Notify the listeners.
   void _processCompletePieceDownload(int index) {
     var piece = pieces[index];
-    if (piece == null) return;
+    if (piece == null || !_validating.add(index)) return;
 
-    if (!piece.validatePiece()) {
-      _log.fine('Piece ${piece.index} is rejected');
-      events.emit(PieceRejected(index));
-      return;
-    }
-    _log.fine('Piece ${piece.index} is accepted');
+    piece.validatePieceInBackground().then((valid) {
+      _validating.remove(index);
+      if (isDisposed || piece.isDisposed) return;
+      if (!valid) {
+        _log.fine('Piece ${piece.index} is rejected');
+        events.emit(PieceRejected(index));
+        return;
+      }
+      _log.fine('Piece ${piece.index} is accepted');
 
-    _downloadingPieces.remove(index);
-    events.emit(PieceAccepted(index));
+      _downloadingPieces.remove(index);
+      events.emit(PieceAccepted(index));
+    }, onError: (Object e) {
+      _validating.remove(index);
+      _log.fine('Piece $index was not checked: $e');
+    });
   }
 
   bool _disposed = false;

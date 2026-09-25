@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:crypto/crypto.dart';
 import 'package:dtorrent_task_v2/src/torrent/torrent_model.dart';
 import 'package:logging/logging.dart';
 import '../piece/piece.dart';
+import '../piece/piece_hasher.dart';
 
 var _log = Logger('FileValidator');
 
@@ -91,8 +91,8 @@ class FileValidator {
         return false;
       }
 
-      // Calculate hash
-      final hash = _calculatePieceHash(pieceData);
+      // Calculate hash, on a background isolate
+      final hash = await PieceHasher.instance.sha1(pieceData);
 
       // Compare with expected hash
       // The piece object already has hashString, so we'll use that
@@ -196,12 +196,6 @@ class FileValidator {
     }
 
     return data;
-  }
-
-  /// Calculate SHA1 hash of piece data
-  Uint8List _calculatePieceHash(Uint8List data) {
-    final digest = sha1.convert(data);
-    return Uint8List.fromList(digest.bytes);
   }
 
   /// Compare two hashes

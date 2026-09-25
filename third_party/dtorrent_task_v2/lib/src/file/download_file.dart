@@ -85,7 +85,10 @@ class DownloadFile {
   ///
   Future<bool> requestWrite(
       int position, List<int> block, int start, int end) async {
+    // A closed file is not opened again: its task has stopped.
+    if (_closed) return false;
     _writeAccess ??= await _getRandomAccessFile(FileRequestType.write);
+    if (_closed) return false;
     var completer = Completer<bool>();
     _streamController?.add(WriteRequest(
       position: position,
@@ -99,7 +102,9 @@ class DownloadFile {
   }
 
   Future<List<int>> requestRead(int position, int length) async {
+    if (_closed) return <int>[];
     _readAccess ??= await _getRandomAccessFile(FileRequestType.read);
+    if (_closed) return <int>[];
     var completer = Completer<List<int>>();
     _streamController?.add(
         ReadRequest(completer: completer, position: position, length: length));
@@ -232,7 +237,9 @@ class DownloadFile {
 
   /// Request to write the buffer to disk.
   Future<bool> requestFlush() async {
+    if (_closed) return false;
     _writeAccess ??= await _getRandomAccessFile(FileRequestType.write);
+    if (_closed) return false;
     var completer = Completer<bool>();
     _streamController?.add(FlushRequest(completer: completer));
     return completer.future;
