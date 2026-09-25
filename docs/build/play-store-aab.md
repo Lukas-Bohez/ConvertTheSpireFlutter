@@ -42,7 +42,7 @@ Play review checks these; 14.4.1 was turned down for the banner and icon ("no fu
 * `android.software.leanback`, `android.hardware.touchscreen` and `android.hardware.faketouch` with `required="false"`.
 * `android:banner="@mipmap/banner"`: `mipmap-<density>/banner.png` from 160x90 (mdpi) to 640x360 (xxxhdpi), so 320x180 px at xhdpi, showing the logo and the app name only.
 * A launcher icon of at least 160x160 px at xhdpi, opaque: the legacy `mipmap-<density>/ic_launcher.png` is 80dp, next to the adaptive icon.
-* An icon that fills its square: the logo on the banner's gradient, edge to edge, in the adaptive icon, the legacy icon and the Play Console's 512x512 icon. 14.4.1's logo on a pale square was turned down with "Your icon does not fill the entire icon space".
+* An icon the logo fills: on white, spanning at least 80% of the legacy icon, of what the adaptive icon shows, and of the Play Console's 512x512 icon, without being cut off. 14.4.1's logo, small in a wide margin, was turned down with "Your icon does not fill the entire icon space".
 * No `android:roundIcon`; Android TV's guidelines deprecate it.
 
 CI checks all of this on the Play flavor's debug APK for every change (`scripts/play_tv_checks.py`), and `verify_play_aab.py` runs the same checks on the release bundle.
