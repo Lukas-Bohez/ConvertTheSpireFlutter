@@ -14,6 +14,7 @@ import 'package:convert_the_spire_reborn/src/vault/bittorrent/torrent_file.dart'
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/notification_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/torrent_content_deleter.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
 import 'package:dtorrent_common/dtorrent_common.dart';
 import 'package:dtorrent_task_v2/dtorrent_task_v2.dart' as dt;
@@ -2930,60 +2931,6 @@ class TorrentEngineService {
     }
   }
 
-  String _sanitizePathSegment(String value) {
-    return value
-        .trim()
-        .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-  }
-
-  bool _isPathInside(String candidatePath, String baseDir) {
-    final base = p.normalize(p.absolute(baseDir));
-    final candidate = p.normalize(p.absolute(candidatePath));
-    return candidate == base ||
-        candidate.startsWith('$base${Platform.pathSeparator}');
-  }
-
-  bool _isFileInUseError(Object error) {
-    if (error is PathAccessException) {
-      final code = error.osError?.errorCode;
-      return code == 32 || code == 33;
-    }
-    return false;
-  }
-
-  Future<bool> _deletePathWithRetry(
-    String targetPath, {
-    int attempts = 2,
-    Duration delay = const Duration(milliseconds: 400),
-  }) async {
-    final type = await FileSystemEntity.type(targetPath, followLinks: false);
-    if (type == FileSystemEntityType.notFound) return true;
-
-    for (var i = 1; i <= attempts; i++) {
-      try {
-        if (type == FileSystemEntityType.directory) {
-          await Directory(targetPath).delete(recursive: true);
-        } else {
-          await File(targetPath).delete();
-        }
-        return true;
-      } catch (e) {
-        final isLocked = _isFileInUseError(e);
-        debugPrint(
-          'forceRedownload: delete attempt $i/$attempts failed for $targetPath: $e',
-        );
-        if (!isLocked || i == attempts) {
-          return false;
-        }
-        await Future<void>.delayed(delay);
-      }
-    }
-
-    return false;
-  }
-
   Future<dt.TorrentModel?> _loadCachedModelForRedownload(
     TorrentModel torrent,
   ) async {
@@ -3032,102 +2979,59 @@ class TorrentEngineService {
         .toSet();
   }
 
-  Future<Set<String>> _deleteTorrentContentForRedownload(
-    TorrentModel torrent,
-    String saveDir,
-    Set<String> relativePaths,
-  ) async {
-    var deletedAnything = false;
-    final lockedPaths = <String>{};
-    var lockFailures = 0;
-    const maxLockFailuresBeforeAbort = 3;
-    if (relativePaths.isNotEmpty) {
-      var ops = 0;
-      final roots = <String>{};
-      for (final relPath in relativePaths) {
-        final relative = relPath.replaceAll('/', Platform.pathSeparator);
-        final target = p.normalize(p.join(saveDir, relative));
-        if (!_isPathInside(target, saveDir)) continue;
+  /// Deletes the files [torrentId] downloaded, and only those; see
+  /// [TorrentContentDeleter]. Stops the torrent first so none is open.
+  ///
+  /// Returns null, and deletes nothing, when the torrent's file list is not
+  /// known, such as a magnet that never got its metadata.
+  Future<TorrentContentDeletion?> deleteTorrentContent(String torrentId) async {
+    final torrent = await TorrentService.instance.getTorrentById(torrentId);
+    if (torrent == null) return null;
+    // The running task has the file list for sure; read it before stopping.
+    final model =
+        _tasks[torrentId]?.metaInfo ?? await _loadModelForDelete(torrent);
+    await stopTorrent(torrentId);
+    if (model == null) {
+      _log(torrentId, 'Delete files: file list unknown, nothing deleted.');
+      return null;
+    }
+    // The folder the download went to: the same choice startTorrent makes.
+    final saveDir = await _resolveWritableDownloadDir(
+      _storedDownloadDirForResume(torrent),
+    );
+    final result = await TorrentContentDeleter.delete(
+      saveDir: saveDir,
+      relativeFiles: _relativeFilePathsFromModel(model),
+      stateFileName: '${model.infoHash}.bt.state',
+    );
+    _log(
+      torrentId,
+      'Delete files in $saveDir: ${result.deleted.length} deleted, '
+      '${result.missing.length} already gone, ${result.failed.length} in use, '
+      '${result.skipped.length} skipped.',
+    );
+    return result;
+  }
 
-        final targetType = await FileSystemEntity.type(
-          target,
-          followLinks: false,
+  /// The torrent's file list from what is kept on disk: the .torrent it was
+  /// added from, the copy the engine keeps, or the metadata cache.
+  Future<dt.TorrentModel?> _loadModelForDelete(TorrentModel torrent) async {
+    final sources = [
+      _sourceTorrentPath(torrent),
+      (await _tryGetManagedTorrentSource(torrent.id))?.path,
+    ];
+    for (final path in sources) {
+      if (path == null) continue;
+      try {
+        final bytes = await File(path).readAsBytes();
+        return await _parseTorrentModelFromRawBencode(
+          _decodeTorrentBencode(bytes),
         );
-        if (targetType == FileSystemEntityType.notFound) {
-          ops++;
-          continue;
-        }
-
-        final didDelete = await _deletePathWithRetry(target);
-        if (!didDelete &&
-            await FileSystemEntity.type(target) !=
-                FileSystemEntityType.notFound) {
-          lockedPaths.add(target);
-          lockFailures++;
-          if (lockFailures >= maxLockFailuresBeforeAbort) {
-            debugPrint(
-              'forceRedownload: aborting bulk delete early due to repeated file locks. Switching strategy.',
-            );
-            break;
-          }
-        }
-        deletedAnything = deletedAnything || didDelete;
-
-        final root = relPath.split('/').first;
-        if (root.isNotEmpty) roots.add(root);
-
-        ops++;
-        if (ops % 20 == 0) {
-          await Future<void>.delayed(Duration.zero);
-        }
-      }
-
-      for (final root in roots) {
-        final targetDir = p.normalize(p.join(saveDir, root));
-        if (!_isPathInside(targetDir, saveDir)) continue;
-        final type = await FileSystemEntity.type(targetDir, followLinks: false);
-        if (type == FileSystemEntityType.directory) {
-          try {
-            final isEmpty = await Directory(targetDir).list().isEmpty;
-            if (isEmpty) {
-              await Directory(targetDir).delete();
-            }
-          } catch (_) {
-            // Best effort cleanup only.
-          }
-        }
+      } catch (e) {
+        debugPrint('Delete files: could not read $path: $e');
       }
     }
-
-    if (deletedAnything) return lockedPaths;
-    if (relativePaths.isNotEmpty) {
-      // We already attempted exact torrent paths. Avoid re-hitting fallback
-      // guesses (which can duplicate lock contention on the same file).
-      return lockedPaths;
-    }
-
-    // Fallback when cached metadata is unavailable: remove common root targets.
-    final safeName = _sanitizePathSegment(torrent.name);
-    if (safeName.isEmpty) return lockedPaths;
-
-    final fallbackTargets = <String>{
-      p.join(saveDir, safeName),
-      p.join(saveDir, '$safeName.mkv'),
-      p.join(saveDir, '$safeName.exe'),
-      p.join(saveDir, '$safeName.mp4'),
-    };
-
-    for (final target in fallbackTargets) {
-      if (!_isPathInside(target, saveDir)) continue;
-      final didDelete = await _deletePathWithRetry(target);
-      if (!didDelete &&
-          await FileSystemEntity.type(target) !=
-              FileSystemEntityType.notFound) {
-        lockedPaths.add(target);
-      }
-    }
-
-    return lockedPaths;
+    return _loadCachedModelForRedownload(torrent);
   }
 
   Future<void> forceRedownload(String torrentId) async {
@@ -3180,11 +3084,11 @@ class TorrentEngineService {
         );
       }
 
-      final lockedPaths = await _deleteTorrentContentForRedownload(
-        torrent,
-        saveDir,
-        relativePaths,
-      );
+      final lockedPaths = (await TorrentContentDeleter.delete(
+        saveDir: saveDir,
+        relativeFiles: relativePaths,
+      ))
+          .failed;
 
       if (lockedPaths.isNotEmpty) {
         final sample = lockedPaths.take(3).join(', ');
