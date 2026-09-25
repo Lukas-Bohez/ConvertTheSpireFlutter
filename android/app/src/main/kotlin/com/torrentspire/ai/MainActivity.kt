@@ -416,6 +416,14 @@ class MainActivity : AudioServiceActivity() {
                         val isTV = uiModeManager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
                         result.success(isTV)
                     }
+                    // Phones and tablets on Android 13 (33) and later show
+                    // their own preview of what was copied, so the app skips
+                    // its "copied" message there. Android TV shows none.
+                    "showsCopyConfirmation" -> {
+                        val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
+                        val isTV = uiModeManager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+                        result.success(android.os.Build.VERSION.SDK_INT >= 33 && !isTV)
+                    }
                     else -> result.notImplemented()
                 }
             }

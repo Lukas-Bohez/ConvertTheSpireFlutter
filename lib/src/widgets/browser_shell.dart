@@ -10,7 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/build_flags.dart';
 import '../screens/browser_screen.dart';
 import '../screens/player.dart'
-    show PlayerState, PositionUiState, MediaItem, MediaType;
+    show PlayerState, PositionUiState, MediaItem, MediaType, copyTrackTitle;
 import '../utils/l10n.dart';
 import '../vault/services/torrent_service.dart';
 import '../widgets/quick_links_service.dart';
@@ -746,6 +746,10 @@ class _BrowserShellState extends State<BrowserShell> {
                               Expanded(
                                 child: InkWell(
                                   onTap: () => widget.onNavigate('player.tab'),
+                                  onLongPress: () =>
+                                      copyTrackTitle(context, item),
+                                  onSecondaryTap: () =>
+                                      copyTrackTitle(context, item),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
