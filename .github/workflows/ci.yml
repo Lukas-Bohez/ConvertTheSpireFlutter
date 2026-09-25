@@ -173,3 +173,11 @@ jobs:
       # (android/app/src/play/res), which Play review checks.
       - name: Build debug APK (Play flavor)
         run: flutter build apk --debug --flavor play
+
+      # Play's TV review turned the app down for its banner and icon; check
+      # them in the APK that was just built (sizes, opaque, an icon that
+      # fills its square, the TV launcher entry).
+      - name: Check the Play build's Android TV banner and icon
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 scripts/play_tv_checks.py build/app/outputs/flutter-apk/app-play-debug.apk
