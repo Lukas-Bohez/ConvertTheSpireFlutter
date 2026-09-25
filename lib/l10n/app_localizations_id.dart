@@ -3554,6 +3554,16 @@ class AppLocalizationsId extends AppLocalizations {
   String get filePathCopied => 'Jalur file disalin';
 
   @override
+  String get copyTitle => 'Salin judul';
+
+  @override
+  String get titleCopied => 'Judul disalin';
+
+  @override
+  String get homeTaglinePlay =>
+      'Torrent, musik, video, dan konversi file dalam satu aplikasi.';
+
+  @override
   String get redownloadFromScratch2 => 'Unduh ulang dari awal';
 
   @override

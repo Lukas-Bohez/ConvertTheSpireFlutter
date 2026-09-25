@@ -3554,6 +3554,16 @@ class AppLocalizationsUk extends AppLocalizations {
   String get filePathCopied => 'Шлях до файлу скопійовано';
 
   @override
+  String get copyTitle => 'Копіювати назву';
+
+  @override
+  String get titleCopied => 'Назву скопійовано';
+
+  @override
+  String get homeTaglinePlay =>
+      'Торенти, музика, відео та конвертація файлів в одному застосунку.';
+
+  @override
   String get redownloadFromScratch2 => 'Завантажити заново з нуля';
 
   @override

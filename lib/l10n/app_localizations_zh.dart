@@ -3410,6 +3410,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get filePathCopied => '文件路径已复制';
 
   @override
+  String get copyTitle => '复制标题';
+
+  @override
+  String get titleCopied => '已复制标题';
+
+  @override
+  String get homeTaglinePlay => '种子下载、音乐、视频和文件转换，尽在一个应用。';
+
+  @override
   String get redownloadFromScratch2 => '从头重新下载';
 
   @override

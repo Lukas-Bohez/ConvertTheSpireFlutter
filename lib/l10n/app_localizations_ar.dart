@@ -3525,6 +3525,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get filePathCopied => 'نُسخ مسار الملف';
 
   @override
+  String get copyTitle => 'نسخ العنوان';
+
+  @override
+  String get titleCopied => 'تم نسخ العنوان';
+
+  @override
+  String get homeTaglinePlay =>
+      'التورنت والموسيقى والفيديو وتحويل الملفات في تطبيق واحد.';
+
+  @override
   String get redownloadFromScratch2 => 'إعادة التنزيل من البداية';
 
   @override

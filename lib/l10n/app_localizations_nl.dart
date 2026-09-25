@@ -3565,6 +3565,16 @@ class AppLocalizationsNl extends AppLocalizations {
   String get filePathCopied => 'Bestandspad gekopieerd';
 
   @override
+  String get copyTitle => 'Titel kopiëren';
+
+  @override
+  String get titleCopied => 'Titel gekopieerd';
+
+  @override
+  String get homeTaglinePlay =>
+      'Torrents, muziek, video\'s en bestanden omzetten in één app.';
+
+  @override
   String get redownloadFromScratch2 => 'Helemaal opnieuw downloaden';
 
   @override

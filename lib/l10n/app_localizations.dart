@@ -6337,6 +6337,24 @@ abstract class AppLocalizations {
   /// **'File path copied'**
   String get filePathCopied;
 
+  /// No description provided for @copyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy title'**
+  String get copyTitle;
+
+  /// No description provided for @titleCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Title copied'**
+  String get titleCopied;
+
+  /// No description provided for @homeTaglinePlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Torrents, music, videos and file conversion in one app.'**
+  String get homeTaglinePlay;
+
   /// No description provided for @redownloadFromScratch2.
   ///
   /// In en, this message translates to:

@@ -3545,6 +3545,16 @@ class AppLocalizationsVi extends AppLocalizations {
   String get filePathCopied => 'Đã sao chép đường dẫn tệp';
 
   @override
+  String get copyTitle => 'Sao chép tiêu đề';
+
+  @override
+  String get titleCopied => 'Đã sao chép tiêu đề';
+
+  @override
+  String get homeTaglinePlay =>
+      'Torrent, nhạc, video và chuyển đổi tệp trong một ứng dụng.';
+
+  @override
   String get redownloadFromScratch2 => 'Tải lại từ đầu';
 
   @override
