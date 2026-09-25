@@ -74,13 +74,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           color: const Color(0xFF6C63FF),
           preview: _FeatureListPreview(items: [
             _FeatureItem(
-              icon: Icons.search_rounded,
-              color: const Color(0xFF6C63FF),
-              label: context.l10n.tabSearch,
-              blurb: context.l10n.previewResultBeforeDownload,
-              visible: !kPlayStoreBuild,
-            ),
-            _FeatureItem(
               icon: Icons.travel_explore_rounded,
               color: const Color(0xFF43CFBB),
               label: context.l10n.multiSearch,
