@@ -23,7 +23,7 @@
 ### Improved
 
 - **Ads that fit in (Play Store version).** One small banner under the home screen, and now and then a full-screen ad when you finish something, such as a conversion, or come back to Home: never in your first two minutes, at most one every three minutes, and never while music or a video is playing. Android TV shows no ads at all. The banner takes no room until an ad has loaded, fits the width of the screen, and goes away during your ad-free half hour.
-- Watch an ad for a colour says so when there is no ad to watch, instead of doing nothing. On Android TV the colour spins straight away (Play Store version).
+- Watch an ad for a colour says so when there is no ad to watch, instead of doing nothing. On Android TV the colour spins straight away (Play Store version). Where there are no ads, on Android TV and in the GitHub builds, the Support screen no longer shows Remove Ads or an ad counter.
 - The app no longer loads an ad it never shows, and no longer loads two full-screen ads at once.
 - When a torrent moves on from a peer that stopped sending, the pieces it was waiting for are picked up by the others right away.
 
