@@ -4302,8 +4302,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get preparing => 'Hazırlanıyor...';
 
   @override
-  String get vaultSpireDesignedExclusivelyLegal =>
-      'Vault The Spire yalnızca yasal indirmeler için tasarlanmıştır. Bunlar şunları kapsar:\n\n- Açık kaynak yazılımlar (Linux dağıtımları, geliştirme araçları, ücretsiz yayımlanan oyunlar)\n- Creative Commons lisanslı müzik, video ve kitaplar\n- Kamu malı içerikler (eski filmler, tarihî kayıtlar, klasik edebiyat)\n- Sana ait olan ve yedeğini kendin aldığın dosyalar\n- Yaratıcılarının serbest dağıtım için açıkça paylaştığı içerikler\n\nTelif hakkıyla korunan materyali izinsiz indirmek veya paylaşmak çoğu ülkede yasa dışıdır. Bu uygulamanın geliştiricileri izinsiz telif hakkı ihlallerini onaylamaz ve desteklemez.';
+  String vaultSpireDesignedExclusivelyLegal(String appName) {
+    return '$appName yalnızca yasal indirmeler için tasarlanmıştır. Bunlar şunları kapsar:\n\n- Açık kaynak yazılımlar (Linux dağıtımları, geliştirme araçları, ücretsiz yayımlanan oyunlar)\n- Creative Commons lisanslı müzik, video ve kitaplar\n- Kamu malı içerikler (eski filmler, tarihî kayıtlar, klasik edebiyat)\n- Sana ait olan ve yedeğini kendin aldığın dosyalar\n- Yaratıcılarının serbest dağıtım için açıkça paylaştığı içerikler\n\nTelif hakkıyla korunan materyali izinsiz indirmek veya paylaşmak çoğu ülkede yasa dışıdır. Bu uygulamanın geliştiricileri izinsiz telif hakkı ihlallerini onaylamaz ve desteklemez.';
+  }
 
   @override
   String get tapButtonPasteMagnetLink =>
@@ -4322,12 +4323,14 @@ class AppLocalizationsTr extends AppLocalizations {
       'İndirilen bir dosya bozuk görünüyor veya açılmıyorsa, ayrıntılarını açmak için torrente dokun, ardından \"Dosyaları doğrula\"ya dokun. Her parça diskten yeniden okunur ve özgün sağlama toplamlarıyla karşılaştırılır; hiçbir veri silinmez.\n\nDoğrulama bozuk parça bulursa ya da tamamen baştan başlamak istersen \"Yeniden indir\"e dokun. Yerel kopya silinir ve her şey eşlerden yeniden indirilir.\n\nBüyük repack\'ler (çok parçalı kurulum arşivleri) bazen bittikten sonra doğrulama gerektirir, çünkü parçalar birçok dosyaya karışık sırayla gelebilir.';
 
   @override
-  String get vaultSpireStoresAllData =>
-      'Vault The Spire tüm verileri cihazında yerel olarak saklar. Torrent geçmişi, indirme istatistikleri ve dosya adları hiçbir sunucuya gönderilmez.\n\nKatıldığın her torrent sürüsündeki diğer eşler IP adresini görebilir; BitTorrent böyle çalışır. Diğer eşlere karşı gizlilik senin için önemliyse bir VPN IP\'ni gizler.\n\nYerleşik tarayıcı geçmişi hiçbir bulutla eşitlemez. Geçmiş yalnızca cihazda saklanır ve Ayarlar\'dan temizlenebilir.';
+  String vaultSpireStoresAllData(String appName) {
+    return '$appName tüm verileri cihazında yerel olarak saklar. Torrent geçmişi, indirme istatistikleri ve dosya adları hiçbir sunucuya gönderilmez.\n\nKatıldığın her torrent sürüsündeki diğer eşler IP adresini görebilir; BitTorrent böyle çalışır. Diğer eşlere karşı gizlilik senin için önemliyse bir VPN IP\'ni gizler.\n\nYerleşik tarayıcı geçmişi hiçbir bulutla eşitlemez. Geçmiş yalnızca cihazda saklanır ve Ayarlar\'dan temizlenebilir.';
+  }
 
   @override
-  String get disableBatteryOptimisationVaultSpire =>
-      '- Sistemin etkin indirmeleri duraklatmaması için Android Ayarları -> Uygulamalar bölümünden Vault The Spire için pil optimizasyonunu kapat.\n\n- Bir torrent \"Dosya zaten kullanımda\" gösteriyorsa dosyayı açık tutan diğer uygulamaları kapat, ardından Yeniden indir\'e dokun.\n\n- İlerleme donmuş görünüyorsa yenilemek için Torrentler listesini aşağı çek.\n\n- Android 12 ve üzerinde en iyi sonuç için ilk açılışta istendiğinde depolama iznini ver.';
+  String disableBatteryOptimisationVaultSpire(String appName) {
+    return '- Sistemin etkin indirmeleri duraklatmaması için Android Ayarları -> Uygulamalar bölümünden $appName için pil optimizasyonunu kapat.\n\n- Bir torrent \"Dosya zaten kullanımda\" gösteriyorsa dosyayı açık tutan diğer uygulamaları kapat, ardından Yeniden indir\'e dokun.\n\n- İlerleme donmuş görünüyorsa yenilemek için Torrentler listesini aşağı çek.\n\n- Android 12 ve üzerinde en iyi sonuç için ilk açılışta istendiğinde depolama iznini ver.';
+  }
 
   @override
   String get appKeepsDownloadingWhenMinimised =>

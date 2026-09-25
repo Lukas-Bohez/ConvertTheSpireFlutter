@@ -143,7 +143,6 @@ No account, no sign-up, and the app does not track what you download. The GitHub
 ![Includes a guide on how to use the app](screenshots/built-in-guide.webp)
 ![Full logs so you know what's happening](screenshots/full-logs.webp)
 ![Full torrent settings](screenshots/full-torrent-settings.webp)
-![Torrents and Ollama safety checks](screenshots/torrents-and-ollama-safety-checks.webp)
 
 ## Questions
 

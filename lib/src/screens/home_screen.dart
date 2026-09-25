@@ -34,8 +34,9 @@ import '../theme/app_colors.dart';
 import '../utils/folder_label.dart';
 import '../utils/l10n.dart';
 import '../utils/snack.dart';
+import '../vault/screens/torrents_screen.dart';
 import '../vault/services/torrent_service.dart';
-import '../vault/vault_hub_screen.dart';
+import '../vault/widgets/torrent_settings_card.dart';
 import '../widgets/browser_shell.dart';
 import '../widgets/onboarding_tooltip_service.dart';
 import '../widgets/quick_links_page.dart';
@@ -475,8 +476,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           },
         );
       case 14:
-        return const VaultHubScreen(
-          key: ValueKey('vault-hub'),
+        return TorrentsScreen(
+          key: const ValueKey('torrents'),
+          onOpenSettingsTab: () => _navigateToPage(7),
         );
       default:
         return _buildSearchTab(settings);
@@ -3215,6 +3217,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 16),
 
+          // Torrents: ports, limits, seeding, peer discovery, proxy
+          const TorrentSettingsCard(),
+          const SizedBox(height: 16),
+
           // Theme Settings
           Card(
             child: Padding(
@@ -4407,6 +4413,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
           ),
+          const SizedBox(height: 24),
+
+          // Torrents: ports, limits, seeding, peer discovery, proxy
+          const TorrentSettingsCard(),
           const SizedBox(height: 24),
 
           // Appearance

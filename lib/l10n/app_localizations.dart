@@ -7600,8 +7600,8 @@ abstract class AppLocalizations {
   /// No description provided for @vaultSpireDesignedExclusivelyLegal.
   ///
   /// In en, this message translates to:
-  /// **'Vault The Spire is designed exclusively for legal downloading. This includes:\n\n- Open-source software (Linux distros, development tools, games released freely)\n- Creative Commons licensed music, video, and books\n- Public domain content (old films, historical recordings, classic literature)\n- Files you own and have backed up yourself\n- Content explicitly shared by creators for free distribution\n\nDownloading or sharing copyrighted material without permission is illegal in most countries. The developers of this app do not condone or support unauthorized copyright violations.'**
-  String get vaultSpireDesignedExclusivelyLegal;
+  /// **'{appName} is designed exclusively for legal downloading. This includes:\n\n- Open-source software (Linux distros, development tools, games released freely)\n- Creative Commons licensed music, video, and books\n- Public domain content (old films, historical recordings, classic literature)\n- Files you own and have backed up yourself\n- Content explicitly shared by creators for free distribution\n\nDownloading or sharing copyrighted material without permission is illegal in most countries. The developers of this app do not condone or support unauthorized copyright violations.'**
+  String vaultSpireDesignedExclusivelyLegal(String appName);
 
   /// No description provided for @tapButtonPasteMagnetLink.
   ///
@@ -7630,14 +7630,14 @@ abstract class AppLocalizations {
   /// No description provided for @vaultSpireStoresAllData.
   ///
   /// In en, this message translates to:
-  /// **'Vault The Spire stores all data locally on your device. No torrent history, download statistics, or file names are sent to any server.\n\nYour IP address is visible to other peers in any torrent swarm you join - this is how BitTorrent works. A VPN will mask your IP if privacy from other peers is important to you.\n\nThe built-in browser does not sync history to any cloud. History is stored only on-device and can be cleared in Settings.'**
-  String get vaultSpireStoresAllData;
+  /// **'{appName} stores all data locally on your device. No torrent history, download statistics, or file names are sent to any server.\n\nYour IP address is visible to other peers in any torrent swarm you join - this is how BitTorrent works. A VPN will mask your IP if privacy from other peers is important to you.\n\nThe built-in browser does not sync history to any cloud. History is stored only on-device and can be cleared in Settings.'**
+  String vaultSpireStoresAllData(String appName);
 
   /// No description provided for @disableBatteryOptimisationVaultSpire.
   ///
   /// In en, this message translates to:
-  /// **'- Disable battery optimisation for Vault The Spire in Android Settings -> Apps to prevent the OS from pausing active downloads.\n\n- If a torrent shows \"File already in use\", close any other app that has the file open, then tap Redownload.\n\n- Pull down on the Torrents list to force a refresh if progress looks frozen.\n\n- For best results on Android 12+, grant the app storage permission when prompted at first launch.'**
-  String get disableBatteryOptimisationVaultSpire;
+  /// **'- Disable battery optimisation for {appName} in Android Settings -> Apps to prevent the OS from pausing active downloads.\n\n- If a torrent shows \"File already in use\", close any other app that has the file open, then tap Redownload.\n\n- Pull down on the Torrents list to force a refresh if progress looks frozen.\n\n- For best results on Android 12+, grant the app storage permission when prompted at first launch.'**
+  String disableBatteryOptimisationVaultSpire(String appName);
 
   /// No description provided for @appKeepsDownloadingWhenMinimised.
   ///

@@ -4133,8 +4133,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get preparing => '正在准备...';
 
   @override
-  String get vaultSpireDesignedExclusivelyLegal =>
-      'Vault The Spire 专为合法下载而设计，包括：\n\n- 开源软件（Linux 发行版、开发工具、免费发布的游戏）\n- 采用知识共享许可的音乐、视频和图书\n- 公有领域内容（老电影、历史录音、经典文学）\n- 属于你自己并由你亲自备份的文件\n- 创作者明确允许自由分发的内容\n\n在大多数国家，未经许可下载或分享受版权保护的内容是违法的。本应用的开发者不纵容也不支持任何未经授权的侵权行为。';
+  String vaultSpireDesignedExclusivelyLegal(String appName) {
+    return '$appName 专为合法下载而设计，包括：\n\n- 开源软件（Linux 发行版、开发工具、免费发布的游戏）\n- 采用知识共享许可的音乐、视频和图书\n- 公有领域内容（老电影、历史录音、经典文学）\n- 属于你自己并由你亲自备份的文件\n- 创作者明确允许自由分发的内容\n\n在大多数国家，未经许可下载或分享受版权保护的内容是违法的。本应用的开发者不纵容也不支持任何未经授权的侵权行为。';
+  }
 
   @override
   String get tapButtonPasteMagnetLink =>
@@ -4153,12 +4154,14 @@ class AppLocalizationsZh extends AppLocalizations {
       '如果下载的文件似乎已损坏或打不开，请点该种子打开详情，然后点“校验文件”。它会从磁盘重新读取每个分块并与原始校验和比对，不会删除任何数据。\n\n如果校验发现坏块，或者你想完全从头开始，请点“重新下载”。这会删除本地副本，并从节点重新下载全部内容。\n\n大型重打包（分卷安装包）有时在完成后需要校验一次，因为分块可能乱序到达多个文件中。';
 
   @override
-  String get vaultSpireStoresAllData =>
-      'Vault The Spire 将所有数据存储在你的设备本地。种子历史、下载统计和文件名都不会发送到任何服务器。\n\n你加入的每个种子群中的其他节点都能看到你的 IP 地址，这是 BitTorrent 的工作方式。如果你在意对其他节点的隐私，可以用 VPN 隐藏你的 IP。\n\n内置浏览器不会把历史记录同步到任何云端。历史只保存在设备上，可在设置中清除。';
+  String vaultSpireStoresAllData(String appName) {
+    return '$appName 将所有数据存储在你的设备本地。种子历史、下载统计和文件名都不会发送到任何服务器。\n\n你加入的每个种子群中的其他节点都能看到你的 IP 地址，这是 BitTorrent 的工作方式。如果你在意对其他节点的隐私，可以用 VPN 隐藏你的 IP。\n\n内置浏览器不会把历史记录同步到任何云端。历史只保存在设备上，可在设置中清除。';
+  }
 
   @override
-  String get disableBatteryOptimisationVaultSpire =>
-      '- 在 Android 设置 -> 应用中关闭 Vault The Spire 的电池优化，防止系统暂停正在进行的下载。\n\n- 如果种子显示“文件正在使用”，请关闭打开该文件的其他应用，然后点“重新下载”。\n\n- 如果进度看起来卡住了，下拉种子列表即可强制刷新。\n\n- 在 Android 12 及以上版本上，首次启动时如被询问，请授予存储权限，效果最佳。';
+  String disableBatteryOptimisationVaultSpire(String appName) {
+    return '- 在 Android 设置 -> 应用中关闭 $appName 的电池优化，防止系统暂停正在进行的下载。\n\n- 如果种子显示“文件正在使用”，请关闭打开该文件的其他应用，然后点“重新下载”。\n\n- 如果进度看起来卡住了，下拉种子列表即可强制刷新。\n\n- 在 Android 12 及以上版本上，首次启动时如被询问，请授予存储权限，效果最佳。';
+  }
 
   @override
   String get appKeepsDownloadingWhenMinimised =>
