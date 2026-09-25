@@ -168,3 +168,8 @@ jobs:
 
       - name: Build debug APK
         run: flutter build apk --debug --flavor full
+
+      # The Play build has its own launcher icons and TV banner
+      # (android/app/src/play/res), which Play review checks.
+      - name: Build debug APK (Play flavor)
+        run: flutter build apk --debug --flavor play
