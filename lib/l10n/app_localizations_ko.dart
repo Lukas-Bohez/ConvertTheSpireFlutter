@@ -3311,7 +3311,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get alsoDeleteDownloadedFiles => '다운로드한 파일도 삭제';
+  String get alsoDeleteDownloadedFiles => '이 토렌트의 파일도 삭제';
 
   @override
   String get removeDeleteFiles => '삭제 + 파일 삭제';
@@ -3321,6 +3321,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get torrentRemoved => '토렌트를 삭제했습니다.';
+
+  @override
+  String get torrentRemovedNoFileList =>
+      '토렌트를 제거했습니다. 이 토렌트의 파일 목록을 받지 못해 파일은 삭제하지 않았습니다.';
+
+  @override
+  String get torrentRemovedSomeFilesInUse =>
+      '토렌트를 제거했지만 일부 파일이 다른 앱에서 열려 있어 삭제하지 못했습니다.';
 
   @override
   String removeFailed(Object e) {

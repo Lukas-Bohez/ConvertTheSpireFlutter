@@ -3407,7 +3407,7 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get alsoDeleteDownloadedFiles => 'डाउनलोड की गई फ़ाइलें भी हटाएं';
+  String get alsoDeleteDownloadedFiles => 'इस टोरेंट की फ़ाइलें भी हटाएं';
 
   @override
   String get removeDeleteFiles => 'हटाएं + फ़ाइलें मिटाएं';
@@ -3418,6 +3418,14 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get torrentRemoved => 'टॉरेंट हटाया गया।';
+
+  @override
+  String get torrentRemovedNoFileList =>
+      'टोरेंट हटाया गया। कोई फ़ाइल नहीं हटाई गई: ऐप को इस टोरेंट की फ़ाइल सूची कभी नहीं मिली।';
+
+  @override
+  String get torrentRemovedSomeFilesInUse =>
+      'टोरेंट हटाया गया, लेकिन इसकी कुछ फ़ाइलें किसी दूसरे ऐप में खुली हैं और नहीं हटाई गईं।';
 
   @override
   String removeFailed(Object e) {

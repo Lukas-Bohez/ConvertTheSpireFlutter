@@ -3418,7 +3418,7 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get alsoDeleteDownloadedFiles => 'Usuń też pobrane pliki';
+  String get alsoDeleteDownloadedFiles => 'Usuń też pliki tego torrenta';
 
   @override
   String get removeDeleteFiles => 'Usuń + usuń pliki';
@@ -3428,6 +3428,14 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get torrentRemoved => 'Usunięto torrent.';
+
+  @override
+  String get torrentRemovedNoFileList =>
+      'Torrent usunięty. Nie usunięto żadnych plików: aplikacja nie otrzymała listy plików tego torrenta.';
+
+  @override
+  String get torrentRemovedSomeFilesInUse =>
+      'Torrent usunięty, ale niektóre jego pliki są otwarte w innej aplikacji i nie zostały usunięte.';
 
   @override
   String removeFailed(Object e) {
