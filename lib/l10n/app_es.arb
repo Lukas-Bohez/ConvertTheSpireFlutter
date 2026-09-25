@@ -1037,6 +1037,7 @@
   "copyTitle": "Copiar título",
   "titleCopied": "Título copiado",
   "homeTaglinePlay": "Torrents, música, vídeos y conversión de archivos en una sola app.",
+  "spinUnlockColour": "Girar → desbloquear un color",
   "redownloadFromScratch2": "Volver a descargar desde cero",
   "mustSetDownloadFolderBefore2": "Debes elegir una carpeta de descargas antes de descargar torrents. Así las descargas no acaban en el almacenamiento inaccesible de la app, donde los archivos se pueden dañar. Ve a Ajustes y elige una carpeta del almacenamiento externo.",
   "couldntFetchTorrentInfoYet": "Aún no se pudo obtener la información del torrent: ningún par respondió. Se añadió a la cola y los metadatos se reintentarán automáticamente.",

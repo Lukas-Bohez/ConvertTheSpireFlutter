@@ -3582,6 +3582,9 @@ class AppLocalizationsPt extends AppLocalizations {
       'Torrents, música, vídeos e conversão de arquivos em um só app.';
 
   @override
+  String get spinUnlockColour => 'Girar → desbloqueie uma cor';
+
+  @override
   String get redownloadFromScratch2 => 'Baixar tudo de novo';
 
   @override

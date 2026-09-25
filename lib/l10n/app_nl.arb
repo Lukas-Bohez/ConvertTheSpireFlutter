@@ -1037,6 +1037,7 @@
   "copyTitle": "Titel kopiëren",
   "titleCopied": "Titel gekopieerd",
   "homeTaglinePlay": "Torrents, muziek, video's en bestanden omzetten in één app.",
+  "spinUnlockColour": "Draai → ontgrendel een kleur",
   "redownloadFromScratch2": "Helemaal opnieuw downloaden",
   "mustSetDownloadFolderBefore2": "Je moet een downloadmap instellen voordat je torrents downloadt. Zo komen downloads niet in ontoegankelijke app-opslag terecht, waar bestanden beschadigd kunnen raken. Open Instellingen en kies een map op externe opslag.",
   "couldntFetchTorrentInfoYet": "Kon de torrentgegevens nog niet ophalen: er reageerden geen peers. Toegevoegd aan de wachtrij; de metadata wordt automatisch opnieuw opgehaald.",

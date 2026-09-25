@@ -1037,6 +1037,7 @@
   "copyTitle": "Kopiuj tytuł",
   "titleCopied": "Skopiowano tytuł",
   "homeTaglinePlay": "Torrenty, muzyka, filmy i konwersja plików w jednej aplikacji.",
+  "spinUnlockColour": "Zakręć → odblokuj kolor",
   "redownloadFromScratch2": "Pobierz od nowa",
   "mustSetDownloadFolderBefore2": "Przed pobieraniem torrentów musisz ustawić folder pobierania. Dzięki temu pliki nie trafią do niedostępnej pamięci aplikacji, gdzie mogą ulec uszkodzeniu. Otwórz Ustawienia i wybierz folder w pamięci zewnętrznej.",
   "couldntFetchTorrentInfoYet": "Nie udało się jeszcze pobrać informacji o torrencie – żaden peer nie odpowiedział. Dodano do kolejki; metadane zostaną pobrane ponownie automatycznie.",

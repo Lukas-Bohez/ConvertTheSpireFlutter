@@ -3559,6 +3559,9 @@ class AppLocalizationsRu extends AppLocalizations {
       'Торренты, музыка, видео и конвертация файлов в одном приложении.';
 
   @override
+  String get spinUnlockColour => 'Крутить → открыть цвет';
+
+  @override
   String get redownloadFromScratch2 => 'Скачать заново с нуля';
 
   @override

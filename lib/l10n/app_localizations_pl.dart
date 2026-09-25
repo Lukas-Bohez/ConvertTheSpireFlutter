@@ -3570,6 +3570,9 @@ class AppLocalizationsPl extends AppLocalizations {
       'Torrenty, muzyka, filmy i konwersja plików w jednej aplikacji.';
 
   @override
+  String get spinUnlockColour => 'Zakręć → odblokuj kolor';
+
+  @override
   String get redownloadFromScratch2 => 'Pobierz od nowa';
 
   @override

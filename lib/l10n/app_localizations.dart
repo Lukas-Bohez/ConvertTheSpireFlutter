@@ -6355,6 +6355,12 @@ abstract class AppLocalizations {
   /// **'Torrents, music, videos and file conversion in one app.'**
   String get homeTaglinePlay;
 
+  /// No description provided for @spinUnlockColour.
+  ///
+  /// In en, this message translates to:
+  /// **'Spin → unlock a colour'**
+  String get spinUnlockColour;
+
   /// No description provided for @redownloadFromScratch2.
   ///
   /// In en, this message translates to:

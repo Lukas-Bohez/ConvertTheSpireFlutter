@@ -3555,6 +3555,9 @@ class AppLocalizationsVi extends AppLocalizations {
       'Torrent, nhạc, video và chuyển đổi tệp trong một ứng dụng.';
 
   @override
+  String get spinUnlockColour => 'Quay → mở khóa một màu';
+
+  @override
   String get redownloadFromScratch2 => 'Tải lại từ đầu';
 
   @override

@@ -1037,6 +1037,7 @@
   "copyTitle": "Copia titolo",
   "titleCopied": "Titolo copiato",
   "homeTaglinePlay": "Torrent, musica, video e conversione di file in un'unica app.",
+  "spinUnlockColour": "Gira → sblocca un colore",
   "redownloadFromScratch2": "Scarica di nuovo da zero",
   "mustSetDownloadFolderBefore2": "Devi impostare una cartella di download prima di scaricare torrent, così i download non finiscono nella memoria dell'app non accessibile, dove i file possono danneggiarsi. Apri le Impostazioni e scegli una cartella nella memoria esterna.",
   "couldntFetchTorrentInfoYet": "Non è stato ancora possibile ottenere le informazioni del torrent: nessun peer ha risposto. È stato aggiunto alla coda e i metadati verranno richiesti di nuovo automaticamente.",

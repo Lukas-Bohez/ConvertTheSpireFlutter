@@ -3564,6 +3564,9 @@ class AppLocalizationsUk extends AppLocalizations {
       'Торенти, музика, відео та конвертація файлів в одному застосунку.';
 
   @override
+  String get spinUnlockColour => 'Крутити → відкрити колір';
+
+  @override
   String get redownloadFromScratch2 => 'Завантажити заново з нуля';
 
   @override

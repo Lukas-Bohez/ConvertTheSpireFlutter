@@ -3461,6 +3461,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeTaglinePlay => '토렌트, 음악, 동영상, 파일 변환을 하나의 앱에서.';
 
   @override
+  String get spinUnlockColour => '돌리기 → 색상 잠금 해제';
+
+  @override
   String get redownloadFromScratch2 => '처음부터 다시 다운로드';
 
   @override

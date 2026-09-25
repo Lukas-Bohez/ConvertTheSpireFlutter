@@ -3582,6 +3582,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Torrents, Musik, Videos und Dateikonvertierung in einer App.';
 
   @override
+  String get spinUnlockColour => 'Drehen → Farbe freischalten';
+
+  @override
   String get redownloadFromScratch2 => 'Komplett neu herunterladen';
 
   @override

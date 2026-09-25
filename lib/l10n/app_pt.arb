@@ -1037,6 +1037,7 @@
   "copyTitle": "Copiar título",
   "titleCopied": "Título copiado",
   "homeTaglinePlay": "Torrents, música, vídeos e conversão de arquivos em um só app.",
+  "spinUnlockColour": "Girar → desbloqueie uma cor",
   "redownloadFromScratch2": "Baixar tudo de novo",
   "mustSetDownloadFolderBefore2": "Você precisa definir uma pasta de download antes de baixar torrents. Isso evita que os downloads fiquem no armazenamento interno do app, que você não consegue acessar e onde os arquivos podem se corromper. Abra as Configurações e escolha uma pasta no armazenamento externo.",
   "couldntFetchTorrentInfoYet": "Ainda não foi possível obter as informações do torrent: nenhum par respondeu. Ele foi adicionado à fila e os metadados serão buscados de novo automaticamente.",

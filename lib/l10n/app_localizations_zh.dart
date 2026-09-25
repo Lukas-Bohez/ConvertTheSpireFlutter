@@ -3419,6 +3419,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeTaglinePlay => '种子下载、音乐、视频和文件转换，尽在一个应用。';
 
   @override
+  String get spinUnlockColour => '转一转 → 解锁一种颜色';
+
+  @override
   String get redownloadFromScratch2 => '从头重新下载';
 
   @override

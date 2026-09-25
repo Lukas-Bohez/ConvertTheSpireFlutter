@@ -148,7 +148,9 @@ class _WatchAdCardState extends State<WatchAdCard> {
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Expanded(
               child: Text(
-                context.l10n.watchAdUnlockColour,
+                spinWithoutAd
+                    ? context.l10n.spinUnlockColour
+                    : context.l10n.watchAdUnlockColour,
                 style:
                     const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),

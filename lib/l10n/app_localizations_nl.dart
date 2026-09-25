@@ -3575,6 +3575,9 @@ class AppLocalizationsNl extends AppLocalizations {
       'Torrents, muziek, video\'s en bestanden omzetten in één app.';
 
   @override
+  String get spinUnlockColour => 'Draai → ontgrendel een kleur';
+
+  @override
   String get redownloadFromScratch2 => 'Helemaal opnieuw downloaden';
 
   @override

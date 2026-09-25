@@ -3461,6 +3461,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get homeTaglinePlay => 'トレント、音楽、動画、ファイル変換をひとつのアプリで。';
 
   @override
+  String get spinUnlockColour => '回す → 色をアンロック';
+
+  @override
   String get redownloadFromScratch2 => '最初からダウンロードし直す';
 
   @override

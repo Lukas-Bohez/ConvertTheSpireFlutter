@@ -3535,6 +3535,9 @@ class AppLocalizationsAr extends AppLocalizations {
       'التورنت والموسيقى والفيديو وتحويل الملفات في تطبيق واحد.';
 
   @override
+  String get spinUnlockColour => 'أدِر ← افتح لونًا';
+
+  @override
   String get redownloadFromScratch2 => 'إعادة التنزيل من البداية';
 
   @override

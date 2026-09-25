@@ -3567,6 +3567,9 @@ class AppLocalizationsTr extends AppLocalizations {
       'Torrentler, müzik, videolar ve dosya dönüştürme tek bir uygulamada.';
 
   @override
+  String get spinUnlockColour => 'Çevir → bir rengin kilidini aç';
+
+  @override
   String get redownloadFromScratch2 => 'Baştan yeniden indir';
 
   @override

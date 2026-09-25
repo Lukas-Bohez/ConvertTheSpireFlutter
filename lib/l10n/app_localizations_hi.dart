@@ -3560,6 +3560,9 @@ class AppLocalizationsHi extends AppLocalizations {
       'टोरेंट, संगीत, वीडियो और फ़ाइल रूपांतरण, सब एक ऐप में।';
 
   @override
+  String get spinUnlockColour => 'घुमाएँ → एक रंग अनलॉक करें';
+
+  @override
   String get redownloadFromScratch2 => 'शुरू से दोबारा डाउनलोड करें';
 
   @override

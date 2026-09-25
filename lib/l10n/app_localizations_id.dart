@@ -3564,6 +3564,9 @@ class AppLocalizationsId extends AppLocalizations {
       'Torrent, musik, video, dan konversi file dalam satu aplikasi.';
 
   @override
+  String get spinUnlockColour => 'Putar → buka satu warna';
+
+  @override
   String get redownloadFromScratch2 => 'Unduh ulang dari awal';
 
   @override
