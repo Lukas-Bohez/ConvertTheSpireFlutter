@@ -55,7 +55,10 @@ dependencies:
   just_audio: 0.10.5
   just_audio_windows: ^0.2.2
   audio_service: 0.18.18
-  dtorrent_task_v2: ^0.4.8
+  # 0.4.9 from pub.dev with two fixes that let magnet links get their file
+  # list; see third_party/dtorrent_task_v2/README.md.
+  dtorrent_task_v2:
+    path: third_party/dtorrent_task_v2
   fl_chart: ^1.2.0
   audio_metadata_reader: ^1.6.0
   metadata_god: ^1.1.0
@@ -82,7 +85,6 @@ dependencies:
   path: ^1.9.0
   b_encode_decode: ^1.0.5
   bittorrent_dht: ^0.0.15
-  # dtorrent_task_v2: ^0.5.3 (reverted to compatible ^0.4.8 above)
   dtorrent_common: ^1.0.8
   desktop_drop: ^0.7.0
   flutter_secure_storage: ^10.0.0
