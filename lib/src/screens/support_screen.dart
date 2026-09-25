@@ -369,7 +369,9 @@ class _SupportScreenState extends State<SupportScreen> {
     final adService = AdService.instance;
     final hasAdBreak = adService.hasTemporaryAdBreak;
     final adBreakRemaining = adService.temporaryAdBreakRemaining;
-    final playAdMode = kPlayStoreBuild;
+    // Android TV shows no ads (AdService explains why), so none of the ad
+    // cards, buttons or the banner appear there.
+    final playAdMode = kPlayStoreBuild && adService.adsSupportedOnDevice;
     final adActionsEnabled =
         !purchase.isAdFree && playAdMode && adService.adsAvailable;
 
@@ -473,7 +475,10 @@ class _SupportScreenState extends State<SupportScreen> {
                       label: Text(
                         purchase.isAdFree
                             ? context.l10n.adsRemoved
-                            : context.l10n.removeAds2(purchase.removeAdsPriceLabel),
+                            : purchase.removeAdsPrice == null
+                                ? context.l10n.removeAds
+                                : context.l10n
+                                    .removeAds2(purchase.removeAdsPrice!),
                       ),
                       onPressed: purchase.storeAvailable && !purchase.isAdFree
                           ? _buyRemoveAds
