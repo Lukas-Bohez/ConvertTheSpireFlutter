@@ -18,15 +18,19 @@ What it writes
   docs/screenshots/banner.png         same promo image (kept for reference;
                                       GitHub releases do not show a banner)
   android/app/src/main/play_tv_assets/  copies of the three TV images above
-  android/app/src/play/res/             launcher icons (adaptive fg + legacy),
-                                        icon background colour, and the in-app
+  android/app/src/play/res/             launcher icons (adaptive foreground and
+                                        background + legacy) and the in-app
                                         Android TV banner (android:banner)
 
 The in-app TV banner and launcher icons follow Google's Android TV sizes
 (developer.android.com/design/ui/tv/guides/system/tv-app-icon-guidelines):
 banner 320x180 px and icon 160x160 px at xhdpi, in mipmap-<density>/. Play
-review rejects the app ("no full-size app banner and/or icon") without them.
+review rejects the app ("no full-size app banner and/or icon") without them,
+and also when the icon is the logo on a pale square ("Your icon does not fill
+the entire icon space"): the icons are the banner's gradient edge to edge.
 """
+import math
+import random
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -54,9 +58,15 @@ BULLETS = [
 ]
 BADGE = "Designed for Android TV"
 
-# Launcher icon background (opaque, so the icon never has see-through parts).
-ICON_BG = (244, 249, 255)  # #F4F9FF
-ICON_BG_HEX = "#F4F9FF"
+# How much of the icon the logo takes up: the diameter of the smallest circle
+# around the whole logo (music note included), as a share of the icon's side.
+# The icons are the banner's gradient edge to edge with the logo on top. Play's
+# TV review turned down the logo on a pale square, with a wide margin around
+# it: "Your icon does not fill the entire icon space".
+ICON_LOGO = 0.88
+# Adaptive icon: 108dp layers. Android TV never clips the centre 72dp
+# (tv-app-icon-guidelines), so the logo takes 70dp of it.
+ADAPTIVE_LOGO_DP = 70
 
 BOLD = ["bahnschrift.ttf", "segoeuib.ttf", "arialbd.ttf", "DejaVuSans-Bold.ttf"]
 REG = ["segoeui.ttf", "SegUIVar.ttf", "arial.ttf", "DejaVuSans.ttf"]
@@ -77,10 +87,19 @@ def font(names, size):
 _LOGO_CACHE = {}
 
 
+def trim_white_edge(im):
+    """The logo was cut out of a white background with about 3 px of that
+    white left around it, a light outline on the dark icon and banner. Pulls
+    the edge in by those 3 px (of 1024), which leaves the logo's own dark rim."""
+    im = im.copy()
+    im.putalpha(im.getchannel("A").filter(ImageFilter.MinFilter(7)))
+    return im
+
+
 def logo_content():
     """The logo cropped to its visible content (drops the transparent margin)."""
     if "c" not in _LOGO_CACHE:
-        im = Image.open(LOGO).convert("RGBA")
+        im = trim_white_edge(Image.open(LOGO).convert("RGBA"))
         bbox = im.getchannel("A").point(lambda v: 255 if v > 40 else 0).getbbox()
         _LOGO_CACHE["c"] = im.crop(bbox)
     return _LOGO_CACHE["c"]
@@ -97,6 +116,64 @@ def logo_fit(box):
 def paste_center(canvas, layer, cx, cy):
     canvas.alpha_composite(layer, (round(cx - layer.width / 2),
                                    round(cy - layer.height / 2)))
+
+
+def _circle_through(p, q, s):
+    (ax, ay), (bx, by), (cx, cy) = p, q, s
+    d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by))
+    if abs(d) < 1e-9:  # in a line: the widest pair spans the circle
+        a, b = max(((p, q), (p, s), (q, s)), key=lambda t: math.dist(*t))
+        return ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), math.dist(a, b) / 2
+    ux = ((ax * ax + ay * ay) * (by - cy) + (bx * bx + by * by) * (cy - ay)
+          + (cx * cx + cy * cy) * (ay - by)) / d
+    uy = ((ax * ax + ay * ay) * (cx - bx) + (bx * bx + by * by) * (ax - cx)
+          + (cx * cx + cy * cy) * (bx - ax)) / d
+    return (ux, uy), math.dist((ux, uy), p)
+
+
+def logo_circle():
+    """Centre and radius of the smallest circle around the logo's content.
+
+    The logo is round with the music note sticking out at the top right, so
+    centring its bounding box would push the note out of a round icon mask."""
+    if "circle" not in _LOGO_CACHE:
+        mask = logo_content().getchannel("A").point(lambda v: 255 if v > 40 else 0)
+        w, h = mask.size
+        px = mask.load()
+        pts = []
+        for y in range(h):
+            xs = [x for x in range(w) if px[x, y]]
+            if xs:
+                pts += [(xs[0], y), (xs[-1] + 1, y), (xs[0], y + 1), (xs[-1] + 1, y + 1)]
+        # Welzl's incremental algorithm; a fixed shuffle keeps it fast and the
+        # output the same on every run.
+        random.Random(0).shuffle(pts)
+        c, r = pts[0], 0.0
+        for i, p in enumerate(pts):
+            if math.dist(p, c) <= r + 1e-7:
+                continue
+            c, r = p, 0.0
+            for j in range(i):
+                q = pts[j]
+                if math.dist(q, c) <= r + 1e-7:
+                    continue
+                c, r = ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2), math.dist(p, q) / 2
+                for k in range(j):
+                    if math.dist(pts[k], c) > r + 1e-7:
+                        c, r = _circle_through(p, q, pts[k])
+        _LOGO_CACHE["circle"] = (c[0], c[1], r)
+    return _LOGO_CACHE["circle"]
+
+
+def paste_logo_round(canvas, diameter):
+    """Logo scaled and centred so all of it lies in a centred circle of
+    `diameter` px."""
+    c = logo_content()
+    cx, cy, r = logo_circle()
+    s = diameter / (2 * r)
+    layer = c.resize((round(c.width * s), round(c.height * s)), Image.LANCZOS)
+    canvas.alpha_composite(layer, (round(canvas.width / 2 - cx * s),
+                                   round(canvas.height / 2 - cy * s)))
 
 
 # --------------------------------------------------------------------------
@@ -239,9 +316,10 @@ def launcher_banner(w, h):
 
 
 def store_icon(size):
-    """Opaque square icon (Play Console 512x512)."""
-    im = Image.new("RGBA", (size, size), ICON_BG + (255,))
-    paste_center(im, logo_fit(round(size * 0.74)), size / 2, size / 2)
+    """Opaque square icon, filled edge to edge (Play Console 512x512, and the
+    legacy launcher icon)."""
+    im = gradient(size, size)
+    paste_logo_round(im, size * ICON_LOGO)
     return im.convert("RGB")
 
 
@@ -257,28 +335,27 @@ def launcher_icons():
         d_dir = PLAY_RES / f"mipmap-{name}"
         d_dir.mkdir(parents=True, exist_ok=True)
 
-        # Adaptive layers are 108dp. Only the centre 66dp (61%) is guaranteed to
-        # be visible, so the whole logo (note included) is kept inside ~58%.
-        fg_size = round(108 * scale)
-        fg = Image.new("RGBA", (fg_size, fg_size), (0, 0, 0, 0))
-        paste_center(fg, logo_fit(round(fg_size * 0.58)), fg_size / 2, fg_size / 2)
+        # Adaptive icon: 108dp layers, the gradient behind and the logo in
+        # front, in the centre ADAPTIVE_LOGO_DP.
+        layer = round(108 * scale)
+        gradient(layer, layer).convert("RGB").save(
+            d_dir / "ic_launcher_background.png", optimize=True)
+        fg = Image.new("RGBA", (layer, layer), (0, 0, 0, 0))
+        paste_logo_round(fg, layer * ADAPTIVE_LOGO_DP / 108)
         fg.save(d_dir / "ic_launcher_foreground.png", optimize=True)
 
         # Legacy icon, at the Android TV size of 80dp (160x160 px at xhdpi)
         # rather than the phone's 48dp: Android TV requires at least that.
         # Opaque edge to edge, so it is a full-size icon with no see-through
         # corners; launchers apply their own shape.
-        size = round(80 * scale)
-        legacy = Image.new("RGBA", (size, size), ICON_BG + (255,))
-        paste_center(legacy, logo_fit(round(size * 0.68)), size / 2, size / 2)
-        legacy.convert("RGB").save(d_dir / "ic_launcher.png", optimize=True)
+        store_icon(round(80 * scale)).save(d_dir / "ic_launcher.png", optimize=True)
 
     any_dir = PLAY_RES / "mipmap-anydpi-v26"
     any_dir.mkdir(parents=True, exist_ok=True)
     xml = (
         '<?xml version="1.0" encoding="utf-8"?>\n'
         '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
-        '    <background android:drawable="@color/ic_launcher_background" />\n'
+        '    <background android:drawable="@mipmap/ic_launcher_background" />\n'
         '    <foreground android:drawable="@mipmap/ic_launcher_foreground" />\n'
         '</adaptive-icon>\n'
     )
@@ -286,15 +363,8 @@ def launcher_icons():
     # android:roundIcon is not used (Android TV's guidelines deprecate it in
     # favour of the adaptive icon above).
     (any_dir / "ic_launcher_round.xml").unlink(missing_ok=True)
-
-    colors = (
-        '<?xml version="1.0" encoding="utf-8"?>\n'
-        '<resources>\n'
-        f'    <color name="ic_launcher_background">{ICON_BG_HEX}</color>\n'
-        '</resources>\n'
-    )
-    (PLAY_RES / "values").mkdir(parents=True, exist_ok=True)
-    (PLAY_RES / "values/colors.xml").write_text(colors, encoding="utf-8")
+    # The background used to be a pale colour defined here.
+    (PLAY_RES / "values/colors.xml").unlink(missing_ok=True)
 
 
 BANNER_SIZES = {"mdpi": (160, 90), "hdpi": (240, 135), "xhdpi": (320, 180),
