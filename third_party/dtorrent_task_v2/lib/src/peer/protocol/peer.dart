@@ -15,6 +15,7 @@ import 'package:utp_protocol/utp_protocol.dart';
 import '../congestion_control.dart';
 import '../speed_calculator.dart';
 import '../extensions/extended_processor.dart';
+import 'receive_buffer.dart';
 
 const KEEP_ALIVE_MESSAGE = [0, 0, 0, 0];
 
@@ -221,7 +222,7 @@ abstract class Peer
   StreamSubscription<Uint8List>? _streamChunk;
 
   /// Buffer to obtain data from the channel.
-  List<int> _cacheBuffer = [];
+  final ReceiveBuffer _cacheBuffer = ReceiveBuffer();
 
   /// The local sends a request buffer. The format is: [index, begin, length].
   final _requestBuffer = <List<int>>[];
@@ -459,9 +460,11 @@ abstract class Peer
       // Log incoming data details for uTP debugging with buffer size tracking
       if (type == PeerType.UTP && data.isNotEmpty) {
         var totalBufferSize = _cacheBuffer.length + data.length;
-        _log.fine(
-            'uTP received data: peer=$address, dataLength=${data.length}, '
-            'cacheBufferLength=${_cacheBuffer.length}, totalBufferSize=$totalBufferSize');
+        if (_log.isLoggable(Level.FINE)) {
+          _log.fine(
+              'uTP received data: peer=$address, dataLength=${data.length}, '
+              'cacheBufferLength=${_cacheBuffer.length}, totalBufferSize=$totalBufferSize');
+        }
 
         // Warn if buffer is getting too large (potential memory issue)
         if (totalBufferSize > BUFFER_SIZE_WARNING_THRESHOLD) {
@@ -471,19 +474,19 @@ abstract class Peer
       }
 
       // Accept data sent by the remote peer and buffer it in one place.
-      _cacheBuffer.addAll(data);
+      _cacheBuffer.add(data);
 
       if (_cacheBuffer.isEmpty) return;
       // Check if it's a handshake header.
       if (_cacheBuffer[0] == 19 &&
           _cacheBuffer.length >= HAND_SHAKE_MESSAGE_LENGTH) {
-        if (_isHandShakeHead(_cacheBuffer)) {
-          if (_validateInfoHash(_cacheBuffer)) {
+        final received = _cacheBuffer.view;
+        if (_isHandShakeHead(received)) {
+          if (_validateInfoHash(received)) {
             var handshakeBuffer = Uint8List(HAND_SHAKE_MESSAGE_LENGTH);
-            handshakeBuffer.setRange(
-                0, HAND_SHAKE_MESSAGE_LENGTH, _cacheBuffer);
+            handshakeBuffer.setRange(0, HAND_SHAKE_MESSAGE_LENGTH, received);
             // clear the buffer to only the handshake
-            _cacheBuffer = _cacheBuffer.sublist(HAND_SHAKE_MESSAGE_LENGTH);
+            _cacheBuffer.consume(HAND_SHAKE_MESSAGE_LENGTH);
             Timer.run(() => _processHandShake(handshakeBuffer));
             if (_cacheBuffer.isNotEmpty) {
               Timer.run(() => _processReceiveData(Uint8List(0)));
@@ -497,6 +500,8 @@ abstract class Peer
         }
       }
       if (_cacheBuffer.length >= MESSAGE_INTEGER) {
+        // Not changed until the messages in it are taken off below.
+        final received = _cacheBuffer.view;
         var start = 0;
         var lengthBuffer = Uint8List(MESSAGE_INTEGER);
 
@@ -507,11 +512,11 @@ abstract class Peer
           return;
         }
 
-        lengthBuffer.setRange(0, MESSAGE_INTEGER, _cacheBuffer, start);
+        lengthBuffer.setRange(0, MESSAGE_INTEGER, received, start);
         var length = ByteData.view(lengthBuffer.buffer).getInt32(0, Endian.big);
 
         // Log message parsing details for uTP debugging
-        if (type == PeerType.UTP) {
+        if (type == PeerType.UTP && _log.isLoggable(Level.FINE)) {
           _log.fine(
               'uTP parsing message: peer=$address, start=$start, length=$length, bufferLength=${_cacheBuffer.length}');
         }
@@ -549,7 +554,7 @@ abstract class Peer
 
             // skip the message length to read the id
             // the id is a single byte
-            var id = _cacheBuffer[start + MESSAGE_INTEGER];
+            var id = received[start + MESSAGE_INTEGER];
 
             // Messages without payload (choke, unchoke, interested, not interested) have length = 1
             // Messages with payload have length > 1
@@ -578,7 +583,7 @@ abstract class Peer
               messageBuffer.setRange(
                 0,
                 messageBuffer.length,
-                _cacheBuffer,
+                received,
                 messageStart,
               );
             } else {
@@ -614,7 +619,7 @@ abstract class Peer
             break;
           }
 
-          lengthBuffer.setRange(0, MESSAGE_INTEGER, _cacheBuffer, start);
+          lengthBuffer.setRange(0, MESSAGE_INTEGER, received, start);
           var nextLength =
               ByteData.view(lengthBuffer.buffer).getInt32(0, Endian.big);
 
@@ -635,7 +640,7 @@ abstract class Peer
           Timer.run(() => _processHave(haveMessages!));
         }
         if (start != 0 && start < _cacheBuffer.length) {
-          _cacheBuffer = _cacheBuffer.sublist(start);
+          _cacheBuffer.consume(start);
         } else if (start >= _cacheBuffer.length) {
           // If we processed all data, clear the buffer
           _cacheBuffer.clear();
@@ -1930,8 +1935,8 @@ class _TCPPeer extends Peer {
       if (_socket != null) return _socket;
 
       // Use proxy if configured and enabled for peers
-      if (_proxyManager != null && _proxyManager!.shouldUseForPeers()) {
-        _socket = await _proxyManager!.connectThroughProxy(
+      if (_proxyManager != null && _proxyManager.shouldUseForPeers()) {
+        _socket = await _proxyManager.connectThroughProxy(
           address.address,
           address.port,
           timeout: Duration(seconds: timeout),

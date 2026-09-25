@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:dtorrent_task_v2/src/torrent/torrent_model.dart';
@@ -385,6 +386,21 @@ class _TorrentTask
   final int maxWriteBufferSize = MAX_WRITE_BUFFER_SIZE;
 
   final _flushIndicesBuffer = <int>{};
+
+  /// Bytes of checked pieces still waiting to be written to disk.
+  int _unwrittenBytes = 0;
+
+  /// How many bytes may wait for the disk before no more are asked for:
+  /// 64 MB, or four pieces when they are bigger than 16 MB.
+  ///
+  /// Nothing held downloads back from a disk slower than the network, so
+  /// pieces piled up in memory until the computer ran out of it.
+  int get maxUnwrittenBytes => max(64 * 1024 * 1024, 4 * _metaInfo.pieceLength);
+
+  /// Peers not asked for more while too much waited for the disk, with the
+  /// piece each was on.
+  final Map<Peer, int> _waitingForDisk = {};
+
   @override
   Iterable<Peer>? get activePeers => _peersManager?.activePeers;
 
@@ -507,13 +523,13 @@ class _TorrentTask
       if (stream && _sequentialConfig != null) {
         // Use advanced sequential selector with configuration
         final advancedSelector =
-            AdvancedSequentialPieceSelector(_sequentialConfig!);
+            AdvancedSequentialPieceSelector(_sequentialConfig);
         if (model.pieces != null) {
           advancedSelector.initialize(model.pieces!.length, model.pieceLength);
         }
 
         // Auto-detect moov atom if enabled
-        if (_sequentialConfig!.autoDetectMoovAtom && model.length != null) {
+        if (_sequentialConfig.autoDetectMoovAtom && model.length != null) {
           advancedSelector.detectAndSetMoovAtom(
               model.length!, model.pieceLength);
         }
@@ -1114,26 +1130,37 @@ class _TorrentTask
     var block = piece.flush();
     if (block == null) return;
 
-    if (_fileManager!.localHave(index)) return;
-    var written = await _fileManager!.writeFile(
-      index,
-      0,
-      block,
-    );
+    var fileManager = _fileManager!;
+    if (fileManager.localHave(index)) return;
+    _unwrittenBytes += block.length;
+    bool written;
+    try {
+      written = await fileManager.writeFile(
+        index,
+        0,
+        block,
+      );
+    } finally {
+      _unwrittenBytes -= block.length;
+      _resumeRequestsWaitingForDisk();
+    }
 
-    if (!written) return;
+    // The task may have stopped while the piece was written.
+    if (!written || _pieceManager == null || _fileManager == null) return;
     _pieceManager!.processPieceWriteComplete(index);
-    await _fileManager!.updateBitfield(index);
+    await fileManager.updateBitfield(index);
+    if (_fileManager == null) return;
 
     // In superseeding mode, send HAVE only to specific peers for specific pieces
-    if (_superseeder != null && _fileManager!.isAllComplete) {
+    if (_superseeder != null && fileManager.isAllComplete) {
       _sendHaveSuperseeding(index);
     } else {
       _peersManager?.sendHaveToAll(index);
     }
     _flushIndicesBuffer.add(index);
     await _flushFiles(_flushIndicesBuffer);
-    if (_fileManager!.isAllComplete) {
+    if (_fileManager == null) return;
+    if (fileManager.isAllComplete) {
       events.emit(AllComplete());
       _whenTaskDownloadComplete();
 
@@ -1189,7 +1216,21 @@ class _TorrentTask
     piece?.pushSubPieceLast(event.begin ~/ DEFAULT_REQUEST_LENGTH);
   }
 
+  /// Asks the peers held back by [maxUnwrittenBytes] for more, once the
+  /// disk has caught up.
+  void _resumeRequestsWaitingForDisk() {
+    if (_waitingForDisk.isEmpty || _unwrittenBytes >= maxUnwrittenBytes) {
+      return;
+    }
+    final waiting = Map.of(_waitingForDisk);
+    _waitingForDisk.clear();
+    waiting.forEach((peer, pieceIndex) {
+      if (!peer.isDisposed) Timer.run(() => requestPieces(peer, pieceIndex));
+    });
+  }
+
   void _processPeerDispose(PeerDisposeEvent event) {
+    _waitingForDisk.remove(event.peer);
     if (_pieceManager == null) return;
 
     // Clean up superseeding tracking for this peer
@@ -1413,6 +1454,10 @@ class _TorrentTask
   void requestPieces(Peer peer, [int pieceIndex = -1]) async {
     if (_pieceManager == null || _peersManager == null) return;
     if (_peersManager!.addPausedRequest(peer, pieceIndex)) return;
+    if (_unwrittenBytes >= maxUnwrittenBytes) {
+      _waitingForDisk[peer] = pieceIndex;
+      return;
+    }
     Piece? piece;
     if (pieceIndex != -1) {
       // a specific piece requested
@@ -1495,6 +1540,9 @@ class _TorrentTask
     _lsd = null;
     _peerIds.clear();
     _comingIp.clear();
+    // Writes still queued when the files closed never finish.
+    _waitingForDisk.clear();
+    _unwrittenBytes = 0;
     _streamingServer?.stop();
 
     // Dispose web seed downloader

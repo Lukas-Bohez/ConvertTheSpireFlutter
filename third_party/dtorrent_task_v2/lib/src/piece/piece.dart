@@ -5,6 +5,7 @@ import '../peer/protocol/peer.dart';
 import '../utils.dart';
 import '../torrent/torrent_version.dart';
 import '../torrent/merkle_tree.dart';
+import 'piece_hasher.dart';
 
 class Piece {
   final String hashString;
@@ -282,9 +283,54 @@ class Piece {
     return valid;
   }
 
+  /// Checks the piece's hash as [validatePiece] does, on a background
+  /// isolate: the isolate running the download (an app's UI isolate) goes
+  /// on meanwhile.
+  Future<bool> validatePieceInBackground() async {
+    final block = _block;
+    if (block == null || block.length < byteLength || !isCompletelyDownloaded) {
+      throw Exception("Piece is cleared");
+    }
+    final bool valid;
+    if (version == TorrentVersion.v2 && _expectedPieceHash != null) {
+      valid = _sameBytes(
+          await PieceHasher.instance.sha256(block), _expectedPieceHash!);
+    } else if (version == TorrentVersion.v2) {
+      valid = _hex(await PieceHasher.instance.sha256(block)) == hashString;
+    } else {
+      // v1 and hybrid, as TorrentVersionHelper.getHashAlgorithm.
+      valid = _hex(await PieceHasher.instance.sha1(block)) == hashString;
+    }
+    if (!identical(block, _block)) throw Exception("Piece is cleared");
+    if (!valid) {
+      for (var subPiece in {..._inMemorySubPieces}) {
+        pushSubPieceBack(subPiece);
+      }
+    }
+    return valid;
+  }
+
+  static bool _sameBytes(Uint8List a, Uint8List b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  static String _hex(Uint8List bytes) {
+    final out = StringBuffer();
+    for (final b in bytes) {
+      out.write(b.toRadixString(16).padLeft(2, '0'));
+    }
+    return out.toString();
+  }
+
+  /// The piece's bytes, handed over for writing to disk: the piece lets go
+  /// of them, so they are not copied.
   Uint8List? flush() {
     if (_block == null || _flushed) return null;
-    var flushed = Uint8List.fromList(_block!);
+    var flushed = _block!;
     _block = null;
     _flushed = true;
     return flushed;

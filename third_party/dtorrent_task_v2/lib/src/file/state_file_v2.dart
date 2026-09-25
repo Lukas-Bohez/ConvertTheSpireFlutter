@@ -50,10 +50,12 @@ class StateFileV2 {
   bool _closed = false;
   int _uploaded = 0;
   final TorrentModel metainfo;
-  RandomAccessFile? _access;
   File? _bitfieldFile;
-  StreamSubscription<Map<String, dynamic>>? _streamSubscription;
-  StreamController<Map<String, dynamic>>? _streamController;
+
+  /// Whether the file is behind what is here.
+  bool _dirty = false;
+  Timer? _saveTimer;
+  Future<void>? _saving;
 
   /// State file metadata
   int _version = STATE_FILE_VERSION;
@@ -127,9 +129,7 @@ class StateFileV2 {
       _version = STATE_FILE_VERSION;
       _lastModified = DateTime.now();
       _isValid = true;
-      await _writeHeader();
-      await _writeBitfield();
-      await _writeFooter();
+      await _writeFile();
     } else {
       // Try to load existing state file
       await _loadStateFile();
@@ -138,182 +138,127 @@ class StateFileV2 {
     return _bitfieldFile!;
   }
 
-  /// Write v2 format header
-  Future<void> _writeHeader() async {
-    if (_bitfieldFile == null) return;
+  /// Writes the whole state file at once.
+  Future<void> _writeFile() async {
+    final file = _bitfieldFile;
+    if (file == null) return;
+    await file.writeAsBytes(_serialize());
+  }
 
-    final header = ByteData(72);
-    var offset = 0;
+  /// The state file's bytes: header, bitfield section, file priorities,
+  /// uploaded bytes and the bitfield's checksum.
+  Uint8List _serialize() {
+    // Decides the storage flags the header records.
+    final bitfield = _bitfieldSection();
+    final uploaded = ByteData(8)..setUint64(0, _uploaded, Endian.little);
+    final checksum = ByteData(4)
+      ..setUint32(0, bitfield.checksum, Endian.little);
+    return (BytesBuilder(copy: false)
+          ..add(_headerBytes())
+          ..add(bitfield.bytes)
+          ..add(_prioritiesBytes())
+          ..add(uploaded.buffer.asUint8List())
+          ..add(checksum.buffer.asUint8List()))
+        .takeBytes();
+  }
 
-    // Magic bytes
-    for (var i = 0; i < STATE_FILE_MAGIC.length; i++) {
-      header.setUint8(offset++, STATE_FILE_MAGIC[i]);
-    }
-
-    // Version
-    header.setUint32(offset, _version, Endian.little);
-    offset += 4;
-
-    // Info hash (20 bytes for SHA1)
-    final infoHash = metainfo.infoHashBuffer;
-    for (var i = 0; i < infoHash.length && i < 20; i++) {
-      header.setUint8(offset++, infoHash[i]);
-    }
-    offset += 20 - infoHash.length;
-
-    // Piece count
+  /// The v2 format header.
+  Uint8List _headerBytes() {
     if (metainfo.pieces == null) {
       throw StateError(
           'Cannot write header: torrent has no pieces (v2-only torrent?)');
     }
-    header.setUint32(offset, metainfo.pieces!.length, Endian.little);
-    offset += 4;
-
-    // Piece length
-    header.setUint64(offset, metainfo.pieceLength, Endian.little);
-    offset += 8;
-
-    // Total length
-    header.setUint64(
-        offset, metainfo.length ?? metainfo.totalSize, Endian.little);
-    offset += 8;
-
-    // Uploaded bytes
-    header.setUint64(offset, _uploaded, Endian.little);
-    offset += 8;
-
-    // Timestamp
-    final timestamp = _lastModified?.millisecondsSinceEpoch ??
-        DateTime.now().millisecondsSinceEpoch;
-    header.setUint64(offset, timestamp, Endian.little);
-    offset += 8;
-
-    // Storage flags
-    int flags = 0;
+    final header = ByteData(72);
+    for (var i = 0; i < STATE_FILE_MAGIC.length; i++) {
+      header.setUint8(i, STATE_FILE_MAGIC[i]);
+    }
+    header.setUint32(4, _version, Endian.little);
+    // Info hash: 20 bytes, the start of a longer (v2) one.
+    final infoHash = metainfo.infoHashBuffer;
+    for (var i = 0; i < infoHash.length && i < 20; i++) {
+      header.setUint8(8 + i, infoHash[i]);
+    }
+    header.setUint32(28, metainfo.pieces!.length, Endian.little);
+    header.setUint64(32, metainfo.pieceLength, Endian.little);
+    header.setUint64(40, metainfo.length ?? metainfo.totalSize, Endian.little);
+    header.setUint64(48, _uploaded, Endian.little);
+    final timestamp = _lastModified ?? DateTime.now();
+    header.setUint64(56, timestamp.millisecondsSinceEpoch, Endian.little);
+    var flags = 0;
     if (_compressed) flags |= FLAG_COMPRESSED;
     if (_sparse) flags |= FLAG_SPARSE;
-    header.setUint8(offset++, flags);
-
-    // Compression level
-    header.setUint8(offset++, _compressed ? _compressionLevel : 255);
-
-    // Reserved (2 bytes)
-    offset += 2;
-
-    // Calculate and write header checksum (CRC32 of first 68 bytes)
-    final headerBytes = header.buffer.asUint8List(0, 68);
-    final crc = _calculateCRC32(headerBytes);
-    header.setUint32(offset, crc, Endian.little);
-
-    // Write header
-    final access = await _bitfieldFile!.open(mode: FileMode.writeOnly);
-    await access.writeFrom(header.buffer.asUint8List());
-    await access.close();
+    header.setUint8(64, flags);
+    header.setUint8(65, _compressed ? _compressionLevel : 255);
+    // 66-67 reserved; the checksum covers the first 68 bytes.
+    header.setUint32(
+        68, _calculateCRC32(header.buffer.asUint8List(0, 68)), Endian.little);
+    return header.buffer.asUint8List();
   }
 
-  /// Write bitfield data with optional compression and sparse storage
-  Future<void> _writeBitfield() async {
-    if (_bitfieldFile == null) return;
-
-    final access = await _bitfieldFile!.open(mode: FileMode.writeOnlyAppend);
-
-    // Decide on storage format
-    final completedCount = _bitfield.completedPieces.length;
+  /// The bitfield as stored, and the checksum the footer keeps of it:
+  /// sparse (the completed pieces' indices) while under [SPARSE_THRESHOLD]
+  /// of the pieces are complete, else the bitfield, compressed when that
+  /// makes it smaller. Sets [_sparse] and [_compressed] to match.
+  ({Uint8List bytes, int checksum}) _bitfieldSection() {
+    final completed = _bitfield.completedPieces;
     final totalPieces = _bitfield.piecesNum;
     final completionRatio =
-        totalPieces > 0 ? completedCount / totalPieces : 0.0;
-
-    // Use sparse storage if completion ratio is low
-    if (completionRatio < SPARSE_THRESHOLD && completedCount > 0) {
+        totalPieces > 0 ? completed.length / totalPieces : 0.0;
+    if (completionRatio < SPARSE_THRESHOLD && completed.isNotEmpty) {
       _sparse = true;
-      await _writeSparseBitfield(access);
-    } else {
-      _sparse = false;
-      await _writeFullBitfield(access);
+      _compressed = false;
+      final bytes = ByteData(4 + completed.length * 4)
+        ..setUint32(0, completed.length, Endian.little);
+      for (var i = 0; i < completed.length; i++) {
+        bytes.setUint32(4 + i * 4, completed[i], Endian.little);
+      }
+      final list = bytes.buffer.asUint8List();
+      return (bytes: list, checksum: _calculateCRC32(list.sublist(4)));
     }
 
-    await access.close();
-  }
-
-  /// Write full bitfield (compressed if beneficial)
-  Future<void> _writeFullBitfield(RandomAccessFile access) async {
-    Uint8List dataToWrite = _bitfield.buffer;
-
-    // Compress if bitfield is large enough
-    if (_bitfield.buffer.length >= COMPRESSION_THRESHOLD) {
+    _sparse = false;
+    _compressed = false;
+    final raw = _bitfield.buffer;
+    var data = raw;
+    if (raw.length >= COMPRESSION_THRESHOLD) {
       try {
-        // Use gzip compression
-        final compressed = gzip.encoder.convert(_bitfield.buffer);
-        // Only use compression if it actually reduces size
-        if (compressed.length < _bitfield.buffer.length) {
+        final compressed = gzip.encoder.convert(raw);
+        if (compressed.length < raw.length) {
           _compressed = true;
-          dataToWrite = Uint8List.fromList(compressed);
-          _log.fine(
-              'Bitfield compressed: ${_bitfield.buffer.length} -> ${compressed.length} bytes');
-        } else {
-          _compressed = false;
+          data = Uint8List.fromList(compressed);
         }
       } catch (e) {
         _log.warning('Compression failed, using uncompressed', e);
-        _compressed = false;
       }
-    } else {
-      _compressed = false;
     }
-
-    // Write compression flag and size if compressed
-    if (_compressed) {
-      final sizeData = ByteData(4);
-      sizeData.setUint32(0, dataToWrite.length, Endian.little);
-      await access.writeFrom(sizeData.buffer.asUint8List());
-    }
-
-    await access.writeFrom(dataToWrite);
+    final checksum = _calculateCRC32(raw);
+    if (!_compressed) return (bytes: data, checksum: checksum);
+    final size = ByteData(4)..setUint32(0, data.length, Endian.little);
+    return (
+      bytes: (BytesBuilder(copy: false)
+            ..add(size.buffer.asUint8List())
+            ..add(data))
+          .takeBytes(),
+      checksum: checksum
+    );
   }
 
-  /// Write sparse bitfield (only completed piece indices)
-  Future<void> _writeSparseBitfield(RandomAccessFile access) async {
-    final completedPieces = _bitfield.completedPieces;
-
-    // Write count of completed pieces
-    final countData = ByteData(4);
-    countData.setUint32(0, completedPieces.length, Endian.little);
-    await access.writeFrom(countData.buffer.asUint8List());
-
-    // Write piece indices
-    for (var index in completedPieces) {
-      final indexData = ByteData(4);
-      indexData.setUint32(0, index, Endian.little);
-      await access.writeFrom(indexData.buffer.asUint8List());
-    }
-
-    _log.fine(
-        'Bitfield stored in sparse format: ${completedPieces.length} pieces');
-  }
-
-  /// Write file priorities section
+  /// File priorities section.
   /// Format: count (4 bytes) + for each file: index (4 bytes) + priority (1 byte)
-  Future<void> _writeFilePriorities(RandomAccessFile access) async {
+  Uint8List _prioritiesBytes() {
     // Only write non-normal priorities
     final nonNormalPriorities = _filePriorities.entries
         .where((e) => e.value != FilePriority.normal)
         .toList();
-
-    // Write count
-    final countData = ByteData(4);
-    countData.setUint32(0, nonNormalPriorities.length, Endian.little);
-    await access.writeFrom(countData.buffer.asUint8List());
-
-    // Write priorities
+    final data = ByteData(4 + nonNormalPriorities.length * 5)
+      ..setUint32(0, nonNormalPriorities.length, Endian.little);
+    var offset = 4;
     for (var entry in nonNormalPriorities) {
-      final fileData = ByteData(5);
-      fileData.setUint32(0, entry.key, Endian.little);
-      fileData.setUint8(4, entry.value.value);
-      await access.writeFrom(fileData.buffer.asUint8List());
+      data.setUint32(offset, entry.key, Endian.little);
+      data.setUint8(offset + 4, entry.value.value);
+      offset += 5;
     }
-
-    _log.fine(
-        'Wrote ${nonNormalPriorities.length} file priorities to state file');
+    return data.buffer.asUint8List();
   }
 
   /// Read file priorities section
@@ -377,40 +322,6 @@ class StateFileV2 {
     _log.fine('Read ${_filePriorities.length} file priorities from state file');
   }
 
-  /// Write footer with checksum
-  Future<void> _writeFooter() async {
-    if (_bitfieldFile == null) return;
-
-    final access = await _bitfieldFile!.open(mode: FileMode.writeOnlyAppend);
-
-    // Write file priorities before footer
-    await _writeFilePriorities(access);
-
-    // Write uploaded bytes again (for compatibility)
-    final uploadedData = ByteData(8);
-    uploadedData.setUint64(0, _uploaded, Endian.little);
-    await access.writeFrom(uploadedData.buffer.asUint8List());
-
-    // Write file checksum (CRC32 of bitfield or sparse indices)
-    int bitfieldChecksum;
-    if (_sparse) {
-      final completedPieces = _bitfield.completedPieces;
-      final indicesBytes = Uint8List(completedPieces.length * 4);
-      final view = ByteData.view(indicesBytes.buffer);
-      for (var i = 0; i < completedPieces.length; i++) {
-        view.setUint32(i * 4, completedPieces[i], Endian.little);
-      }
-      bitfieldChecksum = _calculateCRC32(indicesBytes);
-    } else {
-      bitfieldChecksum = _calculateCRC32(_bitfield.buffer);
-    }
-    final checksumData = ByteData(4);
-    checksumData.setUint32(0, bitfieldChecksum, Endian.little);
-    await access.writeFrom(checksumData.buffer.asUint8List());
-
-    await access.close();
-  }
-
   /// Load state file with format detection and migration
   Future<void> _loadStateFile() async {
     if (_bitfieldFile == null) return;
@@ -443,9 +354,7 @@ class StateFileV2 {
       _uploaded = 0;
       _version = STATE_FILE_VERSION;
       _lastModified = DateTime.now();
-      await _writeHeader();
-      await _writeBitfield();
-      await _writeFooter();
+      await _writeFile();
       _isValid = true;
     }
   }
@@ -701,9 +610,7 @@ class StateFileV2 {
     _isValid = true;
 
     // Write new v2 format
-    await _writeHeader();
-    await _writeBitfield();
-    await _writeFooter();
+    await _writeFile();
 
     _log.info('State file migration completed');
   }
@@ -721,254 +628,50 @@ class StateFileV2 {
     return crc ^ 0xFFFFFFFF;
   }
 
-  /// Update piece bitfield
-  Future<bool> update(int index, {bool have = true, int uploaded = 0}) async {
-    _access = await getAccess();
-    var completer = Completer<bool>();
-    _streamController?.add({
-      'type': 'single',
-      'index': index,
-      'uploaded': uploaded,
-      'have': have,
-      'completer': completer
-    });
-    return completer.future;
-  }
+  /// How long a change waits before it is written, so the pieces completed
+  /// meanwhile go in the same write.
+  static const saveDelay = Duration(seconds: 2);
 
-  Future<void> _update(Map<String, dynamic> event) async {
-    int index = event['index'];
-    int uploaded = event['uploaded'];
-    bool have = event['have'];
-    Completer c = event['completer'];
+  /// Update piece bitfield
+  ///
+  /// The change takes effect at once and is written to the file within
+  /// [saveDelay], or on [close]. The file used to be rewritten in many small
+  /// writes, and flushed to the disk, after every piece: with small pieces
+  /// that was most of what a download did, and it kept a slow disk busy.
+  Future<bool> update(int index, {bool have = true, int uploaded = 0}) async {
+    if (_closed) return false;
     if (index != -1) {
       if (_bitfield.getBit(index) == have && _uploaded == uploaded) {
-        c.complete(false);
-        return;
+        return false;
       }
       _bitfield.setBit(index, have);
-
-      // Check if we should switch storage format
-      final completedCount = _bitfield.completedPieces.length;
-      final totalPieces = _bitfield.piecesNum;
-      final completionRatio =
-          totalPieces > 0 ? completedCount / totalPieces : 0.0;
-
-      // Switch to/from sparse format if needed
-      final shouldBeSparse =
-          completionRatio < SPARSE_THRESHOLD && completedCount > 0;
-      if (shouldBeSparse != _sparse) {
-        _log.info(
-            'Switching bitfield storage format (sparse: $shouldBeSparse)');
-        _sparse = shouldBeSparse;
-        // Rewrite entire bitfield
-        await _rewriteBitfield();
-      }
-    } else {
-      if (_uploaded == uploaded) return;
+    } else if (_uploaded == uploaded) {
+      return false;
     }
     _uploaded = uploaded;
     _lastModified = DateTime.now();
-    try {
-      var access = await getAccess();
-
-      if (index != -1 && !_sparse) {
-        // For full bitfield, update individual byte
-        var i = index ~/ 8;
-        // Calculate offset: header (72) + optional compression size + bitfield offset
-        var bitfieldOffset = 72;
-        if (_compressed) {
-          bitfieldOffset += 4; // Skip compressed size
-        }
-        bitfieldOffset += i;
-        await access?.setPosition(bitfieldOffset);
-        await access?.writeByte(_bitfield.buffer[i]);
-      } else if (index != -1 && _sparse) {
-        // For sparse format, need to rewrite entire sparse section
-        await _rewriteBitfield();
-      }
-
-      // Update uploaded in footer
-      await _updateFooter();
-
-      // Update header uploaded and timestamp
-      await _updateHeader();
-
-      await access?.flush();
-      c.complete(true);
-    } catch (e) {
-      _log.warning(
-          'Update bitfield piece:[$index],uploaded:$uploaded error :', e);
-      c.complete(false);
-    }
+    _dirty = true;
+    _saveTimer ??= Timer(saveDelay, () {
+      _saveTimer = null;
+      unawaited(_save());
+    });
+    return true;
   }
 
-  /// Rewrite entire bitfield section (used when switching formats or sparse updates)
-  Future<void> _rewriteBitfield() async {
-    if (_bitfieldFile == null) return;
-
-    // Find bitfield section start
-    var bitfieldStart = 72;
-
-    // Write new bitfield
-    final access = await _bitfieldFile!.open(mode: FileMode.writeOnlyAppend);
-    await access.setPosition(bitfieldStart);
-
-    // Determine new format
-    final completedCount = _bitfield.completedPieces.length;
-    final totalPieces = _bitfield.piecesNum;
-    final completionRatio =
-        totalPieces > 0 ? completedCount / totalPieces : 0.0;
-    final shouldBeSparse =
-        completionRatio < SPARSE_THRESHOLD && completedCount > 0;
-    _sparse = shouldBeSparse;
-
-    if (_sparse) {
-      await _writeSparseBitfield(access);
-    } else {
-      await _writeFullBitfield(access);
+  /// Writes the changes not in the file yet, one write at a time.
+  Future<void> _save() async {
+    while (_saving != null) {
+      await _saving;
     }
-
-    // If new size is different, we need to shift footer
-    // For simplicity, rewrite entire file from bitfield onwards
-    await access.close();
-
-    // Recalculate and rewrite footer
-    await _updateFooter();
-  }
-
-  /// Update header with new uploaded and timestamp
-  Future<void> _updateHeader() async {
-    if (_bitfieldFile == null) return;
-
-    final access = await _bitfieldFile!.open(mode: FileMode.writeOnlyAppend);
-    final header = ByteData(72);
-    var offset = 0;
-
-    // Magic bytes
-    for (var i = 0; i < STATE_FILE_MAGIC.length; i++) {
-      header.setUint8(offset++, STATE_FILE_MAGIC[i]);
-    }
-
-    // Version
-    header.setUint32(offset, _version, Endian.little);
-    offset += 4;
-
-    // Info hash
-    final infoHash = metainfo.infoHashBuffer;
-    for (var i = 0; i < infoHash.length && i < 20; i++) {
-      header.setUint8(offset++, infoHash[i]);
-    }
-    offset += 20 - infoHash.length;
-
-    // Piece count
-    if (metainfo.pieces == null) {
-      throw StateError(
-          'Cannot write header: torrent has no pieces (v2-only torrent?)');
-    }
-    header.setUint32(offset, metainfo.pieces!.length, Endian.little);
-    offset += 4;
-
-    // Piece length
-    header.setUint64(offset, metainfo.pieceLength, Endian.little);
-    offset += 8;
-
-    // Total length
-    header.setUint64(
-        offset, metainfo.length ?? metainfo.totalSize, Endian.little);
-    offset += 8;
-
-    // Uploaded bytes
-    header.setUint64(offset, _uploaded, Endian.little);
-    offset += 8;
-
-    // Timestamp
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    header.setUint64(offset, timestamp, Endian.little);
-    offset += 8;
-
-    // Storage flags
-    int flags = 0;
-    if (_compressed) flags |= FLAG_COMPRESSED;
-    if (_sparse) flags |= FLAG_SPARSE;
-    header.setUint8(offset++, flags);
-
-    // Compression level
-    header.setUint8(offset++, _compressed ? _compressionLevel : 255);
-    offset += 2;
-
-    // Calculate and write header checksum
-    final headerBytes = header.buffer.asUint8List(0, 68);
-    final crc = _calculateCRC32(headerBytes);
-    header.setUint32(offset, crc, Endian.little);
-
-    await access.setPosition(0);
-    await access.writeFrom(header.buffer.asUint8List());
-    await access.close();
-  }
-
-  /// Update footer with uploaded and checksum
-  Future<void> _updateFooter() async {
-    if (_bitfieldFile == null) return;
-
-    // Calculate bitfield section size
-    var bitfieldSize = 0;
-    if (_sparse) {
-      final completedCount = _bitfield.completedPieces.length;
-      bitfieldSize = 4 + (completedCount * 4); // count + indices
-    } else {
-      if (_compressed) {
-        // Need to read compressed size from file
-        final bytes = await _bitfieldFile!.readAsBytes();
-        if (bytes.length > 72 + 4) {
-          final sizeData = ByteData.view(bytes.buffer, 72, 4);
-          bitfieldSize = 4 + sizeData.getUint32(0, Endian.little);
-        } else {
-          bitfieldSize = _bitfield.buffer.length;
-        }
-      } else {
-        bitfieldSize = _bitfield.buffer.length;
-      }
-    }
-
-    // Calculate priorities section size
-    final prioritiesCount = _filePriorities.entries
-        .where((e) => e.value != FilePriority.normal)
-        .length;
-    final prioritiesSize = 4 + (prioritiesCount * 5);
-
-    final prioritiesOffset = 72 + bitfieldSize;
-    final uploadedOffset = prioritiesOffset + prioritiesSize;
-    final checksumOffset = uploadedOffset + 8;
-    final access = await _bitfieldFile!.open(mode: FileMode.writeOnlyAppend);
-
-    // Update file priorities
-    await access.setPosition(prioritiesOffset);
-    await _writeFilePriorities(access);
-
-    // Update uploaded
-    await access.setPosition(uploadedOffset);
-    final uploadedData = ByteData(8);
-    uploadedData.setUint64(0, _uploaded, Endian.little);
-    await access.writeFrom(uploadedData.buffer.asUint8List());
-
-    // Update checksum
-    await access.setPosition(checksumOffset);
-    int bitfieldChecksum;
-    if (_sparse) {
-      final completedPieces = _bitfield.completedPieces;
-      final indicesBytes = Uint8List(completedPieces.length * 4);
-      final view = ByteData.view(indicesBytes.buffer);
-      for (var i = 0; i < completedPieces.length; i++) {
-        view.setUint32(i * 4, completedPieces[i], Endian.little);
-      }
-      bitfieldChecksum = _calculateCRC32(indicesBytes);
-    } else {
-      bitfieldChecksum = _calculateCRC32(_bitfield.buffer);
-    }
-    final checksumData = ByteData(4);
-    checksumData.setUint32(0, bitfieldChecksum, Endian.little);
-    await access.writeFrom(checksumData.buffer.asUint8List());
-    await access.close();
+    if (!_dirty || _bitfieldFile == null) return;
+    _dirty = false;
+    final saving = _writeFile().catchError((Object e) {
+      _dirty = true;
+      _log.warning('Could not write the state file', e);
+    });
+    _saving = saving;
+    await saving;
+    _saving = null;
   }
 
   Future<bool> updateBitfield(int index, [bool have = true]) async {
@@ -981,42 +684,17 @@ class StateFileV2 {
     return update(-1, uploaded: uploaded);
   }
 
-  void _processRequest(Map<String, dynamic> event) async {
-    _streamSubscription?.pause();
-    if (event['type'] == 'single') {
-      await _update(event);
-    }
-    _streamSubscription?.resume();
-  }
-
-  Future<RandomAccessFile?> getAccess() async {
-    if (_access == null) {
-      _access = await _bitfieldFile?.open(mode: FileMode.writeOnlyAppend);
-      _streamController = StreamController<Map<String, dynamic>>();
-      _streamSubscription = _streamController?.stream.listen(_processRequest,
-          onError: (e) => _log.warning('State file stream error', e));
-    }
-    return _access;
-  }
-
+  /// Writes what changed since the last write.
   Future<void> close() async {
     if (isClosed) return;
     _closed = true;
-    try {
-      await _streamSubscription?.cancel();
-      await _streamController?.close();
-      await _access?.flush();
-      await _access?.close();
-    } catch (e) {
-      _log.warning('Error while closing the status file: ', e);
-    } finally {
-      _access = null;
-      _streamSubscription = null;
-      _streamController = null;
-    }
+    _saveTimer?.cancel();
+    _saveTimer = null;
+    await _save();
   }
 
   Future<FileSystemEntity?> delete() async {
+    _dirty = false;
     await close();
     var r = _bitfieldFile?.delete();
     _bitfieldFile = null;
