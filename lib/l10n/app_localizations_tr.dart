@@ -3414,7 +3414,7 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get alsoDeleteDownloadedFiles => 'İndirilen dosyaları da sil';
+  String get alsoDeleteDownloadedFiles => 'Bu torrentin dosyalarını da sil';
 
   @override
   String get removeDeleteFiles => 'Kaldır + Dosyaları sil';
@@ -3425,6 +3425,14 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get torrentRemoved => 'Torrent kaldırıldı.';
+
+  @override
+  String get torrentRemovedNoFileList =>
+      'Torrent kaldırıldı. Hiçbir dosya silinmedi: uygulama bu torrentin dosya listesini hiç almadı.';
+
+  @override
+  String get torrentRemovedSomeFilesInUse =>
+      'Torrent kaldırıldı, ancak bazı dosyaları başka bir uygulamada açık olduğu için silinmedi.';
 
   @override
   String removeFailed(Object e) {
