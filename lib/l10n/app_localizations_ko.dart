@@ -3149,6 +3149,26 @@ class AppLocalizationsKo extends AppLocalizations {
   String get copyMagnetLink => '마그넷 링크 복사';
 
   @override
+  String get shareTorrentFile => '.torrent 파일 공유';
+
+  @override
+  String get saveTorrentFile => '.torrent 파일 저장';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return '$path에 저장했습니다';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      '아직 .torrent 파일이 없습니다. 이 토렌트의 파일 목록을 받는 중입니다. 대신 마그넷 링크를 복사하세요.';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return '.torrent 파일을 공유하지 못했습니다: $error';
+  }
+
+  @override
   String get magnetLinkCopied => '마그넷 링크를 복사했습니다';
 
   @override
