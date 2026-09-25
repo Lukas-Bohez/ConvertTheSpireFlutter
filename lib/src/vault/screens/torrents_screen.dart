@@ -7,6 +7,7 @@ import 'package:convert_the_spire_reborn/src/vault/platform/drag_drop.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/create_torrent_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/screens/torrent_detail_screen.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/torrent_content_deleter.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/vault_bootstrap.dart';
@@ -454,23 +455,27 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     );
     if (confirmed != true) return;
     try {
-      await TorrentEngineService.instance.stopTorrent(ts.model.id);
+      TorrentContentDeletion? deletion;
       if (deleteFiles) {
-        await TorrentService.instance.purgeTorrentArtifacts(ts.model.id);
+        // This torrent's own files only, never the download folder.
+        deletion =
+            await TorrentService.instance.purgeTorrentArtifacts(ts.model.id);
+      } else {
+        await TorrentEngineService.instance.stopTorrent(ts.model.id);
       }
       await TorrentService.instance.removeTorrent(ts.model.id);
       if (!mounted) return;
+      final l10n = context.l10n;
+      final message = !deleteFiles
+          ? l10n.torrentRemoved
+          : deletion == null
+              ? l10n.torrentRemovedNoFileList
+              : deletion.failed.isNotEmpty
+                  ? l10n.torrentRemovedSomeFilesInUse
+                  : l10n.torrentRemovedFilesDeleted;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(
-        SnackBar(
-          content: Text(
-            deleteFiles
-                ? context.l10n.torrentRemovedFilesDeleted
-                : context.l10n.torrentRemoved,
-          ),
-        ),
-      );
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

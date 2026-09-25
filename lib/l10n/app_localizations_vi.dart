@@ -3404,7 +3404,7 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get alsoDeleteDownloadedFiles => 'Xóa cả các tệp đã tải';
+  String get alsoDeleteDownloadedFiles => 'Xóa cả các tệp của torrent này';
 
   @override
   String get removeDeleteFiles => 'Gỡ + Xóa tệp';
@@ -3414,6 +3414,14 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get torrentRemoved => 'Đã gỡ torrent.';
+
+  @override
+  String get torrentRemovedNoFileList =>
+      'Đã gỡ torrent. Không tệp nào bị xóa: ứng dụng chưa từng nhận được danh sách tệp của torrent này.';
+
+  @override
+  String get torrentRemovedSomeFilesInUse =>
+      'Đã gỡ torrent, nhưng một số tệp đang mở trong ứng dụng khác nên chưa bị xóa.';
 
   @override
   String removeFailed(Object e) {

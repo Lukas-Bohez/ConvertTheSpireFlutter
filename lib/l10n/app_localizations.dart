@@ -6088,7 +6088,7 @@ abstract class AppLocalizations {
   /// No description provided for @alsoDeleteDownloadedFiles.
   ///
   /// In en, this message translates to:
-  /// **'Also delete downloaded files'**
+  /// **'Also delete this torrent\'s files'**
   String get alsoDeleteDownloadedFiles;
 
   /// No description provided for @removeDeleteFiles.
@@ -6108,6 +6108,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Torrent removed.'**
   String get torrentRemoved;
+
+  /// No description provided for @torrentRemovedNoFileList.
+  ///
+  /// In en, this message translates to:
+  /// **'Torrent removed. No files were deleted: the app never got this torrent\'s file list.'**
+  String get torrentRemovedNoFileList;
+
+  /// No description provided for @torrentRemovedSomeFilesInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Torrent removed, but some of its files are open in another app and were not deleted.'**
+  String get torrentRemovedSomeFilesInUse;
 
   /// No description provided for @removeFailed.
   ///

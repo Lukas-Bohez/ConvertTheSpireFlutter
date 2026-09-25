@@ -11,6 +11,7 @@ import 'package:convert_the_spire_reborn/src/vault/bittorrent/torrent_file.dart'
 import 'package:convert_the_spire_reborn/src/vault/db/torrents_dao.dart';
 import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/torrent_content_deleter.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_engine_service.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
@@ -1083,56 +1084,16 @@ class TorrentService {
     unawaited(_takeSnapshot(force: true));
   }
 
-  Future<void> purgeTorrentArtifacts(String id) async {
-    final torrent = await TorrentsDao.instance.getTorrentById(id);
-    if (torrent == null) return;
-
-    final rawPath = torrent.filePath?.trim();
-    final candidatePath = rawPath == null || rawPath.isEmpty
-        ? SettingsService.instance.downloadDestination.trim()
-        : rawPath;
-    if (candidatePath.isEmpty) return;
-
-    final lowerPath = candidatePath.toLowerCase();
-    if (lowerPath.endsWith('.torrent')) {
-      return;
-    }
-
-    await _deletePathWithRetry(candidatePath);
-    final parent =
-        FileSystemEntity.typeSync(candidatePath) == FileSystemEntityType.file
-            ? File(candidatePath).parent.path
-            : candidatePath;
-    final stateFile = File(p.join(parent, '.bt.state'));
-    if (await stateFile.exists()) {
-      await _deletePathWithRetry(stateFile.path);
-    }
-
+  /// Deletes the files the torrent downloaded, and only those.
+  ///
+  /// This used to delete the torrent's folder recursively. That is the
+  /// download folder every torrent shares, so it took everything in it.
+  /// Returns null when the torrent's file list is not known; nothing is
+  /// deleted then.
+  Future<TorrentContentDeletion?> purgeTorrentArtifacts(String id) async {
+    final result = await TorrentEngineService.instance.deleteTorrentContent(id);
     _diskSnapshots.remove(id);
-  }
-
-  Future<void> _deletePathWithRetry(
-    String path, {
-    int attempts = 5,
-    Duration delay = const Duration(milliseconds: 250),
-  }) async {
-    for (var attempt = 1; attempt <= attempts; attempt++) {
-      try {
-        final type = await FileSystemEntity.type(path, followLinks: false);
-        if (type == FileSystemEntityType.notFound) return;
-        final entity = FileSystemEntity.isDirectorySync(path)
-            ? Directory(path)
-            : File(path);
-        await entity.delete(recursive: true);
-        return;
-      } catch (e) {
-        if (attempt == attempts) {
-          debugPrint('Failed to delete torrent artifact $path: $e');
-          return;
-        }
-        await Future.delayed(delay);
-      }
-    }
+    return result;
   }
 
   Future<void> resumeActiveTorrents() async {
