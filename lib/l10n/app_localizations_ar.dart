@@ -3221,6 +3221,26 @@ class AppLocalizationsAr extends AppLocalizations {
   String get copyMagnetLink => 'نسخ رابط magnet';
 
   @override
+  String get shareTorrentFile => 'مشاركة ملف .torrent';
+
+  @override
+  String get saveTorrentFile => 'حفظ ملف .torrent';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return 'تم الحفظ في $path';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      'لا يوجد ملف .torrent بعد: لا يزال التطبيق يجلب قائمة ملفات هذا التورنت. انسخ رابط المغناطيس بدلًا من ذلك.';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return 'تعذّرت مشاركة ملف .torrent: $error';
+  }
+
+  @override
   String get magnetLinkCopied => 'نُسخ رابط magnet';
 
   @override

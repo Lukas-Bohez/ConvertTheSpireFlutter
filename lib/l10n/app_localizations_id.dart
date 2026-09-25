@@ -3248,6 +3248,26 @@ class AppLocalizationsId extends AppLocalizations {
   String get copyMagnetLink => 'Salin tautan magnet';
 
   @override
+  String get shareTorrentFile => 'Bagikan file .torrent';
+
+  @override
+  String get saveTorrentFile => 'Simpan file .torrent';
+
+  @override
+  String torrentFileSavedTo(String path) {
+    return 'Disimpan ke $path';
+  }
+
+  @override
+  String get torrentFileNotReady =>
+      'Belum ada file .torrent: aplikasi masih mengambil daftar file torrent ini. Salin tautan magnet-nya saja.';
+
+  @override
+  String torrentFileExportFailed(String error) {
+    return 'Tidak dapat membagikan file .torrent: $error';
+  }
+
+  @override
   String get magnetLinkCopied => 'Tautan magnet disalin';
 
   @override

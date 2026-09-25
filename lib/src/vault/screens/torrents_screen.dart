@@ -13,8 +13,12 @@ import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart
 import 'package:convert_the_spire_reborn/src/vault/vault_bootstrap.dart';
 import 'package:convert_the_spire_reborn/src/widgets/empty_state.dart';
 import 'package:convert_the_spire_reborn/src/widgets/tv_file_browser.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/torrent_status_text.dart';
 
@@ -406,6 +410,59 @@ class _TorrentsScreenState extends State<TorrentsScreen>
       ).showSnackBar(SnackBar(content: Text(context.l10n.redownloadFailed(e))));
     }
     await TorrentService.instance.refreshTorrentStates();
+  }
+
+  /// Phones share files through the share sheet; computers save them.
+  bool get _sharesFiles => Platform.isAndroid || Platform.isIOS;
+
+  /// Shares the torrent's .torrent file on a phone, or saves it on a
+  /// computer. Copying the magnet link is the other way to share a torrent.
+  Future<void> _exportTorrentFile(TorrentModel torrent) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final bytes =
+          await TorrentEngineService.instance.torrentFileFor(torrent.id);
+      if (bytes == null) {
+        messenger.showSnackBar(
+            SnackBar(content: Text(l10n.torrentFileNotReady)));
+        return;
+      }
+      final name = '${_torrentFileName(torrent.name)}.torrent';
+      if (_sharesFiles) {
+        final dir = await getTemporaryDirectory();
+        final file = File(p.join(dir.path, name));
+        await file.writeAsBytes(bytes, flush: true);
+        await SharePlus.instance.share(ShareParams(
+          files: [XFile(file.path, mimeType: 'application/x-bittorrent')],
+          subject: torrent.name,
+        ));
+        return;
+      }
+      final picked = await FilePicker.platform.saveFile(
+        dialogTitle: l10n.saveTorrentFile,
+        fileName: name,
+        type: FileType.custom,
+        allowedExtensions: const ['torrent'],
+      );
+      if (picked == null) return;
+      final target =
+          picked.toLowerCase().endsWith('.torrent') ? picked : '$picked.torrent';
+      await File(target).writeAsBytes(bytes, flush: true);
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.torrentFileSavedTo(target))));
+    } catch (e) {
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.torrentFileExportFailed('$e'))));
+    }
+  }
+
+  /// [name] as a file name: no characters Windows or Android refuse.
+  static String _torrentFileName(String name) {
+    final cleaned =
+        name.replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1F]'), '_').trim();
+    if (cleaned.isEmpty) return 'torrent';
+    return cleaned.length > 120 ? cleaned.substring(0, 120) : cleaned;
   }
 
   Future<void> _deleteTorrent(TorrentViewState ts) async {
@@ -1089,6 +1146,16 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                   }
                 },
               ),
+              ListTile(
+                leading: Icon(_sharesFiles ? Icons.share : Icons.save_alt),
+                title: Text(_sharesFiles
+                    ? context.l10n.shareTorrentFile
+                    : context.l10n.saveTorrentFile),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _exportTorrentFile(torrent);
+                },
+              ),
               if (path.isNotEmpty)
                 ListTile(
                   leading: const Icon(Icons.folder_outlined),
@@ -1178,6 +1245,9 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                             case 'copy':
                               copyMagnetLink();
                               break;
+                            case 'torrentFile':
+                              _exportTorrentFile(torrent);
+                              break;
                             case 'redownload':
                               _redownloadTorrent(ts);
                               break;
@@ -1213,6 +1283,18 @@ class _TorrentsScreenState extends State<TorrentsScreen>
                               dense: true,
                               leading: const Icon(Icons.link),
                               title: Text(context.l10n.copyMagnetLink),
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'torrentFile',
+                            child: ListTile(
+                              dense: true,
+                              leading: Icon(_sharesFiles
+                                  ? Icons.share
+                                  : Icons.save_alt),
+                              title: Text(_sharesFiles
+                                  ? context.l10n.shareTorrentFile
+                                  : context.l10n.saveTorrentFile),
                             ),
                           ),
                           PopupMenuItem(
