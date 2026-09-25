@@ -4326,8 +4326,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get preparing => 'Preparando...';
 
   @override
-  String get vaultSpireDesignedExclusivelyLegal =>
-      'Vault The Spire está pensado exclusivamente para descargas legales. Eso incluye:\n\n- Software de código abierto (distribuciones de Linux, herramientas de desarrollo, juegos publicados gratis)\n- Música, vídeos y libros con licencia Creative Commons\n- Contenido de dominio público (películas antiguas, grabaciones históricas, literatura clásica)\n- Archivos que te pertenecen y de los que tú mismo hiciste copia\n- Contenido que sus autores comparten expresamente para distribución libre\n\nDescargar o compartir material con derechos de autor sin permiso es ilegal en la mayoría de los países. Los desarrolladores de esta app no aprueban ni apoyan las infracciones de derechos de autor.';
+  String vaultSpireDesignedExclusivelyLegal(String appName) {
+    return '$appName está pensado exclusivamente para descargas legales. Eso incluye:\n\n- Software de código abierto (distribuciones de Linux, herramientas de desarrollo, juegos publicados gratis)\n- Música, vídeos y libros con licencia Creative Commons\n- Contenido de dominio público (películas antiguas, grabaciones históricas, literatura clásica)\n- Archivos que te pertenecen y de los que tú mismo hiciste copia\n- Contenido que sus autores comparten expresamente para distribución libre\n\nDescargar o compartir material con derechos de autor sin permiso es ilegal en la mayoría de los países. Los desarrolladores de esta app no aprueban ni apoyan las infracciones de derechos de autor.';
+  }
 
   @override
   String get tapButtonPasteMagnetLink =>
@@ -4346,12 +4347,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'Si un archivo descargado parece dañado o no se abre, pulsa el torrent para abrir sus detalles y luego «Verificar archivos». Se vuelve a leer cada pieza del disco y se compara con las sumas de comprobación originales; no se borra nada.\n\nSi la verificación encuentra piezas dañadas, o quieres empezar de cero, pulsa «Volver a descargar». Se elimina la copia local y todo se descarga de nuevo desde los pares.\n\nLos repacks grandes (instaladores divididos en varias partes) a veces necesitan una verificación al terminar, porque las piezas pueden llegar desordenadas entre muchos archivos.';
 
   @override
-  String get vaultSpireStoresAllData =>
-      'Vault The Spire guarda todos los datos en tu dispositivo. No se envía a ningún servidor el historial de torrents, las estadísticas de descarga ni los nombres de archivo.\n\nTu dirección IP es visible para los demás pares de cualquier enjambre al que te unas; así funciona BitTorrent. Una VPN ocultará tu IP si te importa la privacidad frente a otros pares.\n\nEl navegador integrado no sincroniza el historial con ninguna nube. El historial solo se guarda en el dispositivo y se puede borrar en Ajustes.';
+  String vaultSpireStoresAllData(String appName) {
+    return '$appName guarda todos los datos en tu dispositivo. No se envía a ningún servidor el historial de torrents, las estadísticas de descarga ni los nombres de archivo.\n\nTu dirección IP es visible para los demás pares de cualquier enjambre al que te unas; así funciona BitTorrent. Una VPN ocultará tu IP si te importa la privacidad frente a otros pares.\n\nEl navegador integrado no sincroniza el historial con ninguna nube. El historial solo se guarda en el dispositivo y se puede borrar en Ajustes.';
+  }
 
   @override
-  String get disableBatteryOptimisationVaultSpire =>
-      '- Desactiva la optimización de batería para Vault The Spire en Ajustes de Android -> Aplicaciones para que el sistema no pause las descargas activas.\n\n- Si un torrent muestra «El archivo ya está en uso», cierra cualquier otra app que tenga el archivo abierto y pulsa Volver a descargar.\n\n- Desliza hacia abajo en la lista de torrents para forzar una actualización si el progreso parece congelado.\n\n- Para obtener los mejores resultados en Android 12 o posterior, concede el permiso de almacenamiento cuando te lo pida al abrirla por primera vez.';
+  String disableBatteryOptimisationVaultSpire(String appName) {
+    return '- Desactiva la optimización de batería para $appName en Ajustes de Android -> Aplicaciones para que el sistema no pause las descargas activas.\n\n- Si un torrent muestra «El archivo ya está en uso», cierra cualquier otra app que tenga el archivo abierto y pulsa Volver a descargar.\n\n- Desliza hacia abajo en la lista de torrents para forzar una actualización si el progreso parece congelado.\n\n- Para obtener los mejores resultados en Android 12 o posterior, concede el permiso de almacenamiento cuando te lo pida al abrirla por primera vez.';
+  }
 
   @override
   String get appKeepsDownloadingWhenMinimised =>
