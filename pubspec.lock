@@ -316,10 +316,9 @@ packages:
   dtorrent_task_v2:
     dependency: "direct main"
     description:
-      name: dtorrent_task_v2
-      sha256: "1366162e37cbbf9e7a0039792d5f9e3f7a2dad09577f91dc35857e7e3c9eeaf8"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/dtorrent_task_v2"
+      relative: true
+    source: path
     version: "0.4.9"
   dtorrent_tracker:
     dependency: transitive

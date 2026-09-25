@@ -42,6 +42,9 @@ export 'src/file/state_recovery.dart';
 /// Peer ID prefix
 const ID_PREFIX = '-DT0201-';
 
+/// This package's version, sent to peers in the extension handshake.
+const PACKAGE_VERSION = '0.4.9';
+
 /// Current version number
 Future<String?> getTorrentTaskVersion() async {
   var file = File('pubspec.yaml');
