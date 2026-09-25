@@ -504,6 +504,18 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool get _canGoBack => _navHistoryIndex > 0;
   bool get _canGoForward => _navHistoryIndex < _navHistory.length - 1;
 
+  static const int _homePageIndex = 13;
+
+  /// A natural break for a full-screen ad: a conversion finished, or the user
+  /// came back to Home from a section. Play build only; [AdService] also
+  /// skips Android TV and keeps ads a few minutes apart. Never while music or
+  /// a video plays, so an ad's sound does not cut in.
+  void _maybeShowBreakAd() {
+    if (!kPlayStoreBuild) return;
+    if (context.read<PlayerState>().isPlaying) return;
+    unawaited(AdService.instance.maybeShowInterstitialAtBreak());
+  }
+
   void _navigateToPage(int index) {
     if (index < 0 || index > 14) return;
     if (!isTabVisibleInCurrentBuild(index)) return;
@@ -531,6 +543,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       widget.controller.switchToTab(index);
     } catch (_) {}
     _lastLocalNavigation = DateTime.now();
+    if (index == _homePageIndex) _maybeShowBreakAd();
   }
 
   void _goBack() {
@@ -544,6 +557,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     try {
       widget.controller.switchToTab(_selectedPageIndex);
     } catch (_) {}
+    if (_selectedPageIndex == _homePageIndex) _maybeShowBreakAd();
   }
 
   void _goForward() {
@@ -720,6 +734,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             if (!didPop && _selectedPageIndex != 13) {
               AdService.instance.registerInteraction();
               setState(() => _selectedPageIndex = 13);
+              _maybeShowBreakAd();
             }
           },
           child: shell,
@@ -4998,6 +5013,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               if (error != null) {
                                 Snack.show(context, context.l10n.conversionFailed(error),
                                     level: SnackLevel.error);
+                              } else {
+                                _maybeShowBreakAd();
                               }
                             },
                       style: ElevatedButton.styleFrom(

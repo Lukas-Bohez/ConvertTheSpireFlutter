@@ -3572,6 +3572,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get filePathCopied => 'Dateipfad kopiert';
 
   @override
+  String get copyTitle => 'Titel kopieren';
+
+  @override
+  String get titleCopied => 'Titel kopiert';
+
+  @override
+  String get homeTaglinePlay =>
+      'Torrents, Musik, Videos und Dateikonvertierung in einer App.';
+
+  @override
+  String get spinUnlockColour => 'Drehen → Farbe freischalten';
+
+  @override
   String get redownloadFromScratch2 => 'Komplett neu herunterladen';
 
   @override

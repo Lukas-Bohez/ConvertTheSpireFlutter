@@ -369,7 +369,9 @@ class _SupportScreenState extends State<SupportScreen> {
     final adService = AdService.instance;
     final hasAdBreak = adService.hasTemporaryAdBreak;
     final adBreakRemaining = adService.temporaryAdBreakRemaining;
-    final playAdMode = kPlayStoreBuild;
+    // Android TV shows no ads (AdService explains why), so none of the ad
+    // cards, buttons or the banner appear there.
+    final playAdMode = kPlayStoreBuild && adService.adsSupportedOnDevice;
     final adActionsEnabled =
         !purchase.isAdFree && playAdMode && adService.adsAvailable;
 
@@ -392,29 +394,31 @@ class _SupportScreenState extends State<SupportScreen> {
                   context.l10n.ifEnjoyUsingBestWay(getAppTitle()),
                   style: theme.textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 12),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.secondaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.play_circle, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          context.l10n.adsWatchedBySupporters(_adsWatchedCount),
-                          style: theme.textTheme.bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
+                if (playAdMode) ...[
+                  const SizedBox(height: 12),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.secondaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.play_circle, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            context.l10n.adsWatchedBySupporters(_adsWatchedCount),
+                            style: theme.textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
                 if (hasAdBreak) ...[
                   const SizedBox(height: 8),
                   AnimatedSwitcher(
@@ -443,64 +447,69 @@ class _SupportScreenState extends State<SupportScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.l10n.removeAds,
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  purchase.isAdFree
-                      ? context.l10n.adsAlreadyRemovedDevice
-                      : context.l10n.oneTimeUnlockSuppressesEvery,
-                  style: theme.textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    FilledButton.icon(
-                      icon: Icon(
-                        purchase.isAdFree ? Icons.verified : Icons.block,
-                      ),
-                      label: Text(
-                        purchase.isAdFree
-                            ? context.l10n.adsRemoved
-                            : context.l10n.removeAds2(purchase.removeAdsPriceLabel),
-                      ),
-                      onPressed: purchase.storeAvailable && !purchase.isAdFree
-                          ? _buyRemoveAds
-                          : null,
-                    ),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.restore),
-                      label: Text(context.l10n.restorePurchase),
-                      onPressed:
-                          purchase.storeAvailable ? _restorePurchases : null,
-                    ),
-                  ],
-                ),
-                if (!purchase.storeAvailable)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      context.l10n.purchasesOnlyAvailableAndroidPlay,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                    ),
+        if (playAdMode) ...[
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.removeAds,
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    purchase.isAdFree
+                        ? context.l10n.adsAlreadyRemovedDevice
+                        : context.l10n.oneTimeUnlockSuppressesEvery,
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      FilledButton.icon(
+                        icon: Icon(
+                          purchase.isAdFree ? Icons.verified : Icons.block,
+                        ),
+                        label: Text(
+                          purchase.isAdFree
+                              ? context.l10n.adsRemoved
+                              : purchase.removeAdsPrice == null
+                                  ? context.l10n.removeAds
+                                  : context.l10n
+                                      .removeAds2(purchase.removeAdsPrice!),
+                        ),
+                        onPressed: purchase.storeAvailable && !purchase.isAdFree
+                            ? _buyRemoveAds
+                            : null,
+                      ),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.restore),
+                        label: Text(context.l10n.restorePurchase),
+                        onPressed:
+                            purchase.storeAvailable ? _restorePurchases : null,
+                      ),
+                    ],
+                  ),
+                  if (!purchase.storeAvailable)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        context.l10n.purchasesOnlyAvailableAndroidPlay,
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
+        ],
         _buildAppearanceCard(theme, controller),
         const SizedBox(height: 12),
         Card(

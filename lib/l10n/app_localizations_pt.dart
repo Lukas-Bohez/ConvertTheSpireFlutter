@@ -3572,6 +3572,19 @@ class AppLocalizationsPt extends AppLocalizations {
   String get filePathCopied => 'Caminho do arquivo copiado';
 
   @override
+  String get copyTitle => 'Copiar título';
+
+  @override
+  String get titleCopied => 'Título copiado';
+
+  @override
+  String get homeTaglinePlay =>
+      'Torrents, música, vídeos e conversão de arquivos em um só app.';
+
+  @override
+  String get spinUnlockColour => 'Girar → desbloqueie uma cor';
+
+  @override
   String get redownloadFromScratch2 => 'Baixar tudo de novo';
 
   @override

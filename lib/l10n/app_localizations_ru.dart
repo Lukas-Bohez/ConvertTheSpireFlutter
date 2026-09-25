@@ -3549,6 +3549,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get filePathCopied => 'Путь к файлу скопирован';
 
   @override
+  String get copyTitle => 'Копировать название';
+
+  @override
+  String get titleCopied => 'Название скопировано';
+
+  @override
+  String get homeTaglinePlay =>
+      'Торренты, музыка, видео и конвертация файлов в одном приложении.';
+
+  @override
+  String get spinUnlockColour => 'Крутить → открыть цвет';
+
+  @override
   String get redownloadFromScratch2 => 'Скачать заново с нуля';
 
   @override

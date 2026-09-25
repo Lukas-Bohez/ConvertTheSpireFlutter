@@ -3550,6 +3550,19 @@ class AppLocalizationsHi extends AppLocalizations {
   String get filePathCopied => 'फ़ाइल पाथ कॉपी हुआ';
 
   @override
+  String get copyTitle => 'शीर्षक कॉपी करें';
+
+  @override
+  String get titleCopied => 'शीर्षक कॉपी हो गया';
+
+  @override
+  String get homeTaglinePlay =>
+      'टोरेंट, संगीत, वीडियो और फ़ाइल रूपांतरण, सब एक ऐप में।';
+
+  @override
+  String get spinUnlockColour => 'घुमाएँ → एक रंग अनलॉक करें';
+
+  @override
   String get redownloadFromScratch2 => 'शुरू से दोबारा डाउनलोड करें';
 
   @override

@@ -5,6 +5,7 @@ import '../../config/build_flags.dart';
 import '../../services/ad_service.dart';
 import '../../services/purchase_service.dart';
 import '../../utils/l10n.dart';
+import '../../utils/snack.dart';
 import 'colour_collection_grid.dart';
 import 'colour_rarity.dart';
 import 'colour_reward_service.dart';
@@ -49,14 +50,20 @@ class _WatchAdCardState extends State<WatchAdCard> {
   Future<void> _showAdAndReward() async {
     AdService.instance.registerInteraction();
     setState(() => _loading = true);
-    final granted =
-        await AdService.instance.showRewardedWithCustomReward(() async {
+    // Say so when there is no ad to watch, instead of a button that does
+    // nothing. Closing an ad early is the user's choice and needs no message.
+    final ad = await AdService.instance.loadRewarded();
+    if (ad == null) {
+      if (mounted) {
+        setState(() => _loading = false);
+        Snack.show(context, context.l10n.rewardedAdsCurrentlyUnavailable);
+      }
+      return;
+    }
+    await AdService.instance.showRewardedWithCustomReward(() async {
       final rewards = await _rollBatch(10);
       await _showRewardSession(rewards);
     });
-    if (!granted) {
-      // noop: no reward granted
-    }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -131,6 +138,9 @@ class _WatchAdCardState extends State<WatchAdCard> {
     final purchase = context.watch<PurchaseService>();
     final hasAllThemes = purchase.hasAllThemes;
     final hasPrice = purchase.canPurchaseAllThemes;
+    // No ads on Android TV and in the GitHub builds: spin straight away there.
+    final spinWithoutAd =
+        kIsGithubRelease || !AdService.instance.adsSupportedOnDevice;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -138,7 +148,9 @@ class _WatchAdCardState extends State<WatchAdCard> {
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Expanded(
               child: Text(
-                context.l10n.watchAdUnlockColour,
+                spinWithoutAd
+                    ? context.l10n.spinUnlockColour
+                    : context.l10n.watchAdUnlockColour,
                 style:
                     const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
@@ -269,15 +281,15 @@ class _WatchAdCardState extends State<WatchAdCard> {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(kIsGithubRelease
+                    : Icon(spinWithoutAd
                         ? Icons.auto_awesome
                         : Icons.ondemand_video),
-                label: Text(kIsGithubRelease
+                label: Text(spinWithoutAd
                     ? context.l10n.spinColour
                     : context.l10n.watchAd),
                 onPressed: _loading
                     ? null
-                    : (kIsGithubRelease ? _spinDirectly : _showAdAndReward),
+                    : (spinWithoutAd ? _spinDirectly : _showAdAndReward),
               ),
             ),
           ],

@@ -3557,6 +3557,19 @@ class AppLocalizationsTr extends AppLocalizations {
   String get filePathCopied => 'Dosya yolu kopyalandı';
 
   @override
+  String get copyTitle => 'Başlığı kopyala';
+
+  @override
+  String get titleCopied => 'Başlık kopyalandı';
+
+  @override
+  String get homeTaglinePlay =>
+      'Torrentler, müzik, videolar ve dosya dönüştürme tek bir uygulamada.';
+
+  @override
+  String get spinUnlockColour => 'Çevir → bir rengin kilidini aç';
+
+  @override
   String get redownloadFromScratch2 => 'Baştan yeniden indir';
 
   @override

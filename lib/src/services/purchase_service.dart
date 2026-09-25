@@ -29,7 +29,9 @@ class PurchaseService extends ChangeNotifier {
   bool get storeAvailable => _storeAvailable;
   bool get isAdFree => _isAdFree;
   bool get hasAllThemes => _hasAllThemes;
-  String get removeAdsPriceLabel => _removeAdsProduct?.price ?? 'Remove Ads';
+  /// The store's price for Remove Ads, or null before the store has answered
+  /// (or on a device without the Play Store).
+  String? get removeAdsPrice => _removeAdsProduct?.price;
   String get getAllThemesPriceLabel =>
       _getAllThemesProduct?.price ?? 'Unlock All 28 Colours';
   bool get canPurchaseRemoveAds => _storeAvailable && _removeAdsProduct != null;

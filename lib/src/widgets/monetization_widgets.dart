@@ -7,7 +7,13 @@ import 'package:provider/provider.dart';
 import '../services/ad_service.dart';
 import '../services/purchase_service.dart';
 
-/// Small reusable banner placement that hides itself when ads are removed.
+/// An anchored adaptive banner as wide as the space it is given.
+///
+/// It takes no room until an ad has loaded, so there is no spinner or empty
+/// box, and it appears by itself once ads are ready (after the consent check
+/// at startup) and goes away during an ad break or after the ad-free
+/// purchase. A failed load is retried after a minute; a new width (the phone
+/// was turned) loads a banner that fits.
 class AdBannerSlot extends StatefulWidget {
   const AdBannerSlot({super.key});
 
@@ -16,57 +22,92 @@ class AdBannerSlot extends StatefulWidget {
 }
 
 class _AdBannerSlotState extends State<AdBannerSlot> {
-  Future<BannerAd?>? _bannerFuture;
-  BannerAd? _bannerAd;
+  static const Duration _retryAfter = Duration(minutes: 1);
+
+  BannerAd? _ad;
+  int? _requestedWidth;
+  Timer? _retry;
 
   @override
   void initState() {
     super.initState();
-    if (AdService.instance.adsAvailable) {
-      _bannerFuture = AdService.instance.loadBanner();
-    }
+    AdService.instance.addListener(_onAdsChanged);
   }
 
   @override
   void dispose() {
-    _bannerAd?.dispose();
+    AdService.instance.removeListener(_onAdsChanged);
+    _retry?.cancel();
+    _ad?.dispose();
     super.dispose();
+  }
+
+  void _onAdsChanged() {
+    if (!mounted) return;
+    if (!AdService.instance.adsReady) _drop();
+    setState(() {});
+  }
+
+  void _drop() {
+    _retry?.cancel();
+    _requestedWidth = null;
+    final ad = _ad;
+    _ad = null;
+    // Dispose after the frame that removes its AdWidget.
+    if (ad != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => ad.dispose());
+    }
+  }
+
+  Future<void> _load(int width) async {
+    _requestedWidth = width;
+    final ad = await AdService.instance.loadBanner(width: width);
+    if (!mounted || _requestedWidth != width) {
+      if (ad != null) unawaited(ad.dispose());
+      return;
+    }
+    if (ad == null) {
+      _retry?.cancel();
+      _retry = Timer(_retryAfter, () {
+        if (!mounted) return;
+        setState(() => _requestedWidth = null);
+      });
+      return;
+    }
+    final old = _ad;
+    setState(() => _ad = ad);
+    if (old != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final isAdFree = context.watch<PurchaseService>().isAdFree;
-    if (isAdFree || !AdService.instance.adsAvailable) {
-      if (_bannerAd != null) {
-        final banner = _bannerAd;
-        _bannerAd = null;
-        unawaited(banner!.dispose());
-      }
+    if (isAdFree || !AdService.instance.adsReady) {
+      if (_ad != null || _requestedWidth != null) _drop();
       return const SizedBox.shrink();
     }
-
-    _bannerFuture ??= AdService.instance.loadBanner();
-    return FutureBuilder<BannerAd?>(
-      future: _bannerFuture,
-      builder: (context, snapshot) {
-        final ad = snapshot.data;
-        if (ad != null) {
-          _bannerAd = ad;
-          return Center(
-            child: SizedBox(
-              width: ad.size.width.toDouble(),
-              height: ad.size.height.toDouble(),
-              child: AdWidget(ad: ad),
-            ),
-          );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = (constraints.maxWidth.isFinite
+                ? constraints.maxWidth
+                : MediaQuery.sizeOf(context).width)
+            .truncate();
+        if (_requestedWidth != width) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _requestedWidth != width) unawaited(_load(width));
+          });
         }
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 60,
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-          );
-        }
-        return const SizedBox.shrink();
+        final ad = _ad;
+        if (ad == null) return const SizedBox.shrink();
+        return Center(
+          child: SizedBox(
+            width: ad.size.width.toDouble(),
+            height: ad.size.height.toDouble(),
+            child: AdWidget(key: ObjectKey(ad), ad: ad),
+          ),
+        );
       },
     );
   }

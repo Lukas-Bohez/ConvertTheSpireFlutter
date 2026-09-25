@@ -3452,6 +3452,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get filePathCopied => '파일 경로를 복사했습니다';
 
   @override
+  String get copyTitle => '제목 복사';
+
+  @override
+  String get titleCopied => '제목을 복사했습니다';
+
+  @override
+  String get homeTaglinePlay => '토렌트, 음악, 동영상, 파일 변환을 하나의 앱에서.';
+
+  @override
+  String get spinUnlockColour => '돌리기 → 색상 잠금 해제';
+
+  @override
   String get redownloadFromScratch2 => '처음부터 다시 다운로드';
 
   @override

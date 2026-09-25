@@ -1496,7 +1496,7 @@ class AppController extends ChangeNotifier {
       await notificationService.showDownloadComplete(title, artist);
     }
     if (success) {
-      unawaited(AdService.instance.maybeShowInterstitialAfterSuccess());
+      unawaited(AdService.instance.maybeShowInterstitialAtBreak());
       unawaited(ReviewService.maybePromptReview());
     }
   }

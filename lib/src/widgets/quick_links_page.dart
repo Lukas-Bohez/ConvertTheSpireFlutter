@@ -9,6 +9,7 @@ import '../config/full_mode_access.dart';
 import '../models/search_result.dart';
 import '../services/folder_access_service.dart';
 import '../utils/l10n.dart';
+import 'monetization_widgets.dart';
 import 'quick_download_card.dart';
 import 'quick_links_service.dart';
 
@@ -179,7 +180,10 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    context.l10n.pasteVideoPlaylistUrlBelow,
+                    // The Play build has no link downloads, so no field below.
+                    kPlayStoreBuild
+                        ? context.l10n.homeTaglinePlay
+                        : context.l10n.pasteVideoPlaylistUrlBelow,
                     style: TextStyle(
                       fontSize: 18,
                       color: cs.onSurfaceVariant.withValues(alpha: 0.7),
@@ -334,7 +338,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
       );
     }
 
-    return Container(
+    final hub = Container(
       color: cs.surfaceContainerLowest,
       child: CustomScrollView(
         slivers: [
@@ -345,6 +349,19 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             sliver: _buildLinksGrid(crossAxisCount, visibleLinks),
           ),
+        ],
+      ),
+    );
+    if (!kPlayStoreBuild) return hub;
+    // Play build: a banner anchored under the grid, on the screen every
+    // session starts on. It takes no room until an ad has loaded, and never
+    // shows on Android TV or after the ad-free purchase.
+    return ColoredBox(
+      color: cs.surfaceContainerLowest,
+      child: Column(
+        children: [
+          Expanded(child: hub),
+          const AdBannerSlot(),
         ],
       ),
     );

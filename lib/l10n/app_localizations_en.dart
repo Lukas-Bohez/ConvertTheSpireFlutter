@@ -3538,6 +3538,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filePathCopied => 'File path copied';
 
   @override
+  String get copyTitle => 'Copy title';
+
+  @override
+  String get titleCopied => 'Title copied';
+
+  @override
+  String get homeTaglinePlay =>
+      'Torrents, music, videos and file conversion in one app.';
+
+  @override
+  String get spinUnlockColour => 'Spin → unlock a colour';
+
+  @override
   String get redownloadFromScratch2 => 'Redownload from scratch';
 
   @override

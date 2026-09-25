@@ -3,16 +3,20 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/build_flags.dart';
 import 'purchase_service.dart';
 
+/// When a full-screen ad may interrupt: never in the first minutes of a
+/// session, never within a few minutes of the last ad (rewarded ones count),
+/// and only after the user has done a few things since.
 class AdFrequencyGate {
-  static const int minInteractionsBetweenAds = 2;
-  static const Duration sessionGracePeriod = Duration(minutes: 1);
-  static const Duration minTimeBetweenAds = Duration(minutes: 1);
+  static const int minInteractionsBetweenAds = 3;
+  static const Duration sessionGracePeriod = Duration(minutes: 2);
+  static const Duration minTimeBetweenAds = Duration(minutes: 3);
 
   final DateTime _sessionStartedAt = DateTime.now();
   int _interactionsSinceLast = 0;
@@ -41,7 +45,16 @@ class AdFrequencyGate {
 }
 
 /// Coordinates Google Mobile Ads loading, display throttling, and reward logic.
-class AdService with WidgetsBindingObserver {
+///
+/// Ads run only in the Play build, on phones and tablets. Android TV gets none:
+/// AdMob's banners and interstitials link to web pages and cannot always be
+/// dismissed with the remote, which the TV quality guidelines (TV-AD, TV-AU)
+/// do not allow.
+///
+/// Listeners are told when ads become ready (after consent) or are switched
+/// off and on again (the ad break), so banners can appear and go by
+/// themselves.
+class AdService with WidgetsBindingObserver, ChangeNotifier {
   AdService._();
 
   static final AdService instance = AdService._();
@@ -64,7 +77,10 @@ class AdService with WidgetsBindingObserver {
   static const String _releaseNativeAdUnitId =
       'ca-app-pub-8418485814964449/7181339255';
 
-  static const Duration _fullScreenAdCooldown = Duration(minutes: 1);
+  /// The same channel the TV layout widgets ask, so all of them agree.
+  static const MethodChannel _platformChannel =
+      MethodChannel('convert_the_spire/saf');
+
   static const String _temporaryAdBreakPrefsKey =
       'monetization_temporary_ad_break_until_ms';
   static const String _adsWatchedCountPrefsKey =
@@ -74,7 +90,6 @@ class AdService with WidgetsBindingObserver {
   bool _isSupportedPlatform = false;
   bool _isInForeground = true;
   bool _adsInitialised = false;
-  DateTime? _lastInterstitialShownAt;
   DateTime? _temporaryAdBreakUntil;
   Timer? _adBreakEndTimer;
   int _adsWatchedCount = 0;
@@ -99,6 +114,14 @@ class AdService with WidgetsBindingObserver {
   bool get adsAvailable => _isSupportedPlatform && !_adsSuppressed;
   bool get adsRemoved => PurchaseService.instance.isAdFree;
 
+  /// Whether this build and device show ads at all: the Play build on a
+  /// phone or tablet. False on Android TV and in the GitHub builds.
+  bool get adsSupportedOnDevice => _isSupportedPlatform;
+
+  /// Ads can be requested right now: supported here, consent checked, the SDK
+  /// initialised, and not switched off by a purchase or an ad break.
+  bool get adsReady => _adsInitialised && adsAvailable;
+
   String get bannerAdUnitId =>
       kDebugMode ? _debugBannerAdUnitId : _releaseBannerAdUnitId;
   String get interstitialAdUnitId =>
@@ -117,12 +140,20 @@ class AdService with WidgetsBindingObserver {
   Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;
-    _isSupportedPlatform = _supportsPlatform;
+    _isSupportedPlatform = _supportsPlatform && !await _isAndroidTv();
     WidgetsBinding.instance.addObserver(this);
     await _loadPersistedAdState();
     if (!_isSupportedPlatform) return;
     // Ads will be preloaded after UMP consent check completes in main.dart
     // via initAdsWithConsent(). Do NOT preload ads here — wait for consent.
+  }
+
+  Future<bool> _isAndroidTv() async {
+    try {
+      return await _platformChannel.invokeMethod<bool>('isAndroidTV') ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   @override
@@ -166,16 +197,30 @@ class AdService with WidgetsBindingObserver {
     // another break), so this is a no-op if ads must stay off.
     _preloadNextInterstitial();
     unawaited(loadRewarded());
+    notifyListeners();
   }
 
-  Future<BannerAd?> loadBanner() async {
-    if (!_adsInitialised) return null;
-    if (!_isSupportedPlatform || _adsSuppressed) return null;
+  /// Loads an anchored adaptive banner as wide as [width] (logical pixels),
+  /// with the height Google picks for it. Null when ads are not ready or
+  /// nothing could be loaded.
+  Future<BannerAd?> loadBanner({required int width}) async {
+    if (!adsReady || width <= 0) return null;
+    AdSize size = AdSize.banner;
+    try {
+      // The standard anchored size (50 to about 64 dp on a phone). The
+      // "large" variant reserves up to 15% of the screen, 128 dp on a phone,
+      // and centres a 64 dp ad in it, which leaves Home with a band of empty
+      // space.
+      // ignore: deprecated_member_use
+      size = await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(
+              width) ??
+          AdSize.banner;
+    } catch (_) {}
     final completer = Completer<BannerAd?>();
     late final BannerAd banner;
     banner = BannerAd(
       adUnitId: bannerAdUnitId,
-      size: AdSize.banner,
+      size: size,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
@@ -348,8 +393,9 @@ class AdService with WidgetsBindingObserver {
     );
   }
 
-  /// Shows an interstitial after a successful download, respecting cooldowns.
-  Future<void> maybeShowInterstitialAfterSuccess() async {
+  /// Shows an interstitial at a natural break (a download or conversion
+  /// finished, the user came back to Home), if [AdFrequencyGate] allows one.
+  Future<void> maybeShowInterstitialAtBreak() async {
     if (!_isSupportedPlatform || _adsSuppressed) return;
     final ad = _preloadedInterstitial;
     if (ad == null) {
@@ -358,14 +404,8 @@ class AdService with WidgetsBindingObserver {
       return;
     }
     if (!isInForeground) return;
-    final last = _lastInterstitialShownAt;
-    if (last != null &&
-        DateTime.now().difference(last) < _fullScreenAdCooldown) {
-      return;
-    }
     if (!_adFrequencyGate.shouldShowAd()) return;
     _preloadedInterstitial = null;
-    _lastInterstitialShownAt = DateTime.now();
     _adFrequencyGate.recordAdShown();
     await ad.show();
   }
@@ -401,6 +441,8 @@ class AdService with WidgetsBindingObserver {
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
+        // No interstitial right after the user chose to watch an ad.
+        _adFrequencyGate.recordAdShown();
         unawaited(loadRewarded());
         if (!closed.isCompleted) closed.complete();
       },
@@ -459,6 +501,7 @@ class AdService with WidgetsBindingObserver {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_temporaryAdBreakPrefsKey, until.millisecondsSinceEpoch);
     disposeAllAds();
+    notifyListeners();
   }
 
   /// Call this once at app startup, before any ad is loaded.
@@ -504,6 +547,7 @@ class AdService with WidgetsBindingObserver {
     debugPrint('AdService: MobileAds initialised');
     _preloadNextInterstitial();
     unawaited(loadRewarded());
+    notifyListeners();
   }
 
   /// UMP's canRequestAds(), treating any error as "no consent".
@@ -518,10 +562,25 @@ class AdService with WidgetsBindingObserver {
 
   Future<void> initAdsWithConsent() => initWithConsent();
 
+  /// Developer builds only: `--dart-define=UMP_DEBUG_EEA=<hashed device id>`
+  /// makes the consent check treat this device as being in the EEA, to see
+  /// the consent form (or its absence) as a European user would. UMP prints
+  /// the device's id in logcat ("addTestDeviceHashedId"). Empty in every real
+  /// build, so the debug settings are never sent.
+  static const String _umpDebugEeaDevice =
+      String.fromEnvironment('UMP_DEBUG_EEA');
+
   /// Request consent info update from UMP SDK.
   /// Handles errors gracefully by completing the future so the flow continues.
   Future<void> _updateConsentInfo() async {
-    final params = ConsentRequestParameters();
+    final params = _umpDebugEeaDevice.isEmpty
+        ? ConsentRequestParameters()
+        : ConsentRequestParameters(
+            consentDebugSettings: ConsentDebugSettings(
+              debugGeography: DebugGeography.debugGeographyEea,
+              testIdentifiers: [_umpDebugEeaDevice],
+            ),
+          );
     final completer = Completer<void>();
     ConsentInformation.instance.requestConsentInfoUpdate(
       params,
@@ -562,19 +621,9 @@ class AdService with WidgetsBindingObserver {
     );
   }
 
-  // TO TEST UMP LOCALLY (debug builds only — never in release):
-  // 1. Run the app once and find your test device hash in logcat:
-  //    Search for: "Use ConsentDebugSettings.testIdentifiers"
-  // 2. Force EEA geography to simulate an EU user:
-  //
-  // final debugSettings = ConsentDebugSettings(
-  //   debugGeography: DebugGeography.debugGeographyEea,
-  //   testIdentifiers: ["YOUR-HASHED-TEST-DEVICE-ID"],
-  // );
-  // final params = ConsentRequestParameters(consentDebugSettings: debugSettings);
-  //
-  // 3. To reset consent state and simulate a first-time user:
-  //    ConsentInformation.instance.reset(); // debug only — never ship this
+  // TO TEST UMP LOCALLY: build with --dart-define=UMP_DEBUG_EEA=<device id>
+  // (see _umpDebugEeaDevice) and clear the app's data first, so the device
+  // counts as a first-time European user.
 
   /// Shows a rewarded ad and pauses ad delivery for 30 minutes as goodwill.
   Future<bool> showRewardedAdForTemporaryAdBreak({

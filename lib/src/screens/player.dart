@@ -11,7 +11,14 @@ import 'package:audio_service/audio_service.dart' as audio_svc;
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
-    show MissingPluginException, DeviceOrientation, SystemChrome, SystemUiMode;
+    show
+        Clipboard,
+        ClipboardData,
+        DeviceOrientation,
+        MethodChannel,
+        MissingPluginException,
+        SystemChrome,
+        SystemUiMode;
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
@@ -5644,41 +5651,51 @@ class _PlayerScreenState extends State<PlayerScreen>
                   // Thumbnail
                   const _NowPlayingThumbnailSlot(),
                   const SizedBox(width: 12),
-                  // Title / artist / type badge
+                  // Title / artist / type badge. A long press (touch) or a
+                  // right click (mouse) copies the title; the track menu has
+                  // the same action for the remote and for discovery.
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                    child: Semantics(
+                      onLongPressHint: context.l10n.copyTitle,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onLongPress: () => copyTrackTitle(context, item),
+                        onSecondaryTap: () => copyTrackTitle(context, item),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Type badge - clear visual distinction between audio and video
-                            _TypeBadge(type: item.type),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                title,
+                            Row(
+                              children: [
+                                // Type badge - clear visual distinction between audio and video
+                                _TypeBadge(type: item.type),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                      color: _PlayerTheme.text(context),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (artist.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                artist,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
-                                  color: _PlayerTheme.text(context),
-                                ),
+                                    fontSize: 12, color: _PlayerTheme.sub(context)),
                               ),
-                            ),
+                            ],
                           ],
                         ),
-                        if (artist.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            artist,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 12, color: _PlayerTheme.sub(context)),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
                   ),
                   // Share is intentionally omitted from the now-playing row
@@ -5833,32 +5850,51 @@ class _PlayerScreenState extends State<PlayerScreen>
                     color: cs.primary,
                     size: 28),
                 const SizedBox(width: 12),
+                // No track menu here, so the title is copied by a long press
+                // or right click, or with the button next to it (remote).
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        stream.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: _PlayerTheme.text(context),
-                        ),
+                  child: Semantics(
+                    onLongPressHint: context.l10n.copyTitle,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onLongPress: () => copyTrackTitle(context, stream.item),
+                      onSecondaryTap: () =>
+                          copyTrackTitle(context, stream.item),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            stream.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: _PlayerTheme.text(context),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            stream.openedFile
+                                ? context.l10n.openedFileNotInLibrary
+                                : context.l10n.streamingFromWatchTogetherHost,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: _PlayerTheme.sub(context)),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        stream.openedFile
-                            ? context.l10n.openedFileNotInLibrary
-                            : context.l10n.streamingFromWatchTogetherHost,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 12, color: _PlayerTheme.sub(context)),
-                      ),
-                    ],
+                    ),
                   ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.content_copy_rounded,
+                      size: 20, color: _PlayerTheme.sub(context)),
+                  tooltip: context.l10n.copyTitle,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => copyTrackTitle(context, stream.item),
                 ),
               ],
             ),
@@ -6183,7 +6219,50 @@ class _PlayPauseButton extends StatelessWidget {
   }
 }
 
-enum _TrackMenuAction { share, queue, favourite, dislike, fixMetadata, delete }
+enum _TrackMenuAction {
+  copyTitle,
+  share,
+  queue,
+  favourite,
+  dislike,
+  fixMetadata,
+  delete,
+}
+
+/// The title the player shows for [item]: its tag, or the file name without
+/// the extension.
+String _displayTitle(MediaItem item) {
+  final title = item.title?.trim();
+  if (title != null && title.isNotEmpty) return title;
+  return p.basenameWithoutExtension(item.path);
+}
+
+/// Copies a track's title, so it can be pasted into a search, a message or a
+/// playlist elsewhere. Reached from the track menu everywhere, and by a long
+/// press (touch) or right click (mouse) on the title itself.
+Future<void> copyTrackTitle(BuildContext context, MediaItem item) async {
+  await Clipboard.setData(ClipboardData(text: _displayTitle(item)));
+  // Android 13+ phones already show a preview of what was copied; a second
+  // message on top of it is noise.
+  if (await _systemConfirmsCopy()) return;
+  if (!context.mounted) return;
+  Snack.show(context, context.l10n.titleCopied,
+      duration: const Duration(seconds: 2));
+}
+
+bool? _systemConfirmsCopyCached;
+
+Future<bool> _systemConfirmsCopy() async {
+  if (kIsWeb || !Platform.isAndroid) return false;
+  if (_systemConfirmsCopyCached case final cached?) return cached;
+  try {
+    const channel = MethodChannel('convert_the_spire/saf');
+    final shows = await channel.invokeMethod<bool>('showsCopyConfirmation');
+    return _systemConfirmsCopyCached = shows ?? false;
+  } catch (_) {
+    return false;
+  }
+}
 
 /// Shares the current media item — the real file if it's on disk, otherwise
 /// a text link. Used both by the inline now-playing Share button
@@ -6227,6 +6306,9 @@ class _TrackMenuButton extends StatelessWidget {
           color: Theme.of(context).colorScheme.onSurfaceVariant),
       onSelected: (action) async {
         switch (action) {
+          case _TrackMenuAction.copyTitle:
+            await copyTrackTitle(context, item);
+            break;
           case _TrackMenuAction.share:
             await _shareMediaItem(item);
             break;
@@ -6286,6 +6368,14 @@ class _TrackMenuButton extends StatelessWidget {
         }
       },
       itemBuilder: (context) => [
+        PopupMenuItem(
+          value: _TrackMenuAction.copyTitle,
+          child: ListTile(
+            leading: const Icon(Icons.content_copy_rounded),
+            title: Text(context.l10n.copyTitle),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
         PopupMenuItem(
           value: _TrackMenuAction.share,
           child: ListTile(
@@ -6576,6 +6666,8 @@ class _MediaCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () => onTap(state, idx),
+        onLongPress: () => copyTrackTitle(context, item),
+        onSecondaryTap: () => copyTrackTitle(context, item),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -6884,52 +6976,56 @@ class _SongTile extends StatelessWidget {
     final isFav = state.isFavourite(item.path);
     final isDisliked = state.isDisliked(item.path);
 
-    return ListTile(
-      leading: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: state.thumbnailForItem(item, size: 56) ??
-                Container(
-                  width: 56,
-                  height: 56,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.11),
-                  child: Icon(Icons.music_note,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ),
-          ),
-          if (isFav || isDisliked)
-            Positioned(
-              right: -4,
-              bottom: -4,
-              child:
-                  _FavDislikeBadge(isFavourite: isFav, isDisliked: isDisliked),
+    return GestureDetector(
+      onSecondaryTap: () => copyTrackTitle(context, item),
+      child: ListTile(
+        leading: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: state.thumbnailForItem(item, size: 56) ??
+                  Container(
+                    width: 56,
+                    height: 56,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.11),
+                    child: Icon(Icons.music_note,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
             ),
-        ],
+            if (isFav || isDisliked)
+              Positioned(
+                right: -4,
+                bottom: -4,
+                child:
+                    _FavDislikeBadge(isFavourite: isFav, isDisliked: isDisliked),
+              ),
+          ],
+        ),
+        title: Text(
+          item.title ?? p.basename(item.path),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+        ),
+        subtitle: Text(
+          item.resolvedArtist,
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+        trailing: state.isPlayingPath(item.path)
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.equalizer, color: Colors.green),
+                  const SizedBox(width: 8),
+                  _TrackMenuButton(state: state, entry: entry),
+                ],
+              )
+            : _TrackMenuButton(state: state, entry: entry),
+        onTap: () => onTap(state, index),
+        onLongPress: () => copyTrackTitle(context, item),
       ),
-      title: Text(
-        item.title ?? p.basename(item.path),
-        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-      ),
-      subtitle: Text(
-        item.resolvedArtist,
-        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-      ),
-      trailing: state.isPlayingPath(item.path)
-          ? Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.equalizer, color: Colors.green),
-                const SizedBox(width: 8),
-                _TrackMenuButton(state: state, entry: entry),
-              ],
-            )
-          : _TrackMenuButton(state: state, entry: entry),
-      onTap: () => onTap(state, index),
     );
   }
 }
