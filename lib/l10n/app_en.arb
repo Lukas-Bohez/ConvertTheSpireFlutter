@@ -2641,13 +2641,34 @@
   "ollamaInstalledLocally": "Ollama installed locally.",
   "installerLaunchedCompleteInstallThen": "Installer launched. Complete install then reconnect.",
   "preparing": "Preparing...",
-  "vaultSpireDesignedExclusivelyLegal": "Vault The Spire is designed exclusively for legal downloading. This includes:\n\n- Open-source software (Linux distros, development tools, games released freely)\n- Creative Commons licensed music, video, and books\n- Public domain content (old films, historical recordings, classic literature)\n- Files you own and have backed up yourself\n- Content explicitly shared by creators for free distribution\n\nDownloading or sharing copyrighted material without permission is illegal in most countries. The developers of this app do not condone or support unauthorized copyright violations.",
+  "vaultSpireDesignedExclusivelyLegal": "{appName} is designed exclusively for legal downloading. This includes:\n\n- Open-source software (Linux distros, development tools, games released freely)\n- Creative Commons licensed music, video, and books\n- Public domain content (old films, historical recordings, classic literature)\n- Files you own and have backed up yourself\n- Content explicitly shared by creators for free distribution\n\nDownloading or sharing copyrighted material without permission is illegal in most countries. The developers of this app do not condone or support unauthorized copyright violations.",
+  "@vaultSpireDesignedExclusivelyLegal": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "tapButtonPasteMagnetLink": "Tap the + button to paste a magnet link, or open a .torrent file from your Files app to begin a download.\n\nSet your download folder in Settings before starting large downloads to make sure files go where you expect.\n\nWatch progress in the Torrents tab. Tap any torrent to see detailed speed, peers, and size information.",
   "dragTorrentFileOntoWindow": "Drag a .torrent file onto the window, or paste a magnet link using the + button in the Torrents tab.\n\nSet your download folder in Settings. For large downloads, choose a drive with plenty of free space.\n\nThe app continues downloading in the system tray when you close the window - use the tray icon to monitor progress.",
   "downloadingPiecesBeingReceivedFrom": "Downloading: Pieces are being received from peers across the internet. Larger torrents (10 GB+) can take hours on a typical home connection.\n\nStalled / Searching for peers: The app is looking for other users sharing this file. Rarer files may take longer to find peers. Try Force Refresh in the torrent details.\n\nSeeding: Download is complete. The app is sharing your copy with others - this is good for the community and is how BitTorrent works.\n\nChecking: After a redownload or app restart, pieces are being verified against their checksums. This ensures file integrity.",
   "ifDownloadedFileSeemsCorrupt": "If a downloaded file seems corrupt or won't open, tap the torrent to open its detail view, then tap \"Verify files\". This re-reads every piece from disk and checks it against the original checksums - no data is deleted.\n\nIf verification finds bad pieces, or if you want to start completely fresh, tap \"Redownload\". This deletes the local copy and downloads everything again from peers.\n\nLarge repacks (multi-part installer archives) sometimes need a verify pass after completing because pieces can arrive out of order across many files.",
-  "vaultSpireStoresAllData": "Vault The Spire stores all data locally on your device. No torrent history, download statistics, or file names are sent to any server.\n\nYour IP address is visible to other peers in any torrent swarm you join - this is how BitTorrent works. A VPN will mask your IP if privacy from other peers is important to you.\n\nThe built-in browser does not sync history to any cloud. History is stored only on-device and can be cleared in Settings.",
-  "disableBatteryOptimisationVaultSpire": "- Disable battery optimisation for Vault The Spire in Android Settings -> Apps to prevent the OS from pausing active downloads.\n\n- If a torrent shows \"File already in use\", close any other app that has the file open, then tap Redownload.\n\n- Pull down on the Torrents list to force a refresh if progress looks frozen.\n\n- For best results on Android 12+, grant the app storage permission when prompted at first launch.",
+  "vaultSpireStoresAllData": "{appName} stores all data locally on your device. No torrent history, download statistics, or file names are sent to any server.\n\nYour IP address is visible to other peers in any torrent swarm you join - this is how BitTorrent works. A VPN will mask your IP if privacy from other peers is important to you.\n\nThe built-in browser does not sync history to any cloud. History is stored only on-device and can be cleared in Settings.",
+  "@vaultSpireStoresAllData": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "disableBatteryOptimisationVaultSpire": "- Disable battery optimisation for {appName} in Android Settings -> Apps to prevent the OS from pausing active downloads.\n\n- If a torrent shows \"File already in use\", close any other app that has the file open, then tap Redownload.\n\n- Pull down on the Torrents list to force a refresh if progress looks frozen.\n\n- For best results on Android 12+, grant the app storage permission when prompted at first launch.",
+  "@disableBatteryOptimisationVaultSpire": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "appKeepsDownloadingWhenMinimised": "- The app keeps downloading when minimised to the system tray. Right-click the tray icon to pause all or quit cleanly.\n\n- If Windows shows a file as \"in use\" after a download completes, wait a few seconds for the app to release the write handle - it does this automatically on completion.\n\n- Use the browser tab to find magnet links without leaving the app. Detected magnets are highlighted automatically.\n\n- For very large torrents (20 GB+), make sure your drive has at least 10% free space beyond the download size.",
   "never": "Never",
   "sAgo": "{inSeconds}s ago",
