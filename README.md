@@ -93,6 +93,7 @@ It is a fully native Flutter app that handles media downloading, playlist import
 
 * **Media player** for audio and video: queue, shuffle, repeat, favourites, sorting and filters, play statistics.
 * **Remembers your library** and reopens it on the next start.
+* **Copy a song's title** with a long press or a right click, or from the track menu, to paste it into a search or a message.
 * **Volume leveling** so every track plays at the same loudness.
 * **Fix metadata** and **organize media** tools for messy folders.
 * **Watch Together** across phone, PC, Mac and TV. A guest without the file streams it from the host.
