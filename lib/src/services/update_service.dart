@@ -11,6 +11,13 @@ class UpdateInfo {
   final String currentVersion;
   final String releaseUrl;
   final String windowsAssetUrl;
+
+  /// ConvertTheSpireReborn-Setup.exe, which the Windows app runs to update
+  /// itself (see WindowsUpdater). Empty for releases without it.
+  final String windowsInstallerUrl;
+
+  /// SHA256SUMS.txt, to check the installer before running it.
+  final String checksumsUrl;
   final String androidAssetUrl;
   final String linuxAssetUrl;
   final bool updateAvailable;
@@ -21,6 +28,8 @@ class UpdateInfo {
     required this.currentVersion,
     required this.releaseUrl,
     required this.windowsAssetUrl,
+    this.windowsInstallerUrl = '',
+    this.checksumsUrl = '',
     required this.androidAssetUrl,
     required this.linuxAssetUrl,
     required this.updateAvailable,
@@ -54,12 +63,21 @@ class UpdateService {
       final htmlUrl = json['html_url'] as String? ?? '';
 
       String windowsUrl = '';
+      String windowsInstallerUrl = '';
+      String checksumsUrl = '';
       String androidUrl = '';
       String linuxUrl = '';
       final assets = json['assets'] as List<dynamic>? ?? [];
       for (final asset in assets) {
         final name = (asset['name'] as String? ?? '').toLowerCase();
         final url = asset['browser_download_url'] as String? ?? '';
+        if (name == 'sha256sums.txt') checksumsUrl = url;
+        if (Platform.isWindows &&
+            name.endsWith('.exe') &&
+            name.contains('setup')) {
+          windowsInstallerUrl = url;
+          continue;
+        }
         if (Platform.isWindows) {
           final isWindowsAsset = name.contains('windows') ||
               name.contains('win64') ||
@@ -89,14 +107,34 @@ class UpdateService {
         currentVersion: current,
         releaseUrl: htmlUrl,
         windowsAssetUrl: windowsUrl,
+        windowsInstallerUrl: windowsInstallerUrl,
+        checksumsUrl: checksumsUrl,
         androidAssetUrl: androidUrl,
         linuxAssetUrl: linuxUrl,
         updateAvailable: _isNewer(tagName, current),
-        releaseNotes: body.length > 500 ? '${body.substring(0, 500)}…' : body,
+        releaseNotes: releaseNotesPreview(body),
       );
     } catch (_) {
       return null;
     }
+  }
+
+  /// The start of a release's notes as plain text, for the update banner.
+  /// A release body opens with the demo video and screenshots (HTML) and uses
+  /// Markdown, which the banner would otherwise show as markup.
+  static String releaseNotesPreview(String body) {
+    final start = body.indexOf('\n## ');
+    final text = (start >= 0 ? body.substring(start) : body)
+        .replaceAll(RegExp(r'<[^>]*>'), ' ')
+        .replaceAllMapped(
+            RegExp(r'!?\[([^\]]*)\]\([^)]*\)'), (m) => m.group(1) ?? '')
+        .replaceAll(RegExp(r'^\s*#+\s*', multiLine: true), '')
+        .replaceAll(RegExp(r'^\s*[-*]\s+', multiLine: true), '')
+        .replaceAll('**', '')
+        .replaceAll('`', '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    return text.length > 300 ? '${text.substring(0, 300)}…' : text;
   }
 
   static bool _isNewer(String latest, String current) {

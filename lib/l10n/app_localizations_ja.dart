@@ -3492,6 +3492,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get spinUnlockColour => '回す → 色をアンロック';
 
   @override
+  String get updateNow => '今すぐ更新';
+
+  @override
+  String get downloadingUpdate => 'アップデートをダウンロード中…';
+
+  @override
+  String get updateCouldNotDownload =>
+      'アップデートをダウンロードできませんでした。代わりにダウンロードページを開きます。';
+
+  @override
   String get redownloadFromScratch2 => '最初からダウンロードし直す';
 
   @override

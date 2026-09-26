@@ -3590,6 +3590,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get spinUnlockColour => 'Крутить → открыть цвет';
 
   @override
+  String get updateNow => 'Обновить сейчас';
+
+  @override
+  String get downloadingUpdate => 'Загрузка обновления…';
+
+  @override
+  String get updateCouldNotDownload =>
+      'Не удалось загрузить обновление. Вместо этого откроется страница загрузки.';
+
+  @override
   String get redownloadFromScratch2 => 'Скачать заново с нуля';
 
   @override

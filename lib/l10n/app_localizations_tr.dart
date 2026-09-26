@@ -3598,6 +3598,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get spinUnlockColour => 'Çevir → bir rengin kilidini aç';
 
   @override
+  String get updateNow => 'Şimdi güncelle';
+
+  @override
+  String get downloadingUpdate => 'Güncelleme indiriliyor…';
+
+  @override
+  String get updateCouldNotDownload =>
+      'Güncelleme indirilemedi. Bunun yerine indirme sayfası açılıyor.';
+
+  @override
   String get redownloadFromScratch2 => 'Baştan yeniden indir';
 
   @override

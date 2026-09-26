@@ -3633,6 +3633,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get spinUnlockColour => 'Tourner → débloquer une couleur';
 
   @override
+  String get updateNow => 'Mettre à jour';
+
+  @override
+  String get downloadingUpdate => 'Téléchargement de la mise à jour…';
+
+  @override
+  String get updateCouldNotDownload =>
+      'La mise à jour n\'a pas pu être téléchargée. La page de téléchargement s\'ouvre à la place.';
+
+  @override
   String get redownloadFromScratch2 => 'Tout retélécharger';
 
   @override

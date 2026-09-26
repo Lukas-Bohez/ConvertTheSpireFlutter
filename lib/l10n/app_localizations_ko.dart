@@ -3492,6 +3492,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get spinUnlockColour => '돌리기 → 색상 잠금 해제';
 
   @override
+  String get updateNow => '지금 업데이트';
+
+  @override
+  String get downloadingUpdate => '업데이트 다운로드 중…';
+
+  @override
+  String get updateCouldNotDownload => '업데이트를 다운로드할 수 없습니다. 대신 다운로드 페이지가 열립니다.';
+
+  @override
   String get redownloadFromScratch2 => '처음부터 다시 다운로드';
 
   @override

@@ -3601,6 +3601,16 @@ class AppLocalizationsPl extends AppLocalizations {
   String get spinUnlockColour => 'Zakręć → odblokuj kolor';
 
   @override
+  String get updateNow => 'Aktualizuj teraz';
+
+  @override
+  String get downloadingUpdate => 'Pobieranie aktualizacji…';
+
+  @override
+  String get updateCouldNotDownload =>
+      'Nie udało się pobrać aktualizacji. Zamiast tego otworzy się strona pobierania.';
+
+  @override
   String get redownloadFromScratch2 => 'Pobierz od nowa';
 
   @override
