@@ -3566,6 +3566,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get spinUnlockColour => 'أدِر ← افتح لونًا';
 
   @override
+  String get updateNow => 'حدّث الآن';
+
+  @override
+  String get downloadingUpdate => 'جارٍ تنزيل التحديث…';
+
+  @override
+  String get updateCouldNotDownload =>
+      'تعذّر تنزيل التحديث. ستُفتح صفحة التنزيل بدلًا من ذلك.';
+
+  @override
   String get redownloadFromScratch2 => 'إعادة التنزيل من البداية';
 
   @override

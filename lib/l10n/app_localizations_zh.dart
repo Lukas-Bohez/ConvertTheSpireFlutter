@@ -3448,6 +3448,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get spinUnlockColour => '转一转 → 解锁一种颜色';
 
   @override
+  String get updateNow => '立即更新';
+
+  @override
+  String get downloadingUpdate => '正在下载更新…';
+
+  @override
+  String get updateCouldNotDownload => '无法下载更新，将改为打开下载页面。';
+
+  @override
   String get redownloadFromScratch2 => '从头重新下载';
 
   @override

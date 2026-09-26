@@ -3591,6 +3591,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get spinUnlockColour => 'घुमाएँ → एक रंग अनलॉक करें';
 
   @override
+  String get updateNow => 'अभी अपडेट करें';
+
+  @override
+  String get downloadingUpdate => 'अपडेट डाउनलोड हो रहा है…';
+
+  @override
+  String get updateCouldNotDownload =>
+      'अपडेट डाउनलोड नहीं हो सका। इसके बजाय डाउनलोड पेज खुलेगा।';
+
+  @override
   String get redownloadFromScratch2 => 'शुरू से दोबारा डाउनलोड करें';
 
   @override

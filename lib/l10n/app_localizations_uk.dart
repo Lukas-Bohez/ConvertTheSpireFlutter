@@ -3595,6 +3595,16 @@ class AppLocalizationsUk extends AppLocalizations {
   String get spinUnlockColour => 'Крутити → відкрити колір';
 
   @override
+  String get updateNow => 'Оновити зараз';
+
+  @override
+  String get downloadingUpdate => 'Завантаження оновлення…';
+
+  @override
+  String get updateCouldNotDownload =>
+      'Не вдалося завантажити оновлення. Натомість відкриється сторінка завантаження.';
+
+  @override
   String get redownloadFromScratch2 => 'Завантажити заново з нуля';
 
   @override

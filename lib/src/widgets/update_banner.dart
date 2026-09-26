@@ -7,11 +7,16 @@ class UpdateBanner extends StatelessWidget {
   final VoidCallback onDismiss;
   final VoidCallback onDownload;
 
+  /// The app can install the update itself (Windows, Setup.exe): the button
+  /// says Update now instead of Download.
+  final bool installsInPlace;
+
   const UpdateBanner({
     super.key,
     required this.info,
     required this.onDismiss,
     required this.onDownload,
+    this.installsInPlace = false,
   });
 
   @override
@@ -57,7 +62,9 @@ class UpdateBanner extends StatelessWidget {
               onPressed: onDownload,
               style:
                   TextButton.styleFrom(foregroundColor: cs.onPrimaryContainer),
-              child: Text(context.l10n.actionDownload),
+              child: Text(installsInPlace
+                  ? context.l10n.updateNow
+                  : context.l10n.actionDownload),
             ),
             IconButton(
               icon: Icon(Icons.close, color: cs.onPrimaryContainer, size: 18),
