@@ -34,6 +34,13 @@ AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher=Oroka Conner
+; Setup.exe's file details. Code signing (SignPath) checks that the product
+; name is the project's, the same as in the app's exe (windows/runner/Runner.rc).
+VersionInfoProductName={#AppName}
+VersionInfoDescription={#AppName} Setup
+VersionInfoCompany=Oroka Conner
+VersionInfoVersion={#AppVersion}
+VersionInfoProductVersion={#AppVersion}
 AppPublisherURL=https://github.com/Lukas-Bohez/ConvertTheSpireFlutter
 AppSupportURL=https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/issues
 AppUpdatesURL=https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest
