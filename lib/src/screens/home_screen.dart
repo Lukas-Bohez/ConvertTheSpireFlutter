@@ -35,6 +35,7 @@ import '../utils/folder_label.dart';
 import '../utils/l10n.dart';
 import '../utils/snack.dart';
 import '../vault/screens/torrents_screen.dart';
+import '../vault/services/torrent_engine_service.dart';
 import '../vault/services/torrent_service.dart';
 import '../vault/widgets/torrent_settings_card.dart';
 import '../widgets/browser_shell.dart';
@@ -292,6 +293,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         checksumsUrl: info.checksumsUrl,
         version: info.latestVersion,
         onProgress: (value) => progress.value = value,
+        // Torrents save what they did in the last seconds.
+        beforeExit: TorrentEngineService.instance.closeForExit,
       );
     } catch (e) {
       debugPrint('Windows update failed: $e');
@@ -358,6 +361,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       try {
         await SessionLogService.instance.flush('normal_exit');
       } catch (_) {}
+      // Torrents save what they did in the last seconds.
+      await TorrentEngineService.instance.closeForExit();
       try {
         await BrowserScreen.browserKey.currentState
             ?.disposeAllWebViewControllers();

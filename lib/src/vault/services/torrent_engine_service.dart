@@ -3466,6 +3466,24 @@ class TorrentEngineService {
     }
   }
 
+  /// Closes every running torrent before the app quits, without pausing it,
+  /// so it carries on at the next launch. A running torrent saves what it
+  /// has done every two seconds; this saves the rest and closes its files.
+  /// Gives up after [timeout] so quitting never hangs on a torrent.
+  Future<void> closeForExit({
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
+    final tasks = _tasks.values.toList();
+    if (tasks.isEmpty) return;
+    await Future.wait(tasks.map((task) async {
+      try {
+        await task.stop();
+      } catch (e) {
+        debugPrint('closeForExit: a torrent did not close cleanly: $e');
+      }
+    })).timeout(timeout, onTimeout: () => const []);
+  }
+
   Future<File> _managedTorrentSourceFile(String torrentId) async {
     final docs = await getApplicationDocumentsDirectory();
     final dir = Directory(

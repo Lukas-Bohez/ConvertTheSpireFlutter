@@ -52,6 +52,7 @@ import 'services/webview_ejs_solver.dart';
 import 'services/youtube_service.dart';
 import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
+import 'vault/services/torrent_engine_service.dart';
 import 'vault/vault_bootstrap.dart';
 import 'widgets/adaptive_ui_frame.dart';
 import 'widgets/global_cursor_overlay.dart';
@@ -529,6 +530,9 @@ class _MyAppState extends State<MyApp>
         }
       }
     }
+
+    // Torrents save what they did in the last seconds.
+    await TorrentEngineService.instance.closeForExit();
 
     // Write the session breadcrumbs (startup timings, close timings) to
     // disk before the process goes away - happens on every normal close,
