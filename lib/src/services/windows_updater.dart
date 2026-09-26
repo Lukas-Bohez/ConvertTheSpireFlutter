@@ -19,10 +19,11 @@ class WindowsUpdater {
   static const String installerName = 'ConvertTheSpireReborn-Setup.exe';
 
   /// Where Setup installs: %LOCALAPPDATA%\Programs\ConvertTheSpireReborn.
+  /// Windows path rules always (p.windows), also when the tests run on Linux.
   static String? installedDir([Map<String, String>? environment]) {
     final local = (environment ?? Platform.environment)['LOCALAPPDATA'];
     if (local == null || local.isEmpty) return null;
-    return p.join(local, 'Programs', 'ConvertTheSpireReborn');
+    return p.windows.join(local, 'Programs', 'ConvertTheSpireReborn');
   }
 
   /// True when [exePath] is the copy Setup installed. That copy updates
@@ -31,7 +32,8 @@ class WindowsUpdater {
   static bool isInstalledCopy(String exePath, [Map<String, String>? environment]) {
     final dir = installedDir(environment);
     if (dir == null) return false;
-    return p.equals(p.dirname(exePath).toLowerCase(), dir.toLowerCase());
+    return p.windows.equals(
+        p.windows.dirname(exePath).toLowerCase(), dir.toLowerCase());
   }
 
   /// The installer's hash from a SHA256SUMS.txt, whose lines look like
