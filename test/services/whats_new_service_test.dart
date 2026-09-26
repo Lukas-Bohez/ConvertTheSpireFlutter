@@ -167,20 +167,24 @@ void main() {
               'would ship with nothing to show. Add one before releasing.');
     });
 
-    test('someone updating from 14.3.1 hears about 14.4.0 as well', () {
+    test('someone who skipped releases hears about each one they missed', () {
       final pubspec = File('pubspec.yaml').readAsStringSync();
       final version = RegExp(r'^version:\s*(\S+)', multiLine: true)
           .firstMatch(pubspec)!
           .group(1)!;
+      final changelog = File('CHANGELOG.md').readAsStringSync();
+      final all =
+          WhatsNewService.entries(changelog).map((e) => e.version).toList();
 
-      final entry = WhatsNewService.entrySince(
-          File('CHANGELOG.md').readAsStringSync(), version,
-          lastSeen: '14.3.1');
+      // Coming from a few releases back (as everyone did who skipped 14.4.0,
+      // which never got past its loading screen): every release since then
+      // is shown, newest first, up to maxEntries.
+      final skipped = WhatsNewService.maxEntries - 1;
+      final entry = WhatsNewService.entrySince(changelog, version,
+          lastSeen: all[skipped]);
 
       expect([entry!.version, ...entry.earlier.map((e) => e.version)],
-          contains('14.4.0'),
-          reason: '14.4.0 never got past its loading screen, so its notes '
-              '(browser extensions among them) were never seen');
+          all.sublist(0, skipped));
     });
 
     test('is bundled, or the dialog would always be empty', () {
