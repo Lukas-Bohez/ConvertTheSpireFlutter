@@ -862,6 +862,18 @@ abstract class Peer
     }
   }
 
+  /// Turns down a request of the remote peer's that won't be answered (a
+  /// piece this side doesn't have, or a read that failed): it no longer
+  /// counts against the peer's request queue, and a peer with the fast
+  /// extension is told so.
+  void rejectRemoteRequest(int index, int begin, int length) {
+    final i = _remoteRequestBuffer
+        .indexWhere((r) => r[0] == index && r[1] == begin && r[2] == length);
+    if (i == -1) return;
+    _remoteRequestBuffer.removeAt(i);
+    sendRejectRequest(index, begin, length);
+  }
+
   void _processPortChange(int port) {
     if (address.port == port) return;
     events.emit(PeerPortChanged(this, port));
@@ -1370,13 +1382,11 @@ abstract class Peer
       return false;
     }
     _remoteRequestBuffer.removeAt(requestIndex);
-    var bytes = <int>[];
-    var messageHead = Uint8List(8);
-    var view = ByteData.view(messageHead.buffer);
+    var bytes = Uint8List(8 + block.length);
+    var view = ByteData.view(bytes.buffer);
     view.setUint32(0, index, Endian.big);
     view.setUint32(4, begin, Endian.big);
-    bytes.addAll(messageHead);
-    bytes.addAll(block);
+    bytes.setRange(8, bytes.length, block);
     sendMessage(ID_PIECE, bytes);
     updateUpload(bytes.length);
     return true;
@@ -1798,7 +1808,17 @@ abstract class Peer
 
       // Step 3: Iteratively generate hashes until we have k unique pieces
       final allowedPieces = <int>{};
-      while (allowedPieces.length < k) {
+      // A torrent with k pieces or fewer can't give k different ones: the
+      // loop below never ended, and the app froze at full CPU as soon as a
+      // peer with the fast extension (libtorrent's) connected to a small
+      // torrent. Like libtorrent, allow them all.
+      if (_piecesNum <= k) {
+        for (var i = 0; i < _piecesNum; i++) {
+          allowedPieces.add(i);
+          sendAllowFast(i);
+        }
+      }
+      while (_piecesNum > k && allowedPieces.length < k) {
         // Compute SHA-1 hash
         final hash = sha1.convert(x);
         final hashBytes = Uint8List.fromList(hash.bytes);

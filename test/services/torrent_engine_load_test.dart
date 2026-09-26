@@ -147,6 +147,28 @@ void main() {
       return roundTrip(20000, List.generate(12000, (i) => i), 1);
     });
 
+    test('saves over a state file the app has hidden', () async {
+      final torrent = model(100);
+      final path = '${dir.path}/${torrent.infoHash}.bt.state';
+      await (await StateFileV2.getStateFile('${dir.path}/', torrent)).close();
+      // The app hides these on Windows, and Windows won't open a hidden file
+      // to write it from scratch: saves failed there.
+      if (Platform.isWindows) {
+        final hide = await Process.run('attrib', ['+h', path]);
+        expect(hide.exitCode, 0);
+      }
+      final state = await StateFileV2.getStateFile('${dir.path}/', torrent);
+      await state.updateBitfield(5);
+      await state.updateUploaded(4096);
+      await state.close();
+
+      final loaded = await StateFileV2.getStateFile('${dir.path}/', torrent);
+      expect(await loaded.validate(), isTrue);
+      expect(loaded.bitfield.completedPieces, [5]);
+      expect(loaded.uploaded, 4096);
+      await loaded.close();
+    });
+
     test('changes reach the file without closing it', () async {
       final torrent = model(100);
       final state = await StateFileV2.getStateFile('${dir.path}/', torrent);

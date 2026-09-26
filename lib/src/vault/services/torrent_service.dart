@@ -520,7 +520,9 @@ class TorrentService {
           downloaded = math.max(downloaded, totalSize);
         }
 
-        final uploaded = runtime?.uploaded ?? torrent.bytesUp;
+        // What is stored is never lost: a runtime count that starts lower
+        // (a restart) must not bring the seeded total down to it.
+        final uploaded = math.max(runtime?.uploaded ?? 0, torrent.bytesUp);
         final now = DateTime.now();
         final downloadSpeed = runtime?.downloadSpeed ?? 0.0;
         if (downloadSpeed > 0) {
@@ -630,7 +632,11 @@ class TorrentService {
         : existing.completedAt;
 
     final bytesDelta = (view.downloaded - existing.bytesDown).abs();
+    // Seeding moves only bytesUp; it was saved only when something else
+    // changed, so a crash lost what had been seeded.
+    final uploadedDelta = view.uploaded - existing.bytesUp;
     final shouldUpdate = bytesDelta > 512 * 1024 ||
+        uploadedDelta >= 1024 * 1024 ||
         (existing.status ?? '') != updatedStatus ||
         existing.seeders != view.seeders ||
         existing.leechers != view.leechers ||
@@ -1485,7 +1491,8 @@ class TorrentService {
       displayName = _extractDisplayNameFromMagnet(magnetUri);
     }
     if (infoHash == null || infoHash.isEmpty) {
-      throw const FormatException('Magnet link must contain btih or btmh infohash');
+      throw const FormatException(
+          'Magnet link must contain btih or btmh infohash');
     }
 
     final canonicalMagnet = _canonicalMagnetForStorage(

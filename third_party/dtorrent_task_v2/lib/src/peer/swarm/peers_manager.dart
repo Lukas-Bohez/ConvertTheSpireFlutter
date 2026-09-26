@@ -20,7 +20,7 @@ const MAX_ACTIVE_PEERS = 50;
 
 const MAX_WRITE_BUFFER_SIZE = 10 * 1024 * 1024;
 
-const MAX_UPLOADED_NOTIFY_SIZE = 1024 * 1024 * 10; // 10 mb
+const MAX_UPLOADED_NOTIFY_SIZE = 1024 * 1024; // 1 mb
 
 var _log = Logger('PeersManager');
 
@@ -172,6 +172,17 @@ class PeersManager with Holepunch, PEX, EventsEmittable<PeerEvent> {
     return _downloaded / live;
   }
 
+  /// Drops a request the task won't answer (see [Peer.rejectRemoteRequest]).
+  void dropRemoteRequest(Peer peer, int index, int begin, int length) {
+    final i = _remoteRequest.indexWhere((request) =>
+        request[0] == index && request[1] == begin && request[2] == peer);
+    if (i != -1) _remoteRequest.removeAt(i);
+    peer.rejectRemoteRequest(index, begin, length);
+  }
+
+  /// Bytes sent to peers since this manager started.
+  int get uploaded => _uploaded;
+
   /// Average upload speed , b/ms
   ///
   /// This speed calculation : `total upload content bytes` / [liveTime]
@@ -264,62 +275,63 @@ class PeersManager with Holepunch, PEX, EventsEmittable<PeerEvent> {
   ///
   /// Usually [socket] is null , unless this peer was incoming connection, but
   /// this type peer was managed by [TorrentTask] , user don't need to know that.
-  void addNewPeerAddress(CompactAddress? address, PeerSource source,
+  ///
+  /// Returns whether a peer was made for it. A [socket] (an incoming
+  /// connection) that is not taken is left to the caller to close.
+  bool addNewPeerAddress(CompactAddress? address, PeerSource source,
       {PeerType? type, dynamic socket}) {
-    if (address == null) return;
-    if (IGNORE_IPS.contains(address.address)) return;
-    if (address.address == localExternalIP) return;
+    if (address == null) return false;
+    if (IGNORE_IPS.contains(address.address)) return false;
+    if (address.address == localExternalIP) return false;
 
     // Check IP filter
     if (_ipFilter != null && _ipFilter!.isBlocked(address.address)) {
       _log.fine('Peer ${address.address} blocked by IP filter');
-      return;
+      return false;
     }
     if (socket != null) {
       // Indicates that it is an actively connected peer, and currently, only one IP address is allowed to connect at a time.
       if (!_incomingAddress.add(address.address)) {
         _log.warning(
             'Incoming connection from ${address.address} is ignored, already connected, multiple connections from the same IP are not allowed.');
-        return;
+        return false;
       }
     }
     // TODO: should we allow reconnects?
     // _activePeers.removeWhere((p) => p.address == address);
     // _peersAddress.remove(address);
-    if (_peersAddress.add(address)) {
-      Peer? peer;
-      if (type == null || type == PeerType.TCP) {
-        if (_metaInfo.pieces == null) {
-          _log.warning(
-              'Cannot create peer: torrent has no pieces (v2-only torrent?)');
-          return;
-        }
-        peer = Peer.newTCPPeer(
-          address,
-          _metaInfo.infoHashBuffer,
-          _metaInfo.pieces!.length,
-          socket,
-          source,
-          proxyManager: _proxyManager,
-        );
-      }
-      if (type == PeerType.UTP) {
-        if (_metaInfo.pieces == null) {
-          _log.warning(
-              'Cannot create peer: torrent has no pieces (v2-only torrent?)');
-          return;
-        }
-        peer = Peer.newUTPPeer(address, _metaInfo.infoHashBuffer,
-            _metaInfo.pieces!.length, socket, source);
-      }
-      if (peer != null) {
-        // Set torrent version for v2/hybrid support in handshake
-        if (_torrentVersion != null) {
-          peer.setTorrentVersion(_torrentVersion!);
-        }
-        _hookPeer(peer);
-      }
+    if (!_peersAddress.add(address)) {
+      if (socket != null) _incomingAddress.remove(address.address);
+      return false;
     }
+    Peer? peer;
+    if (_metaInfo.pieces == null) {
+      _log.warning(
+          'Cannot create peer: torrent has no pieces (v2-only torrent?)');
+    } else if (type == null || type == PeerType.TCP) {
+      peer = Peer.newTCPPeer(
+        address,
+        _metaInfo.infoHashBuffer,
+        _metaInfo.pieces!.length,
+        socket,
+        source,
+        proxyManager: _proxyManager,
+      );
+    } else if (type == PeerType.UTP) {
+      peer = Peer.newUTPPeer(address, _metaInfo.infoHashBuffer,
+          _metaInfo.pieces!.length, socket, source);
+    }
+    if (peer != null) {
+      // Set torrent version for v2/hybrid support in handshake
+      if (_torrentVersion != null) {
+        peer.setTorrentVersion(_torrentVersion!);
+      }
+      _hookPeer(peer);
+      return true;
+    }
+    _peersAddress.remove(address);
+    if (socket != null) _incomingAddress.remove(address.address);
+    return false;
   }
 
   /// When read the resource content complete , invoke this method to notify
@@ -327,7 +339,23 @@ class PeersManager with Holepunch, PEX, EventsEmittable<PeerEvent> {
   ///
   /// [pieceIndex] is the index of the piece, [begin] is the byte index of the whole
   /// contents , [block] should be uint8 list, it's the sub-piece contents bytes.
+  ///
+  /// An empty [block] means the read failed: whoever asked for it is turned
+  /// down instead of left waiting.
   void readSubPieceComplete(int pieceIndex, int begin, List<int> block) {
+    if (block.isEmpty) {
+      _remoteRequest.removeWhere((request) {
+        if (request[0] != pieceIndex || request[1] != begin) return false;
+        final peer = request[2] as Peer;
+        final pending = peer.remoteRequestBuffer
+            .where((r) => r[0] == pieceIndex && r[1] == begin);
+        for (final r in pending.toList()) {
+          peer.rejectRemoteRequest(r[0], r[1], r[2]);
+        }
+        return true;
+      });
+      return;
+    }
     var dindex = [];
     for (var i = 0; i < _remoteRequest.length; i++) {
       var request = _remoteRequest[i];
@@ -358,6 +386,9 @@ class PeersManager with Holepunch, PEX, EventsEmittable<PeerEvent> {
 
   void _processPeerDispose(PeerDisposeEvent disposeEvent) {
     _peerListeners.remove(disposeEvent.peer);
+    // Its requests would never be answered: they only grew this list, which
+    // is searched for every block sent.
+    _remoteRequest.removeWhere((request) => request[2] == disposeEvent.peer);
     var reconnect = true;
     if (disposeEvent.reason is BadException) {
       reconnect = false;
@@ -492,8 +523,13 @@ class PeersManager with Holepunch, PEX, EventsEmittable<PeerEvent> {
         var begin = element[2];
         var length = element[3];
         if (!peer.isDisposed) {
-          Timer.run(() => _processRemoteRequest(
-              PeerRequestEvent(peer, index, begin, length)));
+          Timer.run(() {
+            final request = PeerRequestEvent(peer, index, begin, length);
+            _processRemoteRequest(request);
+            // The task reads the block when it hears of the request; it
+            // never did for requests held while paused.
+            events.emit(request);
+          });
         }
       }
     });

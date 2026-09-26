@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dtorrent_task_v2/src/torrent/torrent_model.dart';
 import 'package:dtorrent_task_v2/src/file/download_file_manager_events.dart';
@@ -254,13 +255,20 @@ class DownloadFileManager with EventsEmittable<DownloadFileManagerEvent> {
     }
   }
 
+  ///
+  /// A read that fails is reported with an empty block.
   Future<List<int>?> readFile(int pieceIndex, int begin, int length) async {
+    final files = _piece2fileMap?[pieceIndex];
+    if (pieceIndex < 0 ||
+        pieceIndex >= _pieces.length ||
+        files == null ||
+        files.isEmpty) {
+      events.emit(SubPieceReadCompleted(pieceIndex, begin, Uint8List(0)));
+      return null;
+    }
     var piece = _pieces[pieceIndex];
-
-    var files = _piece2fileMap?[pieceIndex];
     var startByte = piece.offset + begin;
     var endByte = startByte + length;
-    if (files == null || files.isEmpty) return null;
     var futures = <Future<List<int>>>[];
     for (var i = 0; i < files.length; i++) {
       var tempFile = files[i];
@@ -272,10 +280,22 @@ class DownloadFileManager with EventsEmittable<DownloadFileManagerEvent> {
           .add(tempFile.requestRead(re.position, re.blockEnd - re.blockStart));
     }
     var blocks = await Future.wait(futures);
-    var block = blocks.fold<List<int>>(<int>[], (previousValue, element) {
-      previousValue.addAll(element);
-      return previousValue;
-    });
+    // Joined as bytes: a growable list took eight bytes of memory for each
+    // one, and filling it one element at a time was slow.
+    final Uint8List block;
+    if (blocks.length == 1 && blocks.first is Uint8List) {
+      block = blocks.first as Uint8List;
+    } else {
+      final builder = BytesBuilder(copy: false);
+      for (final b in blocks) {
+        builder.add(b);
+      }
+      block = builder.takeBytes();
+    }
+    if (block.length != length) {
+      events.emit(SubPieceReadCompleted(pieceIndex, begin, Uint8List(0)));
+      return null;
+    }
 
     events.emit(SubPieceReadCompleted(pieceIndex, begin, block));
 
