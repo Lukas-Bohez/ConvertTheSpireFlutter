@@ -121,19 +121,31 @@ class UpdateService {
 
   /// The start of a release's notes as plain text, for the update banner.
   /// A release body opens with the demo video and screenshots (HTML) and uses
-  /// Markdown, which the banner would otherwise show as markup.
+  /// Markdown, which the banner would otherwise show as markup. The section
+  /// names ("New", "Fixed") are left out and every heading and bullet ends
+  /// with a full stop: flattened, they ran into the text ("smoother torrents
+  /// New Double-click install").
   static String releaseNotesPreview(String body) {
     final start = body.indexOf('\n## ');
-    final text = (start >= 0 ? body.substring(start) : body)
-        .replaceAll(RegExp(r'<[^>]*>'), ' ')
-        .replaceAllMapped(
-            RegExp(r'!?\[([^\]]*)\]\([^)]*\)'), (m) => m.group(1) ?? '')
-        .replaceAll(RegExp(r'^\s*#+\s*', multiLine: true), '')
-        .replaceAll(RegExp(r'^\s*[-*]\s+', multiLine: true), '')
-        .replaceAll('**', '')
-        .replaceAll('`', '')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
+    final source = start >= 0 ? body.substring(start) : body;
+    final parts = <String>[];
+    for (final raw in source.split('\n')) {
+      if (RegExp(r'^\s*#{3,}\s').hasMatch(raw)) continue;
+      var line = raw
+          .replaceAll(RegExp(r'<[^>]*>'), ' ')
+          .replaceAllMapped(
+              RegExp(r'!?\[([^\]]*)\]\([^)]*\)'), (m) => m.group(1) ?? '')
+          .replaceAll(RegExp(r'^\s*#+\s*'), '')
+          .replaceAll(RegExp(r'^\s*[-*]\s+'), '')
+          .replaceAll('**', '')
+          .replaceAll('`', '')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+      if (line.isEmpty) continue;
+      if (!RegExp(r'[.!?:…]$').hasMatch(line)) line = '$line.';
+      parts.add(line);
+    }
+    final text = parts.join(' ');
     return text.length > 300 ? '${text.substring(0, 300)}…' : text;
   }
 

@@ -71,5 +71,7 @@ $hash  ./windows-installer/ConvertTheSpireReborn-Setup.exe
     expect(preview, contains('Setup.exe installs the app. See the README.'));
     expect(preview, isNot(contains('<')));
     expect(preview, isNot(contains('**')));
+    // The section name used to run into the text: "Windows New Setup.exe".
+    expect(preview, startsWith('Double-click install on Windows. Setup.exe'));
   });
 }

@@ -1194,9 +1194,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => '搜索队列';
-
-  @override
   String get mediaPlayer => '媒体播放器';
 
   @override
@@ -1206,7 +1203,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get addItemsFromPlayerTab => '从播放器标签页添加项目';
 
   @override
-  String get addItemsFromSearchTab => '从搜索标签页添加项目';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return '通过首页的$quickDownload或$multiSearch添加项目';
+  }
 
   @override
   String get upNext => '接下来';
@@ -1304,7 +1303,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      '此版本针对种子保险库功能进行了优化，并符合应用商店政策。';
+      '此版本专为种子和媒体打造，并符合应用商店的政策。';
 
   @override
   String get minimizeTrayClose => '关闭时最小化到托盘';
@@ -1372,7 +1371,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get torrentFolderOptional => '种子文件夹（可选）';
 
   @override
-  String get whenSetVaultTorrentsUse => '设置后，保险库中的种子将使用此文件夹，而不是通用下载文件夹。';
+  String get whenSetVaultTorrentsUse => '设置后，种子将保存到此文件夹，而不是常规下载文件夹。';
 
   @override
   String get parallelWorkers110 => '并行任务数（1-10）';
@@ -1738,7 +1737,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle 是种子保险库和媒体中心。添加磁力链接和 .torrent 文件，管理下载，在一个应用中把一切整理得井井有条。';
+    return '$getAppTitle 是种子客户端和媒体中心。添加磁力链接和 .torrent 文件，管理下载，并在一个应用中整理一切。';
   }
 
   @override
@@ -2073,6 +2072,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get openedFileNotInLibrary => '已打开的文件，不在你的媒体库中';
+
+  @override
+  String get openFileFolder => '打开所在文件夹';
 
   @override
   String get trackActions => '曲目操作';
@@ -3743,7 +3745,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mediaPlayerLibrary => '媒体播放器与媒体库';
 
   @override
-  String get vaultTorrentManager => '保险库种子管理器';
+  String get vaultTorrentManager => '下载和分享种子';
 
   @override
   String get mac => 'Mac';
@@ -3761,6 +3763,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'v$latestVersion 已发布';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return '已是最新版本（$version）';
+  }
+
+  @override
+  String get updateCheckFailed => '无法检查更新。请检查网络连接。';
 
   @override
   String get dismiss => '忽略';

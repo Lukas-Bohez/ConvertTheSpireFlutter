@@ -1247,9 +1247,6 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => 'Wachtrij doorzoeken';
-
-  @override
   String get mediaPlayer => 'Mediaspeler';
 
   @override
@@ -1259,7 +1256,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get addItemsFromPlayerTab => 'Voeg items toe via het tabblad Speler';
 
   @override
-  String get addItemsFromSearchTab => 'Voeg items toe via het tabblad Zoeken';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return 'Voeg items toe met $quickDownload op Home of met $multiSearch';
+  }
 
   @override
   String get upNext => 'Hierna';
@@ -1362,7 +1361,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      'Deze versie is geoptimaliseerd voor de torrentkluis en voldoet aan het beleid van de app-winkels.';
+      'Deze versie is gemaakt voor torrents en media en voldoet aan het beleid van de app-winkels.';
 
   @override
   String get minimizeTrayClose => 'Minimaliseren naar systeemvak bij sluiten';
@@ -1434,7 +1433,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get whenSetVaultTorrentsUse =>
-      'Indien ingesteld gebruiken kluistorrents deze map in plaats van de algemene downloadmap.';
+      'Indien ingesteld worden torrents in deze map bewaard in plaats van in de algemene downloadmap.';
 
   @override
   String get parallelWorkers110 => 'Parallelle workers (1-10)';
@@ -1816,7 +1815,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle is een torrentkluis en mediacentrum. Voeg magnetlinks en .torrent-bestanden toe, beheer downloads en houd alles overzichtelijk in één app.';
+    return '$getAppTitle is een torrentclient en mediacentrum. Voeg magnetlinks en .torrent-bestanden toe, beheer downloads en houd alles overzichtelijk in één app.';
   }
 
   @override
@@ -2175,6 +2174,9 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get openedFileNotInLibrary =>
       'Geopend bestand, niet in je bibliotheek';
+
+  @override
+  String get openFileFolder => 'Map openen';
 
   @override
   String get trackActions => 'Nummeracties';
@@ -3917,7 +3919,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get mediaPlayerLibrary => 'Mediaspeler en bibliotheek';
 
   @override
-  String get vaultTorrentManager => 'Torrentbeheer van de kluis';
+  String get vaultTorrentManager => 'Torrents downloaden en delen';
 
   @override
   String get mac => 'Mac';
@@ -3935,6 +3937,15 @@ class AppLocalizationsNl extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'v$latestVersion beschikbaar';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return 'Je hebt de nieuwste versie ($version)';
+  }
+
+  @override
+  String get updateCheckFailed =>
+      'Kon niet op updates controleren. Controleer je internetverbinding.';
 
   @override
   String get dismiss => 'Sluiten';

@@ -2356,12 +2356,6 @@ abstract class AppLocalizations {
   /// **'Download {addRangeTo}'**
   String download(Object addRangeTo);
 
-  /// No description provided for @searchQueue.
-  ///
-  /// In en, this message translates to:
-  /// **'Search Queue'**
-  String get searchQueue;
-
   /// No description provided for @mediaPlayer.
   ///
   /// In en, this message translates to:
@@ -2380,11 +2374,11 @@ abstract class AppLocalizations {
   /// **'Add items from the Player tab'**
   String get addItemsFromPlayerTab;
 
-  /// No description provided for @addItemsFromSearchTab.
+  /// No description provided for @addItemsToDownloadQueue.
   ///
   /// In en, this message translates to:
-  /// **'Add items from the Search tab'**
-  String get addItemsFromSearchTab;
+  /// **'Add items with {quickDownload} on Home or with {multiSearch}'**
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch);
 
   /// No description provided for @upNext.
   ///
@@ -2564,7 +2558,7 @@ abstract class AppLocalizations {
   /// No description provided for @versionOptimizedTorrentVaultFunctionalit.
   ///
   /// In en, this message translates to:
-  /// **'This version is optimized for torrent vault functionality and complies with app store policies.'**
+  /// **'This version is made for torrents and media, and follows the app store policies.'**
   String get versionOptimizedTorrentVaultFunctionalit;
 
   /// No description provided for @minimizeTrayClose.
@@ -2690,7 +2684,7 @@ abstract class AppLocalizations {
   /// No description provided for @whenSetVaultTorrentsUse.
   ///
   /// In en, this message translates to:
-  /// **'When set, Vault torrents use this folder instead of the general download folder.'**
+  /// **'When set, torrents are saved in this folder instead of the general download folder.'**
   String get whenSetVaultTorrentsUse;
 
   /// No description provided for @parallelWorkers110.
@@ -3374,7 +3368,7 @@ abstract class AppLocalizations {
   /// No description provided for @torrentVaultMediaHubAdd.
   ///
   /// In en, this message translates to:
-  /// **'{getAppTitle} is a torrent vault and media hub. Add magnet links and .torrent files, manage downloads, and keep everything organized from one app.'**
+  /// **'{getAppTitle} is a torrent client and media hub. Add magnet links and .torrent files, manage downloads, and keep everything organized in one app.'**
   String torrentVaultMediaHubAdd(Object getAppTitle);
 
   /// No description provided for @crossPlatformTorrentMediaToolkit.
@@ -3970,6 +3964,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Opened file, not in your library'**
   String get openedFileNotInLibrary;
+
+  /// No description provided for @openFileFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Open its folder'**
+  String get openFileFolder;
 
   /// No description provided for @trackActions.
   ///
@@ -6964,7 +6964,7 @@ abstract class AppLocalizations {
   /// No description provided for @vaultTorrentManager.
   ///
   /// In en, this message translates to:
-  /// **'Vault torrent manager'**
+  /// **'Download and share torrents'**
   String get vaultTorrentManager;
 
   /// No description provided for @mac.
@@ -6996,6 +6996,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'v{latestVersion} available'**
   String vAvailable(Object latestVersion);
+
+  /// No description provided for @appUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'You have the latest version ({version})'**
+  String appUpToDate(String version);
+
+  /// No description provided for @updateCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not check for updates. Check your internet connection.'**
+  String get updateCheckFailed;
 
   /// No description provided for @dismiss.
   ///

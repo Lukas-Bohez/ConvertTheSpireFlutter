@@ -14,6 +14,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart'
 
 import '../l10n/app_localizations.dart';
 
+import 'config/app_locale.dart';
 import 'config/build_flags.dart';
 import 'config/full_mode_access.dart';
 import 'data/browser_db.dart';
@@ -713,6 +714,7 @@ class _MyAppState extends State<MyApp>
                 GlobalCupertinoLocalizations.delegate,
               ],
               supportedLocales: AppLocalizations.supportedLocales,
+              localeListResolutionCallback: resolveAppLocale,
               shortcuts: const <ShortcutActivator, Intent>{},
               actions: const <Type, Action<Intent>>{},
               theme: lightTheme,

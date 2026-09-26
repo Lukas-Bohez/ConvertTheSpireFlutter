@@ -1241,9 +1241,6 @@ class AppLocalizationsUk extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => 'Пошук у черзі';
-
-  @override
   String get mediaPlayer => 'Медіапрогравач';
 
   @override
@@ -1253,7 +1250,9 @@ class AppLocalizationsUk extends AppLocalizations {
   String get addItemsFromPlayerTab => 'Додайте елементи на вкладці «Програвач»';
 
   @override
-  String get addItemsFromSearchTab => 'Додайте елементи на вкладці «Пошук»';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return 'Додавайте елементи через «$quickDownload» на головній або через «$multiSearch»';
+  }
 
   @override
   String get upNext => 'Далі';
@@ -1354,7 +1353,7 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      'Ця версія оптимізована для торент-сховища й відповідає правилам магазинів застосунків.';
+      'Ця версія створена для торентів і медіа та відповідає правилам магазинів застосунків.';
 
   @override
   String get minimizeTrayClose => 'Згортати в трей під час закриття';
@@ -1426,7 +1425,7 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get whenSetVaultTorrentsUse =>
-      'Якщо задано, торенти зі сховища зберігаються сюди, а не в загальну папку завантажень.';
+      'Якщо задано, торенти зберігаються в цю теку замість загальної теки завантажень.';
 
   @override
   String get parallelWorkers110 => 'Паралельні потоки (1–10)';
@@ -1811,7 +1810,7 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle — торент-сховище й медіацентр. Додавайте magnet-посилання та файли .torrent, керуйте завантаженнями й тримайте все впорядкованим в одному застосунку.';
+    return '$getAppTitle — торент-клієнт і медіацентр. Додавайте magnet-посилання та .torrent-файли, керуйте завантаженнями й тримайте все впорядкованим в одному застосунку.';
   }
 
   @override
@@ -2169,6 +2168,9 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get openedFileNotInLibrary => 'Відкритий файл, не з медіатеки';
+
+  @override
+  String get openFileFolder => 'Відкрити теку';
 
   @override
   String get trackActions => 'Дії з треком';
@@ -3906,7 +3908,7 @@ class AppLocalizationsUk extends AppLocalizations {
   String get mediaPlayerLibrary => 'Медіапрогравач і медіатека';
 
   @override
-  String get vaultTorrentManager => 'Торент-менеджер сховища';
+  String get vaultTorrentManager => 'Завантаження й роздача торентів';
 
   @override
   String get mac => 'Mac';
@@ -3924,6 +3926,15 @@ class AppLocalizationsUk extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'Доступна v$latestVersion';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return 'У вас найновіша версія ($version)';
+  }
+
+  @override
+  String get updateCheckFailed =>
+      'Не вдалося перевірити оновлення. Перевірте з’єднання з інтернетом.';
 
   @override
   String get dismiss => 'Сховати';
