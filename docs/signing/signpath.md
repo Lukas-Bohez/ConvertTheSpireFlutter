@@ -26,6 +26,15 @@ It also makes sure the app's `CompanyName` stays `Oroka Conner`: path_provider
 builds the Windows data folder from it, so changing it would lose everyone's
 settings and library.
 
+One thing to watch on the first signed release: Inno Setup pads the version
+strings in `Setup.exe` with trailing spaces (the CI log shows
+`[Convert The Spire Reborn        ]`). The metadata check trims them, but if
+SignPath compares product name and version exactly and rejects the installer's
+request, the padding is the cause: ask SignPath Foundation whether their check
+trims, or remove the `product-name` and `product-version` attributes from
+`signpath-windows-installer.xml` (the app exe has no padding and keeps its
+restrictions).
+
 ## Once the application is approved
 
 In SignPath (app.signpath.io), for the project SignPath Foundation creates:
