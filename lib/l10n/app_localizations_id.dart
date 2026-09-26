@@ -3595,6 +3595,16 @@ class AppLocalizationsId extends AppLocalizations {
   String get spinUnlockColour => 'Putar → buka satu warna';
 
   @override
+  String get updateNow => 'Perbarui sekarang';
+
+  @override
+  String get downloadingUpdate => 'Mengunduh pembaruan…';
+
+  @override
+  String get updateCouldNotDownload =>
+      'Pembaruan tidak dapat diunduh. Halaman unduhan akan dibuka sebagai gantinya.';
+
+  @override
   String get redownloadFromScratch2 => 'Unduh ulang dari awal';
 
   @override

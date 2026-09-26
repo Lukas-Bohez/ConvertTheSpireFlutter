@@ -3586,6 +3586,16 @@ class AppLocalizationsVi extends AppLocalizations {
   String get spinUnlockColour => 'Quay → mở khóa một màu';
 
   @override
+  String get updateNow => 'Cập nhật ngay';
+
+  @override
+  String get downloadingUpdate => 'Đang tải bản cập nhật…';
+
+  @override
+  String get updateCouldNotDownload =>
+      'Không thể tải bản cập nhật. Trang tải xuống sẽ mở thay thế.';
+
+  @override
   String get redownloadFromScratch2 => 'Tải lại từ đầu';
 
   @override

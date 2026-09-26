@@ -3579,6 +3579,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spinUnlockColour => 'Spin → unlock a colour';
 
   @override
+  String get updateNow => 'Update now';
+
+  @override
+  String get downloadingUpdate => 'Downloading the update…';
+
+  @override
+  String get updateCouldNotDownload =>
+      'The update could not be downloaded. The download page opens instead.';
+
+  @override
   String get redownloadFromScratch2 => 'Redownload from scratch';
 
   @override

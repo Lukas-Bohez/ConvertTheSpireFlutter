@@ -3606,6 +3606,16 @@ class AppLocalizationsNl extends AppLocalizations {
   String get spinUnlockColour => 'Draai → ontgrendel een kleur';
 
   @override
+  String get updateNow => 'Nu bijwerken';
+
+  @override
+  String get downloadingUpdate => 'Update downloaden…';
+
+  @override
+  String get updateCouldNotDownload =>
+      'De update kon niet worden gedownload. In plaats daarvan opent de downloadpagina.';
+
+  @override
   String get redownloadFromScratch2 => 'Helemaal opnieuw downloaden';
 
   @override

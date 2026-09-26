@@ -218,6 +218,47 @@ jobs:
           path: ${{ env.OUTPUT_NAME }}-windows-x64.zip
           retention-days: 7
 
+      # ConvertTheSpireReborn-Setup.exe: the double-click installer, with the
+      # whole app inside (installing needs no network), per user, no admin.
+      # The app also runs it silently to update itself.
+      - name: Build Windows installer (Setup.exe)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          if (!(Test-Path $iscc)) { Write-Error "Inno Setup (ISCC.exe) not found"; exit 1 }
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([0-9.]+)').Matches[0].Groups[1].Value
+          $src = (Resolve-Path "build\windows\x64\runner\Release").Path
+          & $iscc "/DAppVersion=$version" "/DSourceDir=$src" "/DOutputDir=$env:GITHUB_WORKSPACE\installer-out" "windows\installer\ConvertTheSpireReborn.iss"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Install it the way the app updates itself, check the result, and
+      # uninstall again, so a broken installer never reaches a release.
+      - name: Test the installer
+        shell: pwsh
+        run: |
+          $setup = "installer-out\ConvertTheSpireReborn-Setup.exe"
+          $dir = Join-Path $env:LOCALAPPDATA "Programs\ConvertTheSpireReborn"
+          $p = Start-Process $setup -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/NOLAUNCH=1' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Write-Error "Setup exited with $($p.ExitCode)"; exit 1 }
+          foreach ($f in 'convert_the_spire_reborn.exe', 'dll\flutter_windows.dll', 'data\flutter_assets\CHANGELOG.md', 'unins000.exe') {
+            if (!(Test-Path (Join-Path $dir $f))) { Write-Error "Not installed: $f"; exit 1 }
+          }
+          $lnk = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Convert the Spire Reborn.lnk"
+          if (!(Test-Path $lnk)) { Write-Error "No Start menu entry"; exit 1 }
+          $u = Start-Process (Join-Path $dir 'unins000.exe') -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
+          if ($u.ExitCode -ne 0) { Write-Error "Uninstall exited with $($u.ExitCode)"; exit 1 }
+          Start-Sleep -Seconds 3
+          if (Test-Path (Join-Path $dir 'convert_the_spire_reborn.exe')) { Write-Error "Uninstall left the app behind"; exit 1 }
+          if (Test-Path $lnk) { Write-Error "Uninstall left the Start menu entry"; exit 1 }
+          Write-Host "Installer OK: installs, adds the Start menu entry, uninstalls cleanly."
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-installer
+          path: installer-out/ConvertTheSpireReborn-Setup.exe
+          retention-days: 7
+
   # =========================================================================
   # 4. macOS (universal / arm64 + x64)
   # =========================================================================
@@ -261,11 +302,21 @@ jobs:
           [ -n "$APP" ] || { echo "ERROR: .app bundle not found"; exit 1; }
           ditto -c -k --keepParent "$APP" \
             "${{ env.OUTPUT_NAME }}-macOS.zip"
+          # The usual Mac download: a disk image to drag the app from into
+          # Applications (a shortcut to it sits next to the app).
+          STAGE=$(mktemp -d)
+          ditto "$APP" "$STAGE/$(basename "$APP")"
+          ln -s /Applications "$STAGE/Applications"
+          hdiutil create -volname "Convert the Spire Reborn" -srcfolder "$STAGE" \
+            -ov -format UDZO "${{ env.OUTPUT_NAME }}-macOS.dmg"
+          hdiutil verify "${{ env.OUTPUT_NAME }}-macOS.dmg"
 
       - uses: actions/upload-artifact@v7
         with:
           name: macos-x64
-          path: ${{ env.OUTPUT_NAME }}-macOS.zip
+          path: |
+            ${{ env.OUTPUT_NAME }}-macOS.zip
+            ${{ env.OUTPUT_NAME }}-macOS.dmg
           retention-days: 7
 
   # =========================================================================
@@ -430,7 +481,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          for dir in windows-x64 macos-x64 android-apk; do
+          for dir in windows-x64 windows-installer macos-x64 android-apk; do
             count=$(find "artifacts/$dir" -type f 2>/dev/null | wc -l)
             if [ "$count" -eq 0 ]; then
               echo "ERROR: No files found in artifacts/$dir"
@@ -479,7 +530,9 @@ jobs:
           prerelease: ${{ inputs.is_prerelease }}
           fail_on_unmatched_files: true
           files: |
+            artifacts/windows-installer/ConvertTheSpireReborn-Setup.exe
             artifacts/windows-x64/*.zip
+            artifacts/macos-x64/*.dmg
             artifacts/macos-x64/*.zip
             artifacts/android-apk/${{ env.ANDROID_APK_NAME }}
             SHA256SUMS.txt
