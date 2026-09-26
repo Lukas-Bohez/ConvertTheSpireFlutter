@@ -126,7 +126,18 @@ The Android app is the full app, not a cut-down companion: downloads, Compare, t
 
 ## Privacy
 
-No account, no sign-up, and the app does not track what you download. The GitHub builds have no ads and no advertising ID. The Play Store build shows ads, and its [data safety details](docs/publishing/play-data-safety.md) say exactly what that involves.
+No account, no sign-up, and the app does not track what you download. The GitHub builds have no ads and no advertising ID. The Play Store build shows ads, and its [data safety details](docs/publishing/play-data-safety.md) say exactly what that involves. The [privacy policy](PRIVACY.md) lists everything the app connects to.
+
+## Code signing policy
+
+Windows releases will get free code signing provided by SignPath.io, certificate by SignPath Foundation. The project has applied to the [SignPath Foundation](https://signpath.org/); until the application is approved, the Windows downloads are not signed yet.
+
+* **Committers and reviewers:** [Lukas-Bohez](https://github.com/Lukas-Bohez)
+* **Approvers:** [Lukas-Bohez](https://github.com/Lukas-Bohez)
+
+Committers may change the source code directly. Changes from anyone else come in as pull requests, and a committer reviews them before they are merged. Only files that this repository's [release workflow](.github/workflows/release.yml) builds from its own source code are signed, and an approver approves each release before it is signed.
+
+**Privacy:** see the [privacy policy](PRIVACY.md) for what the app sends and to whom.
 
 ## Screenshots
 

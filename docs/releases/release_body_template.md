@@ -30,6 +30,12 @@ No-install options are here too: the Windows zip (extract and run `convert_the_s
 - **"Windows protected your PC"?** Windows shows this once for programs without a paid signature: choose **More info**, then **Run anyway**. Updates from inside the app never show it.
 - **Mac says it cannot open the app?** Right-click it and choose **Open**, once. Converting to MP3 and M4A on a Mac needs FFmpeg: `brew install ffmpeg`.
 
+## Code signing policy
+
+Windows releases will get free code signing provided by SignPath.io, certificate by SignPath Foundation. The project has applied to the [SignPath Foundation](https://signpath.org/); until the application is approved, the Windows downloads are not signed yet.
+
+Committers and reviewers: [Lukas-Bohez](https://github.com/Lukas-Bohez) · Approvers: [Lukas-Bohez](https://github.com/Lukas-Bohez) · [Full code signing policy](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter#code-signing-policy) · [Privacy policy](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/blob/main/PRIVACY.md)
+
 ---
 
 **More screenshots & info:** [README](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter#readme) · [Full changelog](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/blob/{{TAG}}/CHANGELOG.md) · [Report an issue](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/issues)
