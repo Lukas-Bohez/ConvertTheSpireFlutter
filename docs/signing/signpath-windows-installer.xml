@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SignPath artifact configuration "windows-installer": Setup.exe, which
+     .github/workflows/release.yml uploads as a GitHub artifact (a zip with the
+     file at its root). release.yml passes productVersion; the file's product
+     name and version must match, or SignPath rejects the request.
+     tools/check_windows_metadata.ps1 checks the same before signing. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="productVersion" required="true" />
+  </parameters>
+  <zip-file>
+    <pe-file path="ConvertTheSpireReborn-Setup.exe" product-name="Convert The Spire Reborn" product-version="${productVersion}">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

@@ -19,6 +19,13 @@
 #     MACOS_NOTARIZE_PASSWORD   - App-specific password for that Apple ID
 #     MACOS_NOTARIZE_TEAM_ID    - 10-character Apple Team ID
 #
+#   Windows code signing through SignPath Foundation (optional; until these
+#   are set the signing steps are skipped and Windows ships unsigned). See
+#   docs/signing/signpath.md for the SignPath side.
+#     secret   SIGNPATH_API_TOKEN       - API token of the SignPath CI user
+#     variable SIGNPATH_ORGANIZATION_ID - SignPath organization ID
+#     variable SIGNPATH_PROJECT_SLUG    - SignPath project slug
+#
 name: Release Build
 
 on:
@@ -95,7 +102,8 @@ jobs:
     name: Build Windows
     needs: test-and-analyze
     runs-on: windows-latest
-    timeout-minutes: 90
+    # Signing waits for an approver to approve each request in SignPath.
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v5
 
@@ -169,6 +177,54 @@ jobs:
       - name: Build Windows release
         run: flutter build windows --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
 
+      # The versions the app and Setup.exe carry; signing requests pass them
+      # to SignPath, which checks the files against them.
+      - name: Read the version
+        id: version
+        shell: pwsh
+        run: |
+          $full = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(\S+)').Matches[0].Groups[1].Value
+          "full=$full" >> $env:GITHUB_OUTPUT
+          "short=$($full -replace '\+.*$', '')" >> $env:GITHUB_OUTPUT
+
+      # ---- Code signing, part 1: the app ------------------------------------
+      # Only convert_the_spire_reborn.exe is built from this repository's own
+      # source, so it is the only file in Release that gets signed. It is
+      # signed before the zip and Setup.exe are made, so both carry the signed
+      # exe. Skipped until the SignPath variables exist (see the header).
+      - name: Upload the app for signing
+        id: upload-unsigned-app
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-app-unsigned
+          path: build/windows/x64/runner/Release/${{ env.APP_NAME }}.exe
+          retention-days: 1
+
+      - name: Sign the app (SignPath)
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: windows-app
+          github-artifact-id: ${{ steps.upload-unsigned-app.outputs.artifact-id }}
+          parameters: |
+            productVersion: "${{ steps.version.outputs.full }}"
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 5400
+          output-artifact-directory: signed-app
+
+      - name: Use the signed app
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        shell: pwsh
+        run: |
+          $signed = "signed-app\${{ env.APP_NAME }}.exe"
+          if ((Get-AuthenticodeSignature $signed).Status -ne 'Valid') { Write-Error "$signed is not validly signed"; exit 1 }
+          Copy-Item $signed "build\windows\x64\runner\Release\${{ env.APP_NAME }}.exe" -Force
+
       - name: Package Windows build
         shell: pwsh
         run: |
@@ -231,6 +287,46 @@ jobs:
           $src = (Resolve-Path "build\windows\x64\runner\Release").Path
           & $iscc "/DAppVersion=$version" "/DSourceDir=$src" "/DOutputDir=$env:GITHUB_WORKSPACE\installer-out" "windows\installer\ConvertTheSpireReborn.iss"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Check the version metadata
+        shell: pwsh
+        run: pwsh tools/check_windows_metadata.ps1 -App "build\windows\x64\runner\Release\${{ env.APP_NAME }}.exe" -Setup "installer-out\ConvertTheSpireReborn-Setup.exe"
+
+      # ---- Code signing, part 2: the installer ------------------------------
+      # Setup.exe is signed before it is tested, so the test runs the file
+      # that ships.
+      - name: Upload the installer for signing
+        id: upload-unsigned-installer
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-installer-unsigned
+          path: installer-out/ConvertTheSpireReborn-Setup.exe
+          retention-days: 1
+
+      - name: Sign the installer (SignPath)
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: windows-installer
+          github-artifact-id: ${{ steps.upload-unsigned-installer.outputs.artifact-id }}
+          parameters: |
+            productVersion: "${{ steps.version.outputs.short }}"
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 5400
+          output-artifact-directory: signed-installer
+
+      - name: Use the signed installer
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        shell: pwsh
+        run: |
+          $signed = "signed-installer\ConvertTheSpireReborn-Setup.exe"
+          if ((Get-AuthenticodeSignature $signed).Status -ne 'Valid') { Write-Error "$signed is not validly signed"; exit 1 }
+          Copy-Item $signed "installer-out\ConvertTheSpireReborn-Setup.exe" -Force
 
       # Install it the way the app updates itself, check the result, and
       # uninstall again, so a broken installer never reaches a release.
@@ -500,7 +596,8 @@ jobs:
           find . -type f \
             ! -name "*.sha256" \
             ! -path "*/coverage-report/*" \
-          | sort | xargs sha256sum > ../SHA256SUMS.txt
+          | sort | xargs sha256sum \
+          | sed -E 's#  (\./)?([^ ]*/)?([^/]+)$#  \3#' > ../SHA256SUMS.txt
           cat ../SHA256SUMS.txt
 
       # Screenshots go at the TOP of the release body so they are the first
