@@ -129,6 +129,21 @@ jobs:
       - name: Build Windows
         run: flutter build windows --debug
 
+      # Code signing checks product name and version (docs/signing/signpath.md);
+      # building Setup.exe here tests installer and metadata changes before
+      # they reach a release.
+      - name: Build the installer and check the version metadata
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          if (!(Test-Path $iscc)) { Write-Error "Inno Setup (ISCC.exe) not found"; exit 1 }
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([0-9.]+)').Matches[0].Groups[1].Value
+          $src = (Resolve-Path "build\windows\x64\runner\Debug").Path
+          & $iscc "/DAppVersion=$version" "/DSourceDir=$src" "/DOutputDir=$env:GITHUB_WORKSPACE\installer-out" "windows\installer\ConvertTheSpireReborn.iss"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh tools/check_windows_metadata.ps1 -App "$src\convert_the_spire_reborn.exe" -Setup "installer-out\ConvertTheSpireReborn-Setup.exe"
+
   # Catches Kotlin and Gradle breakage before it reaches a release build.
   android:
     name: Android debug build
