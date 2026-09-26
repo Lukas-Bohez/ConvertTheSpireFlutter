@@ -1,25 +1,42 @@
 # Privacy policy
 
-Convert the Spire Reborn has no accounts, no analytics and no tracking. Your settings, library and downloads stay on your device.
+The full privacy policy is at **[quizthespire.com/privacy](https://quizthespire.com/privacy)**. It covers this app (Convert the Spire Reborn for Windows, macOS and Android, published on Google Play as BitPlayer, `com.torrentspire.ai`) and the quizthespire.com website. This page is the same policy for the app, kept next to its code.
 
-## What the app connects to by itself
+One person runs all of this: Lukas Bohez, a solo developer in Belgium. There is no company behind it. Nothing is sold, and nothing is shared except where this page names who.
 
-The GitHub builds (Windows, macOS, Android APK) connect to other systems on their own only for this:
+**In short:** the app sends me nothing, and everything it keeps stays on your device. Only the Google Play build shows ads.
 
-- **Update check:** when the app starts, it asks GitHub (`api.github.com`) for the latest release. You can turn this off in Settings. On Windows, **Update now** downloads the new installer from GitHub only when you press it.
-- **yt-dlp:** on first start the app downloads yt-dlp from its official GitHub releases, and keeps it up to date.
-- **FFmpeg (Windows):** when it is missing, the app downloads FFmpeg from gyan.dev.
+## What the app collects
 
-These requests send nothing about you beyond what any download sends (your IP address and the app's request). GitHub's [privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement) applies to the GitHub requests.
+The app has no account, no sign-in and no server of mine to talk to. It sends me nothing: no analytics, no crash reports, no usage statistics, no telemetry. Your downloads, conversions, playlists, library, settings and logs are written to your own device and stay there. Files you convert are processed on the device and are never uploaded.
 
-## What happens only when you ask for it
+## Where the app connects
 
-- **Downloads** go to the sites you choose (for example YouTube), through yt-dlp.
-- **Torrents** connect to trackers and other peers, who see your IP address, as with any torrent app.
-- **The built-in browser** loads the pages you open.
-- **Casting and Watch Together** talk to devices on your own network.
-- **Report a bug** opens a GitHub issue page in your browser with your app version, platform and recent log. You see all of it before anything is sent, and nothing is sent unless you submit it.
+- **The sites you give it a link to** (YouTube and the other sites yt-dlp supports). The request goes straight from your device to that site, which sees what any browser visit shows: your IP address and a user-agent.
+- **GitHub.** The Windows, macOS and GitHub Android builds check for a new app version when they start (you can turn this off in Settings). The desktop builds download yt-dlp and keep it up to date. On Windows, **Update now** downloads the new installer, only when you press it. Nothing about you goes with these requests beyond what any download needs.
+- **gyan.dev** (Windows only): when FFmpeg is missing, the app downloads it from there, the same way.
+- **Torrent trackers and peers**, if you use torrents: they see your IP address, as with any BitTorrent client.
+- **Devices on your own network**, if you cast or use Watch Together.
+- **Google AdMob**, in the Google Play build only (see below).
 
-## Play Store version
+**Report a bug** in Settings opens a GitHub issue page in your browser with your app version, platform and recent log. You see all of it first, and nothing is sent unless you submit it.
 
-The Play Store version (BitPlayer) shows ads from Google AdMob and handles purchases through Google Play. Its [data safety details](docs/publishing/play-data-safety.md) say exactly what that involves. It is built and signed separately and is not part of the SignPath code signing.
+None of these requests carry an identifier I created, because the app never creates one.
+
+## Ads (Google Play build only)
+
+The Android build from Google Play shows ads through Google AdMob. To fetch an ad, AdMob reads your device's advertising ID with device and connection information and sends it to Google, over HTTPS. I never see it. You can reset or delete the advertising ID in Android's settings (Settings → Google → All services → Ads), and the app keeps working with non-personalised ads. The Windows, macOS and GitHub Android builds carry no ads. The full details, and the Google Play data safety summary, are in the [full policy](https://quizthespire.com/privacy) and [docs/publishing/play-data-safety.md](docs/publishing/play-data-safety.md).
+
+## Deleting your data
+
+Nothing is held off your device, so there is nothing to request. To remove what the app keeps on it:
+
+- **Windows:** uninstall it in Settings → Apps (or delete the folder, if you used the zip), then delete `%APPDATA%\Oroka Conner\Convert the Spire Reborn` and `%LOCALAPPDATA%\ConvertTheSpireReborn`, which hold its settings and caches.
+- **macOS:** delete the app and its settings folder.
+- **Android:** Settings → Apps → the app → Storage → Clear storage, or uninstall it.
+
+Files you downloaded or converted stay where you saved them: they are your files, not app data.
+
+## Your rights and contact
+
+You can ask what is held about you, ask for it to be corrected or deleted, or complain to the Belgian Data Protection Authority. Contact details are in the [full policy](https://quizthespire.com/privacy).
