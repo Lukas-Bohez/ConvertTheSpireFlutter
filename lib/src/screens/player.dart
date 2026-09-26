@@ -41,6 +41,7 @@ import '../services/background_media_update_guard.dart';
 import '../services/ffmpeg_service.dart';
 import '../services/loudness_service.dart';
 import '../services/media_organizer.dart';
+import '../services/metadata_god_init.dart';
 import '../services/platform_dirs.dart';
 import '../services/review_service.dart';
 import '../services/watch_party/watch_party_protocol.dart';
@@ -141,7 +142,24 @@ class RoomStream {
     required this.title,
     required this.type,
     this.openedFile = false,
-  }) : item = MediaItem(url, type, title: title);
+    String? artist,
+    Uint8List? thumbnailData,
+  }) : item = MediaItem(url, type,
+            title: title, artist: artist, thumbnailData: thumbnailData);
+
+  /// The same stream with what the file's tags say: an opened song shows its
+  /// title, artist and cover like a library song.
+  RoomStream withDetails(
+          {String? title, String? artist, Uint8List? thumbnailData}) =>
+      RoomStream(
+        mediaKey: mediaKey,
+        url: url,
+        title: title ?? this.title,
+        type: type,
+        openedFile: openedFile,
+        artist: artist ?? item.artist,
+        thumbnailData: thumbnailData ?? item.thumbnailData,
+      );
 
   /// The room's identifier for the media (the host's file name).
   final String mediaKey;
@@ -1430,6 +1448,8 @@ class PlayerState with ChangeNotifier {
     if (!Platform.isWindows && !Platform.isAndroid) {
       unawaited(_loadThumbnailsSequentially(version, maxItems: 30));
     }
+    // An opened file that is in this library is that library song now.
+    if (keepPlaying) adoptOpenedFile();
     // Ensure the current playing item has a thumbnail request pending.
     unawaited(requestThumbnailForIndex(currentIndex));
     _startDirectoryWatcher(items);
@@ -2535,9 +2555,18 @@ class PlayerState with ChangeNotifier {
   }
 
   void _handleCompletion() {
-    // The room decides what plays next. Advancing to this device's own next
-    // track would only be undone by the next update from the host.
-    if (_roomStream != null) return;
+    final stream = _roomStream;
+    if (stream != null) {
+      // An opened file is the only thing playing: repeat plays it again.
+      if (stream.openedFile && repeatMode != RepeatMode.off) {
+        position = Duration.zero;
+        unawaited(playFileDirect(stream.url, fromRoom: true));
+      }
+      // Otherwise the room decides what plays next. Advancing to this
+      // device's own next track would only be undone by the next update
+      // from the host.
+      return;
+    }
     // Count the tail of the track that hasn't been committed yet.
     final total = duration;
     if (total != null && total > position) position = total;
@@ -2683,7 +2712,7 @@ class PlayerState with ChangeNotifier {
   Future<dynamic> _readLocalTag(String resolvedPath) async {
     if (_metadataGodAvailable) {
       try {
-        await MetadataGod.initialize();
+        await ensureMetadataGod();
         return await MetadataGod.readMetadata(file: resolvedPath);
       } catch (e) {
         // Any Dart-level failure disables the native engine for the session
@@ -3390,7 +3419,7 @@ class PlayerState with ChangeNotifier {
       return false;
     }
 
-    await MetadataGod.initialize();
+    await ensureMetadataGod();
 
     final resolvedPath = await _resolveLocalPath(item.path);
     if (resolvedPath.trim().isEmpty) {
@@ -3507,7 +3536,7 @@ class PlayerState with ChangeNotifier {
       }
 
       try {
-        await MetadataGod.initialize();
+        await ensureMetadataGod();
         final meta = await MetadataGod.readMetadata(file: resolvedPath);
         final hasArtist = (meta.artist?.trim().isNotEmpty == true) ||
             (meta.albumArtist?.trim().isNotEmpty == true);
@@ -3901,15 +3930,76 @@ class PlayerState with ChangeNotifier {
     }
     _commitCurrentPlayStats();
     final fileName = name.isNotEmpty ? name : p.basename(path);
-    _roomStream = RoomStream(
+    final stream = RoomStream(
       mediaKey: fileName,
       url: path,
       title: p.basenameWithoutExtension(fileName),
       type: isVideo ? MediaType.video : MediaType.audio,
       openedFile: true,
     );
+    _roomStream = stream;
     notifyListeners();
+    unawaited(_describeOpenedFile(stream));
     await playFileDirect(path, fromRoom: true);
+  }
+
+  /// Reads the title, artist and cover of a file opened from outside the
+  /// app, so it shows like a library song instead of by its file name.
+  Future<void> _describeOpenedFile(RoomStream stream) async {
+    String? title;
+    String? artist;
+    Uint8List? cover;
+    try {
+      // A video opened from an Android file manager would be copied whole
+      // just to read its tags; its name is enough.
+      final local = !stream.url.startsWith('content://');
+      if (stream.type == MediaType.audio || local) {
+        final resolved = await _resolveLocalPath(stream.url);
+        if (stream.type == MediaType.audio) {
+          final tag = await _readLocalTag(resolved);
+          final tagTitle = (tag?.title as Object?)?.toString().trim();
+          if (tagTitle != null && tagTitle.isNotEmpty) title = tagTitle;
+          final tagArtist = resolveArtist(tag, resolved);
+          if (tagArtist.isNotEmpty) artist = tagArtist;
+          final pictures =
+              readMetadata(File(resolved), getImage: true).pictures;
+          for (final picture in pictures) {
+            if (picture.bytes.isEmpty) continue;
+            cover = await _transcodeToSafePng(picture.bytes,
+                mimeType: picture.mimetype);
+            if (cover != null) break;
+          }
+        } else {
+          cover = await _generateVideoThumbnailSafe(resolved);
+        }
+      }
+    } catch (e) {
+      debugPrint('Could not read the tags of ${stream.url}: $e');
+    }
+    // Something else may be playing by now.
+    if (_disposed || !identical(_roomStream, stream)) return;
+    if (title == null && artist == null && cover == null) return;
+    _roomStream =
+        stream.withDetails(title: title, artist: artist, thumbnailData: cover);
+    _updateMediaNotification(_roomStream!.item);
+    notifyListeners();
+  }
+
+  /// The file opened from outside the app is in the library now (its folder
+  /// was just loaded): it becomes that library song, still playing, with the
+  /// library's controls. Returns whether it did.
+  bool adoptOpenedFile() {
+    final stream = _roomStream;
+    if (stream == null || !stream.openedFile) return false;
+    final idx = library.indexWhere((m) => m.path == stream.url);
+    if (idx < 0) return false;
+    _roomStream = null;
+    currentIndex = idx;
+    _statsCommittedPosition = position;
+    _recordHistorySelection(idx, fromHistory: false);
+    notifyListeners();
+    unawaited(requestThumbnailForIndex(idx));
+    return true;
   }
 
   /// Immediately play a file by its filesystem path. This bypasses any
@@ -5822,11 +5912,26 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
+  /// Loads the folder of a file opened from outside the app as the library;
+  /// the file goes on playing, as the library song it now is.
+  Future<void> _openOpenedFileFolder(RoomStream stream) async {
+    final state = context.read<PlayerState>();
+    if (await _openFolder(p.dirname(stream.url))) state.adoptOpenedFile();
+  }
+
   /// The now-playing card while this device plays a Watch Together host's
-  /// stream. The library-only actions (favourite, dislike, the track menu,
-  /// shuffle, next) do not apply to it; the room drives what plays.
+  /// stream, or a file opened from outside the app. The library-only actions
+  /// (favourite, dislike, the track menu, shuffle, next) do not apply to it.
+  /// An opened file shows its cover, title and artist like a library song,
+  /// and can bring in the rest of its folder.
   Widget _buildRoomStreamCard(PlayerState state, RoomStream stream) {
     final cs = Theme.of(context).colorScheme;
+    final opened = stream.openedFile;
+    final artist = stream.item.artist?.trim() ?? '';
+    final canOpenFolder = opened &&
+        !kIsWeb &&
+        !stream.url.startsWith('content://') &&
+        !stream.url.startsWith('http');
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       decoration: BoxDecoration(
@@ -5843,12 +5948,15 @@ class _PlayerScreenState extends State<PlayerScreen>
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
             child: Row(
               children: [
-                Icon(
-                    stream.openedFile
-                        ? Icons.play_circle_outline_rounded
-                        : Icons.groups_rounded,
-                    color: cs.primary,
-                    size: 28),
+                if (opened)
+                  _TrackThumbnail(
+                    data: stream.item.thumbnailData,
+                    isVideo: stream.type == MediaType.video,
+                    size: 56,
+                    radius: 10,
+                  )
+                else
+                  Icon(Icons.groups_rounded, color: cs.primary, size: 28),
                 const SizedBox(width: 12),
                 // No track menu here, so the title is copied by a long press
                 // or right click, or with the button next to it (remote).
@@ -5873,15 +5981,26 @@ class _PlayerScreenState extends State<PlayerScreen>
                               color: _PlayerTheme.text(context),
                             ),
                           ),
+                          if (artist.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              artist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: _PlayerTheme.sub(context)),
+                            ),
+                          ],
                           const SizedBox(height: 2),
                           Text(
-                            stream.openedFile
+                            opened
                                 ? context.l10n.openedFileNotInLibrary
                                 : context.l10n.streamingFromWatchTogetherHost,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                fontSize: 12,
+                                fontSize: opened ? 11 : 12,
                                 color: _PlayerTheme.sub(context)),
                           ),
                         ],
@@ -5889,6 +6008,14 @@ class _PlayerScreenState extends State<PlayerScreen>
                     ),
                   ),
                 ),
+                if (canOpenFolder)
+                  IconButton(
+                    icon: Icon(Icons.folder_open_rounded,
+                        size: 22, color: _PlayerTheme.sub(context)),
+                    tooltip: context.l10n.openFileFolder,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _openOpenedFileFolder(stream),
+                  ),
                 IconButton(
                   icon: Icon(Icons.content_copy_rounded,
                       size: 20, color: _PlayerTheme.sub(context)),
@@ -5908,6 +6035,16 @@ class _PlayerScreenState extends State<PlayerScreen>
                   playing: state.isPlaying,
                   onPressed: state.togglePlay,
                 ),
+                if (opened)
+                  _ControlButton(
+                    icon: state.repeatMode == RepeatMode.one
+                        ? Icons.repeat_one_rounded
+                        : Icons.repeat_rounded,
+                    active: state.repeatMode != RepeatMode.off,
+                    onPressed: state.cycleRepeat,
+                    tooltip: context.l10n.playerRepeat,
+                    size: 22,
+                  ),
                 const SizedBox(width: 8),
                 Icon(Icons.volume_down_rounded,
                     size: 18, color: _PlayerTheme.sub(context)),

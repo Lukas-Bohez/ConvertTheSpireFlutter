@@ -1240,9 +1240,6 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => 'Tìm trong hàng đợi';
-
-  @override
   String get mediaPlayer => 'Trình phát';
 
   @override
@@ -1252,7 +1249,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get addItemsFromPlayerTab => 'Thêm mục từ thẻ Trình phát';
 
   @override
-  String get addItemsFromSearchTab => 'Thêm mục từ thẻ Tìm kiếm';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return 'Thêm mục bằng $quickDownload ở Trang chủ hoặc bằng $multiSearch';
+  }
 
   @override
   String get upNext => 'Tiếp theo';
@@ -1353,7 +1352,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      'Phiên bản này được tối ưu cho kho torrent và tuân thủ chính sách của cửa hàng ứng dụng.';
+      'Phiên bản này dành cho torrent và đa phương tiện, tuân thủ chính sách của các cửa hàng ứng dụng.';
 
   @override
   String get minimizeTrayClose => 'Thu nhỏ xuống khay khi đóng';
@@ -1425,7 +1424,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get whenSetVaultTorrentsUse =>
-      'Khi được đặt, torrent trong Kho sẽ dùng thư mục này thay cho thư mục tải xuống chung.';
+      'Khi được đặt, torrent sẽ được lưu vào thư mục này thay vì thư mục tải xuống chung.';
 
   @override
   String get parallelWorkers110 => 'Tác vụ song song (1-10)';
@@ -1802,7 +1801,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle là kho torrent và trung tâm đa phương tiện. Thêm liên kết magnet và tệp .torrent, quản lý tải xuống và giữ mọi thứ gọn gàng trong một ứng dụng.';
+    return '$getAppTitle là trình torrent và trung tâm đa phương tiện. Thêm liên kết magnet và tệp .torrent, quản lý tải xuống và sắp xếp mọi thứ trong một ứng dụng.';
   }
 
   @override
@@ -2160,6 +2159,9 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get openedFileNotInLibrary =>
       'Tệp đã mở, không có trong thư viện của bạn';
+
+  @override
+  String get openFileFolder => 'Mở thư mục chứa tệp';
 
   @override
   String get trackActions => 'Thao tác bài hát';
@@ -3893,7 +3895,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get mediaPlayerLibrary => 'Trình phát & thư viện';
 
   @override
-  String get vaultTorrentManager => 'Trình quản lý torrent của kho';
+  String get vaultTorrentManager => 'Tải và chia sẻ torrent';
 
   @override
   String get mac => 'Mac';
@@ -3911,6 +3913,15 @@ class AppLocalizationsVi extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'Đã có v$latestVersion';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return 'Bạn đang dùng phiên bản mới nhất ($version)';
+  }
+
+  @override
+  String get updateCheckFailed =>
+      'Không thể kiểm tra cập nhật. Hãy kiểm tra kết nối internet.';
 
   @override
   String get dismiss => 'Bỏ qua';

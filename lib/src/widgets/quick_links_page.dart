@@ -514,7 +514,9 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
                         fontSize: 15,
                         color: cs.onSurfaceVariant.withValues(alpha: 0.7),
                       ),
-                      maxLines: 1,
+                      // One line cut most of them off ("Help & document…");
+                      // the tiles are tall enough for two.
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                     ),

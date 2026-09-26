@@ -309,8 +309,26 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (kPlayStoreBuild) return;
       if (!_checkUpdatesOnLaunch && !force) return;
       final info = await UpdateService.checkForUpdate();
-      if (info == null) return;
-      final shouldShow =
+      if (!mounted) return;
+      if (info == null) {
+        if (force) {
+          Snack.show(context, context.l10n.updateCheckFailed,
+              level: SnackLevel.warning);
+        }
+        return;
+      }
+      // Only a newer release: the banner offered the latest release even to
+      // the copy that is that release, and on Windows its Update now
+      // installed it again.
+      if (!info.updateAvailable) {
+        if (force) {
+          Snack.show(context, context.l10n.appUpToDate(info.currentVersion),
+              level: SnackLevel.info);
+        }
+        return;
+      }
+      // Asking again brings back a banner that was closed.
+      final shouldShow = force ||
           await UpdateService.shouldShowBanner(info.latestVersion);
       if (mounted) {
         setState(() {
@@ -1314,7 +1332,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Material(
                   child: TabBar(
                     tabs: [
-                      Tab(text: context.l10n.searchQueue),
+                      // Short, like the navigation's name for this page:
+                      // longer names were cut off in the side panel.
+                      Tab(text: context.l10n.tabQueue),
                       Tab(text: context.l10n.mediaPlayer),
                     ],
                   ),
@@ -1352,13 +1372,18 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 6),
-            Text(
-              kPlayStoreBuild
-                  ? context.l10n.addItemsFromPlayerTab
-                  : context.l10n.addItemsFromSearchTab,
-              style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                kPlayStoreBuild
+                    ? context.l10n.addItemsFromPlayerTab
+                    : context.l10n.addItemsToDownloadQueue(
+                        context.l10n.quickDownload, context.l10n.multiSearch),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
             ),
           ],
         ),

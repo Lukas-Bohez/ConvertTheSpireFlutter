@@ -1244,9 +1244,6 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => 'कतार में खोजें';
-
-  @override
   String get mediaPlayer => 'मीडिया प्लेयर';
 
   @override
@@ -1256,7 +1253,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get addItemsFromPlayerTab => 'प्लेयर टैब से आइटम जोड़ें';
 
   @override
-  String get addItemsFromSearchTab => 'खोज टैब से आइटम जोड़ें';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return 'होम पर $quickDownload या $multiSearch से आइटम जोड़ें';
+  }
 
   @override
   String get upNext => 'आगे';
@@ -1357,7 +1356,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      'यह वर्शन टॉरेंट वॉल्ट के लिए बनाया गया है और ऐप स्टोर नीतियों का पालन करता है।';
+      'यह संस्करण टोरेंट और मीडिया के लिए बना है और ऐप स्टोर की नीतियों का पालन करता है।';
 
   @override
   String get minimizeTrayClose => 'बंद करने पर ट्रे में छोटा करें';
@@ -1429,7 +1428,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get whenSetVaultTorrentsUse =>
-      'सेट होने पर वॉल्ट टॉरेंट सामान्य डाउनलोड फ़ोल्डर की जगह यह फ़ोल्डर इस्तेमाल करते हैं।';
+      'सेट होने पर, टोरेंट सामान्य डाउनलोड फ़ोल्डर के बजाय इस फ़ोल्डर में सहेजे जाते हैं।';
 
   @override
   String get parallelWorkers110 => 'पैरलल वर्कर (1-10)';
@@ -1808,7 +1807,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle एक टॉरेंट वॉल्ट और मीडिया हब है। मैग्नेट लिंक और .torrent फ़ाइलें जोड़ें, डाउनलोड संभालें और सब कुछ एक ही ऐप में व्यवस्थित रखें।';
+    return '$getAppTitle एक टोरेंट क्लाइंट और मीडिया हब है। मैग्नेट लिंक और .torrent फ़ाइलें जोड़ें, डाउनलोड प्रबंधित करें और सब कुछ एक ही ऐप में व्यवस्थित रखें।';
   }
 
   @override
@@ -2167,6 +2166,9 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get openedFileNotInLibrary => 'खोली गई फ़ाइल, आपकी लाइब्रेरी में नहीं';
+
+  @override
+  String get openFileFolder => 'इसका फ़ोल्डर खोलें';
 
   @override
   String get trackActions => 'ट्रैक के विकल्प';
@@ -3898,7 +3900,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get mediaPlayerLibrary => 'मीडिया प्लेयर और लाइब्रेरी';
 
   @override
-  String get vaultTorrentManager => 'वॉल्ट टॉरेंट मैनेजर';
+  String get vaultTorrentManager => 'टोरेंट डाउनलोड और साझा करें';
 
   @override
   String get mac => 'Mac';
@@ -3916,6 +3918,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'v$latestVersion उपलब्ध है';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return 'आपके पास नवीनतम संस्करण है ($version)';
+  }
+
+  @override
+  String get updateCheckFailed =>
+      'अपडेट की जाँच नहीं हो सकी। अपना इंटरनेट कनेक्शन जाँचें।';
 
   @override
   String get dismiss => 'हटाएं';

@@ -1244,9 +1244,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => 'Поиск в очереди';
-
-  @override
   String get mediaPlayer => 'Медиаплеер';
 
   @override
@@ -1256,7 +1253,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get addItemsFromPlayerTab => 'Добавьте элементы на вкладке «Плеер»';
 
   @override
-  String get addItemsFromSearchTab => 'Добавьте элементы на вкладке «Поиск»';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return 'Добавляйте элементы через «$quickDownload» на главной или через «$multiSearch»';
+  }
 
   @override
   String get upNext => 'Далее';
@@ -1356,7 +1355,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      'Эта версия оптимизирована для торрент-хранилища и соответствует правилам магазинов приложений.';
+      'Эта версия создана для торрентов и медиа и соответствует правилам магазинов приложений.';
 
   @override
   String get minimizeTrayClose => 'Сворачивать в трей при закрытии';
@@ -1428,7 +1427,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get whenSetVaultTorrentsUse =>
-      'Если задана, торренты из хранилища сохраняются сюда, а не в общую папку загрузок.';
+      'Если задано, торренты сохраняются в эту папку вместо общей папки загрузок.';
 
   @override
   String get parallelWorkers110 => 'Параллельные потоки (1–10)';
@@ -1808,7 +1807,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle — торрент-хранилище и медиацентр. Добавляйте magnet-ссылки и файлы .torrent, управляйте загрузками и держите всё в порядке в одном приложении.';
+    return '$getAppTitle — торрент-клиент и медиацентр. Добавляйте magnet-ссылки и .torrent-файлы, управляйте загрузками и держите всё в порядке в одном приложении.';
   }
 
   @override
@@ -2165,6 +2164,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get openedFileNotInLibrary => 'Открытый файл, не из медиатеки';
+
+  @override
+  String get openFileFolder => 'Открыть папку';
 
   @override
   String get trackActions => 'Действия с треком';
@@ -3897,7 +3899,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mediaPlayerLibrary => 'Медиаплеер и медиатека';
 
   @override
-  String get vaultTorrentManager => 'Торрент-менеджер хранилища';
+  String get vaultTorrentManager => 'Загрузка и раздача торрентов';
 
   @override
   String get mac => 'Mac';
@@ -3915,6 +3917,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'Доступна v$latestVersion';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return 'У вас последняя версия ($version)';
+  }
+
+  @override
+  String get updateCheckFailed =>
+      'Не удалось проверить обновления. Проверьте подключение к интернету.';
 
   @override
   String get dismiss => 'Скрыть';

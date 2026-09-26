@@ -1247,9 +1247,6 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => 'Cerca nella coda';
-
-  @override
   String get mediaPlayer => 'Lettore multimediale';
 
   @override
@@ -1259,7 +1256,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get addItemsFromPlayerTab => 'Aggiungi elementi dalla scheda Lettore';
 
   @override
-  String get addItemsFromSearchTab => 'Aggiungi elementi dalla scheda Cerca';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return 'Aggiungi elementi con $quickDownload nella Home o con $multiSearch';
+  }
 
   @override
   String get upNext => 'A seguire';
@@ -1360,7 +1359,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      'Questa versione è ottimizzata per la cassaforte dei torrent ed è conforme alle regole degli store.';
+      'Questa versione è pensata per torrent e media e rispetta le regole degli store di app.';
 
   @override
   String get minimizeTrayClose => 'Riduci nell\'area di notifica alla chiusura';
@@ -1432,7 +1431,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get whenSetVaultTorrentsUse =>
-      'Se impostata, i torrent della cassaforte usano questa cartella al posto di quella di download generale.';
+      'Se impostata, i torrent vengono salvati in questa cartella invece che nella cartella di download generale.';
 
   @override
   String get parallelWorkers110 => 'Processi paralleli (1-10)';
@@ -1816,7 +1815,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle è una cassaforte per torrent e un hub multimediale. Aggiungi link magnet e file .torrent, gestisci i download e tieni tutto in ordine in un\'unica app.';
+    return '$getAppTitle è un client torrent e un centro multimediale. Aggiungi link magnet e file .torrent, gestisci i download e tieni tutto in ordine in un\'unica app.';
   }
 
   @override
@@ -2175,6 +2174,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get openedFileNotInLibrary => 'File aperto, non è nella tua libreria';
+
+  @override
+  String get openFileFolder => 'Apri la sua cartella';
 
   @override
   String get trackActions => 'Azioni del brano';
@@ -3927,7 +3929,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get mediaPlayerLibrary => 'Lettore e libreria';
 
   @override
-  String get vaultTorrentManager => 'Gestore torrent della cassaforte';
+  String get vaultTorrentManager => 'Scarica e condividi torrent';
 
   @override
   String get mac => 'Mac';
@@ -3945,6 +3947,15 @@ class AppLocalizationsIt extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'v$latestVersion disponibile';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return 'Hai l’ultima versione ($version)';
+  }
+
+  @override
+  String get updateCheckFailed =>
+      'Impossibile cercare aggiornamenti. Controlla la connessione a internet.';
 
   @override
   String get dismiss => 'Ignora';

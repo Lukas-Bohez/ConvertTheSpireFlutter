@@ -14,6 +14,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart'
 
 import '../models/search_result.dart';
 import 'log_service.dart';
+import 'metadata_god_init.dart';
 import 'platform_dirs.dart';
 import 'yt_dlp_service.dart' show YtDlpService;
 
@@ -1942,7 +1943,7 @@ bool get _metadataGodEnabledForMatching =>
 Future<dynamic> _readLocalTagForMatching(String path) async {
   if (_metadataGodEnabledForMatching && !_metadataGodDisabledForMatching) {
     try {
-      await MetadataGod.initialize();
+      await ensureMetadataGod();
       return await MetadataGod.readMetadata(file: path);
     } catch (e) {
       _metadataGodDisabledForMatching = true;

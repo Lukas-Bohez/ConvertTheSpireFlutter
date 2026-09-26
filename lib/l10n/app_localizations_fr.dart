@@ -1251,9 +1251,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => 'Rechercher dans la file';
-
-  @override
   String get mediaPlayer => 'Lecteur multimédia';
 
   @override
@@ -1264,8 +1261,9 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ajoutez des éléments depuis l\'onglet Lecteur';
 
   @override
-  String get addItemsFromSearchTab =>
-      'Ajoutez des éléments depuis l\'onglet Rechercher';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return 'Ajoutez des éléments avec $quickDownload sur l’accueil ou avec $multiSearch';
+  }
 
   @override
   String get upNext => 'À suivre';
@@ -1367,7 +1365,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      'Cette version est optimisée pour le coffre à torrents et respecte les règles des magasins d\'applications.';
+      'Cette version est conçue pour les torrents et les médias, et respecte les règles des magasins d\'applications.';
 
   @override
   String get minimizeTrayClose =>
@@ -1440,7 +1438,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get whenSetVaultTorrentsUse =>
-      'S\'il est défini, les torrents du coffre utilisent ce dossier au lieu du dossier de téléchargement général.';
+      'S\'il est défini, les torrents sont enregistrés dans ce dossier au lieu du dossier de téléchargement général.';
 
   @override
   String get parallelWorkers110 => 'Tâches parallèles (1-10)';
@@ -1825,7 +1823,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle est un coffre à torrents et un centre multimédia. Ajoutez des liens magnet et des fichiers .torrent, gérez vos téléchargements et gardez tout organisé dans une seule application.';
+    return '$getAppTitle est un client torrent et un centre multimédia. Ajoutez des liens magnet et des fichiers .torrent, gérez vos téléchargements et gardez tout organisé dans une seule application.';
   }
 
   @override
@@ -2186,6 +2184,9 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get openedFileNotInLibrary =>
       'Fichier ouvert, absent de votre bibliothèque';
+
+  @override
+  String get openFileFolder => 'Ouvrir son dossier';
 
   @override
   String get trackActions => 'Actions sur le titre';
@@ -3944,7 +3945,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mediaPlayerLibrary => 'Lecteur et bibliothèque';
 
   @override
-  String get vaultTorrentManager => 'Gestionnaire de torrents du coffre';
+  String get vaultTorrentManager => 'Téléchargez et partagez des torrents';
 
   @override
   String get mac => 'Mac';
@@ -3962,6 +3963,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'v$latestVersion disponible';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return 'Vous avez la dernière version ($version)';
+  }
+
+  @override
+  String get updateCheckFailed =>
+      'Impossible de rechercher les mises à jour. Vérifiez votre connexion internet.';
 
   @override
   String get dismiss => 'Ignorer';

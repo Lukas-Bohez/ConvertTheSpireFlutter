@@ -238,10 +238,12 @@ class _TorrentsScreenState extends State<TorrentsScreen>
     }
   }
 
+  /// Asks for a download folder. It can be closed: it opens on the way into
+  /// Torrents, and with no way out but Settings it kept people from just
+  /// looking around.
   void _showSetDownloadFolderDialog() {
     showDialog<void>(
       context: context,
-      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Text(context.l10n.setDownloadFolder2),
         // overflow-fix: keep long settings guidance readable in constrained dialogs.
@@ -251,6 +253,10 @@ class _TorrentsScreenState extends State<TorrentsScreen>
           ),
         ),
         actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(context.l10n.actionClose),
+          ),
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
