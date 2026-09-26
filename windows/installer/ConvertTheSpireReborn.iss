@@ -33,7 +33,18 @@ AppId={{6B2F3E6A-3C1D-4E8B-9A57-2F0C7D51A9E4}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
-AppPublisher=Oroka Conner
+AppPublisher=Lukas Bohez
+AppCopyright=Copyright (C) 2026 Lukas Bohez. Licensed under the GNU GPL v3.
+; Version resource of Setup.exe itself. Code signing (docs/signing/signpath.md)
+; checks product name and version, and they must match the app's own.
+VersionInfoVersion={#AppVersion}
+VersionInfoTextVersion={#AppVersion}
+VersionInfoProductName=Convert The Spire Reborn
+VersionInfoProductVersion={#AppVersion}
+VersionInfoProductTextVersion={#AppVersion}
+VersionInfoCompany=Lukas Bohez
+VersionInfoCopyright=Copyright (C) 2026 Lukas Bohez. Licensed under the GNU GPL v3.
+VersionInfoDescription=Convert The Spire Reborn Setup
 AppPublisherURL=https://github.com/Lukas-Bohez/ConvertTheSpireFlutter
 AppSupportURL=https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/issues
 AppUpdatesURL=https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest

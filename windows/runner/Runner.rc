@@ -89,11 +89,16 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
+            // Never change CompanyName or ProductName: path_provider builds the
+            // app's data folder from them (%APPDATA%\Oroka Conner\Convert the
+            // Spire Reborn), so a new value would lose everyone's settings and
+            // library on the next update. tools/check_windows_metadata.ps1
+            // guards both.
             VALUE "CompanyName", "Oroka Conner" "\0"
             VALUE "FileDescription", "Convert The Spire Reborn" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "convert_the_spire_reborn" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 Oroka Conner. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Lukas Bohez. Licensed under the GNU GPL v3." "\0"
             VALUE "OriginalFilename", "convert_the_spire_reborn.exe" "\0"
             VALUE "ProductName", "Convert The Spire Reborn" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
