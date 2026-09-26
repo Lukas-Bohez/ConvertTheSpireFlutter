@@ -28,6 +28,7 @@ import '../services/session_log_service.dart';
 import '../services/shortcut_service.dart';
 import '../services/tray_service.dart';
 import '../services/update_service.dart';
+import '../services/windows_updater.dart';
 import '../state/app_controller.dart';
 import '../theme/app_colors.dart';
 import '../utils/folder_label.dart';
@@ -257,6 +258,49 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     } finally {
       if (!mounted) return;
       setState(() => _ytDlpVersionChecking = false);
+    }
+  }
+
+  /// Windows releases from 15.2.0 on carry Setup.exe: the app downloads it,
+  /// checks it and runs it, and the new version starts by itself.
+  bool _canInstallUpdateInPlace(UpdateInfo info) =>
+      !kIsWeb &&
+      Platform.isWindows &&
+      info.windowsInstallerUrl.isNotEmpty &&
+      info.checksumsUrl.isNotEmpty;
+
+  Future<void> _installWindowsUpdate(UpdateInfo info) async {
+    final progress = ValueNotifier<double?>(null);
+    unawaited(showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(dialogContext.l10n.downloadingUpdate),
+        content: SizedBox(
+          width: 320,
+          child: ValueListenableBuilder<double?>(
+            valueListenable: progress,
+            builder: (_, value, __) => LinearProgressIndicator(value: value),
+          ),
+        ),
+      ),
+    ));
+    try {
+      // Quits the app once Setup is running; Setup starts the new version.
+      await WindowsUpdater.downloadAndInstall(
+        installerUrl: info.windowsInstallerUrl,
+        checksumsUrl: info.checksumsUrl,
+        version: info.latestVersion,
+        onProgress: (value) => progress.value = value,
+      );
+    } catch (e) {
+      debugPrint('Windows update failed: $e');
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      Snack.show(context, context.l10n.updateCouldNotDownload,
+          level: SnackLevel.error);
+      unawaited(launchUrl(Uri.parse(info.releaseUrl),
+          mode: LaunchMode.externalApplication));
     }
   }
 
@@ -757,11 +801,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         children: [
           UpdateBanner(
             info: _updateInfo!,
+            installsInPlace: _canInstallUpdateInPlace(_updateInfo!),
             onDismiss: () async {
               await UpdateService.dismissBanner(_updateInfo!.latestVersion);
               if (mounted) setState(() => _updateBannerDismissed = true);
             },
             onDownload: () {
+              if (_canInstallUpdateInPlace(_updateInfo!)) {
+                unawaited(_installWindowsUpdate(_updateInfo!));
+                return;
+              }
               String url = _updateInfo!.releaseUrl;
               if (!kIsWeb) {
                 if (Platform.isWindows &&

@@ -1,20 +1,14 @@
-# Release Notes - v15.1.0
+# Release Notes - v15.2.0
 
-## Safe torrent deletes, magnets that fetch, one-line Windows install
-
-### Fixed
-
-* **Deleting a torrent's files no longer empties your download folder.** "Remove torrent" with "Also delete downloaded files" deleted the whole folder the torrent was saved in, which for most torrents was the download folder itself, so other downloads and your own files went with it. It now deletes only the torrent's own files, one by one, and only the folders that end up empty. When it cannot tell which files are the torrent's, it deletes nothing and says so.
-* **Magnet links get their file list again.** Magnets waited at "No metadata" until the app gave up, because qBittorrent, Deluge and other clients built on libtorrent dropped the connection. They now answer in under a second.
-* **The Android icon looks right.** On phones and Android TV the icon shows the whole logo on white and fills its square, and the GitHub version's icon is no longer cut off at the edges.
+## Double-click install on Windows, smoother torrents
 
 ### New
 
-* **One-line Windows install.** Paste one line into Win+R and the app installs itself: it downloads the latest release, checks it, adds a Start menu entry and starts, without the "Windows protected your PC" screen. Run it again to update. The zip is still there if you prefer it.
-* **Share a torrent as a .torrent file.** Each torrent's menu has Share .torrent file on a phone and Save .torrent file on a computer, next to Copy magnet link.
+* **Double-click install on Windows.** `ConvertTheSpireReborn-Setup.exe` installs the app for your account, with a Start menu entry and an uninstaller. No admin rights.
+* **Updates itself on Windows.** **Update now** in the update banner downloads the new version, checks it and restarts the app.
+* **A .dmg for Mac**, to drag the app into Applications.
 
-### Improved
+### Fixed
 
-* **Torrents is one screen.** Its settings are in Settings under Torrents, and its guide is part of the app's Guide. The AI copilot and chat, and the second browser inside Torrents, are gone.
-* **The Search page is gone.** Quick Download on Home and the Playlist Manager do everything it did. Multi-Search stays.
-* The Play Store version no longer calls its pages "Vault" and "Vault Guide".
+* **Torrents no longer freeze the app** or fill up memory on slower PCs.
+* The update banner shows the release notes as plain text.

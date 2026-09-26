@@ -3615,6 +3615,16 @@ class AppLocalizationsIt extends AppLocalizations {
   String get spinUnlockColour => 'Gira → sblocca un colore';
 
   @override
+  String get updateNow => 'Aggiorna ora';
+
+  @override
+  String get downloadingUpdate => 'Download dell\'aggiornamento…';
+
+  @override
+  String get updateCouldNotDownload =>
+      'Impossibile scaricare l\'aggiornamento. Si apre invece la pagina di download.';
+
+  @override
   String get redownloadFromScratch2 => 'Scarica di nuovo da zero';
 
   @override

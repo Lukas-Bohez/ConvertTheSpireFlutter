@@ -6403,6 +6403,24 @@ abstract class AppLocalizations {
   /// **'Spin → unlock a colour'**
   String get spinUnlockColour;
 
+  /// No description provided for @updateNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Update now'**
+  String get updateNow;
+
+  /// No description provided for @downloadingUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading the update…'**
+  String get downloadingUpdate;
+
+  /// No description provided for @updateCouldNotDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'The update could not be downloaded. The download page opens instead.'**
+  String get updateCouldNotDownload;
+
   /// No description provided for @redownloadFromScratch2.
   ///
   /// In en, this message translates to:
