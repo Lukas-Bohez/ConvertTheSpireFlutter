@@ -721,7 +721,10 @@ class AppController extends ChangeNotifier {
       return;
     }
 
-    final maxAttempts = (_settings?.retryCount ?? 2).clamp(1, 5);
+    // "Retry count (0-10)" in Settings: retries after the first attempt. It
+    // was taken as the number of attempts and capped at 5, so 10 gave 4
+    // retries and 1 none.
+    final maxAttempts = (_settings?.retryCount ?? 2).clamp(0, 10) + 1;
     final cookiesFile = settings.youtubeAuthEnabled
         ? settings.youtubeCookiesFile?.trim()
         : null;
