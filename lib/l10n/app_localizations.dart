@@ -2468,7 +2468,7 @@ abstract class AppLocalizations {
   /// No description provided for @enjoyingConvertSpireReborn.
   ///
   /// In en, this message translates to:
-  /// **'Enjoying Convert The Spire Reborn?'**
+  /// **'Enjoying Convert the Spire Reborn?'**
   String get enjoyingConvertSpireReborn;
 
   /// No description provided for @leaveReviewHelpsMoreThan.
@@ -5416,7 +5416,7 @@ abstract class AppLocalizations {
   /// No description provided for @rateConvertSpireReborn.
   ///
   /// In en, this message translates to:
-  /// **'Rate Convert The Spire Reborn'**
+  /// **'Rate Convert the Spire Reborn'**
   String get rateConvertSpireReborn;
 
   /// No description provided for @leaveRatingPlayStore.

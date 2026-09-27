@@ -3062,9 +3062,15 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               _ytDlpLatestVersion ?? context.l10n.unknown);
                         }
 
-                        final checkedText = _ytDlpLastChecked == null
+                        // A date and time in the app's language; it read
+                        // "2026-09-27 08:16:14.446454".
+                        final checked = _ytDlpLastChecked?.toLocal();
+                        final dates = MaterialLocalizations.of(context);
+                        final checkedText = checked == null
                             ? null
-                            : context.l10n.lastChecked(_ytDlpLastChecked!.toLocal());
+                            : context.l10n.lastChecked(
+                                '${dates.formatMediumDate(checked)} '
+                                '${dates.formatTimeOfDay(TimeOfDay.fromDateTime(checked), alwaysUse24HourFormat: MediaQuery.of(context).alwaysUse24HourFormat)}');
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 10),
@@ -3337,18 +3343,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   const Divider(),
                   const SizedBox(height: 8),
-                  SwitchListTile(
-                    value: settings.autoRetryInstall,
-                    onChanged: (value) {
-                      widget.controller.saveSettings(
-                          settings.copyWith(autoRetryInstall: value));
-                    },
-                    title: Text(context.l10n.autoRetryInstalls),
-                    subtitle:
-                        Text(context.l10n.automaticallyRetryFailedDownloads),
-                    secondary: const Icon(Icons.replay),
-                  ),
-                  const SizedBox(height: 12),
+                  // An "Auto-retry installs" switch stood here: nothing read
+                  // it, and downloads retried either way. The count below is
+                  // what decides.
                   TextField(
                     controller: _retryCountController,
                     decoration: InputDecoration(

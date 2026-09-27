@@ -268,7 +268,7 @@ Future<void> _createTorrentIsolateEntry(Map<String, Object> args) async {
 
     final metadict = <String, Object>{
       'info': info,
-      'created by': 'Convert The Spire Reborn 1.0',
+      'created by': 'Convert the Spire Reborn',
       'creation date': DateTime.now().millisecondsSinceEpoch ~/ 1000,
     };
 

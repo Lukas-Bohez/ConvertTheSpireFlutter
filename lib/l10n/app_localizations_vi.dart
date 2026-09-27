@@ -1304,7 +1304,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get enjoyingConvertSpireReborn =>
-      'Bạn thích Convert The Spire Reborn chứ?';
+      'Bạn thích Convert the Spire Reborn chứ?';
 
   @override
   String get leaveReviewHelpsMoreThan =>
@@ -3013,7 +3013,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get privacyPolicy => 'Chính sách quyền riêng tư';
 
   @override
-  String get rateConvertSpireReborn => 'Đánh giá Convert The Spire Reborn';
+  String get rateConvertSpireReborn => 'Đánh giá Convert the Spire Reborn';
 
   @override
   String get leaveRatingPlayStore => 'Đánh giá trên Play Store';

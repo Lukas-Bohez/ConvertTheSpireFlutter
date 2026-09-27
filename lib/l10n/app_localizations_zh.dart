@@ -1257,7 +1257,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get saveSettings => '保存设置';
 
   @override
-  String get enjoyingConvertSpireReborn => '喜欢 Convert The Spire Reborn 吗？';
+  String get enjoyingConvertSpireReborn => '喜欢 Convert the Spire Reborn 吗？';
 
   @override
   String get leaveReviewHelpsMoreThan => '留个评价吧，它的帮助比你想象的更大';
@@ -2883,7 +2883,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get privacyPolicy => '隐私政策';
 
   @override
-  String get rateConvertSpireReborn => '为 Convert The Spire Reborn 评分';
+  String get rateConvertSpireReborn => '为 Convert the Spire Reborn 评分';
 
   @override
   String get leaveRatingPlayStore => '在 Play 商店评分';

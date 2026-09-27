@@ -1276,7 +1276,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get enjoyingConvertSpireReborn =>
-      'Convert The Spire Reborn を気に入っていただけましたか？';
+      'Convert the Spire Reborn を気に入っていただけましたか？';
 
   @override
   String get leaveReviewHelpsMoreThan => 'レビューをお願いします。思っている以上に助けになります';
@@ -2923,7 +2923,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get privacyPolicy => 'プライバシーポリシー';
 
   @override
-  String get rateConvertSpireReborn => 'Convert The Spire Reborn を評価';
+  String get rateConvertSpireReborn => 'Convert the Spire Reborn を評価';
 
   @override
   String get leaveRatingPlayStore => 'Play ストアで評価する';
