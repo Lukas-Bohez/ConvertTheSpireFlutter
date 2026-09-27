@@ -124,11 +124,16 @@ class _TorrentDetailScreenState extends State<TorrentDetailScreen> {
   Widget build(BuildContext context) {
     return StreamBuilder<TorrentViewState?>(
       stream: TorrentService.instance.torrentStateStream(widget.torrent.id),
+      // The stream only speaks when something changes: without this, a
+      // paused or idle torrent showed its raw stored status ("seeding") and
+      // a seeded total that never moved.
+      initialData:
+          TorrentService.instance.latestTorrentState(widget.torrent.id),
       builder: (context, snapshot) {
         final view = snapshot.data;
         final torrent = view?.model ?? widget.torrent;
         final statusLabel = view == null
-            ? (torrent.status ?? context.l10n.unknown)
+            ? localizedStoredTorrentStatus(context, torrent.status)
             : localizedTorrentStatus(context, view.statusLabel);
         final retryCountdown =
             TorrentService.instance.metadataRetryRemaining(torrent.id);

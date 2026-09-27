@@ -38,3 +38,33 @@ String localizedTorrentStatus(BuildContext context, String label) {
   }
   return label;
 }
+
+/// A stored torrent status ("seeding", "pending_metadata", …) in the app's
+/// language, for when there is no live status yet.
+String localizedStoredTorrentStatus(BuildContext context, String? status) {
+  final s = (status ?? '').toLowerCase();
+  if (s.isEmpty) return context.l10n.unknown;
+  final String label;
+  if (s.contains('pending_metadata')) {
+    label = 'Pending Metadata';
+  } else if (s.contains('missing')) {
+    label = 'Missing Files';
+  } else if (s.contains('in_use')) {
+    label = 'File In Use';
+  } else if (s.contains('error')) {
+    label = 'Error';
+  } else if (s.contains('pause')) {
+    label = 'Paused';
+  } else if (s.contains('queue')) {
+    label = 'Queued';
+  } else if (s.contains('check')) {
+    label = 'Checking';
+  } else if (s.contains('seed')) {
+    label = 'Seeding';
+  } else if (s.contains('download')) {
+    label = 'Downloading';
+  } else {
+    return status!;
+  }
+  return localizedTorrentStatus(context, label);
+}
