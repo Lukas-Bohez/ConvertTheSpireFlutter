@@ -143,8 +143,14 @@ class _TorrentSettingsCardState extends State<TorrentSettingsCard> {
     messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Widget _number(TextEditingController controller, String label,
+  Widget _number(TextEditingController controller, String text,
       {bool decimal = false}) {
+    // "Upload rate limit (KiB/s, 0 = unlimited)": the part in brackets goes
+    // under the field. In the label it was cut off, "0 = unlimited" with it.
+    final parts =
+        RegExp(r'^(.*?)\s*[(\uFF08](.*)[)\uFF09]\s*$').firstMatch(text);
+    final label = parts?.group(1) ?? text;
+    final hint = parts?.group(2);
     return SizedBox(
       width: 220,
       child: TextField(
@@ -155,6 +161,8 @@ class _TorrentSettingsCardState extends State<TorrentSettingsCard> {
             : [FilteringTextInputFormatter.digitsOnly],
         decoration: InputDecoration(
           labelText: label,
+          helperText: hint,
+          helperMaxLines: 2,
           border: const OutlineInputBorder(),
         ),
       ),
