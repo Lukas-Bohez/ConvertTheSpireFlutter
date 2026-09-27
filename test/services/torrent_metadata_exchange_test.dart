@@ -83,6 +83,31 @@ void main() {
     // then go back to that same peer.
     expect(watch.elapsed, lessThan(const Duration(seconds: 5)));
   });
+
+  test('gets the file list from a magnet link\'s x.pe peer, known before '
+      'the download starts', () async {
+    final peer = await _FakePeer.start(info);
+    servers.add(peer);
+
+    // No tracker, no DHT: the magnet's own peer is the only source.
+    final downloader = MetadataDownloader.fromMagnet(
+        'magnet:?xt=urn:btih:$infoHash&x.pe=127.0.0.1:${peer.port}');
+    downloader.addKnownPeer(
+        CompactAddress(InternetAddress.loopbackIPv4, peer.port));
+    final done = Completer<Uint8List>();
+    final listener = downloader.createListener()
+      ..on<MetaDataDownloadComplete>((e) {
+        if (!done.isCompleted) done.complete(Uint8List.fromList(e.data));
+      });
+    unawaited(downloader.startDownload());
+    try {
+      final metadata = await done.future.timeout(const Duration(seconds: 8));
+      expect(sha1.convert(metadata).toString(), infoHash);
+    } finally {
+      await listener.dispose();
+      await downloader.stop();
+    }
+  });
 }
 
 /// A metadata-serving peer as strict as libtorrent: an extended message

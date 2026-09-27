@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
+
+import '../../services/app_data_location.dart';
 
 class AppDatabase {
   AppDatabase._();
@@ -77,10 +77,8 @@ class AppDatabase {
     }
   }
 
-  Future<String> _getDatabasePath() async {
-    final documentsDirectory = await getApplicationDocumentsDirectory();
-    return join(documentsDirectory.path, 'vault_the_spire.db');
-  }
+  Future<String> _getDatabasePath() =>
+      AppDataLocation.pathOf('vault_the_spire.db');
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''

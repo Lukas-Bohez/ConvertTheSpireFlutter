@@ -34,6 +34,11 @@ which is what qBittorrent and Deluge run on:
    metadata sources, so each retry went to the dead connection and its pieces
    only came back after their timeout; with the dead peer first in the list,
    the download never finished. Its pieces now go to the other peers at once.
+12. **Peers known in advance are asked too** (`metadata_downloader.dart`,
+    `addKnownPeer`). A peer added before `startDownload()` was dropped, as
+    the downloader was not running yet, so a magnet link's own peers (x.pe)
+    could not be used for the file list. They are now kept and connected to
+    once the download starts.
 
 ## Downloads that froze the app
 
@@ -120,6 +125,14 @@ at about 100 MB/s, with memory flat at 62 to 91 MB and no errors.
     is a `StateFileV2`), and the state file is written without truncating
     it on open, which Windows refuses for the hidden files the app makes of
     these.
+13. **Blocks are read ahead, a megabyte at a time** (`download_file_manager.dart`,
+    `readFile`). Each 16 KB block asked for was its own seek and read, one
+    after another. In a Flutter app every such async step costs about a
+    millisecond (measured on its UI isolate: a zero-length timer 1.1 ms, a
+    seek and read 2.5 ms), which held seeding to about 4 MB/s there. Blocks
+    now come from 1 MB chunks read once, eight kept at most and dropped
+    after 20 s unused or when their piece is written. The app then seeded
+    the same torrent at about 80 MB/s.
 
 ## Updating
 

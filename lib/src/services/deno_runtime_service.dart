@@ -14,9 +14,29 @@ class DenoRuntimeService {
 
   static String? _cachedPath;
 
-  static Future<String?> resolveOrDownload() async {
-    if (kIsWeb) return null;
-    if (Platform.isAndroid || Platform.isIOS) return null;
+  /// The lookup or download under way; callers meanwhile share it instead of
+  /// each downloading Deno again.
+  static Future<String?>? _inFlight;
+
+  /// When the last download failed. Every yt-dlp run asks for Deno, and
+  /// retrying a failed download each time held up every one of them.
+  static DateTime? _downloadFailedAt;
+  static const Duration _retryDownloadAfter = Duration(minutes: 30);
+
+  /// The Deno binary: already there, or downloaded on first use.
+  ///
+  /// With [waitAtMost], gives up waiting after that long and returns null;
+  /// the download goes on, and a later call gets its result.
+  static Future<String?> resolveOrDownload({Duration? waitAtMost}) {
+    if (kIsWeb) return Future.value(null);
+    if (Platform.isAndroid || Platform.isIOS) return Future.value(null);
+    final resolving =
+        _inFlight ??= _resolveOrDownload().whenComplete(() => _inFlight = null);
+    if (waitAtMost == null) return resolving;
+    return resolving.timeout(waitAtMost, onTimeout: () => null);
+  }
+
+  static Future<String?> _resolveOrDownload() async {
     if (_cachedPath != null && await File(_cachedPath!).exists()) {
       if (await _verifyDenoRuns(_cachedPath!)) {
         return _cachedPath;
@@ -87,18 +107,17 @@ class DenoRuntimeService {
         );
       }
 
-      _note("downloading", "deno-runtime: downloading Deno ($assetName)");
-      final dl =
-          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 60));
-      if (dl.statusCode != 200) {
-        _note(
-          "download_failed_http_${dl.statusCode}",
-          "deno-runtime: download failed, HTTP ${dl.statusCode} from $url",
-        );
+      final failedAt = _downloadFailedAt;
+      if (failedAt != null &&
+          DateTime.now().difference(failedAt) < _retryDownloadAfter) {
         return null;
       }
+      _note("downloading", "deno-runtime: downloading Deno ($assetName)");
       final zipPath = p.join(binDir.path, assetName);
-      await File(zipPath).writeAsBytes(dl.bodyBytes, flush: true);
+      if (!await _download(url, zipPath)) {
+        _downloadFailedAt = DateTime.now();
+        return null;
+      }
 
       if (isWindows) {
         final out = await Process.run(
@@ -115,8 +134,13 @@ class DenoRuntimeService {
               runInShell: true);
         }
       } else {
-        await Process.run("tar", ["-xf", zipPath, "-C", binDir.path],
+        final out = await Process.run(
+            "tar", ["-xf", zipPath, "-C", binDir.path],
             runInShell: true);
+        if (out.exitCode != 0) {
+          // GNU tar (most Linux systems) does not read zip files.
+          await Process.run("unzip", ["-o", zipPath, "-d", binDir.path]);
+        }
       }
       try {
         await File(zipPath).delete();
@@ -138,10 +162,48 @@ class DenoRuntimeService {
         "binary_not_found",
         "deno-runtime: downloaded and extracted but binary not found in ${binDir.path}",
       );
+      _downloadFailedAt = DateTime.now();
       return null;
     } catch (e) {
       _note("provision_failed", "deno-runtime: failed to provision Deno: $e");
+      _downloadFailedAt = DateTime.now();
       return null;
+    }
+  }
+
+  /// Downloads [url] to [path]. Gives up when no data arrives for 30
+  /// seconds, not after a fixed time: the old one-minute limit on the whole
+  /// download meant Deno never arrived over a slow connection.
+  static Future<bool> _download(String url, String path) async {
+    final client = http.Client();
+    final file = File(path);
+    try {
+      final response = await client
+          .send(http.Request("GET", Uri.parse(url)))
+          .timeout(const Duration(seconds: 30));
+      if (response.statusCode != 200) {
+        _note(
+          "download_failed_http_${response.statusCode}",
+          "deno-runtime: download failed, HTTP ${response.statusCode} from $url",
+        );
+        return false;
+      }
+      final sink = file.openWrite();
+      try {
+        await sink
+            .addStream(response.stream.timeout(const Duration(seconds: 30)));
+      } finally {
+        await sink.close();
+      }
+      return true;
+    } catch (e) {
+      _note("download_failed", "deno-runtime: download failed: $e");
+      try {
+        if (await file.exists()) await file.delete();
+      } catch (_) {}
+      return false;
+    } finally {
+      client.close();
     }
   }
 

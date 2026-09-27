@@ -93,6 +93,10 @@ class MetadataDownloader
   /// Whether the downloader is currently running
   bool _running = false;
 
+  /// Peers known to have the torrent before any tracker or DHT answers, such
+  /// as the x.pe peers of a magnet link. Connected to once running.
+  final Set<CompactAddress> _knownPeers = {};
+
   /// End of bencoded data marker
   final int E = 'e'.codeUnits[0];
 
@@ -259,6 +263,10 @@ class MetadataDownloader
 
     _running = true;
 
+    for (final address in _knownPeers) {
+      addNewPeerAddress(address, PeerSource.manual);
+    }
+
     // Initialize tracker client if we have trackers from magnet link
     if (_magnetTrackers.isNotEmpty) {
       _log.info('Using ${_magnetTrackers.length} trackers from magnet link');
@@ -357,6 +365,14 @@ class MetadataDownloader
     if (event.infoHash == String.fromCharCodes(_infoHashBuffer)) {
       addNewPeerAddress(event.address, PeerSource.dht);
     }
+  }
+
+  /// Connects to [address], a peer known to have the torrent (a magnet
+  /// link's x.pe), as soon as the download runs. Such a peer may be the only
+  /// source there is, when no tracker or DHT node knows the torrent.
+  void addKnownPeer(CompactAddress address) {
+    _knownPeers.add(address);
+    if (_running) addNewPeerAddress(address, PeerSource.manual);
   }
 
   /// Add a new peer [address] , the default [type] is `PeerType.TCP`,

@@ -8,7 +8,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:youtube_explode_dart/solvers.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
 
@@ -29,6 +28,7 @@ import 'screens/browser_screen.dart';
 import 'screens/home_screen.dart' show HomeScreen;
 import 'screens/onboarding_screen.dart';
 import 'screens/player.dart' show PlayerState;
+import 'services/background_deno_solver.dart';
 import 'services/bulk_import_service.dart';
 import 'services/convert_service.dart';
 import 'services/deno_runtime_service.dart';
@@ -52,6 +52,7 @@ import 'services/webview_ejs_solver.dart';
 import 'services/youtube_service.dart';
 import 'services/yt_dlp_service.dart';
 import 'state/app_controller.dart';
+import 'vault/services/torrent_engine_service.dart';
 import 'vault/vault_bootstrap.dart';
 import 'widgets/adaptive_ui_frame.dart';
 import 'widgets/global_cursor_overlay.dart';
@@ -211,11 +212,11 @@ class _MyAppState extends State<MyApp>
       if (Platform.isAndroid || Platform.isIOS) {
         return YoutubeExplode(jsSolver: WebViewEJSSolver());
       }
-      final denoPath = await DenoRuntimeService.resolveOrDownload();
-      if (denoPath != null) {
-        final solver = await DenoEJSSolver.init(denoExe: denoPath);
-        return YoutubeExplode(jsSolver: solver);
-      }
+      // Not awaited: the first start downloads Deno, and the app would
+      // wait for that behind a spinner.
+      return YoutubeExplode(
+          jsSolver:
+              BackgroundDenoSolver(DenoRuntimeService.resolveOrDownload()));
     } catch (e) {
       debugPrint('MyApp: failed to wire jsSolver: $e');
     }
@@ -529,6 +530,9 @@ class _MyAppState extends State<MyApp>
         }
       }
     }
+
+    // Torrents save what they did in the last seconds.
+    await TorrentEngineService.instance.closeForExit();
 
     // Write the session breadcrumbs (startup timings, close timings) to
     // disk before the process goes away - happens on every normal close,

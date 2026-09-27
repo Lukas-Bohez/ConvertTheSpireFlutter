@@ -144,6 +144,95 @@ void main() {
     expect(task.uploaded, pieceLength);
   });
 
+  test('sends the right bytes from read-ahead, across files and chunks',
+      () async {
+    if (localIp == null) {
+      markTestSkipped('no network interface besides loopback');
+      return;
+    }
+    // Blocks are served from 1 MB chunks read ahead of them. Pieces of 2 MB
+    // over files whose edges fall inside the chunks, and a short last piece.
+    const bigPiece = 2 << 20;
+    const sizes = [700000, 1900001, 1500000, 2100000];
+    final random = Random(5);
+    final all = Uint8List.fromList(List.generate(
+        sizes.reduce((a, b) => a + b), (_) => random.nextInt(256)));
+    await Directory('${dir.path}/multi').create();
+    var at = 0;
+    for (var i = 0; i < sizes.length; i++) {
+      await File('${dir.path}/multi/f$i.bin')
+          .writeAsBytes(all.sublist(at, at + sizes[i]));
+      at += sizes[i];
+    }
+    final pieceCount = (all.length + bigPiece - 1) ~/ bigPiece;
+    final hashes = BytesBuilder();
+    for (var i = 0; i < pieceCount; i++) {
+      hashes.add(sha1
+          .convert(all.sublist(i * bigPiece, min((i + 1) * bigPiece, all.length)))
+          .bytes);
+    }
+    final info = encode({
+      'files': [
+        for (var i = 0; i < sizes.length; i++)
+          {'length': sizes[i], 'path': ['f$i.bin']},
+      ],
+      'name': 'multi',
+      'piece length': bigPiece,
+      'pieces': hashes.toBytes(),
+    });
+    final torrentFile = File('${dir.path}/multi.torrent');
+    await torrentFile.writeAsBytes(encode({'info': decode(info)}));
+    final parsed = await TorrentModel.parse(torrentFile.path);
+    model = TorrentModel(
+      name: parsed.name,
+      files: parsed.files,
+      infoHashBuffer: Uint8List.fromList(sha1.convert(info).bytes),
+      pieceLength: parsed.pieceLength,
+      pieces: parsed.pieces,
+      announces: const [],
+      nodes: const [],
+      length: parsed.length,
+      version: parsed.version,
+    );
+    final state = await StateFileV2.getStateFile('${dir.path}/', model);
+    for (var i = 0; i < pieceCount; i++) {
+      await state.updateBitfield(i);
+    }
+    await state.close();
+
+    final (_, port) = await startTask();
+    final peer = await _Peer.connect(localIp!, port, model.infoHashBuffer);
+    expect(await peer.handshake, isTrue);
+    peer.send(2); // interested
+    await peer.next(1); // unchoke
+
+    Future<void> check(int index, int begin, int length) async {
+      final message = await peer.next(7);
+      final header = ByteData.sublistView(message, 0, 8);
+      expect((header.getUint32(0), header.getUint32(4)), (index, begin));
+      final start = index * bigPiece + begin;
+      expect(message.sublist(8), all.sublist(start, start + length),
+          reason: 'piece $index at $begin');
+    }
+
+    for (var index = 0; index < pieceCount; index++) {
+      final length = min(bigPiece, all.length - index * bigPiece);
+      final asked = <(int, int)>[];
+      for (var begin = 0; begin < length; begin += 16384) {
+        final size = min(16384, length - begin);
+        peer.request(index, begin, size);
+        asked.add((begin, size));
+      }
+      for (final (begin, size) in asked) {
+        await check(index, begin, size);
+      }
+    }
+    // A block across the 1 MB chunk edge is read as it is.
+    peer.request(1, (1 << 20) - 8192, 16384);
+    await check(1, (1 << 20) - 8192, 16384);
+    await peer.close();
+  });
+
   test('a small torrent answers a peer with the fast extension', () async {
     if (localIp == null) {
       markTestSkipped('no network interface besides loopback');
