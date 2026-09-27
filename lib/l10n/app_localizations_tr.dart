@@ -1307,7 +1307,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get enjoyingConvertSpireReborn =>
-      'Convert The Spire Reborn\'u beğendin mi?';
+      'Convert the Spire Reborn\'u beğendin mi?';
 
   @override
   String get leaveReviewHelpsMoreThan =>
@@ -3025,7 +3025,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get rateConvertSpireReborn =>
-      'Convert The Spire Reborn\'u değerlendir';
+      'Convert the Spire Reborn\'u değerlendir';
 
   @override
   String get leaveRatingPlayStore => 'Play Store\'da puan ver';

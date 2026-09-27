@@ -1308,7 +1308,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get saveSettings => 'Simpan Pengaturan';
 
   @override
-  String get enjoyingConvertSpireReborn => 'Suka Convert The Spire Reborn?';
+  String get enjoyingConvertSpireReborn => 'Suka Convert the Spire Reborn?';
 
   @override
   String get leaveReviewHelpsMoreThan =>
@@ -3021,7 +3021,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get privacyPolicy => 'Kebijakan privasi';
 
   @override
-  String get rateConvertSpireReborn => 'Nilai Convert The Spire Reborn';
+  String get rateConvertSpireReborn => 'Nilai Convert the Spire Reborn';
 
   @override
   String get leaveRatingPlayStore => 'Beri nilai di Play Store';

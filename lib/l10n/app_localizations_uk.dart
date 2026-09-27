@@ -1305,7 +1305,7 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get enjoyingConvertSpireReborn =>
-      'Подобається Convert The Spire Reborn?';
+      'Подобається Convert the Spire Reborn?';
 
   @override
   String get leaveReviewHelpsMoreThan =>
@@ -3022,7 +3022,7 @@ class AppLocalizationsUk extends AppLocalizations {
   String get privacyPolicy => 'Політика конфіденційності';
 
   @override
-  String get rateConvertSpireReborn => 'Оцінити Convert The Spire Reborn';
+  String get rateConvertSpireReborn => 'Оцінити Convert the Spire Reborn';
 
   @override
   String get leaveRatingPlayStore => 'Залиште оцінку в Play Маркеті';

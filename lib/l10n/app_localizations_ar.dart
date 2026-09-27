@@ -1296,7 +1296,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get saveSettings => 'حفظ الإعدادات';
 
   @override
-  String get enjoyingConvertSpireReborn => 'هل يعجبك Convert The Spire Reborn؟';
+  String get enjoyingConvertSpireReborn => 'هل يعجبك Convert the Spire Reborn؟';
 
   @override
   String get leaveReviewHelpsMoreThan => 'اترك تقييمًا، فهو يساعد أكثر مما تظن';
@@ -2996,7 +2996,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get privacyPolicy => 'سياسة الخصوصية';
 
   @override
-  String get rateConvertSpireReborn => 'تقييم Convert The Spire Reborn';
+  String get rateConvertSpireReborn => 'تقييم Convert the Spire Reborn';
 
   @override
   String get leaveRatingPlayStore => 'اترك تقييمًا على متجر Play';

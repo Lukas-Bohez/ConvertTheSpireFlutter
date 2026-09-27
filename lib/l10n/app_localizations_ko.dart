@@ -1277,7 +1277,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get enjoyingConvertSpireReborn =>
-      'Convert The Spire Reborn이 마음에 드시나요?';
+      'Convert the Spire Reborn이 마음에 드시나요?';
 
   @override
   String get leaveReviewHelpsMoreThan => '리뷰를 남겨 주세요. 생각보다 큰 도움이 됩니다';
@@ -2923,7 +2923,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get privacyPolicy => '개인정보처리방침';
 
   @override
-  String get rateConvertSpireReborn => 'Convert The Spire Reborn 평가하기';
+  String get rateConvertSpireReborn => 'Convert the Spire Reborn 평가하기';
 
   @override
   String get leaveRatingPlayStore => 'Play 스토어에서 평가하기';
