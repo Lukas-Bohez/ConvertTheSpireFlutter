@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import 'package:b_encode_decode/b_encode_decode.dart';
 import 'package:bittorrent_dht/bittorrent_dht.dart';
+import 'package:convert_the_spire_reborn/src/services/app_data_location.dart';
 import 'package:convert_the_spire_reborn/src/services/network_proxy_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart'
     as vault_bencode;
@@ -2600,6 +2601,7 @@ class TorrentEngineService {
   }
 
   void _startScrapeTimer(String torrentId, dt.TorrentTask task) {
+    _scrapeTimers[torrentId]?.cancel();
     _scrapeTimers[torrentId] = Timer.periodic(const Duration(seconds: 30), (_) {
       _doScrape(torrentId, task);
     });
@@ -3528,11 +3530,8 @@ class TorrentEngineService {
   }
 
   Future<File> _managedTorrentSourceFile(String torrentId) async {
-    final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory(
-      p.join(docs.path, _managedTorrentSourceDirName),
-    );
-    return File(p.join(dir.path, '${torrentId.toLowerCase()}.torrent'));
+    final dir = await AppDataLocation.pathOf(_managedTorrentSourceDirName);
+    return File(p.join(dir, '${torrentId.toLowerCase()}.torrent'));
   }
 
   Future<File?> _tryGetManagedTorrentSource(String torrentId) async {

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
+
+import '../services/app_data_location.dart';
 
 /// SQLite database for the browser module: history, favourites, recent sites.
 class BrowserDb {
@@ -9,8 +9,7 @@ class BrowserDb {
 
   static Future<Database> get database async {
     if (_db != null) return _db!;
-    final dir = await getApplicationDocumentsDirectory();
-    final path = p.join(dir.path, 'browser.db');
+    final path = await AppDataLocation.pathOf('browser.db');
     _db = await openDatabase(
       path,
       version: 2,
