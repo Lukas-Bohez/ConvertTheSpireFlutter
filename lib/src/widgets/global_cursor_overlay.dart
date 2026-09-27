@@ -149,7 +149,16 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
       if (_isTextFieldFocused()) {
         return false;
       }
-      if (isDown) _fireTap();
+      if (isDown) {
+        // Only while the cursor shows, so the click goes where it is seen.
+        // Hidden, Enter clicked wherever the cursor was last, maybe long ago,
+        // or at its starting point: pressing Enter on a dialog clicked
+        // whatever was there. Hidden, Enter now just shows it.
+        if (_cursorVisible) {
+          _fireTap();
+        }
+        _resetHideTimer();
+      }
     } else {
       return false;
     }

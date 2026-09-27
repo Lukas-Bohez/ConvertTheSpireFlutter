@@ -65,6 +65,33 @@ void main() {
     }
   });
 
+  testWidgets('Enter clicks only where the cursor is seen', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      var pageTaps = 0;
+      await tester.pumpWidget(app(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => pageTaps++,
+        ),
+      ));
+
+      // Hidden: Enter used to click wherever the cursor last was.
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      expect(pageTaps, 0);
+      expect(_cursor(), findsOneWidget, reason: 'Enter shows the cursor');
+
+      // Shown: Enter clicks where it is.
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      expect(pageTaps, 1);
+      await tester.pump(const Duration(seconds: 3));
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('Enter in a text field does not click the page', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     try {
