@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
+import 'package:path/path.dart' as p;
 import 'package:youtube_explode_dart/solvers.dart';
 import 'package:youtube_explode_dart/src/reverse_engineering/challenges/ejs/base_ejs_solver.dart';
 
@@ -31,6 +33,36 @@ class BackgroundDenoSolver extends BaseEJSSolver {
 
   late final Future<DenoEJSSolver?> _solver;
   bool _disposed = false;
+
+  /// Deletes the temporary folders earlier sessions' solvers left behind.
+  ///
+  /// DenoEJSSolver makes a `yt_deno_*` folder each start and removes it only
+  /// when disposed, which quitting the app skips: one was left in the temp
+  /// folder every start. Folders changed in the last 12 hours stay, so a
+  /// copy of the app still running keeps its own.
+  static Future<void> removeStaleTempDirs({
+    @visibleForTesting Directory? parent,
+    Duration olderThan = const Duration(hours: 12),
+  }) async {
+    try {
+      final root = parent ?? Directory.systemTemp;
+      await for (final entity in root.list(followLinks: false)) {
+        if (entity is! Directory ||
+            !p.basename(entity.path).startsWith('yt_deno_')) {
+          continue;
+        }
+        final modified = (await entity.stat()).modified;
+        if (DateTime.now().difference(modified) < olderThan) continue;
+        try {
+          await entity.delete(recursive: true);
+        } catch (_) {
+          // In use or already gone.
+        }
+      }
+    } catch (e) {
+      debugPrint('BackgroundDenoSolver: temp cleanup skipped: $e');
+    }
+  }
 
   @override
   Future<String> executeJavaScript(String jsCode) async {

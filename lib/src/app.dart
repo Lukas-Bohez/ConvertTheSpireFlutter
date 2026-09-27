@@ -212,6 +212,7 @@ class _MyAppState extends State<MyApp>
       if (Platform.isAndroid || Platform.isIOS) {
         return YoutubeExplode(jsSolver: WebViewEJSSolver());
       }
+      unawaited(BackgroundDenoSolver.removeStaleTempDirs());
       // Not awaited: the first start downloads Deno, and the app would
       // wait for that behind a spinner.
       return YoutubeExplode(
