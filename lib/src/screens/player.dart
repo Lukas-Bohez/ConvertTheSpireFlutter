@@ -2766,8 +2766,15 @@ class PlayerState with ChangeNotifier {
     return null;
   }
 
-  double? _parseReplayGainDb(String raw) {
-    final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-+]'), '');
+  @visibleForTesting
+  static double? parseReplayGainDbForTesting(String raw) =>
+      _parseReplayGainDb(raw);
+
+  static double? _parseReplayGainDb(String raw) {
+    // Some taggers write a decimal comma ("-6,54 dB"); dropping it read as
+    // -654 dB, and the song played 15 dB too quiet.
+    final cleaned =
+        raw.replaceAll(',', '.').replaceAll(RegExp(r'[^0-9.\-+]'), '');
     final value = double.tryParse(cleaned);
     if (value == null || value.isNaN) return null;
     // Clamp to a safe ±15 dB range to avoid extreme boosts/cuts.
