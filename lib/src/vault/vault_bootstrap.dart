@@ -20,7 +20,15 @@ class VaultBootstrap {
       // threw, and the torrents list spun forever. VaultKeyService stays for
       // when SQLCipher ships with a proper plaintext→encrypted migration.
       await SettingsService.instance.load();
-      await IdentityService.instance.initialize();
+      // The identity lives in the system keyring (Credential Manager on
+      // Windows, the Secret Service on Linux), which can refuse; torrents
+      // do not need it, and a refusal used to leave them all stopped after
+      // a restart.
+      try {
+        await IdentityService.instance.initialize();
+      } catch (e) {
+        debugPrint('Vault identity unavailable: $e');
+      }
       await TorrentService.instance.resumeActiveTorrents();
     } catch (e, st) {
       debugPrint('Vault bootstrap failed: $e');

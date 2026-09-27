@@ -359,6 +359,14 @@ class _TorrentsScreenState extends State<TorrentsScreen>
         if (TorrentEngineService.instance.isRunning(ts.model.id)) {
           TorrentEngineService.instance.resumeTorrent(ts.model.id);
         } else {
+          if (ts.isComplete) {
+            await TorrentEngineService.instance.keepSeedingIfLimitReached(
+              ts.model.id,
+              ownLimit: ts.model.maxSeedRatio,
+              uploaded: ts.uploaded,
+              size: ts.model.totalSize ?? 0,
+            );
+          }
           // A magnet may need minutes to fetch its file list; the card shows
           // that progress instead of the button waiting for it.
           await TorrentService.instance.updateTorrentStatus(

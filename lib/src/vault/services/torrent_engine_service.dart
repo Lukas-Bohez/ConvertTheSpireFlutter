@@ -129,6 +129,10 @@ class TorrentEngineService {
   final Map<String, int> _stallRecoveryCycles = {};
   final Set<String> _hardRecoveryInFlight = <String>{};
   final Set<String> _startingTorrentIds = <String>{};
+
+  /// Each torrent's own seeding limit (TorrentModel.maxSeedRatio): null for
+  /// the one in Settings, 0 for none.
+  final Map<String, double?> _seedRatioByTorrent = <String, double?>{};
   final Map<String, int> _hardRestartCounts = {};
   final Map<String, DateTime> _nextAllowedHardRestart = {};
   final Map<String, List<Uri>> _torrentTrackers = {};
@@ -1246,6 +1250,7 @@ class TorrentEngineService {
 
       final torrent = await TorrentService.instance.getTorrentById(torrentId);
       if (torrent == null) throw StateError('Torrent not found: $torrentId');
+      _seedRatioByTorrent[torrentId] = torrent.maxSeedRatio;
 
       final sourceTorrentPath = _sourceTorrentPath(torrent);
       final hasTorrentFileSource =
@@ -1626,8 +1631,9 @@ class TorrentEngineService {
 
   Future<_FetchedMetadata> _fetchMetadata(
     String torrentId,
-    String magnetUri,
-  ) async {
+    String magnetUri, {
+    List<CompactAddress> explicitPeers = const [],
+  }) async {
     final deadline = DateTime.now().add(metadataBudget);
     Object? lastError;
     var round = 0;
@@ -1639,6 +1645,9 @@ class TorrentEngineService {
         }
         round++;
         final downloader = dt.MetadataDownloader.fromMagnet(magnetUri);
+        // A magnet's x.pe peers have the torrent, and may be the only ones
+        // that do when no tracker or DHT node knows it yet.
+        explicitPeers.forEach(downloader.addKnownPeer);
         final result = Completer<_FetchedMetadata>();
         // Handled here so a failure after the round has moved on is not an
         // unhandled error.
@@ -1773,7 +1782,8 @@ class TorrentEngineService {
     // Cache miss: ask the swarm.
     var metadataPeers = const <dt.Peer>[];
     if (dtModel == null) {
-      final fetched = await _fetchMetadata(torrent.id, effectiveMagnet);
+      final fetched = await _fetchMetadata(torrent.id, effectiveMagnet,
+          explicitPeers: _explicitMagnetPeers(sourceMagnet));
       dtModel = fetched.model;
       downloadedMetadataBytes = fetched.bytes;
       metadataPeers = fetched.peers;
@@ -1942,23 +1952,27 @@ class TorrentEngineService {
   }
 
   void _addExplicitMagnetPeers(String magnetUri, dt.TorrentTask task) {
+    for (final compact in _explicitMagnetPeers(magnetUri)) {
+      try {
+        task.addPeer(compact, dt.PeerSource.manual, type: dt.PeerType.TCP);
+      } catch (_) {}
+      try {
+        task.addPeer(compact, dt.PeerSource.manual, type: dt.PeerType.UTP);
+      } catch (_) {}
+    }
+  }
+
+  /// The peers a magnet link names in its x.pe parameters.
+  List<CompactAddress> _explicitMagnetPeers(String magnetUri) {
     try {
-      final parsed = MagnetLink.parse(magnetUri);
-      if (parsed.peers.isEmpty) return;
-
-      for (final peerEntry in parsed.peers) {
-        final compact = _parseExplicitPeerEntry(peerEntry);
-        if (compact == null) continue;
-
-        try {
-          task.addPeer(compact, dt.PeerSource.manual, type: dt.PeerType.TCP);
-        } catch (_) {}
-        try {
-          task.addPeer(compact, dt.PeerSource.manual, type: dt.PeerType.UTP);
-        } catch (_) {}
-      }
+      return MagnetLink.parse(magnetUri)
+          .peers
+          .map(_parseExplicitPeerEntry)
+          .whereType<CompactAddress>()
+          .toList();
     } catch (_) {
       // Invalid or absent x.pe entries are non-fatal.
+      return const [];
     }
   }
 
@@ -2464,11 +2478,9 @@ class TorrentEngineService {
         : (_isTaskComplete(task) ? 'seeding' : 'downloading');
 
     final seededRatio = totalLength > 0 ? (uploaded / totalLength) : 0.0;
-    _enforceSeedingPolicyIfNeeded(
-      torrentId: torrentId,
-      seededRatio: seededRatio,
-      isPaused: isPaused,
-    );
+    if (!isPaused && _isTaskComplete(task)) {
+      _enforceSeedingPolicyIfNeeded(torrentId, seededRatio);
+    }
     final seededPct = (seededRatio * 100).clamp(0.0, double.infinity);
     final stalledNearCompletion = progress >= 0.95 &&
         ((_lastProgressChangeAtByTorrent[torrentId] == null)
@@ -2542,30 +2554,37 @@ class TorrentEngineService {
     );
   }
 
-  void _enforceSeedingPolicyIfNeeded({
-    required String torrentId,
-    required double seededRatio,
-    required bool isPaused,
-  }) {
-    if (isPaused) return;
+  /// Stops a finished torrent's seeding when Settings says to: seeding off,
+  /// or the seeding ratio reached. Only for finished torrents; it used to
+  /// pause downloads too, all of them when seeding was switched off.
+  void _enforceSeedingPolicyIfNeeded(String torrentId, double seededRatio) {
+    final reason =
+        _seedingStopReason(_seedRatioByTorrent[torrentId], seededRatio);
+    if (reason == null) return;
+    _log(torrentId, 'Auto-pausing seeding: $reason.');
+    pauseTorrent(torrentId);
+  }
+
+  @visibleForTesting
+  static String? seedingStopReasonForTesting(
+          double? ownCap, double seededRatio) =>
+      _seedingStopReason(ownCap, seededRatio);
+
+  /// Why seeding should stop at [seededRatio] (uploaded / size), or null.
+  /// [ownCap] is the torrent's own limit: null for the one in Settings, 0
+  /// for none.
+  static String? _seedingStopReason(double? ownCap, double seededRatio) {
+    if (ownCap != null && ownCap <= 0) return null;
     final settings = SettingsService.instance;
     if (!settings.allowSeedingAfterComplete) {
-      _log(
-        torrentId,
-        'Auto-pausing seeding: seeding is disabled in settings.',
-      );
-      pauseTorrent(torrentId);
-      return;
+      return 'seeding is disabled in settings';
     }
-
-    final cap = settings.maxSeedingRatio;
+    final cap = ownCap ?? settings.maxSeedingRatio;
     if (cap > 0 && seededRatio >= cap) {
-      _log(
-        torrentId,
-        'Auto-pausing seeding at ratio ${seededRatio.toStringAsFixed(2)} (cap ${cap.toStringAsFixed(2)}).',
-      );
-      pauseTorrent(torrentId);
+      return 'ratio ${seededRatio.toStringAsFixed(2)} reached the cap '
+          '${cap.toStringAsFixed(2)}';
     }
+    return null;
   }
 
   String _formatByteCount(int bytes) {
@@ -3230,8 +3249,32 @@ class TorrentEngineService {
     );
   }
 
+  /// For a finished torrent the user resumes: when the seeding limit is what
+  /// stopped it, it keeps seeding from now on, also after a restart. The
+  /// limit used to pause it again at once, so Resume did nothing.
+  Future<void> keepSeedingIfLimitReached(
+    String torrentId, {
+    required double? ownLimit,
+    required int uploaded,
+    required int size,
+  }) async {
+    final ratio = size > 0 ? uploaded / size : 0.0;
+    if (_seedingStopReason(ownLimit, ratio) == null) return;
+    _seedRatioByTorrent[torrentId] = 0;
+    await TorrentService.instance.setSeedRatioLimit(torrentId, 0);
+  }
+
   void resumeTorrent(String torrentId) {
     final task = _tasks[torrentId];
+    if (task != null && _isTaskComplete(task)) {
+      unawaited(keepSeedingIfLimitReached(
+        torrentId,
+        ownLimit: _seedRatioByTorrent[torrentId],
+        uploaded: _uploadedTotal(torrentId, task),
+        size: task.metaInfo.length ?? task.metaInfo.totalSize,
+      ).catchError(
+          (Object e) => debugPrint('resumeTorrent limit write failed: $e')));
+    }
     _pausedTorrentIds.remove(torrentId);
     task?.resume();
     if (task != null) {

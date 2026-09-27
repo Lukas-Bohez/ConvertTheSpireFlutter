@@ -561,8 +561,11 @@ class TorrentService {
         final seeders = runtime?.seeders ?? torrent.seeders;
         final leechers = runtime?.leechers ?? torrent.leechers;
 
+        // A magnet without its file list is fetching it, also in the moment
+        // before the engine gets to it, which used to show as "Stalled".
         final fetchingMetadata = runtime == null &&
-            TorrentEngineService.instance.isFetchingMetadata(torrent.id);
+            (TorrentEngineService.instance.isFetchingMetadata(torrent.id) ||
+                totalSize <= 0);
         final resolvedStatusLabel = _statusLabelForState(
           state,
           downloadSpeed: dlSpeed,
@@ -644,16 +647,14 @@ class TorrentService {
 
     if (!shouldUpdate) return;
 
-    await TorrentsDao.instance.updateTorrent(
-      existing.copyWith(
-        bytesDown: view.downloaded,
-        bytesUp: view.uploaded,
-        status: updatedStatus,
-        completedAt: completedAt,
-        seeders: view.seeders,
-        leechers: view.leechers,
-      ),
-    );
+    await TorrentsDao.instance.updateFields(existing.id, {
+      'bytes_down': view.downloaded,
+      'bytes_up': view.uploaded,
+      'status': updatedStatus,
+      'completed_at': completedAt,
+      'seeders': view.seeders,
+      'leechers': view.leechers,
+    });
   }
 
   Future<void> _reconcileDiskState({bool force = false}) async {
@@ -746,10 +747,15 @@ class TorrentService {
     bool hasRuntime = false,
   }) {
     if (missingOnDisk && !hasRuntime) return 'error_missing_files';
-    if (complete) return 'seeding';
     final runtime = runtimeState?.toLowerCase() ?? '';
-    if (runtime.contains('error')) return runtime;
+    // A finished torrent that is paused (by the user, or by the seeding
+    // limit) is not seeding; it used to say "Seeding" all the same.
     if (runtime.contains('pause')) return 'paused';
+    if (!hasRuntime && (persistedState ?? '').toLowerCase().contains('pause')) {
+      return 'paused';
+    }
+    if (complete) return 'seeding';
+    if (runtime.contains('error')) return runtime;
     if (runtime.contains('queue')) return 'queued';
     if (runtime.contains('seed')) return 'seeding';
     if (runtime.contains('download')) return 'downloading';
@@ -766,6 +772,16 @@ class TorrentService {
 
   /// Status label while a magnet is still getting its file list.
   static const String fetchingMetadataLabel = 'Fetching Metadata';
+
+  @visibleForTesting
+  String deriveStateForTesting(
+    String? persistedState,
+    String? runtimeState,
+    bool complete, {
+    bool hasRuntime = false,
+  }) =>
+      _deriveState(persistedState, runtimeState, complete,
+          hasRuntime: hasRuntime);
 
   @visibleForTesting
   static String statusMessageForTesting(
@@ -1182,29 +1198,7 @@ class TorrentService {
     if (existing == null) {
       throw StateError('Torrent not found: $id');
     }
-    final updated = TorrentModel(
-      id: existing.id,
-      name: existing.name,
-      type: existing.type,
-      totalSize: existing.totalSize,
-      totalPieces: existing.totalPieces,
-      pieceLength: existing.pieceLength,
-      piecesHave: existing.piecesHave,
-      status: status,
-      vaultKey: existing.vaultKey,
-      filePath: existing.filePath,
-      vaultLink: existing.vaultLink,
-      magnetLink: existing.magnetLink,
-      bytesDown: existing.bytesDown,
-      bytesUp: existing.bytesUp,
-      addedAt: existing.addedAt,
-      completedAt: existing.completedAt,
-      isSequential: existing.isSequential,
-      selectedFiles: existing.selectedFiles,
-      maxSeedRatio: existing.maxSeedRatio,
-      deleteAfterRatioReached: existing.deleteAfterRatioReached,
-    );
-    await TorrentsDao.instance.updateTorrent(updated);
+    await TorrentsDao.instance.updateFields(id, {'status': status});
     _queueStateRefresh(force: true);
   }
 
@@ -1213,29 +1207,7 @@ class TorrentService {
     if (existing == null) {
       throw StateError('Torrent not found: $id');
     }
-    final updated = TorrentModel(
-      id: existing.id,
-      name: existing.name,
-      type: existing.type,
-      totalSize: existing.totalSize,
-      totalPieces: existing.totalPieces,
-      pieceLength: existing.pieceLength,
-      piecesHave: existing.piecesHave,
-      status: existing.status,
-      vaultKey: existing.vaultKey,
-      filePath: existing.filePath,
-      vaultLink: existing.vaultLink,
-      magnetLink: existing.magnetLink,
-      bytesDown: existing.bytesDown,
-      bytesUp: existing.bytesUp,
-      addedAt: existing.addedAt,
-      completedAt: existing.completedAt,
-      isSequential: existing.isSequential,
-      selectedFiles: existing.selectedFiles,
-      maxSeedRatio: ratio,
-      deleteAfterRatioReached: existing.deleteAfterRatioReached,
-    );
-    await TorrentsDao.instance.updateTorrent(updated);
+    await TorrentsDao.instance.updateFields(id, {'max_seed_ratio': ratio});
     _queueStateRefresh(force: true);
   }
 
@@ -1244,29 +1216,8 @@ class TorrentService {
     if (existing == null) {
       throw StateError('Torrent not found: $id');
     }
-    final updated = TorrentModel(
-      id: existing.id,
-      name: existing.name,
-      type: existing.type,
-      totalSize: existing.totalSize,
-      totalPieces: existing.totalPieces,
-      pieceLength: existing.pieceLength,
-      piecesHave: existing.piecesHave,
-      status: existing.status,
-      vaultKey: existing.vaultKey,
-      filePath: existing.filePath,
-      vaultLink: existing.vaultLink,
-      magnetLink: existing.magnetLink,
-      bytesDown: existing.bytesDown,
-      bytesUp: existing.bytesUp,
-      addedAt: existing.addedAt,
-      completedAt: existing.completedAt,
-      isSequential: existing.isSequential,
-      selectedFiles: existing.selectedFiles,
-      maxSeedRatio: existing.maxSeedRatio,
-      deleteAfterRatioReached: value,
-    );
-    await TorrentsDao.instance.updateTorrent(updated);
+    await TorrentsDao.instance
+        .updateFields(id, {'delete_after_ratio_reached': value ? 1 : 0});
     _queueStateRefresh(force: true);
   }
 

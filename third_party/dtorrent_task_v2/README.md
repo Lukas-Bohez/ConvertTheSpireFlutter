@@ -34,6 +34,11 @@ which is what qBittorrent and Deluge run on:
    metadata sources, so each retry went to the dead connection and its pieces
    only came back after their timeout; with the dead peer first in the list,
    the download never finished. Its pieces now go to the other peers at once.
+12. **Peers known in advance are asked too** (`metadata_downloader.dart`,
+    `addKnownPeer`). A peer added before `startDownload()` was dropped, as
+    the downloader was not running yet, so a magnet link's own peers (x.pe)
+    could not be used for the file list. They are now kept and connected to
+    once the download starts.
 
 ## Downloads that froze the app
 
