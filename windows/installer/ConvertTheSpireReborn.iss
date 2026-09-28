@@ -34,11 +34,13 @@ AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher=Oroka Conner
+AppCopyright=Copyright (C) 2026 Oroka Conner. Licensed under the GNU GPL v3.
 ; Setup.exe's file details. Code signing (SignPath) checks that the product
 ; name is the project's, the same as in the app's exe (windows/runner/Runner.rc).
 VersionInfoProductName={#AppName}
 VersionInfoDescription={#AppName} Setup
 VersionInfoCompany=Oroka Conner
+VersionInfoCopyright=Copyright (C) 2026 Oroka Conner. Licensed under the GNU GPL v3.
 VersionInfoVersion={#AppVersion}
 VersionInfoProductVersion={#AppVersion}
 AppPublisherURL=https://github.com/Lukas-Bohez/ConvertTheSpireFlutter

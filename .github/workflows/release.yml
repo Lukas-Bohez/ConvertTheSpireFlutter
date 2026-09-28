@@ -280,6 +280,12 @@ jobs:
           & $iscc "/DAppVersion=$version" "/DSourceDir=$src" "/DOutputDir=$env:GITHUB_WORKSPACE\installer-out" "windows\installer\ConvertTheSpireReborn.iss"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # SignPath only signs files whose product name matches, so a wrong name
+      # or version fails here, before a signing request is sent.
+      - name: Check the version metadata
+        shell: pwsh
+        run: pwsh tools/check_windows_metadata.ps1 -App "build\windows\x64\runner\Release\${{ env.APP_NAME }}.exe" -Setup "installer-out\ConvertTheSpireReborn-Setup.exe"
+
       - name: Upload Setup.exe for signing
         id: unsigned-installer
         if: vars.SIGNPATH_ORGANIZATION_ID != ''
@@ -581,7 +587,8 @@ jobs:
           find . -type f \
             ! -name "*.sha256" \
             ! -path "*/coverage-report/*" \
-          | sort | xargs sha256sum > ../SHA256SUMS.txt
+          | sort | xargs sha256sum \
+          | sed -E 's#  (\./)?([^ ]*/)?([^/]+)$#  \3#' > ../SHA256SUMS.txt
           cat ../SHA256SUMS.txt
 
       # Screenshots go at the TOP of the release body so they are the first

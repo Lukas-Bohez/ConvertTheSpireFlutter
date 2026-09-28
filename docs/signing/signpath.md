@@ -20,6 +20,13 @@ Every signed file carries the product name **Convert the Spire Reborn**:
 for Setup.exe. The artifact configuration below only signs files with that
 name, so nothing else can be signed by mistake.
 
+`tools/check_windows_metadata.ps1` checks the product name and version of both
+files on every pull request (CI) and before each release asks for signing, so
+a wrong name fails the build rather than the signing request. It also makes
+sure the app's `CompanyName` stays `Oroka Conner`: path_provider builds the
+Windows data folder from it, so changing it would lose everyone's settings and
+library.
+
 Each release asks for approval twice, once for the exe and once for
 Setup.exe, because the installer is built from the signed exe.
 
@@ -73,6 +80,14 @@ The release page then says the downloads are signed. Its text about
 "Windows protected your PC" changes too: a new certificate still has to
 build up reputation with Windows, so the warning can show for a new version
 until enough people have downloaded it.
+
+One thing to watch on the first signed release: Inno Setup pads the file
+details in Setup.exe with trailing spaces (the metadata check prints them in
+brackets, and trims them before comparing). If SignPath rejects the Setup.exe
+request over its product name, the padding is the cause: ask the SignPath
+Foundation whether their check trims, or match Setup.exe by file name
+(`path="ConvertTheSpireReborn-Setup.exe"`, without `product-name`) in the
+artifact configuration.
 
 After the first signed release, update the Code signing policy section of
 `README.md`: remove the sentence saying the downloads are not signed yet.
