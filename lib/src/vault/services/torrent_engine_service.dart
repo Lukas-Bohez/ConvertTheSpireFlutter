@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import 'package:b_encode_decode/b_encode_decode.dart';
 import 'package:bittorrent_dht/bittorrent_dht.dart';
+import 'package:convert_the_spire_reborn/src/services/app_data_location.dart';
 import 'package:convert_the_spire_reborn/src/services/network_proxy_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/bittorrent/bencode.dart'
     as vault_bencode;
@@ -129,6 +130,10 @@ class TorrentEngineService {
   final Map<String, int> _stallRecoveryCycles = {};
   final Set<String> _hardRecoveryInFlight = <String>{};
   final Set<String> _startingTorrentIds = <String>{};
+
+  /// Each torrent's own seeding limit (TorrentModel.maxSeedRatio): null for
+  /// the one in Settings, 0 for none.
+  final Map<String, double?> _seedRatioByTorrent = <String, double?>{};
   final Map<String, int> _hardRestartCounts = {};
   final Map<String, DateTime> _nextAllowedHardRestart = {};
   final Map<String, List<Uri>> _torrentTrackers = {};
@@ -141,7 +146,10 @@ class TorrentEngineService {
   final Map<String, int> _stagnantDownloadIntervals = {};
   final Set<String> _pausedTorrentIds = <String>{};
   final Map<String, int> _uploadedBytesByTorrent = {};
-  final Map<String, DateTime> _lastUploadedSampleByTorrent = {};
+
+  /// What the app had stored as seeded beyond the task's own count when the
+  /// task started (see [_uploadedTotal]).
+  final Map<String, int> _uploadedOffsetByTorrent = {};
   final Map<String, int> _scrapedSeedersByTorrent = {};
   final Map<String, int> _scrapedLeechersByTorrent = {};
   final Map<String, DateTime> _lastAnnounceAtByTorrent = {};
@@ -249,29 +257,32 @@ class TorrentEngineService {
     }
   }
 
-  Future<void> _refreshUploadedSnapshot(
-    String torrentId,
-    dt.TorrentTask task,
-  ) async {
+  /// Bytes seeded for [torrentId], over every session: the task's own count,
+  /// which its state file keeps, plus what the app had stored beyond that
+  /// from before the count was kept whole.
+  ///
+  /// The seeded total used to start from the state file's number, which only
+  /// held the last session's count (and on Windows stopped being saved), and
+  /// then grew by upload speed times time: after a restart it showed 0 B.
+  int _uploadedTotal(String torrentId, dt.TorrentTask task) {
+    var counted = 0;
     try {
-      final stateUploaded = task.stateFile?.uploaded;
-      if (stateUploaded != null && stateUploaded >= 0) {
-        final prev = _uploadedBytesByTorrent[torrentId] ?? 0;
-        _uploadedBytesByTorrent[torrentId] =
-            stateUploaded >= prev ? stateUploaded : prev;
-      }
-
-      final dynamic taskUploaded = (task as dynamic).uploaded;
-      final uploaded = taskUploaded is int
-          ? taskUploaded
-          : int.tryParse(taskUploaded?.toString() ?? '');
-      if (uploaded != null && uploaded >= 0) {
-        final prev = _uploadedBytesByTorrent[torrentId] ?? 0;
-        _uploadedBytesByTorrent[torrentId] = uploaded >= prev ? uploaded : prev;
-      }
+      counted = task.uploaded;
     } catch (_) {
-      // Best-effort snapshot only.
+      // A task that has not started has nothing counted yet.
     }
+    final total = counted + (_uploadedOffsetByTorrent[torrentId] ?? 0);
+    _uploadedBytesByTorrent[torrentId] = total;
+    return total;
+  }
+
+  /// Called when [task] starts for [torrent], with what its state file had.
+  void _startUploadCount(TorrentModel torrent, int? stateUploaded) {
+    final counted = stateUploaded ?? 0;
+    _uploadedOffsetByTorrent[torrent.id] =
+        math.max(0, torrent.bytesUp - counted);
+    _uploadedBytesByTorrent[torrent.id] =
+        counted + _uploadedOffsetByTorrent[torrent.id]!;
   }
 
   List<String> getLogs(String torrentId) {
@@ -1240,6 +1251,7 @@ class TorrentEngineService {
 
       final torrent = await TorrentService.instance.getTorrentById(torrentId);
       if (torrent == null) throw StateError('Torrent not found: $torrentId');
+      _seedRatioByTorrent[torrentId] = torrent.maxSeedRatio;
 
       final sourceTorrentPath = _sourceTorrentPath(torrent);
       final hasTorrentFileSource =
@@ -1524,10 +1536,7 @@ class TorrentEngineService {
         }
       }
     } catch (_) {}
-    final startupUploaded = startup['uploaded'] as int?;
-    if (startupUploaded != null && startupUploaded >= 0) {
-      _uploadedBytesByTorrent[torrent.id] = startupUploaded;
-    }
+    _startUploadCount(torrent, startup['uploaded'] as int?);
 
     // Ensure tasks are running
     try {
@@ -1623,8 +1632,9 @@ class TorrentEngineService {
 
   Future<_FetchedMetadata> _fetchMetadata(
     String torrentId,
-    String magnetUri,
-  ) async {
+    String magnetUri, {
+    List<CompactAddress> explicitPeers = const [],
+  }) async {
     final deadline = DateTime.now().add(metadataBudget);
     Object? lastError;
     var round = 0;
@@ -1636,6 +1646,9 @@ class TorrentEngineService {
         }
         round++;
         final downloader = dt.MetadataDownloader.fromMagnet(magnetUri);
+        // A magnet's x.pe peers have the torrent, and may be the only ones
+        // that do when no tracker or DHT node knows it yet.
+        explicitPeers.forEach(downloader.addKnownPeer);
         final result = Completer<_FetchedMetadata>();
         // Handled here so a failure after the round has moved on is not an
         // unhandled error.
@@ -1672,8 +1685,8 @@ class TorrentEngineService {
             }
           });
 
-        unawaited(downloader.startDownload().then<void>((_) {},
-            onError: (Object e) {
+        unawaited(
+            downloader.startDownload().then<void>((_) {}, onError: (Object e) {
           if (!result.isCompleted) result.completeError(e);
         }));
 
@@ -1770,14 +1783,14 @@ class TorrentEngineService {
     // Cache miss: ask the swarm.
     var metadataPeers = const <dt.Peer>[];
     if (dtModel == null) {
-      final fetched = await _fetchMetadata(torrent.id, effectiveMagnet);
+      final fetched = await _fetchMetadata(torrent.id, effectiveMagnet,
+          explicitPeers: _explicitMagnetPeers(sourceMagnet));
       dtModel = fetched.model;
       downloadedMetadataBytes = fetched.bytes;
       metadataPeers = fetched.peers;
     }
 
-    if (downloadedMetadataBytes != null &&
-        downloadedMetadataBytes.isNotEmpty) {
+    if (downloadedMetadataBytes != null && downloadedMetadataBytes.isNotEmpty) {
       await cacheTorrentSource(torrent.id, downloadedMetadataBytes);
     }
 
@@ -1871,10 +1884,7 @@ class TorrentEngineService {
       _forceAllFilesNormalPriority(task);
       unawaited(_hideBtStateFilesOnWindows(saveDir, torrentId: torrent.id));
       _announceTrackers(torrent.id, task, force: true);
-      final startupUploaded = startup['uploaded'] as int?;
-      if (startupUploaded != null && startupUploaded >= 0) {
-        _uploadedBytesByTorrent[torrent.id] = startupUploaded;
-      }
+      _startUploadCount(torrent, startup['uploaded'] as int?);
     } catch (e, st) {
       _log(
         torrent.id,
@@ -1943,23 +1953,27 @@ class TorrentEngineService {
   }
 
   void _addExplicitMagnetPeers(String magnetUri, dt.TorrentTask task) {
+    for (final compact in _explicitMagnetPeers(magnetUri)) {
+      try {
+        task.addPeer(compact, dt.PeerSource.manual, type: dt.PeerType.TCP);
+      } catch (_) {}
+      try {
+        task.addPeer(compact, dt.PeerSource.manual, type: dt.PeerType.UTP);
+      } catch (_) {}
+    }
+  }
+
+  /// The peers a magnet link names in its x.pe parameters.
+  List<CompactAddress> _explicitMagnetPeers(String magnetUri) {
     try {
-      final parsed = MagnetLink.parse(magnetUri);
-      if (parsed.peers.isEmpty) return;
-
-      for (final peerEntry in parsed.peers) {
-        final compact = _parseExplicitPeerEntry(peerEntry);
-        if (compact == null) continue;
-
-        try {
-          task.addPeer(compact, dt.PeerSource.manual, type: dt.PeerType.TCP);
-        } catch (_) {}
-        try {
-          task.addPeer(compact, dt.PeerSource.manual, type: dt.PeerType.UTP);
-        } catch (_) {}
-      }
+      return MagnetLink.parse(magnetUri)
+          .peers
+          .map(_parseExplicitPeerEntry)
+          .whereType<CompactAddress>()
+          .toList();
     } catch (_) {
       // Invalid or absent x.pe entries are non-fatal.
+      return const [];
     }
   }
 
@@ -1995,7 +2009,8 @@ class TorrentEngineService {
     dynamic rawMetadata,
   ) async {
     if (rawMetadata is! Map) {
-      throw const FormatException('Invalid metadata: expected bencoded dictionary');
+      throw const FormatException(
+          'Invalid metadata: expected bencoded dictionary');
     }
 
     final normalizedRoot = _normalizeBencodeMap(rawMetadata);
@@ -2246,7 +2261,6 @@ class TorrentEngineService {
   void _wireEvents(String torrentId, dt.TorrentTask task) {
     task.createListener()
       ..on<dt.StateFileUpdated>((_) {
-        unawaited(_refreshUploadedSnapshot(torrentId, task));
         _emitStats(torrentId, task);
       })
       ..on<dt.TaskCompleted>((_) async {
@@ -2416,7 +2430,6 @@ class TorrentEngineService {
         _pollTimers.remove(torrentId)?.cancel();
         return;
       }
-      unawaited(_refreshUploadedSnapshot(torrentId, task));
       _emitStats(torrentId, task);
     });
   }
@@ -2440,23 +2453,7 @@ class TorrentEngineService {
   void _emitStats(String torrentId, dt.TorrentTask task) {
     final isPaused = _pausedTorrentIds.contains(torrentId);
     final downloaded = task.downloaded ?? 0;
-    int uploaded = _uploadedBytesByTorrent[torrentId] ?? 0;
-    try {
-      final stateUploaded = task.stateFile?.uploaded ?? 0;
-      if (stateUploaded > uploaded) {
-        uploaded = stateUploaded;
-      }
-    } catch (_) {
-      // Some task implementations may not expose a state file.
-    }
-    try {
-      final dynamicUploaded = (task as dynamic).uploaded as int?;
-      if (dynamicUploaded != null && dynamicUploaded > uploaded) {
-        uploaded = dynamicUploaded;
-      }
-    } catch (_) {
-      // Some task implementations do not expose uploaded directly.
-    }
+    final uploaded = _uploadedTotal(torrentId, task);
     final dlSpeed = task.currentDownloadSpeed * 1000; // bytes/ms → bytes/s
     final ulSpeed = task.uploadSpeed * 1000;
     final peers = task.connectedPeersNumber;
@@ -2480,24 +2477,11 @@ class TorrentEngineService {
     final state = isPaused
         ? 'paused'
         : (_isTaskComplete(task) ? 'seeding' : 'downloading');
-    final now = DateTime.now();
-    final lastSample = _lastUploadedSampleByTorrent[torrentId];
-    if (lastSample != null) {
-      final dtSeconds = now.difference(lastSample).inMilliseconds / 1000.0;
-      if (dtSeconds > 0 && ulSpeed > 0) {
-        uploaded += (ulSpeed * dtSeconds).round();
-      }
-    }
-
-    _uploadedBytesByTorrent[torrentId] = uploaded;
-    _lastUploadedSampleByTorrent[torrentId] = now;
 
     final seededRatio = totalLength > 0 ? (uploaded / totalLength) : 0.0;
-    _enforceSeedingPolicyIfNeeded(
-      torrentId: torrentId,
-      seededRatio: seededRatio,
-      isPaused: isPaused,
-    );
+    if (!isPaused && _isTaskComplete(task)) {
+      _enforceSeedingPolicyIfNeeded(torrentId, seededRatio);
+    }
     final seededPct = (seededRatio * 100).clamp(0.0, double.infinity);
     final stalledNearCompletion = progress >= 0.95 &&
         ((_lastProgressChangeAtByTorrent[torrentId] == null)
@@ -2571,30 +2555,37 @@ class TorrentEngineService {
     );
   }
 
-  void _enforceSeedingPolicyIfNeeded({
-    required String torrentId,
-    required double seededRatio,
-    required bool isPaused,
-  }) {
-    if (isPaused) return;
+  /// Stops a finished torrent's seeding when Settings says to: seeding off,
+  /// or the seeding ratio reached. Only for finished torrents; it used to
+  /// pause downloads too, all of them when seeding was switched off.
+  void _enforceSeedingPolicyIfNeeded(String torrentId, double seededRatio) {
+    final reason =
+        _seedingStopReason(_seedRatioByTorrent[torrentId], seededRatio);
+    if (reason == null) return;
+    _log(torrentId, 'Auto-pausing seeding: $reason.');
+    pauseTorrent(torrentId);
+  }
+
+  @visibleForTesting
+  static String? seedingStopReasonForTesting(
+          double? ownCap, double seededRatio) =>
+      _seedingStopReason(ownCap, seededRatio);
+
+  /// Why seeding should stop at [seededRatio] (uploaded / size), or null.
+  /// [ownCap] is the torrent's own limit: null for the one in Settings, 0
+  /// for none.
+  static String? _seedingStopReason(double? ownCap, double seededRatio) {
+    if (ownCap != null && ownCap <= 0) return null;
     final settings = SettingsService.instance;
     if (!settings.allowSeedingAfterComplete) {
-      _log(
-        torrentId,
-        'Auto-pausing seeding: seeding is disabled in settings.',
-      );
-      pauseTorrent(torrentId);
-      return;
+      return 'seeding is disabled in settings';
     }
-
-    final cap = settings.maxSeedingRatio;
+    final cap = ownCap ?? settings.maxSeedingRatio;
     if (cap > 0 && seededRatio >= cap) {
-      _log(
-        torrentId,
-        'Auto-pausing seeding at ratio ${seededRatio.toStringAsFixed(2)} (cap ${cap.toStringAsFixed(2)}).',
-      );
-      pauseTorrent(torrentId);
+      return 'ratio ${seededRatio.toStringAsFixed(2)} reached the cap '
+          '${cap.toStringAsFixed(2)}';
     }
+    return null;
   }
 
   String _formatByteCount(int bytes) {
@@ -2610,6 +2601,7 @@ class TorrentEngineService {
   }
 
   void _startScrapeTimer(String torrentId, dt.TorrentTask task) {
+    _scrapeTimers[torrentId]?.cancel();
     _scrapeTimers[torrentId] = Timer.periodic(const Duration(seconds: 30), (_) {
       _doScrape(torrentId, task);
     });
@@ -3142,7 +3134,7 @@ class TorrentEngineService {
     _discoveryTimers.remove(torrentId)?.cancel();
     _progressTimers.remove(torrentId)?.cancel();
     _uploadedBytesByTorrent.remove(torrentId);
-    _lastUploadedSampleByTorrent.remove(torrentId);
+    _uploadedOffsetByTorrent.remove(torrentId);
     _zeroProgressCounters.remove(torrentId);
     _peerlessCounters.remove(torrentId);
     _stallRecoveryCycles.remove(torrentId);
@@ -3259,8 +3251,32 @@ class TorrentEngineService {
     );
   }
 
+  /// For a finished torrent the user resumes: when the seeding limit is what
+  /// stopped it, it keeps seeding from now on, also after a restart. The
+  /// limit used to pause it again at once, so Resume did nothing.
+  Future<void> keepSeedingIfLimitReached(
+    String torrentId, {
+    required double? ownLimit,
+    required int uploaded,
+    required int size,
+  }) async {
+    final ratio = size > 0 ? uploaded / size : 0.0;
+    if (_seedingStopReason(ownLimit, ratio) == null) return;
+    _seedRatioByTorrent[torrentId] = 0;
+    await TorrentService.instance.setSeedRatioLimit(torrentId, 0);
+  }
+
   void resumeTorrent(String torrentId) {
     final task = _tasks[torrentId];
+    if (task != null && _isTaskComplete(task)) {
+      unawaited(keepSeedingIfLimitReached(
+        torrentId,
+        ownLimit: _seedRatioByTorrent[torrentId],
+        uploaded: _uploadedTotal(torrentId, task),
+        size: task.metaInfo.length ?? task.metaInfo.totalSize,
+      ).catchError(
+          (Object e) => debugPrint('resumeTorrent limit write failed: $e')));
+    }
     _pausedTorrentIds.remove(torrentId);
     task?.resume();
     if (task != null) {
@@ -3495,12 +3511,27 @@ class TorrentEngineService {
     }
   }
 
+  /// Closes every running torrent before the app quits, without pausing it,
+  /// so it carries on at the next launch. A running torrent saves what it
+  /// has done every two seconds; this saves the rest and closes its files.
+  /// Gives up after [timeout] so quitting never hangs on a torrent.
+  Future<void> closeForExit({
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
+    final tasks = _tasks.values.toList();
+    if (tasks.isEmpty) return;
+    await Future.wait(tasks.map((task) async {
+      try {
+        await task.stop();
+      } catch (e) {
+        debugPrint('closeForExit: a torrent did not close cleanly: $e');
+      }
+    })).timeout(timeout, onTimeout: () => const []);
+  }
+
   Future<File> _managedTorrentSourceFile(String torrentId) async {
-    final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory(
-      p.join(docs.path, _managedTorrentSourceDirName),
-    );
-    return File(p.join(dir.path, '${torrentId.toLowerCase()}.torrent'));
+    final dir = await AppDataLocation.pathOf(_managedTorrentSourceDirName);
+    return File(p.join(dir, '${torrentId.toLowerCase()}.torrent'));
   }
 
   Future<File?> _tryGetManagedTorrentSource(String torrentId) async {

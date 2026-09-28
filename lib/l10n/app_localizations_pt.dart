@@ -1249,9 +1249,6 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => 'Pesquisar na fila';
-
-  @override
   String get mediaPlayer => 'Player';
 
   @override
@@ -1261,7 +1258,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get addItemsFromPlayerTab => 'Adicione itens pela aba Player';
 
   @override
-  String get addItemsFromSearchTab => 'Adicione itens pela aba Pesquisar';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return 'Adicione itens com $quickDownload no Início ou com $multiSearch';
+  }
 
   @override
   String get upNext => 'A seguir';
@@ -1314,7 +1313,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get enjoyingConvertSpireReborn =>
-      'Está gostando do Convert The Spire Reborn?';
+      'Está gostando do Convert the Spire Reborn?';
 
   @override
   String get leaveReviewHelpsMoreThan =>
@@ -1362,7 +1361,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      'Esta versão é otimizada para o cofre de torrents e segue as políticas das lojas de apps.';
+      'Esta versão foi feita para torrents e mídia e segue as políticas das lojas de apps.';
 
   @override
   String get minimizeTrayClose => 'Minimizar para a bandeja ao fechar';
@@ -1434,7 +1433,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get whenSetVaultTorrentsUse =>
-      'Quando definida, os torrents do cofre usam esta pasta em vez da pasta geral de download.';
+      'Se definida, os torrents são salvos nesta pasta em vez da pasta geral de downloads.';
 
   @override
   String get parallelWorkers110 => 'Tarefas paralelas (1-10)';
@@ -1818,7 +1817,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle é um cofre de torrents e central de mídia. Adicione links magnet e arquivos .torrent, gerencie downloads e mantenha tudo organizado em um só app.';
+    return '$getAppTitle é um cliente de torrent e central de mídia. Adicione links magnet e arquivos .torrent, gerencie downloads e mantenha tudo organizado em um só app.';
   }
 
   @override
@@ -2177,6 +2176,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get openedFileNotInLibrary => 'Arquivo aberto, fora da sua biblioteca';
+
+  @override
+  String get openFileFolder => 'Abrir a pasta';
 
   @override
   String get trackActions => 'Ações da faixa';
@@ -3032,7 +3034,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get privacyPolicy => 'Política de privacidade';
 
   @override
-  String get rateConvertSpireReborn => 'Avaliar o Convert The Spire Reborn';
+  String get rateConvertSpireReborn => 'Avaliar o Convert the Spire Reborn';
 
   @override
   String get leaveRatingPlayStore => 'Deixe uma avaliação na Play Store';
@@ -3926,7 +3928,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get mediaPlayerLibrary => 'Player e biblioteca';
 
   @override
-  String get vaultTorrentManager => 'Gerenciador de torrents do cofre';
+  String get vaultTorrentManager => 'Baixe e compartilhe torrents';
 
   @override
   String get mac => 'Mac';
@@ -3944,6 +3946,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'v$latestVersion disponível';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return 'Você tem a versão mais recente ($version)';
+  }
+
+  @override
+  String get updateCheckFailed =>
+      'Não foi possível verificar atualizações. Verifique sua conexão com a internet.';
 
   @override
   String get dismiss => 'Dispensar';

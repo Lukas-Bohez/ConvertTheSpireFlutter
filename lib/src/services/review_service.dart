@@ -1,6 +1,9 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ReviewService {
   static const _launchCountKey = 'launch_count';
@@ -53,10 +56,23 @@ class ReviewService {
     } catch (_) {}
   }
 
-  /// Fallback: open store listing directly (use for manual "Rate this app" button)
+  static final Uri _projectPage =
+      Uri.parse('https://github.com/Lukas-Bohez/ConvertTheSpireFlutter');
+
+  /// Opens where people can rate the app, for the "Rate" buttons: the Play
+  /// Store listing on Android, the project's GitHub page elsewhere. The app
+  /// is in no other store, and there the button did nothing.
   static Future<void> openStoreListing() async {
+    if (!kIsWeb && Platform.isAndroid) {
+      try {
+        await _inAppReview.openStoreListing(appStoreId: 'com.torrentspire.ai');
+        return;
+      } catch (_) {
+        // Fall through to the project page.
+      }
+    }
     try {
-      await _inAppReview.openStoreListing(appStoreId: 'com.torrentspire.ai');
+      await launchUrl(_projectPage, mode: LaunchMode.externalApplication);
     } catch (_) {}
   }
 }

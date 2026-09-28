@@ -1,7 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
+
+import '../services/app_data_location.dart';
 
 /// SQLite database for the browser module: history, favourites, recent sites.
 class BrowserDb {
@@ -9,8 +11,7 @@ class BrowserDb {
 
   static Future<Database> get database async {
     if (_db != null) return _db!;
-    final dir = await getApplicationDocumentsDirectory();
-    final path = p.join(dir.path, 'browser.db');
+    final path = await AppDataLocation.pathOf('browser.db');
     _db = await openDatabase(
       path,
       version: 2,
@@ -63,7 +64,30 @@ class BrowserDb {
         }
       },
     );
+    // History was never trimmed: a row for every page ever visited, with
+    // its icon. Trimmed once per start.
+    unawaited(pruneHistory(_db!).catchError((Object e) {
+      if (kDebugMode) debugPrint('BrowserDb: pruning history failed: $e');
+    }));
     return _db!;
+  }
+
+  /// Removes history older than [maxAgeDays] and all but the newest
+  /// [maxRows] entries.
+  static Future<void> pruneHistory(Database db,
+      {int maxAgeDays = 365, int maxRows = 5000}) async {
+    final cutoff = DateTime.now()
+        .subtract(Duration(days: maxAgeDays))
+        .millisecondsSinceEpoch;
+    await db.delete('history', where: 'visited_at < ?', whereArgs: [cutoff]);
+
+    final countRow = await db.rawQuery('SELECT COUNT(*) as c FROM history');
+    final count = Sqflite.firstIntValue(countRow) ?? 0;
+    if (count > maxRows) {
+      await db.rawDelete(
+          'DELETE FROM history WHERE id IN (SELECT id FROM history ORDER BY visited_at ASC LIMIT ?)',
+          [count - maxRows]);
+    }
   }
 
   /// Close the underlying database if open. Safe to call multiple times.
@@ -143,20 +167,8 @@ class BrowserRepository extends ChangeNotifier {
   /// - Removes entries older than [maxAgeDays].
   /// - Ensures at most [maxRows] rows remain by deleting oldest entries.
   Future<void> pruneHistory({int maxAgeDays = 365, int maxRows = 5000}) async {
-    final db = await BrowserDb.database;
-    final cutoff = DateTime.now()
-        .subtract(Duration(days: maxAgeDays))
-        .millisecondsSinceEpoch;
-    await db.delete('history', where: 'visited_at < ?', whereArgs: [cutoff]);
-
-    final countRow = await db.rawQuery('SELECT COUNT(*) as c FROM history');
-    final count = Sqflite.firstIntValue(countRow) ?? 0;
-    if (count > maxRows) {
-      final toDelete = count - maxRows;
-      await db.rawDelete(
-          'DELETE FROM history WHERE id IN (SELECT id FROM history ORDER BY visited_at ASC LIMIT ?)',
-          [toDelete]);
-    }
+    await BrowserDb.pruneHistory(await BrowserDb.database,
+        maxAgeDays: maxAgeDays, maxRows: maxRows);
     notifyListeners();
   }
 

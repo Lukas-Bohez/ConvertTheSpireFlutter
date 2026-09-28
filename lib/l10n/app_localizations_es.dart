@@ -1251,9 +1251,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => 'Buscar en la cola';
-
-  @override
   String get mediaPlayer => 'Reproductor';
 
   @override
@@ -1264,7 +1261,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'Añade elementos desde la pestaña Reproductor';
 
   @override
-  String get addItemsFromSearchTab => 'Añade elementos desde la pestaña Buscar';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return 'Añade elementos con $quickDownload en Inicio o con $multiSearch';
+  }
 
   @override
   String get upNext => 'A continuación';
@@ -1318,7 +1317,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get enjoyingConvertSpireReborn =>
-      '¿Te gusta Convert The Spire Reborn?';
+      '¿Te gusta Convert the Spire Reborn?';
 
   @override
   String get leaveReviewHelpsMoreThan =>
@@ -1366,7 +1365,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      'Esta versión está optimizada para la bóveda de torrents y cumple las políticas de las tiendas de apps.';
+      'Esta versión está pensada para torrents y medios, y cumple las políticas de las tiendas de apps.';
 
   @override
   String get minimizeTrayClose => 'Minimizar a la bandeja al cerrar';
@@ -1438,7 +1437,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get whenSetVaultTorrentsUse =>
-      'Si se indica, los torrents de la bóveda usan esta carpeta en lugar de la carpeta general de descargas.';
+      'Si se indica, los torrents se guardan en esta carpeta en lugar de la carpeta general de descargas.';
 
   @override
   String get parallelWorkers110 => 'Trabajos en paralelo (1-10)';
@@ -1822,7 +1821,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle es una bóveda de torrents y un centro multimedia. Añade enlaces magnet y archivos .torrent, gestiona las descargas y mantén todo ordenado en una sola app.';
+    return '$getAppTitle es un cliente de torrents y un centro multimedia. Añade enlaces magnet y archivos .torrent, gestiona las descargas y mantén todo ordenado en una sola app.';
   }
 
   @override
@@ -2182,6 +2181,9 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get openedFileNotInLibrary =>
       'Archivo abierto, no está en tu biblioteca';
+
+  @override
+  String get openFileFolder => 'Abrir su carpeta';
 
   @override
   String get trackActions => 'Acciones de la pista';
@@ -3038,7 +3040,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get privacyPolicy => 'Política de privacidad';
 
   @override
-  String get rateConvertSpireReborn => 'Valorar Convert The Spire Reborn';
+  String get rateConvertSpireReborn => 'Valorar Convert the Spire Reborn';
 
   @override
   String get leaveRatingPlayStore => 'Deja una valoración en Play Store';
@@ -3930,7 +3932,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mediaPlayerLibrary => 'Reproductor y biblioteca';
 
   @override
-  String get vaultTorrentManager => 'Gestor de torrents de la bóveda';
+  String get vaultTorrentManager => 'Descarga y comparte torrents';
 
   @override
   String get mac => 'Mac';
@@ -3948,6 +3950,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'v$latestVersion disponible';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return 'Tienes la última versión ($version)';
+  }
+
+  @override
+  String get updateCheckFailed =>
+      'No se pudo buscar actualizaciones. Comprueba tu conexión a internet.';
 
   @override
   String get dismiss => 'Descartar';

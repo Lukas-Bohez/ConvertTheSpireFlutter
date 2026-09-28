@@ -26,7 +26,6 @@ import 'package:bittorrent_dht/bittorrent_dht.dart';
 import 'package:logging/logging.dart';
 import 'package:events_emitter2/events_emitter2.dart';
 import 'file/download_file_manager.dart';
-import 'file/state_file.dart';
 import 'file/state_file_v2.dart';
 import 'lsd/lsd.dart';
 import 'peer/protocol/peer.dart';
@@ -78,7 +77,7 @@ abstract class TorrentTask with EventsEmittable<TaskEvent> {
   // The name of the torrent
   String get name => metaInfo.name;
 
-  StateFile? get stateFile;
+  StateFileV2? get stateFile;
 
   /// The file manager
   DownloadFileManager? get fileManager;
@@ -117,6 +116,9 @@ abstract class TorrentTask with EventsEmittable<TaskEvent> {
 
   /// Downloaded total bytes length
   int? get downloaded;
+
+  /// Bytes sent to peers, over every session of this torrent.
+  int get uploaded;
 
   /// Downloaded percent
   double get progress;
@@ -332,12 +334,9 @@ class _TorrentTask
 
   dynamic _stateFile; // Can be StateFile or StateFileV2
 
+  /// It is a StateFileV2: casting it to StateFile threw on every call.
   @override
-  StateFile? get stateFile {
-    // StateFileV2 implements the same interface as StateFile
-    // Both have bitfield, uploaded, downloaded properties
-    return _stateFile as StateFile?;
-  }
+  StateFileV2? get stateFile => _stateFile as StateFileV2?;
 
   PieceManager? _pieceManager;
 
@@ -567,6 +566,9 @@ class _TorrentTask
 
     _fileManager ??= await DownloadFileManager.createFileManager(
         model, savePath, _stateFile!, _pieceManager!.pieces.values.toList());
+    if (_peersManager == null) {
+      _uploadedBefore = _stateFile?.uploaded ?? 0;
+    }
     _peersManager ??= PeersManager(_peerId, model, ipFilter: _ipFilter);
 
     // Initialize SuperSeeder if superseeding is enabled
@@ -732,23 +734,30 @@ class _TorrentTask
     }
   }
 
+  /// An incoming connection: at most [MAX_IN_PEERS] at a time, one per
+  /// address.
+  ///
+  /// This checked `socket.address`, this end of the connection, which is the
+  /// same for every peer, and never let go of it: after the first peer that
+  /// connected, every other one was turned away, so a finished torrent could
+  /// hardly seed. Turned-away sockets are closed; they used to stay open.
   void _hookInPeer(Socket socket) {
-    if (socket.remoteAddress == LOCAL_ADDRESS) {
-      socket.close();
+    final remote = socket.remoteAddress;
+    if (remote == LOCAL_ADDRESS ||
+        _comingIp.length >= MAX_IN_PEERS ||
+        !_comingIp.add(remote)) {
+      socket.destroy();
       return;
     }
-    if (_comingIp.length >= MAX_IN_PEERS || !_comingIp.add(socket.address)) {
-      socket.close();
-      return;
+    _log.info('incoming connect: ${remote.address}:${socket.remotePort}');
+    final taken = _peersManager?.addNewPeerAddress(
+            CompactAddress(remote, socket.remotePort), PeerSource.incoming,
+            type: PeerType.TCP, socket: socket) ??
+        false;
+    if (!taken) {
+      _comingIp.remove(remote);
+      socket.destroy();
     }
-    _log.info(
-      'incoming connect: ${socket.remoteAddress.address}:${socket.remotePort}',
-    );
-    _peersManager?.addNewPeerAddress(
-        CompactAddress(socket.remoteAddress, socket.remotePort),
-        PeerSource.incoming,
-        type: PeerType.TCP,
-        socket: socket);
   }
 
   @override
@@ -1016,8 +1025,8 @@ class _TorrentTask
       ..on<PeerHaveEvent>(_processHaveUpdate)
       ..on<RequestTimeoutEvent>(
           (event) => _processRequestTimeout(event.peer, event.requests))
-      ..on<UpdateUploaded>(
-          (event) => _fileManager?.updateUpload(event.uploaded));
+      ..on<UpdateUploaded>((event) =>
+          _fileManager?.updateUpload(_uploadedBefore + event.uploaded));
     fileManagerListener
       ?..on<DownloadManagerFileCompleted>(_whenFileDownloadComplete)
       ..on<StateFileUpdated>((event) {
@@ -1231,6 +1240,9 @@ class _TorrentTask
 
   void _processPeerDispose(PeerDisposeEvent event) {
     _waitingForDisk.remove(event.peer);
+    if (event.peer.source == PeerSource.incoming) {
+      _comingIp.remove(event.peer.address.address);
+    }
     if (_pieceManager == null) return;
 
     // Clean up superseeding tracking for this peer
@@ -1310,12 +1322,22 @@ class _TorrentTask
   }
 
   void _processPeerRequest(PeerRequestEvent event) {
-    if (_fileManager == null ||
-        _peersManager == null ||
-        _peersManager!.isPaused) {
+    final fileManager = _fileManager;
+    final peersManager = _peersManager;
+    if (fileManager == null || peersManager == null || peersManager.isPaused) {
       return;
     }
-    _fileManager!.readFile(event.index, event.begin, event.length);
+    // Only blocks of pieces this side has. A piece index past the end made
+    // the read throw, and the request stayed queued for good.
+    final piece = _pieceManager?[event.index];
+    if (piece == null ||
+        !fileManager.localHave(event.index) ||
+        event.begin + event.length > piece.byteLength) {
+      peersManager.dropRemoteRequest(
+          event.peer, event.index, event.begin, event.length);
+      return;
+    }
+    fileManager.readFile(event.index, event.begin, event.length);
   }
 
   void _processHaveAll(PeerHaveAll event) {
@@ -1511,6 +1533,8 @@ class _TorrentTask
   Future<void> dispose() async {
     await _flushFiles(_flushIndicesBuffer);
     _flushIndicesBuffer.clear();
+    // What was uploaded since the last 1 MB step.
+    if (_peersManager != null) await _fileManager?.updateUpload(uploaded);
     events.dispose();
     _dhtRepeatTimer?.cancel();
     _dhtRepeatTimer = null;
@@ -1612,6 +1636,14 @@ class _TorrentTask
 
   @override
   int? get downloaded => _fileManager?.downloaded;
+
+  /// What the state file said was uploaded when this session started: the
+  /// peers manager counts from zero each session, and its count used to
+  /// replace the total instead of adding to it.
+  int _uploadedBefore = 0;
+
+  @override
+  int get uploaded => _uploadedBefore + (_peersManager?.uploaded ?? 0);
 
   @override
   double get progress {

@@ -64,11 +64,13 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   @override
   void initState() {
     super.initState();
+    // Runs only while the cursor moves (see _startMoving). Always running,
+    // it had the app draw a new frame 60 times a second for as long as it
+    // was open, even with nothing on screen changing.
     _ticker = createTicker(_onTick);
     if (!kIsWeb && _isDesktopPlatform) {
       _isAndroidTV = true;
       HardwareKeyboard.instance.addHandler(_onHardwareKeyEvent);
-      if (!_ticker.isActive) _ticker.start();
       return;
     }
     _detectAndroidTV();
@@ -87,9 +89,12 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
       _isAndroidTV = isTV;
     });
     _keyChannel.setMethodCallHandler(_isAndroidTV ? _onNativeKeyEvent : null);
-    if (_isAndroidTV && !_ticker.isActive) {
-      unawaited(_ticker.start());
-    }
+  }
+
+  void _startMoving() {
+    if (_ticker.isActive) return;
+    _lastElapsed = Duration.zero;
+    unawaited(_ticker.start());
   }
 
   @override
@@ -118,6 +123,14 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
     if (!isDown && !isUp) return false;
 
     final key = event.logicalKey;
+    final isArrow = key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown;
+    // Arrow keys in a text field move its caret, not the cursor, which used
+    // to appear and wander off while someone typed.
+    if (isArrow && isDown && _isTextFieldFocused()) return false;
+
     if (key == LogicalKeyboardKey.arrowLeft) {
       _direction =
           Offset(isDown ? -1 : (isUp ? 0 : _direction.dx), _direction.dy);
@@ -136,17 +149,23 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
       if (_isTextFieldFocused()) {
         return false;
       }
-      if (isDown) _fireTap();
+      if (isDown) {
+        // Only while the cursor shows, so the click goes where it is seen.
+        // Hidden, Enter clicked wherever the cursor was last, maybe long ago,
+        // or at its starting point: pressing Enter on a dialog clicked
+        // whatever was there. Hidden, Enter now just shows it.
+        if (_cursorVisible) {
+          _fireTap();
+        }
+        _resetHideTimer();
+      }
     } else {
       return false;
     }
 
-    if (isDown &&
-        (key == LogicalKeyboardKey.arrowLeft ||
-            key == LogicalKeyboardKey.arrowRight ||
-            key == LogicalKeyboardKey.arrowUp ||
-            key == LogicalKeyboardKey.arrowDown)) {
+    if (isDown && isArrow) {
       _resetHideTimer();
+      _startMoving();
     }
     return true;
   }
@@ -222,6 +241,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
             keyCode == dpadUp ||
             keyCode == dpadDown)) {
       _resetHideTimer();
+      _startMoving();
     }
   }
 
@@ -260,10 +280,15 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
     unawaited(GlobalCursorOverlay._webViewTapCallback?.call(_position));
   }
 
+  /// Whether the keyboard is typing into a text field. The focus belongs to
+  /// a Focus widget inside the EditableText, so the field is looked up from
+  /// there; checking the focused widget itself never matched, and Enter in
+  /// a text field also clicked wherever the cursor was.
   bool _isTextFieldFocused() {
-    final focused = FocusManager.instance.primaryFocus;
-    final widget = focused?.context?.widget;
-    return widget is EditableText;
+    final context = FocusManager.instance.primaryFocus?.context;
+    if (context == null) return false;
+    return context.widget is EditableText ||
+        context.findAncestorStateOfType<EditableTextState>() != null;
   }
 
   void _onTick(Duration elapsed) {
@@ -318,6 +343,10 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
       px = px.clamp(0, _viewportSize.width);
 
       _position = Offset(px, py);
+    }
+
+    if (_direction == Offset.zero && _velocity == Offset.zero) {
+      _ticker.stop();
     }
 
     if (mounted) {

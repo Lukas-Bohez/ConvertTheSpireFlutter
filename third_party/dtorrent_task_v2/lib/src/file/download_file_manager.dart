@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:dtorrent_task_v2/src/torrent/torrent_model.dart';
 import 'package:dtorrent_task_v2/src/file/download_file_manager_events.dart';
@@ -30,7 +32,14 @@ class DownloadFileManager with EventsEmittable<DownloadFileManagerEvent> {
   final Map<String, List<Piece>> _file2pieceMap = {};
   final dynamic _stateFile; // Can be StateFile or StateFileV2
 
-  /// TODO: File read caching
+  /// Read-ahead for seeding: 1 MB chunks of pieces, keyed by
+  /// `pieceIndex * _chunksPerPieceKey + chunk`, oldest first. See [readFile].
+  final Map<int, Future<Uint8List?>> _readCache = {};
+  Timer? _readCacheExpiry;
+  static const int readChunkSize = 1 << 20;
+  static const int _readCacheChunks = 8;
+  static const int _chunksPerPieceKey = 1 << 12;
+
   DownloadFileManager(
     this.metainfo,
     this._stateFile,
@@ -254,13 +263,87 @@ class DownloadFileManager with EventsEmittable<DownloadFileManagerEvent> {
     }
   }
 
+  ///
+  /// A read that fails is reported with an empty block.
+  ///
+  /// Blocks are served from 1 MB chunks read ahead of them. Peers ask for a
+  /// piece's 16 KB blocks one after another, and each block used to be its
+  /// own seek and read. In the app every such async step takes about a
+  /// millisecond, which held seeding to about 4 MB/s; one read now serves up
+  /// to 64 blocks.
   Future<List<int>?> readFile(int pieceIndex, int begin, int length) async {
-    var piece = _pieces[pieceIndex];
+    final files = _piece2fileMap?[pieceIndex];
+    if (pieceIndex < 0 ||
+        pieceIndex >= _pieces.length ||
+        files == null ||
+        files.isEmpty ||
+        begin < 0 ||
+        length <= 0) {
+      events.emit(SubPieceReadCompleted(pieceIndex, begin, Uint8List(0)));
+      return null;
+    }
+    final piece = _pieces[pieceIndex];
+    final chunk = begin ~/ readChunkSize;
+    final chunkStart = chunk * readChunkSize;
+    final chunkLength = min(readChunkSize, piece.byteLength - chunkStart);
+    Uint8List? block;
+    if (begin + length <= chunkStart + chunkLength) {
+      final data = await _readChunk(pieceIndex, chunk, chunkStart, chunkLength);
+      if (data != null) {
+        block = Uint8List.sublistView(
+            data, begin - chunkStart, begin - chunkStart + length);
+      }
+    } else {
+      // Across a chunk boundary: not how peers ask, read it as it is.
+      block = await _read(pieceIndex, begin, length);
+    }
+    if (block == null) {
+      events.emit(SubPieceReadCompleted(pieceIndex, begin, Uint8List(0)));
+      return null;
+    }
+    events.emit(SubPieceReadCompleted(pieceIndex, begin, block));
+    return block;
+  }
 
-    var files = _piece2fileMap?[pieceIndex];
+  /// A chunk of a piece, read once for all the blocks asked of it.
+  Future<Uint8List?> _readChunk(
+      int pieceIndex, int chunk, int chunkStart, int chunkLength) {
+    final key = pieceIndex * _chunksPerPieceKey + chunk;
+    final cached = _readCache.remove(key);
+    if (cached != null) {
+      _readCache[key] = cached; // most recently used last
+      return cached;
+    }
+    final read = _read(pieceIndex, chunkStart, chunkLength);
+    _readCache[key] = read;
+    // A failed read is not kept, so the next request tries again.
+    unawaited(read.then((data) {
+      if (data == null && identical(_readCache[key], read)) {
+        _readCache.remove(key);
+      }
+    }));
+    while (_readCache.length > _readCacheChunks) {
+      _readCache.remove(_readCache.keys.first);
+    }
+    // Memory back once nobody has asked for anything new for a while.
+    _readCacheExpiry?.cancel();
+    _readCacheExpiry = Timer(const Duration(seconds: 20), _readCache.clear);
+    return read;
+  }
+
+  void _forgetReadCache(int pieceIndex) {
+    if (_readCache.isEmpty) return;
+    _readCache.removeWhere((key, _) => key ~/ _chunksPerPieceKey == pieceIndex);
+  }
+
+  /// [length] bytes of piece [pieceIndex] from [begin], across the files the
+  /// piece lies in, or null when they can't all be read.
+  Future<Uint8List?> _read(int pieceIndex, int begin, int length) async {
+    final files = _piece2fileMap?[pieceIndex];
+    if (files == null || files.isEmpty) return null;
+    var piece = _pieces[pieceIndex];
     var startByte = piece.offset + begin;
     var endByte = startByte + length;
-    if (files == null || files.isEmpty) return null;
     var futures = <Future<List<int>>>[];
     for (var i = 0; i < files.length; i++) {
       var tempFile = files[i];
@@ -271,15 +354,26 @@ class DownloadFileManager with EventsEmittable<DownloadFileManagerEvent> {
       futures
           .add(tempFile.requestRead(re.position, re.blockEnd - re.blockStart));
     }
-    var blocks = await Future.wait(futures);
-    var block = blocks.fold<List<int>>(<int>[], (previousValue, element) {
-      previousValue.addAll(element);
-      return previousValue;
-    });
-
-    events.emit(SubPieceReadCompleted(pieceIndex, begin, block));
-
-    return block;
+    final List<List<int>> blocks;
+    try {
+      blocks = await Future.wait(futures);
+    } catch (e) {
+      _log.warning('Reading piece $pieceIndex failed', e);
+      return null;
+    }
+    // Joined as bytes: a growable list took eight bytes of memory for each
+    // one, and filling it one element at a time was slow.
+    final Uint8List block;
+    if (blocks.length == 1 && blocks.first is Uint8List) {
+      block = blocks.first as Uint8List;
+    } else {
+      final builder = BytesBuilder(copy: false);
+      for (final b in blocks) {
+        builder.add(b);
+      }
+      block = builder.takeBytes();
+    }
+    return block.length == length ? block : null;
   }
 
   ///
@@ -289,6 +383,7 @@ class DownloadFileManager with EventsEmittable<DownloadFileManagerEvent> {
   /// The Sub Piece is from the Piece corresponding to [pieceIndex], and the content is [block] starting from [begin].
   /// This class does not validate if the written Sub Piece is a duplicate; it simply overwrites the previous content.
   Future<bool> writeFile(int pieceIndex, int begin, List<int> block) async {
+    _forgetReadCache(pieceIndex);
     var tempFiles = _piece2fileMap?[pieceIndex];
     // TODO: Does this work for last piece?
     // this is the start position relative to  start of the entire torrent block
@@ -320,6 +415,8 @@ class DownloadFileManager with EventsEmittable<DownloadFileManagerEvent> {
   }
 
   Future close() async {
+    _readCacheExpiry?.cancel();
+    _readCache.clear();
     events.dispose();
     await _stateFile.close();
     for (var i = 0; i < _files.length; i++) {

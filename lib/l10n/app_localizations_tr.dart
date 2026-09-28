@@ -1243,9 +1243,6 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => 'Kuyrukta Ara';
-
-  @override
   String get mediaPlayer => 'Medya Oynatıcı';
 
   @override
@@ -1255,7 +1252,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get addItemsFromPlayerTab => 'Oynatıcı sekmesinden öğe ekle';
 
   @override
-  String get addItemsFromSearchTab => 'Ara sekmesinden öğe ekle';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return 'Ana sayfadaki $quickDownload ya da $multiSearch ile öğe ekleyin';
+  }
 
   @override
   String get upNext => 'Sıradaki';
@@ -1308,7 +1307,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get enjoyingConvertSpireReborn =>
-      'Convert The Spire Reborn\'u beğendin mi?';
+      'Convert the Spire Reborn\'u beğendin mi?';
 
   @override
   String get leaveReviewHelpsMoreThan =>
@@ -1356,7 +1355,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      'Bu sürüm torrent kasası işlevi için optimize edilmiştir ve uygulama mağazası politikalarına uyar.';
+      'Bu sürüm torrent ve medya için hazırlanmıştır ve uygulama mağazası politikalarına uyar.';
 
   @override
   String get minimizeTrayClose => 'Kapatınca sistem tepsisine küçült';
@@ -1428,7 +1427,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get whenSetVaultTorrentsUse =>
-      'Ayarlandığında Kasa torrentleri genel indirme klasörü yerine bu klasörü kullanır.';
+      'Ayarlanırsa torrentler genel indirme klasörü yerine bu klasöre kaydedilir.';
 
   @override
   String get parallelWorkers110 => 'Paralel işler (1-10)';
@@ -1808,7 +1807,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle bir torrent kasası ve medya merkezidir. Magnet bağlantıları ve .torrent dosyaları ekle, indirmeleri yönet ve her şeyi tek uygulamada düzenli tut.';
+    return '$getAppTitle bir torrent istemcisi ve medya merkezidir. Magnet bağlantıları ve .torrent dosyaları ekleyin, indirmeleri yönetin ve her şeyi tek bir uygulamada düzenli tutun.';
   }
 
   @override
@@ -2166,6 +2165,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get openedFileNotInLibrary => 'Açılan dosya, kitaplığında değil';
+
+  @override
+  String get openFileFolder => 'Klasörünü aç';
 
   @override
   String get trackActions => 'Parça işlemleri';
@@ -3023,7 +3025,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get rateConvertSpireReborn =>
-      'Convert The Spire Reborn\'u değerlendir';
+      'Convert the Spire Reborn\'u değerlendir';
 
   @override
   String get leaveRatingPlayStore => 'Play Store\'da puan ver';
@@ -3907,7 +3909,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get mediaPlayerLibrary => 'Medya oynatıcı ve kitaplık';
 
   @override
-  String get vaultTorrentManager => 'Kasa torrent yöneticisi';
+  String get vaultTorrentManager => 'Torrent indirin ve paylaşın';
 
   @override
   String get mac => 'Mac';
@@ -3925,6 +3927,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'v$latestVersion mevcut';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return 'En son sürümü kullanıyorsunuz ($version)';
+  }
+
+  @override
+  String get updateCheckFailed =>
+      'Güncellemeler denetlenemedi. İnternet bağlantınızı kontrol edin.';
 
   @override
   String get dismiss => 'Kapat';

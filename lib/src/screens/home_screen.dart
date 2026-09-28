@@ -35,6 +35,7 @@ import '../utils/folder_label.dart';
 import '../utils/l10n.dart';
 import '../utils/snack.dart';
 import '../vault/screens/torrents_screen.dart';
+import '../vault/services/torrent_engine_service.dart';
 import '../vault/services/torrent_service.dart';
 import '../vault/widgets/torrent_settings_card.dart';
 import '../widgets/browser_shell.dart';
@@ -292,6 +293,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         checksumsUrl: info.checksumsUrl,
         version: info.latestVersion,
         onProgress: (value) => progress.value = value,
+        // Torrents save what they did in the last seconds.
+        beforeExit: TorrentEngineService.instance.closeForExit,
       );
     } catch (e) {
       debugPrint('Windows update failed: $e');
@@ -309,8 +312,26 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (kPlayStoreBuild) return;
       if (!_checkUpdatesOnLaunch && !force) return;
       final info = await UpdateService.checkForUpdate();
-      if (info == null) return;
-      final shouldShow =
+      if (!mounted) return;
+      if (info == null) {
+        if (force) {
+          Snack.show(context, context.l10n.updateCheckFailed,
+              level: SnackLevel.warning);
+        }
+        return;
+      }
+      // Only a newer release: the banner offered the latest release even to
+      // the copy that is that release, and on Windows its Update now
+      // installed it again.
+      if (!info.updateAvailable) {
+        if (force) {
+          Snack.show(context, context.l10n.appUpToDate(info.currentVersion),
+              level: SnackLevel.info);
+        }
+        return;
+      }
+      // Asking again brings back a banner that was closed.
+      final shouldShow = force ||
           await UpdateService.shouldShowBanner(info.latestVersion);
       if (mounted) {
         setState(() {
@@ -340,6 +361,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       try {
         await SessionLogService.instance.flush('normal_exit');
       } catch (_) {}
+      // Torrents save what they did in the last seconds.
+      await TorrentEngineService.instance.closeForExit();
       try {
         await BrowserScreen.browserKey.currentState
             ?.disposeAllWebViewControllers();
@@ -1314,7 +1337,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Material(
                   child: TabBar(
                     tabs: [
-                      Tab(text: context.l10n.searchQueue),
+                      // Short, like the navigation's name for this page:
+                      // longer names were cut off in the side panel.
+                      Tab(text: context.l10n.tabQueue),
                       Tab(text: context.l10n.mediaPlayer),
                     ],
                   ),
@@ -1352,13 +1377,18 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 6),
-            Text(
-              kPlayStoreBuild
-                  ? context.l10n.addItemsFromPlayerTab
-                  : context.l10n.addItemsFromSearchTab,
-              style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                kPlayStoreBuild
+                    ? context.l10n.addItemsFromPlayerTab
+                    : context.l10n.addItemsToDownloadQueue(
+                        context.l10n.quickDownload, context.l10n.multiSearch),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
             ),
           ],
         ),
@@ -3032,9 +3062,15 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               _ytDlpLatestVersion ?? context.l10n.unknown);
                         }
 
-                        final checkedText = _ytDlpLastChecked == null
+                        // A date and time in the app's language; it read
+                        // "2026-09-27 08:16:14.446454".
+                        final checked = _ytDlpLastChecked?.toLocal();
+                        final dates = MaterialLocalizations.of(context);
+                        final checkedText = checked == null
                             ? null
-                            : context.l10n.lastChecked(_ytDlpLastChecked!.toLocal());
+                            : context.l10n.lastChecked(
+                                '${dates.formatMediumDate(checked)} '
+                                '${dates.formatTimeOfDay(TimeOfDay.fromDateTime(checked), alwaysUse24HourFormat: MediaQuery.of(context).alwaysUse24HourFormat)}');
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 10),
@@ -3307,18 +3343,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   const Divider(),
                   const SizedBox(height: 8),
-                  SwitchListTile(
-                    value: settings.autoRetryInstall,
-                    onChanged: (value) {
-                      widget.controller.saveSettings(
-                          settings.copyWith(autoRetryInstall: value));
-                    },
-                    title: Text(context.l10n.autoRetryInstalls),
-                    subtitle:
-                        Text(context.l10n.automaticallyRetryFailedDownloads),
-                    secondary: const Icon(Icons.replay),
-                  ),
-                  const SizedBox(height: 12),
+                  // An "Auto-retry installs" switch stood here: nothing read
+                  // it, and downloads retried either way. The count below is
+                  // what decides.
                   TextField(
                     controller: _retryCountController,
                     decoration: InputDecoration(

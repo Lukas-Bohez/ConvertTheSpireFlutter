@@ -1185,7 +1185,9 @@ class YtDlpService {
   /// binary is reused by youtube_explode_dart's `DenoEJSSolver`. Never throws。
   Future<void> _tryApplyDenoRuntime(List<String> args) async {
     if (kIsWeb || Platform.isAndroid || Platform.isIOS) return;
-    final deno = await DenoRuntimeService.resolveOrDownload();
+    // A first-run Deno download still going is not waited out.
+    final deno = await DenoRuntimeService.resolveOrDownload(
+        waitAtMost: const Duration(seconds: 20));
     if (deno == null || deno.trim().isEmpty) {
       // Silent failure path — no log line at all makes it impossible to
       // distinguish "no Deno installed" from "download failed" from

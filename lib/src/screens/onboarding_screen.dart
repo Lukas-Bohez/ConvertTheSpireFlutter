@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -491,8 +493,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final squareSide = (screenWidth * 0.50).clamp(150.0, 280.0);
+    final screen = MediaQuery.of(context).size;
+    // By height too: at its full 280 px on a laptop-sized window, the page's
+    // text fell below the fold with nothing to show it scrolls.
+    final squareSide = math
+        .min(screen.width * 0.50, screen.height * 0.20)
+        .clamp(96.0, 280.0);
 
     return Scaffold(
       body: Focus(
@@ -722,7 +728,9 @@ class _WelcomePreview extends StatelessWidget {
           ];
 
     return Container(
-      width: 280,
+      // Up to 360 wide, never wider than the page: at a fixed 280 every
+      // line was cut off ("Compare results from several sour…").
+      constraints: const BoxConstraints(maxWidth: 360),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: bg,
@@ -777,7 +785,9 @@ class _FeatureListPreview extends StatelessWidget {
     final visibleItems = items.where((i) => i.visible).toList();
 
     return Container(
-      width: 280,
+      // Up to 360 wide, never wider than the page: at a fixed 280 every
+      // line was cut off ("Compare results from several sour…").
+      constraints: const BoxConstraints(maxWidth: 360),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: bg,
@@ -822,7 +832,7 @@ class _FeatureListPreview extends StatelessWidget {
                             ),
                             Text(
                               item.blurb,
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(fontSize: 11, color: subtitle),
                             ),
@@ -882,7 +892,7 @@ class _SupportPreview extends StatelessWidget {
     const accent = Color(0xFFE91E63);
 
     return Container(
-      width: 280,
+      constraints: const BoxConstraints(maxWidth: 360),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: bg,

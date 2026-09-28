@@ -105,7 +105,8 @@ class _TorrentSettingsCardState extends State<TorrentSettingsCard> {
         _settings.setDownloadRateLimitKib(int.tryParse(_downloadRate.text) ?? 0),
         _settings.setUploadRateLimitKib(int.tryParse(_uploadRate.text) ?? 0),
         _settings.setMaxSeedingRatio(
-            double.tryParse(_seedingRatio.text.trim()) ?? 1.5),
+            double.tryParse(_seedingRatio.text.trim().replaceAll(',', '.')) ??
+                1.5),
         NetworkProxyService.save(
           ProxySettings(
             enabled: _proxyEnabled,
@@ -142,21 +143,26 @@ class _TorrentSettingsCardState extends State<TorrentSettingsCard> {
     messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Widget _number(TextEditingController controller, String label,
+  Widget _number(TextEditingController controller, String text,
       {bool decimal = false}) {
+    // "Upload rate limit (KiB/s, 0 = unlimited)": the part in brackets goes
+    // under the field. In the label it was cut off, "0 = unlimited" with it.
+    final parts =
+        RegExp(r'^(.*?)\s*[(\uFF08](.*)[)\uFF09]\s*$').firstMatch(text);
+    final label = parts?.group(1) ?? text;
+    final hint = parts?.group(2);
     return SizedBox(
       width: 220,
       child: TextField(
         controller: controller,
         keyboardType: TextInputType.numberWithOptions(decimal: decimal),
-        inputFormatters: [
-          if (decimal)
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
-          else
-            FilteringTextInputFormatter.digitsOnly,
-        ],
+        inputFormatters: decimal
+            ? decimalInputFormatters()
+            : [FilteringTextInputFormatter.digitsOnly],
         decoration: InputDecoration(
           labelText: label,
+          helperText: hint,
+          helperMaxLines: 2,
           border: const OutlineInputBorder(),
         ),
       ),
@@ -305,3 +311,12 @@ class _TorrentSettingsCardState extends State<TorrentSettingsCard> {
     );
   }
 }
+
+/// What a decimal field takes: digits and a point. A decimal comma, as
+/// typed across most of Europe, becomes a point; it used to be dropped, so
+/// "2,5" became 25.
+List<TextInputFormatter> decimalInputFormatters() => [
+      FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+      TextInputFormatter.withFunction((_, value) =>
+          value.copyWith(text: value.text.replaceAll(',', '.'))),
+    ];

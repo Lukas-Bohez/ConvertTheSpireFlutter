@@ -1212,9 +1212,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => 'キューを検索';
-
-  @override
   String get mediaPlayer => 'メディアプレーヤー';
 
   @override
@@ -1224,7 +1221,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get addItemsFromPlayerTab => 'プレーヤータブから項目を追加してください';
 
   @override
-  String get addItemsFromSearchTab => '検索タブから項目を追加してください';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return 'ホームの$quickDownloadまたは$multiSearchから追加してください';
+  }
 
   @override
   String get upNext => '次に再生';
@@ -1277,7 +1276,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get enjoyingConvertSpireReborn =>
-      'Convert The Spire Reborn を気に入っていただけましたか？';
+      'Convert the Spire Reborn を気に入っていただけましたか？';
 
   @override
   String get leaveReviewHelpsMoreThan => 'レビューをお願いします。思っている以上に助けになります';
@@ -1323,7 +1322,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      'このバージョンはトレント保管庫機能向けに最適化され、アプリストアのポリシーに準拠しています。';
+      'このバージョンはトレントとメディア向けで、アプリストアのポリシーに準拠しています。';
 
   @override
   String get minimizeTrayClose => '閉じるときにトレイへ最小化';
@@ -1391,7 +1390,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get torrentFolderOptional => 'トレントフォルダ（任意）';
 
   @override
-  String get whenSetVaultTorrentsUse => '設定すると、保管庫のトレントは通常の保存先ではなくこのフォルダを使います。';
+  String get whenSetVaultTorrentsUse => '設定すると、トレントは通常の保存先ではなくこのフォルダに保存されます。';
 
   @override
   String get parallelWorkers110 => '並列処理数（1〜10）';
@@ -1763,7 +1762,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle はトレント保管庫兼メディアハブです。マグネットリンクや .torrent ファイルを追加し、ダウンロードを管理し、すべてをひとつのアプリで整理できます。';
+    return '$getAppTitle はトレントクライアント兼メディアハブです。マグネットリンクや .torrent ファイルを追加し、ダウンロードを管理し、すべてをひとつのアプリで整理できます。';
   }
 
   @override
@@ -2101,6 +2100,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get openedFileNotInLibrary => '開いたファイル（ライブラリにはありません）';
+
+  @override
+  String get openFileFolder => 'フォルダを開く';
 
   @override
   String get trackActions => '曲の操作';
@@ -2921,7 +2923,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get privacyPolicy => 'プライバシーポリシー';
 
   @override
-  String get rateConvertSpireReborn => 'Convert The Spire Reborn を評価';
+  String get rateConvertSpireReborn => 'Convert the Spire Reborn を評価';
 
   @override
   String get leaveRatingPlayStore => 'Play ストアで評価する';
@@ -3795,7 +3797,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mediaPlayerLibrary => 'メディアプレーヤーとライブラリ';
 
   @override
-  String get vaultTorrentManager => '保管庫のトレント管理';
+  String get vaultTorrentManager => 'トレントのダウンロードと共有';
 
   @override
   String get mac => 'Mac';
@@ -3813,6 +3815,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'v$latestVersion が利用可能';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return '最新バージョンです（$version）';
+  }
+
+  @override
+  String get updateCheckFailed => 'アップデートを確認できませんでした。インターネット接続を確認してください。';
 
   @override
   String get dismiss => '閉じる';

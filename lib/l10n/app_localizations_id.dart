@@ -1245,9 +1245,6 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => 'Cari di Antrean';
-
-  @override
   String get mediaPlayer => 'Pemutar Media';
 
   @override
@@ -1257,7 +1254,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get addItemsFromPlayerTab => 'Tambahkan item dari tab Pemutar';
 
   @override
-  String get addItemsFromSearchTab => 'Tambahkan item dari tab Cari';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return 'Tambahkan item dengan $quickDownload di Beranda atau dengan $multiSearch';
+  }
 
   @override
   String get upNext => 'Berikutnya';
@@ -1309,7 +1308,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get saveSettings => 'Simpan Pengaturan';
 
   @override
-  String get enjoyingConvertSpireReborn => 'Suka Convert The Spire Reborn?';
+  String get enjoyingConvertSpireReborn => 'Suka Convert the Spire Reborn?';
 
   @override
   String get leaveReviewHelpsMoreThan =>
@@ -1357,7 +1356,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      'Versi ini dioptimalkan untuk fitur brankas torrent dan mematuhi kebijakan toko aplikasi.';
+      'Versi ini dibuat untuk torrent dan media, serta mematuhi kebijakan toko aplikasi.';
 
   @override
   String get minimizeTrayClose => 'Kecilkan ke baki saat ditutup';
@@ -1429,7 +1428,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get whenSetVaultTorrentsUse =>
-      'Jika diatur, torrent Brankas memakai folder ini, bukan folder unduhan umum.';
+      'Jika diatur, torrent disimpan di folder ini, bukan di folder unduhan umum.';
 
   @override
   String get parallelWorkers110 => 'Pekerja paralel (1-10)';
@@ -1808,7 +1807,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle adalah brankas torrent dan pusat media. Tambahkan tautan magnet dan file .torrent, kelola unduhan, dan jaga semuanya tetap rapi dalam satu aplikasi.';
+    return '$getAppTitle adalah klien torrent dan pusat media. Tambahkan tautan magnet dan file .torrent, kelola unduhan, dan atur semuanya dalam satu aplikasi.';
   }
 
   @override
@@ -2166,6 +2165,9 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get openedFileNotInLibrary =>
       'File yang dibuka, tidak ada di pustaka Anda';
+
+  @override
+  String get openFileFolder => 'Buka foldernya';
 
   @override
   String get trackActions => 'Tindakan lagu';
@@ -3019,7 +3021,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get privacyPolicy => 'Kebijakan privasi';
 
   @override
-  String get rateConvertSpireReborn => 'Nilai Convert The Spire Reborn';
+  String get rateConvertSpireReborn => 'Nilai Convert the Spire Reborn';
 
   @override
   String get leaveRatingPlayStore => 'Beri nilai di Play Store';
@@ -3905,7 +3907,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get mediaPlayerLibrary => 'Pemutar media & pustaka';
 
   @override
-  String get vaultTorrentManager => 'Pengelola torrent brankas';
+  String get vaultTorrentManager => 'Unduh dan bagikan torrent';
 
   @override
   String get mac => 'Mac';
@@ -3923,6 +3925,15 @@ class AppLocalizationsId extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'v$latestVersion tersedia';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return 'Anda memakai versi terbaru ($version)';
+  }
+
+  @override
+  String get updateCheckFailed =>
+      'Tidak dapat memeriksa pembaruan. Periksa koneksi internet Anda.';
 
   @override
   String get dismiss => 'Tutup';

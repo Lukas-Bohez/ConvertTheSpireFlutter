@@ -54,7 +54,9 @@ class _CursorOverlayState extends State<CursorOverlay>
   @override
   void initState() {
     super.initState();
-    _ticker = createTicker(_onTick)..start();
+    // Runs only while the cursor moves; always running, it redrew the
+    // screen 60 times a second while the browser was open.
+    _ticker = createTicker(_onTick);
     _installNativeKeyChannelHandler();
     if (widget.active) {
       _registerAsActiveKeyHandler();
@@ -176,6 +178,10 @@ class _CursorOverlayState extends State<CursorOverlay>
             keyCode == dpadUp ||
             keyCode == dpadDown)) {
       _resetHideTimer();
+      if (!_ticker.isActive) {
+        _lastElapsed = Duration.zero;
+        unawaited(_ticker.start());
+      }
     }
   }
 
@@ -184,7 +190,11 @@ class _CursorOverlayState extends State<CursorOverlay>
         ? 0.0
         : (elapsed - _lastElapsed).inMicroseconds / 1000000.0;
     _lastElapsed = elapsed;
-    if (!widget.active || dt <= 0 || dt > 0.1) return;
+    if (!widget.active) {
+      _ticker.stop();
+      return;
+    }
+    if (dt <= 0 || dt > 0.1) return;
 
     var accel = _direction * _acceleration;
     if (_velocity != Offset.zero) {
@@ -228,6 +238,10 @@ class _CursorOverlayState extends State<CursorOverlay>
       px = px.clamp(0, _viewportSize.width);
 
       _position = Offset(px, py);
+    }
+
+    if (_direction == Offset.zero && _velocity == Offset.zero) {
+      _ticker.stop();
     }
 
     if (mounted) {

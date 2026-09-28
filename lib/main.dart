@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show Directory, File, FileMode, Platform;
+import 'dart:io' show Directory, File, Platform;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
@@ -16,11 +16,11 @@ import 'src/config/build_flags.dart';
 import 'src/config/flavor.dart';
 import 'src/config/full_mode_access.dart';
 import 'src/services/ad_service.dart';
+import 'src/services/error_log.dart';
 import 'src/services/open_request_service.dart';
 import 'src/services/purchase_service.dart';
 import 'src/services/review_service.dart';
 import 'src/services/session_log_service.dart';
-import 'src/vault/platform/crash_dump.dart';
 import 'src/widgets/app_error_screen.dart';
 
 Future<File?> _prepareStartupErrorLogFile() async {
@@ -35,29 +35,9 @@ Future<File?> _prepareStartupErrorLogFile() async {
   }
 }
 
-void _logStartupError(
-  File? logFile,
-  String label,
-  Object error,
-  StackTrace stack,
-) {
-  final timestamp = DateTime.now().toIso8601String();
-  final entry = '[$timestamp] $label:\n$error\n$stack\n\n';
-  debugPrint(entry);
-  if (logFile == null) return;
-  unawaited(
-    () async {
-      try {
-        await logFile.writeAsString(entry, mode: FileMode.append, flush: true);
-      } catch (writeError) {
-        debugPrint('Failed to write startup error log entry: $writeError');
-      }
-    }(),
-  );
-}
-
 Future<void> main() async {
-  File? startupErrorLogFile;
+  // Until the documents folder is known, errors only go to the console.
+  var errorLog = ErrorLog(null);
 
   await runZonedGuarded(() async {
     // Ensure bindings are initialized in the same zone that runs runApp.
@@ -92,7 +72,7 @@ Future<void> main() async {
     await ReviewService.trackLaunch();
     SessionLogService.instance.mark('trackLaunch_done');
 
-    startupErrorLogFile = await _prepareStartupErrorLogFile();
+    errorLog = ErrorLog(await _prepareStartupErrorLogFile());
 
     // Request storage/media permissions on Android (if needed).
     Future<void> requestAndroidPermissions() async {
@@ -136,24 +116,20 @@ Future<void> main() async {
         details.stack ?? StackTrace.current,
         details.context?.toString() ?? 'flutter_error',
       );
-      _logStartupError(
-        startupErrorLogFile,
+      errorLog.record(
         'FLUTTER ERROR',
         details.exceptionAsString(),
         details.stack ?? StackTrace.current,
       );
-      unawaited(SessionLogService.instance.flush('flutter_error'));
-      unawaited(captureCrashDump(
-        'flutter_error',
-        startupErrorLogFile?.path ?? '',
-      ));
+      SessionLogService.instance.flushSoon('flutter_error');
     };
+    // Errors are logged, not dumped: this used to write a Windows minidump of
+    // the running app for every one, from inside the app itself, which
+    // Microsoft warns can hang it, many times an hour while a torrent seeded.
     ui.PlatformDispatcher.instance.onError = (error, stack) {
-      _logStartupError(startupErrorLogFile, 'PLATFORM ERROR', error, stack);
-      unawaited(captureCrashDump(
-        'platform_error',
-        startupErrorLogFile?.path ?? '',
-      ));
+      SessionLogService.instance.logSwallowed(error, stack, 'platform');
+      errorLog.record('PLATFORM ERROR', error, stack);
+      SessionLogService.instance.flushSoon('platform_error');
       return true;
     };
 
@@ -224,7 +200,7 @@ Future<void> main() async {
           if (kDebugMode) debugPrint('MediaKit not supported: $msg');
         } else {
           mediaKitError = msg;
-          _logStartupError(startupErrorLogFile, 'MEDIA KIT ERROR', e, st);
+          errorLog.record('MEDIA KIT ERROR', e, st);
           if (kDebugMode) {
             debugPrint('MediaKit initialization failed: $e');
             debugPrint('$st');
@@ -270,11 +246,8 @@ Future<void> main() async {
       ),
     );
   }, (error, stack) {
-    _logStartupError(startupErrorLogFile, 'ZONE ERROR', error, stack);
-    unawaited(SessionLogService.instance.flush('zone_error'));
-    unawaited(captureCrashDump(
-      'zone_error',
-      startupErrorLogFile?.path ?? '',
-    ));
+    SessionLogService.instance.logSwallowed(error, stack, 'zone');
+    errorLog.record('ZONE ERROR', error, stack);
+    SessionLogService.instance.flushSoon('zone_error');
   });
 }

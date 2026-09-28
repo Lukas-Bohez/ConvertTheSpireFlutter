@@ -34,6 +34,11 @@ which is what qBittorrent and Deluge run on:
    metadata sources, so each retry went to the dead connection and its pieces
    only came back after their timeout; with the dead peer first in the list,
    the download never finished. Its pieces now go to the other peers at once.
+12. **Peers known in advance are asked too** (`metadata_downloader.dart`,
+    `addKnownPeer`). A peer added before `startDownload()` was dropped, as
+    the downloader was not running yet, so a magnet link's own peers (x.pe)
+    could not be used for the file list. They are now kept and connected to
+    once the download starts.
 
 ## Downloads that froze the app
 
@@ -84,6 +89,50 @@ the download alone could take all of it.
    that came after its file closed reopened the file and leaked the handle,
    or threw "Cannot add event after closing"; a piece finished just after
    the stop hit a null check.
+
+## Seeding
+
+A finished torrent could hardly seed, a small one froze the app, and what it
+had seeded went back to 0 B after a restart. Measured with the same 600 MB
+torrent seeded to a libtorrent client that downloads it again and again:
+before, the client never got a connection; after, it got 77 GB in 30 minutes
+at about 100 MB/s, with memory flat at 62 to 91 MB and no errors.
+
+### The fixes
+
+8. **Incoming peers are taken one after another** (`lib/src/task.dart`,
+   `_hookInPeer`). It checked `socket.address`, this end of the connection,
+   the same for every peer, and never let go of it: after the first peer
+   that connected, every other one was turned away. Turned-away sockets are
+   now closed; they stayed open (`peers_manager.dart`, `addNewPeerAddress`).
+9. **A small torrent no longer freezes the app** (`peer.dart`,
+   `_generateAndSendAllowedFastSet`). A torrent with 10 pieces or fewer can't
+   give the fast extension's 10 different allowed pieces, and the loop that
+   picked them never ended: the app froze at full CPU as soon as a peer with
+   the fast extension (libtorrent's) connected. Like libtorrent, it now
+   allows them all.
+10. **Requests are checked, and every one is answered or turned down**
+    (`task.dart`, `peers_manager.dart`, `download_file_manager.dart`). A
+    request for a piece index past the end made the read throw, requests
+    for pieces this side lacks were read anyway, a failed read left the
+    request queued, a peer that left kept its requests in a list searched
+    for every block sent, and requests held while paused were never read on
+    resume. Blocks are read and sent as bytes, not growable lists.
+11. **What was seeded is kept** (`task.dart`, `uploaded`,
+    `peers_manager.dart`). Each session counted from zero and saved its count
+    over the total, only every 10 MB; the total now carries on and is saved
+    every 1 MB and on stop. `stateFile` threw a type error on every call (it
+    is a `StateFileV2`), and the state file is written without truncating
+    it on open, which Windows refuses for the hidden files the app makes of
+    these.
+13. **Blocks are read ahead, a megabyte at a time** (`download_file_manager.dart`,
+    `readFile`). Each 16 KB block asked for was its own seek and read, one
+    after another. In a Flutter app every such async step costs about a
+    millisecond (measured on its UI isolate: a zero-length timer 1.1 ms, a
+    seek and read 2.5 ms), which held seeding to about 4 MB/s there. Blocks
+    now come from 1 MB chunks read once, eight kept at most and dropped
+    after 20 s unused or when their piece is written. The app then seeded
+    the same torrent at about 80 MB/s.
 
 ## Updating
 

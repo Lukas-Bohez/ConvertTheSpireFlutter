@@ -58,7 +58,9 @@ class _SearchScreenState extends State<SearchScreen>
   @override
   void initState() {
     super.initState();
-    _refreshDownloadedFiles();
+    // Quietly: "Download folder scan complete" showed on every visit, and
+    // stayed up on the next page. It's for the refresh button.
+    _refreshDownloadedFiles(showSnack: false);
   }
 
   String _normalizeKey(String input) {
@@ -247,7 +249,7 @@ class _SearchScreenState extends State<SearchScreen>
         _results = results;
         _loading = false;
       });
-      unawaited(_refreshDownloadedFiles());
+      unawaited(_refreshDownloadedFiles(showSnack: false));
     } catch (e) {
       if (!mounted) return;
       setState(() {

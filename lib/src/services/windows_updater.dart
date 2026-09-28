@@ -65,6 +65,7 @@ class WindowsUpdater {
     required String checksumsUrl,
     required String version,
     void Function(double? progress)? onProgress,
+    Future<void> Function()? beforeExit,
     http.Client? client,
   }) async {
     final c = client ?? http.Client();
@@ -110,6 +111,7 @@ class WindowsUpdater {
         throw Exception('$installerName does not match its checksum');
       }
 
+      await beforeExit?.call();
       final silent = isInstalledCopy(Platform.resolvedExecutable);
       await Process.start(file.path, setupArguments(silent),
           mode: ProcessStartMode.detached);

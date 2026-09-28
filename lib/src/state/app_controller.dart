@@ -387,12 +387,22 @@ class AppController extends ChangeNotifier {
     unawaited(Future(() async {
       final settings = _settings;
       if (settings == null) return;
+      // Start and end only, once each: progress arrives for every chunk,
+      // and the log filled with dozens of the same "(0%)" line.
+      void Function(int, String) logEnds() {
+        int? last;
+        return (pct, message) {
+          if ((pct == 0 || pct == 100) && pct != last) {
+            last = pct;
+            logs.add('yt-dlp $message ($pct%)');
+          }
+        };
+      }
+
       try {
         final path = await downloadService.ytDlp.ensureAvailable(
           configuredPath: settings.ytDlpPath,
-          onProgress: (pct, message) {
-            if (pct == 0 || pct == 100) logs.add('yt-dlp $message ($pct%)');
-          },
+          onProgress: logEnds(),
         );
         if (settings.ytDlpPath != path) {
           await saveSettings(settings.copyWith(ytDlpPath: path));
@@ -402,9 +412,7 @@ class AppController extends ChangeNotifier {
         try {
           final updatedPath = await downloadService.ytDlp.updateYtDlp(
             configuredPath: settings.ytDlpPath,
-            onProgress: (pct, msg) {
-              if (pct == 0 || pct == 100) logs.add('yt-dlp $msg ($pct%)');
-            },
+            onProgress: logEnds(),
           );
           if (updatedPath != settings.ytDlpPath) {
             await saveSettings(settings.copyWith(ytDlpPath: updatedPath));
@@ -721,7 +729,10 @@ class AppController extends ChangeNotifier {
       return;
     }
 
-    final maxAttempts = (_settings?.retryCount ?? 2).clamp(1, 5);
+    // "Retry count (0-10)" in Settings: retries after the first attempt. It
+    // was taken as the number of attempts and capped at 5, so 10 gave 4
+    // retries and 1 none.
+    final maxAttempts = (_settings?.retryCount ?? 2).clamp(0, 10) + 1;
     final cookiesFile = settings.youtubeAuthEnabled
         ? settings.youtubeCookiesFile?.trim()
         : null;

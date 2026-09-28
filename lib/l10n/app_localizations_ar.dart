@@ -1233,9 +1233,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => 'البحث في قائمة الانتظار';
-
-  @override
   String get mediaPlayer => 'مشغل الوسائط';
 
   @override
@@ -1245,7 +1242,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get addItemsFromPlayerTab => 'أضف عناصر من علامة تبويب المشغل';
 
   @override
-  String get addItemsFromSearchTab => 'أضف عناصر من علامة تبويب البحث';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return 'أضف عناصر عبر $quickDownload في الرئيسية أو عبر $multiSearch';
+  }
 
   @override
   String get upNext => 'التالي';
@@ -1297,7 +1296,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get saveSettings => 'حفظ الإعدادات';
 
   @override
-  String get enjoyingConvertSpireReborn => 'هل يعجبك Convert The Spire Reborn؟';
+  String get enjoyingConvertSpireReborn => 'هل يعجبك Convert the Spire Reborn؟';
 
   @override
   String get leaveReviewHelpsMoreThan => 'اترك تقييمًا، فهو يساعد أكثر مما تظن';
@@ -1344,7 +1343,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      'هذا الإصدار مُحسَّن لوظيفة خزنة التورنت ويلتزم بسياسات متاجر التطبيقات.';
+      'هذا الإصدار مخصّص للتورنت والوسائط ويلتزم بسياسات متاجر التطبيقات.';
 
   @override
   String get minimizeTrayClose => 'التصغير إلى شريط النظام عند الإغلاق';
@@ -1415,7 +1414,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get whenSetVaultTorrentsUse =>
-      'عند تحديده، تستخدم تورنتات الخزنة هذا المجلد بدل مجلد التنزيل العام.';
+      'عند تعيينه، تُحفظ التورنتات في هذا المجلد بدلًا من مجلد التنزيل العام.';
 
   @override
   String get parallelWorkers110 => 'المهام المتوازية (1-10)';
@@ -1793,7 +1792,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle خزنة تورنت ومركز وسائط. أضف روابط magnet وملفات ‎.torrent، وأدر التنزيلات، وحافظ على ترتيب كل شيء من تطبيق واحد.';
+    return '$getAppTitle عميل تورنت ومركز وسائط. أضف روابط magnet وملفات .torrent، وأدِر التنزيلات، ونظّم كل شيء في تطبيق واحد.';
   }
 
   @override
@@ -2148,6 +2147,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get openedFileNotInLibrary => 'ملف مفتوح، ليس في مكتبتك';
+
+  @override
+  String get openFileFolder => 'فتح مجلده';
 
   @override
   String get trackActions => 'إجراءات المقطع';
@@ -2994,7 +2996,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get privacyPolicy => 'سياسة الخصوصية';
 
   @override
-  String get rateConvertSpireReborn => 'تقييم Convert The Spire Reborn';
+  String get rateConvertSpireReborn => 'تقييم Convert the Spire Reborn';
 
   @override
   String get leaveRatingPlayStore => 'اترك تقييمًا على متجر Play';
@@ -3873,7 +3875,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mediaPlayerLibrary => 'مشغل الوسائط والمكتبة';
 
   @override
-  String get vaultTorrentManager => 'مدير تورنت الخزنة';
+  String get vaultTorrentManager => 'نزّل التورنتات وشاركها';
 
   @override
   String get mac => 'Mac';
@@ -3891,6 +3893,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'الإصدار v$latestVersion متاح';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return 'لديك أحدث إصدار ($version)';
+  }
+
+  @override
+  String get updateCheckFailed =>
+      'تعذّر التحقق من التحديثات. تحقّق من اتصالك بالإنترنت.';
 
   @override
   String get dismiss => 'تجاهل';

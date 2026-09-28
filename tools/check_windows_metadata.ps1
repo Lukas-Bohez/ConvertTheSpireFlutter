@@ -30,13 +30,14 @@ foreach ($e in $expected) {
     Write-Host ("{0}: {1} = [{2}]" -f $name, $key, $vi.$key)
   }
   $checks = @(
-    @('ProductName', 'Convert The Spire Reborn'),
+    @('ProductName', 'Convert the Spire Reborn'),
     @('ProductVersion', $e.ProductVersion)
   )
   if ($e.CompanyName) { $checks += , @('CompanyName', $e.CompanyName) }
   foreach ($c in $checks) {
     $actual = "$($vi.($c[0]))".Trim()
-    if ($actual -ne $c[1]) {
+    # -cne, not -ne: PowerShell's -ne ignores case; SignPath's match may not.
+    if ($actual -cne $c[1]) {
       Write-Host "::error::$name $($c[0]) is '$actual', expected '$($c[1])'"
       $failed = $true
     }

@@ -139,10 +139,22 @@ class StateFileV2 {
   }
 
   /// Writes the whole state file at once.
+  ///
+  /// The file is opened without truncating it, written from the start and
+  /// then cut to length: Windows refuses to open a hidden file (the app hides
+  /// these) for writing when opening it truncates it.
   Future<void> _writeFile() async {
     final file = _bitfieldFile;
     if (file == null) return;
-    await file.writeAsBytes(_serialize());
+    final bytes = _serialize();
+    final access = await file.open(mode: FileMode.writeOnlyAppend);
+    try {
+      await access.setPosition(0);
+      await access.writeFrom(bytes);
+      await access.truncate(bytes.length);
+    } finally {
+      await access.close();
+    }
   }
 
   /// The state file's bytes: header, bitfield section, file priorities,

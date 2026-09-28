@@ -1241,9 +1241,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get searchQueue => 'Search Queue';
-
-  @override
   String get mediaPlayer => 'Media Player';
 
   @override
@@ -1253,7 +1250,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addItemsFromPlayerTab => 'Add items from the Player tab';
 
   @override
-  String get addItemsFromSearchTab => 'Add items from the Search tab';
+  String addItemsToDownloadQueue(String quickDownload, String multiSearch) {
+    return 'Add items with $quickDownload on Home or with $multiSearch';
+  }
 
   @override
   String get upNext => 'Up next';
@@ -1305,7 +1304,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveSettings => 'Save Settings';
 
   @override
-  String get enjoyingConvertSpireReborn => 'Enjoying Convert The Spire Reborn?';
+  String get enjoyingConvertSpireReborn => 'Enjoying Convert the Spire Reborn?';
 
   @override
   String get leaveReviewHelpsMoreThan =>
@@ -1353,7 +1352,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get versionOptimizedTorrentVaultFunctionalit =>
-      'This version is optimized for torrent vault functionality and complies with app store policies.';
+      'This version is made for torrents and media, and follows the app store policies.';
 
   @override
   String get minimizeTrayClose => 'Minimize to tray on close';
@@ -1425,7 +1424,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get whenSetVaultTorrentsUse =>
-      'When set, Vault torrents use this folder instead of the general download folder.';
+      'When set, torrents are saved in this folder instead of the general download folder.';
 
   @override
   String get parallelWorkers110 => 'Parallel workers (1-10)';
@@ -1803,7 +1802,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle is a torrent vault and media hub. Add magnet links and .torrent files, manage downloads, and keep everything organized from one app.';
+    return '$getAppTitle is a torrent client and media hub. Add magnet links and .torrent files, manage downloads, and keep everything organized in one app.';
   }
 
   @override
@@ -2158,6 +2157,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get openedFileNotInLibrary => 'Opened file, not in your library';
+
+  @override
+  String get openFileFolder => 'Open its folder';
 
   @override
   String get trackActions => 'Track actions';
@@ -3006,7 +3008,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get privacyPolicy => 'Privacy policy';
 
   @override
-  String get rateConvertSpireReborn => 'Rate Convert The Spire Reborn';
+  String get rateConvertSpireReborn => 'Rate Convert the Spire Reborn';
 
   @override
   String get leaveRatingPlayStore => 'Leave a rating on the Play Store';
@@ -3886,7 +3888,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mediaPlayerLibrary => 'Media player & library';
 
   @override
-  String get vaultTorrentManager => 'Vault torrent manager';
+  String get vaultTorrentManager => 'Download and share torrents';
 
   @override
   String get mac => 'Mac';
@@ -3904,6 +3906,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String vAvailable(Object latestVersion) {
     return 'v$latestVersion available';
   }
+
+  @override
+  String appUpToDate(String version) {
+    return 'You have the latest version ($version)';
+  }
+
+  @override
+  String get updateCheckFailed =>
+      'Could not check for updates. Check your internet connection.';
 
   @override
   String get dismiss => 'Dismiss';
