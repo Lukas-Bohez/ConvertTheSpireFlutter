@@ -12,11 +12,12 @@ from it by `python scripts/store_listing.py pages`. To change a text, edit
 ## Filling them in
 
 **All at once (CSV):** in the submission, **Store listings** →
-**Import/export Store listings** → **Export listings**. Then
+**Import/export Store listings** → **Export listings**. Then, on Windows,
 
-    python scripts/store_listing.py fill <the exported .csv>
+    scripts\make_store_upload.cmd -ListingsOnly -ListingCsv <the exported .csv>
 
-writes `<name>-filled.csv` with the short description, description, what's
+(or `python scripts/store_listing.py fill <the exported .csv>`) writes
+`microsoft-upload\listings-filled.csv` (`<name>-filled.csv` from Python) with the short description, description, what's
 new, features, search terms, copyright and licence terms of every language in
 the export. Back in Partner Center, **Import listings** and pick that file.
 Screenshots are not in the CSV: add them per language, or once for English

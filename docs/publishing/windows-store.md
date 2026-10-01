@@ -33,7 +33,30 @@ The package's version is the one in `pubspec.yaml` with `.0` added
 (`15.2.0` → `15.2.0.0`). Every new submission needs a higher version than the
 last, so bump `version:` in `pubspec.yaml` before building an update.
 
-On a Windows PC, `scripts\build_msix.ps1` does the same steps by hand.
+### On your own PC: `microsoft-upload\`
+
+`scripts\make_store_upload.cmd` does the same on a Windows PC with Flutter and
+Visual Studio, and puts everything for the submission in one folder,
+`microsoft-upload\` in the repository (git ignores it):
+
+| | |
+|---|---|
+| `ConvertTheSpireReborn.msix` | the package (Packages) |
+| `screenshots\` | the 1920×1080 screenshots (Store listings) |
+| `app-tile-300.png` | the 1:1 app tile icon (Store listings) |
+| `listings\<language>.md` | each language's texts, field by field |
+| `listings-filled.csv` | with `-ListingCsv`: the listing CSV to import |
+| `HOW-TO-UPLOAD.txt` | what goes where |
+
+The first time, with the three identity values (they are kept in
+`microsoft-upload\identity.json` for the next runs):
+
+    scripts\make_store_upload.cmd -IdentityName <Package/Identity/Name> -Publisher "CN=..." -PublisherDisplayName "<Package/Properties/PublisherDisplayName>"
+
+After that, `scripts\make_store_upload.cmd` alone. To fill the listing CSV
+exported from Partner Center with all 18 languages, without building:
+
+    scripts\make_store_upload.cmd -ListingsOnly -ListingCsv "%USERPROFILE%\Downloads\<the export>.csv"
 
 ## First submission, step by step
 
