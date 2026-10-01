@@ -16,6 +16,7 @@
 # Windows-specific scripts genuinely benefit from CRLF - leave them alone.
 *.ps1 text eol=crlf
 *.bat text eol=crlf
+*.cmd text eol=crlf
 
 # Binary assets - never touch line endings in these.
 *.png binary
