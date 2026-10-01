@@ -14,7 +14,7 @@ param(
   [Parameter(Mandatory = $true)][string]$IdentityName,
   [Parameter(Mandatory = $true)][string]$Publisher,
   [Parameter(Mandatory = $true)][string]$PublisherDisplayName,
-  [string]$DisplayName = "Convert the Spire Reborn",
+  [string]$DisplayName = "Convert The Spire Reborn",
   [switch]$SkipBuildWindows
 )
 

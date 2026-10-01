@@ -120,7 +120,7 @@ flutter:
 # it in, so identity_name, publisher and publisher_display_name below are
 # placeholders. See docs/store/microsoft-store.md.
 msix_config:
-  display_name: Convert the Spire Reborn
+  display_name: Convert The Spire Reborn
   publisher_display_name: Oroka Conner
   identity_name: OrokaConner.ConvertTheSpireReborn
   publisher: CN=00000000-0000-0000-0000-000000000000
@@ -131,7 +131,9 @@ msix_config:
   # What the app offers to open, as the other builds do (open_requests.cpp).
   file_extension: .torrent,.mp3,.m4a,.flac,.wav,.ogg,.opus,.aac,.wma,.mp4,.mkv,.avi,.webm,.mov,.wmv,.flv,.m4v
   protocol_activation: magnet
-  languages: en-us
+  # The app's 18 languages, so the Store lists them and Partner Center
+  # offers a listing for each (docs/publishing/store-listing/).
+  languages: en-us,ar,de,es,fr,hi,id,it,ja,ko,nl,pl,pt-br,ru,tr,uk,vi,zh-cn
   architecture: x64
   os_min_version: 10.0.17763.0
   store: true

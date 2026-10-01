@@ -40,9 +40,10 @@ On a Windows PC, `scripts\build_msix.ps1` does the same steps by hand.
 ### 1. Reserve the name
 
 Partner Center → **Apps and games** → **New product** → **MSIX or PWA app**
-(not "EXE or MSI app"). Reserve **Convert the Spire Reborn**. If it is taken,
-try **Convert the Spire Reborn – Media & Torrents**; the workflow's
-`display_name` must then be that exact name.
+(not "EXE or MSI app"). The reserved name is **Convert The Spire Reborn**
+(capital T; Store ID 9MT834RPF8ZP), the workflow's default `display_name`.
+The package's name must be the reserved one exactly: reserve another name
+and the workflow's `display_name` must be that name.
 
 ### 2. Copy the package identity
 
@@ -98,9 +99,13 @@ Xbox runs UWP apps only, and Flutter cannot build those; Windows 10 Mobile is
 gone. A device family ticked that the package does not support fails
 certification or is ignored.
 
-### 7. Store listing (English)
+### 7. Store listings (18 languages)
 
-Paste the texts from "Listing text" below. Screenshots: at least one,
+The package declares the app's 18 languages, so Partner Center has a listing
+for each. The texts for all of them are in
+[`store-listing/`](store-listing/README.md): fill them in with one CSV
+import (`scripts/store_listing.py fill`), or copy them per language. The
+English texts are also below. Screenshots: at least one,
 1366×768 or larger. The ones in `docs/screenshots/store/` are made for this
 (1920×1080: Home, Player and Torrents, and Home and Player in the dark
 theme). The **1:1 app tile icon (300×300)** is optional; use
@@ -166,7 +171,7 @@ Store at every start.
 
 ## Listing text
 
-**Product name:** Convert the Spire Reborn
+**Product name:** Convert The Spire Reborn
 
 **Short description** (shown at the top of the listing):
 
@@ -175,7 +180,7 @@ Store at every start.
 
 **Description:**
 
-> Convert the Spire Reborn is an all-in-one media app for Windows: a
+> Convert The Spire Reborn is an all-in-one media app for Windows: a
 > downloader, converter, player and torrent client in one window.
 >
 > DOWNLOAD

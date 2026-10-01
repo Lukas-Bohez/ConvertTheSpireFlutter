@@ -37,7 +37,7 @@ on:
       display_name:
         description: 'The app name you reserved in Partner Center'
         required: false
-        default: 'Convert the Spire Reborn'
+        default: 'Convert The Spire Reborn'
   pull_request:
     paths:
       - 'windows/**'
@@ -76,7 +76,7 @@ jobs:
           IN_IDENTITY: ${{ inputs.identity_name || vars.MSSTORE_IDENTITY_NAME }}
           IN_PUBLISHER: ${{ inputs.publisher || vars.MSSTORE_PUBLISHER }}
           IN_PUBLISHER_NAME: ${{ inputs.publisher_display_name || vars.MSSTORE_PUBLISHER_DISPLAY_NAME }}
-          IN_DISPLAY_NAME: ${{ inputs.display_name || vars.MSSTORE_DISPLAY_NAME || 'Convert the Spire Reborn' }}
+          IN_DISPLAY_NAME: ${{ inputs.display_name || vars.MSSTORE_DISPLAY_NAME || 'Convert The Spire Reborn' }}
           EVENT: ${{ github.event_name }}
         run: |
           $identity = "$env:IN_IDENTITY".Trim()
