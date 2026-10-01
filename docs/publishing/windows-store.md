@@ -96,7 +96,7 @@ workflow with the right ones). Device families: **Windows 10/11 Desktop**.
 Paste the texts from "Listing text" below. Screenshots: at least one,
 1366×768 or larger. The ones in `docs/screenshots/store/` are made for this
 (1920×1080). The **1:1 app tile icon (300×300)** is optional; use
-`assets/icons/app_icon_fixed.png`.
+`docs/screenshots/store/app-tile-300.png`.
 
 ### 8. Submission options
 
