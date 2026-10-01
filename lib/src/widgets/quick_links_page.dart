@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
 import '../config/build_flags.dart';
@@ -46,10 +47,14 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
   bool _ytDlpTransientError = false;
   bool _isFolderWritable = true;
 
+  /// "v15.2.0", shown with the title (issue #35).
+  String? _appVersion;
+
   @override
   void initState() {
     super.initState();
 
+    _loadAppVersion();
     _loadLinks();
     _checkYtDlpVersion();
     _validateDownloadFolder();
@@ -60,6 +65,16 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.downloadFolder != widget.downloadFolder) {
       _validateDownloadFolder();
+    }
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (!mounted || info.version.isEmpty) return;
+      setState(() => _appVersion = 'v${info.version}');
+    } catch (_) {
+      // No version to show; the title stands alone.
     }
   }
 
@@ -133,6 +148,54 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
     // Browser remains available so users can tap it directly.
     final visibleLinks = _links.where((l) => l.route != 'queue.tab').toList();
 
+    // The title with the app's version: at its bottom right on wide
+    // screens, under it on phones.
+    Widget buildTitle() {
+      final titleStyle = Theme.of(context).textTheme.headlineLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+            color: cs.onSurface,
+          );
+      final title = Text(
+        getAppTitle(),
+        style: titleStyle,
+        textAlign: TextAlign.center,
+      );
+      final version = _appVersion;
+      if (version == null) {
+        return SizedBox(width: double.infinity, child: title);
+      }
+      final versionText = Text(
+        version,
+        key: const ValueKey('app-version'),
+        style: TextStyle(
+          // Between a quarter and half the title's size.
+          fontSize: (titleStyle?.fontSize ?? 32) * 0.4,
+          fontWeight: FontWeight.w500,
+          color: cs.onSurfaceVariant.withValues(alpha: 0.75),
+        ),
+      );
+      if (width < 600) {
+        return SizedBox(
+          width: double.infinity,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [title, const SizedBox(height: 2), versionText],
+          ),
+        );
+      }
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Flexible(child: title),
+          const SizedBox(width: 8),
+          versionText,
+        ],
+      );
+    }
+
     Widget buildHeader() {
       return Padding(
         padding: EdgeInsets.symmetric(
@@ -165,19 +228,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                         size: 56, color: cs.primary),
                   ),
                   const SizedBox(height: 18),
-                  SizedBox(
-                    width: double.infinity,
-                    child: Text(
-                      getAppTitle(),
-                      style:
-                          Theme.of(context).textTheme.headlineLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.3,
-                                color: cs.onSurface,
-                              ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
+                  buildTitle(),
                   const SizedBox(height: 8),
                   Text(
                     // The Play build has no link downloads, so no field below.
@@ -315,15 +366,18 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
                             : Colors.green),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    _ytDlpChecking
-                        ? context.l10n.checkingEngine
-                        : _ytDlpTransientError
-                            ? context.l10n.engineCheckInterruptedRetrying
-                            : _ytDlpFailed
-                                ? context.l10n.ytDlpNotAvailableClick
-                                : 'yt-dlp ${_ytDlpVersion ?? 'unknown'}',
-                    style: Theme.of(context).textTheme.bodySmall,
+                  // Wraps in a narrow window instead of running off it.
+                  Flexible(
+                    child: Text(
+                      _ytDlpChecking
+                          ? context.l10n.checkingEngine
+                          : _ytDlpTransientError
+                              ? context.l10n.engineCheckInterruptedRetrying
+                              : _ytDlpFailed
+                                  ? context.l10n.ytDlpNotAvailableClick
+                                  : 'yt-dlp ${_ytDlpVersion ?? 'unknown'}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   if (_ytDlpFailed || _ytDlpTransientError)

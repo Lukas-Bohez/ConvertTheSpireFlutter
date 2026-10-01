@@ -8,7 +8,9 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/build_flags.dart';
 import '../utils/safe_json.dart';
+import 'bundled_tools.dart';
 import 'deno_runtime_service.dart';
 import 'network_proxy_service.dart';
 import 'platform_dirs.dart';
@@ -115,7 +117,8 @@ class YtDlpService {
       r'\[download\]\s+(\d+\.?\d*)%.*?of.*?(\d+\.?\d*\s*\w+B).*?at\s*([\d\.]+\s*\w+/s).*?ETA\s*(\d+:\d+)');
 
   /// Resolve yt-dlp executable path.
-  /// Checks: configured path → app data dir → system PATH → null.
+  /// Checks: configured path → app data dir → the copy that comes with the
+  /// app (Microsoft Store package) → system PATH → null.
   Future<String?> resolveAvailablePath(String? configuredPath) async {
     if (kIsWeb) return null;
 
@@ -127,6 +130,11 @@ class YtDlpService {
     // 2. Check app support dir for previously downloaded binary
     final appBin = await _getAppBinaryPath();
     if (appBin != null && await File(appBin).exists()) return appBin;
+
+    // 2b. The copy that comes with the app; one updated since is in the
+    // app data dir and wins.
+    final bundled = BundledTools.ytDlp;
+    if (bundled != null && await File(bundled).exists()) return bundled;
 
     // 3. Check system PATH
     final exeName = Platform.isWindows ? 'yt-dlp.exe' : 'yt-dlp';
@@ -163,6 +171,7 @@ class YtDlpService {
       throw Exception(
           'yt-dlp auto-download is only available on desktop platforms.');
     }
+    if (kMsStoreBuild) throw Exception(storeBuildNoDownloads);
 
     onProgress?.call(0, 'Downloading yt-dlp…');
 

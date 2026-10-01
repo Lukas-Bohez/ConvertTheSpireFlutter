@@ -3615,6 +3615,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get spinUnlockColour => 'Drehen → Farbe freischalten';
 
   @override
+  String get freeSpinUsedToday =>
+      'Der Gratis-Dreh für heute ist verbraucht. Komm morgen wieder oder schalte alle Farben auf einmal frei.';
+
+  @override
   String get updateNow => 'Jetzt aktualisieren';
 
   @override

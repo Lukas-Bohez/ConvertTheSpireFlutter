@@ -3600,6 +3600,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get spinUnlockColour => 'Çevir → bir rengin kilidini aç';
 
   @override
+  String get freeSpinUsedToday =>
+      'Bugünün ücretsiz çevirmesi kullanıldı. Yarın tekrar gel ya da tüm renklerin kilidini tek seferde aç.';
+
+  @override
   String get updateNow => 'Şimdi güncelle';
 
   @override

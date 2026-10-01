@@ -3608,6 +3608,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get spinUnlockColour => 'Draai → ontgrendel een kleur';
 
   @override
+  String get freeSpinUsedToday =>
+      'De gratis draai van vandaag is gebruikt. Kom morgen terug, of ontgrendel alle kleuren in één keer.';
+
+  @override
   String get updateNow => 'Nu bijwerken';
 
   @override

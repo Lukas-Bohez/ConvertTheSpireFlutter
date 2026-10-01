@@ -3581,6 +3581,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spinUnlockColour => 'Spin → unlock a colour';
 
   @override
+  String get freeSpinUsedToday =>
+      'Today\'s free spin is used. Come back tomorrow, or unlock every colour at once.';
+
+  @override
   String get updateNow => 'Update now';
 
   @override

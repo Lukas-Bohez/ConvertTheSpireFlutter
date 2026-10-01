@@ -6,8 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/build_flags.dart';
 import '../features/colour_rewards/colour_reward_service.dart';
+import 'ms_store_service.dart';
 
 /// Centralizes the one-time Remove Ads unlock and its cached state.
+///
+/// Google Play on Android; in the Microsoft Store build on Windows, the
+/// Store's add-ons instead (MsStoreService), where "all colours" is an
+/// add-on with the same product ID, `get_all_themes`.
 class PurchaseService extends ChangeNotifier {
   PurchaseService._();
 
@@ -24,6 +29,7 @@ class PurchaseService extends ChangeNotifier {
   bool _hasAllThemes = false;
   ProductDetails? _removeAdsProduct;
   ProductDetails? _getAllThemesProduct;
+  MsStoreAddOn? _msAllThemes;
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
 
   bool get storeAvailable => _storeAvailable;
@@ -33,10 +39,14 @@ class PurchaseService extends ChangeNotifier {
   /// (or on a device without the Play Store).
   String? get removeAdsPrice => _removeAdsProduct?.price;
   String get getAllThemesPriceLabel =>
-      _getAllThemesProduct?.price ?? 'Unlock All 28 Colours';
+      _getAllThemesProduct?.price ??
+      _msAllThemes?.price ??
+      'Unlock All 28 Colours';
   bool get canPurchaseRemoveAds => _storeAvailable && _removeAdsProduct != null;
   bool get canPurchaseAllThemes =>
-      _storeAvailable && _getAllThemesProduct != null && !_hasAllThemes;
+      _storeAvailable &&
+      (_getAllThemesProduct != null || _msAllThemes != null) &&
+      !_hasAllThemes;
 
   /// Loads cached ad-free state, restores prior purchases, and wires updates.
   Future<void> initialize() async {
@@ -53,6 +63,16 @@ class PurchaseService extends ChangeNotifier {
       _hasAllThemes = true;
       await prefs.setBool(_allThemesPrefsKey, true);
       await ColourRewardService.instance.unlockAllColours();
+    }
+
+    if (MsStoreService.supported) {
+      _storeAvailable = await MsStoreService.isAvailable();
+      if (_hasAllThemes) {
+        await ColourRewardService.instance.unlockAllColours();
+      }
+      notifyListeners();
+      if (_storeAvailable) await _loadMsStoreAddOns();
+      return;
     }
 
     _storeAvailable = await InAppPurchase.instance.isAvailable();
@@ -95,7 +115,8 @@ class PurchaseService extends ChangeNotifier {
   }
 
   Future<void> purchaseRemoveAds() async {
-    if (_isAdFree || !_storeAvailable) return;
+    // No ads on Windows, so nothing to remove.
+    if (_isAdFree || !_storeAvailable || MsStoreService.supported) return;
     if (_removeAdsProduct == null) {
       await _loadProducts();
     }
@@ -110,8 +131,38 @@ class PurchaseService extends ChangeNotifier {
     );
   }
 
+  /// Asks the Microsoft Store for the add-ons; an owned "all colours"
+  /// unlocks them (bought on another PC, or before a reinstall).
+  Future<void> _loadMsStoreAddOns() async {
+    final addOns = await MsStoreService.addOns();
+    for (final addOn in addOns) {
+      if (addOn.token == getAllThemesProductId) _msAllThemes = addOn;
+    }
+    if (_msAllThemes?.owned ?? false) {
+      await _setAllThemes(true);
+      await ColourRewardService.instance.unlockAllColours();
+    }
+    notifyListeners();
+  }
+
+  Future<void> _purchaseAllThemesInMsStore() async {
+    if (_msAllThemes == null) await _loadMsStoreAddOns();
+    final addOn = _msAllThemes;
+    if (addOn == null) {
+      if (kDebugMode) debugPrint('All colours add-on is not in the Store.');
+      return;
+    }
+    final status = await MsStoreService.purchase(addOn.storeId);
+    if (status == MsStorePurchaseStatus.succeeded ||
+        status == MsStorePurchaseStatus.alreadyPurchased) {
+      await _setAllThemes(true);
+      await ColourRewardService.instance.unlockAllColours();
+    }
+  }
+
   Future<void> purchaseAllThemes() async {
     if (_hasAllThemes || !_storeAvailable) return;
+    if (MsStoreService.supported) return _purchaseAllThemesInMsStore();
     if (_getAllThemesProduct == null) {
       await _loadProducts();
     }
@@ -128,6 +179,7 @@ class PurchaseService extends ChangeNotifier {
 
   Future<void> restorePurchases() async {
     if (!_storeAvailable) return;
+    if (MsStoreService.supported) return _loadMsStoreAddOns();
     await InAppPurchase.instance.restorePurchases();
   }
 

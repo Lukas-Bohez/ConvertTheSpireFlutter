@@ -3592,6 +3592,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get spinUnlockColour => 'Крутить → открыть цвет';
 
   @override
+  String get freeSpinUsedToday =>
+      'Бесплатное вращение на сегодня использовано. Возвращайтесь завтра или откройте все цвета сразу.';
+
+  @override
   String get updateNow => 'Обновить сейчас';
 
   @override

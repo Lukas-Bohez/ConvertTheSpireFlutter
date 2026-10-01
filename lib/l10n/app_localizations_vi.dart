@@ -3588,6 +3588,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get spinUnlockColour => 'Quay → mở khóa một màu';
 
   @override
+  String get freeSpinUsedToday =>
+      'Lượt quay miễn phí hôm nay đã dùng. Hãy quay lại vào ngày mai, hoặc mở khóa tất cả màu cùng lúc.';
+
+  @override
   String get updateNow => 'Cập nhật ngay';
 
   @override

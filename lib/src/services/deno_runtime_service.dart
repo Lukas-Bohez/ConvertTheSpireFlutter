@@ -5,7 +5,9 @@ import "package:flutter/foundation.dart" show debugPrint, kIsWeb;
 import "package:http/http.dart" as http;
 import "package:path/path.dart" as p;
 
+import "../config/build_flags.dart";
 import "../utils/process_runner.dart";
+import "bundled_tools.dart";
 import "platform_dirs.dart";
 import "session_log_service.dart";
 
@@ -57,6 +59,11 @@ class DenoRuntimeService {
         "verify_failed_existing",
         "deno-runtime: existing Deno at $existing failed verification",
       );
+    }
+    // The Microsoft Store package comes with Deno and downloads none.
+    if (kMsStoreBuild) {
+      _note("store_build", "deno-runtime: the bundled Deno is missing");
+      return null;
     }
     try {
       final support = await PlatformDirs.getAppSupportDir();
@@ -249,6 +256,8 @@ class DenoRuntimeService {
   }
 
   static Future<String?> _locateExistingDeno() async {
+    final bundled = BundledTools.deno;
+    if (bundled != null && await File(bundled).exists()) return bundled;
     const paths = [
       "C:\\Program Files\\deno\\deno.exe",
       "/usr/bin/deno",

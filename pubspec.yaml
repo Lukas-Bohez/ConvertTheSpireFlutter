@@ -17,6 +17,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.4
+  msix: ^3.18.0
 
 dependencies:
   flutter:
@@ -111,3 +112,28 @@ flutter:
     # Bundled so the app can show what changed after it updates itself.
     - CHANGELOG.md
   shaders: []
+
+# The Microsoft Store package (MSIX), made by .github/workflows/msstore.yml:
+# `flutter build windows --dart-define=MS_STORE_BUILD=true`, FFmpeg, yt-dlp
+# and Deno put next to the exe, then `dart run msix:create`. The package's
+# identity comes from Partner Center (Product identity); the workflow passes
+# it in, so identity_name, publisher and publisher_display_name below are
+# placeholders. See docs/store/microsoft-store.md.
+msix_config:
+  display_name: Convert the Spire Reborn
+  publisher_display_name: Oroka Conner
+  identity_name: OrokaConner.ConvertTheSpireReborn
+  publisher: CN=00000000-0000-0000-0000-000000000000
+  logo_path: assets/icons/app_icon_fixed.png
+  # runFullTrust is always added. Torrents and the local media server
+  # accept connections, from the internet and from the home network.
+  capabilities: internetClient,internetClientServer,privateNetworkClientServer
+  # What the app offers to open, as the other builds do (open_requests.cpp).
+  file_extension: .torrent,.mp3,.m4a,.flac,.wav,.ogg,.opus,.aac,.wma,.mp4,.mkv,.avi,.webm,.mov,.wmv,.flv,.m4v
+  protocol_activation: magnet
+  languages: en-us
+  architecture: x64
+  os_min_version: 10.0.17763.0
+  store: true
+  build_windows: false
+  output_name: ConvertTheSpireReborn

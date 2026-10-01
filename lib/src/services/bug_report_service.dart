@@ -31,7 +31,12 @@ class BugReportService {
       // A missing plugin must not stop somebody reporting a bug.
     }
     buffer.writeln('- App version: $version');
-    buffer.writeln('- Build: ${kPlayStoreBuild ? 'Play Store' : 'GitHub'}');
+    final build = kMsStoreBuild
+        ? 'Microsoft Store'
+        : kPlayStoreBuild
+            ? 'Play Store'
+            : 'GitHub';
+    buffer.writeln('- Build: $build');
     if (kIsWeb) {
       buffer.writeln('- Platform: web');
     } else {

@@ -3568,6 +3568,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get spinUnlockColour => 'أدِر ← افتح لونًا';
 
   @override
+  String get freeSpinUsedToday =>
+      'تم استخدام الدورة المجانية لهذا اليوم. عد غدًا، أو افتح كل الألوان مرة واحدة.';
+
+  @override
   String get updateNow => 'حدّث الآن';
 
   @override

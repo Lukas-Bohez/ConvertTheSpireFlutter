@@ -3597,6 +3597,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get spinUnlockColour => 'Putar → buka satu warna';
 
   @override
+  String get freeSpinUsedToday =>
+      'Putaran gratis hari ini sudah dipakai. Kembali besok, atau buka semua warna sekaligus.';
+
+  @override
   String get updateNow => 'Perbarui sekarang';
 
   @override

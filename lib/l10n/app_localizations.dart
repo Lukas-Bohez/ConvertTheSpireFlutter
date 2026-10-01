@@ -6403,6 +6403,12 @@ abstract class AppLocalizations {
   /// **'Spin → unlock a colour'**
   String get spinUnlockColour;
 
+  /// Microsoft Store build: shown when the one free colour spin of the day was already used.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s free spin is used. Come back tomorrow, or unlock every colour at once.'**
+  String get freeSpinUsedToday;
+
   /// No description provided for @updateNow.
   ///
   /// In en, this message translates to:

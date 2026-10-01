@@ -3493,6 +3493,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get spinUnlockColour => '돌리기 → 색상 잠금 해제';
 
   @override
+  String get freeSpinUsedToday =>
+      '오늘의 무료 스핀을 사용했습니다. 내일 다시 오시거나 모든 색상을 한 번에 잠금 해제하세요.';
+
+  @override
   String get updateNow => '지금 업데이트';
 
   @override

@@ -3603,6 +3603,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get spinUnlockColour => 'Zakręć → odblokuj kolor';
 
   @override
+  String get freeSpinUsedToday =>
+      'Dzisiejszy darmowy obrót został wykorzystany. Wróć jutro albo odblokuj wszystkie kolory naraz.';
+
+  @override
   String get updateNow => 'Aktualizuj teraz';
 
   @override

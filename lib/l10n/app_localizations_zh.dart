@@ -3450,6 +3450,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get spinUnlockColour => '转一转 → 解锁一种颜色';
 
   @override
+  String get freeSpinUsedToday => '今天的免费转盘次数已用完。明天再来，或一次性解锁所有颜色。';
+
+  @override
   String get updateNow => '立即更新';
 
   @override

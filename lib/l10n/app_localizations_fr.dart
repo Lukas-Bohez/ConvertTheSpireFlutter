@@ -3634,6 +3634,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get spinUnlockColour => 'Tourner → débloquer une couleur';
 
   @override
+  String get freeSpinUsedToday =>
+      'Le tour gratuit du jour est utilisé. Revenez demain, ou débloquez toutes les couleurs d\'un coup.';
+
+  @override
   String get updateNow => 'Mettre à jour';
 
   @override

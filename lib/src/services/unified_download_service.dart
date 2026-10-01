@@ -99,7 +99,8 @@ class UnifiedDownloadService extends ChangeNotifier {
     // fetch and handle an app update itself. Callers on that flavor should
     // hand APK/update links to launchUrl(mode: LaunchMode.externalApplication)
     // instead and let the OS take it fully outside the app's own code.
-    if (category == UnifiedDownloadCategory.appUpdate && kPlayStoreBuild) {
+    if (category == UnifiedDownloadCategory.appUpdate &&
+        (kPlayStoreBuild || kMsStoreBuild)) {
       throw StateError(
         'Refusing to self-download an app update on a Play Store build. '
         'See masterprompt_bitplayer_inapp_browser_downloads.md, Module 1.',
@@ -218,7 +219,7 @@ class UnifiedDownloadService extends ChangeNotifier {
         // Second check here even though enqueueHttp already refuses to get
         // this far for appUpdate on a Play Store build - costs nothing and
         // keeps this method safe if it's ever called from somewhere else.
-        if (kPlayStoreBuild) return;
+        if (kPlayStoreBuild || kMsStoreBuild) return;
         // TODO(cline): call InstallerService().installApk(task.savePath!)
         // once that method exists. installer_service.dart today only has
         // installFfmpeg() (download + checksum + extract) - extend it with

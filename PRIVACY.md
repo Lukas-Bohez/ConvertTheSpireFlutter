@@ -13,7 +13,7 @@ The app has no account, no sign-in and no server of mine to talk to. It sends me
 ## Where the app connects
 
 - **The sites you give it a link to** (YouTube and the other sites yt-dlp supports). The request goes straight from your device to that site, which sees what any browser visit shows: your IP address and a user-agent.
-- **GitHub.** The Windows, macOS and GitHub Android builds check for a new app version when they start (you can turn this off in Settings). The desktop builds download yt-dlp and keep it up to date. On Windows, **Update now** downloads the new installer, only when you press it. Nothing about you goes with these requests beyond what any download needs.
+- **GitHub.** The Windows, macOS and GitHub Android builds check for a new app version when they start (you can turn this off in Settings). The desktop builds download yt-dlp and keep it up to date. On Windows, **Update now** downloads the new installer, only when you press it. Nothing about you goes with these requests beyond what any download needs. The Microsoft Store version does none of this at start (see below).
 - **gyan.dev** (Windows only): when FFmpeg is missing, the app downloads it from there, the same way.
 - **Torrent trackers and peers**, if you use torrents: they see your IP address, as with any BitTorrent client.
 - **Devices on your own network**, if you cast or use Watch Together.
@@ -26,6 +26,10 @@ None of these requests carry an identifier I created, because the app never crea
 ## Ads (Google Play build only)
 
 The Android build from Google Play shows ads through Google AdMob. To fetch an ad, AdMob reads your device's advertising ID with device and connection information and sends it to Google, over HTTPS. I never see it. You can reset or delete the advertising ID in Android's settings (Settings → Google → All services → Ads), and the app keeps working with non-personalised ads. The Windows, macOS and GitHub Android builds carry no ads. The full details, and the Google Play data safety summary, are in the [full policy](https://quizthespire.com/privacy) and [docs/publishing/play-data-safety.md](docs/publishing/play-data-safety.md).
+
+## Microsoft Store version
+
+The Windows app from the Microsoft Store is updated by the Store, so it does not check GitHub for new versions, and FFmpeg, yt-dlp and Deno come with it instead of being downloaded. It only contacts GitHub from Settings: to see whether a newer yt-dlp is out, and to download it when you press **Update** there. Buying the **All colours** add-on and rating the app go through Microsoft's own Store dialogs: Microsoft handles the payment and your account, under [Microsoft's privacy statement](https://privacy.microsoft.com/privacystatement), and the app only learns whether you own the add-on. To remove the app's data, uninstall it in Settings → Apps; Windows deletes its settings and caches with it.
 
 ## Deleting your data
 

@@ -3593,6 +3593,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get spinUnlockColour => 'घुमाएँ → एक रंग अनलॉक करें';
 
   @override
+  String get freeSpinUsedToday =>
+      'आज का मुफ़्त स्पिन इस्तेमाल हो चुका है। कल फिर आएँ, या सभी रंग एक साथ अनलॉक करें।';
+
+  @override
   String get updateNow => 'अभी अपडेट करें';
 
   @override

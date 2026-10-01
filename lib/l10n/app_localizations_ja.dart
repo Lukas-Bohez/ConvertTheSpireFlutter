@@ -3494,6 +3494,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get spinUnlockColour => '回す → 色をアンロック';
 
   @override
+  String get freeSpinUsedToday => '今日の無料スピンは使用済みです。明日また来るか、すべての色をまとめて解放してください。';
+
+  @override
   String get updateNow => '今すぐ更新';
 
   @override

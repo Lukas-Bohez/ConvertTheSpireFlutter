@@ -3597,6 +3597,10 @@ class AppLocalizationsUk extends AppLocalizations {
   String get spinUnlockColour => 'Крутити → відкрити колір';
 
   @override
+  String get freeSpinUsedToday =>
+      'Безкоштовне обертання на сьогодні використано. Повертайтеся завтра або відкрийте всі кольори одразу.';
+
+  @override
   String get updateNow => 'Оновити зараз';
 
   @override
