@@ -185,7 +185,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           '[NAV] QuickLinks routeToIndex keys: ${QuickLinksService.routeToIndex.keys.join(', ')}');
     }
 
-    if (!kPlayStoreBuild) {
+    if (UpdateService.enabled) {
       UpdateService.isCheckOnLaunchEnabled().then((v) {
         if (mounted) setState(() => _checkUpdatesOnLaunch = v);
       });
@@ -309,7 +309,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _checkForUpdate({bool force = false}) async {
     try {
-      if (kPlayStoreBuild) return;
+      if (!UpdateService.enabled) return;
       if (!_checkUpdatesOnLaunch && !force) return;
       final info = await UpdateService.checkForUpdate();
       if (!mounted) return;
@@ -819,7 +819,9 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       }),
     );
 
-    if (!kPlayStoreBuild && _updateInfo != null && !_updateBannerDismissed) {
+    if (UpdateService.enabled &&
+        _updateInfo != null &&
+        !_updateBannerDismissed) {
       return Column(
         children: [
           UpdateBanner(
@@ -3579,7 +3581,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       }
                     },
                   ),
-                  if (!kPlayStoreBuild) ...[
+                  if (UpdateService.enabled) ...[
                     // Update check toggle
                     SwitchListTile(
                       value: _checkUpdatesOnLaunch,

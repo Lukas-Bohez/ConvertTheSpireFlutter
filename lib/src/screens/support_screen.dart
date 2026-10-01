@@ -391,7 +391,10 @@ class _SupportScreenState extends State<SupportScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  context.l10n.ifEnjoyUsingBestWay(getAppTitle()),
+                  // Only the Play build has ads to remove.
+                  playAdMode
+                      ? context.l10n.ifEnjoyUsingBestWay(getAppTitle())
+                      : context.l10n.donationBestWayToSupport(getAppTitle()),
                   style: theme.textTheme.bodyMedium,
                 ),
                 if (playAdMode) ...[

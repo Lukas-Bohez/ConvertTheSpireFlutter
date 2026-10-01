@@ -2643,6 +2643,11 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return 'Si vous aimez utiliser $getAppTitle, un don est le meilleur moyen de soutenir son développement.';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return 'Publicités regardées par les soutiens : $adsWatchedCount';
   }
@@ -3632,6 +3637,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get spinUnlockColour => 'Tourner → débloquer une couleur';
+
+  @override
+  String get freeSpinUsedToday =>
+      'Le tour gratuit du jour est utilisé. Revenez demain, ou débloquez toutes les couleurs d\'un coup.';
 
   @override
   String get updateNow => 'Mettre à jour';

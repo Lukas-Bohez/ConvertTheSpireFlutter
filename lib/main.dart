@@ -17,6 +17,7 @@ import 'src/config/flavor.dart';
 import 'src/config/full_mode_access.dart';
 import 'src/services/ad_service.dart';
 import 'src/services/error_log.dart';
+import 'src/services/ms_store_service.dart';
 import 'src/services/open_request_service.dart';
 import 'src/services/purchase_service.dart';
 import 'src/services/review_service.dart';
@@ -142,6 +143,11 @@ Future<void> main() async {
     // desktop builds (Windows/Linux/macOS) skip billing initialization.
     if (!kIsWeb && Platform.isAndroid && kPlayStoreBuild) {
       await PurchaseService.instance.initialize();
+    }
+    // The Microsoft Store build sells "all colours" as a Store add-on. Not
+    // waited for: the Store's answer can take a moment.
+    if (MsStoreService.supported) {
+      unawaited(PurchaseService.instance.initialize());
     }
 
     // Initialize AdService to load cached monetization state

@@ -2535,6 +2535,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return '$getAppTitle を気に入っていただけたら、寄付が開発を支える一番の方法です。';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return '支援者が視聴した広告：$adsWatchedCount';
   }
@@ -3492,6 +3497,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get spinUnlockColour => '回す → 色をアンロック';
+
+  @override
+  String get freeSpinUsedToday => '今日の無料スピンは使用済みです。明日また来るか、すべての色をまとめて解放してください。';
 
   @override
   String get updateNow => '今すぐ更新';

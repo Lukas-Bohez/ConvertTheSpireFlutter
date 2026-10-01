@@ -131,3 +131,6 @@ diag_output.txt
 full_diagnose_*.log
 screen_state.png
 tv-emulator*.png
+
+# Microsoft Store upload folder (scripts/make_store_upload.ps1)
+/microsoft-upload/

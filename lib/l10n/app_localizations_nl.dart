@@ -2626,6 +2626,11 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return 'Vind je $getAppTitle fijn? Een donatie is de beste manier om de verdere ontwikkeling te steunen.';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return 'Advertenties bekeken door supporters: $adsWatchedCount';
   }
@@ -3606,6 +3611,10 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get spinUnlockColour => 'Draai → ontgrendel een kleur';
+
+  @override
+  String get freeSpinUsedToday =>
+      'De gratis draai van vandaag is gebruikt. Kom morgen terug, of ontgrendel alle kleuren in één keer.';
 
   @override
   String get updateNow => 'Nu bijwerken';

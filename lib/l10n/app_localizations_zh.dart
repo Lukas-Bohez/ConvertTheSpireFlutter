@@ -2501,6 +2501,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return '如果你喜欢使用 $getAppTitle，捐赠是支持其持续开发的最好方式。';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return '支持者观看的广告：$adsWatchedCount';
   }
@@ -3448,6 +3453,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get spinUnlockColour => '转一转 → 解锁一种颜色';
+
+  @override
+  String get freeSpinUsedToday => '今天的免费转盘次数已用完。明天再来，或一次性解锁所有颜色。';
 
   @override
   String get updateNow => '立即更新';

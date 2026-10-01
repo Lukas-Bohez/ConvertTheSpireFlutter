@@ -71,6 +71,17 @@ class _WatchAdCardState extends State<WatchAdCard> {
   /// This method spins directly without requiring an ad watch.
   Future<void> _spinDirectly() async {
     AdService.instance.registerInteraction();
+    // The Microsoft Store build: one free spin a day.
+    if (kMsStoreBuild &&
+        !PurchaseService.instance.hasAllThemes &&
+        !await ColourRewardService.instance.takeDailyFreeSpin()) {
+      if (mounted) {
+        Snack.show(context, context.l10n.freeSpinUsedToday,
+            level: SnackLevel.info);
+      }
+      return;
+    }
+    if (!mounted) return;
     setState(() => _loading = true);
     final rewards = await _rollBatch(10);
     await _showRewardSession(rewards);

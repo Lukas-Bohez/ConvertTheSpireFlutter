@@ -2618,6 +2618,11 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return '$getAppTitle uygulamasını kullanmaktan hoşlanıyorsanız, geliştirilmesini desteklemenin en iyi yolu bağış yapmaktır.';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return 'Destekçilerin izlediği reklamlar: $adsWatchedCount';
   }
@@ -3598,6 +3603,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get spinUnlockColour => 'Çevir → bir rengin kilidini aç';
+
+  @override
+  String get freeSpinUsedToday =>
+      'Bugünün ücretsiz çevirmesi kullanıldı. Yarın tekrar gel ya da tüm renklerin kilidini tek seferde aç.';
 
   @override
   String get updateNow => 'Şimdi güncelle';

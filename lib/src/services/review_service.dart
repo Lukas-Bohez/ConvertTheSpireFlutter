@@ -5,6 +5,8 @@ import 'package:in_app_review/in_app_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'ms_store_service.dart';
+
 class ReviewService {
   static const _launchCountKey = 'launch_count';
   static const _lastReviewKey = 'last_review_prompt';
@@ -26,8 +28,10 @@ class ReviewService {
     try {
       if (kIsWeb) return;
       final platform = defaultTargetPlatform;
+      final msStore = MsStoreService.supported;
       if (platform != TargetPlatform.android &&
-          platform != TargetPlatform.iOS) {
+          platform != TargetPlatform.iOS &&
+          !msStore) {
         return;
       }
 
@@ -47,6 +51,14 @@ class ReviewService {
       if (launchCount < 5) return;
       if (lastPrompt > 0 && daysSinceLastPrompt < 14) return;
 
+      if (msStore) {
+        if (!await MsStoreService.isAvailable()) return;
+        await prefs.setInt(_lastReviewKey, now);
+        await prefs.setBool(_reviewDoneKey, true);
+        await MsStoreService.requestRateAndReview();
+        return;
+      }
+
       final isAvailable = await _inAppReview.isAvailable();
       if (!isAvailable) return;
 
@@ -60,9 +72,20 @@ class ReviewService {
       Uri.parse('https://github.com/Lukas-Bohez/ConvertTheSpireFlutter');
 
   /// Opens where people can rate the app, for the "Rate" buttons: the Play
-  /// Store listing on Android, the project's GitHub page elsewhere. The app
-  /// is in no other store, and there the button did nothing.
+  /// Store listing on Android, the Microsoft Store's rating dialog in the
+  /// Store build on Windows, the project's GitHub page elsewhere.
   static Future<void> openStoreListing() async {
+    if (MsStoreService.supported) {
+      if (await MsStoreService.requestRateAndReview()) return;
+      final page = await MsStoreService.reviewPageUri();
+      if (page != null) {
+        try {
+          if (await launchUrl(page)) return;
+        } catch (_) {
+          // Fall through to the project page.
+        }
+      }
+    }
     if (!kIsWeb && Platform.isAndroid) {
       try {
         await _inAppReview.openStoreListing(appStoreId: 'com.torrentspire.ai');

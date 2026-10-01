@@ -38,6 +38,10 @@ class UpdateInfo {
 }
 
 class UpdateService {
+  /// Whether the app looks for and installs its own updates: only the
+  /// GitHub builds. Google Play and the Microsoft Store update theirs.
+  static bool get enabled => !kPlayStoreBuild && !kMsStoreBuild;
+
   static const _repoOwner = 'Lukas-Bohez';
   static const _repoName = 'ConvertTheSpireFlutter';
   static const _apiUrl =
@@ -48,7 +52,7 @@ class UpdateService {
 
   /// Returns null on network failure - never throws to caller.
   static Future<UpdateInfo?> checkForUpdate() async {
-    if (kPlayStoreBuild) return null;
+    if (!enabled) return null;
     try {
       final response = await http.get(Uri.parse(_apiUrl), headers: {
         'Accept': 'application/vnd.github.v3+json'
@@ -162,13 +166,13 @@ class UpdateService {
   }
 
   static Future<bool> isCheckOnLaunchEnabled() async {
-    if (kPlayStoreBuild) return false;
+    if (!enabled) return false;
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_prefCheckOnLaunch) ?? true;
   }
 
   static Future<void> setCheckOnLaunch(bool value) async {
-    if (kPlayStoreBuild) return;
+    if (!enabled) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_prefCheckOnLaunch, value);
   }

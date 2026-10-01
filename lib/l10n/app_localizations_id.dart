@@ -2617,6 +2617,11 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return 'Jika Anda suka menggunakan $getAppTitle, donasi adalah cara terbaik untuk mendukung pengembangannya.';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return 'Iklan yang ditonton pendukung: $adsWatchedCount';
   }
@@ -3595,6 +3600,10 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get spinUnlockColour => 'Putar → buka satu warna';
+
+  @override
+  String get freeSpinUsedToday =>
+      'Putaran gratis hari ini sudah dipakai. Kembali besok, atau buka semua warna sekaligus.';
 
   @override
   String get updateNow => 'Perbarui sekarang';

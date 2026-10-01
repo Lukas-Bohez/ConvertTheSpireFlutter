@@ -5,6 +5,7 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../utils/process_runner.dart';
+import 'bundled_tools.dart';
 import 'session_log_service.dart';
 
 class FfmpegService {
@@ -67,6 +68,10 @@ class FfmpegService {
     if (configuredPath != null && configuredPath.trim().isNotEmpty) {
       if (await File(configuredPath).exists()) return configuredPath;
     }
+
+    // 1b. The copy that comes with the app (the Microsoft Store package).
+    final bundled = BundledTools.ffmpeg;
+    if (bundled != null && await File(bundled).exists()) return bundled;
 
     // 2. Check system PATH
     try {

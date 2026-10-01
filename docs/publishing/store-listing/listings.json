@@ -1,0 +1,352 @@
+{
+  "_about": "Microsoft Store listing texts in the app's 18 languages. scripts/store_listing.py makes one page per language from this (docs/publishing/store-listing/<language>.md) and can fill a listing CSV exported from Partner Center. The product name is the reserved name in every language.",
+  "common": {
+    "name": "Convert The Spire Reborn",
+    "copyright": "© 2026 Oroka Conner",
+    "licenseTerms": "GNU GPL v3: https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/blob/main/LICENSE"
+  },
+  "languages": {
+    "en-us": {
+      "language": "English",
+      "shortDescription": "Download and convert video and music, play it, cast it to your TV, and download torrents. Free, open source, no account, no tracking.",
+      "description": "Convert The Spire Reborn is an all-in-one media app for Windows: a downloader, converter, player and torrent client in one window.\n\nDOWNLOAD\n• Save videos and music from YouTube and over 1,800 other sites, as MP4, MP3, M4A and more, in the quality you pick.\n• Whole playlists at once, with titles, artwork and tags filled in.\n• A built-in browser finds the media on a page for you.\n\nCONVERT\n• Convert audio and video between 27+ formats with FFmpeg, right on your PC. Nothing is uploaded.\n\nPLAY AND CAST\n• A media player for your music and videos, with playlists.\n• Cast to TVs and speakers on your network (DLNA/UPnP).\n• Watch Together: watch the same video in sync with friends.\n\nTORRENTS\n• A full BitTorrent client: magnet links and .torrent files, seeding with ratio limits, and making and sharing your own torrents.\n\nPRIVATE BY DESIGN\n• No account, no ads, no analytics, no tracking. Everything stays on your PC.\n• Open source (GPL-3.0) on GitHub.\n\nAvailable in 18 languages. Please only download content you have the right to download.",
+      "releaseNotes": "First release in the Microsoft Store.",
+      "features": [
+        "Download video and music from 1,800+ sites",
+        "Convert between 27+ audio and video formats",
+        "Whole playlists with tags and artwork",
+        "Media player with playlists",
+        "Cast to TVs and speakers (DLNA/UPnP)",
+        "Watch videos in sync with friends",
+        "BitTorrent client with magnet links and seeding",
+        "Built-in browser that finds media on a page",
+        "No account, no ads, no tracking",
+        "Open source, in 18 languages"
+      ],
+      "searchTerms": ["video downloader", "mp3 converter", "music downloader", "torrent", "media player", "video converter", "dlna"]
+    },
+    "ar": {
+      "language": "العربية",
+      "shortDescription": "نزّل الفيديو والموسيقى وحوّلها، وشغّلها، وابثّها إلى تلفازك، ونزّل ملفات التورنت. مجاني ومفتوح المصدر، بلا حساب وبلا تتبّع.",
+      "description": "Convert The Spire Reborn تطبيق وسائط متكامل لنظام Windows: أداة تنزيل ومحوّل ومشغّل وعميل تورنت في نافذة واحدة.\n\nالتنزيل\n• احفظ الفيديو والموسيقى من YouTube وأكثر من 1800 موقع آخر بصيغ MP4 وMP3 وM4A وغيرها، وبالجودة التي تختارها.\n• قوائم تشغيل كاملة دفعة واحدة، مع العناوين والصور والوسوم.\n• متصفح مدمج يعثر لك على الوسائط في الصفحة.\n\nالتحويل\n• حوّل الصوت والفيديو بين أكثر من 27 صيغة باستخدام FFmpeg على جهازك مباشرة. لا يُرفع أي شيء.\n\nالتشغيل والبث\n• مشغّل وسائط لموسيقاك ومقاطع الفيديو، مع قوائم تشغيل.\n• البث إلى أجهزة التلفاز ومكبرات الصوت على شبكتك (DLNA/UPnP).\n• المشاهدة معًا: شاهد الفيديو نفسه بشكل متزامن مع أصدقائك.\n\nالتورنت\n• عميل BitTorrent كامل: روابط magnet وملفات ‎.torrent، والمشاركة مع حدود للنسبة، وإنشاء ملفات التورنت الخاصة بك ومشاركتها.\n\nالخصوصية أولًا\n• بلا حساب، بلا إعلانات، بلا تحليلات، بلا تتبّع. كل شيء يبقى على جهازك.\n• مفتوح المصدر (GPL-3.0) على GitHub.\n\nمتوفر بـ 18 لغة. يُرجى تنزيل المحتوى الذي يحق لك تنزيله فقط.",
+      "releaseNotes": "الإصدار الأول في Microsoft Store.",
+      "features": [
+        "نزّل الفيديو والموسيقى من أكثر من 1800 موقع",
+        "حوّل بين أكثر من 27 صيغة صوت وفيديو",
+        "قوائم تشغيل كاملة مع الوسوم والصور",
+        "مشغّل وسائط مع قوائم تشغيل",
+        "البث إلى أجهزة التلفاز ومكبرات الصوت (DLNA/UPnP)",
+        "شاهد الفيديو بشكل متزامن مع أصدقائك",
+        "عميل BitTorrent مع روابط magnet والمشاركة",
+        "متصفح مدمج يعثر على الوسائط في الصفحة",
+        "بلا حساب، بلا إعلانات، بلا تتبّع",
+        "مفتوح المصدر، وبـ 18 لغة"
+      ],
+      "searchTerms": ["تنزيل فيديو", "تحويل mp3", "تنزيل موسيقى", "تورنت", "مشغل وسائط", "محول فيديو", "dlna"]
+    },
+    "de": {
+      "language": "Deutsch",
+      "shortDescription": "Videos und Musik herunterladen und umwandeln, abspielen, auf den Fernseher streamen und Torrents laden. Kostenlos, Open Source, ohne Konto, ohne Tracking.",
+      "description": "Convert The Spire Reborn ist eine All-in-one-Medien-App für Windows: Downloader, Konverter, Player und Torrent-Client in einem Fenster.\n\nHERUNTERLADEN\n• Videos und Musik von YouTube und über 1.800 weiteren Seiten speichern, als MP4, MP3, M4A und mehr, in der gewünschten Qualität.\n• Ganze Playlists auf einmal, mit Titeln, Cover und Tags.\n• Ein eingebauter Browser findet die Medien auf einer Seite für dich.\n\nUMWANDELN\n• Audio und Video zwischen mehr als 27 Formaten umwandeln, mit FFmpeg direkt auf deinem PC. Nichts wird hochgeladen.\n\nABSPIELEN UND STREAMEN\n• Ein Mediaplayer für deine Musik und Videos, mit Playlists.\n• Auf Fernseher und Lautsprecher im Heimnetz streamen (DLNA/UPnP).\n• Gemeinsam schauen: dasselbe Video synchron mit Freunden ansehen.\n\nTORRENTS\n• Ein vollständiger BitTorrent-Client: Magnet-Links und .torrent-Dateien, Seeden mit Ratio-Grenzen und eigene Torrents erstellen und teilen.\n\nPRIVATSPHÄRE ZUERST\n• Kein Konto, keine Werbung, keine Analyse, kein Tracking. Alles bleibt auf deinem PC.\n• Open Source (GPL-3.0) auf GitHub.\n\nIn 18 Sprachen verfügbar. Bitte lade nur Inhalte herunter, zu deren Download du berechtigt bist.",
+      "releaseNotes": "Erste Version im Microsoft Store.",
+      "features": [
+        "Videos und Musik von über 1.800 Seiten herunterladen",
+        "Zwischen mehr als 27 Audio- und Videoformaten umwandeln",
+        "Ganze Playlists mit Tags und Cover",
+        "Mediaplayer mit Playlists",
+        "Auf Fernseher und Lautsprecher streamen (DLNA/UPnP)",
+        "Videos synchron mit Freunden ansehen",
+        "BitTorrent-Client mit Magnet-Links und Seeding",
+        "Eingebauter Browser, der Medien auf einer Seite findet",
+        "Kein Konto, keine Werbung, kein Tracking",
+        "Open Source, in 18 Sprachen"
+      ],
+      "searchTerms": ["video downloader", "mp3 konverter", "musik herunterladen", "torrent", "mediaplayer", "video konverter", "dlna"]
+    },
+    "es": {
+      "language": "Español",
+      "shortDescription": "Descarga y convierte vídeo y música, reprodúcelos, envíalos a tu televisor y descarga torrents. Gratis, de código abierto, sin cuenta y sin rastreo.",
+      "description": "Convert The Spire Reborn es una aplicación multimedia todo en uno para Windows: descargador, conversor, reproductor y cliente de torrents en una sola ventana.\n\nDESCARGAR\n• Guarda vídeos y música de YouTube y de más de 1.800 sitios, en MP4, MP3, M4A y más, con la calidad que elijas.\n• Listas de reproducción completas de una vez, con títulos, carátulas y etiquetas.\n• Un navegador integrado encuentra por ti los archivos multimedia de una página.\n\nCONVERTIR\n• Convierte audio y vídeo entre más de 27 formatos con FFmpeg, directamente en tu PC. No se sube nada.\n\nREPRODUCIR Y ENVIAR\n• Un reproductor para tu música y tus vídeos, con listas de reproducción.\n• Envía a televisores y altavoces de tu red (DLNA/UPnP).\n• Ver juntos: mira el mismo vídeo sincronizado con tus amigos.\n\nTORRENTS\n• Un cliente BitTorrent completo: enlaces magnet y archivos .torrent, compartir con límites de ratio, y crear y compartir tus propios torrents.\n\nPRIVACIDAD ANTE TODO\n• Sin cuenta, sin anuncios, sin analíticas, sin rastreo. Todo se queda en tu PC.\n• Código abierto (GPL-3.0) en GitHub.\n\nDisponible en 18 idiomas. Descarga solo contenido que tengas derecho a descargar.",
+      "releaseNotes": "Primera versión en Microsoft Store.",
+      "features": [
+        "Descarga vídeo y música de más de 1.800 sitios",
+        "Convierte entre más de 27 formatos de audio y vídeo",
+        "Listas completas con etiquetas y carátulas",
+        "Reproductor multimedia con listas de reproducción",
+        "Envía a televisores y altavoces (DLNA/UPnP)",
+        "Mira vídeos sincronizados con tus amigos",
+        "Cliente BitTorrent con enlaces magnet y siembra",
+        "Navegador integrado que encuentra el contenido de una página",
+        "Sin cuenta, sin anuncios, sin rastreo",
+        "Código abierto, en 18 idiomas"
+      ],
+      "searchTerms": ["descargar videos", "convertidor mp3", "descargar musica", "torrent", "reproductor", "convertidor video", "dlna"]
+    },
+    "fr": {
+      "language": "Français",
+      "shortDescription": "Téléchargez et convertissez vidéos et musique, lisez-les, diffusez-les sur votre TV et téléchargez des torrents. Gratuit, open source, sans compte, sans pistage.",
+      "description": "Convert The Spire Reborn est une application multimédia tout-en-un pour Windows : téléchargeur, convertisseur, lecteur et client torrent dans une seule fenêtre.\n\nTÉLÉCHARGER\n• Enregistrez vidéos et musique depuis YouTube et plus de 1 800 autres sites, en MP4, MP3, M4A et plus, dans la qualité de votre choix.\n• Des playlists entières d'un coup, avec titres, pochettes et tags.\n• Un navigateur intégré trouve pour vous les médias d'une page.\n\nCONVERTIR\n• Convertissez audio et vidéo entre plus de 27 formats avec FFmpeg, directement sur votre PC. Rien n'est envoyé en ligne.\n\nLIRE ET DIFFUSER\n• Un lecteur pour votre musique et vos vidéos, avec playlists.\n• Diffusion vers les TV et enceintes de votre réseau (DLNA/UPnP).\n• Regarder ensemble : la même vidéo, synchronisée avec vos amis.\n\nTORRENTS\n• Un client BitTorrent complet : liens magnet et fichiers .torrent, partage avec limites de ratio, création et partage de vos propres torrents.\n\nVIE PRIVÉE AVANT TOUT\n• Sans compte, sans pub, sans statistiques, sans pistage. Tout reste sur votre PC.\n• Open source (GPL-3.0) sur GitHub.\n\nDisponible en 18 langues. Ne téléchargez que du contenu que vous avez le droit de télécharger.",
+      "releaseNotes": "Première version sur le Microsoft Store.",
+      "features": [
+        "Téléchargez vidéos et musique depuis plus de 1 800 sites",
+        "Convertissez entre plus de 27 formats audio et vidéo",
+        "Des playlists entières avec tags et pochettes",
+        "Lecteur multimédia avec playlists",
+        "Diffusion vers TV et enceintes (DLNA/UPnP)",
+        "Regardez des vidéos en synchro avec vos amis",
+        "Client BitTorrent avec liens magnet et partage",
+        "Navigateur intégré qui trouve les médias d'une page",
+        "Sans compte, sans pub, sans pistage",
+        "Open source, en 18 langues"
+      ],
+      "searchTerms": ["telecharger video", "convertisseur mp3", "telecharger musique", "torrent", "lecteur multimedia", "convertisseur video", "dlna"]
+    },
+    "hi": {
+      "language": "हिन्दी",
+      "shortDescription": "वीडियो और संगीत डाउनलोड और कन्वर्ट करें, चलाएँ, अपने टीवी पर कास्ट करें और टोरेंट डाउनलोड करें। मुफ़्त, ओपन सोर्स, बिना अकाउंट, बिना ट्रैकिंग।",
+      "description": "Convert The Spire Reborn, Windows के लिए एक ऑल-इन-वन मीडिया ऐप है: एक ही विंडो में डाउनलोडर, कन्वर्टर, प्लेयर और टोरेंट क्लाइंट।\n\nडाउनलोड\n• YouTube और 1,800 से ज़्यादा दूसरी साइटों से वीडियो और संगीत सहेजें, MP4, MP3, M4A और दूसरे फ़ॉर्मैट में, अपनी चुनी हुई क्वालिटी में।\n• पूरी प्लेलिस्ट एक साथ, शीर्षक, आर्टवर्क और टैग के साथ।\n• बिल्ट-इन ब्राउज़र आपके लिए पेज पर मीडिया ढूँढता है।\n\nकन्वर्ट\n• FFmpeg से ऑडियो और वीडियो को 27 से ज़्यादा फ़ॉर्मैट में बदलें, सीधे आपके PC पर। कुछ भी अपलोड नहीं होता।\n\nचलाएँ और कास्ट करें\n• आपके संगीत और वीडियो के लिए प्लेलिस्ट वाला मीडिया प्लेयर।\n• अपने नेटवर्क के टीवी और स्पीकर पर कास्ट करें (DLNA/UPnP)।\n• साथ देखें: दोस्तों के साथ एक ही वीडियो एक साथ देखें।\n\nटोरेंट\n• पूरा BitTorrent क्लाइंट: magnet लिंक और .torrent फ़ाइलें, रेशियो सीमा के साथ सीडिंग, और अपने टोरेंट बनाना और शेयर करना।\n\nप्राइवेसी सबसे पहले\n• कोई अकाउंट नहीं, कोई विज्ञापन नहीं, कोई एनालिटिक्स नहीं, कोई ट्रैकिंग नहीं। सब कुछ आपके PC पर रहता है।\n• GitHub पर ओपन सोर्स (GPL-3.0)।\n\n18 भाषाओं में उपलब्ध। कृपया केवल वही सामग्री डाउनलोड करें जिसे डाउनलोड करने का आपको अधिकार है।",
+      "releaseNotes": "Microsoft Store में पहली रिलीज़।",
+      "features": [
+        "1,800 से ज़्यादा साइटों से वीडियो और संगीत डाउनलोड करें",
+        "27 से ज़्यादा ऑडियो और वीडियो फ़ॉर्मैट में कन्वर्ट करें",
+        "टैग और आर्टवर्क के साथ पूरी प्लेलिस्ट",
+        "प्लेलिस्ट वाला मीडिया प्लेयर",
+        "टीवी और स्पीकर पर कास्ट करें (DLNA/UPnP)",
+        "दोस्तों के साथ एक साथ वीडियो देखें",
+        "magnet लिंक और सीडिंग वाला BitTorrent क्लाइंट",
+        "पेज पर मीडिया ढूँढने वाला बिल्ट-इन ब्राउज़र",
+        "कोई अकाउंट, विज्ञापन या ट्रैकिंग नहीं",
+        "ओपन सोर्स, 18 भाषाओं में"
+      ],
+      "searchTerms": ["वीडियो डाउनलोडर", "mp3 कन्वर्टर", "गाने डाउनलोड", "टोरेंट", "मीडिया प्लेयर", "वीडियो कन्वर्टर", "dlna"]
+    },
+    "id": {
+      "language": "Bahasa Indonesia",
+      "shortDescription": "Unduh dan konversi video dan musik, putar, kirim ke TV Anda, dan unduh torrent. Gratis, sumber terbuka, tanpa akun, tanpa pelacakan.",
+      "description": "Convert The Spire Reborn adalah aplikasi media serba ada untuk Windows: pengunduh, pengonversi, pemutar, dan klien torrent dalam satu jendela.\n\nUNDUH\n• Simpan video dan musik dari YouTube dan lebih dari 1.800 situs lain, sebagai MP4, MP3, M4A, dan lainnya, dengan kualitas pilihan Anda.\n• Seluruh playlist sekaligus, lengkap dengan judul, sampul, dan tag.\n• Browser bawaan menemukan media di sebuah halaman untuk Anda.\n\nKONVERSI\n• Konversi audio dan video ke lebih dari 27 format dengan FFmpeg, langsung di PC Anda. Tidak ada yang diunggah.\n\nPUTAR DAN KIRIM\n• Pemutar media untuk musik dan video Anda, dengan playlist.\n• Kirim ke TV dan speaker di jaringan Anda (DLNA/UPnP).\n• Nonton Bareng: tonton video yang sama secara sinkron dengan teman.\n\nTORRENT\n• Klien BitTorrent lengkap: tautan magnet dan file .torrent, seeding dengan batas rasio, serta membuat dan membagikan torrent Anda sendiri.\n\nPRIVASI YANG UTAMA\n• Tanpa akun, tanpa iklan, tanpa analitik, tanpa pelacakan. Semuanya tetap di PC Anda.\n• Sumber terbuka (GPL-3.0) di GitHub.\n\nTersedia dalam 18 bahasa. Unduh hanya konten yang berhak Anda unduh.",
+      "releaseNotes": "Rilis pertama di Microsoft Store.",
+      "features": [
+        "Unduh video dan musik dari lebih dari 1.800 situs",
+        "Konversi antara lebih dari 27 format audio dan video",
+        "Seluruh playlist dengan tag dan sampul",
+        "Pemutar media dengan playlist",
+        "Kirim ke TV dan speaker (DLNA/UPnP)",
+        "Tonton video secara sinkron dengan teman",
+        "Klien BitTorrent dengan tautan magnet dan seeding",
+        "Browser bawaan yang menemukan media di halaman",
+        "Tanpa akun, tanpa iklan, tanpa pelacakan",
+        "Sumber terbuka, dalam 18 bahasa"
+      ],
+      "searchTerms": ["pengunduh video", "konverter mp3", "unduh musik", "torrent", "pemutar media", "konverter video", "dlna"]
+    },
+    "it": {
+      "language": "Italiano",
+      "shortDescription": "Scarica e converti video e musica, riproducili, inviali alla TV e scarica torrent. Gratis, open source, senza account, senza tracciamento.",
+      "description": "Convert The Spire Reborn è un'app multimediale tutto in uno per Windows: downloader, convertitore, lettore e client torrent in un'unica finestra.\n\nSCARICA\n• Salva video e musica da YouTube e da oltre 1.800 altri siti, in MP4, MP3, M4A e altri formati, nella qualità che preferisci.\n• Intere playlist in un colpo solo, con titoli, copertine e tag.\n• Un browser integrato trova per te i contenuti di una pagina.\n\nCONVERTI\n• Converti audio e video tra oltre 27 formati con FFmpeg, direttamente sul tuo PC. Non viene caricato nulla.\n\nRIPRODUCI E TRASMETTI\n• Un lettore per la tua musica e i tuoi video, con playlist.\n• Trasmetti a TV e altoparlanti della tua rete (DLNA/UPnP).\n• Guarda insieme: lo stesso video, sincronizzato con i tuoi amici.\n\nTORRENT\n• Un client BitTorrent completo: link magnet e file .torrent, seeding con limiti di ratio, creazione e condivisione dei tuoi torrent.\n\nPRIVACY PRIMA DI TUTTO\n• Nessun account, nessuna pubblicità, nessuna analisi, nessun tracciamento. Tutto resta sul tuo PC.\n• Open source (GPL-3.0) su GitHub.\n\nDisponibile in 18 lingue. Scarica solo contenuti che hai il diritto di scaricare.",
+      "releaseNotes": "Prima versione su Microsoft Store.",
+      "features": [
+        "Scarica video e musica da oltre 1.800 siti",
+        "Converti tra oltre 27 formati audio e video",
+        "Intere playlist con tag e copertine",
+        "Lettore multimediale con playlist",
+        "Trasmetti a TV e altoparlanti (DLNA/UPnP)",
+        "Guarda video in sincronia con gli amici",
+        "Client BitTorrent con link magnet e seeding",
+        "Browser integrato che trova i contenuti di una pagina",
+        "Nessun account, nessuna pubblicità, nessun tracciamento",
+        "Open source, in 18 lingue"
+      ],
+      "searchTerms": ["scaricare video", "convertitore mp3", "scaricare musica", "torrent", "lettore multimediale", "convertitore video", "dlna"]
+    },
+    "ja": {
+      "language": "日本語",
+      "shortDescription": "動画や音楽のダウンロードと変換、再生、テレビへのキャスト、トレントのダウンロードまで。無料・オープンソース、アカウント不要、追跡なし。",
+      "description": "Convert The Spire Reborn は Windows 向けのオールインワン メディア アプリです。ダウンローダー、コンバーター、プレーヤー、トレント クライアントがひとつのウィンドウに。\n\nダウンロード\n• YouTube をはじめ 1,800 以上のサイトから動画や音楽を、MP4、MP3、M4A などの形式で、好きな画質で保存。\n• プレイリストをまるごと一括で。タイトル、アートワーク、タグも自動で付きます。\n• 内蔵ブラウザーがページ上のメディアを見つけます。\n\n変換\n• FFmpeg で音声と動画を 27 以上の形式に変換。すべて PC 上で処理し、何もアップロードしません。\n\n再生とキャスト\n• プレイリスト付きの音楽・動画プレーヤー。\n• ネットワーク上のテレビやスピーカーにキャスト（DLNA/UPnP）。\n• 一緒に見る：同じ動画を友だちと同期して視聴。\n\nトレント\n• 本格的な BitTorrent クライアント：magnet リンクと .torrent ファイル、比率制限付きのシード、自分のトレントの作成と共有。\n\nプライバシー第一\n• アカウント不要、広告なし、分析なし、追跡なし。すべてが PC の中に残ります。\n• GitHub でオープンソース（GPL-3.0）。\n\n18 言語に対応。ダウンロードする権利のあるコンテンツだけをダウンロードしてください。",
+      "releaseNotes": "Microsoft Store での最初のリリースです。",
+      "features": [
+        "1,800 以上のサイトから動画と音楽をダウンロード",
+        "27 以上の音声・動画形式に変換",
+        "タグとアートワーク付きでプレイリストを丸ごと",
+        "プレイリスト付きメディア プレーヤー",
+        "テレビやスピーカーにキャスト（DLNA/UPnP）",
+        "友だちと動画を同期して視聴",
+        "magnet リンクとシード対応の BitTorrent クライアント",
+        "ページ上のメディアを見つける内蔵ブラウザー",
+        "アカウント・広告・追跡なし",
+        "オープンソース、18 言語対応"
+      ],
+      "searchTerms": ["動画 ダウンロード", "mp3 変換", "音楽 ダウンロード", "トレント", "メディアプレーヤー", "動画変換", "dlna"]
+    },
+    "ko": {
+      "language": "한국어",
+      "shortDescription": "동영상과 음악을 다운로드하고 변환하고, 재생하고, TV로 전송하고, 토렌트까지 받으세요. 무료, 오픈 소스, 계정 없음, 추적 없음.",
+      "description": "Convert The Spire Reborn은 Windows용 올인원 미디어 앱입니다. 다운로더, 변환기, 플레이어, 토렌트 클라이언트를 하나의 창에서 쓸 수 있습니다.\n\n다운로드\n• YouTube를 비롯한 1,800개 이상의 사이트에서 동영상과 음악을 MP4, MP3, M4A 등으로, 원하는 화질로 저장하세요.\n• 재생 목록 전체를 한 번에, 제목·앨범 아트·태그까지 채워서.\n• 내장 브라우저가 페이지 속 미디어를 찾아 줍니다.\n\n변환\n• FFmpeg로 오디오와 동영상을 27가지 이상의 형식으로 PC에서 바로 변환합니다. 아무것도 업로드하지 않습니다.\n\n재생과 전송\n• 재생 목록을 지원하는 음악·동영상 플레이어.\n• 네트워크의 TV와 스피커로 전송(DLNA/UPnP).\n• 함께 보기: 친구와 같은 동영상을 동기화해서 시청.\n\n토렌트\n• 완전한 BitTorrent 클라이언트: magnet 링크와 .torrent 파일, 비율 제한이 있는 시딩, 나만의 토렌트 만들기와 공유.\n\n개인정보 우선\n• 계정 없음, 광고 없음, 분석 없음, 추적 없음. 모든 것이 PC에 남습니다.\n• GitHub의 오픈 소스(GPL-3.0).\n\n18개 언어를 지원합니다. 다운로드할 권리가 있는 콘텐츠만 다운로드하세요.",
+      "releaseNotes": "Microsoft Store 첫 출시입니다.",
+      "features": [
+        "1,800개 이상의 사이트에서 동영상과 음악 다운로드",
+        "27가지 이상의 오디오·동영상 형식 변환",
+        "태그와 앨범 아트가 포함된 전체 재생 목록",
+        "재생 목록을 지원하는 미디어 플레이어",
+        "TV와 스피커로 전송(DLNA/UPnP)",
+        "친구와 동영상을 동기화해서 시청",
+        "magnet 링크와 시딩을 지원하는 BitTorrent 클라이언트",
+        "페이지 속 미디어를 찾는 내장 브라우저",
+        "계정·광고·추적 없음",
+        "오픈 소스, 18개 언어 지원"
+      ],
+      "searchTerms": ["동영상 다운로드", "mp3 변환", "음악 다운로드", "토렌트", "미디어 플레이어", "동영상 변환", "dlna"]
+    },
+    "nl": {
+      "language": "Nederlands",
+      "shortDescription": "Download en converteer video en muziek, speel ze af, cast ze naar je tv en download torrents. Gratis, open source, zonder account, zonder tracking.",
+      "description": "Convert The Spire Reborn is een alles-in-één media-app voor Windows: downloader, converter, speler en torrentclient in één venster.\n\nDOWNLOADEN\n• Bewaar video's en muziek van YouTube en meer dan 1.800 andere sites, als MP4, MP3, M4A en meer, in de kwaliteit die je kiest.\n• Hele afspeellijsten in één keer, met titels, hoesjes en tags.\n• Een ingebouwde browser vindt de media op een pagina voor je.\n\nCONVERTEREN\n• Converteer audio en video tussen meer dan 27 formaten met FFmpeg, gewoon op je pc. Er wordt niets geüpload.\n\nAFSPELEN EN CASTEN\n• Een mediaspeler voor je muziek en video's, met afspeellijsten.\n• Cast naar tv's en speakers in je netwerk (DLNA/UPnP).\n• Samen kijken: kijk dezelfde video gelijktijdig met vrienden.\n\nTORRENTS\n• Een volledige BitTorrent-client: magnetlinks en .torrent-bestanden, seeden met ratiolimieten, en je eigen torrents maken en delen.\n\nPRIVACY VOOROP\n• Geen account, geen reclame, geen analytics, geen tracking. Alles blijft op je pc.\n• Open source (GPL-3.0) op GitHub.\n\nBeschikbaar in 18 talen. Download alleen content die je mag downloaden.",
+      "releaseNotes": "Eerste versie in de Microsoft Store.",
+      "features": [
+        "Download video en muziek van meer dan 1.800 sites",
+        "Converteer tussen meer dan 27 audio- en videoformaten",
+        "Hele afspeellijsten met tags en hoesjes",
+        "Mediaspeler met afspeellijsten",
+        "Cast naar tv's en speakers (DLNA/UPnP)",
+        "Kijk video's gelijktijdig met vrienden",
+        "BitTorrent-client met magnetlinks en seeden",
+        "Ingebouwde browser die media op een pagina vindt",
+        "Geen account, geen reclame, geen tracking",
+        "Open source, in 18 talen"
+      ],
+      "searchTerms": ["video downloader", "mp3 converter", "muziek downloaden", "torrent", "mediaspeler", "video converter", "dlna"]
+    },
+    "pl": {
+      "language": "Polski",
+      "shortDescription": "Pobieraj i konwertuj wideo oraz muzykę, odtwarzaj je, przesyłaj na telewizor i pobieraj torrenty. Za darmo, open source, bez konta, bez śledzenia.",
+      "description": "Convert The Spire Reborn to wszechstronna aplikacja multimedialna dla Windows: pobieranie, konwerter, odtwarzacz i klient torrent w jednym oknie.\n\nPOBIERANIE\n• Zapisuj wideo i muzykę z YouTube i ponad 1800 innych serwisów jako MP4, MP3, M4A i inne, w wybranej jakości.\n• Całe playlisty naraz, z tytułami, okładkami i tagami.\n• Wbudowana przeglądarka sama znajduje multimedia na stronie.\n\nKONWERSJA\n• Konwertuj audio i wideo między ponad 27 formatami za pomocą FFmpeg, bezpośrednio na swoim komputerze. Nic nie jest wysyłane.\n\nODTWARZANIE I PRZESYŁANIE\n• Odtwarzacz muzyki i wideo z playlistami.\n• Przesyłanie na telewizory i głośniki w sieci domowej (DLNA/UPnP).\n• Oglądajmy razem: to samo wideo zsynchronizowane ze znajomymi.\n\nTORRENTY\n• Pełny klient BitTorrent: linki magnet i pliki .torrent, seedowanie z limitami ratio oraz tworzenie i udostępnianie własnych torrentów.\n\nPRYWATNOŚĆ PRZEDE WSZYSTKIM\n• Bez konta, bez reklam, bez analityki, bez śledzenia. Wszystko zostaje na Twoim komputerze.\n• Open source (GPL-3.0) na GitHubie.\n\nDostępna w 18 językach. Pobieraj tylko treści, do których pobierania masz prawo.",
+      "releaseNotes": "Pierwsza wersja w Microsoft Store.",
+      "features": [
+        "Pobieraj wideo i muzykę z ponad 1800 serwisów",
+        "Konwertuj między ponad 27 formatami audio i wideo",
+        "Całe playlisty z tagami i okładkami",
+        "Odtwarzacz multimediów z playlistami",
+        "Przesyłanie na telewizory i głośniki (DLNA/UPnP)",
+        "Oglądaj wideo synchronicznie ze znajomymi",
+        "Klient BitTorrent z linkami magnet i seedowaniem",
+        "Wbudowana przeglądarka znajdująca multimedia na stronie",
+        "Bez konta, bez reklam, bez śledzenia",
+        "Open source, w 18 językach"
+      ],
+      "searchTerms": ["pobieranie wideo", "konwerter mp3", "pobieranie muzyki", "torrent", "odtwarzacz", "konwerter wideo", "dlna"]
+    },
+    "pt-br": {
+      "language": "Português (Brasil)",
+      "shortDescription": "Baixe e converta vídeos e músicas, reproduza, transmita para a TV e baixe torrents. Grátis, código aberto, sem conta e sem rastreamento.",
+      "description": "Convert The Spire Reborn é um app de mídia tudo-em-um para Windows: baixador, conversor, player e cliente de torrent em uma só janela.\n\nBAIXAR\n• Salve vídeos e músicas do YouTube e de mais de 1.800 outros sites, em MP4, MP3, M4A e outros formatos, na qualidade que você escolher.\n• Playlists inteiras de uma vez, com títulos, capas e tags.\n• Um navegador integrado encontra para você a mídia de uma página.\n\nCONVERTER\n• Converta áudio e vídeo entre mais de 27 formatos com FFmpeg, direto no seu PC. Nada é enviado.\n\nREPRODUZIR E TRANSMITIR\n• Um player para suas músicas e vídeos, com playlists.\n• Transmita para TVs e caixas de som da sua rede (DLNA/UPnP).\n• Assistir juntos: o mesmo vídeo, sincronizado com seus amigos.\n\nTORRENTS\n• Um cliente BitTorrent completo: links magnet e arquivos .torrent, seed com limites de ratio, e criação e compartilhamento dos seus próprios torrents.\n\nPRIVACIDADE EM PRIMEIRO LUGAR\n• Sem conta, sem anúncios, sem análises, sem rastreamento. Tudo fica no seu PC.\n• Código aberto (GPL-3.0) no GitHub.\n\nDisponível em 18 idiomas. Baixe apenas conteúdo que você tem o direito de baixar.",
+      "releaseNotes": "Primeira versão na Microsoft Store.",
+      "features": [
+        "Baixe vídeos e músicas de mais de 1.800 sites",
+        "Converta entre mais de 27 formatos de áudio e vídeo",
+        "Playlists inteiras com tags e capas",
+        "Player de mídia com playlists",
+        "Transmita para TVs e caixas de som (DLNA/UPnP)",
+        "Assista a vídeos sincronizados com amigos",
+        "Cliente BitTorrent com links magnet e seed",
+        "Navegador integrado que encontra mídia na página",
+        "Sem conta, sem anúncios, sem rastreamento",
+        "Código aberto, em 18 idiomas"
+      ],
+      "searchTerms": ["baixar videos", "conversor mp3", "baixar musicas", "torrent", "player de midia", "conversor de video", "dlna"]
+    },
+    "ru": {
+      "language": "Русский",
+      "shortDescription": "Скачивайте и конвертируйте видео и музыку, воспроизводите их, передавайте на телевизор и качайте торренты. Бесплатно, с открытым кодом, без аккаунта и слежки.",
+      "description": "Convert The Spire Reborn — универсальное медиаприложение для Windows: загрузчик, конвертер, плеер и торрент-клиент в одном окне.\n\nЗАГРУЗКА\n• Сохраняйте видео и музыку с YouTube и более чем 1800 других сайтов в MP4, MP3, M4A и других форматах, в нужном качестве.\n• Целые плейлисты сразу, с названиями, обложками и тегами.\n• Встроенный браузер сам находит медиафайлы на странице.\n\nКОНВЕРТАЦИЯ\n• Конвертируйте аудио и видео между более чем 27 форматами с помощью FFmpeg прямо на компьютере. Ничего не загружается в сеть.\n\nВОСПРОИЗВЕДЕНИЕ И ТРАНСЛЯЦИЯ\n• Плеер для музыки и видео с плейлистами.\n• Трансляция на телевизоры и колонки в вашей сети (DLNA/UPnP).\n• Смотрим вместе: одно и то же видео синхронно с друзьями.\n\nТОРРЕНТЫ\n• Полноценный BitTorrent-клиент: magnet-ссылки и .torrent-файлы, раздача с ограничением рейтинга, создание и раздача собственных торрентов.\n\nПРИВАТНОСТЬ ПРЕЖДЕ ВСЕГО\n• Без аккаунта, без рекламы, без аналитики, без слежки. Всё остаётся на вашем компьютере.\n• Открытый исходный код (GPL-3.0) на GitHub.\n\nДоступно на 18 языках. Скачивайте только тот контент, на загрузку которого у вас есть право.",
+      "releaseNotes": "Первый выпуск в Microsoft Store.",
+      "features": [
+        "Скачивание видео и музыки с более чем 1800 сайтов",
+        "Конвертация между более чем 27 форматами аудио и видео",
+        "Целые плейлисты с тегами и обложками",
+        "Медиаплеер с плейлистами",
+        "Трансляция на телевизоры и колонки (DLNA/UPnP)",
+        "Синхронный просмотр видео с друзьями",
+        "BitTorrent-клиент с magnet-ссылками и раздачей",
+        "Встроенный браузер, находящий медиа на странице",
+        "Без аккаунта, без рекламы, без слежки",
+        "Открытый код, 18 языков"
+      ],
+      "searchTerms": ["скачать видео", "конвертер mp3", "скачать музыку", "торрент", "медиаплеер", "конвертер видео", "dlna"]
+    },
+    "tr": {
+      "language": "Türkçe",
+      "shortDescription": "Video ve müzik indirip dönüştürün, oynatın, TV'nize yansıtın ve torrent indirin. Ücretsiz, açık kaynak, hesap yok, takip yok.",
+      "description": "Convert The Spire Reborn, Windows için hepsi bir arada bir medya uygulamasıdır: indirici, dönüştürücü, oynatıcı ve torrent istemcisi tek pencerede.\n\nİNDİR\n• YouTube ve 1.800'den fazla başka siteden video ve müzikleri MP4, MP3, M4A ve diğer biçimlerde, seçtiğiniz kalitede kaydedin.\n• Başlıkları, kapakları ve etiketleriyle tüm çalma listeleri tek seferde.\n• Yerleşik tarayıcı sayfadaki medyayı sizin için bulur.\n\nDÖNÜŞTÜR\n• FFmpeg ile ses ve videoyu 27'den fazla biçim arasında doğrudan bilgisayarınızda dönüştürün. Hiçbir şey yüklenmez.\n\nOYNAT VE YANSIT\n• Müzikleriniz ve videolarınız için çalma listeli bir medya oynatıcı.\n• Ağınızdaki TV'lere ve hoparlörlere yansıtın (DLNA/UPnP).\n• Birlikte İzle: aynı videoyu arkadaşlarınızla eşzamanlı izleyin.\n\nTORRENT\n• Tam bir BitTorrent istemcisi: magnet bağlantıları ve .torrent dosyaları, oran sınırlı paylaşım ve kendi torrentlerinizi oluşturup paylaşma.\n\nÖNCE GİZLİLİK\n• Hesap yok, reklam yok, analiz yok, takip yok. Her şey bilgisayarınızda kalır.\n• GitHub'da açık kaynak (GPL-3.0).\n\n18 dilde kullanılabilir. Lütfen yalnızca indirme hakkına sahip olduğunuz içerikleri indirin.",
+      "releaseNotes": "Microsoft Store'daki ilk sürüm.",
+      "features": [
+        "1.800'den fazla siteden video ve müzik indirin",
+        "27'den fazla ses ve video biçimi arasında dönüştürün",
+        "Etiketleri ve kapaklarıyla tüm çalma listeleri",
+        "Çalma listeli medya oynatıcı",
+        "TV'lere ve hoparlörlere yansıtın (DLNA/UPnP)",
+        "Videoları arkadaşlarınızla eşzamanlı izleyin",
+        "Magnet bağlantıları ve paylaşım destekli BitTorrent istemcisi",
+        "Sayfadaki medyayı bulan yerleşik tarayıcı",
+        "Hesap yok, reklam yok, takip yok",
+        "Açık kaynak, 18 dilde"
+      ],
+      "searchTerms": ["video indirici", "mp3 dönüştürücü", "müzik indir", "torrent", "medya oynatıcı", "video dönüştürücü", "dlna"]
+    },
+    "uk": {
+      "language": "Українська",
+      "shortDescription": "Завантажуйте й конвертуйте відео та музику, відтворюйте їх, передавайте на телевізор і завантажуйте торренти. Безкоштовно, з відкритим кодом, без облікового запису й стеження.",
+      "description": "Convert The Spire Reborn — універсальний медіазастосунок для Windows: завантажувач, конвертер, програвач і торрент-клієнт в одному вікні.\n\nЗАВАНТАЖЕННЯ\n• Зберігайте відео й музику з YouTube та понад 1800 інших сайтів у MP4, MP3, M4A та інших форматах, у потрібній якості.\n• Цілі плейлисти одразу, з назвами, обкладинками й тегами.\n• Вбудований браузер сам знаходить медіа на сторінці.\n\nКОНВЕРТАЦІЯ\n• Конвертуйте аудіо й відео між понад 27 форматами за допомогою FFmpeg просто на комп'ютері. Нічого не вивантажується.\n\nВІДТВОРЕННЯ Й ТРАНСЛЯЦІЯ\n• Програвач для музики й відео з плейлистами.\n• Трансляція на телевізори й колонки у вашій мережі (DLNA/UPnP).\n• Дивимося разом: те саме відео синхронно з друзями.\n\nТОРРЕНТИ\n• Повноцінний BitTorrent-клієнт: magnet-посилання та .torrent-файли, роздача з обмеженням рейтингу, створення та поширення власних торрентів.\n\nПРИВАТНІСТЬ НАСАМПЕРЕД\n• Без облікового запису, без реклами, без аналітики, без стеження. Усе залишається на вашому комп'ютері.\n• Відкритий код (GPL-3.0) на GitHub.\n\nДоступно 18 мовами. Завантажуйте лише той вміст, який маєте право завантажувати.",
+      "releaseNotes": "Перший випуск у Microsoft Store.",
+      "features": [
+        "Завантаження відео й музики з понад 1800 сайтів",
+        "Конвертація між понад 27 форматами аудіо й відео",
+        "Цілі плейлисти з тегами й обкладинками",
+        "Медіапрогравач із плейлистами",
+        "Трансляція на телевізори й колонки (DLNA/UPnP)",
+        "Синхронний перегляд відео з друзями",
+        "BitTorrent-клієнт із magnet-посиланнями та роздачею",
+        "Вбудований браузер, що знаходить медіа на сторінці",
+        "Без облікового запису, реклами й стеження",
+        "Відкритий код, 18 мов"
+      ],
+      "searchTerms": ["завантажити відео", "конвертер mp3", "завантажити музику", "торрент", "медіапрогравач", "конвертер відео", "dlna"]
+    },
+    "vi": {
+      "language": "Tiếng Việt",
+      "shortDescription": "Tải và chuyển đổi video, nhạc, phát lại, truyền lên TV và tải torrent. Miễn phí, mã nguồn mở, không cần tài khoản, không theo dõi.",
+      "description": "Convert The Spire Reborn là ứng dụng đa phương tiện tất cả trong một cho Windows: trình tải, trình chuyển đổi, trình phát và ứng dụng torrent trong cùng một cửa sổ.\n\nTẢI XUỐNG\n• Lưu video và nhạc từ YouTube và hơn 1.800 trang khác, dưới dạng MP4, MP3, M4A và nhiều định dạng khác, với chất lượng bạn chọn.\n• Tải trọn danh sách phát một lần, kèm tiêu đề, ảnh bìa và thẻ.\n• Trình duyệt tích hợp tự tìm nội dung đa phương tiện trên trang.\n\nCHUYỂN ĐỔI\n• Chuyển đổi âm thanh và video giữa hơn 27 định dạng bằng FFmpeg, ngay trên PC của bạn. Không tải lên bất cứ thứ gì.\n\nPHÁT VÀ TRUYỀN\n• Trình phát nhạc và video có danh sách phát.\n• Truyền lên TV và loa trong mạng của bạn (DLNA/UPnP).\n• Xem cùng nhau: xem cùng một video đồng bộ với bạn bè.\n\nTORRENT\n• Ứng dụng BitTorrent đầy đủ: liên kết magnet và tệp .torrent, chia sẻ với giới hạn tỉ lệ, tạo và chia sẻ torrent của riêng bạn.\n\nQUYỀN RIÊNG TƯ LÀ TRÊN HẾT\n• Không tài khoản, không quảng cáo, không phân tích, không theo dõi. Mọi thứ đều ở lại trên PC của bạn.\n• Mã nguồn mở (GPL-3.0) trên GitHub.\n\nCó 18 ngôn ngữ. Vui lòng chỉ tải nội dung mà bạn có quyền tải.",
+      "releaseNotes": "Bản phát hành đầu tiên trên Microsoft Store.",
+      "features": [
+        "Tải video và nhạc từ hơn 1.800 trang",
+        "Chuyển đổi giữa hơn 27 định dạng âm thanh và video",
+        "Trọn danh sách phát kèm thẻ và ảnh bìa",
+        "Trình phát đa phương tiện có danh sách phát",
+        "Truyền lên TV và loa (DLNA/UPnP)",
+        "Xem video đồng bộ với bạn bè",
+        "Ứng dụng BitTorrent với liên kết magnet và chia sẻ",
+        "Trình duyệt tích hợp tìm nội dung trên trang",
+        "Không tài khoản, không quảng cáo, không theo dõi",
+        "Mã nguồn mở, 18 ngôn ngữ"
+      ],
+      "searchTerms": ["tải video", "chuyển đổi mp3", "tải nhạc", "torrent", "trình phát nhạc", "chuyển đổi video", "dlna"]
+    },
+    "zh-cn": {
+      "language": "简体中文",
+      "shortDescription": "下载并转换视频和音乐，播放、投屏到电视，还能下载种子。免费、开源、无需账户、不追踪。",
+      "description": "Convert The Spire Reborn 是一款适用于 Windows 的一体化媒体应用：下载器、转换器、播放器和 BT 客户端，尽在一个窗口。\n\n下载\n• 从 YouTube 及 1800 多个其他网站保存视频和音乐，支持 MP4、MP3、M4A 等格式，画质任你选。\n• 一次下载整个播放列表，自动填好标题、封面和标签。\n• 内置浏览器帮你找到页面上的媒体。\n\n转换\n• 使用 FFmpeg 在 27 种以上格式之间转换音频和视频，全部在你的电脑上完成，不上传任何内容。\n\n播放与投屏\n• 支持播放列表的音乐和视频播放器。\n• 投屏到家庭网络中的电视和音箱（DLNA/UPnP）。\n• 一起看：与朋友同步观看同一个视频。\n\nBT 下载\n• 完整的 BitTorrent 客户端：磁力链接和 .torrent 文件、可设分享率上限的做种，以及创建和分享你自己的种子。\n\n隐私优先\n• 无需账户、无广告、无统计、无追踪。一切都留在你的电脑上。\n• 在 GitHub 上开源（GPL-3.0）。\n\n支持 18 种语言。请只下载你有权下载的内容。",
+      "releaseNotes": "首次在 Microsoft Store 发布。",
+      "features": [
+        "从 1800 多个网站下载视频和音乐",
+        "在 27 种以上音视频格式之间转换",
+        "整个播放列表，含标签和封面",
+        "带播放列表的媒体播放器",
+        "投屏到电视和音箱（DLNA/UPnP）",
+        "与朋友同步观看视频",
+        "支持磁力链接和做种的 BT 客户端",
+        "能找到页面中媒体的内置浏览器",
+        "无需账户、无广告、无追踪",
+        "开源，支持 18 种语言"
+      ],
+      "searchTerms": ["视频下载", "mp3转换", "音乐下载", "种子下载", "媒体播放器", "视频转换", "dlna"]
+    }
+  }
+}

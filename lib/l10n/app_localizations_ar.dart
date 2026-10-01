@@ -2596,6 +2596,11 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return 'إذا كنت تستمتع باستخدام $getAppTitle، فإن التبرع هو أفضل طريقة لدعم تطويره.';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return 'إعلانات شاهدها الداعمون: $adsWatchedCount';
   }
@@ -3566,6 +3571,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get spinUnlockColour => 'أدِر ← افتح لونًا';
+
+  @override
+  String get freeSpinUsedToday =>
+      'تم استخدام الدورة المجانية لهذا اليوم. عد غدًا، أو افتح كل الألوان مرة واحدة.';
 
   @override
   String get updateNow => 'حدّث الآن';

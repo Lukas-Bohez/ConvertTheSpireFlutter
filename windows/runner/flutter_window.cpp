@@ -6,6 +6,7 @@
 
 #include "flutter/generated_plugin_registrant.h"
 #include "open_requests.h"
+#include "store_purchases.h"
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -51,6 +52,8 @@ bool FlutterWindow::OnCreate() {
       });
   // Only now can a second copy of the app hand requests to this window.
   open_requests::MarkMainWindow(GetHandle());
+  store_purchases::Register(flutter_controller_->engine()->messenger(),
+                            GetHandle());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
@@ -77,6 +80,7 @@ void FlutterWindow::QueueOpenRequests(const std::vector<std::string>& targets) {
 
 void FlutterWindow::OnDestroy() {
   open_channel_ = nullptr;
+  store_purchases::Unregister();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }

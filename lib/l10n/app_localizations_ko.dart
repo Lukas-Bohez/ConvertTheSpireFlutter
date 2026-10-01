@@ -2534,6 +2534,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return '$getAppTitle이(가) 마음에 드신다면, 기부가 개발을 지원하는 가장 좋은 방법입니다.';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return '후원자가 시청한 광고: $adsWatchedCount';
   }
@@ -3491,6 +3496,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get spinUnlockColour => '돌리기 → 색상 잠금 해제';
+
+  @override
+  String get freeSpinUsedToday =>
+      '오늘의 무료 스핀을 사용했습니다. 내일 다시 오시거나 모든 색상을 한 번에 잠금 해제하세요.';
 
   @override
   String get updateNow => '지금 업데이트';

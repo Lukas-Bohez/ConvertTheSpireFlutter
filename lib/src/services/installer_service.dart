@@ -4,6 +4,7 @@ import 'package:archive/archive_io.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
+import '../config/build_flags.dart';
 import 'platform_dirs.dart';
 
 class InstallerService {
@@ -15,6 +16,8 @@ class InstallerService {
     if (kIsWeb) {
       throw Exception('FFmpeg installation is not available on web.');
     }
+    // FFmpeg comes in the package there (see FfmpegService.bundledPath).
+    if (kMsStoreBuild) throw Exception(storeBuildNoDownloads);
     var support = await PlatformDirs.getAppSupportDir();
     support ??= await PlatformDirs.getFilesDir();
     support ??= await Directory.systemTemp.createTemp('ffmpeg_install');

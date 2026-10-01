@@ -1,0 +1,294 @@
+# Convert The Spire Reborn - Microsoft Store package
+#
+# Builds the MSIX package to upload in Partner Center
+# (docs/store/microsoft-store.md). Run it from Actions > "Microsoft Store
+# package" > Run workflow, with the values Partner Center shows under the
+# app's Product management > Product identity:
+#
+#   identity_name           Package/Identity/Name
+#   publisher               Package/Identity/Publisher (CN=...)
+#   publisher_display_name  Package/Properties/PublisherDisplayName
+#
+# They can also be saved once as repository variables (Settings > Secrets
+# and variables > Actions > Variables): MSSTORE_IDENTITY_NAME,
+# MSSTORE_PUBLISHER, MSSTORE_PUBLISHER_DISPLAY_NAME, MSSTORE_DISPLAY_NAME.
+#
+# The package is not signed: the Store signs it. It holds the app built with
+# MS_STORE_BUILD=true (no self-updates; "all colours" is a Store add-on) and
+# FFmpeg, yt-dlp and Deno, so nothing has to be downloaded on first use.
+#
+# Pull requests that touch the Windows app build it too, with placeholder
+# identity values, to show the package still builds (not for upload).
+
+name: Microsoft Store package
+
+on:
+  workflow_dispatch:
+    inputs:
+      identity_name:
+        description: 'Package/Identity/Name (Partner Center > Product identity)'
+        required: false
+      publisher:
+        description: 'Package/Identity/Publisher, CN=...'
+        required: false
+      publisher_display_name:
+        description: 'Package/Properties/PublisherDisplayName'
+        required: false
+      display_name:
+        description: 'The app name you reserved in Partner Center'
+        required: false
+        default: 'Convert The Spire Reborn'
+  pull_request:
+    paths:
+      - 'windows/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'lib/main.dart'
+      - 'lib/src/config/**'
+      - 'lib/src/services/ms_store_service.dart'
+      - 'lib/src/services/bundled_tools.dart'
+      - 'lib/src/services/purchase_service.dart'
+      - '.github/workflows/msstore.yml'
+
+env:
+  FLUTTER_VERSION: '3.41.2'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: msstore-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  msix:
+    name: Build the Store package
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Package identity
+        id: identity
+        shell: pwsh
+        env:
+          IN_IDENTITY: ${{ inputs.identity_name || vars.MSSTORE_IDENTITY_NAME }}
+          IN_PUBLISHER: ${{ inputs.publisher || vars.MSSTORE_PUBLISHER }}
+          IN_PUBLISHER_NAME: ${{ inputs.publisher_display_name || vars.MSSTORE_PUBLISHER_DISPLAY_NAME }}
+          IN_DISPLAY_NAME: ${{ inputs.display_name || vars.MSSTORE_DISPLAY_NAME || 'Convert The Spire Reborn' }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          $identity = "$env:IN_IDENTITY".Trim()
+          $publisher = "$env:IN_PUBLISHER".Trim()
+          $publisherName = "$env:IN_PUBLISHER_NAME".Trim()
+          $displayName = "$env:IN_DISPLAY_NAME".Trim()
+          if (!$identity -or !$publisher -or !$publisherName) {
+            if ($env:EVENT -eq 'workflow_dispatch') {
+              Write-Error ("Fill in identity_name, publisher and publisher_display_name " +
+                "from Partner Center > (the app) > Product management > Product identity, " +
+                "or save them as repository variables (see the top of this file).")
+              exit 1
+            }
+            # A pull request: placeholders, only to show the package builds.
+            $identity = 'OrokaConner.ConvertTheSpireReborn'
+            $publisher = 'CN=00000000-0000-0000-0000-000000000000'
+            $publisherName = 'Oroka Conner'
+            Write-Host "::warning::Placeholder identity: this package is not for upload."
+          }
+          if ($publisher -notmatch '^CN=') {
+            Write-Error "publisher must start with CN= (copy Package/Identity/Publisher exactly)"
+            exit 1
+          }
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([0-9]+\.[0-9]+\.[0-9]+)').Matches[0].Groups[1].Value
+          # The Store wants four numbers and the last one 0.
+          $msixVersion = "$version.0"
+          "identity=$identity" >> $env:GITHUB_OUTPUT
+          "publisher=$publisher" >> $env:GITHUB_OUTPUT
+          "publisher_name=$publisherName" >> $env:GITHUB_OUTPUT
+          "display_name=$displayName" >> $env:GITHUB_OUTPUT
+          "version=$msixVersion" >> $env:GITHUB_OUTPUT
+          Write-Host "Identity: $identity / $publisher / $publisherName"
+          Write-Host "Name: $displayName, version $msixVersion"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: false
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # The same workarounds as the release workflow's Windows build.
+      - name: Set coroutine deprecation workaround
+        shell: pwsh
+        run: |
+          echo "CXXFLAGS=-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "CMAKE_CXX_FLAGS=-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Patch metadata_god resolve_symlinks for CI
+        shell: pwsh
+        run: |
+          $paths = @(
+            "$env:PUB_CACHE\hosted\pub.dev\metadata_god-*\cargokit\cmake\resolve_symlinks.ps1",
+            "$env:LOCALAPPDATA\Pub\Cache\hosted\pub.dev\metadata_god-*\cargokit\cmake\resolve_symlinks.ps1",
+            "windows\flutter\ephemeral\.plugin_symlinks\metadata_god\cargokit\cmake\resolve_symlinks.ps1"
+          )
+          foreach ($pattern in $paths) {
+            $files = Get-ChildItem -Path $pattern -ErrorAction SilentlyContinue
+            foreach ($file in $files) {
+              $text = Get-Content -Raw $file.FullName
+              if ($text -match 'Get-Item \$realPath') {
+                $text = $text -replace 'Get-Item \$realPath', 'Get-Item -ErrorAction SilentlyContinue $realPath'
+                Set-Content -Path $file.FullName -Value $text -NoNewline
+                Write-Host "Patched resolve_symlinks.ps1 at $($file.FullName)"
+              }
+            }
+          }
+
+      - name: Patch flutter_inappwebview Windows symbol mismatch
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "$env:PUB_CACHE\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows\custom_platform_view\custom_platform_view.cc",
+            "$env:LOCALAPPDATA\Pub\Cache\hosted\pub.dev\flutter_inappwebview_windows-0.6.0\windows\custom_platform_view\custom_platform_view.cc",
+            "windows\flutter\ephemeral\.plugin_symlinks\flutter_inappwebview_windows\windows\custom_platform_view\custom_platform_view.cc"
+          )
+          foreach ($file in $candidates) {
+            if (Test-Path $file) {
+              $text = Get-Content -Raw $file
+              $newText = $text -replace '\bwebview_\b', 'view'
+              if ($newText -ne $text) {
+                Set-Content -Path $file -Value $newText -NoNewline
+                Write-Host "Patched $file"
+              }
+            }
+          }
+
+      - name: Build Windows (Store build)
+        run: flutter build windows --release --no-tree-shake-icons --dart-define=MS_STORE_BUILD=true
+
+      # The Store's version may not download programs to run, so the ones
+      # the app would download on first use come in the package, each in a
+      # folder next to the exe (lib/src/services/bundled_tools.dart).
+      - name: Bundle FFmpeg, yt-dlp and Deno
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $ProgressPreference = 'SilentlyContinue'
+          $release = "build\windows\x64\runner\Release"
+          $work = "$env:RUNNER_TEMP\tools"
+          New-Item -ItemType Directory -Force $work | Out-Null
+
+          function Get-File($url, $out) {
+            for ($i = 1; $i -le 4; $i++) {
+              try { Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing; return }
+              catch { Write-Host "Download failed ($i): $_"; Start-Sleep -Seconds (2 * $i) }
+            }
+            throw "Could not download $url"
+          }
+
+          # FFmpeg: the build the other Windows builds download on first use.
+          Get-File 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip' "$work\ffmpeg.zip"
+          Expand-Archive "$work\ffmpeg.zip" "$work\ffmpeg" -Force
+          $bin = Get-ChildItem "$work\ffmpeg" -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          $ffmpegDir = New-Item -ItemType Directory -Force "$release\ffmpeg"
+          Copy-Item $bin.FullName $ffmpegDir
+          Copy-Item (Join-Path $bin.DirectoryName 'ffprobe.exe') $ffmpegDir
+          $ffmpegLicense = Get-ChildItem "$work\ffmpeg" -Recurse -Filter 'LICENSE*' | Select-Object -First 1
+          if ($ffmpegLicense) { Copy-Item $ffmpegLicense.FullName "$ffmpegDir\LICENSE.txt" }
+
+          # yt-dlp
+          $ytDir = New-Item -ItemType Directory -Force "$release\yt-dlp"
+          Get-File 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe' "$ytDir\yt-dlp.exe"
+          Get-File 'https://raw.githubusercontent.com/yt-dlp/yt-dlp/master/LICENSE' "$ytDir\LICENSE.txt"
+
+          # Deno (youtube_explode's and yt-dlp's JavaScript runtime)
+          Get-File 'https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip' "$work\deno.zip"
+          $denoDir = New-Item -ItemType Directory -Force "$release\deno"
+          Expand-Archive "$work\deno.zip" $denoDir -Force
+          Get-File 'https://raw.githubusercontent.com/denoland/deno/main/LICENSE.md' "$denoDir\LICENSE.txt"
+
+          # Each one runs.
+          foreach ($run in @(@("$ffmpegDir\ffmpeg.exe", '-version'),
+                             @("$ytDir\yt-dlp.exe", '--version'),
+                             @("$denoDir\deno.exe", '--version'))) {
+            $out = & $run[0] $run[1]
+            if ($LASTEXITCODE -ne 0) { throw "$($run[0]) does not run" }
+            Write-Host "$($run[0]): $(@($out)[0])"
+          }
+
+          @"
+          Programs that come with Convert the Spire Reborn (Microsoft Store version)
+
+          FFmpeg (ffmpeg\) - GPL v3. Build by gyan.dev: https://www.gyan.dev/ffmpeg/builds/
+            Source code: https://ffmpeg.org/download.html and https://github.com/FFmpeg/FFmpeg
+          yt-dlp (yt-dlp\) - The Unlicense. https://github.com/yt-dlp/yt-dlp
+          Deno (deno\) - MIT. https://github.com/denoland/deno
+
+          Each folder holds the program's licence. They are separate programs that
+          the app runs; the app's own source: https://github.com/Lukas-Bohez/ConvertTheSpireFlutter
+          "@ | Set-Content -Encoding utf8 "$release\THIRD-PARTY-PROGRAMS.txt"
+
+          Get-ChildItem $release -Directory | ForEach-Object {
+            $size = (Get-ChildItem $_.FullName -Recurse -File | Measure-Object Length -Sum).Sum
+            Write-Host ("{0,-10} {1,8:N1} MB" -f $_.Name, ($size / 1MB))
+          }
+
+      - name: Create the MSIX package
+        shell: pwsh
+        env:
+          IDENTITY: ${{ steps.identity.outputs.identity }}
+          PUBLISHER: ${{ steps.identity.outputs.publisher }}
+          PUBLISHER_NAME: ${{ steps.identity.outputs.publisher_name }}
+          DISPLAY_NAME: ${{ steps.identity.outputs.display_name }}
+          VERSION: ${{ steps.identity.outputs.version }}
+        run: |
+          dart run msix:create --store `
+            --identity-name "$env:IDENTITY" `
+            --publisher "$env:PUBLISHER" `
+            --publisher-display-name "$env:PUBLISHER_NAME" `
+            --display-name "$env:DISPLAY_NAME" `
+            --version "$env:VERSION" `
+            --output-path build\msix
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Check the package
+        shell: pwsh
+        env:
+          IDENTITY: ${{ steps.identity.outputs.identity }}
+          PUBLISHER: ${{ steps.identity.outputs.publisher }}
+          VERSION: ${{ steps.identity.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $msix = Get-ChildItem build\msix -Filter *.msix | Select-Object -First 1
+          if (!$msix) { throw "No .msix was made" }
+          Write-Host ("{0}: {1:N1} MB" -f $msix.Name, ($msix.Length / 1MB))
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [IO.Compression.ZipFile]::OpenRead($msix.FullName)
+          try {
+            $names = $zip.Entries.FullName
+            foreach ($need in @('convert_the_spire_reborn.exe', 'dll/flutter_windows.dll',
+                                'ffmpeg/ffmpeg.exe', 'yt-dlp/yt-dlp.exe', 'deno/deno.exe',
+                                'AppxManifest.xml')) {
+              if ($names -notcontains $need) { throw "$need is not in the package" }
+            }
+            $entry = $zip.GetEntry('AppxManifest.xml')
+            $reader = New-Object IO.StreamReader($entry.Open())
+            [xml]$manifest = $reader.ReadToEnd()
+            $reader.Close()
+          } finally { $zip.Dispose() }
+          $id = $manifest.Package.Identity
+          Write-Host "Identity: $($id.Name) $($id.Publisher) $($id.Version)"
+          if ($id.Name -ne $env:IDENTITY -or $id.Publisher -ne $env:PUBLISHER -or $id.Version -ne $env:VERSION) {
+            throw "The package identity is not the one asked for"
+          }
+          if ($manifest.OuterXml -notmatch 'runFullTrust') { throw "runFullTrust is missing" }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: microsoft-store-msix
+          path: build/msix/*.msix
+          retention-days: 30
+          compression-level: 0

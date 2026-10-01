@@ -1556,6 +1556,15 @@
     }
   },
   "ifEnjoyUsingBestWay": "If you enjoy using {getAppTitle}, the best way to support continued development is via donations or the one-time Remove Ads unlock.",
+  "donationBestWayToSupport": "If you enjoy using {getAppTitle}, a donation is the best way to support its development.",
+  "@donationBestWayToSupport": {
+    "description": "Support page intro in builds without ads (Windows, macOS, GitHub Android).",
+    "placeholders": {
+      "getAppTitle": {
+        "type": "Object"
+      }
+    }
+  },
   "@ifEnjoyUsingBestWay": {
     "placeholders": {
       "getAppTitle": {
@@ -2137,6 +2146,10 @@
   "titleCopied": "Title copied",
   "homeTaglinePlay": "Torrents, music, videos and file conversion in one app.",
   "spinUnlockColour": "Spin → unlock a colour",
+  "freeSpinUsedToday": "Today's free spin is used. Come back tomorrow, or unlock every colour at once.",
+  "@freeSpinUsedToday": {
+    "description": "Microsoft Store build: shown when the one free colour spin of the day was already used."
+  },
   "updateNow": "Update now",
   "downloadingUpdate": "Downloading the update…",
   "updateCouldNotDownload": "The update could not be downloaded. The download page opens instead.",

@@ -14,6 +14,7 @@ class ColourRewardService extends ChangeNotifier {
   static const String _ownedKey = 'colour_rewards_owned';
   static const String _equippedKey = 'colour_rewards_equipped';
   static const String _allPurchasedKey = 'colour_all_purchased';
+  static const String _lastFreeSpinKey = 'colour_last_free_spin_day';
 
   final Set<String> _owned = {};
   String _equipped = 'slate';
@@ -60,6 +61,23 @@ class ColourRewardService extends ChangeNotifier {
 
   ColourReward get equipped => kAllColours.firstWhere((c) => c.id == _equipped,
       orElse: () => kAllColours.first);
+
+  /// Takes today's free spin: false when it was already taken today.
+  ///
+  /// The Microsoft Store build has no ads to pay for spins (Android's
+  /// way), so it gives one free spin a day, and sells all colours at once
+  /// as a Store add-on.
+  Future<bool> takeDailyFreeSpin({DateTime? now}) async {
+    final today = _day(now ?? DateTime.now());
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getString(_lastFreeSpinKey) == today) return false;
+    await prefs.setString(_lastFreeSpinKey, today);
+    return true;
+  }
+
+  static String _day(DateTime time) =>
+      '${time.year}-${time.month.toString().padLeft(2, '0')}-'
+      '${time.day.toString().padLeft(2, '0')}';
 
   Future<void> unlockColour(String id) async {
     if (_owned.add(id)) {

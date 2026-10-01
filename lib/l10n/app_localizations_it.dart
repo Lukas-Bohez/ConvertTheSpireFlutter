@@ -2629,6 +2629,11 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return 'Se ti piace usare $getAppTitle, una donazione è il modo migliore per sostenerne lo sviluppo.';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return 'Annunci guardati dai sostenitori: $adsWatchedCount';
   }
@@ -3615,6 +3620,10 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get spinUnlockColour => 'Gira → sblocca un colore';
+
+  @override
+  String get freeSpinUsedToday =>
+      'Il giro gratuito di oggi è stato usato. Torna domani o sblocca tutti i colori in una volta.';
 
   @override
   String get updateNow => 'Aggiorna ora';

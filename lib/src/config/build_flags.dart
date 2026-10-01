@@ -9,6 +9,21 @@ const bool kIsPlayStoreBuildDefine =
 const bool kIsGithubRelease =
     bool.fromEnvironment('GITHUB_RELEASE', defaultValue: false);
 
+/// Compile-time flag: true for the Microsoft Store build (the MSIX package).
+/// Set via: --dart-define=MS_STORE_BUILD=true (the msstore workflow does).
+///
+/// It has every feature of the GitHub build, but the Store updates it, so
+/// the app does not update itself; FFmpeg, yt-dlp and Deno come in the
+/// package instead of being downloaded on first use (BundledTools); and
+/// "all colours" is a Store add-on (PurchaseService).
+const bool kMsStoreBuild =
+    bool.fromEnvironment('MS_STORE_BUILD', defaultValue: false);
+
+/// Why a download of a program is refused in the Microsoft Store build.
+const String storeBuildNoDownloads =
+    'The Microsoft Store version comes with this program and does not '
+    'download it. Repair or reinstall the app from Windows Settings > Apps.';
+
 /// Runtime-play detection. This is initialized early in `main()` by
 /// calling `initAppFlavor()` so that synchronous calls to `kPlayStoreBuild`
 /// reflect the actual app branding at runtime.

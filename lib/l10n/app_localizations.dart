@@ -4698,6 +4698,12 @@ abstract class AppLocalizations {
   /// **'If you enjoy using {getAppTitle}, the best way to support continued development is via donations or the one-time Remove Ads unlock.'**
   String ifEnjoyUsingBestWay(Object getAppTitle);
 
+  /// Support page intro in builds without ads (Windows, macOS, GitHub Android).
+  ///
+  /// In en, this message translates to:
+  /// **'If you enjoy using {getAppTitle}, a donation is the best way to support its development.'**
+  String donationBestWayToSupport(Object getAppTitle);
+
   /// No description provided for @adsWatchedBySupporters.
   ///
   /// In en, this message translates to:
@@ -6402,6 +6408,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Spin → unlock a colour'**
   String get spinUnlockColour;
+
+  /// Microsoft Store build: shown when the one free colour spin of the day was already used.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s free spin is used. Come back tomorrow, or unlock every colour at once.'**
+  String get freeSpinUsedToday;
 
   /// No description provided for @updateNow.
   ///

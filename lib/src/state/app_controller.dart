@@ -408,6 +408,10 @@ class AppController extends ChangeNotifier {
           await saveSettings(settings.copyWith(ytDlpPath: path));
         }
         logs.add('yt-dlp ready: $path');
+        // The Microsoft Store package comes with yt-dlp and downloads no
+        // program on its own at start; updating it is left to the user
+        // (Settings) and to the Store's updates of the app.
+        if (kMsStoreBuild) return;
         // Attempt to update to latest version in the background
         try {
           final updatedPath = await downloadService.ytDlp.updateYtDlp(
@@ -1364,6 +1368,13 @@ class AppController extends ChangeNotifier {
       throw Exception(
         'FFmpeg is required for audio conversion but was not found.\n'
         'Install it via your system package manager or set the path in Settings.',
+      );
+    }
+    if (kMsStoreBuild) {
+      // It comes with the package; missing means the install is damaged.
+      throw Exception(
+        'FFmpeg is missing from this installation. Repair or reinstall the '
+        'app from Windows Settings > Apps > Installed apps.',
       );
     }
 
