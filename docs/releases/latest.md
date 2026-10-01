@@ -1,14 +1,15 @@
-# Release Notes - v15.2.0
+# Release Notes - v15.3.0
 
-## Double-click install on Windows, smoother torrents
+## Seeding that works, a faster start, and a Microsoft Store version
 
 ### New
 
-* **Double-click install on Windows.** `ConvertTheSpireReborn-Setup.exe` installs the app for your account, with a Start menu entry and an uninstaller. No admin rights.
-* **Updates itself on Windows.** **Update now** in the update banner downloads the new version, checks it and restarts the app.
-* **A .dmg for Mac**, to drag the app into Applications.
+* **A Microsoft Store version is on its way**, with FFmpeg and yt-dlp built in and updates through the Store.
+* Home shows which version you have.
 
 ### Fixed
 
-* **Torrents no longer freeze the app** or fill up memory on slower PCs.
-* The update banner shows the release notes as plain text.
+* **Seeding works and keeps going**, about 20 times faster, and each torrent remembers how much it has seeded. Torrents no longer freeze the app or flood the log.
+* **The app starts at once** and uses no CPU while it sits idle.
+* Songs opened from outside the app play like the ones in your library.
+* Smaller fixes: decimal commas are read right, the welcome pages fit a laptop screen, and Enter no longer clicks something you cannot see.
