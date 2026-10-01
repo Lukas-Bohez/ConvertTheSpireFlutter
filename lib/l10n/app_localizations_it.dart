@@ -2629,6 +2629,11 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return 'Se ti piace usare $getAppTitle, una donazione è il modo migliore per sostenerne lo sviluppo.';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return 'Annunci guardati dai sostenitori: $adsWatchedCount';
   }

@@ -761,6 +761,7 @@
   "noInvalidDuplicateFavouritesFound": "कोई अमान्य या डुप्लिकेट पसंदीदा नहीं मिला।",
   "support": "{getAppTitle} को सहयोग दें",
   "ifEnjoyUsingBestWay": "अगर आपको {getAppTitle} पसंद है, तो आगे के विकास में मदद का सबसे अच्छा तरीका दान या एक बार की विज्ञापन-हटाओ खरीद है।",
+  "donationBestWayToSupport": "अगर आपको {getAppTitle} इस्तेमाल करना पसंद है, तो दान इसके विकास का समर्थन करने का सबसे अच्छा तरीका है।",
   "adsWatchedBySupporters": "सहयोगियों ने देखे विज्ञापन: {adsWatchedCount}",
   "adsPausedRemaining": "विज्ञापन रुके हैं: {adBreakRemaining} बाकी",
   "removeAds": "विज्ञापन हटाएं",

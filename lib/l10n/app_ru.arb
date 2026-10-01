@@ -761,6 +761,7 @@
   "noInvalidDuplicateFavouritesFound": "Неверных или повторяющихся записей в избранном нет.",
   "support": "Поддержать {getAppTitle}",
   "ifEnjoyUsingBestWay": "Если вам нравится {getAppTitle}, лучший способ поддержать дальнейшую разработку — пожертвование или разовая покупка отключения рекламы.",
+  "donationBestWayToSupport": "Если вам нравится {getAppTitle}, лучший способ поддержать его развитие — пожертвование.",
   "adsWatchedBySupporters": "Реклам просмотрено поддерживающими: {adsWatchedCount}",
   "adsPausedRemaining": "Реклама на паузе: осталось {adBreakRemaining}",
   "removeAds": "Отключить рекламу",

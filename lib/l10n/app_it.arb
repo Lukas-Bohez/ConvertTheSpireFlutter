@@ -761,6 +761,7 @@
   "noInvalidDuplicateFavouritesFound": "Nessun preferito non valido o duplicato.",
   "support": "Sostieni {getAppTitle}",
   "ifEnjoyUsingBestWay": "Se ti piace usare {getAppTitle}, il modo migliore per sostenerne lo sviluppo è una donazione o l'acquisto una tantum di Rimuovi pubblicità.",
+  "donationBestWayToSupport": "Se ti piace usare {getAppTitle}, una donazione è il modo migliore per sostenerne lo sviluppo.",
   "adsWatchedBySupporters": "Annunci guardati dai sostenitori: {adsWatchedCount}",
   "adsPausedRemaining": "Annunci in pausa: ancora {adBreakRemaining}",
   "removeAds": "Rimuovi pubblicità",

@@ -2614,6 +2614,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return 'Если вам нравится $getAppTitle, лучший способ поддержать его развитие — пожертвование.';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return 'Реклам просмотрено поддерживающими: $adsWatchedCount';
   }

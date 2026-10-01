@@ -761,6 +761,7 @@
   "noInvalidDuplicateFavouritesFound": "Geen ongeldige of dubbele favorieten gevonden.",
   "support": "Steun {getAppTitle}",
   "ifEnjoyUsingBestWay": "Vind je {getAppTitle} fijn? De beste manier om de verdere ontwikkeling te steunen is een donatie of de eenmalige aankoop van Advertenties verwijderen.",
+  "donationBestWayToSupport": "Vind je {getAppTitle} fijn? Een donatie is de beste manier om de verdere ontwikkeling te steunen.",
   "adsWatchedBySupporters": "Advertenties bekeken door supporters: {adsWatchedCount}",
   "adsPausedRemaining": "Advertenties gepauzeerd: nog {adBreakRemaining}",
   "removeAds": "Advertenties verwijderen",

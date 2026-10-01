@@ -761,6 +761,7 @@
   "noInvalidDuplicateFavouritesFound": "Tidak ada favorit yang tidak valid atau duplikat.",
   "support": "Dukung {getAppTitle}",
   "ifEnjoyUsingBestWay": "Jika Anda suka memakai {getAppTitle}, cara terbaik mendukung pengembangannya adalah dengan donasi atau membeli Hapus Iklan sekali bayar.",
+  "donationBestWayToSupport": "Jika Anda suka menggunakan {getAppTitle}, donasi adalah cara terbaik untuk mendukung pengembangannya.",
   "adsWatchedBySupporters": "Iklan yang ditonton pendukung: {adsWatchedCount}",
   "adsPausedRemaining": "Iklan dijeda: sisa {adBreakRemaining}",
   "removeAds": "Hapus Iklan",

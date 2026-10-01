@@ -89,13 +89,21 @@ Fill in the IARC questionnaire truthfully. It matters for these answers:
 
 Upload `ConvertTheSpireReborn.msix`. Partner Center checks it at once; it
 fails here when the identity values do not match the reserved app (re-run the
-workflow with the right ones). Device families: **Windows 10/11 Desktop**.
+workflow with the right ones).
+
+**Device families: Windows 10/11 Desktop only.** Untick Xbox, Mobile,
+HoloLens and the others wherever Partner Center offers them. The package is
+a Win32 desktop app (`Windows.Desktop`, full trust), which only runs on PCs:
+Xbox runs UWP apps only, and Flutter cannot build those; Windows 10 Mobile is
+gone. A device family ticked that the package does not support fails
+certification or is ignored.
 
 ### 7. Store listing (English)
 
 Paste the texts from "Listing text" below. Screenshots: at least one,
 1366×768 or larger. The ones in `docs/screenshots/store/` are made for this
-(1920×1080). The **1:1 app tile icon (300×300)** is optional; use
+(1920×1080: Home, Player and Torrents, and Home and Player in the dark
+theme). The **1:1 app tile icon (300×300)** is optional; use
 `docs/screenshots/store/app-tile-300.png`.
 
 ### 8. Submission options

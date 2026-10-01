@@ -761,6 +761,7 @@
   "noInvalidDuplicateFavouritesFound": "잘못되거나 중복된 즐겨찾기가 없습니다.",
   "support": "{getAppTitle} 후원",
   "ifEnjoyUsingBestWay": "{getAppTitle}이(가) 마음에 드신다면, 후원이나 한 번 구매로 끝나는 광고 제거가 계속된 개발에 가장 큰 도움이 됩니다.",
+  "donationBestWayToSupport": "{getAppTitle}이(가) 마음에 드신다면, 기부가 개발을 지원하는 가장 좋은 방법입니다.",
   "adsWatchedBySupporters": "후원자가 시청한 광고: {adsWatchedCount}",
   "adsPausedRemaining": "광고 일시 중지: {adBreakRemaining} 남음",
   "removeAds": "광고 제거",

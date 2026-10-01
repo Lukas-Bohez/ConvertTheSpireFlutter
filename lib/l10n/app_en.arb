@@ -1556,6 +1556,15 @@
     }
   },
   "ifEnjoyUsingBestWay": "If you enjoy using {getAppTitle}, the best way to support continued development is via donations or the one-time Remove Ads unlock.",
+  "donationBestWayToSupport": "If you enjoy using {getAppTitle}, a donation is the best way to support its development.",
+  "@donationBestWayToSupport": {
+    "description": "Support page intro in builds without ads (Windows, macOS, GitHub Android).",
+    "placeholders": {
+      "getAppTitle": {
+        "type": "Object"
+      }
+    }
+  },
   "@ifEnjoyUsingBestWay": {
     "placeholders": {
       "getAppTitle": {

@@ -761,6 +761,7 @@
   "noInvalidDuplicateFavouritesFound": "Keine ungültigen oder doppelten Favoriten gefunden.",
   "support": "{getAppTitle} unterstützen",
   "ifEnjoyUsingBestWay": "Wenn dir {getAppTitle} gefällt, unterstützt du die Weiterentwicklung am besten mit einer Spende oder dem einmaligen Kauf von „Werbung entfernen“.",
+  "donationBestWayToSupport": "Wenn dir {getAppTitle} gefällt, ist eine Spende der beste Weg, die Weiterentwicklung zu unterstützen.",
   "adsWatchedBySupporters": "Von Unterstützern angesehene Werbung: {adsWatchedCount}",
   "adsPausedRemaining": "Werbung pausiert: noch {adBreakRemaining}",
   "removeAds": "Werbung entfernen",

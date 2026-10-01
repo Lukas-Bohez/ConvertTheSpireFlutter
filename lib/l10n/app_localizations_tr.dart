@@ -2618,6 +2618,11 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return '$getAppTitle uygulamasını kullanmaktan hoşlanıyorsanız, geliştirilmesini desteklemenin en iyi yolu bağış yapmaktır.';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return 'Destekçilerin izlediği reklamlar: $adsWatchedCount';
   }

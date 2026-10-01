@@ -761,6 +761,7 @@
   "noInvalidDuplicateFavouritesFound": "無効または重複したお気に入りはありません。",
   "support": "{getAppTitle} を支援",
   "ifEnjoyUsingBestWay": "{getAppTitle} を気に入っていただけたら、寄付または一度きりの「広告の削除」購入が開発継続の一番の支えになります。",
+  "donationBestWayToSupport": "{getAppTitle} を気に入っていただけたら、寄付が開発を支える一番の方法です。",
   "adsWatchedBySupporters": "支援者が視聴した広告：{adsWatchedCount}",
   "adsPausedRemaining": "広告を一時停止中：残り {adBreakRemaining}",
   "removeAds": "広告を削除",

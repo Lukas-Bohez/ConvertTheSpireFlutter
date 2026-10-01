@@ -2534,6 +2534,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return '$getAppTitle이(가) 마음에 드신다면, 기부가 개발을 지원하는 가장 좋은 방법입니다.';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return '후원자가 시청한 광고: $adsWatchedCount';
   }

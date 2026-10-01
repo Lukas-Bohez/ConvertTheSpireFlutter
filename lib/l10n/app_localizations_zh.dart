@@ -2501,6 +2501,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return '如果你喜欢使用 $getAppTitle，捐赠是支持其持续开发的最好方式。';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return '支持者观看的广告：$adsWatchedCount';
   }

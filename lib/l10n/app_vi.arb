@@ -761,6 +761,7 @@
   "noInvalidDuplicateFavouritesFound": "Không có mục yêu thích nào không hợp lệ hoặc trùng.",
   "support": "Ủng hộ {getAppTitle}",
   "ifEnjoyUsingBestWay": "Nếu bạn thích {getAppTitle}, cách tốt nhất để ủng hộ việc phát triển là quyên góp hoặc mua Gỡ quảng cáo một lần.",
+  "donationBestWayToSupport": "Nếu bạn thích dùng {getAppTitle}, quyên góp là cách tốt nhất để hỗ trợ việc phát triển ứng dụng.",
   "adsWatchedBySupporters": "Quảng cáo người ủng hộ đã xem: {adsWatchedCount}",
   "adsPausedRemaining": "Quảng cáo tạm dừng: còn {adBreakRemaining}",
   "removeAds": "Gỡ quảng cáo",

@@ -761,6 +761,7 @@
   "noInvalidDuplicateFavouritesFound": "Nie znaleziono nieprawidłowych ani zduplikowanych ulubionych.",
   "support": "Wesprzyj {getAppTitle}",
   "ifEnjoyUsingBestWay": "Jeśli lubisz {getAppTitle}, najlepszym sposobem na wsparcie dalszego rozwoju jest darowizna lub jednorazowy zakup usunięcia reklam.",
+  "donationBestWayToSupport": "Jeśli lubisz {getAppTitle}, darowizna to najlepszy sposób na wsparcie jego rozwoju.",
   "adsWatchedBySupporters": "Reklamy obejrzane przez wspierających: {adsWatchedCount}",
   "adsPausedRemaining": "Reklamy wstrzymane: pozostało {adBreakRemaining}",
   "removeAds": "Usuń reklamy",

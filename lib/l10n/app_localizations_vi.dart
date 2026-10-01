@@ -2610,6 +2610,11 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String donationBestWayToSupport(Object getAppTitle) {
+    return 'Nếu bạn thích dùng $getAppTitle, quyên góp là cách tốt nhất để hỗ trợ việc phát triển ứng dụng.';
+  }
+
+  @override
   String adsWatchedBySupporters(Object adsWatchedCount) {
     return 'Quảng cáo người ủng hộ đã xem: $adsWatchedCount';
   }
