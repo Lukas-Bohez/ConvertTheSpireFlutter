@@ -4679,4 +4679,41 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get torrentStatusMissingFiles => '파일 없음';
+
+  @override
+  String get trackLists => '곡 목록';
+
+  @override
+  String get exportTrackLists => '곡 목록 내보내기';
+
+  @override
+  String get exportTrackListsHint =>
+      '노래를 \"아티스트 - 제목\" 줄 목록으로 저장합니다. 다른 기기의 곡 목록 가져오기나 재생목록 이전 사이트에서 다시 음악으로 바꿀 수 있습니다.';
+
+  @override
+  String exportAllSongs(int count) {
+    return '모든 노래 ($count)';
+  }
+
+  @override
+  String exportFavouriteSongs(int count) {
+    return '즐겨찾는 노래 ($count)';
+  }
+
+  @override
+  String get exportAsText => '텍스트 파일 (.txt)';
+
+  @override
+  String get exportAsCsv => '스프레드시트 (.csv)';
+
+  @override
+  String get exportAction => '내보내기';
+
+  @override
+  String savedTrackList(int count) {
+    return '노래 $count곡 목록을 저장했습니다';
+  }
+
+  @override
+  String get noSongsToExport => '아직 노래가 없습니다. 먼저 플레이어에서 음악 폴더를 여세요.';
 }

@@ -1392,5 +1392,15 @@
   "torrentStatusPendingMetadata": "メタデータを待機中",
   "torrentStatusFetchingMetadata": "メタデータを取得中",
   "torrentStatusFileInUse": "ファイル使用中",
-  "torrentStatusMissingFiles": "ファイルがありません"
+  "torrentStatusMissingFiles": "ファイルがありません",
+  "trackLists": "曲リスト",
+  "exportTrackLists": "曲リストをエクスポート",
+  "exportTrackListsHint": "曲を「アーティスト - タイトル」の行のリストとして保存します。別のデバイスの「曲リストをインポート」やプレイリスト移行サイトで、再び音楽に戻せます。",
+  "exportAllSongs": "すべての曲 ({count})",
+  "exportFavouriteSongs": "お気に入りの曲 ({count})",
+  "exportAsText": "テキストファイル (.txt)",
+  "exportAsCsv": "スプレッドシート (.csv)",
+  "exportAction": "エクスポート",
+  "savedTrackList": "{count} 曲のリストを保存しました",
+  "noSongsToExport": "まだ曲がありません。まずプレーヤーで音楽フォルダーを開いてください。"
 }

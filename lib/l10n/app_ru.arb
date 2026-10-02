@@ -1392,5 +1392,15 @@
   "torrentStatusPendingMetadata": "Ожидание метаданных",
   "torrentStatusFetchingMetadata": "Получение метаданных",
   "torrentStatusFileInUse": "Файл используется",
-  "torrentStatusMissingFiles": "Файлы отсутствуют"
+  "torrentStatusMissingFiles": "Файлы отсутствуют",
+  "trackLists": "Списки треков",
+  "exportTrackLists": "Экспорт списков треков",
+  "exportTrackListsHint": "Сохраняет ваши песни как список строк «Исполнитель - Название». Импорт списков треков на другом устройстве или сайт для переноса плейлистов снова превратит его в музыку.",
+  "exportAllSongs": "Все песни ({count})",
+  "exportFavouriteSongs": "Избранные песни ({count})",
+  "exportAsText": "Текстовый файл (.txt)",
+  "exportAsCsv": "Таблица (.csv)",
+  "exportAction": "Экспортировать",
+  "savedTrackList": "Сохранён список из {count} песен",
+  "noSongsToExport": "Песен пока нет. Сначала откройте папку с музыкой в плеере."
 }

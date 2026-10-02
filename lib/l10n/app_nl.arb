@@ -1392,5 +1392,15 @@
   "torrentStatusPendingMetadata": "Wachten op metadata",
   "torrentStatusFetchingMetadata": "Metadata ophalen",
   "torrentStatusFileInUse": "Bestand in gebruik",
-  "torrentStatusMissingFiles": "Bestanden ontbreken"
+  "torrentStatusMissingFiles": "Bestanden ontbreken",
+  "trackLists": "Nummerlijsten",
+  "exportTrackLists": "Nummerlijsten exporteren",
+  "exportTrackListsHint": "Bewaart je nummers als een lijst met regels \"Artiest - Titel\". Nummerlijsten importeren op een ander toestel, of een site die playlists overzet, maakt er weer muziek van.",
+  "exportAllSongs": "Alle nummers ({count})",
+  "exportFavouriteSongs": "Favoriete nummers ({count})",
+  "exportAsText": "Tekstbestand (.txt)",
+  "exportAsCsv": "Rekenblad (.csv)",
+  "exportAction": "Exporteren",
+  "savedTrackList": "Lijst met {count} nummers opgeslagen",
+  "noSongsToExport": "Nog geen nummers. Open eerst je muziekmap in de speler."
 }

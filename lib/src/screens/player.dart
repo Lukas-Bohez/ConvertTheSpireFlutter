@@ -50,6 +50,7 @@ import '../state/app_controller.dart';
 import '../utils/folder_label.dart';
 import '../utils/l10n.dart';
 import '../utils/lock.dart';
+import '../utils/share_file.dart';
 import '../utils/snack.dart';
 import '../vault/platform/desktop_window.dart';
 import '../widgets/tv_file_browser.dart';
@@ -539,6 +540,15 @@ class PlayerState with ChangeNotifier {
 
   // BUG 2 FIX: dedup set for in-flight thumbnail requests.
   final Set<int> _thumbInFlight = {};
+
+  /// When each file last had a thumbnail looked for, and its size then.
+  /// A file without cover art (or a video FFmpeg cannot get a frame from,
+  /// such as one a torrent is still writing) used to be looked at again on
+  /// every rebuild: the look-up changed the item, the change rebuilt the
+  /// card, and the card asked again, dozens of times a second, each time
+  /// starting FFmpeg for a video. The app froze once a torrent put a film
+  /// in the library folder.
+  final Map<String, ({int size, DateTime at})> _thumbTried = {};
 
   bool _disposed = false;
   final List<StreamSubscription> _subs = [];
@@ -1596,7 +1606,10 @@ class PlayerState with ChangeNotifier {
       // Check disk cache first.
       thumb = await _loadThumbFromCache(path);
 
-      if (thumb == null) {
+      // The tag reader is for songs: it reads synchronously, and a
+      // video of several GB (a torrent's film in the library folder) held
+      // the app up with it.
+      if (thumb == null && item.type == MediaType.audio) {
         try {
           final metaPath = await _resolveLocalPath(path);
           final tag = readMetadata(File(metaPath), getImage: true);
@@ -1650,6 +1663,8 @@ class PlayerState with ChangeNotifier {
     if (library[index].thumbnailData != null) return;
     // BUG 2 FIX: skip if already in-flight.
     if (_thumbInFlight.contains(index)) return;
+    if (!await _shouldLookForThumbnail(library[index].path)) return;
+    if (_disposed || index >= library.length) return;
     _thumbInFlight.add(index);
 
     try {
@@ -1660,7 +1675,7 @@ class PlayerState with ChangeNotifier {
 
       thumb = await _loadThumbFromCache(path);
 
-      if (thumb == null) {
+      if (thumb == null && item.type == MediaType.audio) {
         try {
           final metaPath = await _resolveLocalPath(path);
           final tag = readMetadata(File(metaPath), getImage: true);
@@ -1686,7 +1701,9 @@ class PlayerState with ChangeNotifier {
 
       if (_disposed) return;
       if (index < library.length && library[index].path == path) {
-        if (thumb != null || dur != null) {
+        // Only a real change is worth a rebuild (see _thumbTried).
+        final newDuration = dur != null && dur != library[index].duration;
+        if (thumb != null || newDuration) {
           library[index] = library[index].copyWith(
             thumbnailData: thumb ?? library[index].thumbnailData,
             duration: dur,
@@ -1703,6 +1720,24 @@ class PlayerState with ChangeNotifier {
     } finally {
       _thumbInFlight.remove(index);
     }
+  }
+
+  /// Whether to look for [path]'s thumbnail now: not again for a file that
+  /// was looked at and has not changed since, and at most every 30 seconds
+  /// for one that is still growing (a download in progress).
+  Future<bool> _shouldLookForThumbnail(String path) async {
+    final tried = _thumbTried[path];
+    final now = DateTime.now();
+    // Cards ask on every build: answer those without touching the disk.
+    if (tried != null && now.difference(tried.at).inSeconds < 30) return false;
+    var size = -1;
+    if (!path.startsWith('content://') && !path.startsWith('http')) {
+      try {
+        size = await File(path).length();
+      } catch (_) {}
+    }
+    _thumbTried[path] = (size: size, at: now);
+    return tried == null || tried.size != size;
   }
 
   Future<void> _enrichMetadataFast(
@@ -1860,7 +1895,7 @@ class PlayerState with ChangeNotifier {
                   await _openMediaWithFallback(player, item.path, play: true);
                 }
                 await player.setVolume(
-                    volume * _videoVolumeBoost * _trackGainMultiplier * 100);
+                    _mkVolume);
                 // attempt to read duration; may be zero until stream updates
                 try {
                   duration = await player.stream.duration
@@ -1926,7 +1961,7 @@ class PlayerState with ChangeNotifier {
               return;
             }
             await _mkPlayer!.setVolume(
-                volume * _videoVolumeBoost * _trackGainMultiplier * 100);
+                _mkVolume);
             _recordPlayStart(item);
           } catch (e) {
             debugPrint('media_kit video load error: $e');
@@ -2479,10 +2514,10 @@ class PlayerState with ChangeNotifier {
     }
     if (_useMediaKit) {
       if (_mkPlayer != null) {
-        _mkPlayer!.setVolume(effective * _videoVolumeBoost * 100);
+        _mkPlayer!.setVolume(_mkVolume);
       }
       if (_audioMkPlayer != null) {
-        _audioMkPlayer!.setVolume(effective * _videoVolumeBoost * 100);
+        _audioMkPlayer!.setVolume(_mkVolume);
       }
     }
     if (_androidController != null) {
@@ -2796,6 +2831,21 @@ class PlayerState with ChangeNotifier {
     return pow(10, gainDb / 20).toDouble();
   }
 
+  /// Volume for media_kit (mpv), the desktop player: 100 is full volume.
+  ///
+  /// mpv turns its volume into loudness along a cubic curve (volume 50 is
+  /// 0.5³ of full amplitude). The slider keeps that feel, but the leveling
+  /// gain is a real change in dB and goes in as its cube root: fed in
+  /// linearly, -8 dB came out as -24 dB, and songs went nearly silent on
+  /// desktop from their second play on (the first plays before the
+  /// measurement is in). Android's player is linear and was right.
+  double get _mkVolume => mkVolumeFor(volume * _videoVolumeBoost, _trackGainMultiplier);
+
+  /// [_mkVolume] for a slider level and a linear gain.
+  @visibleForTesting
+  static double mkVolumeFor(double sliderLevel, double gainMultiplier) =>
+      sliderLevel * 100 * pow(gainMultiplier, 1 / 3).toDouble();
+
   /// Volume for just_audio, which only accepts 0..1.
   double get _audioPlayerVolume =>
       (volume * _trackGainMultiplier).clamp(0.0, 1.0).toDouble();
@@ -3074,7 +3124,13 @@ class PlayerState with ChangeNotifier {
       final future = loudness.gainDbFor(local).then((gain) {
         if (gain == null || _disposed) return;
         _levelGainDb[item.path] = gain;
-        if (currentItem?.path == item.path) _applyVolume();
+        // A measurement that comes in once the song is well under way is
+        // kept for its next play: the volume jumping mid-song is worse
+        // than one play at its own level.
+        if (currentItem?.path == item.path &&
+            position < const Duration(seconds: 5)) {
+          _applyVolume();
+        }
       });
       if (wait) {
         await future.timeout(const Duration(milliseconds: 2500),
@@ -4089,7 +4145,7 @@ class PlayerState with ChangeNotifier {
               await _openMediaWithFallback(_audioMkPlayer!, path, play: true);
             }
             await _audioMkPlayer!.setVolume(
-                volume * _videoVolumeBoost * _trackGainMultiplier * 100);
+                _mkVolume);
             duration = await _audioMkPlayer!.stream.duration
                 .firstWhere((d) => d.inMilliseconds > 0)
                 .timeout(const Duration(seconds: 1),
@@ -4144,7 +4200,7 @@ class PlayerState with ChangeNotifier {
             await _openMediaWithFallback(_mkPlayer!, path, play: true);
           }
           await _mkPlayer!.setVolume(
-              volume * _videoVolumeBoost * _trackGainMultiplier * 100);
+              _mkVolume);
           if (idx >= 0 && idx < library.length) {
             _recordPlayStart(library[idx]);
           }
@@ -4351,6 +4407,10 @@ class _PlayerScreenState extends State<PlayerScreen>
   final Set<String> _activeGenres = <String>{};
   bool _uiPrefsLoaded = false;
   bool _isFullScreen = false;
+  // Whether this screen's own button put the window in full screen. Leaving
+  // the screen undoes only that: full screen from F11 is the user's and
+  // stays (going to Stats used to drop it).
+  bool _fullScreenIsOurs = false;
   bool _searchEditing = false;
   AppController? _appController;
   StreamSubscription<WatchPartyNotice>? _watchPartyNoticeSub;
@@ -4428,7 +4488,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     _appController?.onLibraryRefreshRequested = null;
     _watchPartyNoticeSub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
-    unawaited(_exitFullScreen());
+    if (!_usesNativeWindowFullscreen || _fullScreenIsOurs) {
+      unawaited(_exitFullScreen());
+    }
     _tabController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -4465,7 +4527,10 @@ class _PlayerScreenState extends State<PlayerScreen>
   Future<void> _enterFullScreen() async {
     if (_isFullScreen) return;
     if (_usesNativeWindowFullscreen) {
-      await toggleDesktopFullScreen();
+      if (!await windowManager.isFullScreen()) {
+        await toggleDesktopFullScreen();
+        _fullScreenIsOurs = true;
+      }
       await _syncFullscreenState();
       return;
     }
@@ -4479,6 +4544,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Future<void> _exitFullScreen() async {
     if (_usesNativeWindowFullscreen) {
+      _fullScreenIsOurs = false;
       try {
         if (await windowManager.isFullScreen()) {
           await toggleDesktopFullScreen();
@@ -5805,7 +5871,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       icon: const Icon(Icons.share),
                       tooltip: context.l10n.actionShare,
                       visualDensity: VisualDensity.compact,
-                      onPressed: () => _shareMediaItem(item),
+                      onPressed: () => _shareMediaItem(context, item),
                     ),
                   // Favourite button
                   IconButton(
@@ -6408,27 +6474,27 @@ Future<bool> _systemConfirmsCopy() async {
   }
 }
 
-/// Shares the current media item — the real file if it's on disk, otherwise
-/// a text link. Used both by the inline now-playing Share button
-/// (tablet/desktop) and by the 3-dot track menu (so phones, where the inline
-/// Share button is hidden to de-clutter the row, can still share).
-Future<void> _shareMediaItem(MediaItem item) async {
+/// Shares the current media item as the file itself. Used both by the inline
+/// now-playing Share button (tablet/desktop) and by the 3-dot track menu (so
+/// phones, where the inline Share button is hidden to de-clutter the row,
+/// can still share).
+Future<void> _shareMediaItem(BuildContext context, MediaItem item) async {
   try {
-    final title = item.title ?? p.basename(item.path);
-    final file = File(item.path);
-    if (await file.exists()) {
-      await SharePlus.instance.share(
-        ShareParams(files: [XFile(item.path)], title: title),
-      );
-    } else {
-      await SharePlus.instance.share(
-        ShareParams(
-          text:
-              'Check out $title on Bitplayer: https://play.google.com/store/apps/details?id=com.torrentspire.ai',
-        ),
-      );
+    if (item.path.startsWith('http://') || item.path.startsWith('https://')) {
+      await SharePlus.instance.share(ShareParams(text: item.path));
+      return;
     }
-  } catch (_) {}
+    if (await shareMediaFile(item.path, name: _displayTitle(item))) return;
+    if (context.mounted) {
+      Snack.show(context, context.l10n.couldNotPrepareFileSharing,
+          level: SnackLevel.error);
+    }
+  } catch (e) {
+    if (context.mounted) {
+      Snack.show(context, context.l10n.couldNotShareFile(e),
+          level: SnackLevel.error);
+    }
+  }
 }
 
 class _TrackMenuButton extends StatelessWidget {
@@ -6454,7 +6520,7 @@ class _TrackMenuButton extends StatelessWidget {
             await copyTrackTitle(context, item);
             break;
           case _TrackMenuAction.share:
-            await _shareMediaItem(item);
+            await _shareMediaItem(context, item);
             break;
           case _TrackMenuAction.queue:
             state.enqueue(index);

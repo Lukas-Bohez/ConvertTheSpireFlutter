@@ -4680,4 +4680,41 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get torrentStatusMissingFiles => 'ファイルがありません';
+
+  @override
+  String get trackLists => '曲リスト';
+
+  @override
+  String get exportTrackLists => '曲リストをエクスポート';
+
+  @override
+  String get exportTrackListsHint =>
+      '曲を「アーティスト - タイトル」の行のリストとして保存します。別のデバイスの「曲リストをインポート」やプレイリスト移行サイトで、再び音楽に戻せます。';
+
+  @override
+  String exportAllSongs(int count) {
+    return 'すべての曲 ($count)';
+  }
+
+  @override
+  String exportFavouriteSongs(int count) {
+    return 'お気に入りの曲 ($count)';
+  }
+
+  @override
+  String get exportAsText => 'テキストファイル (.txt)';
+
+  @override
+  String get exportAsCsv => 'スプレッドシート (.csv)';
+
+  @override
+  String get exportAction => 'エクスポート';
+
+  @override
+  String savedTrackList(int count) {
+    return '$count 曲のリストを保存しました';
+  }
+
+  @override
+  String get noSongsToExport => 'まだ曲がありません。まずプレーヤーで音楽フォルダーを開いてください。';
 }

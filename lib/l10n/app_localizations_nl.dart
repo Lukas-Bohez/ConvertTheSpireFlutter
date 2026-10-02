@@ -4822,4 +4822,42 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get torrentStatusMissingFiles => 'Bestanden ontbreken';
+
+  @override
+  String get trackLists => 'Nummerlijsten';
+
+  @override
+  String get exportTrackLists => 'Nummerlijsten exporteren';
+
+  @override
+  String get exportTrackListsHint =>
+      'Bewaart je nummers als een lijst met regels \"Artiest - Titel\". Nummerlijsten importeren op een ander toestel, of een site die playlists overzet, maakt er weer muziek van.';
+
+  @override
+  String exportAllSongs(int count) {
+    return 'Alle nummers ($count)';
+  }
+
+  @override
+  String exportFavouriteSongs(int count) {
+    return 'Favoriete nummers ($count)';
+  }
+
+  @override
+  String get exportAsText => 'Tekstbestand (.txt)';
+
+  @override
+  String get exportAsCsv => 'Rekenblad (.csv)';
+
+  @override
+  String get exportAction => 'Exporteren';
+
+  @override
+  String savedTrackList(int count) {
+    return 'Lijst met $count nummers opgeslagen';
+  }
+
+  @override
+  String get noSongsToExport =>
+      'Nog geen nummers. Open eerst je muziekmap in de speler.';
 }

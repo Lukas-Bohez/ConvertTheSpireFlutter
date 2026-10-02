@@ -2951,5 +2951,36 @@
   "torrentStatusPendingMetadata": "Waiting for metadata",
   "torrentStatusFetchingMetadata": "Fetching metadata",
   "torrentStatusFileInUse": "File in use",
-  "torrentStatusMissingFiles": "Files missing"
+  "torrentStatusMissingFiles": "Files missing",
+  "trackLists": "Track lists",
+  "exportTrackLists": "Export track lists",
+  "exportTrackListsHint": "Saves your songs as a list of \"Artist - Title\" lines. Import track lists on another device, or a playlist transfer site, turns it back into music.",
+  "exportAllSongs": "All songs ({count})",
+  "@exportAllSongs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportFavouriteSongs": "Favourite songs ({count})",
+  "@exportFavouriteSongs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportAsText": "Text file (.txt)",
+  "exportAsCsv": "Spreadsheet (.csv)",
+  "exportAction": "Export",
+  "savedTrackList": "Saved a list of {count} songs",
+  "@savedTrackList": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noSongsToExport": "No songs yet. Open your music folder in the Player first."
 }

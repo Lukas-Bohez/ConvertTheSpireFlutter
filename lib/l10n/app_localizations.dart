@@ -8490,6 +8490,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Files missing'**
   String get torrentStatusMissingFiles;
+
+  /// No description provided for @trackLists.
+  ///
+  /// In en, this message translates to:
+  /// **'Track lists'**
+  String get trackLists;
+
+  /// No description provided for @exportTrackLists.
+  ///
+  /// In en, this message translates to:
+  /// **'Export track lists'**
+  String get exportTrackLists;
+
+  /// No description provided for @exportTrackListsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Saves your songs as a list of \"Artist - Title\" lines. Import track lists on another device, or a playlist transfer site, turns it back into music.'**
+  String get exportTrackListsHint;
+
+  /// No description provided for @exportAllSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'All songs ({count})'**
+  String exportAllSongs(int count);
+
+  /// No description provided for @exportFavouriteSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Favourite songs ({count})'**
+  String exportFavouriteSongs(int count);
+
+  /// No description provided for @exportAsText.
+  ///
+  /// In en, this message translates to:
+  /// **'Text file (.txt)'**
+  String get exportAsText;
+
+  /// No description provided for @exportAsCsv.
+  ///
+  /// In en, this message translates to:
+  /// **'Spreadsheet (.csv)'**
+  String get exportAsCsv;
+
+  /// No description provided for @exportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get exportAction;
+
+  /// No description provided for @savedTrackList.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved a list of {count} songs'**
+  String savedTrackList(int count);
+
+  /// No description provided for @noSongsToExport.
+  ///
+  /// In en, this message translates to:
+  /// **'No songs yet. Open your music folder in the Player first.'**
+  String get noSongsToExport;
 }
 
 class _AppLocalizationsDelegate

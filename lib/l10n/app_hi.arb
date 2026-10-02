@@ -1392,5 +1392,15 @@
   "torrentStatusPendingMetadata": "मेटाडेटा की प्रतीक्षा",
   "torrentStatusFetchingMetadata": "मेटाडेटा लाया जा रहा है",
   "torrentStatusFileInUse": "फ़ाइल उपयोग में है",
-  "torrentStatusMissingFiles": "फ़ाइलें गायब हैं"
+  "torrentStatusMissingFiles": "फ़ाइलें गायब हैं",
+  "trackLists": "ट्रैक सूचियां",
+  "exportTrackLists": "ट्रैक सूचियां निर्यात करें",
+  "exportTrackListsHint": "आपके गानों को \"कलाकार - शीर्षक\" पंक्तियों की सूची के रूप में सहेजता है। किसी दूसरे डिवाइस पर ट्रैक सूचियां आयात करें, या कोई प्लेलिस्ट ट्रांसफ़र साइट, इसे फिर से संगीत बना देती है।",
+  "exportAllSongs": "सभी गाने ({count})",
+  "exportFavouriteSongs": "पसंदीदा गाने ({count})",
+  "exportAsText": "टेक्स्ट फ़ाइल (.txt)",
+  "exportAsCsv": "स्प्रेडशीट (.csv)",
+  "exportAction": "निर्यात करें",
+  "savedTrackList": "{count} गानों की सूची सहेजी गई",
+  "noSongsToExport": "अभी कोई गाना नहीं है। पहले प्लेयर में अपना संगीत फ़ोल्डर खोलें।"
 }

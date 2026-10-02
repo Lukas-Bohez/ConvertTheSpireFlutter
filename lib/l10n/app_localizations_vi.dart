@@ -4796,4 +4796,42 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get torrentStatusMissingFiles => 'Thiếu tệp';
+
+  @override
+  String get trackLists => 'Danh sách bài hát';
+
+  @override
+  String get exportTrackLists => 'Xuất danh sách bài hát';
+
+  @override
+  String get exportTrackListsHint =>
+      'Lưu bài hát của bạn thành danh sách các dòng \"Nghệ sĩ - Tên bài\". Nhập danh sách bài hát trên thiết bị khác, hoặc một trang chuyển playlist, sẽ biến nó lại thành nhạc.';
+
+  @override
+  String exportAllSongs(int count) {
+    return 'Tất cả bài hát ($count)';
+  }
+
+  @override
+  String exportFavouriteSongs(int count) {
+    return 'Bài hát yêu thích ($count)';
+  }
+
+  @override
+  String get exportAsText => 'Tệp văn bản (.txt)';
+
+  @override
+  String get exportAsCsv => 'Bảng tính (.csv)';
+
+  @override
+  String get exportAction => 'Xuất';
+
+  @override
+  String savedTrackList(int count) {
+    return 'Đã lưu danh sách $count bài hát';
+  }
+
+  @override
+  String get noSongsToExport =>
+      'Chưa có bài hát nào. Hãy mở thư mục nhạc trong trình phát trước.';
 }

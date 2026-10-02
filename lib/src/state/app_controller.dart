@@ -1473,11 +1473,13 @@ class AppController extends ChangeNotifier {
   }
 
   /// Bulk import: parses queries and adds each best match to the queue.
-  Future<void> processBulkImport(List<String> queries, {String? format}) async {
+  /// Finds each of [queries] ("Artist - Title") on YouTube, queues the best
+  /// match and starts downloading. Returns how many were found.
+  Future<int> processBulkImport(List<String> queries, {String? format}) async {
     if (!isYouTubeConversionEnabledInCurrentBuild) {
       logs.add(
           'Bulk import disabled: YouTube conversion is off in this build.');
-      return;
+      return 0;
     }
 
     int found = 0;
@@ -1499,6 +1501,10 @@ class AppController extends ChangeNotifier {
     logs.add(
         'Bulk import: $found queued, $failed failed out of ${queries.length}');
     scheduleNotify();
+    // The tracks used to wait in the queue for "Download all", and the
+    // import looked like it did nothing.
+    if (found > 0) unawaited(downloadAll());
+    return found;
   }
 
   /// Record a completed download in statistics and show notification.

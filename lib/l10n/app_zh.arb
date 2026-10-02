@@ -1392,5 +1392,15 @@
   "torrentStatusPendingMetadata": "等待元数据",
   "torrentStatusFetchingMetadata": "正在获取元数据",
   "torrentStatusFileInUse": "文件被占用",
-  "torrentStatusMissingFiles": "文件缺失"
+  "torrentStatusMissingFiles": "文件缺失",
+  "trackLists": "曲目列表",
+  "exportTrackLists": "导出曲目列表",
+  "exportTrackListsHint": "将你的歌曲保存为“艺人 - 标题”格式的行列表。在另一台设备上用“导入曲目列表”，或通过歌单迁移网站，即可重新变回音乐。",
+  "exportAllSongs": "所有歌曲 ({count})",
+  "exportFavouriteSongs": "收藏的歌曲 ({count})",
+  "exportAsText": "文本文件 (.txt)",
+  "exportAsCsv": "电子表格 (.csv)",
+  "exportAction": "导出",
+  "savedTrackList": "已保存 {count} 首歌曲的列表",
+  "noSongsToExport": "还没有歌曲。请先在播放器中打开你的音乐文件夹。"
 }

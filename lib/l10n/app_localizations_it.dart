@@ -4832,4 +4832,42 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get torrentStatusMissingFiles => 'File mancanti';
+
+  @override
+  String get trackLists => 'Elenchi di brani';
+
+  @override
+  String get exportTrackLists => 'Esporta elenchi di brani';
+
+  @override
+  String get exportTrackListsHint =>
+      'Salva i tuoi brani come elenco di righe \"Artista - Titolo\". Importa elenchi di brani su un altro dispositivo, o un sito per trasferire playlist, li trasforma di nuovo in musica.';
+
+  @override
+  String exportAllSongs(int count) {
+    return 'Tutti i brani ($count)';
+  }
+
+  @override
+  String exportFavouriteSongs(int count) {
+    return 'Brani preferiti ($count)';
+  }
+
+  @override
+  String get exportAsText => 'File di testo (.txt)';
+
+  @override
+  String get exportAsCsv => 'Foglio di calcolo (.csv)';
+
+  @override
+  String get exportAction => 'Esporta';
+
+  @override
+  String savedTrackList(int count) {
+    return 'Elenco di $count brani salvato';
+  }
+
+  @override
+  String get noSongsToExport =>
+      'Ancora nessun brano. Apri prima la tua cartella musicale nel lettore.';
 }

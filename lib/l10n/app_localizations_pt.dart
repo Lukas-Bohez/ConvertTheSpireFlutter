@@ -4833,4 +4833,42 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get torrentStatusMissingFiles => 'Arquivos ausentes';
+
+  @override
+  String get trackLists => 'Listas de faixas';
+
+  @override
+  String get exportTrackLists => 'Exportar listas de faixas';
+
+  @override
+  String get exportTrackListsHint =>
+      'Salva suas músicas como uma lista de linhas \"Artista - Título\". Importar listas de faixas em outro dispositivo, ou um site de transferência de playlists, transforma tudo em música de novo.';
+
+  @override
+  String exportAllSongs(int count) {
+    return 'Todas as músicas ($count)';
+  }
+
+  @override
+  String exportFavouriteSongs(int count) {
+    return 'Músicas favoritas ($count)';
+  }
+
+  @override
+  String get exportAsText => 'Arquivo de texto (.txt)';
+
+  @override
+  String get exportAsCsv => 'Planilha (.csv)';
+
+  @override
+  String get exportAction => 'Exportar';
+
+  @override
+  String savedTrackList(int count) {
+    return 'Lista de $count músicas salva';
+  }
+
+  @override
+  String get noSongsToExport =>
+      'Ainda não há músicas. Abra primeiro sua pasta de música no reprodutor.';
 }

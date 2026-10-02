@@ -4810,4 +4810,42 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get torrentStatusMissingFiles => 'Файли відсутні';
+
+  @override
+  String get trackLists => 'Списки треків';
+
+  @override
+  String get exportTrackLists => 'Експорт списків треків';
+
+  @override
+  String get exportTrackListsHint =>
+      'Зберігає ваші пісні як список рядків «Виконавець - Назва». Імпорт списків треків на іншому пристрої або сайт для перенесення плейлистів знову перетворить його на музику.';
+
+  @override
+  String exportAllSongs(int count) {
+    return 'Усі пісні ($count)';
+  }
+
+  @override
+  String exportFavouriteSongs(int count) {
+    return 'Улюблені пісні ($count)';
+  }
+
+  @override
+  String get exportAsText => 'Текстовий файл (.txt)';
+
+  @override
+  String get exportAsCsv => 'Таблиця (.csv)';
+
+  @override
+  String get exportAction => 'Експортувати';
+
+  @override
+  String savedTrackList(int count) {
+    return 'Збережено список із $count пісень';
+  }
+
+  @override
+  String get noSongsToExport =>
+      'Пісень поки немає. Спочатку відкрийте папку з музикою в плеєрі.';
 }

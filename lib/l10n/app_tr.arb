@@ -1392,5 +1392,15 @@
   "torrentStatusPendingMetadata": "Meta veriler bekleniyor",
   "torrentStatusFetchingMetadata": "Meta veriler alınıyor",
   "torrentStatusFileInUse": "Dosya kullanımda",
-  "torrentStatusMissingFiles": "Dosyalar eksik"
+  "torrentStatusMissingFiles": "Dosyalar eksik",
+  "trackLists": "Parça listeleri",
+  "exportTrackLists": "Parça listelerini dışa aktar",
+  "exportTrackListsHint": "Şarkılarınızı \"Sanatçı - Başlık\" satırlarından oluşan bir liste olarak kaydeder. Başka bir cihazda Parça listelerini içe aktar ya da bir çalma listesi aktarma sitesi onu yeniden müziğe dönüştürür.",
+  "exportAllSongs": "Tüm şarkılar ({count})",
+  "exportFavouriteSongs": "Favori şarkılar ({count})",
+  "exportAsText": "Metin dosyası (.txt)",
+  "exportAsCsv": "Elektronik tablo (.csv)",
+  "exportAction": "Dışa aktar",
+  "savedTrackList": "{count} şarkılık liste kaydedildi",
+  "noSongsToExport": "Henüz şarkı yok. Önce oynatıcıda müzik klasörünüzü açın."
 }

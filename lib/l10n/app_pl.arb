@@ -1392,5 +1392,15 @@
   "torrentStatusPendingMetadata": "Oczekiwanie na metadane",
   "torrentStatusFetchingMetadata": "Pobieranie metadanych",
   "torrentStatusFileInUse": "Plik w użyciu",
-  "torrentStatusMissingFiles": "Brak plików"
+  "torrentStatusMissingFiles": "Brak plików",
+  "trackLists": "Listy utworów",
+  "exportTrackLists": "Eksportuj listy utworów",
+  "exportTrackListsHint": "Zapisuje Twoje utwory jako listę wierszy „Wykonawca - Tytuł”. Importuj listy utworów na innym urządzeniu lub strona do przenoszenia playlist zamieni ją z powrotem w muzykę.",
+  "exportAllSongs": "Wszystkie utwory ({count})",
+  "exportFavouriteSongs": "Ulubione utwory ({count})",
+  "exportAsText": "Plik tekstowy (.txt)",
+  "exportAsCsv": "Arkusz kalkulacyjny (.csv)",
+  "exportAction": "Eksportuj",
+  "savedTrackList": "Zapisano listę {count} utworów",
+  "noSongsToExport": "Brak utworów. Najpierw otwórz folder z muzyką w odtwarzaczu."
 }

@@ -17,16 +17,19 @@ class LoudnessService {
   final SharedPreferences _prefs;
   final FfmpegService _ffmpeg = FfmpegService();
 
-  static const _cacheKey = 'player_loudness_cache_v1';
+  // v2: the target changed, and the cache holds gains, not measurements.
+  static const _cacheKey = 'player_loudness_cache_v2';
 
-  /// Target mean volume (dBFS) for every track.
-  static const double targetMeanDb = -20.0;
+  /// Target mean volume (dBFS) for every track: about where streaming
+  /// services level music (-14 LUFS). It was -20, which turned most music
+  /// down by 8 dB or more.
+  static const double targetMeanDb = -16.0;
 
   /// Never boost so far that the loudest sample would exceed this (dBFS).
   static const double peakCeilingDb = -1.0;
 
   static const double maxBoostDb = 9.0;
-  static const double maxCutDb = -15.0;
+  static const double maxCutDb = -12.0;
 
   final Map<String, double> _cache = {};
   bool _loaded = false;

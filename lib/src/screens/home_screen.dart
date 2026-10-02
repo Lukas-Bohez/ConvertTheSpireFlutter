@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -33,6 +32,7 @@ import '../state/app_controller.dart';
 import '../theme/app_colors.dart';
 import '../utils/folder_label.dart';
 import '../utils/l10n.dart';
+import '../utils/share_file.dart';
 import '../utils/snack.dart';
 import '../vault/screens/torrents_screen.dart';
 import '../vault/services/torrent_engine_service.dart';
@@ -42,6 +42,7 @@ import '../widgets/browser_shell.dart';
 import '../widgets/onboarding_tooltip_service.dart';
 import '../widgets/quick_links_page.dart';
 import '../widgets/quick_links_service.dart';
+import '../widgets/track_lists_menu.dart';
 import '../widgets/tv_file_browser.dart';
 import '../widgets/update_banner.dart';
 import '../widgets/whats_new_dialog.dart';
@@ -53,6 +54,7 @@ import 'playlist_screen.dart';
 import 'search_screen.dart';
 import 'statistics_screen.dart';
 import 'support_screen.dart';
+import 'track_list_export.dart';
 import 'watched_playlists_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -429,12 +431,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       case 4:
         return _buildPlaylistsTab();
       case 5:
-        return BulkImportScreen(
-          key: const ValueKey('bulk-import'),
-          importService: widget.controller.bulkImportService,
-          onProcess: (queries, format) =>
-              widget.controller.processBulkImport(queries, format: format),
-        );
+        // Bulk Import's old page; it opens from Playlists now.
+        return _buildPlaylistsTab();
       case 6:
         return StatisticsScreen(
           key: const ValueKey('statistics'),
@@ -704,7 +702,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'browser': 'browser.tab',
               'downloads': 'torrents.tab',
               'settings': 'settings.tab',
-              'files': 'bulkimport.tab',
+              'files': 'playlists.tab',
             };
 
             final normalizedRoute = routeAliases[route.toLowerCase()] ?? route;
@@ -1431,7 +1429,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildMediaPlayerQueueTab() {
+  // Its own Builder: watching PlayerState from HomeScreen's context rebuilt
+  // the whole app, every page in it, on each change in the player.
+  Widget _buildMediaPlayerQueueTab() => Builder(builder: _mediaPlayerQueueTab);
+
+  Widget _mediaPlayerQueueTab(BuildContext context) {
     final playerState = context.watch<PlayerState>();
     final upNext = playerState.queueSnapshot;
     final previously = playerState.playHistorySnapshot.reversed
@@ -1950,11 +1952,21 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildPlaylistsTab() {
     return Column(
       children: [
-        TabBar(
-          controller: _playlistTabController,
-          tabs: [
-            Tab(text: context.l10n.playlistManager),
-            Tab(text: context.l10n.watchedPlaylists),
+        Row(
+          children: [
+            Expanded(
+              child: TabBar(
+                controller: _playlistTabController,
+                tabs: [
+                  Tab(text: context.l10n.playlistManager),
+                  Tab(text: context.l10n.watchedPlaylists),
+                ],
+              ),
+            ),
+            TrackListsMenu(
+              onImport: _openBulkImport,
+              onExport: () => unawaited(exportTrackList(context)),
+            ),
           ],
         ),
         Expanded(
@@ -1980,6 +1992,26 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       ],
     );
+  }
+
+  /// A list of song names ("Artist - Title", or a CSV or text file) to
+  /// downloads: each is looked up and the best match downloaded.
+  void _openBulkImport() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (routeContext) => Scaffold(
+        appBar: AppBar(title: Text(routeContext.l10n.bulkImport)),
+        body: BulkImportScreen(
+          importService: widget.controller.bulkImportService,
+          onProcess: (queries, format) async {
+            final found = await widget.controller
+                .processBulkImport(queries, format: format);
+            if (!routeContext.mounted) return;
+            Snack.show(routeContext, routeContext.l10n.addedItemsQueue(found),
+                level: found > 0 ? SnackLevel.success : SnackLevel.warning);
+          },
+        ),
+      ),
+    ));
   }
 
   // -- Settings tab -------------------------------------------------------
@@ -3754,22 +3786,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _shareFile(String filePath, String title) async {
     try {
-      var pathToShare = filePath;
-      if (!kIsWeb && Platform.isAndroid && filePath.startsWith('content://')) {
-        final temp = await _androidSaf.copyToTemp(uri: filePath);
-        if (temp == null || temp.isEmpty) {
-          if (mounted) {
-            Snack.show(context, context.l10n.couldNotPrepareFileSharing,
-                level: SnackLevel.error);
-          }
-          return;
-        }
-        pathToShare = temp;
+      final shared = await shareMediaFile(filePath, name: title);
+      if (!shared && mounted) {
+        Snack.show(context, context.l10n.couldNotPrepareFileSharing,
+            level: SnackLevel.error);
       }
-
-      await SharePlus.instance.share(
-        ShareParams(files: [XFile(pathToShare)], title: title),
-      );
     } catch (e) {
       if (mounted) {
         Snack.show(context, context.l10n.couldNotShareFile(e),
