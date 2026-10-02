@@ -873,11 +873,24 @@ class MainActivity : AudioServiceActivity() {
 
     private fun copyContentUriToTemp(uriString: String): String? {
         val srcUri = Uri.parse(uriString)
-        val tempFile = File.createTempFile("saf_", null, cacheDir)
+        // Keep the file's extension: tag readers, FFmpeg and the apps a
+        // shared copy goes to tell a song from a video by it.
+        val extension = displayNameOf(srcUri)
+            ?.substringAfterLast('.', "")
+            ?.takeIf { it.isNotEmpty() && it.length <= 5 && it.all(Char::isLetterOrDigit) }
+        val tempFile = File.createTempFile("saf_", extension?.let { ".$it" }, cacheDir)
         contentResolver.openInputStream(srcUri)?.use { input ->
             FileOutputStream(tempFile).use { output -> input.copyTo(output) }
         } ?: return null
         return tempFile.absolutePath
+    }
+
+    private fun displayNameOf(uri: Uri): String? = try {
+        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getString(0) else null
+        }
+    } catch (e: Exception) {
+        null
     }
 
     private fun getPathFromTreeUri(treeUriString: String): String? {
