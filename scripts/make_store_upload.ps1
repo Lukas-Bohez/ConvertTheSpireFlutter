@@ -24,7 +24,8 @@
     screenshots\                   1920x1080 screenshots (Store listings)
     app-tile-300.png               the 1:1 app tile icon (Store listings)
     listings\<language>.md         each language's texts, field by field
-    listings-filled.csv            with -ListingCsv: import this one
+    store-import\                  with -ListingCsv: the folder to import (filled CSV,
+                                   screenshots and app tile for every language)
     HOW-TO-UPLOAD.txt              what goes where
 
 .EXAMPLE
@@ -83,10 +84,10 @@ Move-Item (Join-Path $shotOut 'app-tile-300.png') (Join-Path $out 'app-tile-300.
 Write-Host "$($languages.Count) languages in $listingOut"
 Write-Host "Screenshots in $shotOut"
 
-# Our language key for a column of Partner Center's CSV, such as "nl-nl".
+# Our language key for one of Partner Center's language columns, such as
+# "nl-nl", or $null for a column we have no texts for.
 function LanguageFor([string]$header) {
   $h = $header.Trim().ToLowerInvariant()
-  if (@('field', 'id', 'type', 'type (type)', 'default') -contains $h) { return $null }
   if ($languages -contains $h) { return $h }
   $base = $h.Split('-')[0]
   if ($base -eq 'zh') { return 'zh-cn' }
@@ -119,31 +120,68 @@ function ValueFor([string]$field, $lang) {
 
 if ($ListingCsv) {
   Step 'Filling the listing CSV'
-  $rows = @(Import-Csv -Path $ListingCsv -Encoding UTF8)
+  # Import-Csv cannot read the export as it is: its "ID" column and
+  # Indonesian's "id" column are the same name to PowerShell. Read the rows
+  # with numbered columns instead and write the header line back unchanged.
+  $text = [IO.File]::ReadAllText((Resolve-Path $ListingCsv), [Text.Encoding]::UTF8)
+  $newline = $text.IndexOf("`n")
+  if ($newline -lt 0) { throw "$ListingCsv has no rows" }
+  $headerLine = $text.Substring(0, $newline).TrimEnd("`r")
+  $headers = @($headerLine.Split(',') | ForEach-Object { $_.Trim().Trim('"') })
+  $names = @(for ($i = 0; $i -lt $headers.Count; $i++) { "c$i" })
+  $bodyFile = Join-Path ([IO.Path]::GetTempPath()) 'cts-listing-rows.csv'
+  [IO.File]::WriteAllText($bodyFile, $text.Substring($newline + 1), (New-Object Text.UTF8Encoding($false)))
+  $rows = @(Import-Csv -Path $bodyFile -Header $names -Encoding UTF8)
+  Remove-Item $bodyFile
   if ($rows.Count -eq 0) { throw "$ListingCsv has no rows" }
-  $columns = @($rows[0].PSObject.Properties.Name)
-  $fieldColumn = $columns[0]
+
+  # Field, ID, Type and default come first; every column after them is a
+  # language (Indonesian's is "id").
   $used = @{}
-  foreach ($column in $columns) {
-    $code = LanguageFor $column
-    if ($code) { $used[$column] = $code }
+  for ($i = 4; $i -lt $headers.Count; $i++) {
+    $code = LanguageFor $headers[$i]
+    if ($code) { $used["c$i"] = $code }
   }
-  if ($used.Count -eq 0) { throw "No language columns in $ListingCsv ($($columns -join ', '))" }
+  if ($used.Count -eq 0) { throw "No language columns in $ListingCsv ($($headers -join ', '))" }
+
+  # New images can only come in with "Import folder": one folder with the
+  # CSV (the only one in it) and the images, which the CSV names as
+  # <folder>/<path>. They go in the default column, which every language
+  # without its own uses, so one set of screenshots serves all languages.
+  $importName = 'store-import'
+  $importDir = Join-Path $out $importName
+  if (Test-Path $importDir) { Remove-Item $importDir -Recurse -Force }
+  $importShots = New-Item -ItemType Directory -Force (Join-Path $importDir 'screenshots')
+  $shots = @(Get-ChildItem (Join-Path $out 'screenshots') -Filter *.png | Sort-Object Name)
+  foreach ($shot in $shots) { Copy-Item $shot.FullName $importShots.FullName }
+  Copy-Item (Join-Path $out 'app-tile-300.png') $importDir
+  $images = @{}
+  for ($n = 0; $n -lt $shots.Count; $n++) {
+    $images["DesktopScreenshot$($n + 1)"] = "$importName/screenshots/$($shots[$n].Name)"
+  }
+  $images['StoreLogo300x300'] = "$importName/app-tile-300.png"
+
   $filled = 0
   foreach ($row in $rows) {
+    $field = $row.c0
+    if ($images.ContainsKey($field)) { $row.c3 = $images[$field]; $filled++; continue }
     foreach ($column in $used.Keys) {
-      $value = ValueFor ($row.$fieldColumn) ($listings.languages.($used[$column]))
+      $value = ValueFor $field ($listings.languages.($used[$column]))
       if ($null -ne $value) { $row.$column = $value; $filled++ }
     }
   }
-  $csvOut = Join-Path $out 'listings-filled.csv'
-  $rows | Export-Csv -Path $csvOut -NoTypeInformation -Encoding UTF8
+
+  # UTF-8 with a byte order mark and CRLF, as Partner Center exports it.
+  $csvLines = @($headerLine) + @($rows | ConvertTo-Csv -NoTypeInformation | Select-Object -Skip 1)
+  $csvOut = Join-Path $importDir 'listings-filled.csv'
+  [IO.File]::WriteAllText($csvOut, ($csvLines -join "`r`n") + "`r`n", (New-Object Text.UTF8Encoding($true)))
   Write-Host "$filled fields filled for $(@($used.Values | Sort-Object -Unique) -join ', ')"
+  Write-Host "$($shots.Count) screenshots and the app tile, for every language"
   $missing = @($languages | Where-Object { @($used.Values) -notcontains $_ })
   if ($missing.Count -gt 0) {
     Write-Host "Not in the export yet (they appear once the package is uploaded): $($missing -join ', ')" -ForegroundColor Yellow
   }
-  Write-Host "Import this file: $csvOut" -ForegroundColor Green
+  Write-Host "Partner Center > Store listings > Import listings > Import folder, and pick: $importDir" -ForegroundColor Green
 }
 
 # ---------------------------------------------------------------------------
@@ -313,8 +351,9 @@ Store listings (18 languages)
   Fastest: Store listings > Import/export Store listings > Export listings,
   then run
     .\scripts\make_store_upload.cmd -ListingsOnly -ListingCsv <the exported csv>
-  and Import listings-filled.csv. The other languages appear in the export
-  once the package is uploaded (it declares all 18).
+  and Import listings > Import folder > store-import (the CSV, the screenshots
+  and the app tile, for every language). The other languages appear in the
+  export once the package is uploaded (it declares all 18).
   By hand: listings\<language>.md has every field, ready to copy.
 
   Screenshots: screenshots\*.png (1920x1080). App tile icon: app-tile-300.png.

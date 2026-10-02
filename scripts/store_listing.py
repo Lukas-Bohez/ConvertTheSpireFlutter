@@ -55,15 +55,15 @@ def pages(data):
         print(f'wrote {code}.md')
 
 
-# The export's own columns before the languages: "ID" is not Indonesian.
-_META_COLUMNS = {'field', 'id', 'type', 'type (type)', 'default'}
+# The export's first columns are Field, ID, Type and default; every column
+# after them is a language. Decided by position: Indonesian's column is "id",
+# the ID column's name but for case.
+_META_COUNT = 4
 
 
 def _language_for(header, languages):
     """Our language key for a CSV column header such as "nl-nl"."""
     h = header.strip().lower()
-    if h in _META_COLUMNS:
-        return None
     if h in languages:
         return h
     base = h.split('-')[0]
@@ -106,8 +106,9 @@ def fill(data, source, target):
         sys.exit(f'{source} is empty')
     header = rows[0]
     languages = data['languages']
-    columns = {i: _language_for(h, languages) for i, h in enumerate(header)}
-    used = {i: code for i, code in columns.items() if code and i > 0}
+    columns = {i: _language_for(h, languages)
+               for i, h in enumerate(header) if i >= _META_COUNT}
+    used = {i: code for i, code in columns.items() if code}
     if not used:
         sys.exit('No language columns found in the header: ' + ', '.join(header))
     filled = 0

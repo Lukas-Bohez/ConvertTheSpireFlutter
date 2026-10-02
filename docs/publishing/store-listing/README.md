@@ -16,12 +16,12 @@ from it by `python scripts/store_listing.py pages`. To change a text, edit
 
     scripts\make_store_upload.cmd -ListingsOnly -ListingCsv <the exported .csv>
 
-(or `python scripts/store_listing.py fill <the exported .csv>`) writes
-`microsoft-upload\listings-filled.csv` (`<name>-filled.csv` from Python) with the short description, description, what's
-new, features, search terms, copyright and licence terms of every language in
-the export. Back in Partner Center, **Import listings** and pick that file.
-Screenshots are not in the CSV: add them per language, or once for English
-and tick "use for all languages" where Partner Center offers it.
+writes the folder `microsoft-upload\store-import\`: the export filled with
+the short description, description, what's new, features, search terms,
+copyright and licence terms of every language, plus the screenshots and the
+app tile, which go in the `default` column so every language uses them. Back
+in Partner Center, **Import listings** → **Import folder** and pick that
+folder. (`python scripts/store_listing.py fill` fills only the texts.)
 
 **By hand:** open a language below and copy each box into the field of the
 same name.
