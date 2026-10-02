@@ -250,7 +250,9 @@ Store at every start.
 `music downloader`, `torrent`, `media player`, `video converter`, `dlna`
 (no other company's brand names here: the Store can reject those).
 
-**What's new in this version:** "First release in the Microsoft Store."
+**What's new in this version:** written for each release, in all 18
+languages, in [`store-listing/`](store-listing/README.md) (the `releaseNotes` of
+`listings.json`).
 
 **Copyright and trademark info:** © 2026 Oroka Conner
 

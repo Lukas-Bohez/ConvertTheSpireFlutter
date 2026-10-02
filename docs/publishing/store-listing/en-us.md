@@ -45,7 +45,7 @@ Available in 18 languages. Please only download content you have the right to do
 ## What's new in this version
 
 ```text
-First release in the Microsoft Store.
+Torrents no longer freeze the app when a file finishes or starts seeding. Songs keep their volume when you play them again. Full screen (F11) stays on when you open another page. Every Convert format works, including text from PDFs and WebP images. New: export your songs as a track list (.txt or .csv) from Playlists, and import it on another device.
 ```
 
 ## Product features

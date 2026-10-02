@@ -45,7 +45,7 @@ BT 下载
 ## What's new in this version
 
 ```text
-首次在 Microsoft Store 发布。
+文件下载完成或开始做种时，种子任务不再让应用卡死。歌曲再次播放时音量保持不变。打开其他页面时全屏模式 (F11) 不再退出。转换中的所有格式均可使用，包括从 PDF 提取文本和 WebP 图片。新功能：在播放列表中将歌曲导出为曲目列表（.txt 或 .csv），并在其他设备上导入。
 ```
 
 ## Product features

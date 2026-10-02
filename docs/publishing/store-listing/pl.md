@@ -45,7 +45,7 @@ Dostępna w 18 językach. Pobieraj tylko treści, do których pobierania masz pr
 ## What's new in this version
 
 ```text
-Pierwsza wersja w Microsoft Store.
+Torrenty nie zawieszają już aplikacji, gdy plik się kończy lub zaczyna się seedowanie. Utwory zachowują głośność przy ponownym odtworzeniu. Pełny ekran (F11) pozostaje włączony po otwarciu innej strony. Działają wszystkie formaty w Konwertuj, w tym tekst z plików PDF i obrazy WebP. Nowość: eksportuj swoje utwory jako listę utworów (.txt lub .csv) z Playlist i zaimportuj ją na innym urządzeniu.
 ```
 
 ## Product features

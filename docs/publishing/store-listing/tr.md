@@ -45,7 +45,7 @@ TORRENT
 ## What's new in this version
 
 ```text
-Microsoft Store'daki ilk sürüm.
+Torrentler artık bir dosya bittiğinde veya paylaşım başladığında uygulamayı dondurmuyor. Şarkılar yeniden çalındığında ses düzeylerini koruyor. Başka bir sayfa açtığınızda tam ekran (F11) açık kalıyor. Dönüştür'deki tüm biçimler çalışıyor; PDF'lerden metin ve WebP görüntüler de dahil. Yeni: Şarkılarınızı Çalma listelerinden parça listesi (.txt veya .csv) olarak dışa aktarın ve başka bir cihazda içe aktarın.
 ```
 
 ## Product features

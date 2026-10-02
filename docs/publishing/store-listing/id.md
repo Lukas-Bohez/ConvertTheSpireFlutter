@@ -45,7 +45,7 @@ Tersedia dalam 18 bahasa. Unduh hanya konten yang berhak Anda unduh.
 ## What's new in this version
 
 ```text
-Rilis pertama di Microsoft Store.
+Torrent tidak lagi membuat aplikasi macet saat file selesai atau mulai di-seed. Lagu tetap pada volumenya saat diputar lagi. Layar penuh (F11) tetap aktif saat Anda membuka halaman lain. Semua format di Konversi berfungsi, termasuk teks dari PDF dan gambar WebP. Baru: ekspor lagu Anda sebagai daftar lagu (.txt atau .csv) dari Playlist, lalu impor di perangkat lain.
 ```
 
 ## Product features

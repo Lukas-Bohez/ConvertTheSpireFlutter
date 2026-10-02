@@ -45,7 +45,7 @@ Disponibile in 18 lingue. Scarica solo contenuti che hai il diritto di scaricare
 ## What's new in this version
 
 ```text
-Prima versione su Microsoft Store.
+I torrent non bloccano più l'app quando un file finisce o inizia il seeding. I brani mantengono il loro volume quando li riascolti. Lo schermo intero (F11) resta attivo quando apri un'altra pagina. Tutti i formati di Converti funzionano, compreso il testo dai PDF e le immagini WebP. Novità: esporta i tuoi brani come elenco (.txt o .csv) da Playlist e importalo su un altro dispositivo.
 ```
 
 ## Product features

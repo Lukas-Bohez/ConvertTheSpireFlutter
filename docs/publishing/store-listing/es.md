@@ -45,7 +45,7 @@ Disponible en 18 idiomas. Descarga solo contenido que tengas derecho a descargar
 ## What's new in this version
 
 ```text
-Primera versión en Microsoft Store.
+Los torrents ya no congelan la aplicación cuando un archivo termina o empieza a compartirse. Las canciones mantienen su volumen al volver a reproducirlas. La pantalla completa (F11) se mantiene al abrir otra página. Todos los formatos de Convertir funcionan, incluido el texto de PDF y las imágenes WebP. Novedad: exporta tus canciones como lista (.txt o .csv) desde Listas de reproducción e impórtala en otro dispositivo.
 ```
 
 ## Product features
