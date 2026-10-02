@@ -32,6 +32,11 @@ class ConvertService {
           ffmpegPath: ffmpegPath);
     }
 
+    // The image package cannot write WebP; FFmpeg can (libwebp).
+    if (targetLower == 'webp') {
+      return _convertToWebp(input, baseName, ffmpegPath: ffmpegPath);
+    }
+
     // For other conversions we need the bytes; read them on demand.
     final inputBytes = Uint8List.fromList(await input.readAsBytes());
 
@@ -73,6 +78,13 @@ class ConvertService {
   }
 
   // ===== Format detection helpers =====
+
+  static const _audioExtensions = <String>{
+    'mp3', 'm4a', 'wav', 'flac', 'ogg', 'oga', 'opus', 'aac', 'wma', 'aiff',
+  };
+  static const _videoTargets = <String>{
+    'mp4', 'webm', 'mkv', 'avi', 'mov', 'wmv',
+  };
 
   bool _isImageTarget(String target) {
     return <String>{'jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tiff', 'tif'}
@@ -168,40 +180,60 @@ class ConvertService {
   /// Handles the most common PDF text operators: Tj, TJ, ', "
   String? _extractTextFromPdf(List<int> bytes) {
     try {
-      final raw = latin1.decode(bytes);
+      final raw = _inflatePdfStreams(bytes);
       final buffer = StringBuffer();
 
-      // Strategy 1: Extract text between BT...ET blocks using text operators
+      // Strategy 1: the text operators between BT and ET, in order, with
+      // the text position followed: text at the same height is one line
+      // (PDF writers often place every word on its own), a new height
+      // starts a new line.
       final btEtPattern = RegExp(r'BT\s(.*?)\sET', dotAll: true);
-      for (final match in btEtPattern.allMatches(raw)) {
-        final block = match.group(1) ?? '';
-
-        // Tj operator: (text) Tj
-        final tjPattern = RegExp(r'\(([^)]*)\)\s*Tj');
-        for (final tj in tjPattern.allMatches(block)) {
-          buffer.write(_decodePdfString(tj.group(1) ?? ''));
-        }
-
-        // TJ operator: [(text) num (text) ...] TJ
-        final tjArrayPattern = RegExp(r'\[(.*?)\]\s*TJ', dotAll: true);
-        for (final tja in tjArrayPattern.allMatches(block)) {
-          final content = tja.group(1) ?? '';
-          final parts = RegExp(r'\(([^)]*)\)');
-          for (final part in parts.allMatches(content)) {
-            buffer.write(_decodePdfString(part.group(1) ?? ''));
+      final opPattern = RegExp(
+          r'(-?[\d.]+)\s+(-?[\d.]+)\s+T[dD]'
+          r'|(?:-?[\d.]+\s+){4}(-?[\d.]+)\s+(-?[\d.]+)\s+Tm'
+          r'|\(((?:[^()\\]|\\.)*)\)\s*(?:Tj|\x27|")'
+          r'|<([0-9A-Fa-f\s]+)>\s*Tj'
+          r'|\[(.*?)\]\s*TJ'
+          r'|T\*',
+          dotAll: true);
+      double? lastY;
+      var y = 0.0;
+      void emit(String text) {
+        if (text.isEmpty) return;
+        if (lastY != null && buffer.isNotEmpty) {
+          if ((y - lastY!).abs() > 1) {
+            buffer.write('\n');
+          } else if (!buffer.toString().endsWith(' ')) {
+            buffer.write(' ');
           }
         }
+        buffer.write(text);
+        lastY = y;
+      }
 
-        // ' operator: (text) '
-        final quotePattern = RegExp(r"\(([^)]*)\)\s*'");
-        for (final q in quotePattern.allMatches(block)) {
-          buffer.write(_decodePdfString(q.group(1) ?? ''));
-          buffer.write('\n');
-        }
-
-        // Td/TD (positioning) can indicate line breaks
-        if (block.contains(RegExp(r'T[dD]\s'))) {
-          buffer.write('\n');
+      for (final match in btEtPattern.allMatches(raw)) {
+        final block = match.group(1) ?? '';
+        y = 0; // BT starts from the origin again.
+        for (final op in opPattern.allMatches(block)) {
+          if (op.group(2) != null) {
+            y += double.tryParse(op.group(2)!) ?? 0; // Td: relative move
+          } else if (op.group(4) != null) {
+            y = double.tryParse(op.group(4)!) ?? y; // Tm: absolute
+          } else if (op.group(5) != null) {
+            emit(_decodePdfString(op.group(5)!));
+          } else if (op.group(6) != null) {
+            emit(_decodePdfHexString(op.group(6)!));
+          } else if (op.group(7) != null) {
+            final parts = RegExp(r'\(((?:[^()\\]|\\.)*)\)|<([0-9A-Fa-f\s]+)>')
+                .allMatches(op.group(7)!)
+                .map((m) => m.group(1) != null
+                    ? _decodePdfString(m.group(1)!)
+                    : _decodePdfHexString(m.group(2)!))
+                .join();
+            emit(parts);
+          } else {
+            y -= 1000; // T*: next line
+          }
         }
       }
 
@@ -236,6 +268,48 @@ class ConvertService {
     } catch (e) {
       return null;
     }
+  }
+
+  /// The PDF as text with its compressed (FlateDecode) streams unpacked
+  /// after it. Most PDFs keep their text compressed, the ones this app makes
+  /// among them, and the text operators are not readable until unpacked.
+  String _inflatePdfStreams(List<int> bytes) {
+    final raw = latin1.decode(bytes);
+    final out = StringBuffer(raw);
+    for (final start in RegExp(r'(?<![A-Za-z])stream\r?\n').allMatches(raw)) {
+      final objStart = raw.lastIndexOf(' obj', start.start);
+      if (objStart < 0 ||
+          !raw.substring(objStart, start.start).contains('/FlateDecode')) {
+        continue;
+      }
+      final end = raw.indexOf('endstream', start.end);
+      if (end < 0) continue;
+      var dataEnd = end;
+      while (dataEnd > start.end &&
+          (bytes[dataEnd - 1] == 0x0A || bytes[dataEnd - 1] == 0x0D)) {
+        dataEnd--;
+      }
+      try {
+        final inflated = const ZLibDecoder().decodeBytes(bytes.sublist(start.end, dataEnd));
+        out
+          ..write('\n')
+          ..write(latin1.decode(inflated, allowInvalid: true));
+      } catch (_) {
+        // Not zlib after all, or damaged: its text stays unread.
+      }
+    }
+    return out.toString();
+  }
+
+  /// A hex string's text, e.g. "48656C6C6F" -> "Hello" (one byte a character).
+  String _decodePdfHexString(String hex) {
+    final digits = hex.replaceAll(RegExp(r'\s'), '');
+    final buffer = StringBuffer();
+    for (var i = 0; i + 1 < digits.length; i += 2) {
+      final code = int.tryParse(digits.substring(i, i + 2), radix: 16);
+      if (code != null) buffer.writeCharCode(code);
+    }
+    return buffer.toString();
   }
 
   /// Decode PDF escape sequences in string literals
@@ -367,27 +441,6 @@ class ConvertService {
       case 'png':
         out = img.encodePng(image);
         break;
-      case 'webp':
-        // The image package doesn't support WebP encoding in all versions.
-        // Try encoding; if unavailable, fall back to PNG.
-        try {
-          // image package 4.1+ can encode WebP but 4.0.x cannot
-          out = img.encodePng(image); // fallback
-          return ConvertResult(
-            name: '$baseName.png',
-            mime: 'image/png',
-            bytes: out,
-            message: 'WebP encoding not available; saved as PNG instead',
-          );
-        } catch (_) {
-          out = img.encodePng(image);
-          return ConvertResult(
-            name: '$baseName.png',
-            mime: 'image/png',
-            bytes: out,
-            message: 'WebP encoding not available; saved as PNG instead',
-          );
-        }
       case 'bmp':
         out = img.encodeBmp(image);
         break;
@@ -410,6 +463,37 @@ class ConvertService {
     );
   }
 
+  // ===== WebP (via FFmpeg) =====
+
+  /// Any picture FFmpeg reads (PNG, JPG, GIF, BMP, TIFF, WebP) to WebP. It
+  /// used to save a PNG named as if it were the WebP asked for.
+  Future<ConvertResult> _convertToWebp(File input, String baseName,
+      {required String? ffmpegPath}) async {
+    if (kIsWeb) {
+      return _report(baseName, 'webp', 'WebP is not supported on web.');
+    }
+    final tempDir = await PlatformDirs.getCacheDir();
+    final outputPath =
+        '${tempDir.path}${Platform.pathSeparator}$baseName.webp';
+    try {
+      await ffmpeg.run([
+        '-y', '-i', input.path, '-c:v', 'libwebp', '-quality', '85',
+        '-loop', '0', outputPath,
+      ], ffmpegPath: ffmpegPath);
+      final bytes = await File(outputPath).readAsBytes();
+      await _safeDelete(outputPath);
+      return ConvertResult(
+        name: '$baseName.webp',
+        mime: 'image/webp',
+        bytes: bytes,
+        message: 'Image converted to WEBP',
+      );
+    } catch (e) {
+      await _safeDelete(outputPath);
+      return _report(baseName, 'webp', 'FFmpeg could not make a WebP: $e');
+    }
+  }
+
   // ===== Media (audio/video via FFmpeg) =====
 
   Future<ConvertResult> _convertMedia(
@@ -428,6 +512,15 @@ class ConvertService {
       '-i',
       input.path,
     ];
+
+    // An audio file's only picture is its cover art, which MP4 and MOV
+    // cannot carry as a video stream (FFmpeg failed outright): from a song
+    // to a video format, the sound goes alone.
+    final fromAudio = _audioExtensions
+        .contains(_getExtension(input.path).toLowerCase());
+    if (fromAudio && _videoTargets.contains(target)) {
+      args.addAll(['-map', '0:a']);
+    }
 
     // Audio-only targets: strip video track
     if (<String>{'mp3', 'm4a', 'wav', 'flac', 'ogg', 'aac', 'wma'}
