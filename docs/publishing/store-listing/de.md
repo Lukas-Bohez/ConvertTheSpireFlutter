@@ -45,7 +45,7 @@ In 18 Sprachen verfügbar. Bitte lade nur Inhalte herunter, zu deren Download du
 ## What's new in this version
 
 ```text
-Erste Version im Microsoft Store.
+Torrents frieren die App nicht mehr ein, wenn eine Datei fertig ist oder das Seeden beginnt. Songs behalten ihre Lautstärke, wenn du sie erneut abspielst. Der Vollbildmodus (F11) bleibt an, wenn du eine andere Seite öffnest. Alle Formate unter Umwandeln funktionieren, auch Text aus PDFs und WebP-Bilder. Neu: Exportiere deine Musik unter Playlists als Titelliste (.txt oder .csv) und importiere sie auf einem anderen Gerät.
 ```
 
 ## Product features

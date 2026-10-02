@@ -45,7 +45,7 @@ Disponible en 18 langues. Ne téléchargez que du contenu que vous avez le droit
 ## What's new in this version
 
 ```text
-Première version sur le Microsoft Store.
+Les torrents ne figent plus l'application quand un fichier se termine ou que le partage commence. Les morceaux gardent leur volume quand vous les rejouez. Le plein écran (F11) reste actif quand vous ouvrez une autre page. Tous les formats de Convertir fonctionnent, y compris le texte des PDF et les images WebP. Nouveau : exportez vos musiques en liste de titres (.txt ou .csv) depuis Playlists et importez-la sur un autre appareil.
 ```
 
 ## Product features

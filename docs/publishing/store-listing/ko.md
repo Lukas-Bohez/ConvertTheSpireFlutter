@@ -45,7 +45,7 @@ Convert The Spire Reborn은 Windows용 올인원 미디어 앱입니다. 다운�
 ## What's new in this version
 
 ```text
-Microsoft Store 첫 출시입니다.
+파일이 완료되거나 시딩이 시작될 때 토렌트가 더 이상 앱을 멈추게 하지 않습니다. 노래를 다시 재생해도 음량이 그대로 유지됩니다. 다른 페이지를 열어도 전체 화면(F11)이 유지됩니다. PDF의 텍스트와 WebP 이미지를 포함해 변환의 모든 형식이 작동합니다. 새 기능: 재생목록에서 노래를 곡 목록(.txt 또는 .csv)으로 내보내고 다른 기기에서 가져올 수 있습니다.
 ```
 
 ## Product features

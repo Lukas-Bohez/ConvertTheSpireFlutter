@@ -45,7 +45,7 @@ Có 18 ngôn ngữ. Vui lòng chỉ tải nội dung mà bạn có quyền tải
 ## What's new in this version
 
 ```text
-Bản phát hành đầu tiên trên Microsoft Store.
+Torrent không còn làm treo ứng dụng khi một tệp tải xong hoặc bắt đầu chia sẻ. Bài hát giữ nguyên âm lượng khi bạn phát lại. Chế độ toàn màn hình (F11) vẫn bật khi bạn mở trang khác. Mọi định dạng trong Chuyển đổi đều hoạt động, kể cả văn bản từ PDF và ảnh WebP. Mới: xuất bài hát thành danh sách bài hát (.txt hoặc .csv) từ Danh sách phát và nhập trên thiết bị khác.
 ```
 
 ## Product features

@@ -1,15 +1,19 @@
-# Release Notes - v15.3.0
+# Release Notes - v15.3.1
 
-## Seeding that works, a faster start, and a Microsoft Store version
+## No freezes during torrents, steady volume, and track list export
 
 ### New
 
-* **A Microsoft Store version is on its way**, with FFmpeg and yt-dlp built in and updates through the Store.
-* Home shows which version you have.
+* **Export your songs as a track list.** Playlists has a **Track lists** menu: save all your songs, or your favourites, as "Artist - Title" lines (.txt) or a spreadsheet (.csv), and import that list on another device to get the music back.
+
+### Changed
+
+* Bulk Import moved from Home into that menu, and an import now starts its downloads straight away.
 
 ### Fixed
 
-* **Seeding works and keeps going**, about 20 times faster, and each torrent remembers how much it has seeded. Torrents no longer freeze the app or flood the log.
-* **The app starts at once** and uses no CPU while it sits idle.
-* Songs opened from outside the app play like the ones in your library.
-* Smaller fixes: decimal commas are read right, the welcome pages fit a laptop screen, and Enter no longer clicks something you cannot see.
+* **Torrents no longer freeze the app** when a file finishes or starts seeding.
+* **Songs keep their volume** when you play them again on Windows, Mac and Linux.
+* Full screen (F11) stays on when you open another page.
+* **Every Convert format works**: text from PDFs, real WebP images, and songs with cover art to video.
+* Share on Android sends the song itself, not a link.

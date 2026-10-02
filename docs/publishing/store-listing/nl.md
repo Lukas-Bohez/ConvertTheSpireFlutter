@@ -45,7 +45,7 @@ Beschikbaar in 18 talen. Download alleen content die je mag downloaden.
 ## What's new in this version
 
 ```text
-Eerste versie in de Microsoft Store.
+Torrents laten de app niet meer vastlopen wanneer een bestand klaar is of begint te seeden. Nummers behouden hun volume als je ze opnieuw afspeelt. Volledig scherm (F11) blijft aan als je een andere pagina opent. Alle formaten bij Converteren werken, ook tekst uit pdf's en WebP-afbeeldingen. Nieuw: exporteer je nummers als nummerlijst (.txt of .csv) via Playlists en importeer die op een ander toestel.
 ```
 
 ## Product features

@@ -45,7 +45,7 @@ Disponível em 18 idiomas. Baixe apenas conteúdo que você tem o direito de bai
 ## What's new in this version
 
 ```text
-Primeira versão na Microsoft Store.
+Os torrents não travam mais o app quando um arquivo termina ou começa a ser semeado. As músicas mantêm o volume quando você as toca de novo. A tela cheia (F11) continua ativa ao abrir outra página. Todos os formatos de Converter funcionam, incluindo texto de PDFs e imagens WebP. Novidade: exporte suas músicas como lista de faixas (.txt ou .csv) em Playlists e importe em outro dispositivo.
 ```
 
 ## Product features
