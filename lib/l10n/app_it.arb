@@ -1392,5 +1392,15 @@
   "torrentStatusPendingMetadata": "In attesa dei metadati",
   "torrentStatusFetchingMetadata": "Recupero metadati",
   "torrentStatusFileInUse": "File in uso",
-  "torrentStatusMissingFiles": "File mancanti"
+  "torrentStatusMissingFiles": "File mancanti",
+  "trackLists": "Elenchi di brani",
+  "exportTrackLists": "Esporta elenchi di brani",
+  "exportTrackListsHint": "Salva i tuoi brani come elenco di righe \"Artista - Titolo\". Importa elenchi di brani su un altro dispositivo, o un sito per trasferire playlist, li trasforma di nuovo in musica.",
+  "exportAllSongs": "Tutti i brani ({count})",
+  "exportFavouriteSongs": "Brani preferiti ({count})",
+  "exportAsText": "File di testo (.txt)",
+  "exportAsCsv": "Foglio di calcolo (.csv)",
+  "exportAction": "Esporta",
+  "savedTrackList": "Elenco di {count} brani salvato",
+  "noSongsToExport": "Ancora nessun brano. Apri prima la tua cartella musicale nel lettore."
 }

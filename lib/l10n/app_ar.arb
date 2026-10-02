@@ -1392,5 +1392,15 @@
   "torrentStatusPendingMetadata": "بانتظار البيانات الوصفية",
   "torrentStatusFetchingMetadata": "جارٍ جلب البيانات الوصفية",
   "torrentStatusFileInUse": "الملف قيد الاستخدام",
-  "torrentStatusMissingFiles": "ملفات مفقودة"
+  "torrentStatusMissingFiles": "ملفات مفقودة",
+  "trackLists": "قوائم المقاطع",
+  "exportTrackLists": "تصدير قوائم المقاطع",
+  "exportTrackListsHint": "يحفظ أغانيك كقائمة من أسطر \"الفنان - العنوان\". استيراد قوائم المقاطع على جهاز آخر، أو موقع لنقل قوائم التشغيل، يعيدها موسيقى.",
+  "exportAllSongs": "كل الأغاني ({count})",
+  "exportFavouriteSongs": "الأغاني المفضلة ({count})",
+  "exportAsText": "ملف نصي (.txt)",
+  "exportAsCsv": "جدول بيانات (.csv)",
+  "exportAction": "تصدير",
+  "savedTrackList": "تم حفظ قائمة من {count} أغنية",
+  "noSongsToExport": "لا توجد أغانٍ بعد. افتح مجلد الموسيقى في المشغل أولًا."
 }

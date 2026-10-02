@@ -62,11 +62,17 @@ String getDefaultDownloadFolderName() {
 /// The page index the old Search page had; nothing shows it any more.
 const int kRemovedSearchTab = 0;
 
+/// The page index Bulk Import had. It is now "Import track lists" on the
+/// Playlists page: its own tile took room on Home for a rarely used tool.
+const int kBulkImportTab = 5;
+
 bool isTabVisibleInCurrentBuild(int tabIndex) {
   // Search (0) is gone from every build: Quick Download on Home and the
   // Playlist Manager do what it did. Multi-Search stays. The page numbers
   // are kept, so every other page keeps its index.
-  if (tabIndex == kRemovedSearchTab) return false;
+  if (tabIndex == kRemovedSearchTab || tabIndex == kBulkImportTab) {
+    return false;
+  }
   // In Play builds hide Multi-Search, Playlists, Bulk Import, Stats, and Logs.
   if (kPlayStoreBuild &&
       (tabIndex == 1 ||

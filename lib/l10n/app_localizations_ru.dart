@@ -4802,4 +4802,42 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get torrentStatusMissingFiles => 'Файлы отсутствуют';
+
+  @override
+  String get trackLists => 'Списки треков';
+
+  @override
+  String get exportTrackLists => 'Экспорт списков треков';
+
+  @override
+  String get exportTrackListsHint =>
+      'Сохраняет ваши песни как список строк «Исполнитель - Название». Импорт списков треков на другом устройстве или сайт для переноса плейлистов снова превратит его в музыку.';
+
+  @override
+  String exportAllSongs(int count) {
+    return 'Все песни ($count)';
+  }
+
+  @override
+  String exportFavouriteSongs(int count) {
+    return 'Избранные песни ($count)';
+  }
+
+  @override
+  String get exportAsText => 'Текстовый файл (.txt)';
+
+  @override
+  String get exportAsCsv => 'Таблица (.csv)';
+
+  @override
+  String get exportAction => 'Экспортировать';
+
+  @override
+  String savedTrackList(int count) {
+    return 'Сохранён список из $count песен';
+  }
+
+  @override
+  String get noSongsToExport =>
+      'Песен пока нет. Сначала откройте папку с музыкой в плеере.';
 }

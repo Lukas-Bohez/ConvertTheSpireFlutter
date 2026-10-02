@@ -5,7 +5,8 @@ import 'package:convert_the_spire_reborn/src/config/build_flags.dart';
 
 /// A tab is hidden only where Play policy requires it: the YouTube download
 /// features in the Play build. File conversion is shown everywhere. The old
-/// Search page (0) is gone from every build.
+/// Search page (0) is gone from every build, and Bulk Import (5) is now a
+/// button on the Playlists page.
 void main() {
   const convert = 9;
   // Multi-Search, Playlists, Bulk Import, Statistics, Logs.
@@ -29,10 +30,12 @@ void main() {
     });
   }
 
-  test('the GitHub build shows every tab but the old Search', () {
+  test('the GitHub build shows every tab but the old Search and Bulk Import',
+      () {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     for (var i = 0; i <= 14; i++) {
-      expect(isTabVisibleInCurrentBuild(i), i != kRemovedSearchTab,
+      expect(isTabVisibleInCurrentBuild(i),
+          i != kRemovedSearchTab && i != kBulkImportTab,
           reason: 'tab $i');
     }
   });
@@ -40,8 +43,7 @@ void main() {
   test('the Play build hides only the tabs it lists', () {
     setPlayStoreBuildFlag(true);
     for (var i = 0; i <= 14; i++) {
-      expect(
-          isTabVisibleInCurrentBuild(i),
+      expect(isTabVisibleInCurrentBuild(i),
           i != kRemovedSearchTab && !playOnlyHidden.contains(i),
           reason: 'tab $i');
     }

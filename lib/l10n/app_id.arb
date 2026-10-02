@@ -1392,5 +1392,15 @@
   "torrentStatusPendingMetadata": "Menunggu metadata",
   "torrentStatusFetchingMetadata": "Mengambil metadata",
   "torrentStatusFileInUse": "File sedang dipakai",
-  "torrentStatusMissingFiles": "File hilang"
+  "torrentStatusMissingFiles": "File hilang",
+  "trackLists": "Daftar lagu",
+  "exportTrackLists": "Ekspor daftar lagu",
+  "exportTrackListsHint": "Menyimpan lagu Anda sebagai daftar baris \"Artis - Judul\". Impor daftar lagu di perangkat lain, atau situs pemindah playlist, mengubahnya kembali menjadi musik.",
+  "exportAllSongs": "Semua lagu ({count})",
+  "exportFavouriteSongs": "Lagu favorit ({count})",
+  "exportAsText": "File teks (.txt)",
+  "exportAsCsv": "Lembar kerja (.csv)",
+  "exportAction": "Ekspor",
+  "savedTrackList": "Daftar {count} lagu disimpan",
+  "noSongsToExport": "Belum ada lagu. Buka folder musik Anda di Pemutar terlebih dahulu."
 }

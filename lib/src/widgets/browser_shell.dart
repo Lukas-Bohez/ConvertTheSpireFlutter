@@ -1469,7 +1469,7 @@ BrowserSubmissionDecision _resolveBrowserSubmission(
   // Legacy aliases kept for compatibility with old input habits.
   const legacyAliases = <String, String>{
     'downloads': 'torrents.tab',
-    'import': 'bulkimport.tab',
+    'import': 'playlists.tab',
     'search+': 'multisearch.tab',
   };
   final aliasedRoute = legacyAliases[lower];

@@ -4818,4 +4818,42 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get torrentStatusMissingFiles => 'Brak plików';
+
+  @override
+  String get trackLists => 'Listy utworów';
+
+  @override
+  String get exportTrackLists => 'Eksportuj listy utworów';
+
+  @override
+  String get exportTrackListsHint =>
+      'Zapisuje Twoje utwory jako listę wierszy „Wykonawca - Tytuł”. Importuj listy utworów na innym urządzeniu lub strona do przenoszenia playlist zamieni ją z powrotem w muzykę.';
+
+  @override
+  String exportAllSongs(int count) {
+    return 'Wszystkie utwory ($count)';
+  }
+
+  @override
+  String exportFavouriteSongs(int count) {
+    return 'Ulubione utwory ($count)';
+  }
+
+  @override
+  String get exportAsText => 'Plik tekstowy (.txt)';
+
+  @override
+  String get exportAsCsv => 'Arkusz kalkulacyjny (.csv)';
+
+  @override
+  String get exportAction => 'Eksportuj';
+
+  @override
+  String savedTrackList(int count) {
+    return 'Zapisano listę $count utworów';
+  }
+
+  @override
+  String get noSongsToExport =>
+      'Brak utworów. Najpierw otwórz folder z muzyką w odtwarzaczu.';
 }

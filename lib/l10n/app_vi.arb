@@ -1392,5 +1392,15 @@
   "torrentStatusPendingMetadata": "Đang chờ siêu dữ liệu",
   "torrentStatusFetchingMetadata": "Đang lấy siêu dữ liệu",
   "torrentStatusFileInUse": "Tệp đang được dùng",
-  "torrentStatusMissingFiles": "Thiếu tệp"
+  "torrentStatusMissingFiles": "Thiếu tệp",
+  "trackLists": "Danh sách bài hát",
+  "exportTrackLists": "Xuất danh sách bài hát",
+  "exportTrackListsHint": "Lưu bài hát của bạn thành danh sách các dòng \"Nghệ sĩ - Tên bài\". Nhập danh sách bài hát trên thiết bị khác, hoặc một trang chuyển playlist, sẽ biến nó lại thành nhạc.",
+  "exportAllSongs": "Tất cả bài hát ({count})",
+  "exportFavouriteSongs": "Bài hát yêu thích ({count})",
+  "exportAsText": "Tệp văn bản (.txt)",
+  "exportAsCsv": "Bảng tính (.csv)",
+  "exportAction": "Xuất",
+  "savedTrackList": "Đã lưu danh sách {count} bài hát",
+  "noSongsToExport": "Chưa có bài hát nào. Hãy mở thư mục nhạc trong trình phát trước."
 }

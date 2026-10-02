@@ -4771,4 +4771,42 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get torrentStatusMissingFiles => 'ملفات مفقودة';
+
+  @override
+  String get trackLists => 'قوائم المقاطع';
+
+  @override
+  String get exportTrackLists => 'تصدير قوائم المقاطع';
+
+  @override
+  String get exportTrackListsHint =>
+      'يحفظ أغانيك كقائمة من أسطر \"الفنان - العنوان\". استيراد قوائم المقاطع على جهاز آخر، أو موقع لنقل قوائم التشغيل، يعيدها موسيقى.';
+
+  @override
+  String exportAllSongs(int count) {
+    return 'كل الأغاني ($count)';
+  }
+
+  @override
+  String exportFavouriteSongs(int count) {
+    return 'الأغاني المفضلة ($count)';
+  }
+
+  @override
+  String get exportAsText => 'ملف نصي (.txt)';
+
+  @override
+  String get exportAsCsv => 'جدول بيانات (.csv)';
+
+  @override
+  String get exportAction => 'تصدير';
+
+  @override
+  String savedTrackList(int count) {
+    return 'تم حفظ قائمة من $count أغنية';
+  }
+
+  @override
+  String get noSongsToExport =>
+      'لا توجد أغانٍ بعد. افتح مجلد الموسيقى في المشغل أولًا.';
 }

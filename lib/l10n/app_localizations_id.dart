@@ -4813,4 +4813,42 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get torrentStatusMissingFiles => 'File hilang';
+
+  @override
+  String get trackLists => 'Daftar lagu';
+
+  @override
+  String get exportTrackLists => 'Ekspor daftar lagu';
+
+  @override
+  String get exportTrackListsHint =>
+      'Menyimpan lagu Anda sebagai daftar baris \"Artis - Judul\". Impor daftar lagu di perangkat lain, atau situs pemindah playlist, mengubahnya kembali menjadi musik.';
+
+  @override
+  String exportAllSongs(int count) {
+    return 'Semua lagu ($count)';
+  }
+
+  @override
+  String exportFavouriteSongs(int count) {
+    return 'Lagu favorit ($count)';
+  }
+
+  @override
+  String get exportAsText => 'File teks (.txt)';
+
+  @override
+  String get exportAsCsv => 'Lembar kerja (.csv)';
+
+  @override
+  String get exportAction => 'Ekspor';
+
+  @override
+  String savedTrackList(int count) {
+    return 'Daftar $count lagu disimpan';
+  }
+
+  @override
+  String get noSongsToExport =>
+      'Belum ada lagu. Buka folder musik Anda di Pemutar terlebih dahulu.';
 }

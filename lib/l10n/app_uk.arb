@@ -1392,5 +1392,15 @@
   "torrentStatusPendingMetadata": "Очікування метаданих",
   "torrentStatusFetchingMetadata": "Отримання метаданих",
   "torrentStatusFileInUse": "Файл використовується",
-  "torrentStatusMissingFiles": "Файли відсутні"
+  "torrentStatusMissingFiles": "Файли відсутні",
+  "trackLists": "Списки треків",
+  "exportTrackLists": "Експорт списків треків",
+  "exportTrackListsHint": "Зберігає ваші пісні як список рядків «Виконавець - Назва». Імпорт списків треків на іншому пристрої або сайт для перенесення плейлистів знову перетворить його на музику.",
+  "exportAllSongs": "Усі пісні ({count})",
+  "exportFavouriteSongs": "Улюблені пісні ({count})",
+  "exportAsText": "Текстовий файл (.txt)",
+  "exportAsCsv": "Таблиця (.csv)",
+  "exportAction": "Експортувати",
+  "savedTrackList": "Збережено список із {count} пісень",
+  "noSongsToExport": "Пісень поки немає. Спочатку відкрийте папку з музикою в плеєрі."
 }

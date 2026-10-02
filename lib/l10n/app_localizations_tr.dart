@@ -4814,4 +4814,42 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get torrentStatusMissingFiles => 'Dosyalar eksik';
+
+  @override
+  String get trackLists => 'Parça listeleri';
+
+  @override
+  String get exportTrackLists => 'Parça listelerini dışa aktar';
+
+  @override
+  String get exportTrackListsHint =>
+      'Şarkılarınızı \"Sanatçı - Başlık\" satırlarından oluşan bir liste olarak kaydeder. Başka bir cihazda Parça listelerini içe aktar ya da bir çalma listesi aktarma sitesi onu yeniden müziğe dönüştürür.';
+
+  @override
+  String exportAllSongs(int count) {
+    return 'Tüm şarkılar ($count)';
+  }
+
+  @override
+  String exportFavouriteSongs(int count) {
+    return 'Favori şarkılar ($count)';
+  }
+
+  @override
+  String get exportAsText => 'Metin dosyası (.txt)';
+
+  @override
+  String get exportAsCsv => 'Elektronik tablo (.csv)';
+
+  @override
+  String get exportAction => 'Dışa aktar';
+
+  @override
+  String savedTrackList(int count) {
+    return '$count şarkılık liste kaydedildi';
+  }
+
+  @override
+  String get noSongsToExport =>
+      'Henüz şarkı yok. Önce oynatıcıda müzik klasörünüzü açın.';
 }

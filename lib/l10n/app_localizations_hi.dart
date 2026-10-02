@@ -4796,4 +4796,42 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get torrentStatusMissingFiles => 'फ़ाइलें गायब हैं';
+
+  @override
+  String get trackLists => 'ट्रैक सूचियां';
+
+  @override
+  String get exportTrackLists => 'ट्रैक सूचियां निर्यात करें';
+
+  @override
+  String get exportTrackListsHint =>
+      'आपके गानों को \"कलाकार - शीर्षक\" पंक्तियों की सूची के रूप में सहेजता है। किसी दूसरे डिवाइस पर ट्रैक सूचियां आयात करें, या कोई प्लेलिस्ट ट्रांसफ़र साइट, इसे फिर से संगीत बना देती है।';
+
+  @override
+  String exportAllSongs(int count) {
+    return 'सभी गाने ($count)';
+  }
+
+  @override
+  String exportFavouriteSongs(int count) {
+    return 'पसंदीदा गाने ($count)';
+  }
+
+  @override
+  String get exportAsText => 'टेक्स्ट फ़ाइल (.txt)';
+
+  @override
+  String get exportAsCsv => 'स्प्रेडशीट (.csv)';
+
+  @override
+  String get exportAction => 'निर्यात करें';
+
+  @override
+  String savedTrackList(int count) {
+    return '$count गानों की सूची सहेजी गई';
+  }
+
+  @override
+  String get noSongsToExport =>
+      'अभी कोई गाना नहीं है। पहले प्लेयर में अपना संगीत फ़ोल्डर खोलें।';
 }

@@ -4624,4 +4624,41 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get torrentStatusMissingFiles => '文件缺失';
+
+  @override
+  String get trackLists => '曲目列表';
+
+  @override
+  String get exportTrackLists => '导出曲目列表';
+
+  @override
+  String get exportTrackListsHint =>
+      '将你的歌曲保存为“艺人 - 标题”格式的行列表。在另一台设备上用“导入曲目列表”，或通过歌单迁移网站，即可重新变回音乐。';
+
+  @override
+  String exportAllSongs(int count) {
+    return '所有歌曲 ($count)';
+  }
+
+  @override
+  String exportFavouriteSongs(int count) {
+    return '收藏的歌曲 ($count)';
+  }
+
+  @override
+  String get exportAsText => '文本文件 (.txt)';
+
+  @override
+  String get exportAsCsv => '电子表格 (.csv)';
+
+  @override
+  String get exportAction => '导出';
+
+  @override
+  String savedTrackList(int count) {
+    return '已保存 $count 首歌曲的列表';
+  }
+
+  @override
+  String get noSongsToExport => '还没有歌曲。请先在播放器中打开你的音乐文件夹。';
 }
