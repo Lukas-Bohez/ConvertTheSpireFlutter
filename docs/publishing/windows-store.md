@@ -45,7 +45,7 @@ Visual Studio, and puts everything for the submission in one folder,
 | `screenshots\` | the 1920×1080 screenshots (Store listings) |
 | `app-tile-300.png` | the 1:1 app tile icon (Store listings) |
 | `listings\<language>.md` | each language's texts, field by field |
-| `listings-filled.csv` | with `-ListingCsv`: the listing CSV to import |
+| `store-import\` | with `-ListingCsv`: the folder to import (the filled CSV, the screenshots and the app tile, for every language) |
 | `HOW-TO-UPLOAD.txt` | what goes where |
 
 The first time, with the three identity values (they are kept in
