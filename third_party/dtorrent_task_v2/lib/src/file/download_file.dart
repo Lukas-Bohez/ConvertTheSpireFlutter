@@ -11,6 +11,11 @@ import 'package:logging/logging.dart';
 var _log = Logger("DownloadFile");
 
 class DownloadFile {
+  /// How long the file stays open for reading after the last read. Windows
+  /// refuses to move or delete a file another program has open, so a
+  /// seeding file is only held open while peers are reading it.
+  static Duration readIdleTimeout = const Duration(seconds: 5);
+
   // This is the full path of the local file
   final String filePath;
 
@@ -41,6 +46,19 @@ class DownloadFile {
   RandomAccessFile? _writeAccess;
 
   RandomAccessFile? _readAccess;
+
+  // The opens in progress, so that callers arriving at the same time share
+  // one handle instead of each opening the file.
+  Future<RandomAccessFile>? _writeOpening;
+  Future<RandomAccessFile>? _readOpening;
+
+  // Writes asked for and not done yet.
+  int _pendingWrites = 0;
+
+  // Whether a request is being processed.
+  bool _processing = false;
+
+  Timer? _readIdle;
 
   StreamController<FileRequest>? _streamController;
 
@@ -87,8 +105,17 @@ class DownloadFile {
       int position, List<int> block, int start, int end) async {
     // A closed file is not opened again: its task has stopped.
     if (_closed) return false;
-    _writeAccess ??= await _getRandomAccessFile(FileRequestType.write);
-    if (_closed) return false;
+    _pendingWrites++;
+    try {
+      await _getRandomAccessFile(FileRequestType.write);
+    } catch (_) {
+      _pendingWrites--;
+      rethrow;
+    }
+    if (_closed) {
+      _pendingWrites--;
+      return false;
+    }
     var completer = Completer<bool>();
     _streamController?.add(WriteRequest(
       position: position,
@@ -103,7 +130,7 @@ class DownloadFile {
 
   Future<List<int>> requestRead(int position, int length) async {
     if (_closed) return <int>[];
-    _readAccess ??= await _getRandomAccessFile(FileRequestType.read);
+    await _getRandomAccessFile(FileRequestType.read);
     if (_closed) return <int>[];
     var completer = Completer<List<int>>();
     _streamController?.add(
@@ -204,6 +231,7 @@ class DownloadFile {
   /// the current request.
   void _processRequest(FileRequest event) async {
     _streamSubscription?.pause();
+    _processing = true;
     if (event is WriteRequest) {
       await _write(event);
     }
@@ -213,10 +241,12 @@ class DownloadFile {
     if (event is FlushRequest) {
       await _flush(event);
     }
+    _processing = false;
     _streamSubscription?.resume();
   }
 
   Future<void> _write(WriteRequest request) async {
+    _pendingWrites--;
     try {
       _writeAccess = await _getRandomAccessFile(FileRequestType.write);
       _writeAccess = await _writeAccess?.setPosition(request.position);
@@ -238,7 +268,9 @@ class DownloadFile {
   /// Request to write the buffer to disk.
   Future<bool> requestFlush() async {
     if (_closed) return false;
-    _writeAccess ??= await _getRandomAccessFile(FileRequestType.write);
+    // Not open for writing: nothing has been written since the last flush.
+    if (_writeAccess == null && _writeOpening == null) return true;
+    await _getRandomAccessFile(FileRequestType.write);
     if (_closed) return false;
     var completer = Completer<bool>();
     _streamController?.add(FlushRequest(completer: completer));
@@ -247,8 +279,17 @@ class DownloadFile {
 
   Future<void> _flush(FlushRequest event) async {
     try {
-      _writeAccess = await _getRandomAccessFile(FileRequestType.write);
-      await _writeAccess?.flush();
+      final access = _writeAccess;
+      if (access != null) {
+        await access.flush();
+        // The whole file is written: stop holding it open for writing, as
+        // Windows can't start a program another program has open for
+        // writing. A piece written again opens it again.
+        if (completelyFlushed && _pendingWrites == 0) {
+          _writeAccess = null;
+          await access.close();
+        }
+      }
       event.completer.complete(true);
     } catch (e) {
       _log.warning('Flush error:', e);
@@ -262,6 +303,8 @@ class DownloadFile {
       access = await access.setPosition(request.position);
       var contents = await access.read(request.length);
       request.completer.complete(contents);
+      _readIdle?.cancel();
+      _readIdle = Timer(readIdleTimeout, _closeIdleRead);
     } catch (e) {
       _log.warning('Read file error:', e);
       request.completer.complete(<int>[]);
@@ -287,25 +330,64 @@ class DownloadFile {
   }
 
   Future<RandomAccessFile> _getRandomAccessFile(FileRequestType type) async {
-    var file = await _getOrCreateFile();
-    RandomAccessFile? access;
-    if (type == FileRequestType.write) {
-      _writeAccess ??= await file?.open(mode: FileMode.writeOnlyAppend);
-      access = _writeAccess;
-    } else {
-      _readAccess ??= await file?.open(mode: FileMode.read);
-      access = _readAccess;
-    }
+    final write = type == FileRequestType.write;
+    // One open at a time: callers that arrived together each opened the
+    // file, and every handle but the last was never closed, so the file
+    // stayed locked until the app quit.
+    final access = (write ? _writeAccess : _readAccess) ??
+        await (write
+            ? (_writeOpening ??= _open(write))
+            : (_readOpening ??= _open(write)));
     if (_streamController == null) {
       _streamController = StreamController();
       _streamSubscription = _streamController?.stream.listen(_processRequest);
     }
-    return access!;
+    return access;
+  }
+
+  Future<RandomAccessFile> _open(bool write) async {
+    try {
+      final file = await _getOrCreateFile();
+      final access = await file!
+          .open(mode: write ? FileMode.writeOnlyAppend : FileMode.read);
+      if (_closed) {
+        // Closed while it was opening: don't keep it open.
+        await access.close();
+        throw FileSystemException('File closed', filePath);
+      }
+      if (write) {
+        _writeAccess = access;
+      } else {
+        _readAccess = access;
+      }
+      return access;
+    } finally {
+      if (write) {
+        _writeOpening = null;
+      } else {
+        _readOpening = null;
+      }
+    }
+  }
+
+  void _closeIdleRead() {
+    // A read in progress is using the handle: look again later.
+    if (_processing) {
+      _readIdle = Timer(readIdleTimeout, _closeIdleRead);
+      return;
+    }
+    final access = _readAccess;
+    _readAccess = null;
+    access?.close().catchError((Object e) {
+      _log.warning('Close file error:', e);
+      return access;
+    });
   }
 
   Future<void> close() async {
     if (isClosed) return;
     _closed = true;
+    _readIdle?.cancel();
     try {
       await _streamSubscription?.cancel();
       await _streamController?.close();
