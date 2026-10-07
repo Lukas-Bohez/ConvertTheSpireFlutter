@@ -1402,5 +1402,18 @@
   "exportAsCsv": "Tabelle (.csv)",
   "exportAction": "Exportieren",
   "savedTrackList": "Liste mit {count} Titeln gespeichert",
-  "noSongsToExport": "Noch keine Musik. Öffne zuerst deinen Musikordner im Player."
+  "noSongsToExport": "Noch keine Musik. Öffne zuerst deinen Musikordner im Player.",
+  "loopParts": "Abschnitte wiederholen",
+  "loopPartsHelp": "Markiere die Abschnitte, die du hören willst. Nur diese laufen, immer wieder, einer nach dem anderen.",
+  "loopStartHere": "Hier beginnen",
+  "loopStartsAt": "Beginnt bei {time}",
+  "loopEndHere": "Hier enden",
+  "loopNoPartsYet": "Spiele bis zum Anfang eines Abschnitts und tippe auf „Hier beginnen“, dann an seinem Ende auf „Hier enden“.",
+  "loopSetToNow": "Auf die aktuelle Zeit setzen",
+  "loopPlayPart": "Diesen Abschnitt abspielen",
+  "loopDeletePart": "Diesen Abschnitt löschen",
+  "loopDeleteAll": "Alle Abschnitte löschen",
+  "loopingPartsCount": "Abschnitte in Schleife ({count})",
+  "loopPartsOffCount": "Abschnitte ohne Schleife ({count})",
+  "loopEdit": "Bearbeiten"
 }

@@ -8550,6 +8550,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No songs yet. Open your music folder in the Player first.'**
   String get noSongsToExport;
+
+  /// No description provided for @loopParts.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop parts'**
+  String get loopParts;
+
+  /// No description provided for @loopPartsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark the parts you want to hear. Only those play, over and over, one after the other.'**
+  String get loopPartsHelp;
+
+  /// No description provided for @loopStartHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Start here'**
+  String get loopStartHere;
+
+  /// No description provided for @loopStartsAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts at {time}'**
+  String loopStartsAt(String time);
+
+  /// No description provided for @loopEndHere.
+  ///
+  /// In en, this message translates to:
+  /// **'End here'**
+  String get loopEndHere;
+
+  /// No description provided for @loopNoPartsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Play to where a part begins and press Start here, then press End here where it ends.'**
+  String get loopNoPartsYet;
+
+  /// No description provided for @loopSetToNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Set to the current time'**
+  String get loopSetToNow;
+
+  /// No description provided for @loopPlayPart.
+  ///
+  /// In en, this message translates to:
+  /// **'Play this part'**
+  String get loopPlayPart;
+
+  /// No description provided for @loopDeletePart.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this part'**
+  String get loopDeletePart;
+
+  /// No description provided for @loopDeleteAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all parts'**
+  String get loopDeleteAll;
+
+  /// No description provided for @loopingPartsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Looping parts ({count})'**
+  String loopingPartsCount(int count);
+
+  /// No description provided for @loopPartsOffCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Parts not looping ({count})'**
+  String loopPartsOffCount(int count);
+
+  /// No description provided for @loopEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get loopEdit;
 }
 
 class _AppLocalizationsDelegate

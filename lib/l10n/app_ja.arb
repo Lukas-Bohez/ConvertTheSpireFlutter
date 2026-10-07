@@ -1402,5 +1402,18 @@
   "exportAsCsv": "スプレッドシート (.csv)",
   "exportAction": "エクスポート",
   "savedTrackList": "{count} 曲のリストを保存しました",
-  "noSongsToExport": "まだ曲がありません。まずプレーヤーで音楽フォルダーを開いてください。"
+  "noSongsToExport": "まだ曲がありません。まずプレーヤーで音楽フォルダーを開いてください。",
+  "loopParts": "パートをループ",
+  "loopPartsHelp": "聴きたいパートに印を付けてください。そのパートだけが順番に繰り返し再生されます。",
+  "loopStartHere": "ここから開始",
+  "loopStartsAt": "{time} から開始",
+  "loopEndHere": "ここで終了",
+  "loopNoPartsYet": "パートの始まりまで再生して「ここから開始」を押し、終わりの所で「ここで終了」を押してください。",
+  "loopSetToNow": "現在の時間に設定",
+  "loopPlayPart": "このパートを再生",
+  "loopDeletePart": "このパートを削除",
+  "loopDeleteAll": "すべてのパートを削除",
+  "loopingPartsCount": "ループ中のパート ({count})",
+  "loopPartsOffCount": "ループしていないパート ({count})",
+  "loopEdit": "編集"
 }

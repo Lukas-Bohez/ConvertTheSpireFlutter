@@ -1402,5 +1402,18 @@
   "exportAsCsv": "جدول بيانات (.csv)",
   "exportAction": "تصدير",
   "savedTrackList": "تم حفظ قائمة من {count} أغنية",
-  "noSongsToExport": "لا توجد أغانٍ بعد. افتح مجلد الموسيقى في المشغل أولًا."
+  "noSongsToExport": "لا توجد أغانٍ بعد. افتح مجلد الموسيقى في المشغل أولًا.",
+  "loopParts": "تكرار مقاطع",
+  "loopPartsHelp": "حدّد المقاطع التي تريد سماعها. تُشغَّل هذه المقاطع فقط، مرارًا وتكرارًا، واحدًا تلو الآخر.",
+  "loopStartHere": "ابدأ من هنا",
+  "loopStartsAt": "يبدأ عند {time}",
+  "loopEndHere": "انتهِ هنا",
+  "loopNoPartsYet": "شغّل حتى بداية المقطع واضغط «ابدأ من هنا»، ثم اضغط «انتهِ هنا» عند نهايته.",
+  "loopSetToNow": "اضبطه على الوقت الحالي",
+  "loopPlayPart": "تشغيل هذا المقطع",
+  "loopDeletePart": "حذف هذا المقطع",
+  "loopDeleteAll": "حذف كل المقاطع",
+  "loopingPartsCount": "مقاطع قيد التكرار ({count})",
+  "loopPartsOffCount": "مقاطع دون تكرار ({count})",
+  "loopEdit": "تعديل"
 }

@@ -4809,4 +4809,51 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'لا توجد أغانٍ بعد. افتح مجلد الموسيقى في المشغل أولًا.';
+
+  @override
+  String get loopParts => 'تكرار مقاطع';
+
+  @override
+  String get loopPartsHelp =>
+      'حدّد المقاطع التي تريد سماعها. تُشغَّل هذه المقاطع فقط، مرارًا وتكرارًا، واحدًا تلو الآخر.';
+
+  @override
+  String get loopStartHere => 'ابدأ من هنا';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'يبدأ عند $time';
+  }
+
+  @override
+  String get loopEndHere => 'انتهِ هنا';
+
+  @override
+  String get loopNoPartsYet =>
+      'شغّل حتى بداية المقطع واضغط «ابدأ من هنا»، ثم اضغط «انتهِ هنا» عند نهايته.';
+
+  @override
+  String get loopSetToNow => 'اضبطه على الوقت الحالي';
+
+  @override
+  String get loopPlayPart => 'تشغيل هذا المقطع';
+
+  @override
+  String get loopDeletePart => 'حذف هذا المقطع';
+
+  @override
+  String get loopDeleteAll => 'حذف كل المقاطع';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'مقاطع قيد التكرار ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'مقاطع دون تكرار ($count)';
+  }
+
+  @override
+  String get loopEdit => 'تعديل';
 }

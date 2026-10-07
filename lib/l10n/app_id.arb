@@ -1402,5 +1402,18 @@
   "exportAsCsv": "Lembar kerja (.csv)",
   "exportAction": "Ekspor",
   "savedTrackList": "Daftar {count} lagu disimpan",
-  "noSongsToExport": "Belum ada lagu. Buka folder musik Anda di Pemutar terlebih dahulu."
+  "noSongsToExport": "Belum ada lagu. Buka folder musik Anda di Pemutar terlebih dahulu.",
+  "loopParts": "Ulangi bagian",
+  "loopPartsHelp": "Tandai bagian yang ingin Anda dengar. Hanya bagian itu yang diputar, berulang-ulang, satu per satu.",
+  "loopStartHere": "Mulai di sini",
+  "loopStartsAt": "Mulai pada {time}",
+  "loopEndHere": "Selesai di sini",
+  "loopNoPartsYet": "Putar sampai awal sebuah bagian lalu tekan Mulai di sini, kemudian tekan Selesai di sini di akhir bagian itu.",
+  "loopSetToNow": "Atur ke waktu sekarang",
+  "loopPlayPart": "Putar bagian ini",
+  "loopDeletePart": "Hapus bagian ini",
+  "loopDeleteAll": "Hapus semua bagian",
+  "loopingPartsCount": "Mengulang bagian ({count})",
+  "loopPartsOffCount": "Bagian tidak diulang ({count})",
+  "loopEdit": "Edit"
 }

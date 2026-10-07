@@ -1402,5 +1402,18 @@
   "exportAsCsv": "电子表格 (.csv)",
   "exportAction": "导出",
   "savedTrackList": "已保存 {count} 首歌曲的列表",
-  "noSongsToExport": "还没有歌曲。请先在播放器中打开你的音乐文件夹。"
+  "noSongsToExport": "还没有歌曲。请先在播放器中打开你的音乐文件夹。",
+  "loopParts": "循环片段",
+  "loopPartsHelp": "标记你想听的片段。只播放这些片段，一个接一个，循环不停。",
+  "loopStartHere": "从这里开始",
+  "loopStartsAt": "从 {time} 开始",
+  "loopEndHere": "在这里结束",
+  "loopNoPartsYet": "播放到片段开始的位置并点按“从这里开始”，然后在片段结束的位置点按“在这里结束”。",
+  "loopSetToNow": "设为当前时间",
+  "loopPlayPart": "播放此片段",
+  "loopDeletePart": "删除此片段",
+  "loopDeleteAll": "删除所有片段",
+  "loopingPartsCount": "正在循环的片段（{count}）",
+  "loopPartsOffCount": "未循环的片段（{count}）",
+  "loopEdit": "编辑"
 }

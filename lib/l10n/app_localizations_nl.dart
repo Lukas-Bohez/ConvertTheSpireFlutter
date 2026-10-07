@@ -4860,4 +4860,51 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Nog geen nummers. Open eerst je muziekmap in de speler.';
+
+  @override
+  String get loopParts => 'Stukken herhalen';
+
+  @override
+  String get loopPartsHelp =>
+      'Markeer de stukken die je wilt horen. Alleen die spelen, steeds opnieuw, na elkaar.';
+
+  @override
+  String get loopStartHere => 'Begin hier';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Begint op $time';
+  }
+
+  @override
+  String get loopEndHere => 'Eindig hier';
+
+  @override
+  String get loopNoPartsYet =>
+      'Speel tot waar een stuk begint en druk op Begin hier, en druk dan op Eindig hier waar het eindigt.';
+
+  @override
+  String get loopSetToNow => 'Op de huidige tijd zetten';
+
+  @override
+  String get loopPlayPart => 'Dit stuk afspelen';
+
+  @override
+  String get loopDeletePart => 'Dit stuk verwijderen';
+
+  @override
+  String get loopDeleteAll => 'Alle stukken verwijderen';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Stukken herhalen ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Stukken, niet herhalen ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Bewerken';
 }

@@ -1402,5 +1402,18 @@
   "exportAsCsv": "Bảng tính (.csv)",
   "exportAction": "Xuất",
   "savedTrackList": "Đã lưu danh sách {count} bài hát",
-  "noSongsToExport": "Chưa có bài hát nào. Hãy mở thư mục nhạc trong trình phát trước."
+  "noSongsToExport": "Chưa có bài hát nào. Hãy mở thư mục nhạc trong trình phát trước.",
+  "loopParts": "Lặp đoạn",
+  "loopPartsHelp": "Đánh dấu những đoạn bạn muốn nghe. Chỉ những đoạn đó được phát, lặp đi lặp lại, lần lượt từng đoạn.",
+  "loopStartHere": "Bắt đầu tại đây",
+  "loopStartsAt": "Bắt đầu lúc {time}",
+  "loopEndHere": "Kết thúc tại đây",
+  "loopNoPartsYet": "Phát đến chỗ một đoạn bắt đầu và nhấn Bắt đầu tại đây, rồi nhấn Kết thúc tại đây ở chỗ đoạn đó kết thúc.",
+  "loopSetToNow": "Đặt theo thời điểm hiện tại",
+  "loopPlayPart": "Phát đoạn này",
+  "loopDeletePart": "Xóa đoạn này",
+  "loopDeleteAll": "Xóa tất cả các đoạn",
+  "loopingPartsCount": "Đang lặp đoạn ({count})",
+  "loopPartsOffCount": "Đoạn không lặp ({count})",
+  "loopEdit": "Sửa"
 }

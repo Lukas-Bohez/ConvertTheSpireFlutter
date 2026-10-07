@@ -4717,4 +4717,50 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get noSongsToExport => 'まだ曲がありません。まずプレーヤーで音楽フォルダーを開いてください。';
+
+  @override
+  String get loopParts => 'パートをループ';
+
+  @override
+  String get loopPartsHelp => '聴きたいパートに印を付けてください。そのパートだけが順番に繰り返し再生されます。';
+
+  @override
+  String get loopStartHere => 'ここから開始';
+
+  @override
+  String loopStartsAt(String time) {
+    return '$time から開始';
+  }
+
+  @override
+  String get loopEndHere => 'ここで終了';
+
+  @override
+  String get loopNoPartsYet =>
+      'パートの始まりまで再生して「ここから開始」を押し、終わりの所で「ここで終了」を押してください。';
+
+  @override
+  String get loopSetToNow => '現在の時間に設定';
+
+  @override
+  String get loopPlayPart => 'このパートを再生';
+
+  @override
+  String get loopDeletePart => 'このパートを削除';
+
+  @override
+  String get loopDeleteAll => 'すべてのパートを削除';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'ループ中のパート ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'ループしていないパート ($count)';
+  }
+
+  @override
+  String get loopEdit => '編集';
 }

@@ -4876,4 +4876,51 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Aún no hay canciones. Abre primero tu carpeta de música en el reproductor.';
+
+  @override
+  String get loopParts => 'Repetir partes';
+
+  @override
+  String get loopPartsHelp =>
+      'Marca las partes que quieres escuchar. Solo suenan esas, una y otra vez, una tras otra.';
+
+  @override
+  String get loopStartHere => 'Empezar aquí';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Empieza en $time';
+  }
+
+  @override
+  String get loopEndHere => 'Terminar aquí';
+
+  @override
+  String get loopNoPartsYet =>
+      'Reproduce hasta donde empieza una parte y pulsa Empezar aquí; luego pulsa Terminar aquí donde acaba.';
+
+  @override
+  String get loopSetToNow => 'Poner en el momento actual';
+
+  @override
+  String get loopPlayPart => 'Reproducir esta parte';
+
+  @override
+  String get loopDeletePart => 'Eliminar esta parte';
+
+  @override
+  String get loopDeleteAll => 'Eliminar todas las partes';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Repitiendo partes ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Partes sin repetir ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Editar';
 }

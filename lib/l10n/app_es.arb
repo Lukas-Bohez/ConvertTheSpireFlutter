@@ -1402,5 +1402,18 @@
   "exportAsCsv": "Hoja de cálculo (.csv)",
   "exportAction": "Exportar",
   "savedTrackList": "Lista de {count} canciones guardada",
-  "noSongsToExport": "Aún no hay canciones. Abre primero tu carpeta de música en el reproductor."
+  "noSongsToExport": "Aún no hay canciones. Abre primero tu carpeta de música en el reproductor.",
+  "loopParts": "Repetir partes",
+  "loopPartsHelp": "Marca las partes que quieres escuchar. Solo suenan esas, una y otra vez, una tras otra.",
+  "loopStartHere": "Empezar aquí",
+  "loopStartsAt": "Empieza en {time}",
+  "loopEndHere": "Terminar aquí",
+  "loopNoPartsYet": "Reproduce hasta donde empieza una parte y pulsa Empezar aquí; luego pulsa Terminar aquí donde acaba.",
+  "loopSetToNow": "Poner en el momento actual",
+  "loopPlayPart": "Reproducir esta parte",
+  "loopDeletePart": "Eliminar esta parte",
+  "loopDeleteAll": "Eliminar todas las partes",
+  "loopingPartsCount": "Repitiendo partes ({count})",
+  "loopPartsOffCount": "Partes sin repetir ({count})",
+  "loopEdit": "Editar"
 }

@@ -34,6 +34,7 @@ import 'package:video_player/video_player.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../models/loop_sections.dart';
 import '../services/android_saf.dart';
 import '../services/audio_handler.dart';
 import '../services/background_media_update_guard.dart';
@@ -54,6 +55,7 @@ import '../utils/share_file.dart';
 import '../utils/snack.dart';
 import '../vault/platform/desktop_window.dart';
 import '../widgets/tv_file_browser.dart';
+import 'loop_sections_sheet.dart';
 import 'watch_party_sheet.dart';
 
 // --- Public entry point -------------------------------------------------------
@@ -564,6 +566,14 @@ class PlayerState with ChangeNotifier {
   Duration position = Duration.zero;
   Duration? duration;
   DateTime? _lastMkOpenTime;
+
+  /// The parts of each file that loop (issue #41).
+  late final LoopSectionStore _loops = LoopSectionStore(prefs);
+
+  /// While the parts are being edited, playback goes anywhere: the editor
+  /// needs to reach the moments it marks.
+  bool loopEditing = false;
+  DateTime? _loopSeekAt;
   final StreamController<PositionUiState> _positionUiController =
       StreamController<PositionUiState>.broadcast();
   bool _isSeeking = false;
@@ -909,6 +919,7 @@ class PlayerState with ChangeNotifier {
 
   void _onPlaybackPositionUpdated(Duration pos) {
     position = pos;
+    _stayInLoopSections(pos);
     // Persist listening time periodically so a killed/throttled process
     // doesn't lose it.
     if (pos - _statsCommittedPosition >= const Duration(seconds: 30)) {
@@ -923,6 +934,47 @@ class PlayerState with ChangeNotifier {
       }
     }
     _emitPositionUiState();
+  }
+
+  // --- Looped parts --------------------------------------------------------
+
+  LoopSettings loopSettingsFor(String path) => _loops.settingsFor(path);
+
+  Future<void> setLoopSettings(String path, LoopSettings settings) async {
+    await _loops.save(path, settings);
+    notifyListeners();
+  }
+
+  Future<void> toggleLoop(String path) {
+    final settings = _loops.settingsFor(path);
+    return setLoopSettings(
+        path, LoopSettings(on: !settings.on, sections: settings.sections));
+  }
+
+  /// The current track's parts while they loop.
+  LoopSettings? get _activeLoop {
+    if (loopEditing || _roomStream != null) return null;
+    final item = currentItem;
+    if (item == null) return null;
+    final settings = _loops.settingsFor(item.path);
+    return settings.looping ? settings : null;
+  }
+
+  void _stayInLoopSections(Duration pos) {
+    final loop = _activeLoop;
+    if (loop == null || _isSeeking) return;
+    // A seek takes a moment to show in the position: don't seek again for
+    // the positions from before it.
+    final last = _loopSeekAt;
+    if (last != null &&
+        DateTime.now().difference(last) < const Duration(milliseconds: 800)) {
+      return;
+    }
+    final target = LoopSectionStore.target(pos, loop.sections);
+    if (target == null) return;
+    _loopSeekAt = DateTime.now();
+    // Not from inside the player's own callback.
+    Future.microtask(() => seek(target));
   }
 
   int mediaIndexForPath(String path) =>
@@ -1096,6 +1148,8 @@ class PlayerState with ChangeNotifier {
     _favouriteCache.remove(path);
     _disliked.remove(path);
     _playStats.remove(path);
+    unawaited(
+        _loops.save(path, const LoopSettings(on: false, sections: [])));
     unawaited(prefs.setStringList('player_favourites', _favourites.toList()));
     unawaited(prefs.setStringList('player_disliked', _disliked.toList()));
     _savePlayStats();
@@ -2600,6 +2654,17 @@ class PlayerState with ChangeNotifier {
       // Otherwise the room decides what plays next. Advancing to this
       // device's own next track would only be undone by the next update
       // from the host.
+      return;
+    }
+    // A looped part that runs to the end of the track starts over at the
+    // first part, instead of the next track.
+    final loop = _activeLoop;
+    if (loop != null) {
+      _loopSeekAt = DateTime.now();
+      unawaited(() async {
+        await seek(loop.sections.first.start);
+        if (!isPlaying) await togglePlay();
+      }());
       return;
     }
     // Count the tail of the track that hasn't been committed yet.
@@ -5918,7 +5983,12 @@ class _PlayerScreenState extends State<PlayerScreen>
           ),
 
           // -- Seek bar --
-          _PositionWidget(state: state, formatDur: _fmtDur),
+          _PositionWidget(
+            state: state,
+            formatDur: _fmtDur,
+            loopSections: state.loopSettingsFor(item.path).sections,
+          ),
+          _LoopChipRow(state: state, path: item.path),
 
           // -- Playback controls --
           Padding(
@@ -5956,6 +6026,17 @@ class _PlayerScreenState extends State<PlayerScreen>
                   tooltip: context.l10n.playerRepeat,
                   size: 22,
                 ),
+                // On a phone the row is full: there it is in the track
+                // menu, and in the row under the seek bar once there are
+                // parts.
+                if (!isMobile)
+                  _ControlButton(
+                    icon: Icons.loop_rounded,
+                    active: state.loopSettingsFor(item.path).looping,
+                    onPressed: () => showLoopSectionsSheet(context, state),
+                    tooltip: context.l10n.loopParts,
+                    size: 22,
+                  ),
               ],
             ),
           ),
@@ -6240,7 +6321,13 @@ class _PositionWidget extends StatelessWidget {
   final PlayerState state;
   final String Function(Duration) formatDur;
 
-  const _PositionWidget({required this.state, required this.formatDur});
+  /// Marked under the track, so the looped parts can be seen.
+  final List<LoopSection> loopSections;
+
+  const _PositionWidget(
+      {required this.state,
+      required this.formatDur,
+      this.loopSections = const []});
 
   @override
   Widget build(BuildContext context) {
@@ -6276,34 +6363,54 @@ class _PositionWidget extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    thumbShape: const RoundSliderThumbShape(
-                      enabledThumbRadius: 6,
+                child: Stack(
+                  children: [
+                    if (loopSections.isNotEmpty && dur > Duration.zero)
+                      // The track runs between the overlay radius (14) at
+                      // each side, centred in the slider's 48.
+                      Positioned(
+                        left: 14,
+                        right: 14,
+                        top: 29,
+                        height: 3,
+                        child: CustomPaint(
+                          painter: _LoopMarksPainter(
+                            sections: loopSections,
+                            duration: dur,
+                            color: _PlayerTheme.accent(context),
+                          ),
+                        ),
+                      ),
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        thumbShape: const RoundSliderThumbShape(
+                          enabledThumbRadius: 6,
+                        ),
+                        overlayShape: const RoundSliderOverlayShape(
+                          overlayRadius: 14,
+                        ),
+                        trackHeight: 3,
+                      ),
+                      child: Slider(
+                        value: progress,
+                        activeColor: _PlayerTheme.accent(context),
+                        inactiveColor: _PlayerTheme.accentDim(context),
+                        onChangeStart: dur.inMilliseconds > 0
+                            ? (_) => state.beginSeekInteraction()
+                            : null,
+                        onChanged: dur.inMilliseconds > 0
+                            ? (v) => state.previewSeekInteraction(
+                                  Duration(
+                                    milliseconds: (v * dur.inMilliseconds).round(),
+                                  ),
+                                )
+                            : null,
+                        onChangeEnd: dur.inMilliseconds > 0
+                            ? (_) => unawaited(state.endSeekInteraction())
+                            : null,
+                      ),
                     ),
-                    overlayShape: const RoundSliderOverlayShape(
-                      overlayRadius: 14,
-                    ),
-                    trackHeight: 3,
-                  ),
-                  child: Slider(
-                    value: progress,
-                    activeColor: _PlayerTheme.accent(context),
-                    inactiveColor: _PlayerTheme.accentDim(context),
-                    onChangeStart: dur.inMilliseconds > 0
-                        ? (_) => state.beginSeekInteraction()
-                        : null,
-                    onChanged: dur.inMilliseconds > 0
-                        ? (v) => state.previewSeekInteraction(
-                              Duration(
-                                milliseconds: (v * dur.inMilliseconds).round(),
-                              ),
-                            )
-                        : null,
-                    onChangeEnd: dur.inMilliseconds > 0
-                        ? (_) => unawaited(state.endSeekInteraction())
-                        : null,
-                  ),
+                  ],
                 ),
               ),
               if (ui.isSeeking)
@@ -6331,6 +6438,81 @@ class _PositionWidget extends StatelessWidget {
       },
     );
   }
+}
+
+/// The looped parts of the track playing: whether they loop, switched with
+/// a tap, and the way to change them. Only there once it has parts.
+class _LoopChipRow extends StatelessWidget {
+  final PlayerState state;
+  final String path;
+
+  const _LoopChipRow({required this.state, required this.path});
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = state.loopSettingsFor(path);
+    final count = settings.sections.length;
+    if (count == 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 8, 2),
+      child: Row(
+        children: [
+          Flexible(
+            child: FilterChip(
+              avatar: const Icon(Icons.loop_rounded, size: 16),
+              showCheckmark: false,
+              selected: settings.on,
+              label: Text(
+                settings.on
+                    ? context.l10n.loopingPartsCount(count)
+                    : context.l10n.loopPartsOffCount(count),
+                overflow: TextOverflow.ellipsis,
+              ),
+              visualDensity: VisualDensity.compact,
+              onSelected: (_) => state.toggleLoop(path),
+            ),
+          ),
+          const SizedBox(width: 4),
+          TextButton(
+            onPressed: () => showLoopSectionsSheet(context, state),
+            child: Text(context.l10n.loopEdit),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The looped parts as marks along the seek bar.
+class _LoopMarksPainter extends CustomPainter {
+  final List<LoopSection> sections;
+  final Duration duration;
+  final Color color;
+
+  _LoopMarksPainter(
+      {required this.sections, required this.duration, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = duration.inMilliseconds;
+    if (total <= 0) return;
+    final paint = Paint()..color = color;
+    for (final s in sections) {
+      final left = size.width * (s.start.inMilliseconds / total).clamp(0, 1);
+      final right = size.width * (s.end.inMilliseconds / total).clamp(0, 1);
+      canvas.drawRRect(
+        RRect.fromLTRBR(left, 0, right.clamp(left + 2, size.width),
+            size.height, const Radius.circular(2)),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LoopMarksPainter old) =>
+      old.sections != sections ||
+      old.duration != duration ||
+      old.color != color;
 }
 
 class _TypeBadge extends StatelessWidget {
@@ -6430,6 +6612,7 @@ class _PlayPauseButton extends StatelessWidget {
 }
 
 enum _TrackMenuAction {
+  loopParts,
   copyTitle,
   share,
   queue,
@@ -6516,6 +6699,9 @@ class _TrackMenuButton extends StatelessWidget {
           color: Theme.of(context).colorScheme.onSurfaceVariant),
       onSelected: (action) async {
         switch (action) {
+          case _TrackMenuAction.loopParts:
+            await showLoopSectionsSheet(context, state);
+            break;
           case _TrackMenuAction.copyTitle:
             await copyTrackTitle(context, item);
             break;
@@ -6578,6 +6764,16 @@ class _TrackMenuButton extends StatelessWidget {
         }
       },
       itemBuilder: (context) => [
+        // Parts are marked while the track plays.
+        if (state.currentItem?.path == item.path)
+          PopupMenuItem(
+            value: _TrackMenuAction.loopParts,
+            child: ListTile(
+              leading: const Icon(Icons.loop_rounded),
+              title: Text(context.l10n.loopParts),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
         PopupMenuItem(
           value: _TrackMenuAction.copyTitle,
           child: ListTile(

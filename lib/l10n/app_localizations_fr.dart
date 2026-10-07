@@ -4891,4 +4891,51 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Pas encore de musique. Ouvrez d\'abord votre dossier de musique dans le lecteur.';
+
+  @override
+  String get loopParts => 'Boucler des passages';
+
+  @override
+  String get loopPartsHelp =>
+      'Marquez les passages que vous voulez entendre. Seuls ceux-ci sont lus, en boucle, l\'un après l\'autre.';
+
+  @override
+  String get loopStartHere => 'Début ici';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Commence à $time';
+  }
+
+  @override
+  String get loopEndHere => 'Fin ici';
+
+  @override
+  String get loopNoPartsYet =>
+      'Lisez jusqu\'au début d\'un passage et appuyez sur « Début ici », puis sur « Fin ici » là où il se termine.';
+
+  @override
+  String get loopSetToNow => 'Régler sur le moment actuel';
+
+  @override
+  String get loopPlayPart => 'Lire ce passage';
+
+  @override
+  String get loopDeletePart => 'Supprimer ce passage';
+
+  @override
+  String get loopDeleteAll => 'Supprimer tous les passages';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Passages en boucle ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Passages hors boucle ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Modifier';
 }

@@ -4834,4 +4834,51 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'अभी कोई गाना नहीं है। पहले प्लेयर में अपना संगीत फ़ोल्डर खोलें।';
+
+  @override
+  String get loopParts => 'हिस्सों को दोहराएं';
+
+  @override
+  String get loopPartsHelp =>
+      'वे हिस्से चिह्नित करें जिन्हें आप सुनना चाहते हैं। सिर्फ़ वही बजेंगे, बार-बार, एक के बाद एक।';
+
+  @override
+  String get loopStartHere => 'यहां से शुरू करें';
+
+  @override
+  String loopStartsAt(String time) {
+    return '$time पर शुरू होता है';
+  }
+
+  @override
+  String get loopEndHere => 'यहां खत्म करें';
+
+  @override
+  String get loopNoPartsYet =>
+      'जहां कोई हिस्सा शुरू होता है वहां तक चलाएं और “यहां से शुरू करें” दबाएं, फिर जहां वह खत्म होता है वहां “यहां खत्म करें” दबाएं।';
+
+  @override
+  String get loopSetToNow => 'मौजूदा समय पर सेट करें';
+
+  @override
+  String get loopPlayPart => 'यह हिस्सा चलाएं';
+
+  @override
+  String get loopDeletePart => 'यह हिस्सा हटाएं';
+
+  @override
+  String get loopDeleteAll => 'सभी हिस्से हटाएं';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'दोहराए जा रहे हिस्से ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'बिना दोहराव वाले हिस्से ($count)';
+  }
+
+  @override
+  String get loopEdit => 'बदलें';
 }

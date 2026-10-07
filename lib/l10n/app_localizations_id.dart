@@ -4851,4 +4851,51 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Belum ada lagu. Buka folder musik Anda di Pemutar terlebih dahulu.';
+
+  @override
+  String get loopParts => 'Ulangi bagian';
+
+  @override
+  String get loopPartsHelp =>
+      'Tandai bagian yang ingin Anda dengar. Hanya bagian itu yang diputar, berulang-ulang, satu per satu.';
+
+  @override
+  String get loopStartHere => 'Mulai di sini';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Mulai pada $time';
+  }
+
+  @override
+  String get loopEndHere => 'Selesai di sini';
+
+  @override
+  String get loopNoPartsYet =>
+      'Putar sampai awal sebuah bagian lalu tekan Mulai di sini, kemudian tekan Selesai di sini di akhir bagian itu.';
+
+  @override
+  String get loopSetToNow => 'Atur ke waktu sekarang';
+
+  @override
+  String get loopPlayPart => 'Putar bagian ini';
+
+  @override
+  String get loopDeletePart => 'Hapus bagian ini';
+
+  @override
+  String get loopDeleteAll => 'Hapus semua bagian';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Mengulang bagian ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Bagian tidak diulang ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Edit';
 }

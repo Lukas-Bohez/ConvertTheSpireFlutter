@@ -4870,4 +4870,51 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Noch keine Musik. Öffne zuerst deinen Musikordner im Player.';
+
+  @override
+  String get loopParts => 'Abschnitte wiederholen';
+
+  @override
+  String get loopPartsHelp =>
+      'Markiere die Abschnitte, die du hören willst. Nur diese laufen, immer wieder, einer nach dem anderen.';
+
+  @override
+  String get loopStartHere => 'Hier beginnen';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Beginnt bei $time';
+  }
+
+  @override
+  String get loopEndHere => 'Hier enden';
+
+  @override
+  String get loopNoPartsYet =>
+      'Spiele bis zum Anfang eines Abschnitts und tippe auf „Hier beginnen“, dann an seinem Ende auf „Hier enden“.';
+
+  @override
+  String get loopSetToNow => 'Auf die aktuelle Zeit setzen';
+
+  @override
+  String get loopPlayPart => 'Diesen Abschnitt abspielen';
+
+  @override
+  String get loopDeletePart => 'Diesen Abschnitt löschen';
+
+  @override
+  String get loopDeleteAll => 'Alle Abschnitte löschen';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Abschnitte in Schleife ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Abschnitte ohne Schleife ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Bearbeiten';
 }

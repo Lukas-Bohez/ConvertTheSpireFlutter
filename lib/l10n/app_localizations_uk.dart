@@ -4848,4 +4848,51 @@ class AppLocalizationsUk extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Пісень поки немає. Спочатку відкрийте папку з музикою в плеєрі.';
+
+  @override
+  String get loopParts => 'Повтор фрагментів';
+
+  @override
+  String get loopPartsHelp =>
+      'Позначте фрагменти, які хочете слухати. Грають лише вони — знову і знову, один за одним.';
+
+  @override
+  String get loopStartHere => 'Почати тут';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Починається з $time';
+  }
+
+  @override
+  String get loopEndHere => 'Закінчити тут';
+
+  @override
+  String get loopNoPartsYet =>
+      'Дійдіть до початку фрагмента й натисніть «Почати тут», потім натисніть «Закінчити тут» там, де він закінчується.';
+
+  @override
+  String get loopSetToNow => 'Поставити поточний час';
+
+  @override
+  String get loopPlayPart => 'Відтворити цей фрагмент';
+
+  @override
+  String get loopDeletePart => 'Видалити цей фрагмент';
+
+  @override
+  String get loopDeleteAll => 'Видалити всі фрагменти';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Фрагменти в повторі ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Фрагменти без повтору ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Змінити';
 }

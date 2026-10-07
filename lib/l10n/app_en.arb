@@ -2982,5 +2982,39 @@
       }
     }
   },
-  "noSongsToExport": "No songs yet. Open your music folder in the Player first."
+  "noSongsToExport": "No songs yet. Open your music folder in the Player first.",
+  "loopParts": "Loop parts",
+  "loopPartsHelp": "Mark the parts you want to hear. Only those play, over and over, one after the other.",
+  "loopStartHere": "Start here",
+  "loopStartsAt": "Starts at {time}",
+  "@loopStartsAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "loopEndHere": "End here",
+  "loopNoPartsYet": "Play to where a part begins and press Start here, then press End here where it ends.",
+  "loopSetToNow": "Set to the current time",
+  "loopPlayPart": "Play this part",
+  "loopDeletePart": "Delete this part",
+  "loopDeleteAll": "Delete all parts",
+  "loopingPartsCount": "Looping parts ({count})",
+  "@loopingPartsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "loopPartsOffCount": "Parts not looping ({count})",
+  "@loopPartsOffCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "loopEdit": "Edit"
 }

@@ -1402,5 +1402,18 @@
   "exportAsCsv": "Tableur (.csv)",
   "exportAction": "Exporter",
   "savedTrackList": "Liste de {count} titres enregistrée",
-  "noSongsToExport": "Pas encore de musique. Ouvrez d'abord votre dossier de musique dans le lecteur."
+  "noSongsToExport": "Pas encore de musique. Ouvrez d'abord votre dossier de musique dans le lecteur.",
+  "loopParts": "Boucler des passages",
+  "loopPartsHelp": "Marquez les passages que vous voulez entendre. Seuls ceux-ci sont lus, en boucle, l'un après l'autre.",
+  "loopStartHere": "Début ici",
+  "loopStartsAt": "Commence à {time}",
+  "loopEndHere": "Fin ici",
+  "loopNoPartsYet": "Lisez jusqu'au début d'un passage et appuyez sur « Début ici », puis sur « Fin ici » là où il se termine.",
+  "loopSetToNow": "Régler sur le moment actuel",
+  "loopPlayPart": "Lire ce passage",
+  "loopDeletePart": "Supprimer ce passage",
+  "loopDeleteAll": "Supprimer tous les passages",
+  "loopingPartsCount": "Passages en boucle ({count})",
+  "loopPartsOffCount": "Passages hors boucle ({count})",
+  "loopEdit": "Modifier"
 }

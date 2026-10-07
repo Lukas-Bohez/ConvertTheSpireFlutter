@@ -4716,4 +4716,50 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get noSongsToExport => '아직 노래가 없습니다. 먼저 플레이어에서 음악 폴더를 여세요.';
+
+  @override
+  String get loopParts => '구간 반복';
+
+  @override
+  String get loopPartsHelp => '듣고 싶은 구간을 표시하세요. 그 구간만 차례로 계속 반복해서 재생됩니다.';
+
+  @override
+  String get loopStartHere => '여기서 시작';
+
+  @override
+  String loopStartsAt(String time) {
+    return '$time에 시작';
+  }
+
+  @override
+  String get loopEndHere => '여기서 끝';
+
+  @override
+  String get loopNoPartsYet =>
+      '구간이 시작하는 곳까지 재생하고 ‘여기서 시작’을 누른 다음, 끝나는 곳에서 ‘여기서 끝’을 누르세요.';
+
+  @override
+  String get loopSetToNow => '현재 시간으로 설정';
+
+  @override
+  String get loopPlayPart => '이 구간 재생';
+
+  @override
+  String get loopDeletePart => '이 구간 삭제';
+
+  @override
+  String get loopDeleteAll => '모든 구간 삭제';
+
+  @override
+  String loopingPartsCount(int count) {
+    return '반복 중인 구간 ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return '반복하지 않는 구간 ($count)';
+  }
+
+  @override
+  String get loopEdit => '편집';
 }

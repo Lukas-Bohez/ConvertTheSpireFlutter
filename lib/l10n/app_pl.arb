@@ -1402,5 +1402,18 @@
   "exportAsCsv": "Arkusz kalkulacyjny (.csv)",
   "exportAction": "Eksportuj",
   "savedTrackList": "Zapisano listę {count} utworów",
-  "noSongsToExport": "Brak utworów. Najpierw otwórz folder z muzyką w odtwarzaczu."
+  "noSongsToExport": "Brak utworów. Najpierw otwórz folder z muzyką w odtwarzaczu.",
+  "loopParts": "Zapętl fragmenty",
+  "loopPartsHelp": "Zaznacz fragmenty, których chcesz słuchać. Grają tylko one, w kółko, jeden po drugim.",
+  "loopStartHere": "Zacznij tutaj",
+  "loopStartsAt": "Zaczyna się od {time}",
+  "loopEndHere": "Zakończ tutaj",
+  "loopNoPartsYet": "Odtwórz do miejsca, gdzie zaczyna się fragment, i naciśnij Zacznij tutaj, a potem Zakończ tutaj tam, gdzie się kończy.",
+  "loopSetToNow": "Ustaw na bieżący czas",
+  "loopPlayPart": "Odtwórz ten fragment",
+  "loopDeletePart": "Usuń ten fragment",
+  "loopDeleteAll": "Usuń wszystkie fragmenty",
+  "loopingPartsCount": "Zapętlone fragmenty ({count})",
+  "loopPartsOffCount": "Fragmenty bez zapętlenia ({count})",
+  "loopEdit": "Edytuj"
 }

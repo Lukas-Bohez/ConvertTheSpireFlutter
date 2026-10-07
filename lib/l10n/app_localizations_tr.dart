@@ -4852,4 +4852,51 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Henüz şarkı yok. Önce oynatıcıda müzik klasörünüzü açın.';
+
+  @override
+  String get loopParts => 'Bölümleri döngüye al';
+
+  @override
+  String get loopPartsHelp =>
+      'Dinlemek istediğin bölümleri işaretle. Yalnızca onlar, art arda, tekrar tekrar çalar.';
+
+  @override
+  String get loopStartHere => 'Buradan başla';
+
+  @override
+  String loopStartsAt(String time) {
+    return '$time konumunda başlar';
+  }
+
+  @override
+  String get loopEndHere => 'Burada bitir';
+
+  @override
+  String get loopNoPartsYet =>
+      'Bir bölümün başladığı yere kadar oynat ve Buradan başla düğmesine bas, sonra bittiği yerde Burada bitir düğmesine bas.';
+
+  @override
+  String get loopSetToNow => 'Şu anki zamana ayarla';
+
+  @override
+  String get loopPlayPart => 'Bu bölümü oynat';
+
+  @override
+  String get loopDeletePart => 'Bu bölümü sil';
+
+  @override
+  String get loopDeleteAll => 'Tüm bölümleri sil';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Döngüdeki bölümler ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Döngüde olmayan bölümler ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Düzenle';
 }

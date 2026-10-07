@@ -4871,4 +4871,51 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Ainda não há músicas. Abra primeiro sua pasta de música no reprodutor.';
+
+  @override
+  String get loopParts => 'Repetir trechos';
+
+  @override
+  String get loopPartsHelp =>
+      'Marque os trechos que você quer ouvir. Só eles tocam, sem parar, um após o outro.';
+
+  @override
+  String get loopStartHere => 'Começar aqui';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Começa em $time';
+  }
+
+  @override
+  String get loopEndHere => 'Terminar aqui';
+
+  @override
+  String get loopNoPartsYet =>
+      'Toque até onde um trecho começa e toque em Começar aqui; depois toque em Terminar aqui onde ele termina.';
+
+  @override
+  String get loopSetToNow => 'Definir para o momento atual';
+
+  @override
+  String get loopPlayPart => 'Tocar este trecho';
+
+  @override
+  String get loopDeletePart => 'Excluir este trecho';
+
+  @override
+  String get loopDeleteAll => 'Excluir todos os trechos';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Repetindo trechos ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Trechos sem repetir ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Editar';
 }

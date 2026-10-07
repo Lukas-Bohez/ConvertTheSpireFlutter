@@ -1402,5 +1402,18 @@
   "exportAsCsv": "Planilha (.csv)",
   "exportAction": "Exportar",
   "savedTrackList": "Lista de {count} músicas salva",
-  "noSongsToExport": "Ainda não há músicas. Abra primeiro sua pasta de música no reprodutor."
+  "noSongsToExport": "Ainda não há músicas. Abra primeiro sua pasta de música no reprodutor.",
+  "loopParts": "Repetir trechos",
+  "loopPartsHelp": "Marque os trechos que você quer ouvir. Só eles tocam, sem parar, um após o outro.",
+  "loopStartHere": "Começar aqui",
+  "loopStartsAt": "Começa em {time}",
+  "loopEndHere": "Terminar aqui",
+  "loopNoPartsYet": "Toque até onde um trecho começa e toque em Começar aqui; depois toque em Terminar aqui onde ele termina.",
+  "loopSetToNow": "Definir para o momento atual",
+  "loopPlayPart": "Tocar este trecho",
+  "loopDeletePart": "Excluir este trecho",
+  "loopDeleteAll": "Excluir todos os trechos",
+  "loopingPartsCount": "Repetindo trechos ({count})",
+  "loopPartsOffCount": "Trechos sem repetir ({count})",
+  "loopEdit": "Editar"
 }

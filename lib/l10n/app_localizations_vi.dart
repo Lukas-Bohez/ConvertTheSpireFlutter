@@ -4834,4 +4834,51 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Chưa có bài hát nào. Hãy mở thư mục nhạc trong trình phát trước.';
+
+  @override
+  String get loopParts => 'Lặp đoạn';
+
+  @override
+  String get loopPartsHelp =>
+      'Đánh dấu những đoạn bạn muốn nghe. Chỉ những đoạn đó được phát, lặp đi lặp lại, lần lượt từng đoạn.';
+
+  @override
+  String get loopStartHere => 'Bắt đầu tại đây';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Bắt đầu lúc $time';
+  }
+
+  @override
+  String get loopEndHere => 'Kết thúc tại đây';
+
+  @override
+  String get loopNoPartsYet =>
+      'Phát đến chỗ một đoạn bắt đầu và nhấn Bắt đầu tại đây, rồi nhấn Kết thúc tại đây ở chỗ đoạn đó kết thúc.';
+
+  @override
+  String get loopSetToNow => 'Đặt theo thời điểm hiện tại';
+
+  @override
+  String get loopPlayPart => 'Phát đoạn này';
+
+  @override
+  String get loopDeletePart => 'Xóa đoạn này';
+
+  @override
+  String get loopDeleteAll => 'Xóa tất cả các đoạn';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Đang lặp đoạn ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Đoạn không lặp ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Sửa';
 }

@@ -1402,5 +1402,18 @@
   "exportAsCsv": "Rekenblad (.csv)",
   "exportAction": "Exporteren",
   "savedTrackList": "Lijst met {count} nummers opgeslagen",
-  "noSongsToExport": "Nog geen nummers. Open eerst je muziekmap in de speler."
+  "noSongsToExport": "Nog geen nummers. Open eerst je muziekmap in de speler.",
+  "loopParts": "Stukken herhalen",
+  "loopPartsHelp": "Markeer de stukken die je wilt horen. Alleen die spelen, steeds opnieuw, na elkaar.",
+  "loopStartHere": "Begin hier",
+  "loopStartsAt": "Begint op {time}",
+  "loopEndHere": "Eindig hier",
+  "loopNoPartsYet": "Speel tot waar een stuk begint en druk op Begin hier, en druk dan op Eindig hier waar het eindigt.",
+  "loopSetToNow": "Op de huidige tijd zetten",
+  "loopPlayPart": "Dit stuk afspelen",
+  "loopDeletePart": "Dit stuk verwijderen",
+  "loopDeleteAll": "Alle stukken verwijderen",
+  "loopingPartsCount": "Stukken herhalen ({count})",
+  "loopPartsOffCount": "Stukken, niet herhalen ({count})",
+  "loopEdit": "Bewerken"
 }

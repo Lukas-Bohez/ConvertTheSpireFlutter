@@ -4661,4 +4661,49 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get noSongsToExport => '还没有歌曲。请先在播放器中打开你的音乐文件夹。';
+
+  @override
+  String get loopParts => '循环片段';
+
+  @override
+  String get loopPartsHelp => '标记你想听的片段。只播放这些片段，一个接一个，循环不停。';
+
+  @override
+  String get loopStartHere => '从这里开始';
+
+  @override
+  String loopStartsAt(String time) {
+    return '从 $time 开始';
+  }
+
+  @override
+  String get loopEndHere => '在这里结束';
+
+  @override
+  String get loopNoPartsYet => '播放到片段开始的位置并点按“从这里开始”，然后在片段结束的位置点按“在这里结束”。';
+
+  @override
+  String get loopSetToNow => '设为当前时间';
+
+  @override
+  String get loopPlayPart => '播放此片段';
+
+  @override
+  String get loopDeletePart => '删除此片段';
+
+  @override
+  String get loopDeleteAll => '删除所有片段';
+
+  @override
+  String loopingPartsCount(int count) {
+    return '正在循环的片段（$count）';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return '未循环的片段（$count）';
+  }
+
+  @override
+  String get loopEdit => '编辑';
 }

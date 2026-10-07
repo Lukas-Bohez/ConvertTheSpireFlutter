@@ -4856,4 +4856,51 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Brak utworów. Najpierw otwórz folder z muzyką w odtwarzaczu.';
+
+  @override
+  String get loopParts => 'Zapętl fragmenty';
+
+  @override
+  String get loopPartsHelp =>
+      'Zaznacz fragmenty, których chcesz słuchać. Grają tylko one, w kółko, jeden po drugim.';
+
+  @override
+  String get loopStartHere => 'Zacznij tutaj';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Zaczyna się od $time';
+  }
+
+  @override
+  String get loopEndHere => 'Zakończ tutaj';
+
+  @override
+  String get loopNoPartsYet =>
+      'Odtwórz do miejsca, gdzie zaczyna się fragment, i naciśnij Zacznij tutaj, a potem Zakończ tutaj tam, gdzie się kończy.';
+
+  @override
+  String get loopSetToNow => 'Ustaw na bieżący czas';
+
+  @override
+  String get loopPlayPart => 'Odtwórz ten fragment';
+
+  @override
+  String get loopDeletePart => 'Usuń ten fragment';
+
+  @override
+  String get loopDeleteAll => 'Usuń wszystkie fragmenty';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Zapętlone fragmenty ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Fragmenty bez zapętlenia ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Edytuj';
 }

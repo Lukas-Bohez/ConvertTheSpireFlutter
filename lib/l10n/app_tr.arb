@@ -1402,5 +1402,18 @@
   "exportAsCsv": "Elektronik tablo (.csv)",
   "exportAction": "Dışa aktar",
   "savedTrackList": "{count} şarkılık liste kaydedildi",
-  "noSongsToExport": "Henüz şarkı yok. Önce oynatıcıda müzik klasörünüzü açın."
+  "noSongsToExport": "Henüz şarkı yok. Önce oynatıcıda müzik klasörünüzü açın.",
+  "loopParts": "Bölümleri döngüye al",
+  "loopPartsHelp": "Dinlemek istediğin bölümleri işaretle. Yalnızca onlar, art arda, tekrar tekrar çalar.",
+  "loopStartHere": "Buradan başla",
+  "loopStartsAt": "{time} konumunda başlar",
+  "loopEndHere": "Burada bitir",
+  "loopNoPartsYet": "Bir bölümün başladığı yere kadar oynat ve Buradan başla düğmesine bas, sonra bittiği yerde Burada bitir düğmesine bas.",
+  "loopSetToNow": "Şu anki zamana ayarla",
+  "loopPlayPart": "Bu bölümü oynat",
+  "loopDeletePart": "Bu bölümü sil",
+  "loopDeleteAll": "Tüm bölümleri sil",
+  "loopingPartsCount": "Döngüdeki bölümler ({count})",
+  "loopPartsOffCount": "Döngüde olmayan bölümler ({count})",
+  "loopEdit": "Düzenle"
 }
