@@ -4889,4 +4889,17 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get startOver => 'من البداية';
+
+  @override
+  String get supportCardTitle => 'صنعه شخص واحد، مجانًا';
+
+  @override
+  String get supportCardBody =>
+      'بلا إعلانات ولا تتبّع ولا شيء للشراء. إن وفّر لك هذا التطبيق وقتًا، فإن فنجان قهوة أو رعاية يبقيانه مستمرًا.';
+
+  @override
+  String get supportCardNotNow => 'ليس الآن';
+
+  @override
+  String get supportCardNever => 'لا تعرض هذا مجددًا';
 }

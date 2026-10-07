@@ -1424,5 +1424,9 @@
   "sleepTimerIn": "{time} 후 정지",
   "sleepAfterTrack": "이 트랙 후 정지",
   "continuedAt": "{time}부터 이어서 재생",
-  "startOver": "처음부터"
+  "startOver": "처음부터",
+  "supportCardTitle": "한 사람이 무료로 만들었습니다",
+  "supportCardBody": "광고도, 추적도, 살 것도 없습니다. 이 앱이 시간을 아껴 주었다면 커피 한 잔이나 후원이 앱을 계속 이어가게 합니다.",
+  "supportCardNotNow": "나중에",
+  "supportCardNever": "다시 표시 안 함"
 }

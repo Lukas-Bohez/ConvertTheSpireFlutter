@@ -4928,4 +4928,17 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get startOver => 'Спочатку';
+
+  @override
+  String get supportCardTitle => 'Зроблено однією людиною, безкоштовно';
+
+  @override
+  String get supportCardBody =>
+      'Без реклами, без стеження, нічого не треба купувати. Якщо застосунок заощадив вам час, кава чи спонсорство допомагають йому жити.';
+
+  @override
+  String get supportCardNotNow => 'Не зараз';
+
+  @override
+  String get supportCardNever => 'Більше не показувати';
 }

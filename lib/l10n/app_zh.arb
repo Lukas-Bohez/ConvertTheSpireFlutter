@@ -1424,5 +1424,9 @@
   "sleepTimerIn": "{time} 后暂停",
   "sleepAfterTrack": "本曲结束后暂停",
   "continuedAt": "已从 {time} 继续",
-  "startOver": "从头开始"
+  "startOver": "从头开始",
+  "supportCardTitle": "由一个人免费制作",
+  "supportCardBody": "没有广告，没有跟踪，也没有需要购买的东西。如果这个应用为你节省了时间，一杯咖啡或一次赞助能让它继续下去。",
+  "supportCardNotNow": "以后再说",
+  "supportCardNever": "不再显示"
 }

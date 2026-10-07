@@ -22,6 +22,7 @@ import 'src/services/open_request_service.dart';
 import 'src/services/purchase_service.dart';
 import 'src/services/review_service.dart';
 import 'src/services/session_log_service.dart';
+import 'src/services/support_nudge_service.dart';
 import 'src/widgets/app_error_screen.dart';
 
 Future<File?> _prepareStartupErrorLogFile() async {
@@ -71,6 +72,7 @@ Future<void> main() async {
 
     // Track launches for review prompt heuristics.
     await ReviewService.trackLaunch();
+    unawaited(SupportNudgeService.instance.trackLaunch());
     SessionLogService.instance.mark('trackLaunch_done');
 
     errorLog = ErrorLog(await _prepareStartupErrorLogFile());

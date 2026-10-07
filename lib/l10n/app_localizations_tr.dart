@@ -4932,4 +4932,17 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get startOver => 'Baştan başla';
+
+  @override
+  String get supportCardTitle => 'Tek bir kişi tarafından, ücretsiz yapıldı';
+
+  @override
+  String get supportCardBody =>
+      'Reklam yok, izleme yok, satın alınacak bir şey yok. Bu uygulama sana zaman kazandırdıysa, bir kahve ya da sponsorluk onu ayakta tutar.';
+
+  @override
+  String get supportCardNotNow => 'Şimdi değil';
+
+  @override
+  String get supportCardNever => 'Bir daha gösterme';
 }

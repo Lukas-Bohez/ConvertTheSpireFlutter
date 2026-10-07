@@ -13,6 +13,7 @@ import '../utils/l10n.dart';
 import 'monetization_widgets.dart';
 import 'quick_download_card.dart';
 import 'quick_links_service.dart';
+import 'support_card.dart';
 
 /// Clean home page with a grid of quick-link tiles.
 class QuickLinksPage extends StatefulWidget {
@@ -403,6 +404,8 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             sliver: _buildLinksGrid(crossAxisCount, visibleLinks),
           ),
+          // Under everything, and only now and then: SupportNudgeService.
+          if (!kPlayStoreBuild) const SliverToBoxAdapter(child: SupportCard()),
         ],
       ),
     );

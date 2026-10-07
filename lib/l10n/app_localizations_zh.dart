@@ -4739,4 +4739,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get startOver => '从头开始';
+
+  @override
+  String get supportCardTitle => '由一个人免费制作';
+
+  @override
+  String get supportCardBody =>
+      '没有广告，没有跟踪，也没有需要购买的东西。如果这个应用为你节省了时间，一杯咖啡或一次赞助能让它继续下去。';
+
+  @override
+  String get supportCardNotNow => '以后再说';
+
+  @override
+  String get supportCardNever => '不再显示';
 }

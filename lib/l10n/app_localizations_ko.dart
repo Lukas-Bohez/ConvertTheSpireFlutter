@@ -4795,4 +4795,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get startOver => '처음부터';
+
+  @override
+  String get supportCardTitle => '한 사람이 무료로 만들었습니다';
+
+  @override
+  String get supportCardBody =>
+      '광고도, 추적도, 살 것도 없습니다. 이 앱이 시간을 아껴 주었다면 커피 한 잔이나 후원이 앱을 계속 이어가게 합니다.';
+
+  @override
+  String get supportCardNotNow => '나중에';
+
+  @override
+  String get supportCardNever => '다시 표시 안 함';
 }

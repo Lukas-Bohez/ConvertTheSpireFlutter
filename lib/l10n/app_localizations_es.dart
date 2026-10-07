@@ -4956,4 +4956,17 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get startOver => 'Empezar de nuevo';
+
+  @override
+  String get supportCardTitle => 'Hecha por una sola persona, gratis';
+
+  @override
+  String get supportCardBody =>
+      'Sin anuncios, sin rastreo, nada que comprar. Si esta app te ha ahorrado tiempo, un café o un patrocinio la mantiene viva.';
+
+  @override
+  String get supportCardNotNow => 'Ahora no';
+
+  @override
+  String get supportCardNever => 'No volver a mostrar';
 }

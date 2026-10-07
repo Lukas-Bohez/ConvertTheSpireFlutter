@@ -1424,5 +1424,9 @@
   "sleepTimerIn": "Pause in {time}",
   "sleepAfterTrack": "Pause nach diesem Titel",
   "continuedAt": "Fortgesetzt bei {time}",
-  "startOver": "Von vorn"
+  "startOver": "Von vorn",
+  "supportCardTitle": "Von einer Person gemacht, kostenlos",
+  "supportCardBody": "Keine Werbung, kein Tracking, nichts zu kaufen. Wenn dir die App Zeit gespart hat, hält ein Kaffee oder ein Sponsoring sie am Laufen.",
+  "supportCardNotNow": "Nicht jetzt",
+  "supportCardNever": "Nicht mehr zeigen"
 }

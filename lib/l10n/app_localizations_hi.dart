@@ -4914,4 +4914,17 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get startOver => 'शुरू से चलाएं';
+
+  @override
+  String get supportCardTitle => 'एक व्यक्ति ने बनाया, मुफ़्त';
+
+  @override
+  String get supportCardBody =>
+      'न विज्ञापन, न ट्रैकिंग, न कुछ खरीदना। अगर इस ऐप ने आपका समय बचाया है, तो एक कॉफ़ी या स्पॉन्सरशिप इसे चलते रहने में मदद करती है।';
+
+  @override
+  String get supportCardNotNow => 'अभी नहीं';
+
+  @override
+  String get supportCardNever => 'फिर न दिखाएं';
 }

@@ -4936,4 +4936,17 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get startOver => 'Od początku';
+
+  @override
+  String get supportCardTitle => 'Zrobione przez jedną osobę, za darmo';
+
+  @override
+  String get supportCardBody =>
+      'Bez reklam, bez śledzenia, nic do kupienia. Jeśli ta aplikacja oszczędziła Ci czas, kawa albo sponsoring pozwalają ją dalej rozwijać.';
+
+  @override
+  String get supportCardNotNow => 'Nie teraz';
+
+  @override
+  String get supportCardNever => 'Nie pokazuj więcej';
 }

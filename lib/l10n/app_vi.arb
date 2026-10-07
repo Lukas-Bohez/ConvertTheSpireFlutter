@@ -1424,5 +1424,9 @@
   "sleepTimerIn": "Dừng sau {time}",
   "sleepAfterTrack": "Dừng sau bài này",
   "continuedAt": "Tiếp tục từ {time}",
-  "startOver": "Phát lại từ đầu"
+  "startOver": "Phát lại từ đầu",
+  "supportCardTitle": "Do một người làm, miễn phí",
+  "supportCardBody": "Không quảng cáo, không theo dõi, không có gì phải mua. Nếu ứng dụng này giúp bạn tiết kiệm thời gian, một ly cà phê hoặc một khoản tài trợ sẽ giúp nó tiếp tục.",
+  "supportCardNotNow": "Để sau",
+  "supportCardNever": "Không hiện lại"
 }

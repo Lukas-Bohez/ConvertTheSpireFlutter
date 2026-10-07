@@ -4931,4 +4931,17 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get startOver => 'Mulai dari awal';
+
+  @override
+  String get supportCardTitle => 'Dibuat oleh satu orang, gratis';
+
+  @override
+  String get supportCardBody =>
+      'Tanpa iklan, tanpa pelacakan, tidak ada yang perlu dibeli. Jika aplikasi ini menghemat waktu Anda, secangkir kopi atau sponsor membuatnya terus berjalan.';
+
+  @override
+  String get supportCardNotNow => 'Nanti saja';
+
+  @override
+  String get supportCardNever => 'Jangan tampilkan lagi';
 }

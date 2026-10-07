@@ -1424,5 +1424,9 @@
   "sleepTimerIn": "{time} 後に停止",
   "sleepAfterTrack": "このトラックの後に停止",
   "continuedAt": "{time} から再開しました",
-  "startOver": "最初から"
+  "startOver": "最初から",
+  "supportCardTitle": "一人で、無料で作っています",
+  "supportCardBody": "広告なし、トラッキングなし、購入するものもありません。このアプリで時間が節約できたなら、コーヒー1杯やスポンサーが開発の支えになります。",
+  "supportCardNotNow": "今はしない",
+  "supportCardNever": "今後表示しない"
 }

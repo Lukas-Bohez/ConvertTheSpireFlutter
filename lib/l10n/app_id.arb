@@ -1424,5 +1424,9 @@
   "sleepTimerIn": "Berhenti dalam {time}",
   "sleepAfterTrack": "Berhenti setelah lagu ini",
   "continuedAt": "Dilanjutkan pada {time}",
-  "startOver": "Mulai dari awal"
+  "startOver": "Mulai dari awal",
+  "supportCardTitle": "Dibuat oleh satu orang, gratis",
+  "supportCardBody": "Tanpa iklan, tanpa pelacakan, tidak ada yang perlu dibeli. Jika aplikasi ini menghemat waktu Anda, secangkir kopi atau sponsor membuatnya terus berjalan.",
+  "supportCardNotNow": "Nanti saja",
+  "supportCardNever": "Jangan tampilkan lagi"
 }

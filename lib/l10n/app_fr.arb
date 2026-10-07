@@ -1424,5 +1424,9 @@
   "sleepTimerIn": "Arrêt dans {time}",
   "sleepAfterTrack": "Arrêt après ce titre",
   "continuedAt": "Reprise à {time}",
-  "startOver": "Recommencer"
+  "startOver": "Recommencer",
+  "supportCardTitle": "Faite par une seule personne, gratuitement",
+  "supportCardBody": "Pas de publicité, pas de pistage, rien à acheter. Si cette application vous a fait gagner du temps, un café ou un parrainage la fait vivre.",
+  "supportCardNotNow": "Pas maintenant",
+  "supportCardNever": "Ne plus afficher"
 }

@@ -4940,4 +4940,17 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get startOver => 'Opnieuw beginnen';
+
+  @override
+  String get supportCardTitle => 'Gemaakt door één persoon, gratis';
+
+  @override
+  String get supportCardBody =>
+      'Geen advertenties, geen tracking, niets te kopen. Heeft deze app je tijd bespaard, dan houdt een koffie of een sponsoring hem draaiende.';
+
+  @override
+  String get supportCardNotNow => 'Niet nu';
+
+  @override
+  String get supportCardNever => 'Niet meer tonen';
 }

@@ -3046,5 +3046,9 @@
       }
     }
   },
-  "startOver": "Start over"
+  "startOver": "Start over",
+  "supportCardTitle": "Made by one person, for free",
+  "supportCardBody": "No ads, no tracking, nothing to buy. If this app has saved you time, a coffee or a sponsorship keeps it going.",
+  "supportCardNotNow": "Not now",
+  "supportCardNever": "Don't show again"
 }

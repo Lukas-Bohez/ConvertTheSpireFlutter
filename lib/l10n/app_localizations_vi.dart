@@ -4914,4 +4914,17 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get startOver => 'Phát lại từ đầu';
+
+  @override
+  String get supportCardTitle => 'Do một người làm, miễn phí';
+
+  @override
+  String get supportCardBody =>
+      'Không quảng cáo, không theo dõi, không có gì phải mua. Nếu ứng dụng này giúp bạn tiết kiệm thời gian, một ly cà phê hoặc một khoản tài trợ sẽ giúp nó tiếp tục.';
+
+  @override
+  String get supportCardNotNow => 'Để sau';
+
+  @override
+  String get supportCardNever => 'Không hiện lại';
 }

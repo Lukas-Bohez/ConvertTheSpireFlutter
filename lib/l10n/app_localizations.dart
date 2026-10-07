@@ -8682,6 +8682,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start over'**
   String get startOver;
+
+  /// No description provided for @supportCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Made by one person, for free'**
+  String get supportCardTitle;
+
+  /// No description provided for @supportCardBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No ads, no tracking, nothing to buy. If this app has saved you time, a coffee or a sponsorship keeps it going.'**
+  String get supportCardBody;
+
+  /// No description provided for @supportCardNotNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get supportCardNotNow;
+
+  /// No description provided for @supportCardNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t show again'**
+  String get supportCardNever;
 }
 
 class _AppLocalizationsDelegate

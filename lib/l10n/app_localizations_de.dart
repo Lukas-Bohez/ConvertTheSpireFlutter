@@ -4950,4 +4950,17 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get startOver => 'Von vorn';
+
+  @override
+  String get supportCardTitle => 'Von einer Person gemacht, kostenlos';
+
+  @override
+  String get supportCardBody =>
+      'Keine Werbung, kein Tracking, nichts zu kaufen. Wenn dir die App Zeit gespart hat, hält ein Kaffee oder ein Sponsoring sie am Laufen.';
+
+  @override
+  String get supportCardNotNow => 'Nicht jetzt';
+
+  @override
+  String get supportCardNever => 'Nicht mehr zeigen';
 }

@@ -1424,5 +1424,9 @@
   "sleepTimerIn": "{time} में रुकेगा",
   "sleepAfterTrack": "इस ट्रैक के बाद रुकेगा",
   "continuedAt": "{time} से जारी",
-  "startOver": "शुरू से चलाएं"
+  "startOver": "शुरू से चलाएं",
+  "supportCardTitle": "एक व्यक्ति ने बनाया, मुफ़्त",
+  "supportCardBody": "न विज्ञापन, न ट्रैकिंग, न कुछ खरीदना। अगर इस ऐप ने आपका समय बचाया है, तो एक कॉफ़ी या स्पॉन्सरशिप इसे चलते रहने में मदद करती है।",
+  "supportCardNotNow": "अभी नहीं",
+  "supportCardNever": "फिर न दिखाएं"
 }

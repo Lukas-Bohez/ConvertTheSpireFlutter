@@ -1424,5 +1424,9 @@
   "sleepTimerIn": "{time} sonra durur",
   "sleepAfterTrack": "Bu parçadan sonra durur",
   "continuedAt": "{time} konumundan devam ediliyor",
-  "startOver": "Baştan başla"
+  "startOver": "Baştan başla",
+  "supportCardTitle": "Tek bir kişi tarafından, ücretsiz yapıldı",
+  "supportCardBody": "Reklam yok, izleme yok, satın alınacak bir şey yok. Bu uygulama sana zaman kazandırdıysa, bir kahve ya da sponsorluk onu ayakta tutar.",
+  "supportCardNotNow": "Şimdi değil",
+  "supportCardNever": "Bir daha gösterme"
 }

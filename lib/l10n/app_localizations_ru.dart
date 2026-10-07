@@ -4920,4 +4920,17 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get startOver => 'Сначала';
+
+  @override
+  String get supportCardTitle => 'Сделано одним человеком, бесплатно';
+
+  @override
+  String get supportCardBody =>
+      'Без рекламы, без слежки, ничего не нужно покупать. Если приложение сэкономило вам время, чашка кофе или спонсорство помогают ему жить.';
+
+  @override
+  String get supportCardNotNow => 'Не сейчас';
+
+  @override
+  String get supportCardNever => 'Больше не показывать';
 }

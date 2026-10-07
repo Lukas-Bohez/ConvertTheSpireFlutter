@@ -4951,4 +4951,17 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get startOver => 'Recomeçar';
+
+  @override
+  String get supportCardTitle => 'Feito por uma pessoa, de graça';
+
+  @override
+  String get supportCardBody =>
+      'Sem anúncios, sem rastreamento, nada para comprar. Se este app te poupou tempo, um café ou um patrocínio o mantém vivo.';
+
+  @override
+  String get supportCardNotNow => 'Agora não';
+
+  @override
+  String get supportCardNever => 'Não mostrar de novo';
 }

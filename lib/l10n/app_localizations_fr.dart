@@ -4971,4 +4971,17 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get startOver => 'Recommencer';
+
+  @override
+  String get supportCardTitle => 'Faite par une seule personne, gratuitement';
+
+  @override
+  String get supportCardBody =>
+      'Pas de publicité, pas de pistage, rien à acheter. Si cette application vous a fait gagner du temps, un café ou un parrainage la fait vivre.';
+
+  @override
+  String get supportCardNotNow => 'Pas maintenant';
+
+  @override
+  String get supportCardNever => 'Ne plus afficher';
 }

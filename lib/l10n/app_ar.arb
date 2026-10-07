@@ -1424,5 +1424,9 @@
   "sleepTimerIn": "إيقاف مؤقت بعد {time}",
   "sleepAfterTrack": "إيقاف مؤقت بعد هذا المقطع",
   "continuedAt": "تم الاستئناف من {time}",
-  "startOver": "من البداية"
+  "startOver": "من البداية",
+  "supportCardTitle": "صنعه شخص واحد، مجانًا",
+  "supportCardBody": "بلا إعلانات ولا تتبّع ولا شيء للشراء. إن وفّر لك هذا التطبيق وقتًا، فإن فنجان قهوة أو رعاية يبقيانه مستمرًا.",
+  "supportCardNotNow": "ليس الآن",
+  "supportCardNever": "لا تعرض هذا مجددًا"
 }

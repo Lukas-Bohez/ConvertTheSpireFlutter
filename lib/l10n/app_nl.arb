@@ -1424,5 +1424,9 @@
   "sleepTimerIn": "Stopt over {time}",
   "sleepAfterTrack": "Stopt na dit nummer",
   "continuedAt": "Verder op {time}",
-  "startOver": "Opnieuw beginnen"
+  "startOver": "Opnieuw beginnen",
+  "supportCardTitle": "Gemaakt door één persoon, gratis",
+  "supportCardBody": "Geen advertenties, geen tracking, niets te kopen. Heeft deze app je tijd bespaard, dan houdt een koffie of een sponsoring hem draaiende.",
+  "supportCardNotNow": "Niet nu",
+  "supportCardNever": "Niet meer tonen"
 }

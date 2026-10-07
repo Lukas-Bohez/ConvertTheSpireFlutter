@@ -1424,5 +1424,9 @@
   "sleepTimerIn": "Pauza za {time}",
   "sleepAfterTrack": "Pauza po tym utworze",
   "continuedAt": "Wznowiono od {time}",
-  "startOver": "Od początku"
+  "startOver": "Od początku",
+  "supportCardTitle": "Zrobione przez jedną osobę, za darmo",
+  "supportCardBody": "Bez reklam, bez śledzenia, nic do kupienia. Jeśli ta aplikacja oszczędziła Ci czas, kawa albo sponsoring pozwalają ją dalej rozwijać.",
+  "supportCardNotNow": "Nie teraz",
+  "supportCardNever": "Nie pokazuj więcej"
 }

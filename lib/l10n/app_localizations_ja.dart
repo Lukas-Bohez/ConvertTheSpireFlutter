@@ -4796,4 +4796,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get startOver => '最初から';
+
+  @override
+  String get supportCardTitle => '一人で、無料で作っています';
+
+  @override
+  String get supportCardBody =>
+      '広告なし、トラッキングなし、購入するものもありません。このアプリで時間が節約できたなら、コーヒー1杯やスポンサーが開発の支えになります。';
+
+  @override
+  String get supportCardNotNow => '今はしない';
+
+  @override
+  String get supportCardNever => '今後表示しない';
 }

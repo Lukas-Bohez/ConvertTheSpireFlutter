@@ -1424,5 +1424,9 @@
   "sleepTimerIn": "Se detiene en {time}",
   "sleepAfterTrack": "Se detiene tras esta pista",
   "continuedAt": "Continúa en {time}",
-  "startOver": "Empezar de nuevo"
+  "startOver": "Empezar de nuevo",
+  "supportCardTitle": "Hecha por una sola persona, gratis",
+  "supportCardBody": "Sin anuncios, sin rastreo, nada que comprar. Si esta app te ha ahorrado tiempo, un café o un patrocinio la mantiene viva.",
+  "supportCardNotNow": "Ahora no",
+  "supportCardNever": "No volver a mostrar"
 }
