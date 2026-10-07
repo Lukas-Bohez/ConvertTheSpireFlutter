@@ -33,8 +33,8 @@ class ColourRewardService extends ChangeNotifier {
     final eq = prefs.getString(_equippedKey);
     if (eq != null && eq.isNotEmpty) _equipped = eq;
 
-    // GitHub release builds unlock all colours from install
-    if (kIsGithubRelease) {
+    // The GitHub and Microsoft Store builds unlock all colours from install
+    if (kIsGithubRelease || kMsStoreBuild) {
       await unlockAllColours();
     } else {
       // Ensure slate owned on first run (normal builds)
