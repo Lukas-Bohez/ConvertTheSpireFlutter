@@ -7111,22 +7111,25 @@ class PlayerBodyScrollbar extends StatelessWidget {
       return Scrollbar(thumbVisibility: true, child: child);
     }
 
-    // Use AnimatedBuilder to rebuild when the handle's extent changes.
-    // Flow analysis proves `handle` is non-null here (either assigned above
-    // or the catch returned); the closure needs an explicit `!` because the
-    // promotion does not flow into it.
-    return AnimatedBuilder(
-      animation: handle,
+    // The handle is read during layout: the header slivers are laid out
+    // before the body, so it already holds this frame's header height. The
+    // handle does not notify when that height is set, so listening to it
+    // (an AnimatedBuilder did) read it before the first layout and left the
+    // inset at 0 or stale (issue #41). The closure needs an explicit `!`
+    // because the promotion of `handle` does not flow into it.
+    return LayoutBuilder(
       builder: (context, _) {
         final overlapExtent = handle!.layoutExtent ?? 0.0;
 
-        // Use RawScrollbar with mainAxisMargin to offset the scrollbar below the header
-        // This ensures the scrollbar track starts below the pinned header
+        // Only the top of the body sits behind the pinned header, so only
+        // the top is padded. A mainAxisMargin shrinks both ends: the thumb
+        // then started inside the search bar and stopped short of the bottom
+        // of the screen.
         return RawScrollbar(
           thumbVisibility: true,
           thickness: 8,
           radius: const Radius.circular(4),
-          mainAxisMargin: overlapExtent > 0 ? overlapExtent / 2 : 0,
+          padding: EdgeInsets.only(top: overlapExtent),
           child: child,
         );
       },
