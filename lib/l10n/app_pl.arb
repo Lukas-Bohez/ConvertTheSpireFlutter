@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "Usuń wszystkie fragmenty",
   "loopingPartsCount": "Zapętlone fragmenty ({count})",
   "loopPartsOffCount": "Fragmenty bez zapętlenia ({count})",
-  "loopEdit": "Edytuj"
+  "loopEdit": "Edytuj",
+  "playbackSpeed": "Prędkość odtwarzania",
+  "sleepTimer": "Wyłącznik czasowy",
+  "sleepTimerMinutes": "{minutes} minut",
+  "sleepTimerEndOfTrack": "Na końcu tego utworu",
+  "sleepTimerOff": "Wyłączony",
+  "sleepTimerIn": "Pauza za {time}",
+  "sleepAfterTrack": "Pauza po tym utworze",
+  "continuedAt": "Wznowiono od {time}",
+  "startOver": "Od początku"
 }

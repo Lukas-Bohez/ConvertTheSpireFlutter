@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "Supprimer tous les passages",
   "loopingPartsCount": "Passages en boucle ({count})",
   "loopPartsOffCount": "Passages hors boucle ({count})",
-  "loopEdit": "Modifier"
+  "loopEdit": "Modifier",
+  "playbackSpeed": "Vitesse de lecture",
+  "sleepTimer": "Minuteur de veille",
+  "sleepTimerMinutes": "{minutes} minutes",
+  "sleepTimerEndOfTrack": "À la fin de ce titre",
+  "sleepTimerOff": "Désactivé",
+  "sleepTimerIn": "Arrêt dans {time}",
+  "sleepAfterTrack": "Arrêt après ce titre",
+  "continuedAt": "Reprise à {time}",
+  "startOver": "Recommencer"
 }

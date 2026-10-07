@@ -4706,4 +4706,37 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get loopEdit => '编辑';
+
+  @override
+  String get playbackSpeed => '播放速度';
+
+  @override
+  String get sleepTimer => '睡眠定时';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => '本曲结束时';
+
+  @override
+  String get sleepTimerOff => '关闭';
+
+  @override
+  String sleepTimerIn(String time) {
+    return '$time 后暂停';
+  }
+
+  @override
+  String get sleepAfterTrack => '本曲结束后暂停';
+
+  @override
+  String continuedAt(String time) {
+    return '已从 $time 继续';
+  }
+
+  @override
+  String get startOver => '从头开始';
 }

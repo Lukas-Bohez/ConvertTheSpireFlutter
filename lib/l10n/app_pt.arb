@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "Excluir todos os trechos",
   "loopingPartsCount": "Repetindo trechos ({count})",
   "loopPartsOffCount": "Trechos sem repetir ({count})",
-  "loopEdit": "Editar"
+  "loopEdit": "Editar",
+  "playbackSpeed": "Velocidade de reprodução",
+  "sleepTimer": "Timer de desligamento",
+  "sleepTimerMinutes": "{minutes} minutos",
+  "sleepTimerEndOfTrack": "No fim desta faixa",
+  "sleepTimerOff": "Desligado",
+  "sleepTimerIn": "Pausa em {time}",
+  "sleepAfterTrack": "Pausa após esta faixa",
+  "continuedAt": "Continuando em {time}",
+  "startOver": "Recomeçar"
 }

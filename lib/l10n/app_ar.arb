@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "حذف كل المقاطع",
   "loopingPartsCount": "مقاطع قيد التكرار ({count})",
   "loopPartsOffCount": "مقاطع دون تكرار ({count})",
-  "loopEdit": "تعديل"
+  "loopEdit": "تعديل",
+  "playbackSpeed": "سرعة التشغيل",
+  "sleepTimer": "مؤقت النوم",
+  "sleepTimerMinutes": "{minutes} دقيقة",
+  "sleepTimerEndOfTrack": "في نهاية هذا المقطع",
+  "sleepTimerOff": "إيقاف",
+  "sleepTimerIn": "إيقاف مؤقت بعد {time}",
+  "sleepAfterTrack": "إيقاف مؤقت بعد هذا المقطع",
+  "continuedAt": "تم الاستئناف من {time}",
+  "startOver": "من البداية"
 }

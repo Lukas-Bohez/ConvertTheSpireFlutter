@@ -4907,4 +4907,37 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get loopEdit => 'Bewerken';
+
+  @override
+  String get playbackSpeed => 'Afspeelsnelheid';
+
+  @override
+  String get sleepTimer => 'Slaaptimer';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes minuten';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'Aan het einde van dit nummer';
+
+  @override
+  String get sleepTimerOff => 'Uit';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'Stopt over $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Stopt na dit nummer';
+
+  @override
+  String continuedAt(String time) {
+    return 'Verder op $time';
+  }
+
+  @override
+  String get startOver => 'Opnieuw beginnen';
 }

@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "Видалити всі фрагменти",
   "loopingPartsCount": "Фрагменти в повторі ({count})",
   "loopPartsOffCount": "Фрагменти без повтору ({count})",
-  "loopEdit": "Змінити"
+  "loopEdit": "Змінити",
+  "playbackSpeed": "Швидкість відтворення",
+  "sleepTimer": "Таймер сну",
+  "sleepTimerMinutes": "{minutes} хвилин",
+  "sleepTimerEndOfTrack": "Наприкінці цього треку",
+  "sleepTimerOff": "Вимкнено",
+  "sleepTimerIn": "Пауза через {time}",
+  "sleepAfterTrack": "Пауза після цього треку",
+  "continuedAt": "Продовжено з {time}",
+  "startOver": "Спочатку"
 }

@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "Tüm bölümleri sil",
   "loopingPartsCount": "Döngüdeki bölümler ({count})",
   "loopPartsOffCount": "Döngüde olmayan bölümler ({count})",
-  "loopEdit": "Düzenle"
+  "loopEdit": "Düzenle",
+  "playbackSpeed": "Oynatma hızı",
+  "sleepTimer": "Uyku zamanlayıcısı",
+  "sleepTimerMinutes": "{minutes} dakika",
+  "sleepTimerEndOfTrack": "Bu parçanın sonunda",
+  "sleepTimerOff": "Kapalı",
+  "sleepTimerIn": "{time} sonra durur",
+  "sleepAfterTrack": "Bu parçadan sonra durur",
+  "continuedAt": "{time} konumundan devam ediliyor",
+  "startOver": "Baştan başla"
 }

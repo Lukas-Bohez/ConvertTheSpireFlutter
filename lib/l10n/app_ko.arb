@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "모든 구간 삭제",
   "loopingPartsCount": "반복 중인 구간 ({count})",
   "loopPartsOffCount": "반복하지 않는 구간 ({count})",
-  "loopEdit": "편집"
+  "loopEdit": "편집",
+  "playbackSpeed": "재생 속도",
+  "sleepTimer": "취침 타이머",
+  "sleepTimerMinutes": "{minutes}분",
+  "sleepTimerEndOfTrack": "이 트랙이 끝날 때",
+  "sleepTimerOff": "끔",
+  "sleepTimerIn": "{time} 후 정지",
+  "sleepAfterTrack": "이 트랙 후 정지",
+  "continuedAt": "{time}부터 이어서 재생",
+  "startOver": "처음부터"
 }

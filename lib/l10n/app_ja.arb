@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "すべてのパートを削除",
   "loopingPartsCount": "ループ中のパート ({count})",
   "loopPartsOffCount": "ループしていないパート ({count})",
-  "loopEdit": "編集"
+  "loopEdit": "編集",
+  "playbackSpeed": "再生速度",
+  "sleepTimer": "スリープタイマー",
+  "sleepTimerMinutes": "{minutes} 分",
+  "sleepTimerEndOfTrack": "このトラックの終わりに",
+  "sleepTimerOff": "オフ",
+  "sleepTimerIn": "{time} 後に停止",
+  "sleepAfterTrack": "このトラックの後に停止",
+  "continuedAt": "{time} から再開しました",
+  "startOver": "最初から"
 }

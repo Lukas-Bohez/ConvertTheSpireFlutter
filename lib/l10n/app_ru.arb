@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "Удалить все фрагменты",
   "loopingPartsCount": "Фрагменты в повторе ({count})",
   "loopPartsOffCount": "Фрагменты без повтора ({count})",
-  "loopEdit": "Изменить"
+  "loopEdit": "Изменить",
+  "playbackSpeed": "Скорость воспроизведения",
+  "sleepTimer": "Таймер сна",
+  "sleepTimerMinutes": "{minutes} минут",
+  "sleepTimerEndOfTrack": "В конце этого трека",
+  "sleepTimerOff": "Выключен",
+  "sleepTimerIn": "Пауза через {time}",
+  "sleepAfterTrack": "Пауза после этого трека",
+  "continuedAt": "Продолжено с {time}",
+  "startOver": "Сначала"
 }

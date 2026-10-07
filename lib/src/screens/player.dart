@@ -56,6 +56,7 @@ import '../utils/snack.dart';
 import '../vault/platform/desktop_window.dart';
 import '../widgets/tv_file_browser.dart';
 import 'loop_sections_sheet.dart';
+import 'playback_options.dart';
 import 'watch_party_sheet.dart';
 
 // --- Public entry point -------------------------------------------------------
@@ -492,7 +493,6 @@ typedef WatchPartyNotice = String Function(AppLocalizations l10n);
 
 class PlayerState with ChangeNotifier {
   static const String _playStatsPrefsKey = 'player_play_stats';
-  // TODO(next): add first-class sleep timer state and countdown exposure for all player surfaces.
   final SharedPreferences prefs;
   bool _artistEnrichmentRunning = false;
   final Set<String> _artistLookupInFlight = <String>{};
@@ -569,6 +569,30 @@ class PlayerState with ChangeNotifier {
 
   /// The parts of each file that loop (issue #41).
   late final LoopSectionStore _loops = LoopSectionStore(prefs);
+
+  /// How fast media plays, 1 for normal. The pitch stays.
+  double speed = 1.0;
+  static const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+  static const _speedPrefsKey = 'player_speed';
+
+  /// When playback pauses by itself, or null; or at the end of the track.
+  DateTime? sleepAt;
+  bool sleepAtTrackEnd = false;
+  Timer? _sleepTimer;
+
+  /// Media at least this long opens where it was left: films, podcasts,
+  /// lectures. Positions of the last 200 such files are kept.
+  static const resumeMinDuration = Duration(minutes: 10);
+  static const _resumePrefsKey = 'player_resume_positions';
+  final Map<String, int> _resumeMs = {};
+  String? _resumeCheckPath;
+  DateTime _resumeSavedAt = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime _resumeSeekAt = DateTime.fromMillisecondsSinceEpoch(0);
+  final StreamController<Duration> _resumed =
+      StreamController<Duration>.broadcast();
+
+  /// Where a file was opened at instead of its start.
+  Stream<Duration> get resumedAt => _resumed.stream;
 
   /// While the parts are being edited, playback goes anywhere: the editor
   /// needs to reach the moments it marks.
@@ -920,6 +944,7 @@ class PlayerState with ChangeNotifier {
   void _onPlaybackPositionUpdated(Duration pos) {
     position = pos;
     _stayInLoopSections(pos);
+    _rememberPosition(pos);
     // Persist listening time periodically so a killed/throttled process
     // doesn't lose it.
     if (pos - _statsCommittedPosition >= const Duration(seconds: 30)) {
@@ -934,6 +959,108 @@ class PlayerState with ChangeNotifier {
       }
     }
     _emitPositionUiState();
+  }
+
+  // --- Speed, sleep timer, resuming ----------------------------------------
+
+  Future<void> setSpeed(double value) async {
+    speed = value;
+    await prefs.setDouble(_speedPrefsKey, value);
+    _applySpeed();
+    notifyListeners();
+  }
+
+  /// A room's stream plays at the room's pace, or it would drift from it.
+  double get _effectiveSpeed => _roomStream != null ? 1.0 : speed;
+
+  void _applySpeed() {
+    final rate = _effectiveSpeed;
+    _runOnMainThread(() {
+      _audio?.setSpeed(rate);
+      _mkPlayer?.setRate(rate);
+      _audioMkPlayer?.setRate(rate);
+      _androidController?.setPlaybackSpeed(rate);
+    });
+  }
+
+  /// Pauses playback after [after], or turns the timer off when null.
+  void setSleepTimer(Duration? after) {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    sleepAt = null;
+    sleepAtTrackEnd = false;
+    if (after != null) {
+      sleepAt = DateTime.now().add(after);
+      _sleepTimer = Timer(after, () {
+        _sleepTimer = null;
+        sleepAt = null;
+        if (isPlaying) unawaited(togglePlay());
+        notifyListeners();
+      });
+    }
+    notifyListeners();
+  }
+
+  /// Stops at the end of the track playing instead of going on.
+  void setSleepAtTrackEnd() {
+    setSleepTimer(null);
+    sleepAtTrackEnd = true;
+    notifyListeners();
+  }
+
+  void _loadResumePositions() {
+    final raw = prefs.getString(_resumePrefsKey);
+    if (raw == null) return;
+    try {
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      _resumeMs
+        ..clear()
+        ..addAll(json.map((k, v) => MapEntry(k, v as int)));
+    } catch (_) {}
+  }
+
+  /// Opens a long file where it was left, and remembers where that is.
+  void _rememberPosition(Duration pos) {
+    final item = currentItem;
+    final total = duration;
+    if (item == null || _roomStream != null) return;
+    if (total == null || total < resumeMinDuration) return;
+    final path = item.path;
+    final now = DateTime.now();
+    if (_resumeCheckPath == path) {
+      _resumeCheckPath = null;
+      final saved = _resumeMs[path];
+      if (saved != null &&
+          _activeLoop == null &&
+          pos < const Duration(seconds: 5)) {
+        final at = Duration(milliseconds: saved);
+        _resumeSeekAt = now;
+        Future.microtask(() => seek(at));
+        if (!_resumed.isClosed) _resumed.add(at);
+        return;
+      }
+    }
+    // Positions from before the seek to where it was left come in a moment
+    // longer: they must not count as starting over.
+    if (now.difference(_resumeSeekAt) < const Duration(seconds: 2)) return;
+    // Near the start or the end there is nothing to come back to.
+    if (pos < const Duration(seconds: 30) ||
+        total - pos < const Duration(seconds: 30)) {
+      if (_resumeMs.remove(path) != null) _saveResumePositions();
+      return;
+    }
+    if (now.difference(_resumeSavedAt) < const Duration(seconds: 10)) return;
+    _resumeSavedAt = now;
+    _resumeMs.remove(path);
+    _resumeMs[path] = pos.inMilliseconds;
+    while (_resumeMs.length > 200) {
+      _resumeMs.remove(_resumeMs.keys.first);
+    }
+    _saveResumePositions();
+  }
+
+  void _saveResumePositions() {
+    unawaited(prefs.setString(_resumePrefsKey, jsonEncode(_resumeMs)));
   }
 
   // --- Looped parts --------------------------------------------------------
@@ -1895,6 +2022,7 @@ class PlayerState with ChangeNotifier {
 
     // Snapshot the item at load time - don't rely on currentItem getter.
     final item = library[targetIndex];
+    _resumeCheckPath = item.path;
 
     _videoCompletionFired = false;
     _videoReady = false;
@@ -2100,6 +2228,7 @@ class PlayerState with ChangeNotifier {
       }
 
       _androidController = ctrl;
+      if (_effectiveSpeed != 1.0) await ctrl.setPlaybackSpeed(_effectiveSpeed);
       duration = ctrl.value.duration;
       position = Duration.zero;
       _emitPositionUiState();
@@ -2656,6 +2785,11 @@ class PlayerState with ChangeNotifier {
       // from the host.
       return;
     }
+    if (sleepAtTrackEnd) {
+      sleepAtTrackEnd = false;
+      notifyListeners();
+      return;
+    }
     // A looped part that runs to the end of the track starts over at the
     // first part, instead of the next track.
     final loop = _activeLoop;
@@ -2735,6 +2869,9 @@ class PlayerState with ChangeNotifier {
 
   Future<void> _loadPrefs() async {
     volume = prefs.getDouble('volume') ?? 0.5;
+    speed = prefs.getDouble(_speedPrefsKey) ?? 1.0;
+    if (speed != 1.0) _applySpeed();
+    _loadResumePositions();
     volumeLeveling = prefs.getBool(_volumeLevelingPrefsKey) ?? true;
     shuffle = prefs.getBool('shuffle') ?? false;
     repeatMode = RepeatMode.values[
@@ -3908,6 +4045,7 @@ class PlayerState with ChangeNotifier {
       tried.add(uri);
       try {
         await player.open(Media(uri), play: play);
+        if (_effectiveSpeed != 1.0) await player.setRate(_effectiveSpeed);
         return;
       } catch (e) {
         debugPrint('media open failed for $uri: $e');
@@ -3997,6 +4135,8 @@ class PlayerState with ChangeNotifier {
     _watchPartySub = null;
     unawaited(watchParty.dispose());
     _watchPartyNotices.close();
+    _resumed.close();
+    _sleepTimer?.cancel();
     _seekDebounceTimer?.cancel();
     _seekDebounceTimer = null;
     _positionUiController.close();
@@ -4144,6 +4284,7 @@ class PlayerState with ChangeNotifier {
     final idx = library.indexWhere((m) => m.path == path);
     if (idx >= 0) {
       currentIndex = idx;
+      _resumeCheckPath = path;
       notifyListeners();
     }
 
@@ -4479,6 +4620,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _searchEditing = false;
   AppController? _appController;
   StreamSubscription<WatchPartyNotice>? _watchPartyNoticeSub;
+  StreamSubscription<Duration>? _resumedSub;
 
   bool get _usesNativeWindowFullscreen =>
       !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
@@ -4512,6 +4654,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       };
     }
     _listenForWatchPartyNotices(context.read<PlayerState>());
+    _listenForResumes(context.read<PlayerState>());
     if (_uiPrefsLoaded) return;
     _uiPrefsLoaded = true;
     final prefs = context.read<PlayerState>().prefs;
@@ -4548,10 +4691,27 @@ class _PlayerScreenState extends State<PlayerScreen>
     });
   }
 
+  /// A long file opened where it was left says so, with the way back to
+  /// its start.
+  void _listenForResumes(PlayerState player) {
+    _resumedSub?.cancel();
+    _resumedSub = player.resumedAt.listen((at) {
+      if (!mounted) return;
+      Snack.show(
+        context,
+        context.l10n.continuedAt(_fmtDur(at)),
+        actionLabel: context.l10n.startOver,
+        onAction: () => unawaited(player.seek(Duration.zero)),
+        duration: const Duration(seconds: 6),
+      );
+    });
+  }
+
   @override
   void dispose() {
     _appController?.onLibraryRefreshRequested = null;
     _watchPartyNoticeSub?.cancel();
+    _resumedSub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     if (!_usesNativeWindowFullscreen || _fullScreenIsOurs) {
       unawaited(_exitFullScreen());
@@ -5988,7 +6148,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             formatDur: _fmtDur,
             loopSections: state.loopSettingsFor(item.path).sections,
           ),
-          _LoopChipRow(state: state, path: item.path),
+          _PlaybackStatusRow(state: state, path: item.path),
 
           // -- Playback controls --
           Padding(
@@ -6440,25 +6600,32 @@ class _PositionWidget extends StatelessWidget {
   }
 }
 
-/// The looped parts of the track playing: whether they loop, switched with
-/// a tap, and the way to change them. Only there once it has parts.
-class _LoopChipRow extends StatelessWidget {
+/// What plays differently from normal, under the seek bar, each changed
+/// with a tap: the track's looped parts (switched on and off), a speed
+/// other than 1×, the sleep timer. Not there while all is as normal, so
+/// the card stays as small as before; on a narrow phone the chips wrap.
+class _PlaybackStatusRow extends StatelessWidget {
   final PlayerState state;
   final String path;
 
-  const _LoopChipRow({required this.state, required this.path});
+  const _PlaybackStatusRow({required this.state, required this.path});
 
   @override
   Widget build(BuildContext context) {
     final settings = state.loopSettingsFor(path);
     final count = settings.sections.length;
-    if (count == 0) return const SizedBox.shrink();
+    final sleeping = state.sleepAt != null || state.sleepAtTrackEnd;
+    if (count == 0 && state.speed == 1.0 && !sleeping) {
+      return const SizedBox.shrink();
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 8, 2),
-      child: Row(
+      child: Wrap(
+        spacing: 6,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Flexible(
-            child: FilterChip(
+          if (count > 0) ...[
+            FilterChip(
               avatar: const Icon(Icons.loop_rounded, size: 16),
               showCheckmark: false,
               selected: settings.on,
@@ -6471,12 +6638,20 @@ class _LoopChipRow extends StatelessWidget {
               visualDensity: VisualDensity.compact,
               onSelected: (_) => state.toggleLoop(path),
             ),
-          ),
-          const SizedBox(width: 4),
-          TextButton(
-            onPressed: () => showLoopSectionsSheet(context, state),
-            child: Text(context.l10n.loopEdit),
-          ),
+            TextButton(
+              onPressed: () => showLoopSectionsSheet(context, state),
+              child: Text(context.l10n.loopEdit),
+            ),
+          ],
+          if (state.speed != 1.0)
+            ActionChip(
+              avatar: const Icon(Icons.speed_rounded, size: 16),
+              label: Text(formatSpeed(state.speed)),
+              tooltip: context.l10n.playbackSpeed,
+              visualDensity: VisualDensity.compact,
+              onPressed: () => showSpeedDialog(context, state),
+            ),
+          if (sleeping) SleepTimerChip(state: state),
         ],
       ),
     );
@@ -6613,6 +6788,8 @@ class _PlayPauseButton extends StatelessWidget {
 
 enum _TrackMenuAction {
   loopParts,
+  speed,
+  sleepTimer,
   copyTitle,
   share,
   queue,
@@ -6702,6 +6879,12 @@ class _TrackMenuButton extends StatelessWidget {
           case _TrackMenuAction.loopParts:
             await showLoopSectionsSheet(context, state);
             break;
+          case _TrackMenuAction.speed:
+            await showSpeedDialog(context, state);
+            break;
+          case _TrackMenuAction.sleepTimer:
+            await showSleepTimerDialog(context, state);
+            break;
           case _TrackMenuAction.copyTitle:
             await copyTrackTitle(context, item);
             break;
@@ -6764,8 +6947,9 @@ class _TrackMenuButton extends StatelessWidget {
         }
       },
       itemBuilder: (context) => [
-        // Parts are marked while the track plays.
-        if (state.currentItem?.path == item.path)
+        // Parts are marked while the track plays; speed and the sleep
+        // timer are about what plays now.
+        if (state.currentItem?.path == item.path) ...[
           PopupMenuItem(
             value: _TrackMenuAction.loopParts,
             child: ListTile(
@@ -6774,6 +6958,24 @@ class _TrackMenuButton extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
             ),
           ),
+          PopupMenuItem(
+            value: _TrackMenuAction.speed,
+            child: ListTile(
+              leading: const Icon(Icons.speed_rounded),
+              title: Text(context.l10n.playbackSpeed),
+              trailing: Text(formatSpeed(state.speed)),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          PopupMenuItem(
+            value: _TrackMenuAction.sleepTimer,
+            child: ListTile(
+              leading: const Icon(Icons.bedtime_outlined),
+              title: Text(context.l10n.sleepTimer),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ],
         PopupMenuItem(
           value: _TrackMenuAction.copyTitle,
           child: ListTile(

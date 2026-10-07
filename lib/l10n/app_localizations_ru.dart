@@ -4887,4 +4887,37 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get loopEdit => 'Изменить';
+
+  @override
+  String get playbackSpeed => 'Скорость воспроизведения';
+
+  @override
+  String get sleepTimer => 'Таймер сна';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes минут';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'В конце этого трека';
+
+  @override
+  String get sleepTimerOff => 'Выключен';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'Пауза через $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Пауза после этого трека';
+
+  @override
+  String continuedAt(String time) {
+    return 'Продолжено с $time';
+  }
+
+  @override
+  String get startOver => 'Сначала';
 }

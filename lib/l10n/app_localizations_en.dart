@@ -4873,4 +4873,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get loopEdit => 'Edit';
+
+  @override
+  String get playbackSpeed => 'Playback speed';
+
+  @override
+  String get sleepTimer => 'Sleep timer';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes minutes';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'At the end of this track';
+
+  @override
+  String get sleepTimerOff => 'Off';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'Sleep in $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Sleep after this track';
+
+  @override
+  String continuedAt(String time) {
+    return 'Continued at $time';
+  }
+
+  @override
+  String get startOver => 'Start over';
 }

@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "सभी हिस्से हटाएं",
   "loopingPartsCount": "दोहराए जा रहे हिस्से ({count})",
   "loopPartsOffCount": "बिना दोहराव वाले हिस्से ({count})",
-  "loopEdit": "बदलें"
+  "loopEdit": "बदलें",
+  "playbackSpeed": "प्लेबैक स्पीड",
+  "sleepTimer": "स्लीप टाइमर",
+  "sleepTimerMinutes": "{minutes} मिनट",
+  "sleepTimerEndOfTrack": "इस ट्रैक के अंत में",
+  "sleepTimerOff": "बंद",
+  "sleepTimerIn": "{time} में रुकेगा",
+  "sleepAfterTrack": "इस ट्रैक के बाद रुकेगा",
+  "continuedAt": "{time} से जारी",
+  "startOver": "शुरू से चलाएं"
 }

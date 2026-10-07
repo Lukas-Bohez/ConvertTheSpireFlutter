@@ -3016,5 +3016,35 @@
       }
     }
   },
-  "loopEdit": "Edit"
+  "loopEdit": "Edit",
+  "playbackSpeed": "Playback speed",
+  "sleepTimer": "Sleep timer",
+  "sleepTimerMinutes": "{minutes} minutes",
+  "@sleepTimerMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "sleepTimerEndOfTrack": "At the end of this track",
+  "sleepTimerOff": "Off",
+  "sleepTimerIn": "Sleep in {time}",
+  "@sleepTimerIn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "sleepAfterTrack": "Sleep after this track",
+  "continuedAt": "Continued at {time}",
+  "@continuedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "startOver": "Start over"
 }

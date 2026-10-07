@@ -4899,4 +4899,37 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get loopEdit => 'Düzenle';
+
+  @override
+  String get playbackSpeed => 'Oynatma hızı';
+
+  @override
+  String get sleepTimer => 'Uyku zamanlayıcısı';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes dakika';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'Bu parçanın sonunda';
+
+  @override
+  String get sleepTimerOff => 'Kapalı';
+
+  @override
+  String sleepTimerIn(String time) {
+    return '$time sonra durur';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Bu parçadan sonra durur';
+
+  @override
+  String continuedAt(String time) {
+    return '$time konumundan devam ediliyor';
+  }
+
+  @override
+  String get startOver => 'Baştan başla';
 }

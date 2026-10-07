@@ -4856,4 +4856,37 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get loopEdit => 'تعديل';
+
+  @override
+  String get playbackSpeed => 'سرعة التشغيل';
+
+  @override
+  String get sleepTimer => 'مؤقت النوم';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes دقيقة';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'في نهاية هذا المقطع';
+
+  @override
+  String get sleepTimerOff => 'إيقاف';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'إيقاف مؤقت بعد $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'إيقاف مؤقت بعد هذا المقطع';
+
+  @override
+  String continuedAt(String time) {
+    return 'تم الاستئناف من $time';
+  }
+
+  @override
+  String get startOver => 'من البداية';
 }

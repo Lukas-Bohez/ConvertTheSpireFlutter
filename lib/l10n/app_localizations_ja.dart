@@ -4763,4 +4763,37 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get loopEdit => '編集';
+
+  @override
+  String get playbackSpeed => '再生速度';
+
+  @override
+  String get sleepTimer => 'スリープタイマー';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes 分';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'このトラックの終わりに';
+
+  @override
+  String get sleepTimerOff => 'オフ';
+
+  @override
+  String sleepTimerIn(String time) {
+    return '$time 後に停止';
+  }
+
+  @override
+  String get sleepAfterTrack => 'このトラックの後に停止';
+
+  @override
+  String continuedAt(String time) {
+    return '$time から再開しました';
+  }
+
+  @override
+  String get startOver => '最初から';
 }

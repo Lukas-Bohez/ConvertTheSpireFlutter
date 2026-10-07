@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "Xóa tất cả các đoạn",
   "loopingPartsCount": "Đang lặp đoạn ({count})",
   "loopPartsOffCount": "Đoạn không lặp ({count})",
-  "loopEdit": "Sửa"
+  "loopEdit": "Sửa",
+  "playbackSpeed": "Tốc độ phát",
+  "sleepTimer": "Hẹn giờ tắt",
+  "sleepTimerMinutes": "{minutes} phút",
+  "sleepTimerEndOfTrack": "Khi hết bài này",
+  "sleepTimerOff": "Tắt",
+  "sleepTimerIn": "Dừng sau {time}",
+  "sleepAfterTrack": "Dừng sau bài này",
+  "continuedAt": "Tiếp tục từ {time}",
+  "startOver": "Phát lại từ đầu"
 }

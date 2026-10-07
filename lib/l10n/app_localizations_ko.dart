@@ -4762,4 +4762,37 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get loopEdit => '편집';
+
+  @override
+  String get playbackSpeed => '재생 속도';
+
+  @override
+  String get sleepTimer => '취침 타이머';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes분';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => '이 트랙이 끝날 때';
+
+  @override
+  String get sleepTimerOff => '끔';
+
+  @override
+  String sleepTimerIn(String time) {
+    return '$time 후 정지';
+  }
+
+  @override
+  String get sleepAfterTrack => '이 트랙 후 정지';
+
+  @override
+  String continuedAt(String time) {
+    return '$time부터 이어서 재생';
+  }
+
+  @override
+  String get startOver => '처음부터';
 }

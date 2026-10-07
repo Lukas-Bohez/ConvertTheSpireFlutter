@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "删除所有片段",
   "loopingPartsCount": "正在循环的片段（{count}）",
   "loopPartsOffCount": "未循环的片段（{count}）",
-  "loopEdit": "编辑"
+  "loopEdit": "编辑",
+  "playbackSpeed": "播放速度",
+  "sleepTimer": "睡眠定时",
+  "sleepTimerMinutes": "{minutes} 分钟",
+  "sleepTimerEndOfTrack": "本曲结束时",
+  "sleepTimerOff": "关闭",
+  "sleepTimerIn": "{time} 后暂停",
+  "sleepAfterTrack": "本曲结束后暂停",
+  "continuedAt": "已从 {time} 继续",
+  "startOver": "从头开始"
 }

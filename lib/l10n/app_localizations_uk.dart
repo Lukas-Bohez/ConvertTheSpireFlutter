@@ -4895,4 +4895,37 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get loopEdit => 'Змінити';
+
+  @override
+  String get playbackSpeed => 'Швидкість відтворення';
+
+  @override
+  String get sleepTimer => 'Таймер сну';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes хвилин';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'Наприкінці цього треку';
+
+  @override
+  String get sleepTimerOff => 'Вимкнено';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'Пауза через $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Пауза після цього треку';
+
+  @override
+  String continuedAt(String time) {
+    return 'Продовжено з $time';
+  }
+
+  @override
+  String get startOver => 'Спочатку';
 }

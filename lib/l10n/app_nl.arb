@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "Alle stukken verwijderen",
   "loopingPartsCount": "Stukken herhalen ({count})",
   "loopPartsOffCount": "Stukken, niet herhalen ({count})",
-  "loopEdit": "Bewerken"
+  "loopEdit": "Bewerken",
+  "playbackSpeed": "Afspeelsnelheid",
+  "sleepTimer": "Slaaptimer",
+  "sleepTimerMinutes": "{minutes} minuten",
+  "sleepTimerEndOfTrack": "Aan het einde van dit nummer",
+  "sleepTimerOff": "Uit",
+  "sleepTimerIn": "Stopt over {time}",
+  "sleepAfterTrack": "Stopt na dit nummer",
+  "continuedAt": "Verder op {time}",
+  "startOver": "Opnieuw beginnen"
 }

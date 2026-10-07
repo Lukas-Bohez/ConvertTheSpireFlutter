@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "Alle Abschnitte löschen",
   "loopingPartsCount": "Abschnitte in Schleife ({count})",
   "loopPartsOffCount": "Abschnitte ohne Schleife ({count})",
-  "loopEdit": "Bearbeiten"
+  "loopEdit": "Bearbeiten",
+  "playbackSpeed": "Wiedergabegeschwindigkeit",
+  "sleepTimer": "Schlaf-Timer",
+  "sleepTimerMinutes": "{minutes} Minuten",
+  "sleepTimerEndOfTrack": "Am Ende dieses Titels",
+  "sleepTimerOff": "Aus",
+  "sleepTimerIn": "Pause in {time}",
+  "sleepAfterTrack": "Pause nach diesem Titel",
+  "continuedAt": "Fortgesetzt bei {time}",
+  "startOver": "Von vorn"
 }

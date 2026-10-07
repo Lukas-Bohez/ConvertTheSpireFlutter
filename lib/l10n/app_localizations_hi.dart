@@ -4881,4 +4881,37 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get loopEdit => 'बदलें';
+
+  @override
+  String get playbackSpeed => 'प्लेबैक स्पीड';
+
+  @override
+  String get sleepTimer => 'स्लीप टाइमर';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes मिनट';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'इस ट्रैक के अंत में';
+
+  @override
+  String get sleepTimerOff => 'बंद';
+
+  @override
+  String sleepTimerIn(String time) {
+    return '$time में रुकेगा';
+  }
+
+  @override
+  String get sleepAfterTrack => 'इस ट्रैक के बाद रुकेगा';
+
+  @override
+  String continuedAt(String time) {
+    return '$time से जारी';
+  }
+
+  @override
+  String get startOver => 'शुरू से चलाएं';
 }

@@ -1415,5 +1415,14 @@
   "loopDeleteAll": "Hapus semua bagian",
   "loopingPartsCount": "Mengulang bagian ({count})",
   "loopPartsOffCount": "Bagian tidak diulang ({count})",
-  "loopEdit": "Edit"
+  "loopEdit": "Edit",
+  "playbackSpeed": "Kecepatan putar",
+  "sleepTimer": "Pengatur waktu tidur",
+  "sleepTimerMinutes": "{minutes} menit",
+  "sleepTimerEndOfTrack": "Di akhir lagu ini",
+  "sleepTimerOff": "Mati",
+  "sleepTimerIn": "Berhenti dalam {time}",
+  "sleepAfterTrack": "Berhenti setelah lagu ini",
+  "continuedAt": "Dilanjutkan pada {time}",
+  "startOver": "Mulai dari awal"
 }

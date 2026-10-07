@@ -4918,4 +4918,37 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get loopEdit => 'Editar';
+
+  @override
+  String get playbackSpeed => 'Velocidade de reprodução';
+
+  @override
+  String get sleepTimer => 'Timer de desligamento';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes minutos';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'No fim desta faixa';
+
+  @override
+  String get sleepTimerOff => 'Desligado';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'Pausa em $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Pausa após esta faixa';
+
+  @override
+  String continuedAt(String time) {
+    return 'Continuando em $time';
+  }
+
+  @override
+  String get startOver => 'Recomeçar';
 }

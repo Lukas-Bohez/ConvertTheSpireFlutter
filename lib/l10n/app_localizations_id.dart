@@ -4898,4 +4898,37 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get loopEdit => 'Edit';
+
+  @override
+  String get playbackSpeed => 'Kecepatan putar';
+
+  @override
+  String get sleepTimer => 'Pengatur waktu tidur';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes menit';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'Di akhir lagu ini';
+
+  @override
+  String get sleepTimerOff => 'Mati';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'Berhenti dalam $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Berhenti setelah lagu ini';
+
+  @override
+  String continuedAt(String time) {
+    return 'Dilanjutkan pada $time';
+  }
+
+  @override
+  String get startOver => 'Mulai dari awal';
 }

@@ -4881,4 +4881,37 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get loopEdit => 'Sửa';
+
+  @override
+  String get playbackSpeed => 'Tốc độ phát';
+
+  @override
+  String get sleepTimer => 'Hẹn giờ tắt';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes phút';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'Khi hết bài này';
+
+  @override
+  String get sleepTimerOff => 'Tắt';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'Dừng sau $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Dừng sau bài này';
+
+  @override
+  String continuedAt(String time) {
+    return 'Tiếp tục từ $time';
+  }
+
+  @override
+  String get startOver => 'Phát lại từ đầu';
 }

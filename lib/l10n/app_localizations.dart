@@ -8628,6 +8628,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit'**
   String get loopEdit;
+
+  /// No description provided for @playbackSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback speed'**
+  String get playbackSpeed;
+
+  /// No description provided for @sleepTimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep timer'**
+  String get sleepTimer;
+
+  /// No description provided for @sleepTimerMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} minutes'**
+  String sleepTimerMinutes(int minutes);
+
+  /// No description provided for @sleepTimerEndOfTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'At the end of this track'**
+  String get sleepTimerEndOfTrack;
+
+  /// No description provided for @sleepTimerOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get sleepTimerOff;
+
+  /// No description provided for @sleepTimerIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep in {time}'**
+  String sleepTimerIn(String time);
+
+  /// No description provided for @sleepAfterTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep after this track'**
+  String get sleepAfterTrack;
+
+  /// No description provided for @continuedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Continued at {time}'**
+  String continuedAt(String time);
+
+  /// No description provided for @startOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Start over'**
+  String get startOver;
 }
 
 class _AppLocalizationsDelegate
