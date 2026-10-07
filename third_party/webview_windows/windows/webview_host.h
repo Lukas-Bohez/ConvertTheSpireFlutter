@@ -58,6 +58,8 @@ class WebviewHost {
     return browser_extensions_enabled_;
   }
 
+  ICoreWebView2Environment3* environment() const { return webview_env_.get(); }
+
  private:
   winrt::com_ptr<ABI::Windows::UI::Composition::ICompositor> compositor_;
   wil::com_ptr<ICoreWebView2Environment3> webview_env_;

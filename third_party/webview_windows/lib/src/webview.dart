@@ -435,6 +435,31 @@ class WebviewController extends ValueNotifier<WebviewValue> {
     return _methodChannel.invokeMethod('postWebMessage', message);
   }
 
+  /// Blocks requests with the request block rules of [rulesId], which every
+  /// webview shares, or stops blocking when it is null. False when the
+  /// shared rules are not those: [setRequestBlockRules] sends them.
+  Future<bool> setRequestBlocking(String? rulesId) async {
+    if (_isDisposed) {
+      return false;
+    }
+    assert(value.isInitialized);
+    return await _methodChannel.invokeMethod<bool>(
+            'setRequestBlocking', rulesId) ??
+        false;
+  }
+
+  /// Replaces the request block rules every webview shares and blocks with
+  /// them here: `id`, `blockedHosts`, `allowedHosts`, `allowedPages` and
+  /// `exemptPages` (lists of hosts), `rules` and `exceptions` (by host,
+  /// lists of `[pattern, 'on|on', 'not|not']`).
+  Future<void> setRequestBlockRules(Map<String, Object?> rules) async {
+    if (_isDisposed) {
+      return;
+    }
+    assert(value.isInitialized);
+    return _methodChannel.invokeMethod('setRequestBlockRules', rules);
+  }
+
   /// Sets the user agent value.
   Future<void> setUserAgent(String userAgent) async {
     if (_isDisposed) {

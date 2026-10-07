@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
@@ -9,16 +8,26 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Lightweight ad-block service that uses EasyList domain rules.
+import '../../config/build_flags.dart';
+import '../platform/browser_webview_controller.dart' show ContentBlocking;
+import 'adblock_scripts.dart';
+import 'filter_list.dart';
+
+/// The in-app browser's ad blocker, on the filter lists uBlock Origin also
+/// starts from: EasyList (ads) and EasyPrivacy (trackers).
 ///
-/// Parses `||domain^` and `||domain/` style rules into a [HashSet] for O(1)
-/// lookup. The blocklist is cached locally and refreshed every 7 days.
+/// It blocks the requests the lists name (see [FilterSet]) and hides the
+/// elements they name. The lists are cached and refreshed every 7 days.
 class AdBlockService extends ChangeNotifier {
-  static const _easyListUrl = 'https://easylist.to/easylist/easylist.txt';
+  static const _listUrls = [
+    'https://easylist.to/easylist/easylist.txt',
+    'https://easylist.to/easylist/easyprivacy.txt',
+  ];
   static const _prefKey = 'adblock_enabled';
   static const _lastUpdatedKey = 'adblock_last_updated';
 
-  HashSet<String> _blockedDomains = HashSet<String>();
+  FilterSet _filters = FilterSet(blockedHosts: {..._hardcodedPopupDomains});
+  ContentBlocking? _contentBlocking;
   bool _enabled = true;
   bool _loaded = false;
   bool _disposed = false;
@@ -27,14 +36,13 @@ class AdBlockService extends ChangeNotifier {
   bool get adBlockEnabled => _enabled;
   bool get isLoaded => _loaded;
   DateTime? get lastUpdated => _lastUpdated;
+  FilterSet get filters => _filters;
 
-  /// The always-blocked popup/tracking domains. Exposed so the Windows
-  /// WebView adapter (which cannot intercept requests) can embed them in
-  /// an injected fetch/XHR blocker.
+  /// The always-blocked popup/tracking domains.
   Set<String> get hardcodedPopupDomains => _hardcodedPopupDomains;
 
   /// Common popup / tracking domains that are always blocked.
-  static final _hardcodedPopupDomains = HashSet<String>.from([
+  static final _hardcodedPopupDomains = <String>{
     'popads.net',
     'popcash.net',
     'propellerads.com',
@@ -54,7 +62,24 @@ class AdBlockService extends ChangeNotifier {
     'exoclick.com',
     'juicyads.com',
     'revcontent.com',
-  ]);
+  };
+
+  /// What a webview needs to block with the current lists, or null while
+  /// the blocker is off.
+  ContentBlocking? get contentBlocking {
+    if (!_enabled) return null;
+    return _contentBlocking ??= ContentBlocking(
+      id: '${identityHashCode(_filters)}-${DateTime.now().microsecondsSinceEpoch}',
+      filters: _filters,
+      // YouTube features stay out of the Play build.
+      documentStartScript:
+          documentStartScript(_filters, skipYouTubeAds: !kPlayStoreBuild),
+    );
+  }
+
+  /// The script that hides [url]'s own site's ad elements, or null.
+  String? siteHideScript(String url) =>
+      _enabled ? siteHideScriptFor(_filters, url) : null;
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -65,15 +90,10 @@ class AdBlockService extends ChangeNotifier {
     }
     await _loadOrFetch();
     _loaded = true;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
-  Future<void> toggleAdBlock() async {
-    _enabled = !_enabled;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_prefKey, _enabled);
-    notifyListeners();
-  }
+  Future<void> toggleAdBlock() => setEnabled(!_enabled);
 
   Future<void> setEnabled(bool value) async {
     if (_enabled == value) return;
@@ -85,7 +105,7 @@ class AdBlockService extends ChangeNotifier {
 
   Future<void> updateBlocklist() async {
     await _fetchAndCache();
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   /// Test seam: loads a blocklist without touching the network or disk.
@@ -95,112 +115,100 @@ class AdBlockService extends ChangeNotifier {
   /// every ad through, so the rules are worth pinning down.
   @visibleForTesting
   void seedBlocklistForTesting(Iterable<String> domains, {bool enabled = true}) {
-    _blockedDomains = HashSet<String>.from(domains.map((d) => d.toLowerCase()));
+    _setFilters(FilterSet(blockedHosts: {...domains.map((d) => d.toLowerCase())}));
     _enabled = enabled;
   }
 
-  /// Returns `true` if [url] should be blocked.
-  bool shouldBlock(String url) {
+  @visibleForTesting
+  void seedFiltersForTesting(FilterSet filters) => _setFilters(filters);
+
+  /// Whether [url], loaded by the page at [pageUrl], is blocked.
+  bool shouldBlock(String url, {String? pageUrl}) {
     if (!_enabled) return false;
     try {
-      final uri = Uri.parse(url);
-      final host = uri.host.toLowerCase();
-      // Check exact domain and parent domains
-      if (_blockedDomains.contains(host) ||
-          _hardcodedPopupDomains.contains(host)) {
-        return true;
-      }
-      // Check parent domains (e.g. ads.example.com → example.com)
-      final parts = host.split('.');
-      for (var i = 1; i < parts.length - 1; i++) {
-        final parent = parts.sublist(i).join('.');
-        if (_blockedDomains.contains(parent) ||
-            _hardcodedPopupDomains.contains(parent)) {
-          return true;
-        }
-      }
-    } catch (_) {}
-    return false;
+      return _filters.blocks(url, pageUrl: pageUrl);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _setFilters(FilterSet filters) {
+    filters.blockedHosts.addAll(_hardcodedPopupDomains);
+    _filters = filters;
+    _contentBlocking = null;
   }
 
   // -- Private --
 
   Future<File> get _cacheFile async {
     final dir = await getApplicationSupportDirectory();
-    return File('${dir.path}/easylist_domains.txt');
+    return File('${dir.path}/adblock_filters.json');
   }
 
   Future<void> _loadOrFetch() async {
     final file = await _cacheFile;
-    final needsFetch = !file.existsSync() ||
+    final exists = file.existsSync();
+    final needsFetch = !exists ||
         _lastUpdated == null ||
         DateTime.now().difference(_lastUpdated!).inDays >= 7;
 
-    if (file.existsSync()) {
-      final lines = await file.readAsLines();
-      _blockedDomains = HashSet<String>.from(lines);
+    if (exists) {
+      try {
+        final path = file.path;
+        final cached = await Isolate.run(
+            () => FilterSet.fromJson(jsonDecode(File(path).readAsStringSync())));
+        if (cached != null && !_disposed) _setFilters(cached);
+      } catch (e) {
+        if (kDebugMode) debugPrint('AdBlock cache unreadable: $e');
+      }
     }
+    // The domain-only cache of earlier versions.
+    final old = File('${file.parent.path}/easylist_domains.txt');
+    if (old.existsSync()) unawaited(old.delete().then((_) {}, onError: (_) {}));
 
-    if (needsFetch) {
-      // Fetch in background - don't block init
-      unawaited(_fetchAndCache().catchError((e) {
-        if (kDebugMode) debugPrint('AdBlock fetch failed: $e');
+    if (needsFetch || _filters.ruleCount <= _hardcodedPopupDomains.length) {
+      // Fetched in the background: init doesn't wait for the network.
+      unawaited(_fetchAndCache().then((_) {
+        if (!_disposed) notifyListeners();
       }));
     }
   }
 
   Future<void> _fetchAndCache() async {
     try {
-      // Bound the isolate parse with a timeout to avoid long-running work.
-      final domains = await Isolate.run(() => _fetchAndParse())
-          .timeout(const Duration(seconds: 25));
-      if (_disposed) return;
-      _blockedDomains = HashSet<String>.from(domains);
-
-      final file = await _cacheFile;
-      await file.writeAsString(domains.join('\n'));
+      final path = (await _cacheFile).path;
+      final filters = await Isolate.run(() => _fetchParseAndCache(path))
+          .timeout(const Duration(seconds: 60));
+      if (_disposed || filters == null) return;
+      _setFilters(filters);
 
       _lastUpdated = DateTime.now();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_lastUpdatedKey, _lastUpdated!.millisecondsSinceEpoch);
     } catch (e) {
-      if (e is TimeoutException) {
-        if (kDebugMode) debugPrint('AdBlock fetch timed out');
-        return;
-      }
       if (kDebugMode) debugPrint('AdBlock update failed: $e');
     }
   }
 
-  /// Fetched and parsed in an isolate to avoid blocking the UI.
-  static Future<List<String>> _fetchAndParse() async {
-    try {
-      // Network timeout to avoid hanging on slow responses.
-      final response = await http
-          .get(Uri.parse(_easyListUrl))
-          .timeout(const Duration(seconds: 15));
-      if (response.statusCode != 200) return [];
-
-      final domains = <String>[];
-      for (final line in const LineSplitter().convert(response.body)) {
-        // Match: ||domain^ or ||domain/
-        if (!line.startsWith('||')) continue;
-        final rest = line.substring(2);
-        // Find the terminator - ^ or /
-        var end = rest.indexOf('^');
-        final slashEnd = rest.indexOf('/');
-        if (end < 0 || (slashEnd >= 0 && slashEnd < end)) end = slashEnd;
-        if (end <= 0) continue;
-        final domain = rest.substring(0, end).toLowerCase();
-        // Validate: must look like a domain (letters, digits, dots, hyphens)
-        if (domain.contains(RegExp(r'[^a-z0-9.\-]'))) continue;
-        if (!domain.contains('.')) continue;
-        domains.add(domain);
+  /// Downloads and parses the lists and writes the cache, on an isolate so
+  /// the UI keeps going. Null when no list could be downloaded.
+  static Future<FilterSet?> _fetchParseAndCache(String cachePath) async {
+    final lines = <String>[];
+    for (final url in _listUrls) {
+      try {
+        final response = await http
+            .get(Uri.parse(url))
+            .timeout(const Duration(seconds: 20));
+        if (response.statusCode != 200) continue;
+        lines.addAll(const LineSplitter().convert(response.body));
+      } catch (_) {
+        // The other list still helps.
       }
-      return domains;
-    } on TimeoutException {
-      return [];
     }
+    if (lines.isEmpty) return null;
+    final filters = FilterSet.parse(lines);
+    await File(cachePath).writeAsString(jsonEncode(filters.toJson()));
+    return filters;
   }
 
   @override

@@ -30,7 +30,6 @@ class BrowserWebviewFactory {
   /// Returns null on platforms without a supported WebView (Linux only).
   static BrowserWebviewController? create({
     FindInteractionController? findInteractionController,
-    Set<String> blockedDomains = const {},
     BrowserWebViewHooks? hooks,
   }) {
     try {
@@ -38,8 +37,7 @@ class BrowserWebviewFactory {
         return BrowserWebWebViewAdapter(hooks: hooks);
       }
       if (Platform.isWindows) {
-        return BrowserWindowsWebViewAdapter(
-            blockedDomains: blockedDomains, hooks: hooks);
+        return BrowserWindowsWebViewAdapter(hooks: hooks);
       }
       if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
         return BrowserInAppWebViewAdapter(

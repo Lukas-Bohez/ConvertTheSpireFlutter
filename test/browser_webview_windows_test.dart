@@ -30,7 +30,6 @@ void main() {
       final gate = _InitGate(failPersistently: false);
       final factory = _FactoryCounter(gate);
       final adapter = BrowserWindowsWebViewAdapter(
-        blockedDomains: {},
         controllerFactory: factory.make,
       );
 
@@ -75,7 +74,6 @@ void main() {
       final gate = _InitGate(failPersistently: true);
       final factory = _FactoryCounter(gate);
       final adapter = BrowserWindowsWebViewAdapter(
-        blockedDomains: {},
         controllerFactory: factory.make,
       );
 
@@ -123,7 +121,6 @@ void main() {
           return [atDocumentStart ? 'START' : 'END'];
         };
       final adapter = BrowserWindowsWebViewAdapter(
-        blockedDomains: {},
         controllerFactory: factory.make,
         hooks: hooks,
       );
@@ -145,7 +142,6 @@ void main() {
         ..userScriptsFor =
             (url, {required atDocumentStart}) => throw StateError('bad');
       final adapter = BrowserWindowsWebViewAdapter(
-        blockedDomains: {},
         controllerFactory: factory.make,
         hooks: hooks,
       );

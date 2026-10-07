@@ -1,5 +1,7 @@
 #include "webview_bridge.h"
 
+#include "request_blocker.h"
+
 #include <flutter/event_stream_handler_functions.h>
 #include <flutter/method_result_functions.h>
 
@@ -37,6 +39,8 @@ constexpr auto kMethodSetPointerUpdate = "setPointerUpdate";
 constexpr auto kMethodSetPointerButton = "setPointerButton";
 constexpr auto kMethodSetScrollDelta = "setScrollDelta";
 constexpr auto kMethodSetUserAgent = "setUserAgent";
+constexpr auto kMethodSetRequestBlocking = "setRequestBlocking";
+constexpr auto kMethodSetRequestBlockRules = "setRequestBlockRules";
 constexpr auto kMethodSetBackgroundColor = "setBackgroundColor";
 constexpr auto kMethodSetZoomFactor = "setZoomFactor";
 constexpr auto kMethodOpenDevTools = "openDevTools";
@@ -57,6 +61,64 @@ constexpr auto kEventValue = "value";
 constexpr auto kErrorNotSupported = "not_supported";
 constexpr auto kScriptFailed = "script_failed";
 constexpr auto kMethodFailed = "method_failed";
+
+static std::vector<std::string> GetStrings(const flutter::EncodableMap& map,
+                                           const char* key) {
+  std::vector<std::string> out;
+  const auto it = map.find(flutter::EncodableValue(key));
+  if (it == map.end()) {
+    return out;
+  }
+  if (const auto list = std::get_if<flutter::EncodableList>(&it->second)) {
+    for (const auto& value : *list) {
+      if (const auto s = std::get_if<std::string>(&value)) {
+        out.push_back(*s);
+      }
+    }
+  }
+  return out;
+}
+
+// {host: [[pattern, "on|on", "not|not"], ...]} as sent by FilterSet.
+static std::unordered_map<std::string, std::vector<UrlRule>> GetUrlRules(
+    const flutter::EncodableMap& map, const char* key) {
+  std::unordered_map<std::string, std::vector<UrlRule>> out;
+  const auto it = map.find(flutter::EncodableValue(key));
+  if (it == map.end()) {
+    return out;
+  }
+  const auto split = [](const std::string& s) {
+    std::vector<std::string> parts;
+    size_t start = 0;
+    while (start < s.size()) {
+      auto end = s.find('|', start);
+      if (end == std::string::npos) end = s.size();
+      if (end > start) parts.push_back(s.substr(start, end - start));
+      start = end + 1;
+    }
+    return parts;
+  };
+  const auto hosts = std::get_if<flutter::EncodableMap>(&it->second);
+  if (!hosts) {
+    return out;
+  }
+  for (const auto& [host_value, rules_value] : *hosts) {
+    const auto host = std::get_if<std::string>(&host_value);
+    const auto rules = std::get_if<flutter::EncodableList>(&rules_value);
+    if (!host || !rules) continue;
+    auto& list = out[*host];
+    for (const auto& rule_value : *rules) {
+      const auto rule = std::get_if<flutter::EncodableList>(&rule_value);
+      if (!rule || rule->size() != 3) continue;
+      const auto pattern = std::get_if<std::string>(&(*rule)[0]);
+      const auto on = std::get_if<std::string>(&(*rule)[1]);
+      const auto not_on = std::get_if<std::string>(&(*rule)[2]);
+      if (!pattern || !on || !not_on) continue;
+      list.push_back(UrlRule{*pattern, split(*on), split(*not_on)});
+    }
+  }
+  return out;
+}
 
 static const std::optional<std::pair<double, double>> GetPointFromArgs(
     const flutter::EncodableValue* args) {
@@ -697,6 +759,56 @@ void WebviewBridge::HandleMethodCall(
   }
 
   // setUserAgent: string
+  // setRequestBlocking: string? (rules id)
+  // Blocks requests with the shared rules if they have this id, and answers
+  // false when they don't: setRequestBlockRules sends them. Null stops it.
+  if (method_name.compare(kMethodSetRequestBlocking) == 0) {
+    const auto args = method_call.arguments();
+    if (!args || std::holds_alternative<std::monostate>(*args)) {
+      webview_->SetRequestBlocking(false);
+      return result->Success(flutter::EncodableValue(true));
+    }
+    if (const auto id = std::get_if<std::string>(args)) {
+      const auto& shared = RequestBlockRules::Shared();
+      if (!shared || shared->id != *id) {
+        return result->Success(flutter::EncodableValue(false));
+      }
+      webview_->SetRequestBlocking(true);
+      return result->Success(flutter::EncodableValue(true));
+    }
+    return result->Error(kErrorInvalidArgs);
+  }
+
+  // setRequestBlockRules: {id, blockedHosts, allowedHosts, rules, exceptions,
+  // allowedPages, exemptPages}. Shared by every webview; blocks with them.
+  if (method_name.compare(kMethodSetRequestBlockRules) == 0) {
+    const auto map =
+        std::get_if<flutter::EncodableMap>(method_call.arguments());
+    if (!map) {
+      return result->Error(kErrorInvalidArgs);
+    }
+    auto rules = std::make_shared<RequestBlockRules>();
+    const auto id = map->find(flutter::EncodableValue("id"));
+    if (id != map->end()) {
+      if (const auto s = std::get_if<std::string>(&id->second)) rules->id = *s;
+    }
+    for (auto& host : GetStrings(*map, "blockedHosts")) {
+      rules->blocked_hosts.insert(std::move(host));
+    }
+    for (auto& host : GetStrings(*map, "allowedHosts")) {
+      rules->allowed_hosts.insert(std::move(host));
+    }
+    for (auto& host : GetStrings(*map, "allowedPages")) {
+      rules->allowed_pages.insert(std::move(host));
+    }
+    rules->exempt_pages = GetStrings(*map, "exemptPages");
+    rules->rules = GetUrlRules(*map, "rules");
+    rules->exceptions = GetUrlRules(*map, "exceptions");
+    RequestBlockRules::Shared() = std::move(rules);
+    webview_->SetRequestBlocking(true);
+    return result->Success();
+  }
+
   if (method_name.compare(kMethodSetUserAgent) == 0) {
     if (const auto user_agent =
             std::get_if<std::string>(method_call.arguments())) {

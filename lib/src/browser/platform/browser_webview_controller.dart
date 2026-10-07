@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 
+import '../adblock/filter_list.dart';
+
 /// Platform-neutral abstraction over the WebView backing the in-app browser.
 ///
 /// Two implementations exist:
@@ -33,6 +35,12 @@ abstract class BrowserWebviewController {
 
   /// Runs [js] in the page and returns the raw result (may be null).
   Future<Object?> evaluateJs(String js);
+
+  /// The ad blocker for this webview, or none when null: the filters'
+  /// requests are blocked where the platform matches them itself (Windows;
+  /// Android asks [BrowserWebViewHooks.shouldBlockResource] for each one),
+  /// and the script runs in every page before its own scripts.
+  Future<void> setContentBlocking(ContentBlocking? blocking);
 
   /// Applies user-agent / incognito style settings.
   Future<void> applySettings({required bool desktopMode, required bool incognito});
@@ -87,6 +95,37 @@ abstract class BrowserWebviewController {
   /// returns normally and the screen shows a snackbar.
   Future<void> clearSession();
   Future<void> dispose();
+}
+
+/// What the ad blocker hands a webview.
+class ContentBlocking {
+  ContentBlocking({
+    required this.id,
+    required this.filters,
+    required this.documentStartScript,
+  });
+
+  /// Changes with [filters], so a webview sends them on only once.
+  final String id;
+  final FilterSet filters;
+  final String documentStartScript;
+
+  /// The request rules as the Windows webview takes them.
+  Map<String, Object?> toNativeRules() => {
+        'id': id,
+        'blockedHosts': filters.blockedHosts.toList(),
+        'allowedHosts': filters.allowedHosts.toList(),
+        'allowedPages': filters.allowedPages.toList(),
+        'exemptPages': FilterSet.exemptPages,
+        'rules': {
+          for (final e in filters.rules.entries)
+            e.key: [for (final r in e.value) r.toJson()],
+        },
+        'exceptions': {
+          for (final e in filters.exceptions.entries)
+            e.key: [for (final r in e.value) r.toJson()],
+        },
+      };
 }
 
 /// Page load lifecycle event.

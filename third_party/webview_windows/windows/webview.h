@@ -97,6 +97,8 @@ struct EventRegistrations {
   EventRegistrationToken devtools_protocol_event_token_{};
   EventRegistrationToken new_windows_requested_token_{};
   EventRegistrationToken contains_fullscreen_element_changed_token_{};
+  EventRegistrationToken navigation_starting_token_{};
+  EventRegistrationToken web_resource_requested_token_{};
 };
 
 class Webview {
@@ -166,6 +168,8 @@ class Webview {
   bool SetCacheDisabled(bool disabled);
   void SetPopupWindowPolicy(WebviewPopupWindowPolicy policy);
   bool SetUserAgent(const std::string& user_agent);
+  // Blocks requests with the shared RequestBlockRules (the ad blocker).
+  void SetRequestBlocking(bool enabled);
   bool OpenDevTools();
   bool SetBackgroundColor(int32_t color);
   bool SetZoomFactor(double factor);
@@ -252,6 +256,9 @@ class Webview {
   VirtualKeyState virtual_keys_;
   WebviewPopupWindowPolicy popup_window_policy_ =
       WebviewPopupWindowPolicy::Allow;
+  bool request_blocking_ = false;
+  // The page being navigated to, which the ad blocker never blocks.
+  std::string main_navigation_url_;
 
   winrt::com_ptr<ABI::Windows::UI::Composition::IVisual> surface_;
   winrt::com_ptr<ABI::Windows::UI::Composition::Desktop::IDesktopWindowTarget>
