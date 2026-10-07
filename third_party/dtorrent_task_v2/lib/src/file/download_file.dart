@@ -378,10 +378,7 @@ class DownloadFile {
     }
     final access = _readAccess;
     _readAccess = null;
-    access?.close().catchError((Object e) {
-      _log.warning('Close file error:', e);
-      return access;
-    });
+    access?.close().catchError((Object e) => _log.warning('Close file error:', e));
   }
 
   Future<void> close() async {
