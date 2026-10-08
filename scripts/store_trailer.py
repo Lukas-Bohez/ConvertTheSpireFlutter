@@ -30,7 +30,7 @@ FADE = 0.4
 
 CAPTIONS = {
     'home': 'Download from 1,800+ sites as MP3, M4A or MP4',
-    'player': 'One player for your music and videos',
+    'player': 'One player for music and videos, lyrics included',
     'video': 'Subtitles load by themselves',
     'large': 'Watch big, without the clutter',
     'loop': 'Loop just the best part',

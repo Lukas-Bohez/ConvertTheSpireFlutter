@@ -4,12 +4,12 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/screenshots/media-player-audio-controls.webp" width="32%" alt="media player audio controls">
-  <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/screenshots/search-and-download-songs.webp" width="32%" alt="search and download songs">
-  <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/screenshots/convert-files-between-supported-media-types.webp" width="32%" alt="convert files between supported media types">
-  <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/screenshots/match-playlists-to-folders.webp" width="32%" alt="match playlists to folders">
-  <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/screenshots/watch-playlists-auto-install.webp" width="32%" alt="watch playlists auto install">
-  <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/screenshots/custom-file-explorer-tv.webp" width="32%" alt="custom file explorer tv">
+  <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/docs/screenshots/store/2-player.png" width="32%" alt="the player, with a song and its lyrics">
+  <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/docs/screenshots/store/3-video-subtitles.png" width="32%" alt="a video with its subtitles">
+  <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/docs/screenshots/store/4-large-view.png" width="32%" alt="the large view">
+  <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/docs/screenshots/store/5-loop-parts.png" width="32%" alt="looping the best part of a song">
+  <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/docs/screenshots/store/1-home.png" width="32%" alt="Home, with a link pasted in">
+  <img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/{{TAG}}/docs/screenshots/store/7-player-dark.png" width="32%" alt="the player in dark mode">
 </p>
 
 **Nothing to set up.** Download one file, open it, and it runs: no admin rights, no Python, no account.
@@ -47,5 +47,7 @@ Free code signing provided by [SignPath.io](https://signpath.io), certificate by
 Committers and reviewers: [Lukas-Bohez](https://github.com/Lukas-Bohez) · Approvers: [Lukas-Bohez](https://github.com/Lukas-Bohez) · [Full code signing policy](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter#code-signing-policy) · [Privacy policy](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/blob/main/PRIVACY.md)
 
 ---
+
+**Like the app?** It is made by one person, in their free time: [Buy me a coffee](https://buymeacoffee.com/orokaconner) · [GitHub Sponsors](https://github.com/sponsors/Lukas-Bohez)
 
 **More screenshots & info:** [README](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter#readme) · [Full changelog](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/blob/{{TAG}}/CHANGELOG.md) · [Report an issue](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/issues)
