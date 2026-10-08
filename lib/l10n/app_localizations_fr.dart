@@ -5045,4 +5045,7 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get partTimesInvalid =>
       'Chaque passage doit se terminer après son début, dans la durée de la vidéo.';
+
+  @override
+  String get lyrics => 'Paroles';
 }

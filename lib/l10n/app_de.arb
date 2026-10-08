@@ -1446,5 +1446,6 @@
   "partFrom": "Von",
   "partTo": "Bis",
   "addPartsToQueue": "In die Warteschlange ({count} Abschnitte)",
-  "partTimesInvalid": "Jeder Abschnitt muss nach seinem Beginn enden, innerhalb des Videos."
+  "partTimesInvalid": "Jeder Abschnitt muss nach seinem Beginn enden, innerhalb des Videos.",
+  "lyrics": "Songtext"
 }

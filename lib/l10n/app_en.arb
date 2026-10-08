@@ -3082,5 +3082,9 @@
       }
     }
   },
-  "partTimesInvalid": "Each part has to end after it starts, within the video."
+  "partTimesInvalid": "Each part has to end after it starts, within the video.",
+  "lyrics": "Lyrics",
+  "@lyrics": {
+    "description": "The subtitles chip and sheet, when the file is synced lyrics (.lrc) for a song."
+  }
 }

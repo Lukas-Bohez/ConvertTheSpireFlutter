@@ -5010,4 +5010,7 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get partTimesInvalid =>
       'Każdy fragment musi kończyć się po swoim początku, w obrębie filmu.';
+
+  @override
+  String get lyrics => 'Tekst';
 }

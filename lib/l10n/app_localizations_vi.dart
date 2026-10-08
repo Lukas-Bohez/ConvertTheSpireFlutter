@@ -4988,4 +4988,7 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get partTimesInvalid =>
       'Mỗi đoạn phải kết thúc sau khi bắt đầu và nằm trong video.';
+
+  @override
+  String get lyrics => 'Lời bài hát';
 }

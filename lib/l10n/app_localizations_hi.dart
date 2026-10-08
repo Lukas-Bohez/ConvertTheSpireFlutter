@@ -4988,4 +4988,7 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get partTimesInvalid =>
       'हर हिस्सा शुरू होने के बाद और वीडियो के भीतर खत्म होना चाहिए।';
+
+  @override
+  String get lyrics => 'बोल';
 }

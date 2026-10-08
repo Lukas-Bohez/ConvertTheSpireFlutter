@@ -5005,4 +5005,7 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get partTimesInvalid =>
       'Setiap bagian harus berakhir setelah dimulai, di dalam durasi video.';
+
+  @override
+  String get lyrics => 'Lirik';
 }

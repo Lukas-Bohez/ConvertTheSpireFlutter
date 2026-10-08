@@ -1446,5 +1446,6 @@
   "partFrom": "Van",
   "partTo": "Tot",
   "addPartsToQueue": "Aan de wachtrij toevoegen ({count} stukken)",
-  "partTimesInvalid": "Elk stuk moet na zijn begin eindigen, binnen de video."
+  "partTimesInvalid": "Elk stuk moet na zijn begin eindigen, binnen de video.",
+  "lyrics": "Songtekst"
 }

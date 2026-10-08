@@ -5024,4 +5024,7 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get partTimesInvalid =>
       'Ogni parte deve finire dopo il suo inizio, entro la durata del video.';
+
+  @override
+  String get lyrics => 'Testo';
 }

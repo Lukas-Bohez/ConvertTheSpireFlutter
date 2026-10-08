@@ -55,6 +55,19 @@ class Device:
     def shell(self, *args, check=True):
         return self.adb('shell', *args, check=check)
 
+    def wait_until_booted(self, seconds=600):
+        """An emulator just started takes a few minutes; then a little
+        more for its launcher to settle."""
+        self.adb('wait-for-device', timeout=seconds)
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            done = self.shell('getprop', 'sys.boot_completed', check=False)
+            if done.stdout.strip() == b'1':
+                time.sleep(10)
+                return
+            time.sleep(3)
+        raise SystemExit('the device did not finish starting')
+
     def demo_mode(self, on):
         """A clean status bar: 10:00, full battery and signal, no icons."""
         if not on:
@@ -188,6 +201,7 @@ def main():
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     device = Device(args.device)
+    device.wait_until_booted()
     tour = Tour(device, Path(args.media), out)
     size, density = FORMS[args.form]
     if size:

@@ -1446,5 +1446,6 @@
   "partFrom": "Od",
   "partTo": "Do",
   "addPartsToQueue": "Dodaj do kolejki ({count} fragm.)",
-  "partTimesInvalid": "Każdy fragment musi kończyć się po swoim początku, w obrębie filmu."
+  "partTimesInvalid": "Każdy fragment musi kończyć się po swoim początku, w obrębie filmu.",
+  "lyrics": "Tekst"
 }

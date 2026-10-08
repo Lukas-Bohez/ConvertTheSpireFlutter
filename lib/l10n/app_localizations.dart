@@ -8814,6 +8814,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Each part has to end after it starts, within the video.'**
   String get partTimesInvalid;
+
+  /// The subtitles chip and sheet, when the file is synced lyrics (.lrc) for a song.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics'**
+  String get lyrics;
 }
 
 class _AppLocalizationsDelegate

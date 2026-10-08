@@ -4868,4 +4868,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get partTimesInvalid => '各パートは開始より後、動画の長さの範囲内で終わる必要があります。';
+
+  @override
+  String get lyrics => '歌詞';
 }

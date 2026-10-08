@@ -1446,5 +1446,6 @@
   "partFrom": "De",
   "partTo": "Até",
   "addPartsToQueue": "Adicionar à fila ({count} trechos)",
-  "partTimesInvalid": "Cada trecho precisa terminar depois de começar, dentro do vídeo."
+  "partTimesInvalid": "Cada trecho precisa terminar depois de começar, dentro do vídeo.",
+  "lyrics": "Letra"
 }

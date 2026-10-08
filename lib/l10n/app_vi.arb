@@ -1446,5 +1446,6 @@
   "partFrom": "Từ",
   "partTo": "Đến",
   "addPartsToQueue": "Thêm vào hàng đợi ({count} đoạn)",
-  "partTimesInvalid": "Mỗi đoạn phải kết thúc sau khi bắt đầu và nằm trong video."
+  "partTimesInvalid": "Mỗi đoạn phải kết thúc sau khi bắt đầu và nằm trong video.",
+  "lyrics": "Lời bài hát"
 }

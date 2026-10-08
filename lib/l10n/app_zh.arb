@@ -1446,5 +1446,6 @@
   "partFrom": "从",
   "partTo": "到",
   "addPartsToQueue": "加入队列（{count} 个片段）",
-  "partTimesInvalid": "每个片段的结束时间必须晚于开始时间，并在视频时长之内。"
+  "partTimesInvalid": "每个片段的结束时间必须晚于开始时间，并在视频时长之内。",
+  "lyrics": "歌词"
 }

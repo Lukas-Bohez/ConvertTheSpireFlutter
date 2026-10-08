@@ -1446,5 +1446,6 @@
   "partFrom": "De",
   "partTo": "À",
   "addPartsToQueue": "Ajouter à la file ({count} passages)",
-  "partTimesInvalid": "Chaque passage doit se terminer après son début, dans la durée de la vidéo."
+  "partTimesInvalid": "Chaque passage doit se terminer après son début, dans la durée de la vidéo.",
+  "lyrics": "Paroles"
 }

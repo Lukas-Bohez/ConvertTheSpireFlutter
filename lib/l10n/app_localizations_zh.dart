@@ -4810,4 +4810,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get partTimesInvalid => '每个片段的结束时间必须晚于开始时间，并在视频时长之内。';
+
+  @override
+  String get lyrics => '歌词';
 }

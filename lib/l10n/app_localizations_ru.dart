@@ -4994,4 +4994,7 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get partTimesInvalid =>
       'Каждый фрагмент должен заканчиваться после начала и в пределах видео.';
+
+  @override
+  String get lyrics => 'Текст песни';
 }

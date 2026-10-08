@@ -5025,4 +5025,7 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get partTimesInvalid =>
       'Cada trecho precisa terminar depois de começar, dentro do vídeo.';
+
+  @override
+  String get lyrics => 'Letra';
 }

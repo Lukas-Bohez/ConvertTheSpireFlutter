@@ -1446,5 +1446,6 @@
   "partFrom": "Başlangıç",
   "partTo": "Bitiş",
   "addPartsToQueue": "Kuyruğa ekle ({count} bölüm)",
-  "partTimesInvalid": "Her bölüm başladıktan sonra ve video içinde bitmelidir."
+  "partTimesInvalid": "Her bölüm başladıktan sonra ve video içinde bitmelidir.",
+  "lyrics": "Şarkı sözleri"
 }

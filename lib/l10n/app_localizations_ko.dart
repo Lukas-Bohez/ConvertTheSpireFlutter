@@ -4867,4 +4867,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get partTimesInvalid => '각 구간은 시작 이후, 동영상 길이 안에서 끝나야 합니다.';
+
+  @override
+  String get lyrics => '가사';
 }

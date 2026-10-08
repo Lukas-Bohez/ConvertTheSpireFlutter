@@ -5006,4 +5006,7 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get partTimesInvalid =>
       'Her bölüm başladıktan sonra ve video içinde bitmelidir.';
+
+  @override
+  String get lyrics => 'Şarkı sözleri';
 }

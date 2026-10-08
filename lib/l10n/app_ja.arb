@@ -1446,5 +1446,6 @@
   "partFrom": "開始",
   "partTo": "終了",
   "addPartsToQueue": "キューに追加（{count} パート）",
-  "partTimesInvalid": "各パートは開始より後、動画の長さの範囲内で終わる必要があります。"
+  "partTimesInvalid": "各パートは開始より後、動画の長さの範囲内で終わる必要があります。",
+  "lyrics": "歌詞"
 }

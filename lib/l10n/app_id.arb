@@ -1446,5 +1446,6 @@
   "partFrom": "Dari",
   "partTo": "Sampai",
   "addPartsToQueue": "Tambahkan ke antrean ({count} bagian)",
-  "partTimesInvalid": "Setiap bagian harus berakhir setelah dimulai, di dalam durasi video."
+  "partTimesInvalid": "Setiap bagian harus berakhir setelah dimulai, di dalam durasi video.",
+  "lyrics": "Lirik"
 }

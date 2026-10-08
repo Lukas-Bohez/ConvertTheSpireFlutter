@@ -4963,4 +4963,7 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get partTimesInvalid =>
       'يجب أن ينتهي كل مقطع بعد بدايته وضمن مدة الفيديو.';
+
+  @override
+  String get lyrics => 'الكلمات';
 }

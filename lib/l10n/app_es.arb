@@ -1446,5 +1446,6 @@
   "partFrom": "Desde",
   "partTo": "Hasta",
   "addPartsToQueue": "Añadir a la cola ({count} partes)",
-  "partTimesInvalid": "Cada parte debe terminar después de empezar, dentro del vídeo."
+  "partTimesInvalid": "Cada parte debe terminar después de empezar, dentro del vídeo.",
+  "lyrics": "Letra"
 }

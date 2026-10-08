@@ -601,6 +601,10 @@ class PlayerState with ChangeNotifier {
   /// it, or else one found next to it.
   Subtitles? _subtitles;
   String? subtitlePath;
+
+  /// Whether the subtitles are a song's synced lyrics (an .lrc file).
+  bool get showingLyrics =>
+      subtitlePath?.toLowerCase().endsWith('.lrc') ?? false;
   List<String> subtitleOptions = const [];
   bool subtitlesOn = true;
   Duration subtitleDelay = Duration.zero;
@@ -7241,11 +7245,19 @@ class _PlaybackStatusRow extends StatelessWidget {
           if (sleeping) SleepTimerChip(state: state),
           if (subtitles)
             FilterChip(
-              avatar: const Icon(Icons.closed_caption_rounded, size: 16),
+              avatar: Icon(
+                  state.showingLyrics
+                      ? Icons.lyrics_rounded
+                      : Icons.closed_caption_rounded,
+                  size: 16),
               showCheckmark: false,
               selected: state.subtitlesOn,
-              label: Text(context.l10n.subtitles),
-              tooltip: context.l10n.subtitlesShow,
+              label: Text(state.showingLyrics
+                  ? context.l10n.lyrics
+                  : context.l10n.subtitles),
+              tooltip: state.showingLyrics
+                  ? context.l10n.lyrics
+                  : context.l10n.subtitlesShow,
               visualDensity: VisualDensity.compact,
               onSelected: (on) => unawaited(state.setSubtitlesOn(on)),
             ),

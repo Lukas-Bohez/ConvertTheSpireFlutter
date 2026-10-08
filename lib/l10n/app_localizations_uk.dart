@@ -5002,4 +5002,7 @@ class AppLocalizationsUk extends AppLocalizations {
   @override
   String get partTimesInvalid =>
       'Кожен фрагмент має закінчуватися після початку й у межах відео.';
+
+  @override
+  String get lyrics => 'Текст пісні';
 }

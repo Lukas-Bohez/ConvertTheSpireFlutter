@@ -1446,5 +1446,6 @@
   "partFrom": "시작",
   "partTo": "끝",
   "addPartsToQueue": "대기열에 추가({count}개 구간)",
-  "partTimesInvalid": "각 구간은 시작 이후, 동영상 길이 안에서 끝나야 합니다."
+  "partTimesInvalid": "각 구간은 시작 이후, 동영상 길이 안에서 끝나야 합니다.",
+  "lyrics": "가사"
 }

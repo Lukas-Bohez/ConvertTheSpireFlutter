@@ -1446,5 +1446,6 @@
   "partFrom": "Da",
   "partTo": "A",
   "addPartsToQueue": "Aggiungi alla coda ({count} parti)",
-  "partTimesInvalid": "Ogni parte deve finire dopo il suo inizio, entro la durata del video."
+  "partTimesInvalid": "Ogni parte deve finire dopo il suo inizio, entro la durata del video.",
+  "lyrics": "Testo"
 }

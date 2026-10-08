@@ -58,10 +58,14 @@ class SubtitlesSheet extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.closed_caption_rounded, color: cs.primary),
+              Icon(
+                  state.showingLyrics
+                      ? Icons.lyrics_rounded
+                      : Icons.closed_caption_rounded,
+                  color: cs.primary),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(l10n.subtitles,
+                child: Text(state.showingLyrics ? l10n.lyrics : l10n.subtitles,
                     style: Theme.of(context).textTheme.titleLarge),
               ),
               Switch(
