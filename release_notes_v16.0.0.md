@@ -26,6 +26,7 @@
 - **A torrent of files you already have seeds at once**, instead of sitting at "Stalled 0%".
 - **Videos in your library have thumbnails**, and a song you never played no longer says "0 plays".
 - **Phones and tablets:** no more empty band at the top of every page, and the library's tabs and cards are no longer cut off.
+- **The player no longer looks songs up online by itself.** It sent the titles of songs without an artist to MusicBrainz, often guessed wrong, and on Android wrote the guess into the file. Fix missing metadata still does it, when you ask.
 - The player's scroll bar reaches the bottom of the list.
 - A YouTube download no longer fails when the video page can't be read the first time.
 - Android: the notification shows the song as soon as it starts, and the 30-second preview stops after 30 seconds.
