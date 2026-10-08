@@ -2220,7 +2220,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'В избранном пока пусто.\nНажмите на звёздочку у трека, чтобы добавить его сюда.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return 'Прослушиваний: $playCount • $totalPlayedDuration';
   }
 

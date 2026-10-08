@@ -1250,11 +1250,11 @@
   "noSongsFound": "No songs found.",
   "noVideosFound": "No videos found.",
   "noFavouritesYetTapStar": "No favourites yet.\nTap the star on any track to add it here.",
-  "plays": "{playCount} plays • {totalPlayedDuration}",
+  "plays": "{playCount, plural, =1{1 play} other{{playCount} plays}} • {totalPlayedDuration}",
   "@plays": {
     "placeholders": {
       "playCount": {
-        "type": "Object"
+        "type": "int"
       },
       "totalPlayedDuration": {
         "type": "Object"

@@ -2215,7 +2215,7 @@ class AppLocalizationsVi extends AppLocalizations {
       'Chưa có mục yêu thích.\nNhấn vào ngôi sao ở bất kỳ bài nào để thêm vào đây.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount lượt phát • $totalPlayedDuration';
   }
 

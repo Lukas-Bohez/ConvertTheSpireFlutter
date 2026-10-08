@@ -2230,7 +2230,7 @@ class AppLocalizationsNl extends AppLocalizations {
       'Nog geen favorieten.\nTik op de ster bij een nummer om het hier toe te voegen.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount keer afgespeeld • $totalPlayedDuration';
   }
 

@@ -2224,7 +2224,7 @@ class AppLocalizationsUk extends AppLocalizations {
       'В обраному поки порожньо.\nНатисніть зірочку біля треку, щоб додати його сюди.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return 'Прослуховувань: $playCount • $totalPlayedDuration';
   }
 

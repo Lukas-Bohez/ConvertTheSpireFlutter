@@ -2155,7 +2155,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get noFavouritesYetTapStar => 'お気に入りはまだありません。\n曲の星をタップするとここに追加されます。';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount 回再生 • $totalPlayedDuration';
   }
 

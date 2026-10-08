@@ -2156,7 +2156,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get noFavouritesYetTapStar => '아직 즐겨찾기가 없습니다.\n곡의 별을 누르면 여기에 추가됩니다.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount회 재생 • $totalPlayedDuration';
   }
 

@@ -2227,7 +2227,7 @@ class AppLocalizationsPl extends AppLocalizations {
       'Brak ulubionych.\nStuknij gwiazdkę przy utworze, aby dodać go tutaj.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return 'Odtworzenia: $playCount • $totalPlayedDuration';
   }
 

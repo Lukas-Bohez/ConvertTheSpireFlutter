@@ -2213,8 +2213,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'No favourites yet.\nTap the star on any track to add it here.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
-    return '$playCount plays • $totalPlayedDuration';
+  String plays(int playCount, Object totalPlayedDuration) {
+    String _temp0 = intl.Intl.pluralLogic(
+      playCount,
+      locale: localeName,
+      other: '$playCount plays',
+      one: '1 play',
+    );
+    return '$_temp0 • $totalPlayedDuration';
   }
 
   @override

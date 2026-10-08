@@ -2237,7 +2237,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Noch keine Favoriten.\nTippe bei einem Titel auf den Stern, um ihn hier hinzuzufügen.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount× gespielt • $totalPlayedDuration';
   }
 

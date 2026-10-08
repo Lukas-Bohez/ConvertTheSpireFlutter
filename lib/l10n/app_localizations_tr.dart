@@ -2221,7 +2221,7 @@ class AppLocalizationsTr extends AppLocalizations {
       'Henüz favori yok.\nBuraya eklemek için herhangi bir parçadaki yıldıza dokun.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount kez çalındı • $totalPlayedDuration';
   }
 

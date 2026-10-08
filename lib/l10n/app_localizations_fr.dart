@@ -2240,7 +2240,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucun favori pour l\'instant.\nAppuyez sur l\'étoile d\'un titre pour l\'ajouter ici.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount écoutes • $totalPlayedDuration';
   }
 

@@ -1977,20 +1977,22 @@ class PlayerState with ChangeNotifier {
 
       thumb = await _loadThumbFromCache(path);
 
-      if (thumb == null && item.type == MediaType.audio) {
-        try {
-          final metaPath = await _resolveLocalPath(path);
-          final tag = readMetadata(File(metaPath), getImage: true);
-          dur = tag.duration;
-          for (final pic in tag.pictures) {
-            if (pic.bytes.isEmpty) continue;
-            thumb =
-                await _transcodeToSafePng(pic.bytes, mimeType: pic.mimetype);
-            if (thumb != null) break;
-          }
-        } catch (_) {}
-
-        if (thumb == null && item.type == MediaType.video) {
+      if (thumb == null) {
+        if (item.type == MediaType.audio) {
+          try {
+            final metaPath = await _resolveLocalPath(path);
+            final tag = readMetadata(File(metaPath), getImage: true);
+            dur = tag.duration;
+            for (final pic in tag.pictures) {
+              if (pic.bytes.isEmpty) continue;
+              thumb = await _transcodeToSafePng(pic.bytes,
+                  mimeType: pic.mimetype);
+              if (thumb != null) break;
+            }
+          } catch (_) {}
+        } else {
+          // This sat inside the song branch above, so a video in the
+          // library never got its thumbnail.
           thumb = await _generateVideoThumbnailSafe(path);
         }
 

@@ -2127,7 +2127,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noFavouritesYetTapStar => '还没有收藏。\n点任意曲目上的星标即可添加到这里。';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '播放 $playCount 次 • $totalPlayedDuration';
   }
 

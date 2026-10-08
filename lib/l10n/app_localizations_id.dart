@@ -2221,7 +2221,7 @@ class AppLocalizationsId extends AppLocalizations {
       'Belum ada favorit.\nKetuk bintang di lagu mana pun untuk menambahkannya di sini.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount kali diputar • $totalPlayedDuration';
   }
 

@@ -2222,7 +2222,7 @@ class AppLocalizationsHi extends AppLocalizations {
       'अभी कोई पसंदीदा नहीं।\nकिसी भी ट्रैक पर स्टार टैप करके उसे यहां जोड़ें।';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount बार चलाया • $totalPlayedDuration';
   }
 

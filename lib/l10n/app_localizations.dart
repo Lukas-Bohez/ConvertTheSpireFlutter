@@ -4064,8 +4064,8 @@ abstract class AppLocalizations {
   /// No description provided for @plays.
   ///
   /// In en, this message translates to:
-  /// **'{playCount} plays • {totalPlayedDuration}'**
-  String plays(Object playCount, Object totalPlayedDuration);
+  /// **'{playCount, plural, =1{1 play} other{{playCount} plays}} • {totalPlayedDuration}'**
+  String plays(int playCount, Object totalPlayedDuration);
 
   /// No description provided for @selectMusicFolderCompare.
   ///

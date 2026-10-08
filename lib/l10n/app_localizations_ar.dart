@@ -2203,7 +2203,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'لا توجد مفضلات بعد.\nاضغط على النجمة بجوار أي مقطع لإضافته هنا.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount تشغيل • $totalPlayedDuration';
   }
 

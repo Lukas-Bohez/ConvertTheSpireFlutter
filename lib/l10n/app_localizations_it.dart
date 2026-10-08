@@ -2230,7 +2230,7 @@ class AppLocalizationsIt extends AppLocalizations {
       'Ancora nessun preferito.\nTocca la stella di un brano per aggiungerlo qui.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount ascolti • $totalPlayedDuration';
   }
 
