@@ -1813,25 +1813,10 @@ class PlayerState with ChangeNotifier {
             _replaceLibraryItem(library[i]);
             continue;
           }
-
-          final titleForLookup = (metadata.title?.trim().isNotEmpty == true)
-              ? metadata.title!.trim()
-              : (item.title?.trim().isNotEmpty == true
-                  ? item.title!.trim()
-                  : _displayNameForMetadata(item.path));
-          final mbArtist = await fetchArtistFromMusicBrainz(titleForLookup);
-          if (mbArtist == null || mbArtist.trim().isEmpty) continue;
-
-          final resolvedArtist = mbArtist.trim();
-          _artistCache[item.path] = resolvedArtist;
-          await _writeArtistTagIfPossible(
-            resolvedPath: resolvedPath,
-            metadata: metadata,
-            artist: resolvedArtist,
-          );
-          library[i] = library[i].copyWith(artist: resolvedArtist);
-          _replaceLibraryItem(library[i]);
-          await Future.delayed(const Duration(milliseconds: 200));
+          // No guessing online: it sent every untagged song's title to
+          // MusicBrainz, took the first match for whatever the title was
+          // ("song" got an artist), and wrote it into the file on Android.
+          // Fix missing metadata still looks songs up, when asked to.
         } catch (e) {
           debugPrint('artist enrichment failed for ${item.path}: $e');
         } finally {
@@ -1844,40 +1829,6 @@ class PlayerState with ChangeNotifier {
       debugPrint('artist enrichment aborted: $e');
     } finally {
       _artistEnrichmentRunning = false;
-    }
-  }
-
-  Future<void> _writeArtistTagIfPossible({
-    required String resolvedPath,
-    required Metadata metadata,
-    required String artist,
-  }) async {
-    if (!_supportsMetadataRewrite(resolvedPath)) return;
-    // Native tag write — only available where `metadata_god` runs (Android).
-    // On Windows / disabled we skip the write; the resolved artist is still
-    // applied to the in-memory library item by the caller.
-    if (!_metadataGodAvailable) return;
-    try {
-      await MetadataGod.writeMetadata(
-        file: resolvedPath,
-        metadata: Metadata(
-          title: metadata.title,
-          artist: artist,
-          albumArtist: artist,
-          album: metadata.album,
-          genre: metadata.genre,
-          picture: metadata.picture,
-          trackNumber: metadata.trackNumber,
-          trackTotal: metadata.trackTotal,
-          discNumber: metadata.discNumber,
-          discTotal: metadata.discTotal,
-          year: metadata.year,
-          durationMs: metadata.durationMs,
-          fileSize: metadata.fileSize,
-        ),
-      );
-    } catch (e) {
-      debugPrint('writeArtistTag failed for $resolvedPath: $e');
     }
   }
 
