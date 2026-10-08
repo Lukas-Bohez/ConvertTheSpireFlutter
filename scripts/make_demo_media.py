@@ -6,7 +6,8 @@ rights to any of it.
 
 Eight songs by made-up artists (soft chords, a gradient for cover art) and
 four videos from FFmpeg's own generators (two Mandelbrot zooms, Conway's
-Game of Life, an aurora of gradients), with subtitles for one of them.
+Game of Life, an aurora of gradients), with subtitles for one video and
+synced lyrics (written for it) for one song.
 About 250 MB. See docs/publishing/store-trailer.md.
 """
 import argparse
@@ -56,6 +57,26 @@ They work for songs too.
 Deeper and deeper into the Mandelbrot set.
 """
 
+# Made up for the demo, like the artists.
+LYRICS = """[ar:Night Signals]
+[ti:Neon Rain]
+[00:01.00]Neon rain on an empty street
+[00:04.00]Every light keeps time with my feet
+[00:08.50]Signals glow where the rivers meet
+[00:13.00]Hold the night, it's ours to keep
+[00:17.50]
+[00:19.00][01:02.00]Oh, neon rain
+[00:22.50][01:05.50]Wash the city clean again
+[00:27.00][01:10.00]Oh, neon rain
+[00:30.50][01:13.50]Lead me home the way I came
+[00:35.00][01:18.00]
+[00:38.00]Windows hum a midnight tune
+[00:42.50]Taxis drift beneath the moon
+[00:47.00]Every word I meant to say
+[00:51.50]Falls like colours on the bay
+[00:56.00]
+"""
+
 
 def run(ffmpeg, args):
     subprocess.run([ffmpeg, '-hide_banner', '-loglevel', 'error', '-y', *args],
@@ -103,6 +124,7 @@ def main():
         for job in jobs:
             job.result()
     (folder / 'Fractal Dreams.srt').write_text(SUBTITLES, encoding='utf-8')
+    (folder / 'Neon Rain.lrc').write_text(LYRICS, encoding='utf-8')
     print(f'{len(SONGS)} songs and {len(VIDEOS)} videos in {folder}')
 
 

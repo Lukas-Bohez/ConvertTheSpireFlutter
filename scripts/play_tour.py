@@ -86,7 +86,7 @@ class Tour:
 
     def files(self):
         return sorted(p.name for p in self.media.iterdir()
-                      if p.suffix.lower() in ('.mp3', '.mp4', '.srt', '.vtt'))
+                      if p.suffix.lower() in ('.mp3', '.mp4', '.srt', '.vtt', '.lrc'))
 
     def ready(self):
         for permission in ('POST_NOTIFICATIONS', 'READ_MEDIA_AUDIO',
