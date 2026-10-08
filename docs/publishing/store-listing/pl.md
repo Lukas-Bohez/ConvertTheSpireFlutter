@@ -11,105 +11,130 @@ Convert The Spire Reborn
 ## Short description
 
 ```text
-Pobieraj i konwertuj wideo oraz muzykę, odtwarzaj je, przesyłaj na telewizor i pobieraj torrenty. Za darmo, open source, bez konta, bez śledzenia.
+Twoja muzyka i filmy w jednej aplikacji: odtwarzacz z napisami i zapętlaniem, pobieranie z ponad 1800 stron, konwerter, przesyłanie na TV i torrenty. Za darmo, bez konta, bez reklam.
 ```
 
 ## Description
 
 ```text
-Convert The Spire Reborn to wszechstronna aplikacja multimedialna dla Windows: pobieranie, konwerter, odtwarzacz i klient torrent w jednym oknie.
+Convert The Spire Reborn to Twoja muzyka i filmy w jednej aplikacji: odtwarzacz z napisami, zapętlaniem fragmentów i dużym widokiem, i wszystkie sposoby, by go zapełnić, od pobierania i torrentów po przeglądarkę, która blokuje reklamy.
+
+ODTWARZANIE
+• Jedna biblioteka na piosenki i filmy, z playlistami, ulubionymi, losowaniem i powtarzaniem.
+• Napisy do filmów i piosenek: plik .srt lub .vtt obok pliku wczytuje się sam. Włączaj je i wyłączaj jednym dotknięciem, wybierz inny plik albo przesuń je, gdy się rozjeżdżają.
+• Zapętl najlepszy fragment: zaznacz jeden lub kilka fragmentów piosenki albo filmu, a odtwarzane będą tylko one, jeden po drugim.
+• Duży widok: film wypełnia ekran, bez niczego dookoła.
+• Prędkość od 0,5× do 2× i wyłącznik czasowy, który zatrzymuje odtwarzanie po 15–60 minutach albo na końcu piosenki.
+• Długie filmy i podcasty wracają tam, gdzie skończyłeś.
 
 POBIERANIE
-• Zapisuj wideo i muzykę z YouTube i ponad 1800 innych serwisów jako MP4, MP3, M4A i inne, w wybranej jakości.
-• Całe playlisty naraz, z tytułami, okładkami i tagami.
-• Wbudowana przeglądarka sama znajduje multimedia na stronie.
+• Zapisuj filmy i muzykę z YouTube i ponad 1800 innych stron jako MP4, MP3, M4A i inne, w wybranej jakości, albo tylko wybrany fragment.
+• Całe playlisty naraz, z tytułami, okładkami i tagami. Widzisz też, których piosenek jeszcze brakuje.
+• Bez logowania: aplikacja nigdy nie prosi o konto Google ani YouTube.
 
 KONWERSJA
-• Konwertuj audio i wideo między ponad 27 formatami za pomocą FFmpeg, bezpośrednio na swoim komputerze. Nic nie jest wysyłane.
+• Konwertuj dźwięk, wideo i obrazy między ponad 27 formatami za pomocą FFmpeg, na swoim komputerze. Nic nie jest wysyłane.
 
-ODTWARZANIE I PRZESYŁANIE
-• Odtwarzacz muzyki i wideo z playlistami.
-• Przesyłanie na telewizory i głośniki w sieci domowej (DLNA/UPnP).
-• Oglądajmy razem: to samo wideo zsynchronizowane ze znajomymi.
+PRZESYŁANIE I WSPÓLNE OGLĄDANIE
+• Przesyłaj na telewizory i głośniki w swojej sieci (DLNA/UPnP).
+• Oglądaj razem: ten sam film, zsynchronizowany, ze znajomymi w Twojej sieci Wi-Fi. Udostępnij sześcioznakowy kod; bez konta, bez serwera.
 
 TORRENTY
-• Pełny klient BitTorrent: linki magnet i pliki .torrent, seedowanie z limitami ratio oraz tworzenie i udostępnianie własnych torrentów.
+• Pełny klient BitTorrent: linki magnet i pliki .torrent, seedowanie z limitami ratio i tworzenie własnych torrentów.
 
-PRYWATNOŚĆ PRZEDE WSZYSTKIM
+PRZEGLĄDARKA
+• Wbudowana przeglądarka, która blokuje reklamy i trackery listami filtrów uBlock Origin i sama znajduje multimedia na stronie.
+
+PRYWATNOŚĆ W ZAŁOŻENIU
 • Bez konta, bez reklam, bez analityki, bez śledzenia. Wszystko zostaje na Twoim komputerze.
-• Open source (GPL-3.0) na GitHubie.
+• Otwarte źródło (GPL-3.0) na GitHubie.
 
-Dostępna w 18 językach. Pobieraj tylko treści, do których pobierania masz prawo.
+Dostępna w 18 językach. Pobieraj tylko treści, do których pobrania masz prawo.
 ```
 
 ## What's new in this version
 
 ```text
-Torrenty nie zawieszają już aplikacji, gdy plik się kończy lub zaczyna się seedowanie. Utwory zachowują głośność przy ponownym odtworzeniu. Pełny ekran (F11) pozostaje włączony po otwarciu innej strony. Działają wszystkie formaty w Konwertuj, w tym tekst z plików PDF i obrazy WebP. Nowość: eksportuj swoje utwory jako listę utworów (.txt lub .csv) z Playlist i zaimportuj ją na innym urządzeniu.
+Nowość: pobierz tylko ten fragment filmu lub piosenki, który chcesz. Napisy do filmów i piosenek: pliki .srt i .vtt wczytują się same. Zapętl najlepszy fragment, zmień prędkość, ustaw wyłącznik czasowy i oglądaj w dużym widoku. Długie filmy wracają tam, gdzie skończyłeś, a bloker reklam w przeglądarce korzysta teraz z list uBlock Origin. Odtwarzacz ma jeden zestaw przycisków i więcej miejsca na film, a wszystkie kolory są odblokowane. Naprawione: program pobrany torrentem uruchamia się podczas seedowania, torrenty plików, które już masz, od razu się seedują, a filmy w bibliotece mają miniatury.
 ```
 
 ## Product features
 
 1.
 ```text
-Pobieraj wideo i muzykę z ponad 1800 serwisów
+Odtwarzacz muzyki i wideo, z playlistami i ulubionymi
 ```
 
 2.
 ```text
-Konwertuj między ponad 27 formatami audio i wideo
+Napisy do filmów i piosenek (.srt i .vtt)
 ```
 
 3.
 ```text
-Całe playlisty z tagami i okładkami
+Zapętlanie fragmentów, prędkość, wyłącznik czasowy
 ```
 
 4.
 ```text
-Odtwarzacz multimediów z playlistami
+Duży widok: film bez niczego dookoła
 ```
 
 5.
 ```text
-Przesyłanie na telewizory i głośniki (DLNA/UPnP)
+Pobieranie wideo i muzyki z 1800+ stron, także fragmentów
 ```
 
 6.
 ```text
-Oglądaj wideo synchronicznie ze znajomymi
+Całe playlisty, z tytułami, tagami i okładkami
 ```
 
 7.
 ```text
-Klient BitTorrent z linkami magnet i seedowaniem
+Konwersja między 27+ formatami audio, wideo i obrazów
 ```
 
 8.
 ```text
-Wbudowana przeglądarka znajdująca multimedia na stronie
+Przesyłanie na TV i głośniki (DLNA/UPnP)
 ```
 
 9.
 ```text
-Bez konta, bez reklam, bez śledzenia
+Wspólne oglądanie ze znajomymi, w synchronizacji
 ```
 
 10.
 ```text
-Open source, w 18 językach
+Klient BitTorrent z linkami magnet i seedowaniem
+```
+
+11.
+```text
+Przeglądarka z prawdziwym blokerem reklam
+```
+
+12.
+```text
+Bez konta, bez reklam, bez śledzenia
+```
+
+13.
+```text
+Otwarte źródło, w 18 językach
 ```
 
 ## Search terms
 
 1.
 ```text
-pobieranie wideo
+odtwarzacz multimediów
 ```
 
 2.
 ```text
-konwerter mp3
+pobieranie wideo
 ```
 
 3.
@@ -119,22 +144,22 @@ pobieranie muzyki
 
 4.
 ```text
-torrent
+konwerter mp3
 ```
 
 5.
 ```text
-odtwarzacz
+odtwarzacz wideo
 ```
 
 6.
 ```text
-konwerter wideo
+napisy
 ```
 
 7.
 ```text
-dlna
+torrent
 ```
 
 ## Copyright and trademark info

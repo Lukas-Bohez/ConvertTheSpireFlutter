@@ -11,31 +11,41 @@ Convert The Spire Reborn
 ## Short description
 
 ```text
-Videos und Musik herunterladen und umwandeln, abspielen, auf den Fernseher streamen und Torrents laden. Kostenlos, Open Source, ohne Konto, ohne Tracking.
+Deine Musik und Videos in einer App: ein Player mit Untertiteln und Schleifen, Downloads von über 1.800 Seiten, ein Konverter, Streaming und Torrents. Kostenlos, ohne Konto, ohne Werbung.
 ```
 
 ## Description
 
 ```text
-Convert The Spire Reborn ist eine All-in-one-Medien-App für Windows: Downloader, Konverter, Player und Torrent-Client in einem Fenster.
+Convert The Spire Reborn vereint deine Musik und Videos in einer App: ein Player mit Untertiteln, Schleifen und großer Ansicht, und jeder Weg, ihn zu füllen, von Downloads und Torrents bis zu einem Browser, der Werbung blockiert.
+
+ABSPIELEN
+• Eine Bibliothek für deine Songs und Videos, mit Playlists, Favoriten, Zufallswiedergabe und Wiederholen.
+• Untertitel für Videos und Songs: Eine .srt- oder .vtt-Datei neben der Datei wird von selbst geladen. Mit einem Tipp ein- oder ausschalten, eine andere Datei wählen oder verschieben, wenn sie nicht synchron sind.
+• Die beste Stelle in Schleife: Markiere einen oder mehrere Abschnitte eines Songs oder Videos, und nur diese laufen, einer nach dem anderen.
+• Große Ansicht: Das Video füllt den Bildschirm, ohne alles drumherum.
+• Geschwindigkeit von 0,5× bis 2× und ein Schlaf-Timer, der nach 15 bis 60 Minuten oder am Ende des Songs stoppt.
+• Lange Videos und Podcasts gehen dort weiter, wo du aufgehört hast.
 
 HERUNTERLADEN
-• Videos und Musik von YouTube und über 1.800 weiteren Seiten speichern, als MP4, MP3, M4A und mehr, in der gewünschten Qualität.
-• Ganze Playlists auf einmal, mit Titeln, Cover und Tags.
-• Ein eingebauter Browser findet die Medien auf einer Seite für dich.
+• Speichere Videos und Musik von YouTube und über 1.800 anderen Seiten als MP4, MP3, M4A und mehr, in der Qualität deiner Wahl, oder nur den Teil, den du willst.
+• Ganze Playlists auf einmal, mit Titeln, Cover und Tags. Du siehst auch, welche Songs dir noch fehlen.
+• Keine Anmeldung: Die App fragt nie nach deinem Google- oder YouTube-Konto.
 
-UMWANDELN
-• Audio und Video zwischen mehr als 27 Formaten umwandeln, mit FFmpeg direkt auf deinem PC. Nichts wird hochgeladen.
+KONVERTIEREN
+• Audio, Video und Bilder zwischen über 27 Formaten konvertieren, mit FFmpeg, direkt auf deinem PC. Nichts wird hochgeladen.
 
-ABSPIELEN UND STREAMEN
-• Ein Mediaplayer für deine Musik und Videos, mit Playlists.
-• Auf Fernseher und Lautsprecher im Heimnetz streamen (DLNA/UPnP).
-• Gemeinsam schauen: dasselbe Video synchron mit Freunden ansehen.
+STREAMEN UND GEMEINSAM SCHAUEN
+• Auf Fernseher und Lautsprecher in deinem Netzwerk streamen (DLNA/UPnP).
+• Gemeinsam schauen: dasselbe Video, synchron, mit Freunden in deinem WLAN. Teile einen sechsstelligen Code; kein Konto, kein Server.
 
 TORRENTS
-• Ein vollständiger BitTorrent-Client: Magnet-Links und .torrent-Dateien, Seeden mit Ratio-Grenzen und eigene Torrents erstellen und teilen.
+• Ein vollwertiger BitTorrent-Client: Magnet-Links und .torrent-Dateien, Seeding mit Ratio-Grenzen und eigene Torrents erstellen.
 
-PRIVATSPHÄRE ZUERST
+BROWSER
+• Ein eingebauter Browser, der Werbung und Tracker mit den Filterlisten von uBlock Origin blockiert und die Medien auf einer Seite für dich findet.
+
+PRIVAT VON GRUND AUF
 • Kein Konto, keine Werbung, keine Analyse, kein Tracking. Alles bleibt auf deinem PC.
 • Open Source (GPL-3.0) auf GitHub.
 
@@ -45,57 +55,72 @@ In 18 Sprachen verfügbar. Bitte lade nur Inhalte herunter, zu deren Download du
 ## What's new in this version
 
 ```text
-Torrents frieren die App nicht mehr ein, wenn eine Datei fertig ist oder das Seeden beginnt. Songs behalten ihre Lautstärke, wenn du sie erneut abspielst. Der Vollbildmodus (F11) bleibt an, wenn du eine andere Seite öffnest. Alle Formate unter Umwandeln funktionieren, auch Text aus PDFs und WebP-Bilder. Neu: Exportiere deine Musik unter Playlists als Titelliste (.txt oder .csv) und importiere sie auf einem anderen Gerät.
+Neu: Lade nur den Teil eines Videos oder Songs herunter, den du willst. Untertitel für Videos und Songs: .srt- und .vtt-Dateien werden von selbst geladen. Die beste Stelle in Schleife, Geschwindigkeit ändern, Schlaf-Timer stellen und in großer Ansicht schauen. Lange Videos gehen dort weiter, wo du aufgehört hast, und der Werbeblocker im Browser nutzt jetzt die Listen von uBlock Origin. Der Player hat nur noch eine Steuerung und mehr Platz fürs Video, und alle Farben sind freigeschaltet. Behoben: Ein per Torrent geladenes Programm startet, während es seedet, Torrents von Dateien, die du schon hast, seeden sofort, und Videos in deiner Bibliothek haben Vorschaubilder.
 ```
 
 ## Product features
 
 1.
 ```text
-Videos und Musik von über 1.800 Seiten herunterladen
+Player für Musik und Video, mit Playlists und Favoriten
 ```
 
 2.
 ```text
-Zwischen mehr als 27 Audio- und Videoformaten umwandeln
+Untertitel für Videos und Songs (.srt und .vtt)
 ```
 
 3.
 ```text
-Ganze Playlists mit Tags und Cover
+Beste Stelle in Schleife, Geschwindigkeit, Schlaf-Timer
 ```
 
 4.
 ```text
-Mediaplayer mit Playlists
+Große Ansicht: das Video ohne alles drumherum
 ```
 
 5.
 ```text
-Auf Fernseher und Lautsprecher streamen (DLNA/UPnP)
+Video und Musik von über 1.800 Seiten laden, auch nur einen Teil
 ```
 
 6.
 ```text
-Videos synchron mit Freunden ansehen
+Ganze Playlists, mit Titeln, Tags und Cover
 ```
 
 7.
 ```text
-BitTorrent-Client mit Magnet-Links und Seeding
+Konvertieren zwischen über 27 Audio-, Video- und Bildformaten
 ```
 
 8.
 ```text
-Eingebauter Browser, der Medien auf einer Seite findet
+Auf Fernseher und Lautsprecher streamen (DLNA/UPnP)
 ```
 
 9.
 ```text
-Kein Konto, keine Werbung, kein Tracking
+Videos synchron mit Freunden schauen
 ```
 
 10.
+```text
+BitTorrent-Client mit Magnet-Links und Seeding
+```
+
+11.
+```text
+Browser mit echtem Werbeblocker
+```
+
+12.
+```text
+Kein Konto, keine Werbung, kein Tracking
+```
+
+13.
 ```text
 Open Source, in 18 Sprachen
 ```
@@ -104,37 +129,37 @@ Open Source, in 18 Sprachen
 
 1.
 ```text
-video downloader
+Mediaplayer
 ```
 
 2.
 ```text
-mp3 konverter
+Video Downloader
 ```
 
 3.
 ```text
-musik herunterladen
+Musik Downloader
 ```
 
 4.
 ```text
-torrent
+MP3 Konverter
 ```
 
 5.
 ```text
-mediaplayer
+Videoplayer
 ```
 
 6.
 ```text
-video konverter
+Untertitel
 ```
 
 7.
 ```text
-dlna
+Torrent
 ```
 
 ## Copyright and trademark info

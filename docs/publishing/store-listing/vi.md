@@ -11,91 +11,116 @@ Convert The Spire Reborn
 ## Short description
 
 ```text
-Tải và chuyển đổi video, nhạc, phát lại, truyền lên TV và tải torrent. Miễn phí, mã nguồn mở, không cần tài khoản, không theo dõi.
+Nhạc và video của bạn trong một ứng dụng: trình phát có phụ đề và lặp đoạn, tải từ hơn 1.800 trang, bộ chuyển đổi, truyền lên TV và torrent. Miễn phí, không tài khoản, không quảng cáo.
 ```
 
 ## Description
 
 ```text
-Convert The Spire Reborn là ứng dụng đa phương tiện tất cả trong một cho Windows: trình tải, trình chuyển đổi, trình phát và ứng dụng torrent trong cùng một cửa sổ.
+Convert The Spire Reborn gom nhạc và video của bạn vào một ứng dụng: trình phát có phụ đề, lặp đoạn và chế độ xem lớn, cùng mọi cách để lấp đầy nó, từ tải xuống và torrent đến trình duyệt chặn quảng cáo.
+
+PHÁT
+• Một thư viện cho bài hát và video, với danh sách phát, mục yêu thích, phát ngẫu nhiên và lặp lại.
+• Phụ đề cho video và bài hát: tệp .srt hoặc .vtt nằm cạnh tệp sẽ tự tải. Bật hoặc tắt chỉ bằng một chạm, chọn tệp khác, hoặc dịch thời gian khi bị lệch.
+• Lặp đoạn hay nhất: đánh dấu một hoặc nhiều đoạn của bài hát hay video, và chỉ những đoạn đó được phát, lần lượt từng đoạn.
+• Chế độ xem lớn: video lấp đầy màn hình, không có gì xung quanh.
+• Tốc độ từ 0,5× đến 2×, và hẹn giờ tắt sau 15 đến 60 phút hoặc khi hết bài.
+• Video dài và podcast tiếp tục từ chỗ bạn đã dừng.
 
 TẢI XUỐNG
-• Lưu video và nhạc từ YouTube và hơn 1.800 trang khác, dưới dạng MP4, MP3, M4A và nhiều định dạng khác, với chất lượng bạn chọn.
-• Tải trọn danh sách phát một lần, kèm tiêu đề, ảnh bìa và thẻ.
-• Trình duyệt tích hợp tự tìm nội dung đa phương tiện trên trang.
+• Lưu video và nhạc từ YouTube và hơn 1.800 trang khác dưới dạng MP4, MP3, M4A và nhiều định dạng khác, với chất lượng bạn chọn, hoặc chỉ đoạn bạn muốn.
+• Tải cả danh sách phát một lần, có sẵn tiêu đề, ảnh bìa và thẻ. Bạn cũng thấy những bài hát nào còn thiếu.
+• Không cần đăng nhập: ứng dụng không bao giờ hỏi tài khoản Google hay YouTube của bạn.
 
 CHUYỂN ĐỔI
-• Chuyển đổi âm thanh và video giữa hơn 27 định dạng bằng FFmpeg, ngay trên PC của bạn. Không tải lên bất cứ thứ gì.
+• Chuyển đổi âm thanh, video và hình ảnh giữa hơn 27 định dạng bằng FFmpeg, ngay trên PC. Không tải gì lên mạng.
 
-PHÁT VÀ TRUYỀN
-• Trình phát nhạc và video có danh sách phát.
+TRUYỀN VÀ XEM CÙNG NHAU
 • Truyền lên TV và loa trong mạng của bạn (DLNA/UPnP).
-• Xem cùng nhau: xem cùng một video đồng bộ với bạn bè.
+• Xem cùng nhau: cùng một video, đồng bộ, với bạn bè trên Wi-Fi của bạn. Chia sẻ mã sáu ký tự; không cần tài khoản, không cần máy chủ.
 
 TORRENT
-• Ứng dụng BitTorrent đầy đủ: liên kết magnet và tệp .torrent, chia sẻ với giới hạn tỉ lệ, tạo và chia sẻ torrent của riêng bạn.
+• Trình khách BitTorrent đầy đủ: liên kết magnet và tệp .torrent, seeding với giới hạn tỉ lệ, và tự tạo torrent.
 
-QUYỀN RIÊNG TƯ LÀ TRÊN HẾT
-• Không tài khoản, không quảng cáo, không phân tích, không theo dõi. Mọi thứ đều ở lại trên PC của bạn.
+TRÌNH DUYỆT
+• Trình duyệt tích hợp chặn quảng cáo và trình theo dõi bằng danh sách bộ lọc của uBlock Origin, và tự tìm nội dung đa phương tiện trên trang cho bạn.
+
+RIÊNG TƯ TỪ THIẾT KẾ
+• Không tài khoản, không quảng cáo, không phân tích, không theo dõi. Mọi thứ ở lại trên PC của bạn.
 • Mã nguồn mở (GPL-3.0) trên GitHub.
 
-Có 18 ngôn ngữ. Vui lòng chỉ tải nội dung mà bạn có quyền tải.
+Có 18 ngôn ngữ. Vui lòng chỉ tải nội dung bạn có quyền tải.
 ```
 
 ## What's new in this version
 
 ```text
-Torrent không còn làm treo ứng dụng khi một tệp tải xong hoặc bắt đầu chia sẻ. Bài hát giữ nguyên âm lượng khi bạn phát lại. Chế độ toàn màn hình (F11) vẫn bật khi bạn mở trang khác. Mọi định dạng trong Chuyển đổi đều hoạt động, kể cả văn bản từ PDF và ảnh WebP. Mới: xuất bài hát thành danh sách bài hát (.txt hoặc .csv) từ Danh sách phát và nhập trên thiết bị khác.
+Mới: chỉ tải đoạn video hoặc bài hát bạn muốn. Phụ đề cho video và bài hát: tệp .srt và .vtt tự tải. Lặp đoạn hay nhất, đổi tốc độ, hẹn giờ tắt và xem ở chế độ xem lớn. Video dài tiếp tục từ chỗ bạn đã dừng, và bộ chặn quảng cáo của trình duyệt giờ dùng danh sách của uBlock Origin. Trình phát giờ chỉ có một bộ nút điều khiển và nhiều chỗ hơn cho video, và mọi màu đều đã mở khóa. Đã sửa: chương trình tải qua torrent chạy được khi đang seeding, torrent của tệp bạn đã có được seed ngay, và video trong thư viện có ảnh thu nhỏ.
 ```
 
 ## Product features
 
 1.
 ```text
-Tải video và nhạc từ hơn 1.800 trang
+Trình phát nhạc và video, có danh sách phát và mục yêu thích
 ```
 
 2.
 ```text
-Chuyển đổi giữa hơn 27 định dạng âm thanh và video
+Phụ đề cho video và bài hát (.srt và .vtt)
 ```
 
 3.
 ```text
-Trọn danh sách phát kèm thẻ và ảnh bìa
+Lặp đoạn, tốc độ phát, hẹn giờ tắt
 ```
 
 4.
 ```text
-Trình phát đa phương tiện có danh sách phát
+Chế độ xem lớn: chỉ video, không có gì xung quanh
 ```
 
 5.
 ```text
-Truyền lên TV và loa (DLNA/UPnP)
+Tải video và nhạc từ 1.800+ trang, hoặc chỉ một đoạn
 ```
 
 6.
 ```text
-Xem video đồng bộ với bạn bè
+Cả danh sách phát, có tiêu đề, thẻ và ảnh bìa
 ```
 
 7.
 ```text
-Ứng dụng BitTorrent với liên kết magnet và chia sẻ
+Chuyển đổi giữa 27+ định dạng âm thanh, video và hình ảnh
 ```
 
 8.
 ```text
-Trình duyệt tích hợp tìm nội dung trên trang
+Truyền lên TV và loa (DLNA/UPnP)
 ```
 
 9.
 ```text
-Không tài khoản, không quảng cáo, không theo dõi
+Xem video đồng bộ cùng bạn bè
 ```
 
 10.
+```text
+Trình khách BitTorrent với liên kết magnet và seeding
+```
+
+11.
+```text
+Trình duyệt có bộ chặn quảng cáo thật sự
+```
+
+12.
+```text
+Không tài khoản, không quảng cáo, không theo dõi
+```
+
+13.
 ```text
 Mã nguồn mở, 18 ngôn ngữ
 ```
@@ -104,12 +129,12 @@ Mã nguồn mở, 18 ngôn ngữ
 
 1.
 ```text
-tải video
+trình phát media
 ```
 
 2.
 ```text
-chuyển đổi mp3
+tải video
 ```
 
 3.
@@ -119,22 +144,22 @@ tải nhạc
 
 4.
 ```text
-torrent
+chuyển đổi mp3
 ```
 
 5.
 ```text
-trình phát nhạc
+trình phát video
 ```
 
 6.
 ```text
-chuyển đổi video
+phụ đề
 ```
 
 7.
 ```text
-dlna
+torrent
 ```
 
 ## Copyright and trademark info

@@ -11,91 +11,116 @@ Convert The Spire Reborn
 ## Short description
 
 ```text
-Download en converteer video en muziek, speel ze af, cast ze naar je tv en download torrents. Gratis, open source, zonder account, zonder tracking.
+Je muziek en video's in één app: een speler met ondertitels en herhaalde stukken, downloads van meer dan 1.800 sites, een converter, casten en torrents. Gratis, zonder account, zonder advertenties.
 ```
 
 ## Description
 
 ```text
-Convert The Spire Reborn is een alles-in-één media-app voor Windows: downloader, converter, speler en torrentclient in één venster.
+Convert The Spire Reborn brengt je muziek en video's samen in één app: een speler met ondertitels, herhaalde stukken en een groot beeld, en elke manier om hem te vullen, van downloads en torrents tot een browser die advertenties blokkeert.
+
+AFSPELEN
+• Eén bibliotheek voor je liedjes en video's, met afspeellijsten, favorieten, shuffle en herhalen.
+• Ondertitels voor video's en liedjes: een .srt- of .vtt-bestand naast het bestand laadt vanzelf. Zet ze met één tik aan of uit, kies een ander bestand, of schuif ze op als ze niet gelijklopen.
+• Herhaal het beste stuk: markeer een of meer stukken van een liedje of video en alleen die spelen, na elkaar.
+• Groot beeld: de video vult het scherm, zonder iets eromheen.
+• Snelheid van 0,5× tot 2×, en een slaaptimer die stopt na 15 tot 60 minuten of aan het eind van het liedje.
+• Lange video's en podcasts gaan verder waar je gebleven was.
 
 DOWNLOADEN
-• Bewaar video's en muziek van YouTube en meer dan 1.800 andere sites, als MP4, MP3, M4A en meer, in de kwaliteit die je kiest.
-• Hele afspeellijsten in één keer, met titels, hoesjes en tags.
-• Een ingebouwde browser vindt de media op een pagina voor je.
+• Bewaar video's en muziek van YouTube en meer dan 1.800 andere sites als MP4, MP3, M4A en meer, in de kwaliteit die je kiest, of alleen het stuk dat je wilt.
+• Hele afspeellijsten in één keer, met titels, hoesjes en tags ingevuld. Je ziet ook welke liedjes je nog mist.
+• Geen aanmelding: de app vraagt nooit naar je Google- of YouTube-account.
 
 CONVERTEREN
-• Converteer audio en video tussen meer dan 27 formaten met FFmpeg, gewoon op je pc. Er wordt niets geüpload.
+• Converteer audio, video en afbeeldingen tussen meer dan 27 formaten met FFmpeg, op je eigen pc. Er wordt niets geüpload.
 
-AFSPELEN EN CASTEN
-• Een mediaspeler voor je muziek en video's, met afspeellijsten.
+CASTEN EN SAMEN KIJKEN
 • Cast naar tv's en speakers in je netwerk (DLNA/UPnP).
-• Samen kijken: kijk dezelfde video gelijktijdig met vrienden.
+• Samen kijken: dezelfde video, gelijk, met vrienden op je wifi. Deel een code van zes tekens; geen account, geen server.
 
 TORRENTS
-• Een volledige BitTorrent-client: magnetlinks en .torrent-bestanden, seeden met ratiolimieten, en je eigen torrents maken en delen.
+• Een volledige BitTorrent-client: magnetlinks en .torrent-bestanden, seeden met ratiolimieten, en je eigen torrents maken.
 
-PRIVACY VOOROP
-• Geen account, geen reclame, geen analytics, geen tracking. Alles blijft op je pc.
+BROWSER
+• Een ingebouwde browser die advertenties en trackers blokkeert met de filterlijsten van uBlock Origin, en de media op een pagina voor je vindt.
+
+PRIVÉ VAN BEGIN TOT EIND
+• Geen account, geen advertenties, geen analytics, geen tracking. Alles blijft op je pc.
 • Open source (GPL-3.0) op GitHub.
 
-Beschikbaar in 18 talen. Download alleen content die je mag downloaden.
+Beschikbaar in 18 talen. Download alleen inhoud die je mag downloaden.
 ```
 
 ## What's new in this version
 
 ```text
-Torrents laten de app niet meer vastlopen wanneer een bestand klaar is of begint te seeden. Nummers behouden hun volume als je ze opnieuw afspeelt. Volledig scherm (F11) blijft aan als je een andere pagina opent. Alle formaten bij Converteren werken, ook tekst uit pdf's en WebP-afbeeldingen. Nieuw: exporteer je nummers als nummerlijst (.txt of .csv) via Playlists en importeer die op een ander toestel.
+Nieuw: download alleen het stuk van een video of liedje dat je wilt. Ondertitels voor video's en liedjes: .srt- en .vtt-bestanden laden vanzelf. Herhaal het beste stuk, verander de snelheid, zet een slaaptimer en kijk in groot beeld. Lange video's gaan verder waar je gebleven was, en de adblocker van de browser gebruikt nu de lijsten van uBlock Origin. De speler heeft nog maar één set knoppen en meer ruimte voor de video, en alle kleuren zijn vrijgespeeld. Opgelost: een programma dat via torrent binnenkwam start terwijl het seedt, torrents van bestanden die je al hebt seeden meteen, en video's in je bibliotheek hebben miniaturen.
 ```
 
 ## Product features
 
 1.
 ```text
-Download video en muziek van meer dan 1.800 sites
+Speler voor muziek en video, met afspeellijsten en favorieten
 ```
 
 2.
 ```text
-Converteer tussen meer dan 27 audio- en videoformaten
+Ondertitels voor video's en liedjes (.srt en .vtt)
 ```
 
 3.
 ```text
-Hele afspeellijsten met tags en hoesjes
+Het beste stuk herhalen, snelheid, slaaptimer
 ```
 
 4.
 ```text
-Mediaspeler met afspeellijsten
+Groot beeld: de video zonder iets eromheen
 ```
 
 5.
 ```text
-Cast naar tv's en speakers (DLNA/UPnP)
+Video en muziek downloaden van 1.800+ sites, of alleen een stuk
 ```
 
 6.
 ```text
-Kijk video's gelijktijdig met vrienden
+Hele afspeellijsten, met titels, tags en hoesjes
 ```
 
 7.
 ```text
-BitTorrent-client met magnetlinks en seeden
+Converteren tussen 27+ audio-, video- en afbeeldingsformaten
 ```
 
 8.
 ```text
-Ingebouwde browser die media op een pagina vindt
+Casten naar tv's en speakers (DLNA/UPnP)
 ```
 
 9.
 ```text
-Geen account, geen reclame, geen tracking
+Samen video's kijken, gelijk met vrienden
 ```
 
 10.
+```text
+BitTorrent-client met magnetlinks en seeden
+```
+
+11.
+```text
+Browser met een echte adblocker
+```
+
+12.
+```text
+Geen account, geen advertenties, geen tracking
+```
+
+13.
 ```text
 Open source, in 18 talen
 ```
@@ -104,37 +129,37 @@ Open source, in 18 talen
 
 1.
 ```text
-video downloader
+mediaspeler
 ```
 
 2.
 ```text
-mp3 converter
+video downloader
 ```
 
 3.
 ```text
-muziek downloaden
+muziek downloader
 ```
 
 4.
 ```text
-torrent
+mp3 converter
 ```
 
 5.
 ```text
-mediaspeler
+videospeler
 ```
 
 6.
 ```text
-video converter
+ondertitels
 ```
 
 7.
 ```text
-dlna
+torrent
 ```
 
 ## Copyright and trademark info

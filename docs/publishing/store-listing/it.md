@@ -11,31 +11,41 @@ Convert The Spire Reborn
 ## Short description
 
 ```text
-Scarica e converti video e musica, riproducili, inviali alla TV e scarica torrent. Gratis, open source, senza account, senza tracciamento.
+La tua musica e i tuoi video in un'unica app: un lettore con sottotitoli e ripetizioni, download da oltre 1.800 siti, un convertitore, la trasmissione alla TV e i torrent. Gratis, senza account, senza pubblicità.
 ```
 
 ## Description
 
 ```text
-Convert The Spire Reborn è un'app multimediale tutto in uno per Windows: downloader, convertitore, lettore e client torrent in un'unica finestra.
+Convert The Spire Reborn riunisce la tua musica e i tuoi video in un'unica app: un lettore con sottotitoli, ripetizioni e vista grande, e ogni modo per riempirlo, dai download e i torrent a un browser che blocca la pubblicità.
+
+RIPRODUCI
+• Un'unica libreria per canzoni e video, con playlist, preferiti, riproduzione casuale e ripetizione.
+• Sottotitoli per video e canzoni: un file .srt o .vtt accanto al file si carica da solo. Attivali o disattivali con un tocco, scegli un altro file o spostali se non sono sincronizzati.
+• La parte migliore in loop: segna una o più parti di una canzone o di un video e vengono riprodotte solo quelle, una dopo l'altra.
+• Vista grande: il video riempie lo schermo, senza nient'altro intorno.
+• Velocità da 0,5× a 2× e un timer che si ferma dopo 15–60 minuti o alla fine della canzone.
+• I video lunghi e i podcast riprendono da dove eri rimasto.
 
 SCARICA
-• Salva video e musica da YouTube e da oltre 1.800 altri siti, in MP4, MP3, M4A e altri formati, nella qualità che preferisci.
-• Intere playlist in un colpo solo, con titoli, copertine e tag.
-• Un browser integrato trova per te i contenuti di una pagina.
+• Salva video e musica da YouTube e da oltre 1.800 altri siti in MP4, MP3, M4A e altro, nella qualità che scegli, o solo la parte che vuoi.
+• Playlist intere in una volta, con titoli, copertine e tag. Vedi anche quali canzoni ti mancano.
+• Nessun accesso: l'app non ti chiede mai il tuo account Google o YouTube.
 
 CONVERTI
-• Converti audio e video tra oltre 27 formati con FFmpeg, direttamente sul tuo PC. Non viene caricato nulla.
+• Converti audio, video e immagini tra oltre 27 formati con FFmpeg, sul tuo PC. Non viene caricato nulla.
 
-RIPRODUCI E TRASMETTI
-• Un lettore per la tua musica e i tuoi video, con playlist.
+TRASMETTI E GUARDA INSIEME
 • Trasmetti a TV e altoparlanti della tua rete (DLNA/UPnP).
-• Guarda insieme: lo stesso video, sincronizzato con i tuoi amici.
+• Guarda insieme: lo stesso video, sincronizzato, con gli amici sul tuo Wi-Fi. Condividi un codice di sei caratteri; niente account, niente server.
 
 TORRENT
-• Un client BitTorrent completo: link magnet e file .torrent, seeding con limiti di ratio, creazione e condivisione dei tuoi torrent.
+• Un client BitTorrent completo: link magnet e file .torrent, seeding con limiti di ratio e creazione dei tuoi torrent.
 
-PRIVACY PRIMA DI TUTTO
+BROWSER
+• Un browser integrato che blocca pubblicità e tracker con le liste di filtri di uBlock Origin, e trova per te i contenuti di una pagina.
+
+PRIVATO PER SCELTA
 • Nessun account, nessuna pubblicità, nessuna analisi, nessun tracciamento. Tutto resta sul tuo PC.
 • Open source (GPL-3.0) su GitHub.
 
@@ -45,57 +55,72 @@ Disponibile in 18 lingue. Scarica solo contenuti che hai il diritto di scaricare
 ## What's new in this version
 
 ```text
-I torrent non bloccano più l'app quando un file finisce o inizia il seeding. I brani mantengono il loro volume quando li riascolti. Lo schermo intero (F11) resta attivo quando apri un'altra pagina. Tutti i formati di Converti funzionano, compreso il testo dai PDF e le immagini WebP. Novità: esporta i tuoi brani come elenco (.txt o .csv) da Playlist e importalo su un altro dispositivo.
+Novità: scarica solo la parte di un video o di una canzone che vuoi. Sottotitoli per video e canzoni: i file .srt e .vtt si caricano da soli. Metti in loop la parte migliore, cambia la velocità, imposta un timer di spegnimento e guarda in vista grande. I video lunghi riprendono da dove eri rimasto, e il blocco pubblicità del browser ora usa le liste di uBlock Origin. Il lettore ha un solo set di comandi e più spazio per il video, e tutti i colori sono sbloccati. Corretto: un programma scaricato via torrent si avvia mentre è in seeding, i torrent di file che hai già vanno subito in seeding e i video della libreria hanno le miniature.
 ```
 
 ## Product features
 
 1.
 ```text
-Scarica video e musica da oltre 1.800 siti
+Lettore per musica e video, con playlist e preferiti
 ```
 
 2.
 ```text
-Converti tra oltre 27 formati audio e video
+Sottotitoli per video e canzoni (.srt e .vtt)
 ```
 
 3.
 ```text
-Intere playlist con tag e copertine
+La parte migliore in loop, velocità, timer di spegnimento
 ```
 
 4.
 ```text
-Lettore multimediale con playlist
+Vista grande: il video senza nient'altro intorno
 ```
 
 5.
 ```text
-Trasmetti a TV e altoparlanti (DLNA/UPnP)
+Scarica video e musica da 1.800+ siti, o solo una parte
 ```
 
 6.
 ```text
-Guarda video in sincronia con gli amici
+Playlist intere, con titoli, tag e copertine
 ```
 
 7.
 ```text
-Client BitTorrent con link magnet e seeding
+Converti tra 27+ formati audio, video e immagine
 ```
 
 8.
 ```text
-Browser integrato che trova i contenuti di una pagina
+Trasmissione a TV e altoparlanti (DLNA/UPnP)
 ```
 
 9.
 ```text
-Nessun account, nessuna pubblicità, nessun tracciamento
+Guarda video in sincronia con gli amici
 ```
 
 10.
+```text
+Client BitTorrent con link magnet e seeding
+```
+
+11.
+```text
+Browser con un vero blocco pubblicità
+```
+
+12.
+```text
+Niente account, niente pubblicità, niente tracciamento
+```
+
+13.
 ```text
 Open source, in 18 lingue
 ```
@@ -104,12 +129,12 @@ Open source, in 18 lingue
 
 1.
 ```text
-scaricare video
+lettore multimediale
 ```
 
 2.
 ```text
-convertitore mp3
+scaricare video
 ```
 
 3.
@@ -119,22 +144,22 @@ scaricare musica
 
 4.
 ```text
-torrent
+convertitore mp3
 ```
 
 5.
 ```text
-lettore multimediale
+lettore video
 ```
 
 6.
 ```text
-convertitore video
+sottotitoli
 ```
 
 7.
 ```text
-dlna
+torrent
 ```
 
 ## Copyright and trademark info

@@ -11,91 +11,116 @@ Convert The Spire Reborn
 ## Short description
 
 ```text
-Téléchargez et convertissez vidéos et musique, lisez-les, diffusez-les sur votre TV et téléchargez des torrents. Gratuit, open source, sans compte, sans pistage.
+Votre musique et vos vidéos dans une seule app : un lecteur avec sous-titres et boucles, des téléchargements depuis plus de 1 800 sites, un convertisseur, la diffusion et les torrents. Gratuit, sans compte, sans pub.
 ```
 
 ## Description
 
 ```text
-Convert The Spire Reborn est une application multimédia tout-en-un pour Windows : téléchargeur, convertisseur, lecteur et client torrent dans une seule fenêtre.
+Convert The Spire Reborn réunit votre musique et vos vidéos dans une seule app : un lecteur avec sous-titres, boucles et grand affichage, et toutes les façons de le remplir, des téléchargements et torrents à un navigateur qui bloque les pubs.
+
+LECTURE
+• Une seule bibliothèque pour vos chansons et vidéos, avec playlists, favoris, lecture aléatoire et répétition.
+• Des sous-titres pour les vidéos et les chansons : un fichier .srt ou .vtt à côté du fichier se charge tout seul. Activez-les ou coupez-les d'un geste, choisissez un autre fichier, ou décalez-les s'ils ne sont pas synchronisés.
+• Le meilleur passage en boucle : marquez un ou plusieurs passages d'une chanson ou d'une vidéo, et seuls ceux-là sont lus, l'un après l'autre.
+• Grand affichage : la vidéo remplit l'écran, sans rien autour.
+• Vitesse de 0,5× à 2×, et un minuteur de veille qui arrête la lecture après 15 à 60 minutes ou à la fin de la chanson.
+• Les longues vidéos et les podcasts reprennent là où vous vous étiez arrêté.
 
 TÉLÉCHARGER
-• Enregistrez vidéos et musique depuis YouTube et plus de 1 800 autres sites, en MP4, MP3, M4A et plus, dans la qualité de votre choix.
-• Des playlists entières d'un coup, avec titres, pochettes et tags.
-• Un navigateur intégré trouve pour vous les médias d'une page.
+• Enregistrez des vidéos et de la musique depuis YouTube et plus de 1 800 autres sites en MP4, MP3, M4A et plus, dans la qualité de votre choix, ou seulement le passage que vous voulez.
+• Des playlists entières d'un coup, avec titres, pochettes et tags remplis. Vous voyez aussi quelles chansons il vous manque.
+• Aucune connexion : l'app ne vous demande jamais votre compte Google ou YouTube.
 
 CONVERTIR
-• Convertissez audio et vidéo entre plus de 27 formats avec FFmpeg, directement sur votre PC. Rien n'est envoyé en ligne.
+• Convertissez audio, vidéo et images entre plus de 27 formats avec FFmpeg, sur votre PC. Rien n'est envoyé en ligne.
 
-LIRE ET DIFFUSER
-• Un lecteur pour votre musique et vos vidéos, avec playlists.
-• Diffusion vers les TV et enceintes de votre réseau (DLNA/UPnP).
-• Regarder ensemble : la même vidéo, synchronisée avec vos amis.
+DIFFUSER ET REGARDER ENSEMBLE
+• Diffusez sur les TV et enceintes de votre réseau (DLNA/UPnP).
+• Regarder ensemble : la même vidéo, synchronisée, avec vos amis sur votre Wi-Fi. Partagez un code à six caractères ; sans compte, sans serveur.
 
 TORRENTS
-• Un client BitTorrent complet : liens magnet et fichiers .torrent, partage avec limites de ratio, création et partage de vos propres torrents.
+• Un vrai client BitTorrent : liens magnet et fichiers .torrent, partage avec limites de ratio, et création de vos propres torrents.
 
-VIE PRIVÉE AVANT TOUT
-• Sans compte, sans pub, sans statistiques, sans pistage. Tout reste sur votre PC.
+NAVIGATEUR
+• Un navigateur intégré qui bloque les pubs et les traqueurs avec les listes de filtres d'uBlock Origin, et trouve pour vous les médias d'une page.
+
+PRIVÉ PAR CONCEPTION
+• Pas de compte, pas de pub, pas d'analyse, pas de pistage. Tout reste sur votre PC.
 • Open source (GPL-3.0) sur GitHub.
 
-Disponible en 18 langues. Ne téléchargez que du contenu que vous avez le droit de télécharger.
+Disponible en 18 langues. Ne téléchargez que des contenus que vous avez le droit de télécharger.
 ```
 
 ## What's new in this version
 
 ```text
-Les torrents ne figent plus l'application quand un fichier se termine ou que le partage commence. Les morceaux gardent leur volume quand vous les rejouez. Le plein écran (F11) reste actif quand vous ouvrez une autre page. Tous les formats de Convertir fonctionnent, y compris le texte des PDF et les images WebP. Nouveau : exportez vos musiques en liste de titres (.txt ou .csv) depuis Playlists et importez-la sur un autre appareil.
+Nouveau : téléchargez seulement le passage d'une vidéo ou d'une chanson que vous voulez. Des sous-titres pour les vidéos et les chansons : les fichiers .srt et .vtt se chargent tout seuls. Mettez le meilleur passage en boucle, changez la vitesse, réglez un minuteur de veille et regardez en grand affichage. Les longues vidéos reprennent là où vous vous étiez arrêté, et le bloqueur de pubs du navigateur utilise désormais les listes d'uBlock Origin. Le lecteur n'a plus qu'un seul jeu de commandes et plus de place pour la vidéo, et toutes les couleurs sont débloquées. Corrigé : un programme téléchargé par torrent se lance pendant qu'il est partagé, les torrents de fichiers que vous avez déjà se partagent aussitôt, et les vidéos de votre bibliothèque ont des miniatures.
 ```
 
 ## Product features
 
 1.
 ```text
-Téléchargez vidéos et musique depuis plus de 1 800 sites
+Lecteur de musique et de vidéo, avec playlists et favoris
 ```
 
 2.
 ```text
-Convertissez entre plus de 27 formats audio et vidéo
+Sous-titres pour les vidéos et les chansons (.srt et .vtt)
 ```
 
 3.
 ```text
-Des playlists entières avec tags et pochettes
+Meilleur passage en boucle, vitesse, minuteur de veille
 ```
 
 4.
 ```text
-Lecteur multimédia avec playlists
+Grand affichage : la vidéo sans rien autour
 ```
 
 5.
 ```text
-Diffusion vers TV et enceintes (DLNA/UPnP)
+Téléchargez vidéo et musique depuis 1 800+ sites, ou un seul passage
 ```
 
 6.
 ```text
-Regardez des vidéos en synchro avec vos amis
+Playlists entières, avec titres, tags et pochettes
 ```
 
 7.
 ```text
-Client BitTorrent avec liens magnet et partage
+Conversion entre 27+ formats audio, vidéo et image
 ```
 
 8.
 ```text
-Navigateur intégré qui trouve les médias d'une page
+Diffusion sur TV et enceintes (DLNA/UPnP)
 ```
 
 9.
 ```text
-Sans compte, sans pub, sans pistage
+Regardez des vidéos en synchro avec vos amis
 ```
 
 10.
+```text
+Client BitTorrent avec liens magnet et partage
+```
+
+11.
+```text
+Navigateur avec un vrai bloqueur de pubs
+```
+
+12.
+```text
+Sans compte, sans pub, sans pistage
+```
+
+13.
 ```text
 Open source, en 18 langues
 ```
@@ -104,37 +129,37 @@ Open source, en 18 langues
 
 1.
 ```text
-telecharger video
+lecteur multimédia
 ```
 
 2.
 ```text
-convertisseur mp3
+téléchargeur vidéo
 ```
 
 3.
 ```text
-telecharger musique
+téléchargeur musique
 ```
 
 4.
 ```text
-torrent
+convertisseur mp3
 ```
 
 5.
 ```text
-lecteur multimedia
+lecteur vidéo
 ```
 
 6.
 ```text
-convertisseur video
+sous-titres
 ```
 
 7.
 ```text
-dlna
+torrent
 ```
 
 ## Copyright and trademark info

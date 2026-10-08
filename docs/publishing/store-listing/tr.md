@@ -11,91 +11,116 @@ Convert The Spire Reborn
 ## Short description
 
 ```text
-Video ve müzik indirip dönüştürün, oynatın, TV'nize yansıtın ve torrent indirin. Ücretsiz, açık kaynak, hesap yok, takip yok.
+Müziğin ve videoların tek uygulamada: altyazılı ve döngülü bir oynatıcı, 1.800'den fazla siteden indirme, dönüştürücü, TV'ye yayın ve torrentler. Ücretsiz, hesapsız, reklamsız.
 ```
 
 ## Description
 
 ```text
-Convert The Spire Reborn, Windows için hepsi bir arada bir medya uygulamasıdır: indirici, dönüştürücü, oynatıcı ve torrent istemcisi tek pencerede.
+Convert The Spire Reborn, müziğini ve videolarını tek bir uygulamada toplar: altyazılı, bölüm döngülü ve büyük görünümlü bir oynatıcı ve onu doldurmanın her yolu; indirmelerden ve torrentlerden reklamları engelleyen bir tarayıcıya kadar.
+
+OYNAT
+• Şarkıların ve videoların için tek kitaplık: çalma listeleri, favoriler, karışık çalma ve tekrar.
+• Videolar ve şarkılar için altyazı: dosyanın yanındaki .srt veya .vtt dosyası kendiliğinden yüklenir. Tek dokunuşla aç veya kapat, başka bir dosya seç ya da senkronu kaydıysa kaydır.
+• En iyi bölümü döngüye al: bir şarkının veya videonun bir ya da daha fazla bölümünü işaretle, yalnızca onlar arka arkaya çalsın.
+• Büyük görünüm: video, etrafında başka hiçbir şey olmadan ekranı doldurur.
+• 0,5× ile 2× arası hız ve 15–60 dakika sonra ya da şarkının sonunda durduran bir uyku zamanlayıcısı.
+• Uzun videolar ve podcast'ler kaldığın yerden devam eder.
 
 İNDİR
-• YouTube ve 1.800'den fazla başka siteden video ve müzikleri MP4, MP3, M4A ve diğer biçimlerde, seçtiğiniz kalitede kaydedin.
-• Başlıkları, kapakları ve etiketleriyle tüm çalma listeleri tek seferde.
-• Yerleşik tarayıcı sayfadaki medyayı sizin için bulur.
+• YouTube'dan ve 1.800'den fazla başka siteden video ve müziği MP4, MP3, M4A ve daha fazlası olarak, seçtiğin kalitede ya da yalnızca istediğin bölümü kaydet.
+• Bütün çalma listeleri tek seferde; başlıklar, kapaklar ve etiketler doldurulmuş olarak. Hangi şarkıların eksik olduğunu da görürsün.
+• Oturum açma yok: uygulama asla Google veya YouTube hesabını istemez.
 
 DÖNÜŞTÜR
-• FFmpeg ile ses ve videoyu 27'den fazla biçim arasında doğrudan bilgisayarınızda dönüştürün. Hiçbir şey yüklenmez.
+• Ses, video ve görüntüleri FFmpeg ile 27'den fazla format arasında, kendi bilgisayarında dönüştür. Hiçbir şey yüklenmez.
 
-OYNAT VE YANSIT
-• Müzikleriniz ve videolarınız için çalma listeli bir medya oynatıcı.
-• Ağınızdaki TV'lere ve hoparlörlere yansıtın (DLNA/UPnP).
-• Birlikte İzle: aynı videoyu arkadaşlarınızla eşzamanlı izleyin.
+YAYINLA VE BİRLİKTE İZLE
+• Ağındaki TV'lere ve hoparlörlere yayınla (DLNA/UPnP).
+• Birlikte İzle: aynı video, senkronize, Wi-Fi'ındaki arkadaşlarınla. Altı karakterlik bir kod paylaş; hesap yok, sunucu yok.
 
-TORRENT
-• Tam bir BitTorrent istemcisi: magnet bağlantıları ve .torrent dosyaları, oran sınırlı paylaşım ve kendi torrentlerinizi oluşturup paylaşma.
+TORRENTLER
+• Tam bir BitTorrent istemcisi: magnet bağlantıları ve .torrent dosyaları, oran sınırlı paylaşım ve kendi torrentlerini oluşturma.
 
-ÖNCE GİZLİLİK
-• Hesap yok, reklam yok, analiz yok, takip yok. Her şey bilgisayarınızda kalır.
+TARAYICI
+• uBlock Origin'in filtre listeleriyle reklamları ve izleyicileri engelleyen, bir sayfadaki medyayı senin için bulan yerleşik bir tarayıcı.
+
+GİZLİLİK ODAKLI
+• Hesap yok, reklam yok, analiz yok, izleme yok. Her şey bilgisayarında kalır.
 • GitHub'da açık kaynak (GPL-3.0).
 
-18 dilde kullanılabilir. Lütfen yalnızca indirme hakkına sahip olduğunuz içerikleri indirin.
+18 dilde kullanılabilir. Lütfen yalnızca indirme hakkına sahip olduğun içerikleri indir.
 ```
 
 ## What's new in this version
 
 ```text
-Torrentler artık bir dosya bittiğinde veya paylaşım başladığında uygulamayı dondurmuyor. Şarkılar yeniden çalındığında ses düzeylerini koruyor. Başka bir sayfa açtığınızda tam ekran (F11) açık kalıyor. Dönüştür'deki tüm biçimler çalışıyor; PDF'lerden metin ve WebP görüntüler de dahil. Yeni: Şarkılarınızı Çalma listelerinden parça listesi (.txt veya .csv) olarak dışa aktarın ve başka bir cihazda içe aktarın.
+Yeni: bir videonun veya şarkının yalnızca istediğin bölümünü indir. Videolar ve şarkılar için altyazı: .srt ve .vtt dosyaları kendiliğinden yüklenir. En iyi bölümü döngüye al, hızı değiştir, uyku zamanlayıcısı kur ve büyük görünümde izle. Uzun videolar kaldığın yerden devam eder ve tarayıcının reklam engelleyicisi artık uBlock Origin'in listelerini kullanır. Oynatıcının artık tek bir kontrol seti ve videoya daha fazla yeri var; tüm renklerin kilidi açıldı. Düzeltildi: torrentle indirilen bir program paylaşılırken çalışır, zaten sahip olduğun dosyaların torrentleri hemen paylaşılır ve kitaplıktaki videoların küçük resimleri var.
 ```
 
 ## Product features
 
 1.
 ```text
-1.800'den fazla siteden video ve müzik indirin
+Çalma listeleri ve favorilerle müzik ve video oynatıcı
 ```
 
 2.
 ```text
-27'den fazla ses ve video biçimi arasında dönüştürün
+Videolar ve şarkılar için altyazı (.srt ve .vtt)
 ```
 
 3.
 ```text
-Etiketleri ve kapaklarıyla tüm çalma listeleri
+Bölüm döngüsü, oynatma hızı, uyku zamanlayıcısı
 ```
 
 4.
 ```text
-Çalma listeli medya oynatıcı
+Büyük görünüm: etrafında hiçbir şey olmadan video
 ```
 
 5.
 ```text
-TV'lere ve hoparlörlere yansıtın (DLNA/UPnP)
+1.800+ siteden video ve müzik indir, istersen yalnızca bir bölüm
 ```
 
 6.
 ```text
-Videoları arkadaşlarınızla eşzamanlı izleyin
+Başlık, etiket ve kapaklarla bütün çalma listeleri
 ```
 
 7.
 ```text
-Magnet bağlantıları ve paylaşım destekli BitTorrent istemcisi
+27+ ses, video ve görüntü formatı arasında dönüştürme
 ```
 
 8.
 ```text
-Sayfadaki medyayı bulan yerleşik tarayıcı
+TV'lere ve hoparlörlere yayın (DLNA/UPnP)
 ```
 
 9.
 ```text
-Hesap yok, reklam yok, takip yok
+Arkadaşlarınla senkronize video izle
 ```
 
 10.
+```text
+Magnet bağlantıları ve paylaşımla BitTorrent istemcisi
+```
+
+11.
+```text
+Gerçek bir reklam engelleyicili tarayıcı
+```
+
+12.
+```text
+Hesap yok, reklam yok, izleme yok
+```
+
+13.
 ```text
 Açık kaynak, 18 dilde
 ```
@@ -104,37 +129,37 @@ Açık kaynak, 18 dilde
 
 1.
 ```text
-video indirici
+medya oynatıcı
 ```
 
 2.
 ```text
-mp3 dönüştürücü
+video indirici
 ```
 
 3.
 ```text
-müzik indir
+müzik indirici
 ```
 
 4.
 ```text
-torrent
+mp3 dönüştürücü
 ```
 
 5.
 ```text
-medya oynatıcı
+video oynatıcı
 ```
 
 6.
 ```text
-video dönüştürücü
+altyazı
 ```
 
 7.
 ```text
-dlna
+torrent
 ```
 
 ## Copyright and trademark info
