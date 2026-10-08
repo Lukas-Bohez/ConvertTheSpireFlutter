@@ -240,9 +240,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (_webViewController != null) {
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) {
-          try {
-            _webviewInputChannel.invokeMethod('registerWebView');
-          } catch (_) {}
+          _inputChannel('registerWebView');
         }
       });
     }
@@ -465,9 +463,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
-      try {
-        _webviewInputChannel.invokeMethod('registerWebView');
-      } catch (_) {}
+      _inputChannel('registerWebView');
     });
 
     unawaited(adapter.applySettings(
@@ -835,6 +831,15 @@ class _BrowserScreenState extends State<BrowserScreen>
         level: error == null ? SnackLevel.success : SnackLevel.error);
   }
 
+  /// Tells the Android TV input bridge [method]. Other platforms have no
+  /// such channel: the call fails there, and the failure, not awaited,
+  /// escaped the try around it as an unhandled error.
+  void _inputChannel(String method) {
+    unawaited(_webviewInputChannel
+        .invokeMethod<void>(method)
+        .then<void>((_) {}, onError: (Object _) {}));
+  }
+
   bool _shouldBlockResource(String url) {
     // YouTube's and Google's own pages are left alone (FilterSet.exemptPages).
     if (_adBlock.shouldBlock(url, pageUrl: _addressController.text)) {
@@ -902,9 +907,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _resumeCursor() {
     if (!mounted || _webViewController == null) return;
-    try {
-      _webviewInputChannel.invokeMethod('dismissIME');
-    } catch (_) {}
+    _inputChannel('dismissIME');
     if (!_cursorActive) {
       setState(() => _cursorActive = true);
     }
