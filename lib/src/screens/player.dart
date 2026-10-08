@@ -5037,10 +5037,17 @@ class _SubtitleText extends StatelessWidget {
   final PlayerState state;
   final bool large;
 
-  const _SubtitleText({required this.state, this.large = false});
+  /// Over a video: white on a dark box. Under a song (lyrics, mostly): in
+  /// the theme's colour, fading from line to line, with room for two lines
+  /// kept so the card doesn't jump between them.
+  final bool overVideo;
+
+  const _SubtitleText(
+      {required this.state, this.large = false, this.overVideo = true});
 
   @override
   Widget build(BuildContext context) {
+    if (!overVideo) return _underSong(context);
     return ValueListenableBuilder<String?>(
       valueListenable: state.subtitleLine,
       builder: (context, line, _) {
@@ -5076,6 +5083,36 @@ class _SubtitleText extends StatelessWidget {
         );
       },
     );
+  }
+
+  Widget _underSong(BuildContext context) {
+    final color = _PlayerTheme.accent(context);
+    return LayoutBuilder(builder: (context, constraints) {
+      final size = (constraints.maxWidth / 32).clamp(15.0, 20.0);
+      final lineHeight = MediaQuery.textScalerOf(context).scale(size) * 1.3;
+      return SizedBox(
+        height: lineHeight * 2 + 4,
+        child: ValueListenableBuilder<String?>(
+          valueListenable: state.subtitleLine,
+          builder: (context, line, _) => AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: Text(
+              line ?? '',
+              key: ValueKey(line),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontSize: size,
+                height: 1.3,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      );
+    });
   }
 }
 
@@ -6689,7 +6726,7 @@ class _PlayerScreenState extends State<PlayerScreen>
           if (item.type == MediaType.audio && state.hasSubtitles)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 2, 12, 6),
-              child: _SubtitleText(state: state),
+              child: _SubtitleText(state: state, overVideo: false),
             ),
 
           // -- Playback controls --
