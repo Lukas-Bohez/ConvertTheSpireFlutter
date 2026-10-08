@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
 
+import '../models/media_part.dart';
 import '../models/search_result.dart';
 import '../services/playlist_service.dart';
 import '../services/yt_dlp_service.dart';
@@ -14,9 +15,13 @@ import 'video_or_playlist_dialog.dart';
 /// A small card used on the Home page for quickly pasting a URL and starting a download.
 ///
 /// It fetches basic metadata for YouTube URLs and shows a preview before enqueueing.
+/// Queues [result] for download: all of it, or only [parts] of it.
+typedef QuickDownloadCallback = Future<void> Function(
+    SearchResult result, String format, String quality,
+    {List<MediaPart> parts});
+
 class QuickDownloadCard extends StatefulWidget {
-  final Future<void> Function(
-      SearchResult result, String format, String quality) onDownload;
+  final QuickDownloadCallback onDownload;
   final void Function(String url, String format, String quality)?
       onPlaylistDetected;
 
@@ -130,7 +135,7 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
           );
         }
         if (!mounted) return;
-        final confirmed = await showModalBottomSheet<bool>(
+        final choice = await showModalBottomSheet<List<MediaPart>>(
           context: context,
           isScrollControlled: true,
           builder: (ctx) {
@@ -148,13 +153,14 @@ class _QuickDownloadCardState extends State<QuickDownloadCard> {
             );
           },
         );
-        if (confirmed == true) {
+        // Null when closed; empty for all of it; or the parts to download.
+        if (choice != null) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(context.l10n.queuedDownload)),
             );
           }
-          await widget.onDownload(result, _format, _quality);
+          await widget.onDownload(result, _format, _quality, parts: choice);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(context.l10n.downloadStarted)),
@@ -491,6 +497,26 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
   bool _loading = true;
   String? _error;
 
+  /// Only parts of it (issue #41), as competitors offer.
+  bool _partsOnly = false;
+  final List<MediaPart> _parts = [];
+
+  Duration get _duration => widget.result.duration;
+
+  bool get _partsValid =>
+      _parts.isNotEmpty &&
+      _parts.every((p) => p.isValid && p.end <= _duration);
+
+  void _addPart() {
+    // After the last one, or the first 30 seconds.
+    final from = _parts.isEmpty ? Duration.zero : _parts.last.end;
+    var to = from + const Duration(seconds: 30);
+    if (to > _duration) to = _duration;
+    setState(() => _parts.add(MediaPart(
+        from >= _duration ? Duration.zero : from,
+        from >= _duration ? _duration : to)));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -555,7 +581,8 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
+    final canCut = _duration > const Duration(seconds: 1);
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -606,7 +633,7 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
               ),
               IconButton(
                 icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context, false),
+                onPressed: () => Navigator.pop(context),
               ),
             ],
           ),
@@ -633,12 +660,60 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
                   ? Text(_error!, style: TextStyle(color: cs.error))
                   : Text(context.l10n.estimatedSize(_formatSize(_estimatedSize)),
                       style: Theme.of(context).textTheme.bodyMedium),
+          if (canCut) ...[
+            const SizedBox(height: 16),
+            SegmentedButton<bool>(
+              segments: [
+                ButtonSegment(
+                    value: false,
+                    icon: const Icon(Icons.movie_outlined),
+                    label: Text(context.l10n.downloadWhole)),
+                ButtonSegment(
+                    value: true,
+                    icon: const Icon(Icons.content_cut_rounded),
+                    label: Text(context.l10n.downloadOnlyParts)),
+              ],
+              selected: {_partsOnly},
+              onSelectionChanged: (v) {
+                setState(() => _partsOnly = v.first);
+                if (_partsOnly && _parts.isEmpty) _addPart();
+              },
+            ),
+          ],
+          if (_partsOnly) ...[
+            const SizedBox(height: 8),
+            Text(context.l10n.downloadPartsHint,
+                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
+            for (var i = 0; i < _parts.length; i++)
+              _PartEditor(
+                key: ObjectKey(_parts[i]),
+                part: _parts[i],
+                duration: _duration,
+                onChanged: (p) => setState(() => _parts[i] = p),
+                onRemove: _parts.length > 1
+                    ? () => setState(() => _parts.removeAt(i))
+                    : null,
+              ),
+            TextButton.icon(
+              icon: const Icon(Icons.add_rounded),
+              label: Text(context.l10n.downloadAddPart),
+              onPressed: _addPart,
+            ),
+            if (!_partsValid)
+              Text(context.l10n.partTimesInvalid,
+                  style: TextStyle(color: cs.error, fontSize: 12)),
+          ],
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(context.l10n.addQueue),
+              onPressed: _partsOnly && !_partsValid
+                  ? null
+                  : () => Navigator.pop(
+                      context, _partsOnly ? List.of(_parts) : <MediaPart>[]),
+              child: Text(_partsOnly
+                  ? context.l10n.addPartsToQueue(_parts.length)
+                  : context.l10n.addQueue),
             ),
           ),
           const SizedBox(height: 8),
@@ -650,6 +725,105 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
                 ?.copyWith(color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+}
+
+/// One part to download: from and to, typed (`1:05`) or dragged.
+class _PartEditor extends StatefulWidget {
+  const _PartEditor({
+    super.key,
+    required this.part,
+    required this.duration,
+    required this.onChanged,
+    this.onRemove,
+  });
+
+  final MediaPart part;
+  final Duration duration;
+  final ValueChanged<MediaPart> onChanged;
+  final VoidCallback? onRemove;
+
+  @override
+  State<_PartEditor> createState() => _PartEditorState();
+}
+
+class _PartEditorState extends State<_PartEditor> {
+  late final _from =
+      TextEditingController(text: MediaPart.formatTime(widget.part.start));
+  late final _to =
+      TextEditingController(text: MediaPart.formatTime(widget.part.end));
+  late MediaPart _part = widget.part;
+
+  @override
+  void dispose() {
+    _from.dispose();
+    _to.dispose();
+    super.dispose();
+  }
+
+  void _typed() {
+    final from = MediaPart.parseTime(_from.text);
+    final to = MediaPart.parseTime(_to.text);
+    if (from == null || to == null) return;
+    _part = MediaPart(from, to);
+    widget.onChanged(_part);
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final max = widget.duration.inMilliseconds / 1000;
+    double sec(Duration d) => (d.inMilliseconds / 1000).clamp(0, max);
+    Widget field(TextEditingController c, String label) => SizedBox(
+          width: 92,
+          child: TextField(
+            controller: c,
+            decoration: InputDecoration(
+              labelText: label,
+              isDense: true,
+              border: const OutlineInputBorder(),
+            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: (_) => _typed(),
+          ),
+        );
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              field(_from, l10n.partFrom),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Text('–'),
+              ),
+              field(_to, l10n.partTo),
+              const Spacer(),
+              if (widget.onRemove != null)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  tooltip: l10n.loopDeletePart,
+                  onPressed: widget.onRemove,
+                ),
+            ],
+          ),
+          RangeSlider(
+            values: RangeValues(sec(_part.start), sec(_part.end)),
+            max: max,
+            onChanged: (v) {
+              _part = MediaPart(Duration(milliseconds: (v.start * 1000).round()),
+                  Duration(milliseconds: (v.end * 1000).round()));
+              _from.text = MediaPart.formatTime(_part.start);
+              _to.text = MediaPart.formatTime(_part.end);
+              widget.onChanged(_part);
+              setState(() {});
+            },
+          ),
         ],
       ),
     );

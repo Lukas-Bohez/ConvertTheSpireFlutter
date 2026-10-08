@@ -9,6 +9,7 @@ import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
+import '../models/media_part.dart';
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
 import 'android_saf.dart';
@@ -135,6 +136,7 @@ class DownloadService {
     bool createFormatSubfolders = true,
     String? cookiesFile,
     String? cookiesFromBrowser,
+    MediaPart? part,
   }) async {
     if (kIsWeb) {
       throw Exception('Downloads are not supported on web.');
@@ -162,7 +164,7 @@ class DownloadService {
     final isSafOutput = _isSafOutput(outputDir);
 
     final downloadTitle = resolveDownloadTitle(item.title);
-    final safeTitle = _sanitizeFileName(downloadTitle);
+    final safeTitle = _partTitle(_sanitizeFileName(downloadTitle), part);
 
     onProgress(0, DownloadStatus.downloading);
 
@@ -195,6 +197,7 @@ class DownloadService {
         extraHeaders: isDifficultSite(item.url) ? headers : null,
         cookiesFile: cookiesFile,
         cookiesFromBrowser: cookiesFromBrowser,
+        section: part?.ytDlpSection,
         onProgress: (pct, speed, eta) {
           final adjusted = (pct * 0.95).toInt();
           final status = pct >= 100
@@ -246,6 +249,7 @@ class DownloadService {
             cookiesFile: cookiesFile,
             cookiesFromBrowser: cookiesFromBrowser,
             forceGenericExtractor: true,
+            section: part?.ytDlpSection,
             onProgress: (pct, speed, eta) {
               final adjusted = (pct * 0.95).toInt();
               final status = pct >= 100
@@ -293,6 +297,7 @@ class DownloadService {
     bool createFormatSubfolders = true,
     String? cookiesFile,
     String? cookiesFromBrowser,
+    MediaPart? part,
   }) async {
     if (kIsWeb) {
       throw Exception(
@@ -309,27 +314,39 @@ class DownloadService {
           'Download folder is not configured. Set one in Settings.');
     }
     final isSafOutput = _isSafOutput(outputDir);
-    final video = await yt.videos.get(item.url).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () =>
-            throw TimeoutException('Timed out fetching video info'));
+    final resolvedYtDlp = await ytDlp.resolveAvailablePath(ytDlpPath);
+    Video? video;
+    try {
+      video = await yt.videos.get(item.url).timeout(
+          const Duration(seconds: 30),
+          onTimeout: () =>
+              throw TimeoutException('Timed out fetching video info'));
+    } catch (e) {
+      // yt-dlp reads the page itself: the title and thumbnail from here are
+      // only nice to have. youtube_explode now and then fails to read the
+      // watch page ("Failed to retrieve initial data"), and that failed the
+      // whole download although yt-dlp would have got it.
+      if (resolvedYtDlp == null) rethrow;
+      debugPrint('Video info unavailable ($e); yt-dlp downloads it anyway');
+    }
 
     final downloadTitle =
-        resolveDownloadTitle(item.title, sourceTitle: video.title);
+        resolveDownloadTitle(item.title, sourceTitle: video?.title);
     final downloadArtist = resolveDownloadArtist(
       item.uploader,
-      sourceArtist: video.author,
+      sourceArtist: video?.author,
     );
-    final safeTitle = _sanitizeFileName(downloadTitle);
+    final safeTitle = _partTitle(_sanitizeFileName(downloadTitle), part);
 
     // -- yt-dlp fast-path (when available)
     // yt-dlp handles throttle-token decryption, chunked downloads, and
     // adaptive stream merging natively - bypassing the youtube_explode_dart
     // stream issues that cause 403 errors on HD adaptive streams.
-    final resolvedYtDlp = await ytDlp.resolveAvailablePath(ytDlpPath);
     if (resolvedYtDlp != null) {
+      final id = VideoId.parseVideoId(item.url);
       return _downloadWithYtDlp(
-        video: video,
+        thumbnailUrl: video?.thumbnails.highResUrl ??
+            (id == null ? null : 'https://i.ytimg.com/vi/$id/hqdefault.jpg'),
         url: item.url,
         downloadTitle: downloadTitle,
         downloadArtist: downloadArtist,
@@ -347,6 +364,7 @@ class DownloadService {
         useMediaStoreOnly: useMediaStoreOnly,
         cookiesFile: cookiesFile,
         cookiesFromBrowser: cookiesFromBrowser,
+        part: part,
       );
     }
 
@@ -356,7 +374,9 @@ class DownloadService {
     // Fetch stream manifest with multiple YouTube API clients.  The default
     // androidSdkless client often returns empty manifests on mobile; rotating
     // through tv, safari and ios clients dramatically improves success.
-    final streams = await _getManifestWithFallbackClients(video.id);
+    // Without yt-dlp the video info was required (rethrown above).
+    final video0 = video!;
+    final streams = await _getManifestWithFallbackClients(video0.id);
 
     final needsConversion = formatLower != 'mp4';
     // Muxed streams are limited to 360p. Anything above 360p requires
@@ -384,7 +404,7 @@ class DownloadService {
     final tempFiles = <String>[];
 
     Uint8List? thumbBytes =
-        await _fetchThumbnailBytes(video.thumbnails.highResUrl);
+        await _fetchThumbnailBytes(video0.thumbnails.highResUrl);
     thumbBytes = _prepareCoverBytes(thumbBytes);
     final thumbPath =
         await _writeThumbnailFile(outputFolder.path, safeTitle, thumbBytes);
@@ -451,20 +471,20 @@ class DownloadService {
             {String? speed, String? eta}) {
           final adjustedPct = (pct * 0.6).toInt();
           onProgress(adjustedPct, status, speed: speed, eta: eta);
-        }, videoId: video.id);
+        }, videoId: video0.id);
         if (token.cancelled) throw Exception('Cancelled');
         await _downloadStream(separateAudioStream, tempAudioPath!, token,
             (pct, status, {String? speed, String? eta}) {
           final adjustedPct = 60 + (pct * 0.2).toInt();
           onProgress(adjustedPct, status, speed: speed, eta: eta);
-        }, videoId: video.id);
+        }, videoId: video0.id);
       } else {
         // Single stream download (0-90%)
         await _downloadStream(sourceStream, tempFilePath, token, (pct, status,
             {String? speed, String? eta}) {
           final adjustedPct = (pct * 0.9).toInt();
           onProgress(adjustedPct, status, speed: speed, eta: eta);
-        }, videoId: video.id);
+        }, videoId: video0.id);
       }
 
       if (token.cancelled) {
@@ -490,7 +510,7 @@ class DownloadService {
           title: downloadTitle,
           artist: downloadArtist,
           album: downloadArtist,
-          date: video.uploadDate?.toIso8601String() ?? '',
+          date: video0.uploadDate?.toIso8601String() ?? '',
           bitrate: preferredAudioBitrate,
         );
         await ffmpeg.run(args, ffmpegPath: ffmpegPath);
@@ -543,6 +563,12 @@ class DownloadService {
         await _safeDelete(f);
       }
 
+      // This path downloads all of it: keep only the part.
+      if (part != null) {
+        await _cutToPart(outputPath, part,
+            ffmpegPath: ffmpegPath, video: formatLower == 'mp4');
+      }
+
       return _finalizeOutput(
         outputPath: outputPath,
         outputDir: outputDir,
@@ -568,7 +594,8 @@ class DownloadService {
   /// internally, avoiding the 403 errors that plague adaptive streams via
   /// youtube_explode_dart.
   Future<DownloadResult> _downloadWithYtDlp({
-    required dynamic video, // Video from youtube_explode_dart
+    MediaPart? part,
+    required String? thumbnailUrl,
     required String url,
     required String downloadTitle,
     required String downloadArtist,
@@ -603,7 +630,7 @@ class DownloadService {
 
     // Fetch thumbnail via youtube_explode_dart for display in the queue
     Uint8List? thumbBytes =
-        await _fetchThumbnailBytes(video.thumbnails.highResUrl);
+        thumbnailUrl == null ? null : await _fetchThumbnailBytes(thumbnailUrl);
     thumbBytes = _prepareCoverBytes(thumbBytes);
 
     try {
@@ -620,6 +647,7 @@ class DownloadService {
         sponsorBlockEnabled: sponsorBlockEnabled,
         cookiesFile: cookiesFile,
         cookiesFromBrowser: cookiesFromBrowser,
+        section: part?.ytDlpSection,
         isCancelled: () => token.cancelled,
         onProgress: (pct, speed, eta) {
           // Scale yt-dlp's 0-100 into 0-95 (leave room for finalization)
@@ -749,6 +777,34 @@ class DownloadService {
   }
 
   /// Move the final output file to SAF / Downloads / local, cleaning up temp.
+  /// A part's file is named after the part as well: `Song (1m05s-2m30s)`.
+  static String _partTitle(String safeTitle, MediaPart? part) =>
+      part == null ? safeTitle : '$safeTitle (${part.fileLabel})';
+
+  /// Replaces the file at [path] with only [part] of it. A video is
+  /// re-encoded so it starts at the exact time; audio is copied.
+  Future<void> _cutToPart(String path, MediaPart part,
+      {required String? ffmpegPath, required bool video}) async {
+    final dot = path.lastIndexOf('.');
+    final cut = '${path.substring(0, dot)}.part${path.substring(dot)}';
+    String seconds(Duration d) => (d.inMilliseconds / 1000).toStringAsFixed(3);
+    await ffmpeg.run([
+      '-y',
+      '-ss', seconds(part.start), //
+      '-to', seconds(part.end),
+      '-i', path,
+      '-map', '0',
+      if (video) ...['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20',
+        '-c:a', 'aac'] else ...['-c', 'copy'],
+      cut,
+    ], ffmpegPath: ffmpegPath);
+    if (!await File(cut).exists()) {
+      throw Exception('Could not cut out the part ${part.fileLabel}.');
+    }
+    await File(path).delete();
+    await File(cut).rename(path);
+  }
+
   Future<DownloadResult> _finalizeOutput({
     required String outputPath,
     required String outputDir,

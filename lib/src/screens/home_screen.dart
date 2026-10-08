@@ -468,12 +468,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             final idx = QuickLinksService.routeToIndex[route];
             if (idx != null) _navigateToPage(idx);
           },
-          onDownload: (result, format, quality) async {
-            widget.controller.addSearchResultToQueue(
-              result,
-              format: format,
-              videoQuality: quality,
-            );
+          onDownload: (result, format, quality, {parts = const []}) async {
+            // A file per part, or all of it.
+            for (final part in parts.isEmpty ? const [null] : parts) {
+              widget.controller.addSearchResultToQueue(
+                result,
+                format: format,
+                videoQuality: quality,
+                part: part,
+              );
+            }
             unawaited(widget.controller.downloadAll());
             _navigateToPage(3); // show queue
           },

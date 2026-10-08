@@ -13,6 +13,7 @@ import '../config/build_flags.dart';
 import '../config/full_mode_access.dart';
 import '../models/app_settings.dart';
 import '../models/convert_result.dart';
+import '../models/media_part.dart';
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
 import '../models/search_result.dart' as models;
@@ -599,8 +600,9 @@ class AppController extends ChangeNotifier {
   }
 
   void addToQueue(PreviewItem item, String format,
-      {String? videoQuality, String? outputFolder}) {
-    if (queue.any((q) => q.url == item.url && q.format == format)) {
+      {String? videoQuality, String? outputFolder, MediaPart? part}) {
+    if (queue.any(
+        (q) => q.url == item.url && q.format == format && q.part == part)) {
       return;
     }
     if (queue.length >= _maxQueueCap) {
@@ -623,6 +625,7 @@ class AppController extends ChangeNotifier {
           outputFolder: outputFolder,
           error: null,
           videoQuality: videoQuality,
+          part: part,
         ),
       );
     scheduleNotify();
@@ -630,10 +633,9 @@ class AppController extends ChangeNotifier {
   }
 
   void removeFromQueue(QueueItem item) {
-    final key = '${item.url}|${item.format}';
+    final key = item.key;
     _tokens[key]?.cancel();
-    queue = List<QueueItem>.from(queue)
-      ..removeWhere((q) => q.url == item.url && q.format == item.format);
+    queue = List<QueueItem>.from(queue)..removeWhere((q) => q.key == item.key);
     scheduleNotify();
     unawaited(_saveQueue());
   }
@@ -681,7 +683,7 @@ class AppController extends ChangeNotifier {
     }
 
     final token = DownloadToken();
-    final key = '${item.url}|${item.format}';
+    final key = item.key;
     _tokens[key] = token;
 
     // Determine destination folder for this item:
@@ -782,11 +784,13 @@ class AppController extends ChangeNotifier {
             preferredVideoQuality:
                 item.videoQuality ?? settings.preferredVideoQuality,
             preferredAudioBitrate: settings.preferredAudioBitrate,
+            part: item.part,
           );
         } else {
           // Non-YouTube → route to yt-dlp generic download
           result = await downloadService.downloadGeneric(
             previewItem,
+            part: item.part,
             format: item.format,
             outputDir: downloadFolder,
             ffmpegPath: ffmpegPath,
@@ -954,7 +958,7 @@ class AppController extends ChangeNotifier {
   }
 
   void cancelDownload(QueueItem item) {
-    final key = '${item.url}|${item.format}';
+    final key = item.key;
     _tokens[key]?.cancel();
     final updated =
         item.copyWith(status: DownloadStatus.cancelled, error: 'Cancelled');
@@ -964,7 +968,7 @@ class AppController extends ChangeNotifier {
   void resumeDownload(QueueItem item) {
     // Guard against duplicate concurrent downloads (downloadAll may pick this
     // item up before downloadSingle progresses past its first await).
-    final key = '${item.url}|${item.format}';
+    final key = item.key;
     if (_tokens.containsKey(key) && !_tokens[key]!.cancelled) return;
     final reset =
         item.copyWith(status: DownloadStatus.queued, progress: 0, error: null);
@@ -974,7 +978,8 @@ class AppController extends ChangeNotifier {
 
   void changeQueueItemFormat(QueueItem item, String newFormat) {
     // Prevent duplicate: another queue item with the same URL + new format
-    if (queue.any((q) => q.url == item.url && q.format == newFormat)) {
+    if (queue.any((q) =>
+        q.url == item.url && q.format == newFormat && q.part == item.part)) {
       return;
     }
     final updated = item.copyWith(format: newFormat);
@@ -1149,8 +1154,7 @@ class AppController extends ChangeNotifier {
   }
 
   void _updateQueue(QueueItem original, QueueItem updated) {
-    final index = queue.indexWhere(
-        (q) => q.url == original.url && q.format == original.format);
+    final index = queue.indexWhere((q) => q.key == original.key);
     if (index == -1) {
       return;
     }
@@ -1444,7 +1448,10 @@ class AppController extends ChangeNotifier {
   /// YouTube results are queued with a `youtube.com/watch?v=` URL.
   /// Generic (non-YouTube) results are queued with the raw URL stored in [id].
   void addSearchResultToQueue(models.SearchResult result,
-      {String? format, String? videoQuality, String? outputFolder}) {
+      {String? format,
+      String? videoQuality,
+      String? outputFolder,
+      MediaPart? part}) {
     final fmt = format ?? _settings?.defaultAudioFormat ?? 'mp3';
 
     // If source is 'generic', the ID *is* the URL (set by BrowserScreen)
@@ -1469,6 +1476,7 @@ class AppController extends ChangeNotifier {
       fmt,
       videoQuality: videoQuality,
       outputFolder: outputFolder,
+      part: part,
     );
   }
 

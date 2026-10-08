@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 
 import '../config/build_flags.dart';
 import '../config/full_mode_access.dart';
-import '../models/search_result.dart';
 import '../services/folder_access_service.dart';
 import '../utils/l10n.dart';
 import 'monetization_widgets.dart';
@@ -18,8 +17,7 @@ import 'support_card.dart';
 /// Clean home page with a grid of quick-link tiles.
 class QuickLinksPage extends StatefulWidget {
   final ValueChanged<String> onNavigate;
-  final Future<void> Function(
-      SearchResult result, String format, String quality) onDownload;
+  final QuickDownloadCallback onDownload;
   final void Function(String url, String format, String quality)?
       onPlaylistDetected;
   final Future<String?> Function() getYtDlpVersion;

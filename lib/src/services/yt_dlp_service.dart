@@ -597,9 +597,19 @@ class YtDlpService {
     String? cookiesFromBrowser,
     bool sponsorBlockEnabled = false,
     bool forceGenericExtractor = false,
+    String? section,
   }) async {
     final args = <String>[];
     final formatLower = format.toLowerCase();
+
+    // Only a part (issue #41): yt-dlp fetches just that stretch, cut at the
+    // exact times. Without --force-keyframes-at-cuts an audio-only stream
+    // came back from its start: 0:00-0:20 for a part 0:10-0:20 (checked
+    // with yt-dlp 2026.08.19), and a video starts at the nearest keyframe.
+    if (section != null) {
+      args.addAll(
+          ['--download-sections', section, '--force-keyframes-at-cuts']);
+    }
 
     if (formatLower == 'mp4') {
       // Video download: best video+audio up to target quality

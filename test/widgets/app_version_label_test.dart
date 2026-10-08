@@ -39,7 +39,7 @@ void main() {
         home: Scaffold(
           body: QuickLinksPage(
             onNavigate: (_) {},
-            onDownload: (_, __, ___) async {},
+            onDownload: (_, __, ___, {parts = const []}) async {},
             getYtDlpVersion: () async => null,
           ),
         ),
