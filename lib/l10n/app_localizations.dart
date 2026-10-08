@@ -8706,6 +8706,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Don\'t show again'**
   String get supportCardNever;
+
+  /// No description provided for @largeView.
+  ///
+  /// In en, this message translates to:
+  /// **'Large view'**
+  String get largeView;
+
+  /// No description provided for @exitLargeView.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the library'**
+  String get exitLargeView;
+
+  /// No description provided for @subtitles.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtitles'**
+  String get subtitles;
+
+  /// No description provided for @subtitlesNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get subtitlesNone;
+
+  /// No description provided for @subtitlesChooseFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a subtitle file…'**
+  String get subtitlesChooseFile;
+
+  /// No description provided for @subtitlesNoneFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No subtitle file next to this one. Choose an .srt or .vtt file.'**
+  String get subtitlesNoneFound;
+
+  /// No description provided for @subtitlesTiming.
+  ///
+  /// In en, this message translates to:
+  /// **'Timing: {delay}'**
+  String subtitlesTiming(String delay);
+
+  /// No description provided for @subtitlesEarlier.
+  ///
+  /// In en, this message translates to:
+  /// **'Show earlier'**
+  String get subtitlesEarlier;
+
+  /// No description provided for @subtitlesLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Show later'**
+  String get subtitlesLater;
+
+  /// No description provided for @subtitlesShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Show subtitles'**
+  String get subtitlesShow;
+
+  /// No description provided for @downloadWhole.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole'**
+  String get downloadWhole;
+
+  /// No description provided for @downloadOnlyParts.
+  ///
+  /// In en, this message translates to:
+  /// **'Only parts'**
+  String get downloadOnlyParts;
+
+  /// No description provided for @downloadAddPart.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a part'**
+  String get downloadAddPart;
+
+  /// No description provided for @downloadPartsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Each part is saved as a file of its own, from and to the times you set.'**
+  String get downloadPartsHint;
+
+  /// No description provided for @partFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get partFrom;
+
+  /// No description provided for @partTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get partTo;
+
+  /// No description provided for @addPartsToQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to queue ({count} parts)'**
+  String addPartsToQueue(int count);
+
+  /// No description provided for @partTimesInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Each part has to end after it starts, within the video.'**
+  String get partTimesInvalid;
 }
 
 class _AppLocalizationsDelegate

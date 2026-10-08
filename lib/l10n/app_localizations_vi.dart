@@ -4927,4 +4927,65 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get supportCardNever => 'Không hiện lại';
+
+  @override
+  String get largeView => 'Chế độ xem lớn';
+
+  @override
+  String get exitLargeView => 'Quay lại thư viện';
+
+  @override
+  String get subtitles => 'Phụ đề';
+
+  @override
+  String get subtitlesNone => 'Không có';
+
+  @override
+  String get subtitlesChooseFile => 'Chọn tệp phụ đề…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'Không có tệp phụ đề cạnh tệp này. Hãy chọn tệp .srt hoặc .vtt.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Độ lệch: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Hiện sớm hơn';
+
+  @override
+  String get subtitlesLater => 'Hiện muộn hơn';
+
+  @override
+  String get subtitlesShow => 'Hiện phụ đề';
+
+  @override
+  String get downloadWhole => 'Toàn bộ';
+
+  @override
+  String get downloadOnlyParts => 'Chỉ một số đoạn';
+
+  @override
+  String get downloadAddPart => 'Thêm đoạn';
+
+  @override
+  String get downloadPartsHint =>
+      'Mỗi đoạn được lưu thành một tệp riêng, từ và đến thời điểm bạn chọn.';
+
+  @override
+  String get partFrom => 'Từ';
+
+  @override
+  String get partTo => 'Đến';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Thêm vào hàng đợi ($count đoạn)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Mỗi đoạn phải kết thúc sau khi bắt đầu và nằm trong video.';
 }

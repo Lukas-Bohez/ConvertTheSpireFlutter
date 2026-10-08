@@ -4919,4 +4919,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supportCardNever => 'Don\'t show again';
+
+  @override
+  String get largeView => 'Large view';
+
+  @override
+  String get exitLargeView => 'Back to the library';
+
+  @override
+  String get subtitles => 'Subtitles';
+
+  @override
+  String get subtitlesNone => 'None';
+
+  @override
+  String get subtitlesChooseFile => 'Choose a subtitle file…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'No subtitle file next to this one. Choose an .srt or .vtt file.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Timing: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Show earlier';
+
+  @override
+  String get subtitlesLater => 'Show later';
+
+  @override
+  String get subtitlesShow => 'Show subtitles';
+
+  @override
+  String get downloadWhole => 'Whole';
+
+  @override
+  String get downloadOnlyParts => 'Only parts';
+
+  @override
+  String get downloadAddPart => 'Add a part';
+
+  @override
+  String get downloadPartsHint =>
+      'Each part is saved as a file of its own, from and to the times you set.';
+
+  @override
+  String get partFrom => 'From';
+
+  @override
+  String get partTo => 'To';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Add to queue ($count parts)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Each part has to end after it starts, within the video.';
 }

@@ -4945,4 +4945,65 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get supportCardNever => 'Bir daha gösterme';
+
+  @override
+  String get largeView => 'Büyük görünüm';
+
+  @override
+  String get exitLargeView => 'Kitaplığa dön';
+
+  @override
+  String get subtitles => 'Altyazılar';
+
+  @override
+  String get subtitlesNone => 'Yok';
+
+  @override
+  String get subtitlesChooseFile => 'Altyazı dosyası seç…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'Bu dosyanın yanında altyazı yok. Bir .srt veya .vtt dosyası seç.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Zamanlama: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Daha erken göster';
+
+  @override
+  String get subtitlesLater => 'Daha geç göster';
+
+  @override
+  String get subtitlesShow => 'Altyazıları göster';
+
+  @override
+  String get downloadWhole => 'Tamamı';
+
+  @override
+  String get downloadOnlyParts => 'Yalnızca bölümler';
+
+  @override
+  String get downloadAddPart => 'Bölüm ekle';
+
+  @override
+  String get downloadPartsHint =>
+      'Her bölüm, belirttiğin zamanlar arasında ayrı bir dosya olarak kaydedilir.';
+
+  @override
+  String get partFrom => 'Başlangıç';
+
+  @override
+  String get partTo => 'Bitiş';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Kuyruğa ekle ($count bölüm)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Her bölüm başladıktan sonra ve video içinde bitmelidir.';
 }

@@ -4969,4 +4969,65 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get supportCardNever => 'No volver a mostrar';
+
+  @override
+  String get largeView => 'Vista grande';
+
+  @override
+  String get exitLargeView => 'Volver a la biblioteca';
+
+  @override
+  String get subtitles => 'Subtítulos';
+
+  @override
+  String get subtitlesNone => 'Ninguno';
+
+  @override
+  String get subtitlesChooseFile => 'Elegir un archivo de subtítulos…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'No hay subtítulos junto a este archivo. Elige un archivo .srt o .vtt.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Desfase: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Mostrar antes';
+
+  @override
+  String get subtitlesLater => 'Mostrar después';
+
+  @override
+  String get subtitlesShow => 'Mostrar subtítulos';
+
+  @override
+  String get downloadWhole => 'Completo';
+
+  @override
+  String get downloadOnlyParts => 'Solo partes';
+
+  @override
+  String get downloadAddPart => 'Añadir una parte';
+
+  @override
+  String get downloadPartsHint =>
+      'Cada parte se guarda como un archivo propio, desde y hasta los momentos que indiques.';
+
+  @override
+  String get partFrom => 'Desde';
+
+  @override
+  String get partTo => 'Hasta';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Añadir a la cola ($count partes)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Cada parte debe terminar después de empezar, dentro del vídeo.';
 }

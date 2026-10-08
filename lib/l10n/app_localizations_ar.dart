@@ -4902,4 +4902,65 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get supportCardNever => 'لا تعرض هذا مجددًا';
+
+  @override
+  String get largeView => 'عرض كبير';
+
+  @override
+  String get exitLargeView => 'العودة إلى المكتبة';
+
+  @override
+  String get subtitles => 'الترجمة';
+
+  @override
+  String get subtitlesNone => 'بلا';
+
+  @override
+  String get subtitlesChooseFile => 'اختر ملف ترجمة…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'لا يوجد ملف ترجمة بجانب هذا الملف. اختر ملف .srt أو .vtt.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'التوقيت: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'اعرضها أبكر';
+
+  @override
+  String get subtitlesLater => 'اعرضها لاحقًا';
+
+  @override
+  String get subtitlesShow => 'عرض الترجمة';
+
+  @override
+  String get downloadWhole => 'كاملًا';
+
+  @override
+  String get downloadOnlyParts => 'مقاطع فقط';
+
+  @override
+  String get downloadAddPart => 'إضافة مقطع';
+
+  @override
+  String get downloadPartsHint =>
+      'يُحفظ كل مقطع في ملف خاص به، من الوقت الذي تحدده وإليه.';
+
+  @override
+  String get partFrom => 'من';
+
+  @override
+  String get partTo => 'إلى';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'إضافة إلى قائمة الانتظار ($count مقاطع)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'يجب أن ينتهي كل مقطع بعد بدايته وضمن مدة الفيديو.';
 }

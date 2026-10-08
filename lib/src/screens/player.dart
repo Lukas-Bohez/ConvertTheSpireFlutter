@@ -9,12 +9,14 @@ import 'dart:typed_data';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:audio_service/audio_service.dart' as audio_svc;
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
     show
         Clipboard,
         ClipboardData,
         DeviceOrientation,
+        LogicalKeyboardKey,
         MethodChannel,
         MissingPluginException,
         SystemChrome,
@@ -35,6 +37,7 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../models/loop_sections.dart';
+import '../models/subtitles.dart';
 import '../services/android_saf.dart';
 import '../services/audio_handler.dart';
 import '../services/background_media_update_guard.dart';
@@ -594,6 +597,23 @@ class PlayerState with ChangeNotifier {
   /// Where a file was opened at instead of its start.
   Stream<Duration> get resumedAt => _resumed.stream;
 
+  /// Subtitles of what plays, video or song (issue #41): a file picked for
+  /// it, or else one found next to it.
+  Subtitles? _subtitles;
+  String? subtitlePath;
+  List<String> subtitleOptions = const [];
+  bool subtitlesOn = true;
+  Duration subtitleDelay = Duration.zero;
+  int _subtitleGeneration = 0;
+  String? _subtitlesFor;
+  static const _subtitlesOnPrefsKey = 'player_subtitles_on';
+  static const _subtitleChoicesPrefsKey = 'player_subtitle_choices';
+
+  /// The subtitle line showing now, or null.
+  final ValueNotifier<String?> subtitleLine = ValueNotifier<String?>(null);
+
+  bool get hasSubtitles => _subtitles != null;
+
   /// While the parts are being edited, playback goes anywhere: the editor
   /// needs to reach the moments it marks.
   bool loopEditing = false;
@@ -945,6 +965,7 @@ class PlayerState with ChangeNotifier {
     position = pos;
     _stayInLoopSections(pos);
     _rememberPosition(pos);
+    _updateSubtitleLine(pos);
     // Persist listening time periodically so a killed/throttled process
     // doesn't lose it.
     if (pos - _statsCommittedPosition >= const Duration(seconds: 30)) {
@@ -959,6 +980,106 @@ class PlayerState with ChangeNotifier {
       }
     }
     _emitPositionUiState();
+  }
+
+  // --- Subtitles -----------------------------------------------------------
+
+  void _updateSubtitleLine(Duration pos) {
+    final subs = _subtitles;
+    final line = subs == null || !subtitlesOn
+        ? null
+        : subs.textAt(pos - subtitleDelay);
+    if (subtitleLine.value != line) subtitleLine.value = line;
+  }
+
+  Map<String, dynamic> _subtitleChoices() {
+    try {
+      final raw = prefs.getString(_subtitleChoicesPrefsKey);
+      if (raw != null) return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {}
+    return {};
+  }
+
+  Future<void> _saveSubtitleChoice(String mediaPath) async {
+    final choices = _subtitleChoices();
+    choices.remove(mediaPath);
+    choices[mediaPath] = {
+      'file': subtitlePath ?? '',
+      'delayMs': subtitleDelay.inMilliseconds,
+    };
+    while (choices.length > 300) {
+      choices.remove(choices.keys.first);
+    }
+    await prefs.setString(_subtitleChoicesPrefsKey, jsonEncode(choices));
+  }
+
+  /// Finds and reads the subtitles of [mediaPath], as it starts playing.
+  Future<void> _loadSubtitlesFor(String mediaPath) async {
+    if (_subtitlesFor == mediaPath) return;
+    _subtitlesFor = mediaPath;
+    final generation = ++_subtitleGeneration;
+    _subtitles = null;
+    subtitlePath = null;
+    subtitleOptions = const [];
+    subtitleDelay = Duration.zero;
+    subtitleLine.value = null;
+    final options = await Subtitles.findFor(mediaPath);
+    if (generation != _subtitleGeneration) return;
+    final choice = _subtitleChoices()[mediaPath] as Map<String, dynamic>?;
+    String? path = options.isEmpty ? null : options.first;
+    if (choice != null) {
+      final file = choice['file'] as String? ?? '';
+      // An empty choice is "no subtitles" picked for this file.
+      path = file.isEmpty ? null : file;
+      subtitleDelay = Duration(milliseconds: choice['delayMs'] as int? ?? 0);
+    }
+    subtitleOptions = {...options, if (path != null) path}.toList();
+    await _readSubtitles(path, generation);
+  }
+
+  Future<void> _readSubtitles(String? path, int generation) async {
+    Subtitles? subs;
+    if (path != null) {
+      try {
+        subs = await Subtitles.load(path);
+      } catch (e) {
+        debugPrint('Subtitles could not be read from $path: $e');
+      }
+    }
+    if (generation != _subtitleGeneration) return;
+    _subtitles = subs;
+    subtitlePath = subs == null ? null : path;
+    _updateSubtitleLine(position);
+    notifyListeners();
+  }
+
+  /// Uses the subtitle file at [path] for what plays, or none when null.
+  Future<void> useSubtitleFile(String? path) async {
+    final media = _subtitlesFor;
+    if (media == null) return;
+    if (path != null && !subtitleOptions.contains(path)) {
+      subtitleOptions = [...subtitleOptions, path];
+    }
+    if (path != null && !subtitlesOn) await setSubtitlesOn(true);
+    await _readSubtitles(path, ++_subtitleGeneration);
+    await _saveSubtitleChoice(media);
+  }
+
+  Future<void> setSubtitlesOn(bool on) async {
+    subtitlesOn = on;
+    await prefs.setBool(_subtitlesOnPrefsKey, on);
+    _updateSubtitleLine(position);
+    notifyListeners();
+  }
+
+  /// Shows the subtitles [delay] later (negative: earlier), for subtitles
+  /// made for another release of the film.
+  Future<void> setSubtitleDelay(Duration delay) async {
+    subtitleDelay = delay;
+    _updateSubtitleLine(position);
+    notifyListeners();
+    final media = _subtitlesFor;
+    if (media != null) await _saveSubtitleChoice(media);
   }
 
   // --- Speed, sleep timer, resuming ----------------------------------------
@@ -2023,6 +2144,7 @@ class PlayerState with ChangeNotifier {
     // Snapshot the item at load time - don't rely on currentItem getter.
     final item = library[targetIndex];
     _resumeCheckPath = item.path;
+    unawaited(_loadSubtitlesFor(item.path));
 
     _videoCompletionFired = false;
     _videoReady = false;
@@ -2870,6 +2992,7 @@ class PlayerState with ChangeNotifier {
   Future<void> _loadPrefs() async {
     volume = prefs.getDouble('volume') ?? 0.5;
     speed = prefs.getDouble(_speedPrefsKey) ?? 1.0;
+    subtitlesOn = prefs.getBool(_subtitlesOnPrefsKey) ?? true;
     if (speed != 1.0) _applySpeed();
     _loadResumePositions();
     volumeLeveling = prefs.getBool(_volumeLevelingPrefsKey) ?? true;
@@ -3947,11 +4070,19 @@ class PlayerState with ChangeNotifier {
 
   /// Wrapper that guarantees only one thumbnail generation runs at a time.
   Future<Uint8List?> _generateVideoThumbnailSafe(String filePath) async {
-    // Windows thumbnail generation has proven unstable (native crashes).
-    // Avoid any native thumbnail generation on Windows and use a placeholder.
-    if (Platform.isWindows) return null;
-
     await _thumbLock.acquire();
+    if (Platform.isWindows) {
+      // Frames taken inside the app crashed it on Windows; FFmpeg takes them
+      // in a process of its own, so a video no longer shows as a grey tile.
+      try {
+        if (_disposed) return null;
+        return await _generateVideoThumbnailWithFfmpeg(
+            await _resolveLocalPath(filePath));
+      } finally {
+        _thumbLock.release();
+      }
+    }
+    
     try {
       if (_disposed) return null;
       return await _generateVideoThumbnail(filePath);
@@ -3971,20 +4102,24 @@ class PlayerState with ChangeNotifier {
           '${dir.path}${Platform.pathSeparator}${_thumbCacheKey(filePath)}.png';
       final outputFile = File(outPath);
 
-      final args = [
-        '-y',
-        '-i',
-        filePath,
-        '-ss',
-        '00:00:01',
-        '-frames:v',
-        '1',
-        '-vf',
-        'scale=256:-1',
-        outPath,
-      ];
-
-      await ffmpeg.run(args, ffmpegPath: ffmpegPath);
+      // 15 seconds in: at one second most films are still black. A shorter
+      // video has no frame there, so then one second in.
+      for (final at in const ['00:00:15', '00:00:01']) {
+        final args = [
+          '-y',
+          '-ss',
+          at,
+          '-i',
+          filePath,
+          '-frames:v',
+          '1',
+          '-vf',
+          'scale=256:-1',
+          outPath,
+        ];
+        await ffmpeg.run(args, ffmpegPath: ffmpegPath);
+        if (await outputFile.exists()) break;
+      }
       if (!await outputFile.exists()) return null;
       final bytes = await outputFile.readAsBytes();
       if (bytes.length < 64) return null;
@@ -4137,6 +4272,7 @@ class PlayerState with ChangeNotifier {
     _watchPartyNotices.close();
     _resumed.close();
     _sleepTimer?.cancel();
+    subtitleLine.dispose();
     _seekDebounceTimer?.cancel();
     _seekDebounceTimer = null;
     _positionUiController.close();
@@ -4279,6 +4415,8 @@ class PlayerState with ChangeNotifier {
     // Prevent pending debounce seeks from a previously selected track from
     // being applied after direct file selection.
     _resetSeekInteractionState();
+
+    unawaited(_loadSubtitlesFor(path));
 
     // Try to find a library index for UI bookkeeping; not required to play.
     final idx = library.indexWhere((m) => m.path == path);
@@ -4445,126 +4583,476 @@ class _AllTabItem {
 
 // --- Persistent video widget --------------------------------------------------
 
-class _VideoPane extends StatefulWidget {
+/// The video, its subtitles, and the one set of controls that goes with it
+/// (issue #41: the video had media_kit's own controls on top of the
+/// player's, so two play buttons, two seek bars, two volume sliders and two
+/// fullscreen buttons that looked the same and did different things).
+///
+/// Where the now-playing card is on screen under the video (a wide window)
+/// the card is the controls, and the video only offers its two views on
+/// hover: large (the video fills the player, the window stays as it is)
+/// and full screen. Everywhere else (a phone, the large view, full screen)
+/// the controls are over the video, and hide while it plays.
+class _VideoStage extends StatefulWidget {
+  final PlayerState state;
   final VideoController? mkController;
   final VideoPlayerController? androidController;
-  final bool visible;
   final bool ready;
-  final bool isFullScreen;
-  final VoidCallback onTap;
-  final VoidCallback onToggleFullScreen;
 
-  const _VideoPane({
+  /// The player's own controls over the video.
+  final bool transportControls;
+  final bool largeView;
+  final bool fullScreen;
+  final VoidCallback onToggleLargeView;
+  final VoidCallback onToggleFullScreen;
+  final String Function(Duration) formatDur;
+
+  const _VideoStage({
+    required this.state,
     required this.mkController,
     required this.androidController,
-    required this.visible,
     required this.ready,
-    required this.onTap,
-    required this.isFullScreen,
+    required this.transportControls,
+    required this.largeView,
+    required this.fullScreen,
+    required this.onToggleLargeView,
     required this.onToggleFullScreen,
+    required this.formatDur,
   });
 
   @override
-  State<_VideoPane> createState() => _VideoPaneState();
+  State<_VideoStage> createState() => _VideoStageState();
 }
 
-class _VideoPaneState extends State<_VideoPane> {
+class _VideoStageState extends State<_VideoStage> {
+  bool _controlsShown = true;
+  bool _hovering = false;
+  Timer? _hideTimer;
+  final FocusNode _focus = FocusNode(debugLabel: 'video stage');
+
+  bool get _immersive => widget.largeView || widget.fullScreen;
+
   Size? _prevSize;
   bool _recreateScheduled = false;
 
-  void _maybeScheduleRecreate(BuildContext context, Size size) {
-    if (_prevSize == null) {
-      _prevSize = size;
-      return;
-    }
-    if (Platform.isWindows) {
-      _prevSize = size;
-      return;
-    }
-    // If area increases dramatically (e.g., maximize), schedule a single recreate.
-    final oldArea = _prevSize!.width * _prevSize!.height;
+  /// media_kit's texture can stop showing after the window grows a lot
+  /// (maximized) on some platforms; Windows is fine.
+  void _maybeScheduleRecreate(Size size) {
+    final prev = _prevSize;
+    _prevSize = size;
+    if (prev == null || Platform.isWindows) return;
+    final oldArea = prev.width * prev.height;
     final newArea = size.width * size.height;
     if (!_recreateScheduled && oldArea > 0 && newArea / oldArea > 2.0) {
       _recreateScheduled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         try {
-          await context.read<PlayerState>().safeRecreateMkPlayer();
+          await widget.state.safeRecreateMkPlayer();
         } catch (e) {
           debugPrint('recreate scheduled failed: $e');
         } finally {
-          // allow future recreates after a short delay
           Future.delayed(const Duration(seconds: 2), () {
             _recreateScheduled = false;
           });
         }
       });
     }
-    _prevSize = size;
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (!widget.visible) return const SizedBox.shrink();
+  void initState() {
+    super.initState();
+    _scheduleHide();
+    if (_immersive) _focus.requestFocus();
+  }
 
-    final mq = MediaQuery.of(context);
-    final size = mq.size;
-    _maybeScheduleRecreate(context, size);
+  @override
+  void didUpdateWidget(covariant _VideoStage old) {
+    super.didUpdateWidget(old);
+    if (_immersive && !(old.largeView || old.fullScreen)) {
+      _focus.requestFocus();
+    }
+  }
 
-    Widget child;
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _show() {
+    if (!_controlsShown) setState(() => _controlsShown = true);
+    _scheduleHide();
+  }
+
+  void _scheduleHide() {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted && widget.state.isPlaying) {
+        setState(() => _controlsShown = false);
+      }
+    });
+  }
+
+  void _seekBy(int seconds) {
+    final state = widget.state;
+    final total = state.duration ?? Duration.zero;
+    var target = state.position + Duration(seconds: seconds);
+    if (target < Duration.zero) target = Duration.zero;
+    if (total > Duration.zero && target > total) target = total;
+    unawaited(state.seek(target));
+    _show();
+  }
+
+  void _escape() {
+    if (widget.fullScreen) {
+      widget.onToggleFullScreen();
+    } else if (widget.largeView) {
+      widget.onToggleLargeView();
+    }
+  }
+
+  Widget _video() {
     if (widget.mkController != null) {
-      child = Video(controller: widget.mkController!);
-    } else if (widget.androidController != null) {
-      child = ValueListenableBuilder<VideoPlayerValue>(
-        valueListenable: widget.androidController!,
+      return Video(
+        controller: widget.mkController!,
+        // The player's controls are the only ones, and it shows the
+        // subtitles itself, for songs too.
+        controls: NoVideoControls,
+        subtitleViewConfiguration:
+            const SubtitleViewConfiguration(visible: false),
+      );
+    }
+    final android = widget.androidController;
+    if (android != null) {
+      return ValueListenableBuilder<VideoPlayerValue>(
+        valueListenable: android,
         builder: (_, val, __) => val.isInitialized
             ? AspectRatio(
-                aspectRatio: val.aspectRatio,
-                child: VideoPlayer(widget.androidController!))
+                aspectRatio: val.aspectRatio, child: VideoPlayer(android))
             : Center(
                 child: CircularProgressIndicator(
                     color: _PlayerTheme.accent(context))),
       );
-    } else {
-      child = Center(
-          child:
-              CircularProgressIndicator(color: _PlayerTheme.accent(context)));
     }
+    return Center(
+        child: CircularProgressIndicator(color: _PlayerTheme.accent(context)));
+  }
 
-    return GestureDetector(
-      onTap: widget.onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox.expand(
-        child: ColoredBox(
-          color: Theme.of(context).colorScheme.background,
-          child: widget.ready
-              ? Stack(
-                  fit: StackFit.loose,
-                  children: [
-                    Center(child: child),
-                    Positioned(
-                      // overflow-fix: keep top-right overlay control inside safe insets.
-                      top: mq.padding.top + 10,
-                      right: mq.padding.right + 10,
-                      child: IconButton(
-                        icon: Icon(
-                          widget.isFullScreen
-                              ? Icons.fullscreen_exit
-                              : Icons.fullscreen,
-                          color: Colors.white.withOpacity(0.85),
-                        ),
-                        tooltip: widget.isFullScreen
-                            ? context.l10n.exitFullscreen
-                            : context.l10n.fullscreen,
-                        onPressed: widget.onToggleFullScreen,
-                      ),
-                    ),
-                  ],
-                )
-              : Center(
-                  child: CircularProgressIndicator(
-                      color: _PlayerTheme.accent(context))),
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.state;
+    final mq = MediaQuery.of(context);
+    _maybeScheduleRecreate(mq.size);
+    final shown = _controlsShown || !state.isPlaying;
+    final cs = Theme.of(context).colorScheme;
+    // White on the video, whatever the app's theme: the controls sit on a
+    // dark shade over the picture.
+    final dark = Theme.of(context).copyWith(
+      colorScheme:
+          ColorScheme.fromSeed(seedColor: cs.primary, brightness: Brightness.dark),
+      iconTheme: const IconThemeData(color: Colors.white),
+    );
+
+    final stage = Stack(
+      children: [
+        Positioned.fill(
+          child: ColoredBox(
+            color: _immersive ? Colors.black : cs.surface,
+            child: widget.ready
+                ? Center(child: _video())
+                : Center(
+                    child: CircularProgressIndicator(
+                        color: _PlayerTheme.accent(context))),
+          ),
+        ),
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: widget.transportControls && shown ? 120 : 20,
+          child: _SubtitleText(state: state, large: _immersive),
+        ),
+        if (widget.transportControls && _immersive)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: _fade(
+              shown,
+              Theme(data: dark, child: _topBar(context, mq)),
+            ),
+          ),
+        if (widget.transportControls)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _fade(
+              shown,
+              Theme(data: dark, child: _controlBar(context, mq)),
+            ),
+          )
+        else
+          // The card under the video has the controls: here only the views.
+          Positioned(
+            right: 8,
+            bottom: 8,
+            child: _fade(
+              _hovering || !state.isPlaying,
+              Theme(
+                data: dark,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: _viewButtons(context),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.space): () {
+          unawaited(state.togglePlay());
+          _show();
+        },
+        const SingleActivator(LogicalKeyboardKey.arrowLeft): () => _seekBy(-5),
+        const SingleActivator(LogicalKeyboardKey.arrowRight): () => _seekBy(5),
+        const SingleActivator(LogicalKeyboardKey.keyF):
+            widget.onToggleFullScreen,
+        const SingleActivator(LogicalKeyboardKey.keyC): () {
+          if (state.hasSubtitles) {
+            unawaited(state.setSubtitlesOn(!state.subtitlesOn));
+          }
+        },
+        const SingleActivator(LogicalKeyboardKey.escape): _escape,
+      },
+      child: Focus(
+        focusNode: _focus,
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _hovering = true),
+          onExit: (_) => setState(() => _hovering = false),
+          onHover: (_) => _show(),
+          cursor: _immersive && !shown
+              ? SystemMouseCursors.none
+              : MouseCursor.defer,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapUp: (details) {
+              _focus.requestFocus();
+              final mouse = details.kind == PointerDeviceKind.mouse;
+              if (mouse || !widget.transportControls) {
+                // A click plays and pauses, as on any video site.
+                unawaited(state.togglePlay());
+                _show();
+              } else if (shown) {
+                // A touch shows the controls, a second one hides them.
+                setState(() => _controlsShown = false);
+              } else {
+                _show();
+              }
+            },
+            onDoubleTap: widget.onToggleFullScreen,
+            child: stage,
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _fade(bool visible, Widget child) => AnimatedOpacity(
+        opacity: visible ? 1 : 0,
+        duration: const Duration(milliseconds: 200),
+        child: IgnorePointer(ignoring: !visible, child: child),
+      );
+
+  List<Widget> _viewButtons(BuildContext context) {
+    final l10n = context.l10n;
+    return [
+      if (!widget.fullScreen)
+        IconButton(
+          icon: Icon(widget.largeView
+              ? Icons.close_fullscreen_rounded
+              : Icons.open_in_full_rounded),
+          tooltip: widget.largeView ? l10n.exitLargeView : l10n.largeView,
+          onPressed: widget.onToggleLargeView,
+        ),
+      IconButton(
+        icon: Icon(widget.fullScreen
+            ? Icons.fullscreen_exit_rounded
+            : Icons.fullscreen_rounded),
+        tooltip: widget.fullScreen ? l10n.exitFullscreen : l10n.fullscreen,
+        onPressed: widget.onToggleFullScreen,
+      ),
+    ];
+  }
+
+  Widget _topBar(BuildContext context, MediaQueryData mq) {
+    final item = widget.state.currentItem;
+    final title = item == null
+        ? ''
+        : (item.title ?? p.basenameWithoutExtension(item.path));
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+          mq.padding.left + 4, mq.padding.top + 4, mq.padding.right + 16, 24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.black.withValues(alpha: 0.7), Colors.transparent],
+        ),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            tooltip: widget.fullScreen
+                ? context.l10n.exitFullscreen
+                : context.l10n.exitLargeView,
+            onPressed: _escape,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _controlBar(BuildContext context, MediaQueryData mq) {
+    final state = widget.state;
+    final item = state.currentItem;
+    final narrow = mq.size.width < 600;
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+          mq.padding.left + 4, 28, mq.padding.right + 4, mq.padding.bottom + 4),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [Colors.black.withValues(alpha: 0.8), Colors.transparent],
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _PositionWidget(
+            state: state,
+            formatDur: widget.formatDur,
+            loopSections: item == null
+                ? const []
+                : state.loopSettingsFor(item.path).sections,
+          ),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.skip_previous_rounded),
+                onPressed: () => state.previous(only: state.activeTabFilter),
+              ),
+              _PlayPauseButton(
+                playing: state.isPlaying,
+                onPressed: () {
+                  unawaited(state.togglePlay());
+                  _show();
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.skip_next_rounded),
+                onPressed: () => state.next(only: state.activeTabFilter),
+              ),
+              if (!narrow) ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.volume_up_rounded, size: 20),
+                SizedBox(
+                  width: 120,
+                  child: Slider(
+                    value: state.volume,
+                    onChanged: (v) {
+                      state.setVolume(v);
+                      _show();
+                    },
+                  ),
+                ),
+              ],
+              const Spacer(),
+              if (state.hasSubtitles)
+                IconButton(
+                  icon: Icon(state.subtitlesOn
+                      ? Icons.closed_caption_rounded
+                      : Icons.closed_caption_disabled_rounded),
+                  tooltip: context.l10n.subtitles,
+                  onPressed: () =>
+                      unawaited(state.setSubtitlesOn(!state.subtitlesOn)),
+                ),
+              ..._viewButtons(context),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The subtitle line showing now, over the video or under a song.
+class _SubtitleText extends StatelessWidget {
+  final PlayerState state;
+  final bool large;
+
+  const _SubtitleText({required this.state, this.large = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<String?>(
+      valueListenable: state.subtitleLine,
+      builder: (context, line, _) {
+        if (line == null) return const SizedBox.shrink();
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final size = large
+                ? (constraints.maxWidth / 52).clamp(18.0, 34.0)
+                : (constraints.maxWidth / 50).clamp(14.0, 22.0);
+            return Center(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.62),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  child: Text(
+                    line,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: size,
+                      height: 1.25,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -4598,6 +5086,18 @@ abstract class _PlayerTheme {
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
 
+  /// Whether a video fills the window (large view or full screen): the
+  /// app's own bars, side panel and banners make way for it.
+  static final ValueNotifier<bool> immersive = ValueNotifier<bool>(false);
+
+  /// [child], or nothing while a video fills the window.
+  static Widget hiddenWhileImmersive(Widget child) =>
+      ValueListenableBuilder<bool>(
+        valueListenable: immersive,
+        builder: (context, on, child) => on ? const SizedBox.shrink() : child!,
+        child: child,
+      );
+
   @override
   State<PlayerScreen> createState() => _PlayerScreenState();
 }
@@ -4618,6 +5118,9 @@ class _PlayerScreenState extends State<PlayerScreen>
   // stays (going to Stats used to drop it).
   bool _fullScreenIsOurs = false;
   bool _searchEditing = false;
+
+  /// The video fills the player; the window stays as it is.
+  bool _largeView = false;
   AppController? _appController;
   StreamSubscription<WatchPartyNotice>? _watchPartyNoticeSub;
   StreamSubscription<Duration>? _resumedSub;
@@ -4709,6 +5212,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   @override
   void dispose() {
+    PlayerScreen.immersive.value = false;
     _appController?.onLibraryRefreshRequested = null;
     _watchPartyNoticeSub?.cancel();
     _resumedSub?.cancel();
@@ -4783,6 +5287,10 @@ class _PlayerScreenState extends State<PlayerScreen>
     _isFullScreen = false;
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+  }
+
+  void _toggleLargeView() {
+    setState(() => _largeView = !_largeView);
   }
 
   Future<void> _toggleFullScreen() async {
@@ -5186,23 +5694,29 @@ class _PlayerScreenState extends State<PlayerScreen>
     final showVideo = state.isVideo &&
         (state.videoController != null || state.androidVideoController != null);
 
-    if (_isFullScreen) {
+    // Leaving a video for a song leaves the large view too. (F11 during a
+    // song used to show a black video here.)
+    if (!showVideo) _largeView = false;
+    final immersive = showVideo && (_largeView || _isFullScreen);
+    if (PlayerScreen.immersive.value != immersive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        PlayerScreen.immersive.value = immersive;
+      });
+    }
+    if (immersive) {
       return Scaffold(
-        body: SafeArea(
-          top: false,
-          bottom: false,
-          child: _VideoPane(
-            mkController: state.videoController,
-            androidController: state.androidVideoController,
-            visible: true,
-            ready: state.videoReady,
-            isFullScreen: true,
-            onTap: state.togglePlay,
-            onToggleFullScreen: () async {
-              await _exitFullScreen();
-              setState(() {});
-            },
-          ),
+        backgroundColor: Colors.black,
+        body: _VideoStage(
+          state: state,
+          mkController: state.videoController,
+          androidController: state.androidVideoController,
+          ready: state.videoReady,
+          transportControls: true,
+          largeView: true,
+          fullScreen: _isFullScreen,
+          onToggleLargeView: _toggleLargeView,
+          onToggleFullScreen: _toggleFullScreen,
+          formatDur: _fmtDur,
         ),
       );
     }
@@ -5217,12 +5731,13 @@ class _PlayerScreenState extends State<PlayerScreen>
               final mediaQuery = MediaQuery.of(context);
               final isMobile = mediaQuery.size.width < 600;
               final showVideoPane = showVideo;
-              // 16:9 of the available width, but never more than 40% of the
-              // screen. A fixed 260px pane swallowed most of a phone screen
-              // and left the queue with nowhere to go (issue #7).
+              // 16:9 of the available width, but never more than 40% of a
+              // phone's screen (a fixed 260px pane swallowed most of it and
+              // left the queue with nowhere to go, issue #7) or 55% of a
+              // window: the video was less than half of it (issue #41).
               final videoPaneHeight = min(
                 mediaQuery.size.width * 9 / 16,
-                mediaQuery.size.height * 0.4,
+                mediaQuery.size.height * (isMobile ? 0.4 : 0.55),
               );
               // The search bar is hidden on mobile while a video is playing
               // (kept out of the way of the video surface); everywhere else it
@@ -5241,14 +5756,18 @@ class _PlayerScreenState extends State<PlayerScreen>
                         clipBehavior: Clip.hardEdge,
                         decoration: BoxDecoration(
                             color: Theme.of(context).colorScheme.background),
-                        child: _VideoPane(
+                        child: _VideoStage(
+                          state: state,
                           mkController: state.videoController,
                           androidController: state.androidVideoController,
-                          visible: true,
                           ready: state.videoReady,
-                          isFullScreen: _isFullScreen,
-                          onTap: state.togglePlay,
+                          // On a phone the card is not under the video.
+                          transportControls: isMobile,
+                          largeView: false,
+                          fullScreen: false,
+                          onToggleLargeView: _toggleLargeView,
                           onToggleFullScreen: _toggleFullScreen,
+                          formatDur: _fmtDur,
                         ),
                       ),
                     ),
@@ -5406,21 +5925,11 @@ class _PlayerScreenState extends State<PlayerScreen>
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+        padding: const EdgeInsets.fromLTRB(16, 4, 8, 0),
+        // No "Player" title: the address bar above already says where this
+        // is, and the room went to it rather than to the video (issue #41).
         child: Row(
           children: [
-            Icon(Icons.music_note_rounded,
-                color: _PlayerTheme.accent(context), size: 26),
-            const SizedBox(width: 8),
-            Text(
-              context.l10n.tabPlayer,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: _PlayerTheme.accent(context),
-                letterSpacing: -0.5,
-              ),
-            ),
             const Spacer(),
             _headerIconButton(
               icon: Icons.folder_open_rounded,
@@ -6149,6 +6658,12 @@ class _PlayerScreenState extends State<PlayerScreen>
             loopSections: state.loopSettingsFor(item.path).sections,
           ),
           _PlaybackStatusRow(state: state, path: item.path),
+          // A video shows its subtitles over the picture; a song here.
+          if (item.type == MediaType.audio && state.hasSubtitles)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 2, 12, 6),
+              child: _SubtitleText(state: state),
+            ),
 
           // -- Playback controls --
           Padding(
@@ -6615,7 +7130,8 @@ class _PlaybackStatusRow extends StatelessWidget {
     final settings = state.loopSettingsFor(path);
     final count = settings.sections.length;
     final sleeping = state.sleepAt != null || state.sleepAtTrackEnd;
-    if (count == 0 && state.speed == 1.0 && !sleeping) {
+    final subtitles = state.hasSubtitles;
+    if (count == 0 && state.speed == 1.0 && !sleeping && !subtitles) {
       return const SizedBox.shrink();
     }
     return Padding(
@@ -6652,6 +7168,16 @@ class _PlaybackStatusRow extends StatelessWidget {
               onPressed: () => showSpeedDialog(context, state),
             ),
           if (sleeping) SleepTimerChip(state: state),
+          if (subtitles)
+            FilterChip(
+              avatar: const Icon(Icons.closed_caption_rounded, size: 16),
+              showCheckmark: false,
+              selected: state.subtitlesOn,
+              label: Text(context.l10n.subtitles),
+              tooltip: context.l10n.subtitlesShow,
+              visualDensity: VisualDensity.compact,
+              onSelected: (on) => unawaited(state.setSubtitlesOn(on)),
+            ),
         ],
       ),
     );
@@ -6788,6 +7314,7 @@ class _PlayPauseButton extends StatelessWidget {
 
 enum _TrackMenuAction {
   loopParts,
+  subtitles,
   speed,
   sleepTimer,
   copyTitle,
@@ -6879,6 +7406,9 @@ class _TrackMenuButton extends StatelessWidget {
           case _TrackMenuAction.loopParts:
             await showLoopSectionsSheet(context, state);
             break;
+          case _TrackMenuAction.subtitles:
+            await showSubtitlesSheet(context, state);
+            break;
           case _TrackMenuAction.speed:
             await showSpeedDialog(context, state);
             break;
@@ -6955,6 +7485,14 @@ class _TrackMenuButton extends StatelessWidget {
             child: ListTile(
               leading: const Icon(Icons.loop_rounded),
               title: Text(context.l10n.loopParts),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          PopupMenuItem(
+            value: _TrackMenuAction.subtitles,
+            child: ListTile(
+              leading: const Icon(Icons.closed_caption_rounded),
+              title: Text(context.l10n.subtitles),
               contentPadding: EdgeInsets.zero,
             ),
           ),
@@ -7357,14 +7895,19 @@ class _MediaCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          context.l10n.plays(item.playCount, _formatPlayedDuration(item.totalPlayedDuration)),
-                          style: TextStyle(
-                              color: cs.onSurfaceVariant, fontSize: 11),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        // "0 plays • 0:00.000" on every new file said
+                        // nothing and looked broken.
+                        if (item.playCount > 0) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            context.l10n.plays(item.playCount,
+                                _formatPlayedDuration(item.totalPlayedDuration)),
+                            style: TextStyle(
+                                color: cs.onSurfaceVariant, fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -7392,10 +7935,10 @@ class _MediaCard extends StatelessWidget {
   }
 
   static String _formatPlayedDuration(Duration d) {
-    final mm = d.inMinutes.toString();
+    final h = d.inHours;
+    final mm = d.inMinutes.remainder(60).toString();
     final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    final ms = d.inMilliseconds.remainder(1000).toString().padLeft(3, '0');
-    return '$mm:$ss.$ms';
+    return h > 0 ? '$h:${mm.padLeft(2, '0')}:$ss' : '$mm:$ss';
   }
 }
 

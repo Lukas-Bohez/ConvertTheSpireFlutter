@@ -4752,4 +4752,62 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get supportCardNever => '不再显示';
+
+  @override
+  String get largeView => '大屏观看';
+
+  @override
+  String get exitLargeView => '返回媒体库';
+
+  @override
+  String get subtitles => '字幕';
+
+  @override
+  String get subtitlesNone => '无';
+
+  @override
+  String get subtitlesChooseFile => '选择字幕文件…';
+
+  @override
+  String get subtitlesNoneFound => '此文件旁没有字幕文件。请选择一个 .srt 或 .vtt 文件。';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return '时间偏移：$delay';
+  }
+
+  @override
+  String get subtitlesEarlier => '提前显示';
+
+  @override
+  String get subtitlesLater => '延后显示';
+
+  @override
+  String get subtitlesShow => '显示字幕';
+
+  @override
+  String get downloadWhole => '完整';
+
+  @override
+  String get downloadOnlyParts => '仅部分片段';
+
+  @override
+  String get downloadAddPart => '添加片段';
+
+  @override
+  String get downloadPartsHint => '每个片段会按你设定的起止时间保存为单独的文件。';
+
+  @override
+  String get partFrom => '从';
+
+  @override
+  String get partTo => '到';
+
+  @override
+  String addPartsToQueue(int count) {
+    return '加入队列（$count 个片段）';
+  }
+
+  @override
+  String get partTimesInvalid => '每个片段的结束时间必须晚于开始时间，并在视频时长之内。';
 }

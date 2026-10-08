@@ -4809,4 +4809,63 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get supportCardNever => '今後表示しない';
+
+  @override
+  String get largeView => '大きく表示';
+
+  @override
+  String get exitLargeView => 'ライブラリに戻る';
+
+  @override
+  String get subtitles => '字幕';
+
+  @override
+  String get subtitlesNone => 'なし';
+
+  @override
+  String get subtitlesChooseFile => '字幕ファイルを選択…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'このファイルの横に字幕ファイルがありません。.srt または .vtt ファイルを選んでください。';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'タイミング: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => '早く表示';
+
+  @override
+  String get subtitlesLater => '遅く表示';
+
+  @override
+  String get subtitlesShow => '字幕を表示';
+
+  @override
+  String get downloadWhole => '全体';
+
+  @override
+  String get downloadOnlyParts => '一部のみ';
+
+  @override
+  String get downloadAddPart => 'パートを追加';
+
+  @override
+  String get downloadPartsHint => '各パートは指定した時間の範囲で、それぞれ別のファイルとして保存されます。';
+
+  @override
+  String get partFrom => '開始';
+
+  @override
+  String get partTo => '終了';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'キューに追加（$count パート）';
+  }
+
+  @override
+  String get partTimesInvalid => '各パートは開始より後、動画の長さの範囲内で終わる必要があります。';
 }

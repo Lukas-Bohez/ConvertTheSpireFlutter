@@ -4953,4 +4953,65 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get supportCardNever => 'Niet meer tonen';
+
+  @override
+  String get largeView => 'Groot beeld';
+
+  @override
+  String get exitLargeView => 'Terug naar de bibliotheek';
+
+  @override
+  String get subtitles => 'Ondertitels';
+
+  @override
+  String get subtitlesNone => 'Geen';
+
+  @override
+  String get subtitlesChooseFile => 'Ondertitelbestand kiezen…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'Geen ondertitelbestand naast dit bestand. Kies een .srt- of .vtt-bestand.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Timing: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Vroeger tonen';
+
+  @override
+  String get subtitlesLater => 'Later tonen';
+
+  @override
+  String get subtitlesShow => 'Ondertitels tonen';
+
+  @override
+  String get downloadWhole => 'Volledig';
+
+  @override
+  String get downloadOnlyParts => 'Alleen stukken';
+
+  @override
+  String get downloadAddPart => 'Stuk toevoegen';
+
+  @override
+  String get downloadPartsHint =>
+      'Elk stuk wordt als eigen bestand bewaard, van en tot de tijden die je opgeeft.';
+
+  @override
+  String get partFrom => 'Van';
+
+  @override
+  String get partTo => 'Tot';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Aan de wachtrij toevoegen ($count stukken)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Elk stuk moet na zijn begin eindigen, binnen de video.';
 }

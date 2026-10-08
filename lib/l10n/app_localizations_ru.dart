@@ -4933,4 +4933,65 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get supportCardNever => 'Больше не показывать';
+
+  @override
+  String get largeView => 'Большой экран';
+
+  @override
+  String get exitLargeView => 'Назад в медиатеку';
+
+  @override
+  String get subtitles => 'Субтитры';
+
+  @override
+  String get subtitlesNone => 'Нет';
+
+  @override
+  String get subtitlesChooseFile => 'Выбрать файл субтитров…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'Рядом с этим файлом нет субтитров. Выберите файл .srt или .vtt.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Сдвиг: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Показывать раньше';
+
+  @override
+  String get subtitlesLater => 'Показывать позже';
+
+  @override
+  String get subtitlesShow => 'Показывать субтитры';
+
+  @override
+  String get downloadWhole => 'Целиком';
+
+  @override
+  String get downloadOnlyParts => 'Только фрагменты';
+
+  @override
+  String get downloadAddPart => 'Добавить фрагмент';
+
+  @override
+  String get downloadPartsHint =>
+      'Каждый фрагмент сохраняется отдельным файлом — от и до указанного вами времени.';
+
+  @override
+  String get partFrom => 'С';
+
+  @override
+  String get partTo => 'До';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Добавить в очередь (фрагментов: $count)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Каждый фрагмент должен заканчиваться после начала и в пределах видео.';
 }

@@ -3050,5 +3050,37 @@
   "supportCardTitle": "Made by one person, for free",
   "supportCardBody": "No ads, no tracking, nothing to buy. If this app has saved you time, a coffee or a sponsorship keeps it going.",
   "supportCardNotNow": "Not now",
-  "supportCardNever": "Don't show again"
+  "supportCardNever": "Don't show again",
+  "largeView": "Large view",
+  "exitLargeView": "Back to the library",
+  "subtitles": "Subtitles",
+  "subtitlesNone": "None",
+  "subtitlesChooseFile": "Choose a subtitle file…",
+  "subtitlesNoneFound": "No subtitle file next to this one. Choose an .srt or .vtt file.",
+  "subtitlesTiming": "Timing: {delay}",
+  "@subtitlesTiming": {
+    "placeholders": {
+      "delay": {
+        "type": "String"
+      }
+    }
+  },
+  "subtitlesEarlier": "Show earlier",
+  "subtitlesLater": "Show later",
+  "subtitlesShow": "Show subtitles",
+  "downloadWhole": "Whole",
+  "downloadOnlyParts": "Only parts",
+  "downloadAddPart": "Add a part",
+  "downloadPartsHint": "Each part is saved as a file of its own, from and to the times you set.",
+  "partFrom": "From",
+  "partTo": "To",
+  "addPartsToQueue": "Add to queue ({count} parts)",
+  "@addPartsToQueue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "partTimesInvalid": "Each part has to end after it starts, within the video."
 }

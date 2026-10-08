@@ -4949,4 +4949,65 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get supportCardNever => 'Nie pokazuj więcej';
+
+  @override
+  String get largeView => 'Duży widok';
+
+  @override
+  String get exitLargeView => 'Wróć do biblioteki';
+
+  @override
+  String get subtitles => 'Napisy';
+
+  @override
+  String get subtitlesNone => 'Brak';
+
+  @override
+  String get subtitlesChooseFile => 'Wybierz plik z napisami…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'Obok tego pliku nie ma napisów. Wybierz plik .srt lub .vtt.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Przesunięcie: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Pokazuj wcześniej';
+
+  @override
+  String get subtitlesLater => 'Pokazuj później';
+
+  @override
+  String get subtitlesShow => 'Pokazuj napisy';
+
+  @override
+  String get downloadWhole => 'Całość';
+
+  @override
+  String get downloadOnlyParts => 'Tylko fragmenty';
+
+  @override
+  String get downloadAddPart => 'Dodaj fragment';
+
+  @override
+  String get downloadPartsHint =>
+      'Każdy fragment zapisuje się jako osobny plik, od i do podanych przez Ciebie chwil.';
+
+  @override
+  String get partFrom => 'Od';
+
+  @override
+  String get partTo => 'Do';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Dodaj do kolejki ($count fragm.)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Każdy fragment musi kończyć się po swoim początku, w obrębie filmu.';
 }

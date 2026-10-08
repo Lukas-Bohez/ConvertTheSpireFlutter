@@ -4944,4 +4944,65 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get supportCardNever => 'Jangan tampilkan lagi';
+
+  @override
+  String get largeView => 'Tampilan besar';
+
+  @override
+  String get exitLargeView => 'Kembali ke pustaka';
+
+  @override
+  String get subtitles => 'Subtitel';
+
+  @override
+  String get subtitlesNone => 'Tidak ada';
+
+  @override
+  String get subtitlesChooseFile => 'Pilih file subtitel…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'Tidak ada file subtitel di samping file ini. Pilih file .srt atau .vtt.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Waktu: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Tampilkan lebih awal';
+
+  @override
+  String get subtitlesLater => 'Tampilkan lebih lambat';
+
+  @override
+  String get subtitlesShow => 'Tampilkan subtitel';
+
+  @override
+  String get downloadWhole => 'Utuh';
+
+  @override
+  String get downloadOnlyParts => 'Hanya bagian';
+
+  @override
+  String get downloadAddPart => 'Tambah bagian';
+
+  @override
+  String get downloadPartsHint =>
+      'Setiap bagian disimpan sebagai file tersendiri, dari dan sampai waktu yang Anda tentukan.';
+
+  @override
+  String get partFrom => 'Dari';
+
+  @override
+  String get partTo => 'Sampai';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Tambahkan ke antrean ($count bagian)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Setiap bagian harus berakhir setelah dimulai, di dalam durasi video.';
 }

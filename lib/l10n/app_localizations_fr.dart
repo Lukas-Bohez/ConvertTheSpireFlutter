@@ -4984,4 +4984,65 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get supportCardNever => 'Ne plus afficher';
+
+  @override
+  String get largeView => 'Grand affichage';
+
+  @override
+  String get exitLargeView => 'Retour à la bibliothèque';
+
+  @override
+  String get subtitles => 'Sous-titres';
+
+  @override
+  String get subtitlesNone => 'Aucun';
+
+  @override
+  String get subtitlesChooseFile => 'Choisir un fichier de sous-titres…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'Aucun fichier de sous-titres à côté de celui-ci. Choisissez un fichier .srt ou .vtt.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Décalage : $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Afficher plus tôt';
+
+  @override
+  String get subtitlesLater => 'Afficher plus tard';
+
+  @override
+  String get subtitlesShow => 'Afficher les sous-titres';
+
+  @override
+  String get downloadWhole => 'En entier';
+
+  @override
+  String get downloadOnlyParts => 'Seulement des passages';
+
+  @override
+  String get downloadAddPart => 'Ajouter un passage';
+
+  @override
+  String get downloadPartsHint =>
+      'Chaque passage est enregistré dans son propre fichier, entre les moments que vous indiquez.';
+
+  @override
+  String get partFrom => 'De';
+
+  @override
+  String get partTo => 'À';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Ajouter à la file ($count passages)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Chaque passage doit se terminer après son début, dans la durée de la vidéo.';
 }

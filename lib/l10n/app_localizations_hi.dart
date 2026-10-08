@@ -4927,4 +4927,65 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get supportCardNever => 'फिर न दिखाएं';
+
+  @override
+  String get largeView => 'बड़ा दृश्य';
+
+  @override
+  String get exitLargeView => 'लाइब्रेरी पर वापस जाएं';
+
+  @override
+  String get subtitles => 'सबटाइटल';
+
+  @override
+  String get subtitlesNone => 'कोई नहीं';
+
+  @override
+  String get subtitlesChooseFile => 'सबटाइटल फ़ाइल चुनें…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'इस फ़ाइल के पास कोई सबटाइटल फ़ाइल नहीं है। कोई .srt या .vtt फ़ाइल चुनें।';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'समय: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'पहले दिखाएं';
+
+  @override
+  String get subtitlesLater => 'बाद में दिखाएं';
+
+  @override
+  String get subtitlesShow => 'सबटाइटल दिखाएं';
+
+  @override
+  String get downloadWhole => 'पूरा';
+
+  @override
+  String get downloadOnlyParts => 'सिर्फ़ हिस्से';
+
+  @override
+  String get downloadAddPart => 'हिस्सा जोड़ें';
+
+  @override
+  String get downloadPartsHint =>
+      'हर हिस्सा अलग फ़ाइल के रूप में सहेजा जाता है, आपके चुने समय से उस समय तक।';
+
+  @override
+  String get partFrom => 'से';
+
+  @override
+  String get partTo => 'तक';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'कतार में जोड़ें ($count हिस्से)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'हर हिस्सा शुरू होने के बाद और वीडियो के भीतर खत्म होना चाहिए।';
 }

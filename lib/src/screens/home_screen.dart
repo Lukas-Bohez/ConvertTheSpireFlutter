@@ -49,7 +49,7 @@ import '../widgets/whats_new_dialog.dart';
 import 'browser_screen.dart';
 import 'bulk_import_screen.dart';
 import 'guide_screen.dart';
-import 'player.dart' show PlayerPage, PlayerState, MediaType;
+import 'player.dart' show PlayerPage, PlayerScreen, PlayerState, MediaType;
 import 'playlist_screen.dart';
 import 'search_screen.dart';
 import 'statistics_screen.dart';
@@ -822,7 +822,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         !_updateBannerDismissed) {
       return Column(
         children: [
-          UpdateBanner(
+          PlayerScreen.hiddenWhileImmersive(UpdateBanner(
             info: _updateInfo!,
             installsInPlace: _canInstallUpdateInPlace(_updateInfo!),
             onDismiss: () async {
@@ -851,15 +851,15 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
               }
             },
-          ),
+          )),
           if (showBanner && description != null)
-            OnboardingBanner(
+            PlayerScreen.hiddenWhileImmersive(OnboardingBanner(
               message: description,
               onDismiss: () {
                 _onboarding.markScreenVisited(route);
                 if (mounted) setState(() => _dismissedBannerRoute = route);
               },
-            ),
+            )),
           Expanded(child: stack),
         ],
       );
@@ -868,13 +868,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (showBanner && description != null) {
       return Column(
         children: [
-          OnboardingBanner(
+          PlayerScreen.hiddenWhileImmersive(OnboardingBanner(
             message: description,
             onDismiss: () {
               _onboarding.markScreenVisited(route);
               if (mounted) setState(() => _dismissedBannerRoute = route);
             },
-          ),
+          )),
           Expanded(child: stack),
         ],
       );

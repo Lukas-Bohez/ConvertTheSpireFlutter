@@ -4964,4 +4964,65 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get supportCardNever => 'Não mostrar de novo';
+
+  @override
+  String get largeView => 'Visualização ampliada';
+
+  @override
+  String get exitLargeView => 'Voltar à biblioteca';
+
+  @override
+  String get subtitles => 'Legendas';
+
+  @override
+  String get subtitlesNone => 'Nenhuma';
+
+  @override
+  String get subtitlesChooseFile => 'Escolher um arquivo de legenda…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'Não há legenda ao lado deste arquivo. Escolha um arquivo .srt ou .vtt.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Sincronia: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Mostrar antes';
+
+  @override
+  String get subtitlesLater => 'Mostrar depois';
+
+  @override
+  String get subtitlesShow => 'Mostrar legendas';
+
+  @override
+  String get downloadWhole => 'Completo';
+
+  @override
+  String get downloadOnlyParts => 'Só trechos';
+
+  @override
+  String get downloadAddPart => 'Adicionar trecho';
+
+  @override
+  String get downloadPartsHint =>
+      'Cada trecho é salvo como um arquivo próprio, do momento ao momento que você indicar.';
+
+  @override
+  String get partFrom => 'De';
+
+  @override
+  String get partTo => 'Até';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Adicionar à fila ($count trechos)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Cada trecho precisa terminar depois de começar, dentro do vídeo.';
 }

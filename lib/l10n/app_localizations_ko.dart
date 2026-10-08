@@ -4808,4 +4808,63 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get supportCardNever => '다시 표시 안 함';
+
+  @override
+  String get largeView => '크게 보기';
+
+  @override
+  String get exitLargeView => '라이브러리로 돌아가기';
+
+  @override
+  String get subtitles => '자막';
+
+  @override
+  String get subtitlesNone => '없음';
+
+  @override
+  String get subtitlesChooseFile => '자막 파일 선택…';
+
+  @override
+  String get subtitlesNoneFound =>
+      '이 파일 옆에 자막 파일이 없습니다. .srt 또는 .vtt 파일을 선택하세요.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return '싱크: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => '더 일찍 표시';
+
+  @override
+  String get subtitlesLater => '더 늦게 표시';
+
+  @override
+  String get subtitlesShow => '자막 표시';
+
+  @override
+  String get downloadWhole => '전체';
+
+  @override
+  String get downloadOnlyParts => '일부 구간만';
+
+  @override
+  String get downloadAddPart => '구간 추가';
+
+  @override
+  String get downloadPartsHint => '각 구간은 지정한 시간 범위로 별도의 파일로 저장됩니다.';
+
+  @override
+  String get partFrom => '시작';
+
+  @override
+  String get partTo => '끝';
+
+  @override
+  String addPartsToQueue(int count) {
+    return '대기열에 추가($count개 구간)';
+  }
+
+  @override
+  String get partTimesInvalid => '각 구간은 시작 이후, 동영상 길이 안에서 끝나야 합니다.';
 }

@@ -10,7 +10,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/build_flags.dart';
 import '../screens/browser_screen.dart';
 import '../screens/player.dart'
-    show PlayerState, PositionUiState, MediaItem, MediaType, copyTrackTitle;
+    show
+        PlayerScreen,
+        PlayerState,
+        PositionUiState,
+        MediaItem,
+        MediaType,
+        copyTrackTitle;
 import '../utils/l10n.dart';
 import '../vault/services/torrent_service.dart';
 import '../widgets/quick_links_service.dart';
@@ -441,7 +447,10 @@ class _BrowserShellState extends State<BrowserShell> {
     final isPlaying =
         context.select<PlayerState, bool>((state) => state.isPlaying);
     final playerState = context.read<PlayerState>();
-    final showPlayerOverlay = currentItem != null;
+    // Not on the Player page itself: its card has the controls, and a
+    // second set under it was one too many (issue #41).
+    final showPlayerOverlay = currentItem != null &&
+        widget.currentIndex != QuickLinksService.routeToIndex['player.tab'];
 
     final safeBottom = MediaQuery.of(context).padding.bottom;
     final overlayHeight = showPlayerOverlay
@@ -464,16 +473,19 @@ class _BrowserShellState extends State<BrowserShell> {
         top: false,
         child: Column(
           children: [
-            FocusTraversalGroup(child: _buildNavBar(cs, isDesktop)),
+            PlayerScreen.hiddenWhileImmersive(
+                FocusTraversalGroup(child: _buildNavBar(cs, isDesktop))),
             Expanded(
               child: isDesktop
                   ? Row(
                       children: [
                         if (!widget.queueOnRight && _showQueueDesktop)
-                          _buildDesktopQueuePanel(cs),
+                          PlayerScreen.hiddenWhileImmersive(
+                              _buildDesktopQueuePanel(cs)),
                         Expanded(child: widget.child),
                         if (widget.queueOnRight && _showQueueDesktop)
-                          _buildDesktopQueuePanel(cs),
+                          PlayerScreen.hiddenWhileImmersive(
+                              _buildDesktopQueuePanel(cs)),
                       ],
                     )
                   : widget.child,

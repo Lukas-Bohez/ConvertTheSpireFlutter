@@ -4963,4 +4963,65 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get supportCardNever => 'Nicht mehr zeigen';
+
+  @override
+  String get largeView => 'Große Ansicht';
+
+  @override
+  String get exitLargeView => 'Zurück zur Mediathek';
+
+  @override
+  String get subtitles => 'Untertitel';
+
+  @override
+  String get subtitlesNone => 'Keine';
+
+  @override
+  String get subtitlesChooseFile => 'Untertiteldatei wählen…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'Neben dieser Datei liegen keine Untertitel. Wähle eine .srt- oder .vtt-Datei.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Zeitversatz: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Früher zeigen';
+
+  @override
+  String get subtitlesLater => 'Später zeigen';
+
+  @override
+  String get subtitlesShow => 'Untertitel zeigen';
+
+  @override
+  String get downloadWhole => 'Ganz';
+
+  @override
+  String get downloadOnlyParts => 'Nur Abschnitte';
+
+  @override
+  String get downloadAddPart => 'Abschnitt hinzufügen';
+
+  @override
+  String get downloadPartsHint =>
+      'Jeder Abschnitt wird als eigene Datei gespeichert, von und bis zu den Zeiten, die du angibst.';
+
+  @override
+  String get partFrom => 'Von';
+
+  @override
+  String get partTo => 'Bis';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'In die Warteschlange ($count Abschnitte)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Jeder Abschnitt muss nach seinem Beginn enden, innerhalb des Videos.';
 }
