@@ -1807,12 +1807,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle bir torrent istemcisi ve medya merkezidir. Magnet bağlantıları ve .torrent dosyaları ekleyin, indirmeleri yönetin ve her şeyi tek bir uygulamada düzenli tutun.';
+    return '$getAppTitle müziğini ve videolarını altyazı, senkronize şarkı sözleri, bölüm döngüsü ve büyük görünümle oynatır. Torrentler, dosya dönüştürücü ve reklamları engelleyen bir tarayıcı da içinde.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle çapraz platform bir torrent ve medya araç setidir. Magnet bağlantıları ve .torrent dosyaları ekle, indirmeleri yönet, biçim dönüştür, TV\'ne yayınla ve daha fazlası; hepsi tek uygulamada.';
+    return '$getAppTitle müziğini ve videolarını altyazı, senkronize şarkı sözleri, bölüm döngüsü ve büyük görünümle oynatır ve onları senin için getirir: 1.800\'den fazla siteden indirme, torrentler, dönüştürücü ve TV\'ye yayın.';
   }
 
   @override
@@ -1882,7 +1882,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'Oynatma, karıştırma, tekrarlama ve basit bir kitaplık';
+      'Altyazı, şarkı sözleri, döngü, hız ve uyku zamanlayıcısı';
 
   @override
   String get convertAudioVideoBetweenFormats =>

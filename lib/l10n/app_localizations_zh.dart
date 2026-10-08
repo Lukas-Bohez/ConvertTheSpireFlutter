@@ -1737,12 +1737,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle 是种子客户端和媒体中心。添加磁力链接和 .torrent 文件，管理下载，并在一个应用中整理一切。';
+    return '$getAppTitle 播放你的音乐和视频，支持字幕、同步歌词、片段循环和大屏观看。还内置种子下载、文件转换和能拦截广告的浏览器。';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle 是跨平台的种子与媒体工具箱。添加磁力链接和 .torrent 文件、管理下载、转换格式、投放到电视等等，全部在一个应用中完成。';
+    return '$getAppTitle 播放你的音乐和视频，支持字幕、同步歌词、片段循环和大屏观看，还能帮你获取它们：从 1800 多个网站下载、种子下载、格式转换和投屏到电视。';
   }
 
   @override
@@ -1804,7 +1804,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get playFilesBuiltPlayerSet => '在内置播放器中播放文件，并在设置中配置文件夹、默认格式和外观。';
 
   @override
-  String get playbackShuffleRepeatSimpleLibrary => '播放、随机、循环和简洁的媒体库';
+  String get playbackShuffleRepeatSimpleLibrary => '字幕、歌词、循环、播放速度和睡眠定时';
 
   @override
   String get convertAudioVideoBetweenFormats => '用 FFmpeg 转换音视频格式';

@@ -1792,12 +1792,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle عميل تورنت ومركز وسائط. أضف روابط magnet وملفات .torrent، وأدِر التنزيلات، ونظّم كل شيء في تطبيق واحد.';
+    return 'يشغّل $getAppTitle موسيقاك وفيديوهاتك مع الترجمة والكلمات المتزامنة وتكرار المقاطع والعرض الكبير. وفيه أيضًا التورنت ومحوّل الملفات ومتصفح يحجب الإعلانات.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle حزمة تورنت ووسائط متعددة المنصات. أضف روابط magnet وملفات ‎.torrent، وأدر التنزيلات، وحوّل الصيغ، وابثّ إلى تلفازك والمزيد، كل ذلك من تطبيق واحد.';
+    return 'يشغّل $getAppTitle موسيقاك وفيديوهاتك مع الترجمة والكلمات المتزامنة وتكرار المقاطع والعرض الكبير، ويجلبها لك: تنزيل من أكثر من 1800 موقع، والتورنت، ومحوّل، والبث إلى التلفاز.';
   }
 
   @override
@@ -1866,7 +1866,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'تشغيل وتشغيل عشوائي وتكرار ومكتبة بسيطة';
+      'ترجمة وكلمات وتكرار وسرعة ومؤقت نوم';
 
   @override
   String get convertAudioVideoBetweenFormats =>

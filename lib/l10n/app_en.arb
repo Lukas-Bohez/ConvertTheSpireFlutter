@@ -992,7 +992,7 @@
   "noLogsYet": "No logs yet",
   "activityWillLoggedHere": "Activity will be logged here",
   "welcome": "Welcome",
-  "torrentVaultMediaHubAdd": "{getAppTitle} is a torrent client and media hub. Add magnet links and .torrent files, manage downloads, and keep everything organized in one app.",
+  "torrentVaultMediaHubAdd": "{getAppTitle} plays your music and videos, with subtitles, synced lyrics, loops and a large view. Torrents, a file converter and a browser that blocks ads are built in too.",
   "@torrentVaultMediaHubAdd": {
     "placeholders": {
       "getAppTitle": {
@@ -1000,7 +1000,7 @@
       }
     }
   },
-  "crossPlatformTorrentMediaToolkit": "{getAppTitle} is a cross-platform torrent and media toolkit. Add magnet links and .torrent files, manage downloads, convert formats, cast to your TV, and more - all from one app.",
+  "crossPlatformTorrentMediaToolkit": "{getAppTitle} plays your music and videos, with subtitles, synced lyrics, loops and a large view, and gets them for you: downloads from 1,800+ sites, torrents, a converter and casting to your TV.",
   "@crossPlatformTorrentMediaToolkit": {
     "placeholders": {
       "getAppTitle": {
@@ -1026,7 +1026,7 @@
   "playConvertCustomize": "Play, Convert & Customize",
   "playFilesBuiltPlayerConvert": "Play your files in the built-in player, convert between formats with FFmpeg, and set folders, defaults, and appearance in Settings.",
   "playFilesBuiltPlayerSet": "Play your files in the built-in player, and set folders, format defaults, and appearance in Settings.",
-  "playbackShuffleRepeatSimpleLibrary": "Playback, shuffle, repeat, and a simple library",
+  "playbackShuffleRepeatSimpleLibrary": "Subtitles, lyrics, loops, speed and a sleep timer",
   "convertAudioVideoBetweenFormats": "Convert audio/video between formats with FFmpeg",
   "foldersFormatDefaultsRetryBehaviour": "Folders, format defaults, retry behaviour, and more",
   "helpSupport": "Help & Support",

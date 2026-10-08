@@ -1810,12 +1810,12 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle — торент-клієнт і медіацентр. Додавайте magnet-посилання та .torrent-файли, керуйте завантаженнями й тримайте все впорядкованим в одному застосунку.';
+    return '$getAppTitle відтворює вашу музику й відео — із субтитрами, синхронним текстом пісень, повтором фрагментів і великим екраном. А ще торенти, конвертер файлів і браузер, що блокує рекламу.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle — кросплатформний набір інструментів для торентів і медіа. Додавайте magnet-посилання та файли .torrent, керуйте завантаженнями, конвертуйте формати, транслюйте на телевізор і багато іншого — все в одному застосунку.';
+    return '$getAppTitle відтворює вашу музику й відео — із субтитрами, синхронним текстом пісень, повтором фрагментів і великим екраном — і здобуває їх для вас: завантаження з 1800+ сайтів, торенти, конвертер і трансляція на ТБ.';
   }
 
   @override
@@ -1886,7 +1886,7 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'Відтворення, перемішування, повтор і проста медіатека';
+      'Субтитри, тексти пісень, повтор, швидкість і таймер сну';
 
   @override
   String get convertAudioVideoBetweenFormats =>

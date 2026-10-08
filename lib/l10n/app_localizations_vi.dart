@@ -1801,12 +1801,12 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle là trình torrent và trung tâm đa phương tiện. Thêm liên kết magnet và tệp .torrent, quản lý tải xuống và sắp xếp mọi thứ trong một ứng dụng.';
+    return '$getAppTitle phát nhạc và video của bạn, có phụ đề, lời bài hát đồng bộ, lặp đoạn và chế độ xem lớn. Ứng dụng còn có torrent, bộ chuyển đổi tệp và trình duyệt chặn quảng cáo.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle là bộ công cụ torrent và đa phương tiện đa nền tảng. Thêm liên kết magnet và tệp .torrent, quản lý tải xuống, chuyển đổi định dạng, truyền lên TV và nhiều hơn nữa - tất cả trong một ứng dụng.';
+    return '$getAppTitle phát nhạc và video của bạn, có phụ đề, lời bài hát đồng bộ, lặp đoạn và chế độ xem lớn, và tải chúng về cho bạn: tải từ hơn 1.800 trang, torrent, bộ chuyển đổi và truyền lên TV.';
   }
 
   @override
@@ -1875,7 +1875,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'Phát, phát ngẫu nhiên, lặp lại và thư viện đơn giản';
+      'Phụ đề, lời bài hát, lặp đoạn, tốc độ và hẹn giờ tắt';
 
   @override
   String get convertAudioVideoBetweenFormats =>

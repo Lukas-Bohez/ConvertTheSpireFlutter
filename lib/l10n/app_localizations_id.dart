@@ -1807,12 +1807,12 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle adalah klien torrent dan pusat media. Tambahkan tautan magnet dan file .torrent, kelola unduhan, dan atur semuanya dalam satu aplikasi.';
+    return '$getAppTitle memutar musik dan videomu, dengan subtitel, lirik tersinkron, pengulangan bagian, dan tampilan besar. Torrent, konverter file, dan peramban yang memblokir iklan juga sudah ada.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle adalah perangkat torrent dan media lintas platform. Tambahkan tautan magnet dan file .torrent, kelola unduhan, konversi format, transmisikan ke TV, dan banyak lagi - semua dari satu aplikasi.';
+    return '$getAppTitle memutar musik dan videomu, dengan subtitel, lirik tersinkron, pengulangan bagian, dan tampilan besar, sekaligus mengambilkannya untukmu: unduhan dari 1.800+ situs, torrent, konverter, dan transmisi ke TV.';
   }
 
   @override
@@ -1882,7 +1882,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'Pemutaran, acak, ulangi, dan pustaka sederhana';
+      'Subtitel, lirik, pengulangan, kecepatan, dan pengatur waktu tidur';
 
   @override
   String get convertAudioVideoBetweenFormats =>

@@ -3368,13 +3368,13 @@ abstract class AppLocalizations {
   /// No description provided for @torrentVaultMediaHubAdd.
   ///
   /// In en, this message translates to:
-  /// **'{getAppTitle} is a torrent client and media hub. Add magnet links and .torrent files, manage downloads, and keep everything organized in one app.'**
+  /// **'{getAppTitle} plays your music and videos, with subtitles, synced lyrics, loops and a large view. Torrents, a file converter and a browser that blocks ads are built in too.'**
   String torrentVaultMediaHubAdd(Object getAppTitle);
 
   /// No description provided for @crossPlatformTorrentMediaToolkit.
   ///
   /// In en, this message translates to:
-  /// **'{getAppTitle} is a cross-platform torrent and media toolkit. Add magnet links and .torrent files, manage downloads, convert formats, cast to your TV, and more - all from one app.'**
+  /// **'{getAppTitle} plays your music and videos, with subtitles, synced lyrics, loops and a large view, and gets them for you: downloads from 1,800+ sites, torrents, a converter and casting to your TV.'**
   String crossPlatformTorrentMediaToolkit(Object getAppTitle);
 
   /// No description provided for @findAddContent.
@@ -3488,7 +3488,7 @@ abstract class AppLocalizations {
   /// No description provided for @playbackShuffleRepeatSimpleLibrary.
   ///
   /// In en, this message translates to:
-  /// **'Playback, shuffle, repeat, and a simple library'**
+  /// **'Subtitles, lyrics, loops, speed and a sleep timer'**
   String get playbackShuffleRepeatSimpleLibrary;
 
   /// No description provided for @convertAudioVideoBetweenFormats.

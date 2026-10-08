@@ -1807,12 +1807,12 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle एक टोरेंट क्लाइंट और मीडिया हब है। मैग्नेट लिंक और .torrent फ़ाइलें जोड़ें, डाउनलोड प्रबंधित करें और सब कुछ एक ही ऐप में व्यवस्थित रखें।';
+    return '$getAppTitle आपका संगीत और वीडियो चलाता है, सबटाइटल, सिंक किए हुए बोल, हिस्से दोहराने और बड़े दृश्य के साथ। इसमें टॉरेंट, फ़ाइल कन्वर्टर और विज्ञापन रोकने वाला ब्राउज़र भी है।';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle एक क्रॉस-प्लैटफ़ॉर्म टॉरेंट और मीडिया टूलकिट है। मैग्नेट लिंक और .torrent फ़ाइलें जोड़ें, डाउनलोड संभालें, फ़ॉर्मैट बदलें, टीवी पर कास्ट करें और भी बहुत कुछ - सब एक ही ऐप से।';
+    return '$getAppTitle आपका संगीत और वीडियो चलाता है, सबटाइटल, सिंक किए हुए बोल, हिस्से दोहराने और बड़े दृश्य के साथ, और उन्हें आपके लिए लाता है: 1,800+ साइटों से डाउनलोड, टॉरेंट, कन्वर्टर और टीवी पर कास्ट।';
   }
 
   @override
@@ -1882,7 +1882,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'प्लेबैक, शफ़ल, रिपीट और एक आसान लाइब्रेरी';
+      'सबटाइटल, बोल, लूप, स्पीड और स्लीप टाइमर';
 
   @override
   String get convertAudioVideoBetweenFormats =>

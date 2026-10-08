@@ -1761,12 +1761,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle은(는) 토렌트 클라이언트이자 미디어 허브입니다. 마그넷 링크와 .torrent 파일을 추가하고, 다운로드를 관리하고, 모든 것을 하나의 앱에서 정리하세요.';
+    return '$getAppTitle는 자막, 가사 동기화, 구간 반복, 크게 보기로 음악과 동영상을 재생합니다. 토렌트, 파일 변환기, 광고를 차단하는 브라우저도 들어 있습니다.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle은(는) 크로스 플랫폼 토렌트·미디어 도구 모음입니다. 마그넷 링크와 .torrent 파일 추가, 다운로드 관리, 형식 변환, TV로 전송 등을 한 앱에서 모두 할 수 있습니다.';
+    return '$getAppTitle는 자막, 가사 동기화, 구간 반복, 크게 보기로 음악과 동영상을 재생하고, 가져오는 것도 돕습니다: 1,800개 이상 사이트에서 다운로드, 토렌트, 변환기, TV 캐스트.';
   }
 
   @override
@@ -1830,7 +1830,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '내장 플레이어로 파일을 재생하고, 설정에서 폴더·기본 형식·화면을 지정하세요.';
 
   @override
-  String get playbackShuffleRepeatSimpleLibrary => '재생, 셔플, 반복, 간단한 라이브러리';
+  String get playbackShuffleRepeatSimpleLibrary => '자막, 가사, 구간 반복, 속도, 취침 타이머';
 
   @override
   String get convertAudioVideoBetweenFormats => 'FFmpeg로 오디오/동영상 형식 변환';

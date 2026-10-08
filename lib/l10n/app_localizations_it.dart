@@ -1815,12 +1815,12 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle è un client torrent e un centro multimediale. Aggiungi link magnet e file .torrent, gestisci i download e tieni tutto in ordine in un\'unica app.';
+    return '$getAppTitle riproduce la tua musica e i tuoi video, con sottotitoli, testi sincronizzati, ripetizioni e vista grande. Include anche torrent, un convertitore di file e un browser che blocca la pubblicità.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle è un kit multipiattaforma per torrent e contenuti multimediali. Aggiungi link magnet e file .torrent, gestisci i download, converti formati, trasmetti sulla TV e altro ancora, tutto da un\'unica app.';
+    return '$getAppTitle riproduce la tua musica e i tuoi video, con sottotitoli, testi sincronizzati, ripetizioni e vista grande, e te li procura: download da oltre 1.800 siti, torrent, un convertitore e la trasmissione alla TV.';
   }
 
   @override
@@ -1890,7 +1890,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'Riproduzione, casuale, ripetizione e una libreria semplice';
+      'Sottotitoli, testi, loop, velocità e timer di spegnimento';
 
   @override
   String get convertAudioVideoBetweenFormats =>

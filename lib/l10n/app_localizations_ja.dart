@@ -1762,12 +1762,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle はトレントクライアント兼メディアハブです。マグネットリンクや .torrent ファイルを追加し、ダウンロードを管理し、すべてをひとつのアプリで整理できます。';
+    return '$getAppTitle は、字幕、歌詞の同期表示、パートのループ、大きく表示で音楽と動画を再生します。トレント、ファイル変換、広告をブロックするブラウザも内蔵。';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle はクロスプラットフォームのトレント＆メディアツールキットです。マグネットリンクや .torrent ファイルの追加、ダウンロード管理、形式変換、テレビへのキャストなどを、ひとつのアプリで行えます。';
+    return '$getAppTitle は、字幕、歌詞の同期表示、パートのループ、大きく表示で音楽と動画を再生し、入手も手伝います：1,800 以上のサイトからのダウンロード、トレント、変換、テレビへのキャスト。';
   }
 
   @override
@@ -1831,7 +1831,7 @@ class AppLocalizationsJa extends AppLocalizations {
       '内蔵プレーヤーでファイルを再生し、設定でフォルダ・既定の形式・外観を指定できます。';
 
   @override
-  String get playbackShuffleRepeatSimpleLibrary => '再生、シャッフル、リピート、シンプルなライブラリ';
+  String get playbackShuffleRepeatSimpleLibrary => '字幕、歌詞、ループ、再生速度、スリープタイマー';
 
   @override
   String get convertAudioVideoBetweenFormats => 'FFmpeg で音声・動画の形式を変換';

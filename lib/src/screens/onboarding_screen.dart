@@ -55,8 +55,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   static List<_OnboardingPage> _buildPages(BuildContext context) =>
       <_OnboardingPage>[
         // Welcome (was page 1 of 14: Welcome)
+        // The player first: it is what the app is for, and people took a
+        // tour that opened with downloads for "a downloader's UI".
         _OnboardingPage(
-          icon: Icons.download_rounded,
+          icon: Icons.play_circle_rounded,
           title: context.l10n.welcome,
           detail: kPlayStoreBuild
               ? context.l10n.torrentVaultMediaHubAdd(getAppTitle())
@@ -714,18 +716,13 @@ class _WelcomePreview extends StatelessWidget {
     final border = isDark ? const Color(0xFF3A3A3A) : const Color(0xFFDDDDDD);
 
     final l10n = context.l10n;
-    final features = kPlayStoreBuild
-        ? [
-            (Icons.download_rounded, l10n.featureTorrentDownloads),
-            (Icons.folder_copy_rounded, l10n.featureQueueLibrary),
-            (Icons.favorite_outline, l10n.supportViaDonations),
-          ]
-        : [
-            (Icons.download_rounded, l10n.featureTorrentDownloads),
-            (Icons.transform_rounded, l10n.featureFormatConversion),
-            (Icons.cast_rounded, l10n.featureDlnaCast),
-            (Icons.favorite_outline, l10n.supportViaDonations),
-          ];
+    final features = [
+      (Icons.music_note_rounded, l10n.mediaPlayerLibrary),
+      (Icons.lyrics_rounded, '${l10n.subtitles} · ${l10n.lyrics}'),
+      (Icons.download_rounded, l10n.featureTorrentDownloads),
+      (Icons.transform_rounded, l10n.featureFormatConversion),
+      (Icons.cast_rounded, l10n.featureDlnaCast),
+    ];
 
     return Container(
       // Up to 360 wide, never wider than the page: at a fixed 280 every
