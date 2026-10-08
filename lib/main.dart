@@ -136,8 +136,9 @@ Future<void> main() async {
       return true;
     };
 
-    await requestAndroidPermissions();
-    SessionLogService.instance.mark('permissions_done');
+    // The permission prompts wait until the app is on screen (see after
+    // runApp): before it, a new user's first sight of the app was a row of
+    // system prompts over a blank grey screen.
 
     // Initialize purchase service only on Play Store Android builds.
     // The `in_app_purchase` plugin is not available on desktop builds and
@@ -253,6 +254,13 @@ Future<void> main() async {
         ),
       ),
     );
+    // Over the app's first screen, a moment after it shows.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 800), () async {
+        await requestAndroidPermissions();
+        SessionLogService.instance.mark('permissions_done');
+      });
+    });
   }, (error, stack) {
     SessionLogService.instance.logSwallowed(error, stack, 'zone');
     errorLog.record('ZONE ERROR', error, stack);
