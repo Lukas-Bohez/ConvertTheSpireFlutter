@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, kDebugMode, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -540,6 +541,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (!kPlayStoreBuild) return;
     if (context.read<PlayerState>().isPlaying) return;
     unawaited(AdService.instance.maybeShowInterstitialAtBreak());
+  }
+
+  /// Opens the page of [route] (`player.tab`, ...), as its tile on Home
+  /// does. For the store tour (integration_test/store_tour_test.dart).
+  @visibleForTesting
+  void openPage(String route) {
+    final index = QuickLinksService.routeToIndex[route];
+    if (index != null) _navigateToPage(index);
   }
 
   void _navigateToPage(int index) {

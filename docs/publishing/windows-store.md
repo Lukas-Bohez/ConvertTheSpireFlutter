@@ -130,9 +130,11 @@ for each. The texts for all of them are in
 import (`scripts/store_listing.py fill`), or copy them per language. The
 English texts are also below. Screenshots: at least one,
 1366×768 or larger. The ones in `docs/screenshots/store/` are made for this
-(1920×1080: Home, Player and Torrents, and Home and Player in the dark
-theme). The **1:1 app tile icon (300×300)** is optional; use
-`docs/screenshots/store/app-tile-300.png`.
+(1920×1080: Home, the player, a video with subtitles, the large view, loop
+parts, Torrents, and the player in the dark theme). The **1:1 app tile icon
+(300×300)** is optional; use `docs/screenshots/store/app-tile-300.png`.
+**Trailers:** add `microsoft-upload/trailer/trailer.mp4` with its thumbnail;
+how it is made and uploaded is in [store-trailer.md](store-trailer.md).
 
 ### 8. Submission options
 
