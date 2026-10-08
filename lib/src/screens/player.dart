@@ -4450,6 +4450,9 @@ class PlayerState with ChangeNotifier {
       currentIndex = idx;
       _resumeCheckPath = path;
       notifyListeners();
+      // Its cover, for the now-playing card: covers otherwise load as their
+      // library card comes on screen, which on a phone it may not be.
+      unawaited(requestThumbnailForIndex(idx));
     }
 
     // Bump generation to cancel any in-flight _loadCurrent calls.
