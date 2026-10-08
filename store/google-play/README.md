@@ -11,6 +11,16 @@ real screenshots by one script**, so they can never drift apart.
 | `tv-screenshot-1-1920x1080.png`, `tv-screenshot-2-...png` | TV screenshots | Graphics -> TV screenshots |
 | `tv-promo-banner-1920x1080.png` | Promo image | optional promo graphic |
 | `build_store_assets.py` | Regenerates everything | - |
+| `feature-graphic-1024x500.png` | Feature graphic, from the phone screenshots (`scripts/play_feature_graphic.py`) | Main store listing -> Feature graphic |
+| `screenshots/phone/*.png` (1080x1920) | Phone screenshots | Main store listing -> Phone screenshots |
+| `screenshots/tablet/*.png` (2560x1440) | Tablet screenshots | 7-inch and 10-inch tablet screenshots |
+| `screenshots/chromebook/*.png` (1920x1080) | Chromebook screenshots | Chromebook screenshots |
+| `screenshots/tv/*.png` (1920x1080) | Android TV screenshots | Android TV screenshots |
+| `listing/` | Title, short and full description and release notes in 18 languages (`scripts/play_listing.py`) | Main store listing, per language; the release's notes |
+
+The screenshots and the trailer come from the real Play build on an
+emulator: `scripts/play_tour.py` (see `docs/publishing/store-trailer.md`).
+The trailer goes on YouTube and its link in Main store listing -> Video.
 
 ## Updating the store graphics
 1. To change wording, edit the constants at the top of `build_store_assets.py`

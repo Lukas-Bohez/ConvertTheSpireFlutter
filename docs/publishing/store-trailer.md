@@ -71,11 +71,37 @@ Reborn in 50 seconds" as its title. The other languages can use the same
 trailer. A trailer goes live with the next submission.
 
 **Google Play** takes a YouTube link, not a file: Play Console → Grow →
-Store presence → Main store listing → **Video**. Upload `trailer.mp4` to
-YouTube (public or unlisted, ads off, not "made for kids"), then paste its
-link. This trailer shows the Windows app, and the Play version is BitPlayer
-without the downloader: for the Play listing record a phone instead, or
-leave out the first feature (`store_trailer.py` reads `marks.json`; remove
-the `home` line from it).
+Store presence → Main store listing → **Video**. Upload the Play trailer
+(below) to YouTube (public or unlisted, ads off, not "made for kids"),
+then paste its link.
+
+## The Google Play trailer and screenshots
+
+The Play version is BitPlayer, without the downloader, so it has its own
+tour, of the Play build on Android emulators: a phone, a tablet (which
+also plays the Chromebook, at desktop density) and an Android TV.
+
+```powershell
+$ffmpeg = 'microsoft-upload\.tools\ffmpeg\ffmpeg-9.0.2-essentials_build\bin\ffmpeg.exe'
+$tmp = "$env:TEMP\store-tour"
+
+# One emulator at a time: three at once ran out of memory.
+python scripts/play_tour.py "$tmp\media" "$tmp\play\phone" --form phone --device emulator-5554 --record
+python scripts/play_tour.py "$tmp\media" "$tmp\play\tablet" --form tablet --device emulator-5556 --record
+python scripts/play_tour.py "$tmp\media" "$tmp\play\chromebook" --form chromebook --device emulator-5556 --record
+python scripts/play_tour.py "$tmp\media" "$tmp\play\tv" --form tv --device emulator-5558 --record
+
+python scripts/play_trailer.py "$tmp\play\trailer.mp4" --ffmpeg $ffmpeg `
+  --phone "$tmp\play\phone" --tablet "$tmp\play\tablet" --tv "$tmp\play\tv"
+python scripts/play_feature_graphic.py "$tmp\play\phone\2-player.png" "$tmp\play\phone\3-video-subtitles.png"
+```
+
+The emulators used: a Pixel 6 (Android 13, Google APIs), a Pixel Tablet
+(Android 13, Google APIs) and the Android TV 1080p image. `play_tour.py`
+sets each screen to the size Play takes (a phone 1080x1920, a tablet
+2560x1440, a Chromebook 1920x1080), tidies the status bar (10:00, full
+battery) and puts both back afterwards. The test serves itself the demo
+media from the computer over `adb reverse`; nothing is copied onto the
+device. Copy the screenshots to `store/google-play/screenshots/<kind>/`.
 
 The same YouTube link is good for the GitHub README and the website.
