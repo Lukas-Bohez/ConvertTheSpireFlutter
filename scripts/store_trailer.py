@@ -3,6 +3,7 @@
 
     python scripts/store_trailer.py <tour folder> <trailer.mp4>
         [--ffmpeg <ffmpeg.exe>] [--until <segment id>] [--stop-at <s>]
+        [--skip <segment id> ...]
 
 <tour folder> is what integration_test/store_tour_test.dart wrote with
 TOUR_RECORD=true: tour.mp4 and marks.json, where each feature starts. The
@@ -121,6 +122,8 @@ def main():
     parser.add_argument('--ffmpeg', default='ffmpeg')
     parser.add_argument('--until')
     parser.add_argument('--stop-at', type=float)
+    # Features to leave out (the browser's new tab says little).
+    parser.add_argument('--skip', nargs='*', default=[])
     args = parser.parse_args()
 
     tour_dir = Path(args.tour)
@@ -134,7 +137,7 @@ def main():
             if here['t'] >= args.stop_at - 1:
                 break
             end = min(end, args.stop_at)
-        if here['id'] in CAPTIONS:
+        if here['id'] in CAPTIONS and here['id'] not in args.skip:
             segments.append((here['id'], here['t'], end))
 
     with tempfile.TemporaryDirectory() as tmp:
