@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
@@ -54,7 +55,11 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> play() => _player.play();
+  Future<void> play() async {
+    // play() completes only when playback pauses; the notification's
+    // button shouldn't wait for that.
+    unawaited(_player.play());
+  }
 
   @override
   Future<void> pause() => _player.pause();

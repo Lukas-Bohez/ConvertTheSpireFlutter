@@ -2184,7 +2184,7 @@ class PlayerState with ChangeNotifier {
             duration = _audio!.duration;
             position = Duration.zero;
             if (generation != _loadGeneration) return;
-            await _audio!.play();
+            _playJustAudio();
             _recordPlayStart(item);
             _updateMediaNotification(item);
           } else if (_useMediaKit) {
@@ -2529,26 +2529,14 @@ class PlayerState with ChangeNotifier {
       }
     } else {
       if (_audio != null) {
-        try {
-          _audio!.playing ? await _audio!.pause() : await _audio!.play();
-        } catch (e) {
-          debugPrint('just_audio togglePlay error: $e');
+        if (_audio!.playing) {
           try {
-            // Reloading applies to library items only; a room's stream is
-            // reloaded by following the room again.
-            final item = _roomStream == null ? currentItem : null;
-            if (item != null && item.type == MediaType.audio) {
-              final localPath = await _resolveLocalPath(item.path);
-              if (localPath.startsWith('http') ||
-                  localPath.startsWith('content://')) {
-                await _audio!.setUrl(localPath);
-              } else {
-                await _audio!.setFilePath(localPath);
-              }
-              await _audio!.setVolume(_audioPlayerVolume);
-              await _audio!.play();
-            }
-          } catch (_) {}
+            await _audio!.pause();
+          } catch (e) {
+            debugPrint('just_audio pause error: $e');
+          }
+        } else {
+          _playJustAudio(onError: _reloadJustAudio);
         }
       } else if (_useMediaKit) {
         final player = _audioMkPlayer ?? _mkPlayer;
@@ -2564,6 +2552,38 @@ class PlayerState with ChangeNotifier {
     }
     _publishWatchStateSoon();
     notifyListeners();
+  }
+
+  /// Starts just_audio. Its play() completes only when playback pauses or
+  /// stops, so it isn't awaited: what comes after it (the play count, the
+  /// notification, telling a room) would otherwise wait for the next pause.
+  void _playJustAudio({Future<void> Function()? onError}) {
+    final audio = _audio;
+    if (_disposed || audio == null) return;
+    unawaited(audio.play().catchError((Object e) async {
+      debugPrint('just_audio play error: $e');
+      await onError?.call();
+    }));
+  }
+
+  /// Loads the current song into just_audio again and plays it, after it
+  /// failed to play. Library items only: a room's stream is reloaded by
+  /// following the room again.
+  Future<void> _reloadJustAudio() async {
+    final item = _roomStream == null ? currentItem : null;
+    if (_disposed || _audio == null || item?.type != MediaType.audio) return;
+    try {
+      final localPath = await _resolveLocalPath(item!.path);
+      if (localPath.startsWith('http') || localPath.startsWith('content://')) {
+        await _audio!.setUrl(localPath);
+      } else {
+        await _audio!.setFilePath(localPath);
+      }
+      await _audio!.setVolume(_audioPlayerVolume);
+      _playJustAudio();
+    } catch (e) {
+      debugPrint('just_audio reload error: $e');
+    }
   }
 
   Future<void> seek(Duration d) async {
@@ -4521,7 +4541,7 @@ class PlayerState with ChangeNotifier {
                 await _audio!.setVolume(_audioPlayerVolume);
                 duration = _audio!.duration;
                 position = Duration.zero;
-                await _audio!.play();
+                _playJustAudio();
                 if (idx >= 0 && idx < library.length) {
                   _recordPlayStart(library[idx]);
                 }
