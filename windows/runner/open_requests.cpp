@@ -12,9 +12,18 @@ namespace {
 
 // These names identify the app to Windows. Keep them stable: renaming one
 // leaves the old entries behind on every PC.
+// A debug build (flutter run, flutter test) is a copy of its own: it used
+// to hand its start to an installed copy that was running, and exit.
+#ifdef _DEBUG
+constexpr wchar_t kInstanceMutexName[] =
+    L"Local\\ConvertTheSpireReborn.Instance.Debug";
+constexpr wchar_t kMainWindowProperty[] =
+    L"ConvertTheSpireReborn.MainWindow.Debug";
+#else
 constexpr wchar_t kInstanceMutexName[] =
     L"Local\\ConvertTheSpireReborn.Instance";
 constexpr wchar_t kMainWindowProperty[] = L"ConvertTheSpireReborn.MainWindow";
+#endif
 // Tags our WM_COPYDATA ("CTSR"), so other senders are ignored.
 constexpr ULONG_PTR kForwardedArgumentsId = 0x43545352;
 
