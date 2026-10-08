@@ -7724,46 +7724,57 @@ class _MediaGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final crossAxisCount = width < 500
-        ? 2
-        : width < 900
-            ? 3
-            : width < 1200
-                ? 4
-                : width < 1600
-                    ? 5
-                    : 6;
     // CustomScrollView (not a plain GridView) so we can lead with a
     // SliverOverlapInjector that cancels the pinned TabBar/search header
     // overlap — this keeps the first row (and the scrollbar) below that
     // header instead of being hidden behind it. The scrollable remains
     // primary so NestedScrollView still collapses the now-playing card.
-    return PlayerBodyScrollbar(
-      child: CustomScrollView(
-        slivers: [
-          SliverOverlapInjector(
-            handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
-          ),
-          SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              // Hand-tuned: thumbnail block is now a fixed 16:9 instead of
-              // filling the card, so the card itself is shorter relative to its
-              // width (was 0.82 : 0.9 when the thumbnail filled the tile).
-              childAspectRatio: width < 900 ? 1.15 : 1.25,
+    return LayoutBuilder(builder: (context, constraints) {
+      // The room the grid has, not the screen's: beside the Up next panel
+      // on a tablet, five columns of the screen's width were too short for
+      // the lines under each picture.
+      final width = constraints.maxWidth;
+      final crossAxisCount = width < 500
+          ? 2
+          : width < 900
+              ? 3
+              : width < 1200
+                  ? 4
+                  : width < 1600
+                      ? 5
+                      : 6;
+      const spacing = 12.0;
+      final tileWidth =
+          (width - spacing * (crossAxisCount - 1)) / crossAxisCount;
+      // The card's margins, its 16:9 picture, and the artist and plays lines
+      // under it (which grow with the text size).
+      final tileHeight = 8 +
+          (tileWidth - 8) * 9 / 16 +
+          18 +
+          MediaQuery.textScalerOf(context).scale(36);
+      return PlayerBodyScrollbar(
+        child: CustomScrollView(
+          slivers: [
+            SliverOverlapInjector(
+              handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
             ),
-            delegate: SliverChildBuilderDelegate(
-              (ctx, i) =>
-                  _MediaCard(entry: entries[i], state: state, onTap: onTap),
-              childCount: entries.length,
+            SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                mainAxisSpacing: spacing,
+                crossAxisSpacing: spacing,
+                mainAxisExtent: tileHeight,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (ctx, i) =>
+                    _MediaCard(entry: entries[i], state: state, onTap: onTap),
+                childCount: entries.length,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 }
 
