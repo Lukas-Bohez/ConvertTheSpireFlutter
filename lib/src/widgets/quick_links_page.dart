@@ -7,18 +7,17 @@ import 'package:provider/provider.dart';
 
 import '../config/build_flags.dart';
 import '../config/full_mode_access.dart';
-import '../models/search_result.dart';
 import '../services/folder_access_service.dart';
 import '../utils/l10n.dart';
 import 'monetization_widgets.dart';
 import 'quick_download_card.dart';
 import 'quick_links_service.dart';
+import 'support_card.dart';
 
 /// Clean home page with a grid of quick-link tiles.
 class QuickLinksPage extends StatefulWidget {
   final ValueChanged<String> onNavigate;
-  final Future<void> Function(
-      SearchResult result, String format, String quality) onDownload;
+  final QuickDownloadCallback onDownload;
   final void Function(String url, String format, String quality)?
       onPlaylistDetected;
   final Future<String?> Function() getYtDlpVersion;
@@ -211,21 +210,13 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          cs.primary.withValues(alpha: 0.15),
-                          cs.tertiary.withValues(alpha: 0.10),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Icon(Icons.music_note_rounded,
-                        size: 56, color: cs.primary),
+                  // The app's own logo, not a stock music note.
+                  Image.asset(
+                    'assets/icons/app_logo_384.png',
+                    width: 96,
+                    height: 96,
+                    filterQuality: FilterQuality.medium,
+                    semanticLabel: getAppTitle(),
                   ),
                   const SizedBox(height: 18),
                   buildTitle(),
@@ -403,6 +394,8 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             sliver: _buildLinksGrid(crossAxisCount, visibleLinks),
           ),
+          // Under everything, and only now and then: SupportNudgeService.
+          if (!kPlayStoreBuild) const SliverToBoxAdapter(child: SupportCard()),
         ],
       ),
     );
@@ -423,6 +416,10 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
 
   Widget _buildLinksGrid(int crossAxisCount, List<QuickLink> visibleLinks) {
     final cs = Theme.of(context).colorScheme;
+    // As tall as a tile's icon and two lines of text need. A height in
+    // proportion to the width left a third of every tile empty on a phone,
+    // where only two tiles showed, and more on a wide screen.
+    final tileHeight = 112 + MediaQuery.textScalerOf(context).scale(72);
 
     if (_links.isEmpty && _ytDlpChecking) {
       return SliverPadding(
@@ -446,7 +443,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
             crossAxisCount: crossAxisCount,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 0.78,
+            mainAxisExtent: tileHeight,
           ),
         ),
       );
@@ -490,7 +487,7 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
         crossAxisCount: crossAxisCount,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.78,
+        mainAxisExtent: tileHeight,
       ),
     );
   }
@@ -631,8 +628,14 @@ String quickLinkName(BuildContext context, QuickLink link) {
 
 String quickLinkDescription(BuildContext context, QuickLink link) {
   final english = _builtInQuickLink(_englishText, link.route);
-  if (english == null || link.description != english.description) {
+  if (english == null ||
+      (link.description != english.description &&
+          link.description != _formerDescriptions[link.route])) {
     return link.description;
   }
   return _builtInQuickLink(context.l10n, link.route)!.description;
 }
+
+/// What a built-in link said before, in layouts saved back then: still the
+/// built-in text, so it is shown in the app's language like the rest.
+const _formerDescriptions = {'torrents.tab': 'Vault torrent manager'};

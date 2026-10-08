@@ -14,8 +14,8 @@ const bool kIsGithubRelease =
 ///
 /// It has every feature of the GitHub build, but the Store updates it, so
 /// the app does not update itself; FFmpeg, yt-dlp and Deno come in the
-/// package instead of being downloaded on first use (BundledTools); and
-/// "all colours" is a Store add-on (PurchaseService).
+/// package instead of being downloaded on first use (BundledTools). All
+/// colours are unlocked, as in the GitHub build (PurchaseService).
 const bool kMsStoreBuild =
     bool.fromEnvironment('MS_STORE_BUILD', defaultValue: false);
 

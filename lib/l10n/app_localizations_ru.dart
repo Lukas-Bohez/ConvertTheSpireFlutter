@@ -1807,12 +1807,12 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle — торрент-клиент и медиацентр. Добавляйте magnet-ссылки и .torrent-файлы, управляйте загрузками и держите всё в порядке в одном приложении.';
+    return '$getAppTitle воспроизводит вашу музыку и видео — с субтитрами, синхронным текстом песен, повтором фрагментов и большим экраном. А ещё торренты, конвертер файлов и браузер, который блокирует рекламу.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle — кроссплатформенный набор инструментов для торрентов и медиа. Добавляйте magnet-ссылки и файлы .torrent, управляйте загрузками, конвертируйте форматы, транслируйте на телевизор и многое другое — всё в одном приложении.';
+    return '$getAppTitle воспроизводит вашу музыку и видео — с субтитрами, синхронным текстом песен, повтором фрагментов и большим экраном — и достаёт их для вас: загрузка с 1800+ сайтов, торренты, конвертер и трансляция на ТВ.';
   }
 
   @override
@@ -1882,7 +1882,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'Воспроизведение, перемешивание, повтор и простая медиатека';
+      'Субтитры, тексты песен, повтор, скорость и таймер сна';
 
   @override
   String get convertAudioVideoBetweenFormats =>
@@ -2220,7 +2220,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'В избранном пока пусто.\nНажмите на звёздочку у трека, чтобы добавить его сюда.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return 'Прослушиваний: $playCount • $totalPlayedDuration';
   }
 
@@ -3591,7 +3591,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'Торренты, музыка, видео и конвертация файлов в одном приложении.';
+      'Музыка, видео, торренты и конвертация файлов в одном приложении.';
 
   @override
   String get spinUnlockColour => 'Крутить → открыть цвет';
@@ -4840,4 +4840,161 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Песен пока нет. Сначала откройте папку с музыкой в плеере.';
+
+  @override
+  String get loopParts => 'Повтор фрагментов';
+
+  @override
+  String get loopPartsHelp =>
+      'Отметьте фрагменты, которые хотите слушать. Играют только они — снова и снова, один за другим.';
+
+  @override
+  String get loopStartHere => 'Начать здесь';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Начинается с $time';
+  }
+
+  @override
+  String get loopEndHere => 'Закончить здесь';
+
+  @override
+  String get loopNoPartsYet =>
+      'Дойдите до начала фрагмента и нажмите «Начать здесь», затем нажмите «Закончить здесь» там, где он заканчивается.';
+
+  @override
+  String get loopSetToNow => 'Поставить текущее время';
+
+  @override
+  String get loopPlayPart => 'Воспроизвести этот фрагмент';
+
+  @override
+  String get loopDeletePart => 'Удалить этот фрагмент';
+
+  @override
+  String get loopDeleteAll => 'Удалить все фрагменты';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Фрагменты в повторе ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Фрагменты без повтора ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Изменить';
+
+  @override
+  String get playbackSpeed => 'Скорость воспроизведения';
+
+  @override
+  String get sleepTimer => 'Таймер сна';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes минут';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'В конце этого трека';
+
+  @override
+  String get sleepTimerOff => 'Выключен';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'Пауза через $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Пауза после этого трека';
+
+  @override
+  String continuedAt(String time) {
+    return 'Продолжено с $time';
+  }
+
+  @override
+  String get startOver => 'Сначала';
+
+  @override
+  String get supportCardTitle => 'Сделано одним человеком, бесплатно';
+
+  @override
+  String get supportCardBody =>
+      'Без рекламы, без слежки, ничего не нужно покупать. Если приложение сэкономило вам время, чашка кофе или спонсорство помогают ему жить.';
+
+  @override
+  String get supportCardNotNow => 'Не сейчас';
+
+  @override
+  String get supportCardNever => 'Больше не показывать';
+
+  @override
+  String get largeView => 'Большой экран';
+
+  @override
+  String get exitLargeView => 'Назад в медиатеку';
+
+  @override
+  String get subtitles => 'Субтитры';
+
+  @override
+  String get subtitlesNone => 'Нет';
+
+  @override
+  String get subtitlesChooseFile => 'Выбрать файл субтитров…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'Рядом с этим файлом нет субтитров или текста песни. Выберите файл .srt, .vtt или .lrc.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Сдвиг: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Показывать раньше';
+
+  @override
+  String get subtitlesLater => 'Показывать позже';
+
+  @override
+  String get subtitlesShow => 'Показывать субтитры';
+
+  @override
+  String get downloadWhole => 'Целиком';
+
+  @override
+  String get downloadOnlyParts => 'Только фрагменты';
+
+  @override
+  String get downloadAddPart => 'Добавить фрагмент';
+
+  @override
+  String get downloadPartsHint =>
+      'Каждый фрагмент сохраняется отдельным файлом — от и до указанного вами времени.';
+
+  @override
+  String get partFrom => 'С';
+
+  @override
+  String get partTo => 'До';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Добавить в очередь (фрагментов: $count)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Каждый фрагмент должен заканчиваться после начала и в пределах видео.';
+
+  @override
+  String get lyrics => 'Текст песни';
 }

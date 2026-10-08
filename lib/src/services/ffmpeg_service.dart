@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../utils/process_runner.dart';
 import 'bundled_tools.dart';
+import 'platform_dirs.dart';
 import 'session_log_service.dart';
 
 class FfmpegService {
@@ -73,6 +74,12 @@ class FfmpegService {
     final bundled = BundledTools.ffmpeg;
     if (bundled != null && await File(bundled).exists()) return bundled;
 
+    // 1c. The copy the app downloaded (InstallerService). Callers without
+    // the settings at hand, such as the player's video thumbnails, used to
+    // miss it and find FFmpeg only on the PATH.
+    final downloaded = await _downloadedPath();
+    if (downloaded != null) return downloaded;
+
     // 2. Check system PATH
     try {
       final result = await runProcess('ffmpeg', const ['-version'],
@@ -82,6 +89,28 @@ class FfmpegService {
       SessionLogService.instance.logSwallowed(e, st, 'ffmpeg PATH probe');
     }
 
+    return null;
+  }
+
+  static String? _downloaded;
+
+  static Future<String?> _downloadedPath() async {
+    final cached = _downloaded;
+    if (cached != null && await File(cached).exists()) return cached;
+    final support = await PlatformDirs.getAppSupportDir();
+    if (support == null) return null;
+    final root = Directory('${support.path}${Platform.pathSeparator}ffmpeg');
+    if (!await root.exists()) return null;
+    final name = Platform.isWindows ? 'ffmpeg.exe' : 'ffmpeg';
+    try {
+      await for (final entity
+          in root.list(recursive: true, followLinks: false)) {
+        if (entity is File &&
+            entity.uri.pathSegments.last.toLowerCase() == name) {
+          return _downloaded = entity.path;
+        }
+      }
+    } catch (_) {}
     return null;
   }
 

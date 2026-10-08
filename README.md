@@ -1,6 +1,6 @@
 # Convert the Spire Reborn
 
-**Download whole playlists, see which songs you are missing, and play, convert, cast and share them, in one free app with nothing else to install.**
+**Your music and videos in one free app: a player with subtitles, loops and a large view, and every way to fill it: downloads from 1,800+ sites (whole playlists, or only the part you want), torrents, a converter and a browser that blocks ads. Nothing else to install.**
 
 [![Latest release](https://img.shields.io/github/v/release/Lukas-Bohez/ConvertTheSpireFlutter?label=latest%20release)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Lukas-Bohez/ConvertTheSpireFlutter/total)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases)
@@ -57,7 +57,7 @@ Downloading is only the first step. Usually you then need something to check wha
 | Know which songs you are still missing | Compare file names by hand | **Compare** lists what is in your folder, what is missing and what does not belong, then downloads only the missing songs. |
 | Keep a playlist up to date | Redo it every time the playlist grows | **Watched playlists** check for new songs and fetch them. |
 | Download while watching | Copy the link into another program | Press download in the built-in browser. Playing from a playlist? It asks whether you want the song or the whole playlist. |
-| Play your music and videos | A separate player app | Built-in player with queue, shuffle, favourites, statistics and volume leveling. |
+| Play your music and videos | A separate player app | Built-in player with subtitles, loops, a large view, speed and a sleep timer, plus queue, shuffle, favourites, statistics and volume leveling. |
 | Convert files | An upload-and-wait website | 27+ formats (audio, video, images, documents, archives), offline. |
 | Watch together | A service that needs everyone to sign up | Share a six-character code. Runs on your own Wi-Fi, no server, no account. |
 | Get it on the TV | Another casting app | DLNA/UPnP casting, and an Android TV version you can use with the remote. |
@@ -84,28 +84,31 @@ It is a fully native Flutter app that handles media downloading, playlist import
 
 ## Features
 
+### Playing
+
+* **One player for music and video**: queue, shuffle, repeat, favourites, sorting and filters, play statistics. It remembers your library and reopens it on the next start.
+* **Subtitles for videos and songs.** An `.srt` or `.vtt` file next to the file, or in a `Subs` folder, loads by itself. Pick another, turn them off with one tap (or `C`), or move them earlier or later.
+* **Loop the best part.** Mark one or more parts of a song or video and playback stays in them.
+* **Large view**: the video fills the window with nothing around it, and one set of controls, not two.
+* **Playback speed** (0.5× to 2×), a **sleep timer**, and long videos and podcasts that **open where you left off**.
+* **Volume leveling** so every track plays at the same loudness.
+* **Fix metadata** and **organize media** tools for messy folders, and **copy a song's title** with a long press or a right click.
+* **Watch Together** across phone, PC, Mac and TV. A guest without the file streams it from the host.
+* **DLNA/UPnP casting** to smart TVs and speakers.
+
 ### Downloading
 
 * **Whole playlists**, including very large ones, on desktop and on phones.
 * **Compare with a folder:** see Matched, Missing and Extras (half-finished downloads, files in the wrong format, songs that are not in the playlist), fix the extras in one tap, and download only what is missing, straight into that folder. Export the missing list or an M3U playlist.
 * **Watched playlists** that download new additions automatically.
 * **MP3, M4A and MP4**, with quality and bitrate settings, SponsorBlock, and per-format download folders.
+* **Only the part you want**: Quick Download asks whether you want the whole video or song, or only parts of it (from 1:05 to 2:30, say), each its own file.
 * **1,800+ sites** through yt-dlp, not only YouTube.
 * **Keeps going with the screen off** on Android, with progress in the notification.
 
-### Playing
-
-* **Media player** for audio and video: queue, shuffle, repeat, favourites, sorting and filters, play statistics.
-* **Remembers your library** and reopens it on the next start.
-* **Copy a song's title** with a long press or a right click, or from the track menu, to paste it into a search or a message.
-* **Volume leveling** so every track plays at the same loudness.
-* **Fix metadata** and **organize media** tools for messy folders.
-* **Watch Together** across phone, PC, Mac and TV. A guest without the file streams it from the host.
-* **DLNA/UPnP casting** to smart TVs and speakers.
-
 ### Browsing
 
-* **Built-in browser** with ad and tracker blocking, tabs, incognito, history and favourites.
+* **Built-in browser** that blocks ads and trackers with the filter lists uBlock Origin uses (EasyList and EasyPrivacy), with tabs, incognito, history and favourites.
 * **Userscripts** (Tampermonkey/Greasemonkey compatible) on every platform, with one-tap searches for popular ones such as dark mode, Return YouTube Dislike and SponsorBlock.
 * **Browser extensions on Windows:** Chrome extensions and add-ons from addons.mozilla.org, with a catalog, permission prompts, popups and options pages. Tested with uBlock Origin Lite and Dark Reader.
 
@@ -141,6 +144,16 @@ Committers may change the source code directly. Changes from anyone else come in
 
 ## Screenshots
 
+![The player with its library](docs/screenshots/store/2-player.png)
+![A video with its subtitles](docs/screenshots/store/3-video-subtitles.png)
+![The large view](docs/screenshots/store/4-large-view.png)
+![Looping the best part of a song](docs/screenshots/store/5-loop-parts.png)
+![Home, with a link pasted in](docs/screenshots/store/1-home.png)
+![A torrent seeding](docs/screenshots/store/6-torrents.png)
+![The player in dark mode](docs/screenshots/store/7-player-dark.png)
+
+Older screenshots of the other pages:
+
 ![Media player with volume boosting and full audio control](screenshots/media-player-audio-controls.webp)
 ![Search songs and download them](screenshots/search-and-download-songs.webp)
 ![Convert files between the supported media types](screenshots/convert-files-between-supported-media-types.webp)
@@ -158,6 +171,10 @@ Committers may change the source code directly. Changes from anyone else come in
 **Windows shows a blue "Windows protected your PC" screen.** That screen is SmartScreen checking a program your browser downloaded that is not signed with a paid certificate. Install with the [one line above](#-install-in-a-minute) instead and it does not appear; to update, run the same line again. With the zip, choose **More info**, then **Run anyway**, and when updating, extract into a new folder rather than over the old one.
 
 **Android says the app is from an unknown source.** Android asks this for any app that does not come from the Play Store. Allow it for the app you opened the APK from (your browser or file manager).
+
+**Is this just a front end for yt-dlp?** No. yt-dlp is one of the ways it gets media in, and the app installs it and keeps it up to date for you. Everything around it is the app's own: the player (subtitles, loops, large view, speed, sleep timer, picking up where you left off), the library and Compare, the converter, Watch Together, casting, a torrent client and a browser with an ad blocker. The Google Play version has no YouTube downloads at all and is still a complete player.
+
+**Can YouTube ban my account or my IP for this?** The app never signs in to YouTube or Google, so there is no account to ban. (Only if you hand it your browser's cookies yourself, for age-restricted or private videos, does a download use your account.) Downloads come from your own connection, like watching in a browser. Downloading hundreds of videos in one go can make YouTube ask for a sign-in or slow you down for a while, as with any downloader; everyday use doesn't.
 
 **Why does the Play Store version have no YouTube downloads?** Google Play does not allow them. The APK and desktop builds here have everything.
 

@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'media_part.dart';
+
 enum DownloadStatus {
   queued,
   downloading,
@@ -28,6 +30,12 @@ class QueueItem {
   /// Optional per-item video quality override (e.g., 1080p, 4K). If null, app-wide setting is used.
   final String? videoQuality;
 
+  /// Only this part of the video or song, or all of it when null.
+  final MediaPart? part;
+
+  /// Which download this is: a URL, in a format, all of it or a part.
+  String get key => '$url|$format|${part?.ytDlpSection ?? ''}';
+
   const QueueItem({
     required this.url,
     required this.title,
@@ -42,6 +50,7 @@ class QueueItem {
     this.videoQuality,
     this.speed,
     this.eta,
+    this.part,
   });
 
   QueueItem copyWith({
@@ -73,16 +82,20 @@ class QueueItem {
       videoQuality: videoQuality ?? this.videoQuality,
       speed: speed ?? this.speed,
       eta: eta ?? this.eta,
+      part: part,
     );
   }
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is QueueItem && url == other.url && format == other.format;
+      other is QueueItem &&
+          url == other.url &&
+          format == other.format &&
+          part == other.part;
 
   @override
-  int get hashCode => url.hashCode ^ format.hashCode;
+  int get hashCode => Object.hash(url, format, part);
 
   Map<String, dynamic> toJson() => {
         'url': url,
@@ -97,6 +110,7 @@ class QueueItem {
         'videoQuality': videoQuality,
         'speed': speed,
         'eta': eta,
+        if (part != null) 'part': part!.toJson(),
       };
 
   factory QueueItem.fromJson(Map<String, dynamic> json) => QueueItem(
@@ -122,5 +136,6 @@ class QueueItem {
         videoQuality: json['videoQuality'] as String?,
         speed: json['speed'] as String?,
         eta: json['eta'] as String?,
+        part: MediaPart.fromJson(json['part']),
       );
 }

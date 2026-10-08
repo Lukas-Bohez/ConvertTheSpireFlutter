@@ -157,6 +157,10 @@ class BrowserWebWebViewAdapter implements BrowserWebviewController {
   Future<Object?> evaluateJs(String js) async =>
       await _controller?.evaluateJavascript(source: js);
 
+  /// The web build's iframe can't run scripts in other sites' pages.
+  @override
+  Future<void> setContentBlocking(ContentBlocking? blocking) async {}
+
   @override
   Future<void> applySettings({
     required bool desktopMode,

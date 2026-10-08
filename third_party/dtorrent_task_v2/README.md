@@ -133,6 +133,22 @@ at about 100 MB/s, with memory flat at 62 to 91 MB and no errors.
     now come from 1 MB chunks read once, eight kept at most and dropped
     after 20 s unused or when their piece is written. The app then seeded
     the same torrent at about 80 MB/s.
+14. **A seeding file is not kept locked** (`lib/src/file/download_file.dart`).
+    On Windows a downloaded program would not start while its torrent
+    seeded ("being used by another process"), and no seeding file could be
+    moved or deleted, even after the torrent stopped:
+    - blocks that arrived together each opened the file, and every handle
+      but the last was never closed, so the file stayed open until the app
+      quit. Opens are now shared;
+    - the file stayed open for writing after its last piece was written,
+      and Windows won't start a program that is open for writing. The write
+      handle is closed once every piece is written, and opened again if one
+      is written again;
+    - it stayed open for reading for good. It is closed 5 s after the last
+      read (`readIdleTimeout`).
+
+    Checked on Windows with `test/services/torrent_file_lock_test.dart` in
+    the app: a peer downloads `hostname.exe` and runs it while seeding it.
 
 ## Updating
 

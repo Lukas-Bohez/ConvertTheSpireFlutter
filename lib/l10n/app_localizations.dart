@@ -3368,13 +3368,13 @@ abstract class AppLocalizations {
   /// No description provided for @torrentVaultMediaHubAdd.
   ///
   /// In en, this message translates to:
-  /// **'{getAppTitle} is a torrent client and media hub. Add magnet links and .torrent files, manage downloads, and keep everything organized in one app.'**
+  /// **'{getAppTitle} plays your music and videos, with subtitles, synced lyrics, loops and a large view. Torrents, a file converter and a browser that blocks ads are built in too.'**
   String torrentVaultMediaHubAdd(Object getAppTitle);
 
   /// No description provided for @crossPlatformTorrentMediaToolkit.
   ///
   /// In en, this message translates to:
-  /// **'{getAppTitle} is a cross-platform torrent and media toolkit. Add magnet links and .torrent files, manage downloads, convert formats, cast to your TV, and more - all from one app.'**
+  /// **'{getAppTitle} plays your music and videos, with subtitles, synced lyrics, loops and a large view, and gets them for you: downloads from 1,800+ sites, torrents, a converter and casting to your TV.'**
   String crossPlatformTorrentMediaToolkit(Object getAppTitle);
 
   /// No description provided for @findAddContent.
@@ -3488,7 +3488,7 @@ abstract class AppLocalizations {
   /// No description provided for @playbackShuffleRepeatSimpleLibrary.
   ///
   /// In en, this message translates to:
-  /// **'Playback, shuffle, repeat, and a simple library'**
+  /// **'Subtitles, lyrics, loops, speed and a sleep timer'**
   String get playbackShuffleRepeatSimpleLibrary;
 
   /// No description provided for @convertAudioVideoBetweenFormats.
@@ -4064,8 +4064,8 @@ abstract class AppLocalizations {
   /// No description provided for @plays.
   ///
   /// In en, this message translates to:
-  /// **'{playCount} plays • {totalPlayedDuration}'**
-  String plays(Object playCount, Object totalPlayedDuration);
+  /// **'{playCount, plural, =1{1 play} other{{playCount} plays}} • {totalPlayedDuration}'**
+  String plays(int playCount, Object totalPlayedDuration);
 
   /// No description provided for @selectMusicFolderCompare.
   ///
@@ -6400,7 +6400,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeTaglinePlay.
   ///
   /// In en, this message translates to:
-  /// **'Torrents, music, videos and file conversion in one app.'**
+  /// **'Music, videos, torrents and file conversion in one app.'**
   String get homeTaglinePlay;
 
   /// No description provided for @spinUnlockColour.
@@ -8550,6 +8550,276 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No songs yet. Open your music folder in the Player first.'**
   String get noSongsToExport;
+
+  /// No description provided for @loopParts.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop parts'**
+  String get loopParts;
+
+  /// No description provided for @loopPartsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark the parts you want to hear. Only those play, over and over, one after the other.'**
+  String get loopPartsHelp;
+
+  /// No description provided for @loopStartHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Start here'**
+  String get loopStartHere;
+
+  /// No description provided for @loopStartsAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts at {time}'**
+  String loopStartsAt(String time);
+
+  /// No description provided for @loopEndHere.
+  ///
+  /// In en, this message translates to:
+  /// **'End here'**
+  String get loopEndHere;
+
+  /// No description provided for @loopNoPartsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Play to where a part begins and press Start here, then press End here where it ends.'**
+  String get loopNoPartsYet;
+
+  /// No description provided for @loopSetToNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Set to the current time'**
+  String get loopSetToNow;
+
+  /// No description provided for @loopPlayPart.
+  ///
+  /// In en, this message translates to:
+  /// **'Play this part'**
+  String get loopPlayPart;
+
+  /// No description provided for @loopDeletePart.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this part'**
+  String get loopDeletePart;
+
+  /// No description provided for @loopDeleteAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all parts'**
+  String get loopDeleteAll;
+
+  /// No description provided for @loopingPartsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Looping parts ({count})'**
+  String loopingPartsCount(int count);
+
+  /// No description provided for @loopPartsOffCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Parts not looping ({count})'**
+  String loopPartsOffCount(int count);
+
+  /// No description provided for @loopEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get loopEdit;
+
+  /// No description provided for @playbackSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback speed'**
+  String get playbackSpeed;
+
+  /// No description provided for @sleepTimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep timer'**
+  String get sleepTimer;
+
+  /// No description provided for @sleepTimerMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} minutes'**
+  String sleepTimerMinutes(int minutes);
+
+  /// No description provided for @sleepTimerEndOfTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'At the end of this track'**
+  String get sleepTimerEndOfTrack;
+
+  /// No description provided for @sleepTimerOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get sleepTimerOff;
+
+  /// No description provided for @sleepTimerIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep in {time}'**
+  String sleepTimerIn(String time);
+
+  /// No description provided for @sleepAfterTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep after this track'**
+  String get sleepAfterTrack;
+
+  /// No description provided for @continuedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Continued at {time}'**
+  String continuedAt(String time);
+
+  /// No description provided for @startOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Start over'**
+  String get startOver;
+
+  /// No description provided for @supportCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Made by one person, for free'**
+  String get supportCardTitle;
+
+  /// No description provided for @supportCardBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No ads, no tracking, nothing to buy. If this app has saved you time, a coffee or a sponsorship keeps it going.'**
+  String get supportCardBody;
+
+  /// No description provided for @supportCardNotNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get supportCardNotNow;
+
+  /// No description provided for @supportCardNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t show again'**
+  String get supportCardNever;
+
+  /// No description provided for @largeView.
+  ///
+  /// In en, this message translates to:
+  /// **'Large view'**
+  String get largeView;
+
+  /// No description provided for @exitLargeView.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the library'**
+  String get exitLargeView;
+
+  /// No description provided for @subtitles.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtitles'**
+  String get subtitles;
+
+  /// No description provided for @subtitlesNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get subtitlesNone;
+
+  /// No description provided for @subtitlesChooseFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a subtitle file…'**
+  String get subtitlesChooseFile;
+
+  /// No description provided for @subtitlesNoneFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No subtitle or lyrics file next to this one. Choose an .srt, .vtt or .lrc file.'**
+  String get subtitlesNoneFound;
+
+  /// No description provided for @subtitlesTiming.
+  ///
+  /// In en, this message translates to:
+  /// **'Timing: {delay}'**
+  String subtitlesTiming(String delay);
+
+  /// No description provided for @subtitlesEarlier.
+  ///
+  /// In en, this message translates to:
+  /// **'Show earlier'**
+  String get subtitlesEarlier;
+
+  /// No description provided for @subtitlesLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Show later'**
+  String get subtitlesLater;
+
+  /// No description provided for @subtitlesShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Show subtitles'**
+  String get subtitlesShow;
+
+  /// No description provided for @downloadWhole.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole'**
+  String get downloadWhole;
+
+  /// No description provided for @downloadOnlyParts.
+  ///
+  /// In en, this message translates to:
+  /// **'Only parts'**
+  String get downloadOnlyParts;
+
+  /// No description provided for @downloadAddPart.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a part'**
+  String get downloadAddPart;
+
+  /// No description provided for @downloadPartsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Each part is saved as a file of its own, from and to the times you set.'**
+  String get downloadPartsHint;
+
+  /// No description provided for @partFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get partFrom;
+
+  /// No description provided for @partTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get partTo;
+
+  /// No description provided for @addPartsToQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to queue ({count} parts)'**
+  String addPartsToQueue(int count);
+
+  /// No description provided for @partTimesInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Each part has to end after it starts, within the video.'**
+  String get partTimesInvalid;
+
+  /// The subtitles chip and sheet, when the file is synced lyrics (.lrc) for a song.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics'**
+  String get lyrics;
 }
 
 class _AppLocalizationsDelegate

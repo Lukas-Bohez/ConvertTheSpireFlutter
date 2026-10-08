@@ -1801,12 +1801,12 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle là trình torrent và trung tâm đa phương tiện. Thêm liên kết magnet và tệp .torrent, quản lý tải xuống và sắp xếp mọi thứ trong một ứng dụng.';
+    return '$getAppTitle phát nhạc và video của bạn, có phụ đề, lời bài hát đồng bộ, lặp đoạn và chế độ xem lớn. Ứng dụng còn có torrent, bộ chuyển đổi tệp và trình duyệt chặn quảng cáo.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle là bộ công cụ torrent và đa phương tiện đa nền tảng. Thêm liên kết magnet và tệp .torrent, quản lý tải xuống, chuyển đổi định dạng, truyền lên TV và nhiều hơn nữa - tất cả trong một ứng dụng.';
+    return '$getAppTitle phát nhạc và video của bạn, có phụ đề, lời bài hát đồng bộ, lặp đoạn và chế độ xem lớn, và tải chúng về cho bạn: tải từ hơn 1.800 trang, torrent, bộ chuyển đổi và truyền lên TV.';
   }
 
   @override
@@ -1875,7 +1875,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'Phát, phát ngẫu nhiên, lặp lại và thư viện đơn giản';
+      'Phụ đề, lời bài hát, lặp đoạn, tốc độ và hẹn giờ tắt';
 
   @override
   String get convertAudioVideoBetweenFormats =>
@@ -2215,7 +2215,7 @@ class AppLocalizationsVi extends AppLocalizations {
       'Chưa có mục yêu thích.\nNhấn vào ngôi sao ở bất kỳ bài nào để thêm vào đây.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount lượt phát • $totalPlayedDuration';
   }
 
@@ -3587,7 +3587,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'Torrent, nhạc, video và chuyển đổi tệp trong một ứng dụng.';
+      'Nhạc, video, torrent và chuyển đổi tệp trong một ứng dụng.';
 
   @override
   String get spinUnlockColour => 'Quay → mở khóa một màu';
@@ -4834,4 +4834,161 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Chưa có bài hát nào. Hãy mở thư mục nhạc trong trình phát trước.';
+
+  @override
+  String get loopParts => 'Lặp đoạn';
+
+  @override
+  String get loopPartsHelp =>
+      'Đánh dấu những đoạn bạn muốn nghe. Chỉ những đoạn đó được phát, lặp đi lặp lại, lần lượt từng đoạn.';
+
+  @override
+  String get loopStartHere => 'Bắt đầu tại đây';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Bắt đầu lúc $time';
+  }
+
+  @override
+  String get loopEndHere => 'Kết thúc tại đây';
+
+  @override
+  String get loopNoPartsYet =>
+      'Phát đến chỗ một đoạn bắt đầu và nhấn Bắt đầu tại đây, rồi nhấn Kết thúc tại đây ở chỗ đoạn đó kết thúc.';
+
+  @override
+  String get loopSetToNow => 'Đặt theo thời điểm hiện tại';
+
+  @override
+  String get loopPlayPart => 'Phát đoạn này';
+
+  @override
+  String get loopDeletePart => 'Xóa đoạn này';
+
+  @override
+  String get loopDeleteAll => 'Xóa tất cả các đoạn';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Đang lặp đoạn ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Đoạn không lặp ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Sửa';
+
+  @override
+  String get playbackSpeed => 'Tốc độ phát';
+
+  @override
+  String get sleepTimer => 'Hẹn giờ tắt';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes phút';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'Khi hết bài này';
+
+  @override
+  String get sleepTimerOff => 'Tắt';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'Dừng sau $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Dừng sau bài này';
+
+  @override
+  String continuedAt(String time) {
+    return 'Tiếp tục từ $time';
+  }
+
+  @override
+  String get startOver => 'Phát lại từ đầu';
+
+  @override
+  String get supportCardTitle => 'Do một người làm, miễn phí';
+
+  @override
+  String get supportCardBody =>
+      'Không quảng cáo, không theo dõi, không có gì phải mua. Nếu ứng dụng này giúp bạn tiết kiệm thời gian, một ly cà phê hoặc một khoản tài trợ sẽ giúp nó tiếp tục.';
+
+  @override
+  String get supportCardNotNow => 'Để sau';
+
+  @override
+  String get supportCardNever => 'Không hiện lại';
+
+  @override
+  String get largeView => 'Chế độ xem lớn';
+
+  @override
+  String get exitLargeView => 'Quay lại thư viện';
+
+  @override
+  String get subtitles => 'Phụ đề';
+
+  @override
+  String get subtitlesNone => 'Không có';
+
+  @override
+  String get subtitlesChooseFile => 'Chọn tệp phụ đề…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'Không có tệp phụ đề hay lời bài hát cạnh tệp này. Hãy chọn tệp .srt, .vtt hoặc .lrc.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Độ lệch: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Hiện sớm hơn';
+
+  @override
+  String get subtitlesLater => 'Hiện muộn hơn';
+
+  @override
+  String get subtitlesShow => 'Hiện phụ đề';
+
+  @override
+  String get downloadWhole => 'Toàn bộ';
+
+  @override
+  String get downloadOnlyParts => 'Chỉ một số đoạn';
+
+  @override
+  String get downloadAddPart => 'Thêm đoạn';
+
+  @override
+  String get downloadPartsHint =>
+      'Mỗi đoạn được lưu thành một tệp riêng, từ và đến thời điểm bạn chọn.';
+
+  @override
+  String get partFrom => 'Từ';
+
+  @override
+  String get partTo => 'Đến';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Thêm vào hàng đợi ($count đoạn)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Mỗi đoạn phải kết thúc sau khi bắt đầu và nằm trong video.';
+
+  @override
+  String get lyrics => 'Lời bài hát';
 }

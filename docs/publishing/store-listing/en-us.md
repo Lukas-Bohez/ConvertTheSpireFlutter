@@ -11,29 +11,40 @@ Convert The Spire Reborn
 ## Short description
 
 ```text
-Download and convert video and music, play it, cast it to your TV, and download torrents. Free, open source, no account, no tracking.
+Your music and videos in one app: a player with subtitles and loops, downloads from 1,800+ sites, a converter, casting and torrents. Free, no account, no ads.
 ```
 
 ## Description
 
 ```text
-Convert The Spire Reborn is an all-in-one media app for Windows: a downloader, converter, player and torrent client in one window.
+Convert The Spire Reborn is your music and videos in one app: a player with subtitles, loops and a large view, and every way to fill it, from downloads and torrents to a browser that blocks ads.
+
+PLAY
+• One library for your songs and videos, with playlists, favourites, shuffle and repeat.
+• Subtitles for videos and songs: an .srt or .vtt file next to the file loads by itself. Turn them on or off with one tap, pick another file, or move them when they are out of step.
+• Synced lyrics: an .lrc file next to a song shows each line as it is sung.
+• Loop the best part: mark one or more parts of a song or video and only those play, one after the other.
+• Large view: the video fills the screen, with nothing else around it.
+• Speed from 0.5× to 2×, and a sleep timer that stops after 15 to 60 minutes or at the end of the song.
+• Long videos and podcasts open where you left off.
 
 DOWNLOAD
-• Save videos and music from YouTube and over 1,800 other sites, as MP4, MP3, M4A and more, in the quality you pick.
-• Whole playlists at once, with titles, artwork and tags filled in.
-• A built-in browser finds the media on a page for you.
+• Save videos and music from YouTube and over 1,800 other sites as MP4, MP3, M4A and more, in the quality you pick, or only the part you want.
+• Whole playlists at once, with titles, artwork and tags filled in. You also see which songs you are still missing.
+• No sign-in: the app never asks for your Google or YouTube account.
 
 CONVERT
-• Convert audio and video between 27+ formats with FFmpeg, right on your PC. Nothing is uploaded.
+• Convert audio, video and images between 27+ formats with FFmpeg, on your PC. Nothing is uploaded.
 
-PLAY AND CAST
-• A media player for your music and videos, with playlists.
+CAST AND WATCH TOGETHER
 • Cast to TVs and speakers on your network (DLNA/UPnP).
-• Watch Together: watch the same video in sync with friends.
+• Watch Together: the same video, in sync, with friends on your Wi-Fi. Share a six-character code; no account, no server.
 
 TORRENTS
-• A full BitTorrent client: magnet links and .torrent files, seeding with ratio limits, and making and sharing your own torrents.
+• A full BitTorrent client: magnet links and .torrent files, seeding with ratio limits, and making your own torrents.
+
+BROWSER
+• A built-in browser that blocks ads and trackers with the filter lists uBlock Origin uses, and finds the media on a page for you.
 
 PRIVATE BY DESIGN
 • No account, no ads, no analytics, no tracking. Everything stays on your PC.
@@ -45,57 +56,77 @@ Available in 18 languages. Please only download content you have the right to do
 ## What's new in this version
 
 ```text
-Torrents no longer freeze the app when a file finishes or starts seeding. Songs keep their volume when you play them again. Full screen (F11) stays on when you open another page. Every Convert format works, including text from PDFs and WebP images. New: export your songs as a track list (.txt or .csv) from Playlists, and import it on another device.
+New: download only the part of a video or song you want. Subtitles for videos and songs: .srt and .vtt files load by themselves. Synced lyrics from .lrc files. Loop the best part, change the speed, set a sleep timer and watch in a large view. Long videos open where you left off, and the browser's ad blocker now uses uBlock Origin's lists. The player has one set of controls and more room for the video, and every colour is unlocked. Fixed: a program downloaded by torrent starts while it seeds, torrents of files you already have seed at once, and videos in your library have thumbnails.
 ```
 
 ## Product features
 
 1.
 ```text
-Download video and music from 1,800+ sites
+Player for music and video, with playlists and favourites
 ```
 
 2.
 ```text
-Convert between 27+ audio and video formats
+Subtitles for videos and songs (.srt and .vtt)
 ```
 
 3.
 ```text
-Whole playlists with tags and artwork
+Synced lyrics for your songs (.lrc)
 ```
 
 4.
 ```text
-Media player with playlists
+Loop the best part, change the speed, set a sleep timer
 ```
 
 5.
 ```text
-Cast to TVs and speakers (DLNA/UPnP)
+Large view: the video without the clutter
 ```
 
 6.
 ```text
-Watch videos in sync with friends
+Download video and music from 1,800+ sites, or only a part
 ```
 
 7.
 ```text
-BitTorrent client with magnet links and seeding
+Whole playlists, with titles, tags and artwork
 ```
 
 8.
 ```text
-Built-in browser that finds media on a page
+Convert between 27+ audio, video and image formats
 ```
 
 9.
 ```text
-No account, no ads, no tracking
+Cast to TVs and speakers (DLNA/UPnP)
 ```
 
 10.
+```text
+Watch videos in sync with friends
+```
+
+11.
+```text
+BitTorrent client with magnet links and seeding
+```
+
+12.
+```text
+Browser with a real ad blocker
+```
+
+13.
+```text
+No account, no ads, no tracking
+```
+
+14.
 ```text
 Open source, in 18 languages
 ```
@@ -104,12 +135,12 @@ Open source, in 18 languages
 
 1.
 ```text
-video downloader
+media player
 ```
 
 2.
 ```text
-mp3 converter
+video downloader
 ```
 
 3.
@@ -119,22 +150,22 @@ music downloader
 
 4.
 ```text
-torrent
+mp3 converter
 ```
 
 5.
 ```text
-media player
+video player
 ```
 
 6.
 ```text
-video converter
+subtitles
 ```
 
 7.
 ```text
-dlna
+torrent
 ```
 
 ## Copyright and trademark info

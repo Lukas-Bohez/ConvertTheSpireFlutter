@@ -1761,12 +1761,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle은(는) 토렌트 클라이언트이자 미디어 허브입니다. 마그넷 링크와 .torrent 파일을 추가하고, 다운로드를 관리하고, 모든 것을 하나의 앱에서 정리하세요.';
+    return '$getAppTitle는 자막, 가사 동기화, 구간 반복, 크게 보기로 음악과 동영상을 재생합니다. 토렌트, 파일 변환기, 광고를 차단하는 브라우저도 들어 있습니다.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle은(는) 크로스 플랫폼 토렌트·미디어 도구 모음입니다. 마그넷 링크와 .torrent 파일 추가, 다운로드 관리, 형식 변환, TV로 전송 등을 한 앱에서 모두 할 수 있습니다.';
+    return '$getAppTitle는 자막, 가사 동기화, 구간 반복, 크게 보기로 음악과 동영상을 재생하고, 가져오는 것도 돕습니다: 1,800개 이상 사이트에서 다운로드, 토렌트, 변환기, TV 캐스트.';
   }
 
   @override
@@ -1830,7 +1830,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '내장 플레이어로 파일을 재생하고, 설정에서 폴더·기본 형식·화면을 지정하세요.';
 
   @override
-  String get playbackShuffleRepeatSimpleLibrary => '재생, 셔플, 반복, 간단한 라이브러리';
+  String get playbackShuffleRepeatSimpleLibrary => '자막, 가사, 구간 반복, 속도, 취침 타이머';
 
   @override
   String get convertAudioVideoBetweenFormats => 'FFmpeg로 오디오/동영상 형식 변환';
@@ -2156,7 +2156,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get noFavouritesYetTapStar => '아직 즐겨찾기가 없습니다.\n곡의 별을 누르면 여기에 추가됩니다.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount회 재생 • $totalPlayedDuration';
   }
 
@@ -3492,7 +3492,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get titleCopied => '제목을 복사했습니다';
 
   @override
-  String get homeTaglinePlay => '토렌트, 음악, 동영상, 파일 변환을 하나의 앱에서.';
+  String get homeTaglinePlay => '음악, 동영상, 토렌트, 파일 변환을 하나의 앱에서.';
 
   @override
   String get spinUnlockColour => '돌리기 → 색상 잠금 해제';
@@ -4716,4 +4716,158 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get noSongsToExport => '아직 노래가 없습니다. 먼저 플레이어에서 음악 폴더를 여세요.';
+
+  @override
+  String get loopParts => '구간 반복';
+
+  @override
+  String get loopPartsHelp => '듣고 싶은 구간을 표시하세요. 그 구간만 차례로 계속 반복해서 재생됩니다.';
+
+  @override
+  String get loopStartHere => '여기서 시작';
+
+  @override
+  String loopStartsAt(String time) {
+    return '$time에 시작';
+  }
+
+  @override
+  String get loopEndHere => '여기서 끝';
+
+  @override
+  String get loopNoPartsYet =>
+      '구간이 시작하는 곳까지 재생하고 ‘여기서 시작’을 누른 다음, 끝나는 곳에서 ‘여기서 끝’을 누르세요.';
+
+  @override
+  String get loopSetToNow => '현재 시간으로 설정';
+
+  @override
+  String get loopPlayPart => '이 구간 재생';
+
+  @override
+  String get loopDeletePart => '이 구간 삭제';
+
+  @override
+  String get loopDeleteAll => '모든 구간 삭제';
+
+  @override
+  String loopingPartsCount(int count) {
+    return '반복 중인 구간 ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return '반복하지 않는 구간 ($count)';
+  }
+
+  @override
+  String get loopEdit => '편집';
+
+  @override
+  String get playbackSpeed => '재생 속도';
+
+  @override
+  String get sleepTimer => '취침 타이머';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes분';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => '이 트랙이 끝날 때';
+
+  @override
+  String get sleepTimerOff => '끔';
+
+  @override
+  String sleepTimerIn(String time) {
+    return '$time 후 정지';
+  }
+
+  @override
+  String get sleepAfterTrack => '이 트랙 후 정지';
+
+  @override
+  String continuedAt(String time) {
+    return '$time부터 이어서 재생';
+  }
+
+  @override
+  String get startOver => '처음부터';
+
+  @override
+  String get supportCardTitle => '한 사람이 무료로 만들었습니다';
+
+  @override
+  String get supportCardBody =>
+      '광고도, 추적도, 살 것도 없습니다. 이 앱이 시간을 아껴 주었다면 커피 한 잔이나 후원이 앱을 계속 이어가게 합니다.';
+
+  @override
+  String get supportCardNotNow => '나중에';
+
+  @override
+  String get supportCardNever => '다시 표시 안 함';
+
+  @override
+  String get largeView => '크게 보기';
+
+  @override
+  String get exitLargeView => '라이브러리로 돌아가기';
+
+  @override
+  String get subtitles => '자막';
+
+  @override
+  String get subtitlesNone => '없음';
+
+  @override
+  String get subtitlesChooseFile => '자막 파일 선택…';
+
+  @override
+  String get subtitlesNoneFound =>
+      '이 파일 옆에 자막이나 가사 파일이 없습니다. .srt, .vtt 또는 .lrc 파일을 선택하세요.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return '싱크: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => '더 일찍 표시';
+
+  @override
+  String get subtitlesLater => '더 늦게 표시';
+
+  @override
+  String get subtitlesShow => '자막 표시';
+
+  @override
+  String get downloadWhole => '전체';
+
+  @override
+  String get downloadOnlyParts => '일부 구간만';
+
+  @override
+  String get downloadAddPart => '구간 추가';
+
+  @override
+  String get downloadPartsHint => '각 구간은 지정한 시간 범위로 별도의 파일로 저장됩니다.';
+
+  @override
+  String get partFrom => '시작';
+
+  @override
+  String get partTo => '끝';
+
+  @override
+  String addPartsToQueue(int count) {
+    return '대기열에 추가($count개 구간)';
+  }
+
+  @override
+  String get partTimesInvalid => '각 구간은 시작 이후, 동영상 길이 안에서 끝나야 합니다.';
+
+  @override
+  String get lyrics => '가사';
 }

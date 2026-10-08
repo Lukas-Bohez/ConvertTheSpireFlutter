@@ -19,6 +19,7 @@ class BrowserInAppWebViewAdapter implements BrowserWebviewController {
   final BrowserWebViewHooks _hooks;
 
   InAppWebViewController? _controller;
+  ContentBlocking? _blocking;
   bool _desktopMode = false;
   bool _incognito = false;
   String? _lastUrl;
@@ -55,7 +56,10 @@ class BrowserInAppWebViewAdapter implements BrowserWebviewController {
       key: const ValueKey('browser_webview'),
       initialSettings: _buildSettings(),
       findInteractionController: _findInteractionController,
-      onWebViewCreated: (controller) => _controller = controller,
+      onWebViewCreated: (controller) {
+        _controller = controller;
+        if (_blocking != null) unawaited(_applyContentBlocking());
+      },
       onLoadStart: _handleLoadStart,
       onLoadStop: _handleLoadStop,
       onProgressChanged: (controller, progress) =>
@@ -186,10 +190,41 @@ class BrowserInAppWebViewAdapter implements BrowserWebviewController {
   Future<WebResourceResponse?> _shouldInterceptRequest(
       InAppWebViewController controller, WebResourceRequest request) async {
     final hook = _hooks.shouldBlockResource;
-    if (hook != null && hook(request.url.toString())) {
+    // The page itself is never blocked, only what it loads.
+    if (hook != null &&
+        hook(request.url.toString()) &&
+        request.isForMainFrame != true) {
       return WebResourceResponse(data: Uint8List(0));
     }
     return null;
+  }
+
+  static const _blockingGroup = 'cts-adblock';
+
+  @override
+  Future<void> setContentBlocking(ContentBlocking? blocking) async {
+    _blocking = blocking;
+    if (_controller != null) await _applyContentBlocking();
+  }
+
+  Future<void> _applyContentBlocking() async {
+    final controller = _controller;
+    if (controller == null) return;
+    try {
+      await controller.removeUserScriptsByGroupName(groupName: _blockingGroup);
+      final blocking = _blocking;
+      if (blocking == null) return;
+      await controller.addUserScript(
+        userScript: UserScript(
+          groupName: _blockingGroup,
+          source: blocking.documentStartScript,
+          injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+          forMainFrameOnly: false,
+        ),
+      );
+    } catch (e) {
+      debugPrint('content blocking script failed: $e');
+    }
   }
 
   @override

@@ -11,91 +11,122 @@ Convert The Spire Reborn
 ## Short description
 
 ```text
-Unduh dan konversi video dan musik, putar, kirim ke TV Anda, dan unduh torrent. Gratis, sumber terbuka, tanpa akun, tanpa pelacakan.
+Musik dan videomu dalam satu aplikasi: pemutar dengan subtitel dan pengulangan bagian, unduhan dari 1.800+ situs, konverter, transmisi ke TV, dan torrent. Gratis, tanpa akun, tanpa iklan.
 ```
 
 ## Description
 
 ```text
-Convert The Spire Reborn adalah aplikasi media serba ada untuk Windows: pengunduh, pengonversi, pemutar, dan klien torrent dalam satu jendela.
+Convert The Spire Reborn menyatukan musik dan videomu dalam satu aplikasi: pemutar dengan subtitel, pengulangan bagian, dan tampilan besar, plus semua cara untuk mengisinya, dari unduhan dan torrent sampai peramban yang memblokir iklan.
+
+PUTAR
+• Satu pustaka untuk lagu dan videomu, dengan playlist, favorit, acak, dan ulang.
+• Subtitel untuk video dan lagu: file .srt atau .vtt di samping file dimuat otomatis. Nyalakan atau matikan dengan satu ketukan, pilih file lain, atau geser jika tidak pas.
+• Lirik tersinkron: file .lrc di samping lagu menampilkan setiap baris saat dinyanyikan.
+• Ulangi bagian terbaik: tandai satu atau beberapa bagian lagu atau video, dan hanya bagian itu yang diputar, satu demi satu.
+• Tampilan besar: video memenuhi layar, tanpa apa pun di sekitarnya.
+• Kecepatan 0,5× sampai 2×, dan pengatur waktu tidur yang berhenti setelah 15 sampai 60 menit atau di akhir lagu.
+• Video panjang dan podcast dilanjutkan dari tempat terakhir.
 
 UNDUH
-• Simpan video dan musik dari YouTube dan lebih dari 1.800 situs lain, sebagai MP4, MP3, M4A, dan lainnya, dengan kualitas pilihan Anda.
-• Seluruh playlist sekaligus, lengkap dengan judul, sampul, dan tag.
-• Browser bawaan menemukan media di sebuah halaman untuk Anda.
+• Simpan video dan musik dari YouTube dan lebih dari 1.800 situs lain sebagai MP4, MP3, M4A, dan lainnya, dalam kualitas pilihanmu, atau hanya bagian yang kamu mau.
+• Seluruh playlist sekaligus, lengkap dengan judul, sampul, dan tag. Kamu juga bisa melihat lagu mana yang belum ada.
+• Tanpa masuk akun: aplikasi tidak pernah meminta akun Google atau YouTube-mu.
 
 KONVERSI
-• Konversi audio dan video ke lebih dari 27 format dengan FFmpeg, langsung di PC Anda. Tidak ada yang diunggah.
+• Konversi audio, video, dan gambar di antara lebih dari 27 format dengan FFmpeg, langsung di PC-mu. Tidak ada yang diunggah.
 
-PUTAR DAN KIRIM
-• Pemutar media untuk musik dan video Anda, dengan playlist.
-• Kirim ke TV dan speaker di jaringan Anda (DLNA/UPnP).
-• Nonton Bareng: tonton video yang sama secara sinkron dengan teman.
+TRANSMISI DAN NONTON BARENG
+• Transmisikan ke TV dan speaker di jaringanmu (DLNA/UPnP).
+• Nonton Bareng: video yang sama, serempak, dengan teman di Wi-Fi-mu. Bagikan kode enam karakter; tanpa akun, tanpa server.
 
 TORRENT
-• Klien BitTorrent lengkap: tautan magnet dan file .torrent, seeding dengan batas rasio, serta membuat dan membagikan torrent Anda sendiri.
+• Klien BitTorrent lengkap: tautan magnet dan file .torrent, seeding dengan batas rasio, dan membuat torrent sendiri.
 
-PRIVASI YANG UTAMA
-• Tanpa akun, tanpa iklan, tanpa analitik, tanpa pelacakan. Semuanya tetap di PC Anda.
+PERAMBAN
+• Peramban bawaan yang memblokir iklan dan pelacak dengan daftar filter uBlock Origin, dan menemukan media di halaman untukmu.
+
+PRIVAT SEJAK AWAL
+• Tanpa akun, tanpa iklan, tanpa analitik, tanpa pelacakan. Semuanya tetap di PC-mu.
 • Sumber terbuka (GPL-3.0) di GitHub.
 
-Tersedia dalam 18 bahasa. Unduh hanya konten yang berhak Anda unduh.
+Tersedia dalam 18 bahasa. Harap hanya unduh konten yang berhak kamu unduh.
 ```
 
 ## What's new in this version
 
 ```text
-Torrent tidak lagi membuat aplikasi macet saat file selesai atau mulai di-seed. Lagu tetap pada volumenya saat diputar lagi. Layar penuh (F11) tetap aktif saat Anda membuka halaman lain. Semua format di Konversi berfungsi, termasuk teks dari PDF dan gambar WebP. Baru: ekspor lagu Anda sebagai daftar lagu (.txt atau .csv) dari Playlist, lalu impor di perangkat lain.
+Baru: unduh hanya bagian video atau lagu yang kamu mau. Subtitel untuk video dan lagu: file .srt dan .vtt dimuat otomatis. Lirik tersinkron dari file .lrc. Ulangi bagian terbaik, ubah kecepatan, pasang pengatur waktu tidur, dan tonton dalam tampilan besar. Video panjang dilanjutkan dari tempat terakhir, dan pemblokir iklan di peramban kini memakai daftar uBlock Origin. Pemutar kini hanya punya satu set kontrol dan lebih banyak ruang untuk video, dan semua warna sudah terbuka. Diperbaiki: program yang diunduh lewat torrent bisa dijalankan saat seeding, torrent dari file yang sudah kamu punya langsung di-seed, dan video di pustaka punya thumbnail.
 ```
 
 ## Product features
 
 1.
 ```text
-Unduh video dan musik dari lebih dari 1.800 situs
+Pemutar musik dan video, dengan playlist dan favorit
 ```
 
 2.
 ```text
-Konversi antara lebih dari 27 format audio dan video
+Subtitel untuk video dan lagu (.srt dan .vtt)
 ```
 
 3.
 ```text
-Seluruh playlist dengan tag dan sampul
+Lirik lagu tersinkron (.lrc)
 ```
 
 4.
 ```text
-Pemutar media dengan playlist
+Ulangi bagian, kecepatan putar, pengatur waktu tidur
 ```
 
 5.
 ```text
-Kirim ke TV dan speaker (DLNA/UPnP)
+Tampilan besar: video tanpa apa pun di sekitarnya
 ```
 
 6.
 ```text
-Tonton video secara sinkron dengan teman
+Unduh video dan musik dari 1.800+ situs, atau hanya sebagian
 ```
 
 7.
 ```text
-Klien BitTorrent dengan tautan magnet dan seeding
+Seluruh playlist, dengan judul, tag, dan sampul
 ```
 
 8.
 ```text
-Browser bawaan yang menemukan media di halaman
+Konversi di antara 27+ format audio, video, dan gambar
 ```
 
 9.
 ```text
-Tanpa akun, tanpa iklan, tanpa pelacakan
+Transmisi ke TV dan speaker (DLNA/UPnP)
 ```
 
 10.
+```text
+Nonton video serempak bersama teman
+```
+
+11.
+```text
+Klien BitTorrent dengan tautan magnet dan seeding
+```
+
+12.
+```text
+Peramban dengan pemblokir iklan sungguhan
+```
+
+13.
+```text
+Tanpa akun, tanpa iklan, tanpa pelacakan
+```
+
+14.
 ```text
 Sumber terbuka, dalam 18 bahasa
 ```
@@ -104,37 +135,37 @@ Sumber terbuka, dalam 18 bahasa
 
 1.
 ```text
-pengunduh video
+pemutar media
 ```
 
 2.
 ```text
-konverter mp3
+pengunduh video
 ```
 
 3.
 ```text
-unduh musik
+pengunduh musik
 ```
 
 4.
 ```text
-torrent
+konverter mp3
 ```
 
 5.
 ```text
-pemutar media
+pemutar video
 ```
 
 6.
 ```text
-konverter video
+subtitel
 ```
 
 7.
 ```text
-dlna
+torrent
 ```
 
 ## Copyright and trademark info

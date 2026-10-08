@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:convert_the_spire_reborn/src/browser/adblock/adblock_scripts.dart';
+import 'package:convert_the_spire_reborn/src/browser/adblock/filter_list.dart';
 import 'package:convert_the_spire_reborn/src/browser/platform/browser_webview_controller.dart';
 import 'package:convert_the_spire_reborn/src/browser/platform/browser_webview_windows.dart';
 import 'package:flutter/material.dart';
@@ -10,9 +12,10 @@ import 'package:integration_test/integration_test.dart';
 
 /// End-to-end browser tests on a real Windows machine against a local
 /// fixture HTTP server: a Google-style search-results page for the query
-/// "minecraft", a torrent listing page with magnet links, and an ad-block
-/// probe that proves blocked fetches never leave the webview while
-/// allowed ones do.
+/// "minecraft", a torrent listing page with magnet links, and the ad blocker:
+/// the requests it blocks (a fetch, a script, an image, an iframe) never
+/// reach the server while the others do, the page itself always loads, and
+/// the elements it hides are hidden.
 ///
 /// Run with: flutter test -d windows integration_test/browser_webview_integration_test.dart
 void main() {
@@ -34,6 +37,12 @@ void main() {
       server.listen((req) async {
         requestedPaths.add(req.uri.path);
         switch (req.uri.path) {
+          case '/ad.js':
+          case '/ad-script.js':
+          case '/ad.png':
+          case '/ad-frame.html':
+            req.response.write('AD');
+            break;
           case '/allowed.js':
             req.response.headers.contentType =
                 ContentType('application', 'javascript');
@@ -65,15 +74,37 @@ void main() {
       // Userscripts: one at document start, one at document end, only for
       // the search page. The Windows adapter used to ignore this hook, so
       // userscripts never ran on Windows at all.
+      // The ad blocker's rules for the fixtures, in the filter lists' own
+      // syntax. /torrents is a page the test opens: a page is never blocked.
+      final filters = FilterSet.parse([
+        '||ads.blocked-test.local^',
+        '||127.0.0.1/ad.js',
+        '||127.0.0.1/ad-script.js',
+        '||127.0.0.1/ad.png',
+        '||127.0.0.1/ad-frame.html',
+        '||127.0.0.1/torrents',
+        '##.ad-banner',
+        '127.0.0.1##.site-promo',
+      ]);
       final hooks = BrowserWebViewHooks()
         ..userScriptsFor = (url, {required atDocumentStart}) {
           if (!url.contains('/search')) return const [];
-          return atDocumentStart
-              ? const ['window.__userscriptStart = true;']
-              : const ["document.body.dataset.userscript = 'ran';"];
+          return [
+            // As the browser screen does.
+            if (siteHideScriptFor(filters, url) case final hide?) hide,
+            atDocumentStart
+                ? 'window.__userscriptStart = true;'
+                : "document.body.dataset.userscript = 'ran';",
+          ];
         };
-      final adapter = BrowserWindowsWebViewAdapter(
-          blockedDomains: {'ads.blocked-test.local'}, hooks: hooks);
+      final adapter = BrowserWindowsWebViewAdapter(hooks: hooks);
+      // Before the webview is ready, as on opening the browser.
+      await adapter.setContentBlocking(ContentBlocking(
+        id: 'fixtures',
+        filters: filters,
+        documentStartScript:
+            documentStartScript(filters, skipYouTubeAds: true),
+      ));
       final jsMessages = <BrowserJsMessage>[];
       final urls = <String>[];
       final subs = <StreamSubscription>[
@@ -124,9 +155,9 @@ void main() {
           'true',
           reason: 'document-start userscripts must run on Windows');
 
-      // 3) Ad-block: the blocked fetch is short-circuited inside the
-      //    webview (empty response), the allowed fetch passes through and
-      //    hits the server. The page reports both via the JS bridge.
+      // 3) Ad-block: the blocked fetch gets an empty answer from inside the
+      //    webview, the allowed fetch passes through and hits the server.
+      //    The page reports both via the JS bridge.
       await _waitUntil(
           tester, () => jsMessages.any((m) => m.handler == 'adblockProbe'),
           timeout: const Duration(seconds: 30));
@@ -136,7 +167,30 @@ void main() {
           reason: 'blocked domain fetch must be neutralised, '
               'same-origin fetch must succeed');
       expect(requestedPaths, contains('/allowed.js'));
-      expect(requestedPaths, isNot(contains('/ad.js')));
+      // Nothing blocked reached the server: the old fetch/XHR hook let the
+      // page's scripts, images and iframes through.
+      for (final blocked in [
+        '/ad.js',
+        '/ad-script.js',
+        '/ad.png',
+        '/ad-frame.html',
+      ]) {
+        expect(requestedPaths, isNot(contains(blocked)), reason: blocked);
+      }
+
+      // 3b) The generic and the site's own hidden elements are hidden; the
+      //     rest is not.
+      String display(String id) => 'getComputedStyle(document.getElementById('
+          "'$id')).display";
+      for (final id in ['generic-ad', 'site-ad']) {
+        String shown = '';
+        for (var i = 0; i < 30 && shown != 'none'; i++) {
+          shown = _plain(await adapter.evaluateJs(display(id)));
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(shown, 'none', reason: '#$id must be hidden');
+      }
+      expect(_plain(await adapter.evaluateJs(display('q'))), 'block');
 
       // 4) Torrent listing page: entries and magnet links survive.
       await adapter.loadUrl('$base/torrents');
@@ -195,11 +249,16 @@ String _searchPage(String q) => '''
 <body style="background:#fff;color:#000">
 <h1>Minecraft Official Result</h1>
 <p id="q">query: $q</p>
+<div id="generic-ad" class="ad-banner">Generic ad</div>
+<div id="site-ad" class="site-promo">This site's ad</div>
+<script src="/ad-script.js"></script>
+<img src="/ad.png" alt="">
+<iframe src="/ad-frame.html"></iframe>
 <div class="result">Minecraft is a sandbox game by Mojang.</div>
 <div class="result">Download Minecraft from minecraft.net</div>
 <script>
 window.addEventListener('load', function () {
-  var blocked = fetch('http://ads.blocked-test.local/ad.js')
+  var blocked = fetch('/ad.js')
     .then(function (r) { return r.text(); })
     .then(function (t) { return 'blocked:' + t; })
     .catch(function () { return 'blocked:err'; });

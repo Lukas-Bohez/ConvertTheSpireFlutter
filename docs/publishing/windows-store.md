@@ -9,7 +9,7 @@ GitHub build:
 |---|---|---|
 | Updates | the app updates itself from GitHub | the Store updates it; the app's own update check and "Update now" are off |
 | FFmpeg, yt-dlp, Deno | downloaded on first use | come in the package (`ffmpeg\`, `yt-dlp\`, `deno\` next to the exe); nothing is downloaded at start. yt-dlp can still be updated from Settings |
-| Colours | all unlocked | one free spin a day, or all at once with the **All colours** add-on |
+| Colours | all unlocked | all unlocked (the **All colours** add-on is free) |
 | "Rate" | opens GitHub | opens the Store's rating dialog; after five starts the app asks once |
 
 All of it hangs on one build flag, `--dart-define=MS_STORE_BUILD=true`
@@ -107,7 +107,7 @@ Fill in the IARC questionnaire truthfully. It matters for these answers:
 * Users interact or share content with each other: **yes** (Watch Together,
   torrents).
 * No violence, gambling, location sharing or purchases of real-world goods.
-  Digital purchases: **yes** (the All colours add-on).
+  Digital purchases: **no** (the All colours add-on is free).
 
 ### 6. Packages
 
@@ -130,9 +130,11 @@ for each. The texts for all of them are in
 import (`scripts/store_listing.py fill`), or copy them per language. The
 English texts are also below. Screenshots: at least one,
 1366×768 or larger. The ones in `docs/screenshots/store/` are made for this
-(1920×1080: Home, Player and Torrents, and Home and Player in the dark
-theme). The **1:1 app tile icon (300×300)** is optional; use
-`docs/screenshots/store/app-tile-300.png`.
+(1920×1080: Home, the player, a video with subtitles, the large view, loop
+parts, Torrents, and the player in the dark theme). The **1:1 app tile icon
+(300×300)** is optional; use `docs/screenshots/store/app-tile-300.png`.
+**Trailers:** add `microsoft-upload/trailer/trailer.mp4` with its thumbnail;
+how it is made and uploaded is in [store-trailer.md](store-trailer.md).
 
 ### 8. Submission options
 
@@ -152,7 +154,8 @@ theme). The **1:1 app tile icon (300×300)** is optional; use
 > Download. Convert tab → pick an audio or video file → convert. Torrents tab
 > → add a magnet link of a legal torrent, such as an Ubuntu ISO. The app is
 > open source (GPL-3.0): https://github.com/Lukas-Bohez/ConvertTheSpireFlutter.
-> The "All colours" add-on only unlocks cosmetic colour themes (Support tab).
+> The free "All colours" add-on only unlocks cosmetic colour themes, which
+> the app already has unlocked.
 
 Then **Submit to the Store**. Certification usually takes 1 to 3 working days.
 
@@ -162,24 +165,24 @@ The new app → **Add-ons** → **Create a new add-on**:
 
 * **Product type:** Durable. **Product lifetime:** Forever.
 * **Product ID:** `get_all_themes`, exactly: the app finds the add-on by it.
-* **Pricing:** €2.99 (or the USD 2.99 tier). Markets: all.
+* **Pricing:** free. Selling it needs a company BIC/SWIFT code in the
+  payout profile, which Google Play does not ask for; the app unlocks every
+  colour from install anyway.
 * **Properties → Content type:** Electronic software download.
 * **Store listing:** title "All colours"; description "Unlocks all 28 colour
   themes at once, and supports the app's development."
 
 Submit it. It can be created and submitted before the app is out; it goes
-live with or after the app. Until it is live, the app's buy button shows no
-price and buying is not offered. Someone who bought it gets the colours back
-by themselves on every PC with the same Microsoft account: the app asks the
-Store at every start.
+live with or after the app. The app does not offer it: all colours are
+unlocked from install, as in the GitHub build.
 
 ## Earning from it
 
 * **Free app, paid extra.** A free app gets far more installs, and installs
   and ratings are what move an app up in Store search. The GitHub build
   stays free with the same features, so a price on the Store version mostly
-  buys fewer users. The money comes from the **All colours** add-on
-  (Microsoft keeps 15% for apps) and from donations.
+  buys fewer users. The money comes from donations: the **All colours**
+  add-on is free, as selling it needs a company BIC/SWIFT code.
 * **Donations stay in the app.** Buy Me a Coffee and GitHub Sponsors in the
   Support tab are allowed for apps that are not games, and Microsoft takes no
   share of them.

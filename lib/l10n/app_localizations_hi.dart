@@ -1807,12 +1807,12 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle एक टोरेंट क्लाइंट और मीडिया हब है। मैग्नेट लिंक और .torrent फ़ाइलें जोड़ें, डाउनलोड प्रबंधित करें और सब कुछ एक ही ऐप में व्यवस्थित रखें।';
+    return '$getAppTitle आपका संगीत और वीडियो चलाता है, सबटाइटल, सिंक किए हुए बोल, हिस्से दोहराने और बड़े दृश्य के साथ। इसमें टॉरेंट, फ़ाइल कन्वर्टर और विज्ञापन रोकने वाला ब्राउज़र भी है।';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle एक क्रॉस-प्लैटफ़ॉर्म टॉरेंट और मीडिया टूलकिट है। मैग्नेट लिंक और .torrent फ़ाइलें जोड़ें, डाउनलोड संभालें, फ़ॉर्मैट बदलें, टीवी पर कास्ट करें और भी बहुत कुछ - सब एक ही ऐप से।';
+    return '$getAppTitle आपका संगीत और वीडियो चलाता है, सबटाइटल, सिंक किए हुए बोल, हिस्से दोहराने और बड़े दृश्य के साथ, और उन्हें आपके लिए लाता है: 1,800+ साइटों से डाउनलोड, टॉरेंट, कन्वर्टर और टीवी पर कास्ट।';
   }
 
   @override
@@ -1882,7 +1882,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'प्लेबैक, शफ़ल, रिपीट और एक आसान लाइब्रेरी';
+      'सबटाइटल, बोल, लूप, स्पीड और स्लीप टाइमर';
 
   @override
   String get convertAudioVideoBetweenFormats =>
@@ -2222,7 +2222,7 @@ class AppLocalizationsHi extends AppLocalizations {
       'अभी कोई पसंदीदा नहीं।\nकिसी भी ट्रैक पर स्टार टैप करके उसे यहां जोड़ें।';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount बार चलाया • $totalPlayedDuration';
   }
 
@@ -3592,7 +3592,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'टोरेंट, संगीत, वीडियो और फ़ाइल रूपांतरण, सब एक ऐप में।';
+      'संगीत, वीडियो, टोरेंट और फ़ाइल रूपांतरण, सब एक ऐप में।';
 
   @override
   String get spinUnlockColour => 'घुमाएँ → एक रंग अनलॉक करें';
@@ -4834,4 +4834,161 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'अभी कोई गाना नहीं है। पहले प्लेयर में अपना संगीत फ़ोल्डर खोलें।';
+
+  @override
+  String get loopParts => 'हिस्सों को दोहराएं';
+
+  @override
+  String get loopPartsHelp =>
+      'वे हिस्से चिह्नित करें जिन्हें आप सुनना चाहते हैं। सिर्फ़ वही बजेंगे, बार-बार, एक के बाद एक।';
+
+  @override
+  String get loopStartHere => 'यहां से शुरू करें';
+
+  @override
+  String loopStartsAt(String time) {
+    return '$time पर शुरू होता है';
+  }
+
+  @override
+  String get loopEndHere => 'यहां खत्म करें';
+
+  @override
+  String get loopNoPartsYet =>
+      'जहां कोई हिस्सा शुरू होता है वहां तक चलाएं और “यहां से शुरू करें” दबाएं, फिर जहां वह खत्म होता है वहां “यहां खत्म करें” दबाएं।';
+
+  @override
+  String get loopSetToNow => 'मौजूदा समय पर सेट करें';
+
+  @override
+  String get loopPlayPart => 'यह हिस्सा चलाएं';
+
+  @override
+  String get loopDeletePart => 'यह हिस्सा हटाएं';
+
+  @override
+  String get loopDeleteAll => 'सभी हिस्से हटाएं';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'दोहराए जा रहे हिस्से ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'बिना दोहराव वाले हिस्से ($count)';
+  }
+
+  @override
+  String get loopEdit => 'बदलें';
+
+  @override
+  String get playbackSpeed => 'प्लेबैक स्पीड';
+
+  @override
+  String get sleepTimer => 'स्लीप टाइमर';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes मिनट';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'इस ट्रैक के अंत में';
+
+  @override
+  String get sleepTimerOff => 'बंद';
+
+  @override
+  String sleepTimerIn(String time) {
+    return '$time में रुकेगा';
+  }
+
+  @override
+  String get sleepAfterTrack => 'इस ट्रैक के बाद रुकेगा';
+
+  @override
+  String continuedAt(String time) {
+    return '$time से जारी';
+  }
+
+  @override
+  String get startOver => 'शुरू से चलाएं';
+
+  @override
+  String get supportCardTitle => 'एक व्यक्ति ने बनाया, मुफ़्त';
+
+  @override
+  String get supportCardBody =>
+      'न विज्ञापन, न ट्रैकिंग, न कुछ खरीदना। अगर इस ऐप ने आपका समय बचाया है, तो एक कॉफ़ी या स्पॉन्सरशिप इसे चलते रहने में मदद करती है।';
+
+  @override
+  String get supportCardNotNow => 'अभी नहीं';
+
+  @override
+  String get supportCardNever => 'फिर न दिखाएं';
+
+  @override
+  String get largeView => 'बड़ा दृश्य';
+
+  @override
+  String get exitLargeView => 'लाइब्रेरी पर वापस जाएं';
+
+  @override
+  String get subtitles => 'सबटाइटल';
+
+  @override
+  String get subtitlesNone => 'कोई नहीं';
+
+  @override
+  String get subtitlesChooseFile => 'सबटाइटल फ़ाइल चुनें…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'इस फ़ाइल के पास कोई सबटाइटल या बोल की फ़ाइल नहीं है। कोई .srt, .vtt या .lrc फ़ाइल चुनें।';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'समय: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'पहले दिखाएं';
+
+  @override
+  String get subtitlesLater => 'बाद में दिखाएं';
+
+  @override
+  String get subtitlesShow => 'सबटाइटल दिखाएं';
+
+  @override
+  String get downloadWhole => 'पूरा';
+
+  @override
+  String get downloadOnlyParts => 'सिर्फ़ हिस्से';
+
+  @override
+  String get downloadAddPart => 'हिस्सा जोड़ें';
+
+  @override
+  String get downloadPartsHint =>
+      'हर हिस्सा अलग फ़ाइल के रूप में सहेजा जाता है, आपके चुने समय से उस समय तक।';
+
+  @override
+  String get partFrom => 'से';
+
+  @override
+  String get partTo => 'तक';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'कतार में जोड़ें ($count हिस्से)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'हर हिस्सा शुरू होने के बाद और वीडियो के भीतर खत्म होना चाहिए।';
+
+  @override
+  String get lyrics => 'बोल';
 }

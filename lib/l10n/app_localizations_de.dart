@@ -1821,12 +1821,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle ist ein Torrent-Client und Medien-Hub. Füge Magnet-Links und .torrent-Dateien hinzu, verwalte Downloads und halte alles in einer App geordnet.';
+    return '$getAppTitle spielt deine Musik und Videos, mit Untertiteln, synchronisierten Songtexten, Schleifen und großer Ansicht. Torrents, ein Dateikonverter und ein Browser, der Werbung blockiert, sind gleich mit dabei.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle ist ein plattformübergreifendes Torrent- und Medien-Toolkit. Füge Magnet-Links und .torrent-Dateien hinzu, verwalte Downloads, konvertiere Formate, streame auf deinen Fernseher und mehr – alles in einer App.';
+    return '$getAppTitle spielt deine Musik und Videos, mit Untertiteln, synchronisierten Songtexten, Schleifen und großer Ansicht, und besorgt sie dir: Downloads von über 1.800 Seiten, Torrents, ein Konverter und Streaming auf den Fernseher.';
   }
 
   @override
@@ -1896,7 +1896,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'Wiedergabe, Zufall, Wiederholen und eine einfache Mediathek';
+      'Untertitel, Songtexte, Schleifen, Tempo und Schlaf-Timer';
 
   @override
   String get convertAudioVideoBetweenFormats =>
@@ -2237,7 +2237,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Noch keine Favoriten.\nTippe bei einem Titel auf den Stern, um ihn hier hinzuzufügen.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount× gespielt • $totalPlayedDuration';
   }
 
@@ -3614,7 +3614,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'Torrents, Musik, Videos und Dateikonvertierung in einer App.';
+      'Musik, Videos, Torrents und Dateikonvertierung in einer App.';
 
   @override
   String get spinUnlockColour => 'Drehen → Farbe freischalten';
@@ -4870,4 +4870,161 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Noch keine Musik. Öffne zuerst deinen Musikordner im Player.';
+
+  @override
+  String get loopParts => 'Abschnitte wiederholen';
+
+  @override
+  String get loopPartsHelp =>
+      'Markiere die Abschnitte, die du hören willst. Nur diese laufen, immer wieder, einer nach dem anderen.';
+
+  @override
+  String get loopStartHere => 'Hier beginnen';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Beginnt bei $time';
+  }
+
+  @override
+  String get loopEndHere => 'Hier enden';
+
+  @override
+  String get loopNoPartsYet =>
+      'Spiele bis zum Anfang eines Abschnitts und tippe auf „Hier beginnen“, dann an seinem Ende auf „Hier enden“.';
+
+  @override
+  String get loopSetToNow => 'Auf die aktuelle Zeit setzen';
+
+  @override
+  String get loopPlayPart => 'Diesen Abschnitt abspielen';
+
+  @override
+  String get loopDeletePart => 'Diesen Abschnitt löschen';
+
+  @override
+  String get loopDeleteAll => 'Alle Abschnitte löschen';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Abschnitte in Schleife ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Abschnitte ohne Schleife ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Bearbeiten';
+
+  @override
+  String get playbackSpeed => 'Wiedergabegeschwindigkeit';
+
+  @override
+  String get sleepTimer => 'Schlaf-Timer';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes Minuten';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'Am Ende dieses Titels';
+
+  @override
+  String get sleepTimerOff => 'Aus';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'Pause in $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Pause nach diesem Titel';
+
+  @override
+  String continuedAt(String time) {
+    return 'Fortgesetzt bei $time';
+  }
+
+  @override
+  String get startOver => 'Von vorn';
+
+  @override
+  String get supportCardTitle => 'Von einer Person gemacht, kostenlos';
+
+  @override
+  String get supportCardBody =>
+      'Keine Werbung, kein Tracking, nichts zu kaufen. Wenn dir die App Zeit gespart hat, hält ein Kaffee oder ein Sponsoring sie am Laufen.';
+
+  @override
+  String get supportCardNotNow => 'Nicht jetzt';
+
+  @override
+  String get supportCardNever => 'Nicht mehr zeigen';
+
+  @override
+  String get largeView => 'Große Ansicht';
+
+  @override
+  String get exitLargeView => 'Zurück zur Mediathek';
+
+  @override
+  String get subtitles => 'Untertitel';
+
+  @override
+  String get subtitlesNone => 'Keine';
+
+  @override
+  String get subtitlesChooseFile => 'Untertiteldatei wählen…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'Neben dieser Datei liegen keine Untertitel oder Songtexte. Wähle eine .srt-, .vtt- oder .lrc-Datei.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Zeitversatz: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Früher zeigen';
+
+  @override
+  String get subtitlesLater => 'Später zeigen';
+
+  @override
+  String get subtitlesShow => 'Untertitel zeigen';
+
+  @override
+  String get downloadWhole => 'Ganz';
+
+  @override
+  String get downloadOnlyParts => 'Nur Abschnitte';
+
+  @override
+  String get downloadAddPart => 'Abschnitt hinzufügen';
+
+  @override
+  String get downloadPartsHint =>
+      'Jeder Abschnitt wird als eigene Datei gespeichert, von und bis zu den Zeiten, die du angibst.';
+
+  @override
+  String get partFrom => 'Von';
+
+  @override
+  String get partTo => 'Bis';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'In die Warteschlange ($count Abschnitte)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Jeder Abschnitt muss nach seinem Beginn enden, innerhalb des Videos.';
+
+  @override
+  String get lyrics => 'Songtext';
 }

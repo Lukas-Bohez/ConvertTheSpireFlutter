@@ -18,18 +18,14 @@ import 'webview2_environment.dart';
 /// touches the flutter_inappwebview plugin at all.
 ///
 /// Known limitations vs the Android implementation:
-///  - No per-request interception: ad-block runs as an injected
-///    fetch/XHR hook using the block domain list.
 ///  - No incremental load progress (0 at start, 1 on completion).
 ///  - No tab-preview screenshots (`takeScreenshot` always returns null).
 ///  - Incognito mode is a no-op (WebView2 shares one profile).
 class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   BrowserWindowsWebViewAdapter({
-    required Set<String> blockedDomains,
     BrowserWebViewHooks? hooks,
     WebviewController Function()? controllerFactory,
-  })  : _blockedDomains = blockedDomains,
-        _hooks = hooks ?? BrowserWebViewHooks(),
+  })  : _hooks = hooks ?? BrowserWebViewHooks(),
         _controllerFactory = controllerFactory ?? WebviewController.new {
     _native = _controllerFactory();
   }
@@ -40,9 +36,12 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   /// touching a real WebView2 runtime.
   final WebviewController Function() _controllerFactory;
 
-  final Set<String> _blockedDomains;
   // ignore: unused_field
   final BrowserWebViewHooks _hooks;
+
+  ContentBlocking? _blocking;
+  String? _blockingScriptId;
+  bool _requestBlocking = false;
 
   /// Non-final: a controller that failed [initialize] must never be reused
   /// for a second attempt — `webview_windows` 0.4.0 throws "Bad state: Stream
@@ -148,9 +147,11 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
       } catch (_) {
         // Older package versions may not expose setUserAgent - non-fatal.
       }
-      // Shared JS bridge + popup suppression + ad-block hook run before any
-      // page script on every document.
+      // The shared JS bridge runs before any page script on every document.
       await _native.addScriptToExecuteOnDocumentCreated(_documentCreatedJs());
+      _blockingScriptId = null;
+      _requestBlocking = false;
+      await _applyContentBlocking();
       await applySettings(desktopMode: _desktopMode, incognito: false);
     } finally {
       _initializing = false;
@@ -261,9 +262,41 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
     }
   }
 
+  @override
+  Future<void> setContentBlocking(ContentBlocking? blocking) async {
+    _blocking = blocking;
+    // Before initialization, _init applies it.
+    if (_native.value.isInitialized) await _applyContentBlocking();
+  }
+
+  /// Requests are blocked natively (the plugin's request_blocker.cc), so no
+  /// request waits on Dart; the rules go over once and every tab shares them.
+  Future<void> _applyContentBlocking() async {
+    final native = _native;
+    final blocking = _blocking;
+    try {
+      final previous = _blockingScriptId;
+      _blockingScriptId = null;
+      if (previous != null) {
+        await native.removeScriptToExecuteOnDocumentCreated(previous);
+      }
+      if (blocking == null) {
+        if (_requestBlocking) await native.setRequestBlocking(null);
+        _requestBlocking = false;
+        return;
+      }
+      _blockingScriptId = await native
+          .addScriptToExecuteOnDocumentCreated(blocking.documentStartScript);
+      if (!await native.setRequestBlocking(blocking.id)) {
+        await native.setRequestBlockRules(blocking.toNativeRules());
+      }
+      _requestBlocking = true;
+    } catch (e) {
+      debugPrint('[BROWSER] content blocking failed: $e');
+    }
+  }
+
   String _documentCreatedJs() {
-    final domainList =
-        _blockedDomains.map((d) => "'${d.replaceAll("'", '')}'").join(',');
     return '''
 (function() {
   if (!window.__bbCall) {
@@ -272,33 +305,6 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
         window.chrome.webview.postMessage(JSON.stringify({ handler: name, payload: payload }));
       } catch (e) {}
     };
-  }
-  var blocked = [$domainList];
-  function isBlocked(url) {
-    try {
-      var host = new URL(url, location.href).hostname.toLowerCase();
-      for (var i = 0; i < blocked.length; i++) {
-        var b = blocked[i];
-        if (host === b || host.endsWith('.' + b)) return true;
-      }
-    } catch (e) {}
-    return false;
-  }
-  if (!window.__adblockHooked) {
-    window.__adblockHooked = true;
-    var _open = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function(m, u) {
-      if (isBlocked(u)) { arguments[1] = 'data:text/plain,'; }
-      return _open.apply(this, arguments);
-    };
-    var _fetch = window.fetch;
-    if (_fetch) {
-      window.fetch = function(input, init) {
-        var url = (typeof input === 'string') ? input : (input && input.url) || '';
-        if (isBlocked(url)) { return Promise.resolve(new Response('')); }
-        return _fetch.apply(this, arguments);
-      };
-    }
   }
 })();
 ''';

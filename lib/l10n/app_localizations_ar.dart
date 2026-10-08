@@ -1792,12 +1792,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle عميل تورنت ومركز وسائط. أضف روابط magnet وملفات .torrent، وأدِر التنزيلات، ونظّم كل شيء في تطبيق واحد.';
+    return 'يشغّل $getAppTitle موسيقاك وفيديوهاتك مع الترجمة والكلمات المتزامنة وتكرار المقاطع والعرض الكبير. وفيه أيضًا التورنت ومحوّل الملفات ومتصفح يحجب الإعلانات.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle حزمة تورنت ووسائط متعددة المنصات. أضف روابط magnet وملفات ‎.torrent، وأدر التنزيلات، وحوّل الصيغ، وابثّ إلى تلفازك والمزيد، كل ذلك من تطبيق واحد.';
+    return 'يشغّل $getAppTitle موسيقاك وفيديوهاتك مع الترجمة والكلمات المتزامنة وتكرار المقاطع والعرض الكبير، ويجلبها لك: تنزيل من أكثر من 1800 موقع، والتورنت، ومحوّل، والبث إلى التلفاز.';
   }
 
   @override
@@ -1866,7 +1866,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'تشغيل وتشغيل عشوائي وتكرار ومكتبة بسيطة';
+      'ترجمة وكلمات وتكرار وسرعة ومؤقت نوم';
 
   @override
   String get convertAudioVideoBetweenFormats =>
@@ -2203,7 +2203,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'لا توجد مفضلات بعد.\nاضغط على النجمة بجوار أي مقطع لإضافته هنا.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount تشغيل • $totalPlayedDuration';
   }
 
@@ -3567,7 +3567,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'التورنت والموسيقى والفيديو وتحويل الملفات في تطبيق واحد.';
+      'الموسيقى والفيديو والتورنت وتحويل الملفات في تطبيق واحد.';
 
   @override
   String get spinUnlockColour => 'أدِر ← افتح لونًا';
@@ -4809,4 +4809,161 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'لا توجد أغانٍ بعد. افتح مجلد الموسيقى في المشغل أولًا.';
+
+  @override
+  String get loopParts => 'تكرار مقاطع';
+
+  @override
+  String get loopPartsHelp =>
+      'حدّد المقاطع التي تريد سماعها. تُشغَّل هذه المقاطع فقط، مرارًا وتكرارًا، واحدًا تلو الآخر.';
+
+  @override
+  String get loopStartHere => 'ابدأ من هنا';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'يبدأ عند $time';
+  }
+
+  @override
+  String get loopEndHere => 'انتهِ هنا';
+
+  @override
+  String get loopNoPartsYet =>
+      'شغّل حتى بداية المقطع واضغط «ابدأ من هنا»، ثم اضغط «انتهِ هنا» عند نهايته.';
+
+  @override
+  String get loopSetToNow => 'اضبطه على الوقت الحالي';
+
+  @override
+  String get loopPlayPart => 'تشغيل هذا المقطع';
+
+  @override
+  String get loopDeletePart => 'حذف هذا المقطع';
+
+  @override
+  String get loopDeleteAll => 'حذف كل المقاطع';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'مقاطع قيد التكرار ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'مقاطع دون تكرار ($count)';
+  }
+
+  @override
+  String get loopEdit => 'تعديل';
+
+  @override
+  String get playbackSpeed => 'سرعة التشغيل';
+
+  @override
+  String get sleepTimer => 'مؤقت النوم';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes دقيقة';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'في نهاية هذا المقطع';
+
+  @override
+  String get sleepTimerOff => 'إيقاف';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'إيقاف مؤقت بعد $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'إيقاف مؤقت بعد هذا المقطع';
+
+  @override
+  String continuedAt(String time) {
+    return 'تم الاستئناف من $time';
+  }
+
+  @override
+  String get startOver => 'من البداية';
+
+  @override
+  String get supportCardTitle => 'صنعه شخص واحد، مجانًا';
+
+  @override
+  String get supportCardBody =>
+      'بلا إعلانات ولا تتبّع ولا شيء للشراء. إن وفّر لك هذا التطبيق وقتًا، فإن فنجان قهوة أو رعاية يبقيانه مستمرًا.';
+
+  @override
+  String get supportCardNotNow => 'ليس الآن';
+
+  @override
+  String get supportCardNever => 'لا تعرض هذا مجددًا';
+
+  @override
+  String get largeView => 'عرض كبير';
+
+  @override
+  String get exitLargeView => 'العودة إلى المكتبة';
+
+  @override
+  String get subtitles => 'الترجمة';
+
+  @override
+  String get subtitlesNone => 'بلا';
+
+  @override
+  String get subtitlesChooseFile => 'اختر ملف ترجمة…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'لا يوجد ملف ترجمة أو كلمات بجانب هذا الملف. اختر ملف .srt أو .vtt أو .lrc.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'التوقيت: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'اعرضها أبكر';
+
+  @override
+  String get subtitlesLater => 'اعرضها لاحقًا';
+
+  @override
+  String get subtitlesShow => 'عرض الترجمة';
+
+  @override
+  String get downloadWhole => 'كاملًا';
+
+  @override
+  String get downloadOnlyParts => 'مقاطع فقط';
+
+  @override
+  String get downloadAddPart => 'إضافة مقطع';
+
+  @override
+  String get downloadPartsHint =>
+      'يُحفظ كل مقطع في ملف خاص به، من الوقت الذي تحدده وإليه.';
+
+  @override
+  String get partFrom => 'من';
+
+  @override
+  String get partTo => 'إلى';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'إضافة إلى قائمة الانتظار ($count مقاطع)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'يجب أن ينتهي كل مقطع بعد بدايته وضمن مدة الفيديو.';
+
+  @override
+  String get lyrics => 'الكلمات';
 }

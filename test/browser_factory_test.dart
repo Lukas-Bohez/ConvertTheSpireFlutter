@@ -61,14 +61,6 @@ void main() {
       expect(controller, isA<BrowserWebviewController>());
     });
 
-    test('factory accepts blockedDomains parameter', () {
-      final blockedDomains = {'example.com', 'ads.example.com'};
-      final controller =
-          BrowserWebviewFactory.create(blockedDomains: blockedDomains);
-      // Should not throw on any platform
-      expect(controller, isA<BrowserWebviewController?>());
-    });
-
     test('dispose does not throw', () async {
       final controller = BrowserWebviewFactory.create();
       if (controller == null) return;

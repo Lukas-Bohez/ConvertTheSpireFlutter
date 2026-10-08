@@ -1737,12 +1737,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle 是种子客户端和媒体中心。添加磁力链接和 .torrent 文件，管理下载，并在一个应用中整理一切。';
+    return '$getAppTitle 播放你的音乐和视频，支持字幕、同步歌词、片段循环和大屏观看。还内置种子下载、文件转换和能拦截广告的浏览器。';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle 是跨平台的种子与媒体工具箱。添加磁力链接和 .torrent 文件、管理下载、转换格式、投放到电视等等，全部在一个应用中完成。';
+    return '$getAppTitle 播放你的音乐和视频，支持字幕、同步歌词、片段循环和大屏观看，还能帮你获取它们：从 1800 多个网站下载、种子下载、格式转换和投屏到电视。';
   }
 
   @override
@@ -1804,7 +1804,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get playFilesBuiltPlayerSet => '在内置播放器中播放文件，并在设置中配置文件夹、默认格式和外观。';
 
   @override
-  String get playbackShuffleRepeatSimpleLibrary => '播放、随机、循环和简洁的媒体库';
+  String get playbackShuffleRepeatSimpleLibrary => '字幕、歌词、循环、播放速度和睡眠定时';
 
   @override
   String get convertAudioVideoBetweenFormats => '用 FFmpeg 转换音视频格式';
@@ -2127,7 +2127,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noFavouritesYetTapStar => '还没有收藏。\n点任意曲目上的星标即可添加到这里。';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '播放 $playCount 次 • $totalPlayedDuration';
   }
 
@@ -3449,7 +3449,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get titleCopied => '已复制标题';
 
   @override
-  String get homeTaglinePlay => '种子下载、音乐、视频和文件转换，尽在一个应用。';
+  String get homeTaglinePlay => '音乐、视频、种子下载和文件转换，尽在一个应用。';
 
   @override
   String get spinUnlockColour => '转一转 → 解锁一种颜色';
@@ -4661,4 +4661,156 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get noSongsToExport => '还没有歌曲。请先在播放器中打开你的音乐文件夹。';
+
+  @override
+  String get loopParts => '循环片段';
+
+  @override
+  String get loopPartsHelp => '标记你想听的片段。只播放这些片段，一个接一个，循环不停。';
+
+  @override
+  String get loopStartHere => '从这里开始';
+
+  @override
+  String loopStartsAt(String time) {
+    return '从 $time 开始';
+  }
+
+  @override
+  String get loopEndHere => '在这里结束';
+
+  @override
+  String get loopNoPartsYet => '播放到片段开始的位置并点按“从这里开始”，然后在片段结束的位置点按“在这里结束”。';
+
+  @override
+  String get loopSetToNow => '设为当前时间';
+
+  @override
+  String get loopPlayPart => '播放此片段';
+
+  @override
+  String get loopDeletePart => '删除此片段';
+
+  @override
+  String get loopDeleteAll => '删除所有片段';
+
+  @override
+  String loopingPartsCount(int count) {
+    return '正在循环的片段（$count）';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return '未循环的片段（$count）';
+  }
+
+  @override
+  String get loopEdit => '编辑';
+
+  @override
+  String get playbackSpeed => '播放速度';
+
+  @override
+  String get sleepTimer => '睡眠定时';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => '本曲结束时';
+
+  @override
+  String get sleepTimerOff => '关闭';
+
+  @override
+  String sleepTimerIn(String time) {
+    return '$time 后暂停';
+  }
+
+  @override
+  String get sleepAfterTrack => '本曲结束后暂停';
+
+  @override
+  String continuedAt(String time) {
+    return '已从 $time 继续';
+  }
+
+  @override
+  String get startOver => '从头开始';
+
+  @override
+  String get supportCardTitle => '由一个人免费制作';
+
+  @override
+  String get supportCardBody =>
+      '没有广告，没有跟踪，也没有需要购买的东西。如果这个应用为你节省了时间，一杯咖啡或一次赞助能让它继续下去。';
+
+  @override
+  String get supportCardNotNow => '以后再说';
+
+  @override
+  String get supportCardNever => '不再显示';
+
+  @override
+  String get largeView => '大屏观看';
+
+  @override
+  String get exitLargeView => '返回媒体库';
+
+  @override
+  String get subtitles => '字幕';
+
+  @override
+  String get subtitlesNone => '无';
+
+  @override
+  String get subtitlesChooseFile => '选择字幕文件…';
+
+  @override
+  String get subtitlesNoneFound => '此文件旁没有字幕或歌词文件。请选择一个 .srt、.vtt 或 .lrc 文件。';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return '时间偏移：$delay';
+  }
+
+  @override
+  String get subtitlesEarlier => '提前显示';
+
+  @override
+  String get subtitlesLater => '延后显示';
+
+  @override
+  String get subtitlesShow => '显示字幕';
+
+  @override
+  String get downloadWhole => '完整';
+
+  @override
+  String get downloadOnlyParts => '仅部分片段';
+
+  @override
+  String get downloadAddPart => '添加片段';
+
+  @override
+  String get downloadPartsHint => '每个片段会按你设定的起止时间保存为单独的文件。';
+
+  @override
+  String get partFrom => '从';
+
+  @override
+  String get partTo => '到';
+
+  @override
+  String addPartsToQueue(int count) {
+    return '加入队列（$count 个片段）';
+  }
+
+  @override
+  String get partTimesInvalid => '每个片段的结束时间必须晚于开始时间，并在视频时长之内。';
+
+  @override
+  String get lyrics => '歌词';
 }

@@ -1802,12 +1802,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle is a torrent client and media hub. Add magnet links and .torrent files, manage downloads, and keep everything organized in one app.';
+    return '$getAppTitle plays your music and videos, with subtitles, synced lyrics, loops and a large view. Torrents, a file converter and a browser that blocks ads are built in too.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle is a cross-platform torrent and media toolkit. Add magnet links and .torrent files, manage downloads, convert formats, cast to your TV, and more - all from one app.';
+    return '$getAppTitle plays your music and videos, with subtitles, synced lyrics, loops and a large view, and gets them for you: downloads from 1,800+ sites, torrents, a converter and casting to your TV.';
   }
 
   @override
@@ -1877,7 +1877,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'Playback, shuffle, repeat, and a simple library';
+      'Subtitles, lyrics, loops, speed and a sleep timer';
 
   @override
   String get convertAudioVideoBetweenFormats =>
@@ -2213,8 +2213,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'No favourites yet.\nTap the star on any track to add it here.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
-    return '$playCount plays • $totalPlayedDuration';
+  String plays(int playCount, Object totalPlayedDuration) {
+    String _temp0 = intl.Intl.pluralLogic(
+      playCount,
+      locale: localeName,
+      other: '$playCount plays',
+      one: '1 play',
+    );
+    return '$_temp0 • $totalPlayedDuration';
   }
 
   @override
@@ -3580,7 +3586,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'Torrents, music, videos and file conversion in one app.';
+      'Music, videos, torrents and file conversion in one app.';
 
   @override
   String get spinUnlockColour => 'Spin → unlock a colour';
@@ -4826,4 +4832,161 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'No songs yet. Open your music folder in the Player first.';
+
+  @override
+  String get loopParts => 'Loop parts';
+
+  @override
+  String get loopPartsHelp =>
+      'Mark the parts you want to hear. Only those play, over and over, one after the other.';
+
+  @override
+  String get loopStartHere => 'Start here';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Starts at $time';
+  }
+
+  @override
+  String get loopEndHere => 'End here';
+
+  @override
+  String get loopNoPartsYet =>
+      'Play to where a part begins and press Start here, then press End here where it ends.';
+
+  @override
+  String get loopSetToNow => 'Set to the current time';
+
+  @override
+  String get loopPlayPart => 'Play this part';
+
+  @override
+  String get loopDeletePart => 'Delete this part';
+
+  @override
+  String get loopDeleteAll => 'Delete all parts';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Looping parts ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Parts not looping ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Edit';
+
+  @override
+  String get playbackSpeed => 'Playback speed';
+
+  @override
+  String get sleepTimer => 'Sleep timer';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes minutes';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'At the end of this track';
+
+  @override
+  String get sleepTimerOff => 'Off';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'Sleep in $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Sleep after this track';
+
+  @override
+  String continuedAt(String time) {
+    return 'Continued at $time';
+  }
+
+  @override
+  String get startOver => 'Start over';
+
+  @override
+  String get supportCardTitle => 'Made by one person, for free';
+
+  @override
+  String get supportCardBody =>
+      'No ads, no tracking, nothing to buy. If this app has saved you time, a coffee or a sponsorship keeps it going.';
+
+  @override
+  String get supportCardNotNow => 'Not now';
+
+  @override
+  String get supportCardNever => 'Don\'t show again';
+
+  @override
+  String get largeView => 'Large view';
+
+  @override
+  String get exitLargeView => 'Back to the library';
+
+  @override
+  String get subtitles => 'Subtitles';
+
+  @override
+  String get subtitlesNone => 'None';
+
+  @override
+  String get subtitlesChooseFile => 'Choose a subtitle file…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'No subtitle or lyrics file next to this one. Choose an .srt, .vtt or .lrc file.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Timing: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Show earlier';
+
+  @override
+  String get subtitlesLater => 'Show later';
+
+  @override
+  String get subtitlesShow => 'Show subtitles';
+
+  @override
+  String get downloadWhole => 'Whole';
+
+  @override
+  String get downloadOnlyParts => 'Only parts';
+
+  @override
+  String get downloadAddPart => 'Add a part';
+
+  @override
+  String get downloadPartsHint =>
+      'Each part is saved as a file of its own, from and to the times you set.';
+
+  @override
+  String get partFrom => 'From';
+
+  @override
+  String get partTo => 'To';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Add to queue ($count parts)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Each part has to end after it starts, within the video.';
+
+  @override
+  String get lyrics => 'Lyrics';
 }

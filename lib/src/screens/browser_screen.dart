@@ -211,6 +211,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   void initState() {
     _playbackScreenshotTimer?.cancel();
     super.initState();
+    _adBlock.addListener(_pushContentBlocking);
     _adBlock.init();
     unawaited(_userScripts.init());
     _castService.startDiscovery();
@@ -239,9 +240,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (_webViewController != null) {
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) {
-          try {
-            _webviewInputChannel.invokeMethod('registerWebView');
-          } catch (_) {}
+          _inputChannel('registerWebView');
         }
       });
     }
@@ -332,6 +331,8 @@ class _BrowserScreenState extends State<BrowserScreen>
     _playbackScreenshotTimer?.cancel();
     _castBadgeController.dispose();
     _videoDetector.removeListener(_onVideoDetectorChanged);
+    _adBlock.removeListener(_pushContentBlocking);
+    _adBlock.dispose();
     _castService.removeListener(_onCastChanged);
     _castService.stopDiscovery();
     _addressController.dispose();
@@ -424,7 +425,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (_webViewController != null) return;
     final adapter = BrowserWebviewFactory.create(
       findInteractionController: _findInteractionController,
-      blockedDomains: _adBlock.hardcodedPopupDomains,
       hooks: BrowserWebViewHooks()
         ..shouldAllowNavigation = _shouldAllowNavigation
         ..shouldBlockResource = _shouldBlockResource
@@ -459,11 +459,11 @@ class _BrowserScreenState extends State<BrowserScreen>
       }),
     ]);
 
+    _pushContentBlocking();
+
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
-      try {
-        _webviewInputChannel.invokeMethod('registerWebView');
-      } catch (_) {}
+      _inputChannel('registerWebView');
     });
 
     unawaited(adapter.applySettings(
@@ -771,15 +771,25 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   }
 
+  /// Hands the webview the ad blocker's current lists, or none when it is
+  /// off.
+  void _pushContentBlocking() {
+    unawaited(_webViewController?.setContentBlocking(_adBlock.contentBlocking));
+  }
+
   /// Userscripts to run on [url]. Document-start scripts go in before the
-  /// page's own code; everything else waits for the DOM.
+  /// page's own code; everything else waits for the DOM. The ad blocker's
+  /// hiding for the site goes with both and runs once.
   List<String> _userScriptsFor(String url, {required bool atDocumentStart}) =>
-      _userScripts.injectionsFor(
-        url,
-        runAt: atDocumentStart
-            ? UserScriptRunAt.documentStart
-            : UserScriptRunAt.documentEnd,
-      );
+      [
+        if (_adBlock.siteHideScript(url) case final hide?) hide,
+        ..._userScripts.injectionsFor(
+          url,
+          runAt: atDocumentStart
+              ? UserScriptRunAt.documentStart
+              : UserScriptRunAt.documentEnd,
+        ),
+      ];
 
   static bool _looksLikeUserScriptUrl(String url) {
     final withoutQuery = url.split('?').first.split('#').first.toLowerCase();
@@ -821,20 +831,19 @@ class _BrowserScreenState extends State<BrowserScreen>
         level: error == null ? SnackLevel.success : SnackLevel.error);
   }
 
+  /// Tells the Android TV input bridge [method]. Other platforms have no
+  /// such channel: the call fails there, and the failure, not awaited,
+  /// escaped the try around it as an unhandled error.
+  void _inputChannel(String method) {
+    unawaited(_webviewInputChannel
+        .invokeMethod<void>(method)
+        .then<void>((_) {}, onError: (Object _) {}));
+  }
+
   bool _shouldBlockResource(String url) {
-    // Ad-block (skip on YouTube/Google sites whose players depend on
-    // Google ad domains like doubleclick.net and googlesyndication.com).
-    if (_adBlock.adBlockEnabled && _adBlock.shouldBlock(url)) {
-      final pageHost =
-          Uri.tryParse(_addressController.text)?.host.toLowerCase() ?? '';
-      final isGoogleSite = pageHost.endsWith('youtube.com') ||
-          pageHost.endsWith('.youtube.com') ||
-          pageHost.endsWith('google.com') ||
-          pageHost.endsWith('.google.com') ||
-          pageHost.contains('.google.');
-      if (!isGoogleSite) {
-        return true;
-      }
+    // YouTube's and Google's own pages are left alone (FilterSet.exemptPages).
+    if (_adBlock.shouldBlock(url, pageUrl: _addressController.text)) {
+      return true;
     }
 
     // Video detection via network sniffing.
@@ -898,9 +907,7 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   void _resumeCursor() {
     if (!mounted || _webViewController == null) return;
-    try {
-      _webviewInputChannel.invokeMethod('dismissIME');
-    } catch (_) {}
+    _inputChannel('dismissIME');
     if (!_cursorActive) {
       setState(() => _cursorActive = true);
     }

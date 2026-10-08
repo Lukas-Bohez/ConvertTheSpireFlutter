@@ -1,0 +1,54 @@
+<en-US>
+New: subtitles for videos and songs, looping the best part, a large view, playback speed and a sleep timer. Synced lyrics from .lrc files. Long videos open where you left off. The player has one set of controls and more room for the video, and the browser blocks ads with uBlock Origin's lists. Fixed: torrents of files you already have seed at once, and videos in your library have thumbnails.
+</en-US>
+<de-DE>
+Neu: Untertitel für Videos und Songs, die beste Stelle in Schleife, eine große Ansicht, Wiedergabegeschwindigkeit und ein Schlaf-Timer. Synchronisierte Songtexte aus .lrc-Dateien. Lange Videos gehen dort weiter, wo du aufgehört hast. Der Player hat nur noch eine Steuerung und mehr Platz fürs Video, und der Browser blockiert Werbung mit den Listen von uBlock Origin. Behoben: Torrents von Dateien, die du schon hast, seeden sofort, und Videos haben Vorschaubilder.
+</de-DE>
+<nl-NL>
+Nieuw: ondertitels voor video's en liedjes, het beste stuk herhalen, groot beeld, afspeelsnelheid en een slaaptimer. Meelopende songteksten uit .lrc-bestanden. Lange video's gaan verder waar je gebleven was. De speler heeft één set knoppen en meer ruimte voor de video, en de browser blokkeert advertenties met de lijsten van uBlock Origin. Opgelost: torrents van bestanden die je al hebt seeden meteen, en video's hebben miniaturen.
+</nl-NL>
+<fr-FR>
+Nouveau : sous-titres pour les vidéos et les chansons, meilleur passage en boucle, grand affichage, vitesse de lecture et minuteur de veille. Paroles synchronisées depuis les fichiers .lrc. Les longues vidéos reprennent là où vous vous étiez arrêté. Le lecteur n'a plus qu'un jeu de commandes et plus de place pour la vidéo, et le navigateur bloque les pubs avec les listes d'uBlock Origin. Corrigé : les torrents de fichiers déjà présents se partagent aussitôt, et les vidéos ont des miniatures.
+</fr-FR>
+<es-ES>
+Novedades: subtítulos para vídeos y canciones, la mejor parte en bucle, vista grande, velocidad de reproducción y temporizador. Letras sincronizadas desde archivos .lrc. Los vídeos largos siguen donde los dejaste. El reproductor tiene un solo juego de controles y más espacio para el vídeo, y el navegador bloquea anuncios con las listas de uBlock Origin. Corregido: los torrents de archivos que ya tienes se comparten al instante y los vídeos tienen miniaturas.
+</es-ES>
+<it-IT>
+Novità: sottotitoli per video e canzoni, la parte migliore in loop, vista grande, velocità di riproduzione e timer di spegnimento. Testi sincronizzati dai file .lrc. I video lunghi riprendono da dove eri rimasto. Il lettore ha un solo set di comandi e più spazio per il video, e il browser blocca la pubblicità con le liste di uBlock Origin. Corretto: i torrent di file che hai già vanno subito in seeding e i video hanno le miniature.
+</it-IT>
+<pt-BR>
+Novo: legendas para vídeos e músicas, a melhor parte em repetição, visualização ampliada, velocidade de reprodução e timer de desligamento. Letras sincronizadas de arquivos .lrc. Vídeos longos continuam de onde você parou. O player tem um só conjunto de controles e mais espaço para o vídeo, e o navegador bloqueia anúncios com as listas do uBlock Origin. Corrigido: torrents de arquivos que você já tem são semeados na hora e os vídeos têm miniaturas.
+</pt-BR>
+<pl-PL>
+Nowość: napisy do filmów i piosenek, zapętlanie najlepszego fragmentu, duży widok, prędkość odtwarzania i wyłącznik czasowy. Zsynchronizowane teksty z plików .lrc. Długie filmy wracają tam, gdzie skończyłeś. Odtwarzacz ma jeden zestaw przycisków i więcej miejsca na film, a przeglądarka blokuje reklamy listami uBlock Origin. Naprawione: torrenty plików, które już masz, od razu się seedują, a filmy mają miniatury.
+</pl-PL>
+<ru-RU>
+Новое: субтитры для видео и песен, повтор лучшего фрагмента, большой экран, скорость воспроизведения и таймер сна. Синхронный текст песен из файлов .lrc. Длинные видео продолжаются с того места, где вы остановились. У плеера один набор кнопок и больше места для видео, а браузер блокирует рекламу по спискам uBlock Origin. Исправлено: торренты файлов, которые у вас уже есть, сразу раздаются, а у видео есть миниатюры.
+</ru-RU>
+<uk>
+Нове: субтитри для відео й пісень, повтор найкращого фрагмента, великий екран, швидкість відтворення і таймер сну. Синхронний текст пісень із файлів .lrc. Довгі відео продовжуються з того місця, де ви зупинилися. У програвача один набір кнопок і більше місця для відео, а браузер блокує рекламу за списками uBlock Origin. Виправлено: торенти файлів, які у вас уже є, одразу роздаються, а відео мають мініатюри.
+</uk>
+<tr-TR>
+Yeni: videolar ve şarkılar için altyazı, en iyi bölümü döngüye alma, büyük görünüm, oynatma hızı ve uyku zamanlayıcısı. .lrc dosyalarından senkronize şarkı sözleri. Uzun videolar kaldığın yerden devam eder. Oynatıcının tek bir kontrol seti ve videoya daha fazla yeri var; tarayıcı reklamları uBlock Origin'in listeleriyle engeller. Düzeltildi: zaten sahip olduğun dosyaların torrentleri hemen paylaşılır ve videoların küçük resimleri var.
+</tr-TR>
+<ar>
+جديد: ترجمة للفيديوهات والأغاني، وتكرار أفضل جزء، وعرض كبير، وسرعة التشغيل، ومؤقت النوم. كلمات متزامنة من ملفات .lrc. تُستأنف الفيديوهات الطويلة من حيث توقفت. للمشغّل مجموعة أزرار واحدة ومساحة أكبر للفيديو، والمتصفح يحجب الإعلانات بقوائم uBlock Origin. تم الإصلاح: ملفات التورنت لملفات لديك أصلًا تُشارَك فورًا، وللفيديوهات صور مصغّرة.
+</ar>
+<hi-IN>
+नया: वीडियो और गानों के लिए सबटाइटल, सबसे अच्छा हिस्सा दोहराना, बड़ा दृश्य, प्लेबैक स्पीड और स्लीप टाइमर। .lrc फ़ाइलों से सिंक किए हुए बोल। लंबे वीडियो वहीं से शुरू होते हैं जहां आपने छोड़ा था। प्लेयर में कंट्रोल का एक ही सेट है और वीडियो के लिए ज़्यादा जगह, और ब्राउज़र uBlock Origin की सूचियों से विज्ञापन रोकता है। ठीक किया गया: जो फ़ाइलें पहले से आपके पास हैं उनके टॉरेंट तुरंत सीड होते हैं, और वीडियो में थंबनेल हैं।
+</hi-IN>
+<id>
+Baru: subtitel untuk video dan lagu, mengulang bagian terbaik, tampilan besar, kecepatan putar, dan pengatur waktu tidur. Lirik tersinkron dari file .lrc. Video panjang dilanjutkan dari tempat terakhir. Pemutar punya satu set kontrol dan lebih banyak ruang untuk video, dan peramban memblokir iklan dengan daftar uBlock Origin. Diperbaiki: torrent dari file yang sudah kamu punya langsung di-seed, dan video punya thumbnail.
+</id>
+<vi>
+Mới: phụ đề cho video và bài hát, lặp đoạn hay nhất, chế độ xem lớn, tốc độ phát và hẹn giờ tắt. Lời bài hát đồng bộ từ tệp .lrc. Video dài tiếp tục từ chỗ bạn đã dừng. Trình phát chỉ còn một bộ nút điều khiển và nhiều chỗ hơn cho video, và trình duyệt chặn quảng cáo bằng danh sách của uBlock Origin. Đã sửa: torrent của tệp bạn đã có được seed ngay, và video có ảnh thu nhỏ.
+</vi>
+<ja-JP>
+新機能：動画と曲の字幕、好きなパートのループ、大きく表示、再生速度、スリープタイマー。.lrc ファイルによる歌詞の同期表示。長い動画は前回の続きから再生。プレーヤーの操作ボタンはひとつにまとまり、動画が大きくなりました。ブラウザは uBlock Origin のリストで広告をブロックします。修正：すでに持っているファイルのトレントはすぐにシードされ、動画にサムネイルが付きました。
+</ja-JP>
+<ko-KR>
+새 기능: 동영상과 노래 자막, 가장 좋은 구간 반복, 크게 보기, 재생 속도, 취침 타이머. .lrc 파일로 가사 동기화. 긴 동영상은 멈춘 곳부터 이어서 재생됩니다. 플레이어는 조작 버튼이 한 세트뿐이고 동영상 공간이 넓어졌으며, 브라우저는 uBlock Origin의 목록으로 광고를 차단합니다. 수정: 이미 있는 파일의 토렌트는 바로 시딩되고, 동영상에 썸네일이 생겼습니다.
+</ko-KR>
+<zh-CN>
+新功能：视频和歌曲字幕、循环最喜欢的片段、大屏观看、播放速度和睡眠定时。支持 .lrc 同步歌词。长视频会从上次停下的地方继续。播放器只有一组控制按钮，视频空间更大，浏览器使用 uBlock Origin 的列表拦截广告。修复：你已有文件的种子会立即做种，视频有了缩略图。
+</zh-CN>

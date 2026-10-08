@@ -16,7 +16,9 @@ class PreviewPlayerService {
     _player = AudioPlayer();
     try {
       await _player!.setUrl(url);
-      await _player!.play();
+      // Not awaited: play() completes only when playback stops, and the
+      // timer that stops the preview has to start now.
+      unawaited(_player!.play().catchError((Object _) => stopPreview()));
       _isPlaying = true;
 
       _autoStopTimer = Timer(Duration(seconds: previewSeconds), () {
@@ -34,7 +36,9 @@ class PreviewPlayerService {
     _player = AudioPlayer();
     try {
       await _player!.setFilePath(filePath);
-      await _player!.play();
+      // Not awaited: play() completes only when playback stops, and the
+      // timer that stops the preview has to start now.
+      unawaited(_player!.play().catchError((Object _) => stopPreview()));
       _isPlaying = true;
 
       _autoStopTimer = Timer(Duration(seconds: previewSeconds), () {

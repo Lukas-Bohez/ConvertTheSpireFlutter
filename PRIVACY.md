@@ -17,6 +17,7 @@ The app has no account, no sign-in and no server of mine to talk to. It sends me
 - **gyan.dev** (Windows only): when FFmpeg is missing, the app downloads it from there, the same way.
 - **Torrent trackers and peers**, if you use torrents: they see your IP address, as with any BitTorrent client.
 - **Devices on your own network**, if you cast or use Watch Together.
+- **MusicBrainz** (musicbrainz.org), only when you use **Fix missing metadata** in the player: it looks up the artist of each song in your library that has none, by the song's title. Nothing else goes with it.
 - **Google AdMob**, in the Google Play build only (see below).
 
 **Report a bug** in Settings opens a GitHub issue page in your browser with your app version, platform and recent log. You see all of it first, and nothing is sent unless you submit it.

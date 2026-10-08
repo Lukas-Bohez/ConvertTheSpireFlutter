@@ -1807,12 +1807,12 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle adalah klien torrent dan pusat media. Tambahkan tautan magnet dan file .torrent, kelola unduhan, dan atur semuanya dalam satu aplikasi.';
+    return '$getAppTitle memutar musik dan videomu, dengan subtitel, lirik tersinkron, pengulangan bagian, dan tampilan besar. Torrent, konverter file, dan peramban yang memblokir iklan juga sudah ada.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle adalah perangkat torrent dan media lintas platform. Tambahkan tautan magnet dan file .torrent, kelola unduhan, konversi format, transmisikan ke TV, dan banyak lagi - semua dari satu aplikasi.';
+    return '$getAppTitle memutar musik dan videomu, dengan subtitel, lirik tersinkron, pengulangan bagian, dan tampilan besar, sekaligus mengambilkannya untukmu: unduhan dari 1.800+ situs, torrent, konverter, dan transmisi ke TV.';
   }
 
   @override
@@ -1882,7 +1882,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'Pemutaran, acak, ulangi, dan pustaka sederhana';
+      'Subtitel, lirik, pengulangan, kecepatan, dan pengatur waktu tidur';
 
   @override
   String get convertAudioVideoBetweenFormats =>
@@ -2221,7 +2221,7 @@ class AppLocalizationsId extends AppLocalizations {
       'Belum ada favorit.\nKetuk bintang di lagu mana pun untuk menambahkannya di sini.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount kali diputar • $totalPlayedDuration';
   }
 
@@ -3596,7 +3596,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'Torrent, musik, video, dan konversi file dalam satu aplikasi.';
+      'Musik, video, torrent, dan konversi file dalam satu aplikasi.';
 
   @override
   String get spinUnlockColour => 'Putar → buka satu warna';
@@ -4851,4 +4851,161 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Belum ada lagu. Buka folder musik Anda di Pemutar terlebih dahulu.';
+
+  @override
+  String get loopParts => 'Ulangi bagian';
+
+  @override
+  String get loopPartsHelp =>
+      'Tandai bagian yang ingin Anda dengar. Hanya bagian itu yang diputar, berulang-ulang, satu per satu.';
+
+  @override
+  String get loopStartHere => 'Mulai di sini';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Mulai pada $time';
+  }
+
+  @override
+  String get loopEndHere => 'Selesai di sini';
+
+  @override
+  String get loopNoPartsYet =>
+      'Putar sampai awal sebuah bagian lalu tekan Mulai di sini, kemudian tekan Selesai di sini di akhir bagian itu.';
+
+  @override
+  String get loopSetToNow => 'Atur ke waktu sekarang';
+
+  @override
+  String get loopPlayPart => 'Putar bagian ini';
+
+  @override
+  String get loopDeletePart => 'Hapus bagian ini';
+
+  @override
+  String get loopDeleteAll => 'Hapus semua bagian';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Mengulang bagian ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Bagian tidak diulang ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Edit';
+
+  @override
+  String get playbackSpeed => 'Kecepatan putar';
+
+  @override
+  String get sleepTimer => 'Pengatur waktu tidur';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes menit';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'Di akhir lagu ini';
+
+  @override
+  String get sleepTimerOff => 'Mati';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'Berhenti dalam $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Berhenti setelah lagu ini';
+
+  @override
+  String continuedAt(String time) {
+    return 'Dilanjutkan pada $time';
+  }
+
+  @override
+  String get startOver => 'Mulai dari awal';
+
+  @override
+  String get supportCardTitle => 'Dibuat oleh satu orang, gratis';
+
+  @override
+  String get supportCardBody =>
+      'Tanpa iklan, tanpa pelacakan, tidak ada yang perlu dibeli. Jika aplikasi ini menghemat waktu Anda, secangkir kopi atau sponsor membuatnya terus berjalan.';
+
+  @override
+  String get supportCardNotNow => 'Nanti saja';
+
+  @override
+  String get supportCardNever => 'Jangan tampilkan lagi';
+
+  @override
+  String get largeView => 'Tampilan besar';
+
+  @override
+  String get exitLargeView => 'Kembali ke pustaka';
+
+  @override
+  String get subtitles => 'Subtitel';
+
+  @override
+  String get subtitlesNone => 'Tidak ada';
+
+  @override
+  String get subtitlesChooseFile => 'Pilih file subtitel…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'Tidak ada file subtitel atau lirik di samping file ini. Pilih file .srt, .vtt, atau .lrc.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Waktu: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Tampilkan lebih awal';
+
+  @override
+  String get subtitlesLater => 'Tampilkan lebih lambat';
+
+  @override
+  String get subtitlesShow => 'Tampilkan subtitel';
+
+  @override
+  String get downloadWhole => 'Utuh';
+
+  @override
+  String get downloadOnlyParts => 'Hanya bagian';
+
+  @override
+  String get downloadAddPart => 'Tambah bagian';
+
+  @override
+  String get downloadPartsHint =>
+      'Setiap bagian disimpan sebagai file tersendiri, dari dan sampai waktu yang Anda tentukan.';
+
+  @override
+  String get partFrom => 'Dari';
+
+  @override
+  String get partTo => 'Sampai';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Tambahkan ke antrean ($count bagian)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Setiap bagian harus berakhir setelah dimulai, di dalam durasi video.';
+
+  @override
+  String get lyrics => 'Lirik';
 }

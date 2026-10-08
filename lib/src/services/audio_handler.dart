@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
@@ -54,7 +55,11 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> play() => _player.play();
+  Future<void> play() async {
+    // play() completes only when playback pauses; the notification's
+    // button shouldn't wait for that.
+    unawaited(_player.play());
+  }
 
   @override
   Future<void> pause() => _player.pause();
@@ -87,10 +92,14 @@ Future<AppAudioHandler?> initAudioService(AudioPlayer player) async {
   try {
     final handler = await AudioService.init<AppAudioHandler>(
       builder: () => AppAudioHandler(player),
-      config: AudioServiceConfig(
+      config: const AudioServiceConfig(
         androidNotificationChannelId: 'com.orokaconner.convertthespire.audio',
         androidNotificationChannelName: 'Audio Playback',
-        androidNotificationOngoing: true,
+        // The service stays in the foreground while paused, so Android
+        // doesn't stop it. 'Ongoing' only works with the opposite (and
+        // audio_service asserts on the pair, so debug builds never got
+        // background playback); release builds ignored it anyway.
+        androidNotificationOngoing: false,
         androidStopForegroundOnPause: false,
       ),
     );

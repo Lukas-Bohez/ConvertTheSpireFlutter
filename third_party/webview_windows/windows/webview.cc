@@ -6,6 +6,7 @@
 #include <format>
 #include <iostream>
 
+#include "request_blocker.h"
 #include "util/composition.desktop.interop.h"
 #include "util/string_converter.h"
 #include "webview_host.h"
@@ -173,6 +174,61 @@ void Webview::RegisterEventHandlers() {
   if (!webview_) {
     return;
   }
+
+  webview_->add_NavigationStarting(
+      Callback<ICoreWebView2NavigationStartingEventHandler>(
+          [this](ICoreWebView2* sender,
+                 ICoreWebView2NavigationStartingEventArgs* args) -> HRESULT {
+            wil::unique_cotaskmem_string uri;
+            if (SUCCEEDED(args->get_Uri(&uri))) {
+              main_navigation_url_ = util::Utf8FromUtf16(uri.get());
+            }
+            return S_OK;
+          })
+          .Get(),
+      &event_registrations_.navigation_starting_token_);
+
+  // The ad blocker. Requests are only raised here while SetRequestBlocking
+  // has the filter added.
+  webview_->add_WebResourceRequested(
+      Callback<ICoreWebView2WebResourceRequestedEventHandler>(
+          [this](ICoreWebView2* sender,
+                 ICoreWebView2WebResourceRequestedEventArgs* args) -> HRESULT {
+            const auto& rules = RequestBlockRules::Shared();
+            if (!request_blocking_ || !rules) {
+              return S_OK;
+            }
+            wil::com_ptr<ICoreWebView2WebResourceRequest> request;
+            wil::unique_cotaskmem_string uri;
+            if (FAILED(args->get_Request(&request)) ||
+                FAILED(request->get_Uri(&uri))) {
+              return S_OK;
+            }
+            const auto url = util::Utf8FromUtf16(uri.get());
+            COREWEBVIEW2_WEB_RESOURCE_CONTEXT context;
+            if (SUCCEEDED(args->get_ResourceContext(&context)) &&
+                context == COREWEBVIEW2_WEB_RESOURCE_CONTEXT_DOCUMENT &&
+                url == main_navigation_url_) {
+              return S_OK;  // the page itself
+            }
+            wil::unique_cotaskmem_string source;
+            const auto page = SUCCEEDED(webview_->get_Source(&source))
+                                  ? util::Utf8FromUtf16(source.get())
+                                  : std::string();
+            if (!rules->Blocks(url, page)) {
+              return S_OK;
+            }
+            // An empty answer, as the Android webview gives: a page waiting
+            // on a blocked script carries on instead of failing.
+            wil::com_ptr<ICoreWebView2WebResourceResponse> response;
+            if (SUCCEEDED(host_->environment()->CreateWebResourceResponse(
+                    nullptr, 200, L"OK", L"", &response))) {
+              args->put_Response(response.get());
+            }
+            return S_OK;
+          })
+          .Get(),
+      &event_registrations_.web_resource_requested_token_);
 
   webview_->add_ContentLoading(
       Callback<ICoreWebView2ContentLoadingEventHandler>(
@@ -446,6 +502,20 @@ bool Webview::SetUserAgent(const std::string& user_agent) {
            S_OK;
   }
   return false;
+}
+
+void Webview::SetRequestBlocking(bool enabled) {
+  if (!IsValid() || request_blocking_ == enabled) {
+    return;
+  }
+  request_blocking_ = enabled;
+  if (enabled) {
+    webview_->AddWebResourceRequestedFilter(
+        L"*", COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
+  } else {
+    webview_->RemoveWebResourceRequestedFilter(
+        L"*", COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
+  }
 }
 
 bool Webview::SetBackgroundColor(int32_t color) {

@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, kDebugMode, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -49,7 +50,7 @@ import '../widgets/whats_new_dialog.dart';
 import 'browser_screen.dart';
 import 'bulk_import_screen.dart';
 import 'guide_screen.dart';
-import 'player.dart' show PlayerPage, PlayerState, MediaType;
+import 'player.dart' show PlayerPage, PlayerScreen, PlayerState, MediaType;
 import 'playlist_screen.dart';
 import 'search_screen.dart';
 import 'statistics_screen.dart';
@@ -468,12 +469,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             final idx = QuickLinksService.routeToIndex[route];
             if (idx != null) _navigateToPage(idx);
           },
-          onDownload: (result, format, quality) async {
-            widget.controller.addSearchResultToQueue(
-              result,
-              format: format,
-              videoQuality: quality,
-            );
+          onDownload: (result, format, quality, {parts = const []}) async {
+            // A file per part, or all of it.
+            for (final part in parts.isEmpty ? const [null] : parts) {
+              widget.controller.addSearchResultToQueue(
+                result,
+                format: format,
+                videoQuality: quality,
+                part: part,
+              );
+            }
             unawaited(widget.controller.downloadAll());
             _navigateToPage(3); // show queue
           },
@@ -536,6 +541,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (!kPlayStoreBuild) return;
     if (context.read<PlayerState>().isPlaying) return;
     unawaited(AdService.instance.maybeShowInterstitialAtBreak());
+  }
+
+  /// Opens the page of [route] (`player.tab`, ...), as its tile on Home
+  /// does. For the store tour (integration_test/store_tour_test.dart).
+  @visibleForTesting
+  void openPage(String route) {
+    final index = QuickLinksService.routeToIndex[route];
+    if (index != null) _navigateToPage(index);
   }
 
   void _navigateToPage(int index) {
@@ -822,7 +835,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         !_updateBannerDismissed) {
       return Column(
         children: [
-          UpdateBanner(
+          PlayerScreen.hiddenWhileImmersive(UpdateBanner(
             info: _updateInfo!,
             installsInPlace: _canInstallUpdateInPlace(_updateInfo!),
             onDismiss: () async {
@@ -851,15 +864,15 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
               }
             },
-          ),
+          )),
           if (showBanner && description != null)
-            OnboardingBanner(
+            PlayerScreen.hiddenWhileImmersive(OnboardingBanner(
               message: description,
               onDismiss: () {
                 _onboarding.markScreenVisited(route);
                 if (mounted) setState(() => _dismissedBannerRoute = route);
               },
-            ),
+            )),
           Expanded(child: stack),
         ],
       );
@@ -868,13 +881,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (showBanner && description != null) {
       return Column(
         children: [
-          OnboardingBanner(
+          PlayerScreen.hiddenWhileImmersive(OnboardingBanner(
             message: description,
             onDismiss: () {
               _onboarding.markScreenVisited(route);
               if (mounted) setState(() => _dismissedBannerRoute = route);
             },
-          ),
+          )),
           Expanded(child: stack),
         ],
       );

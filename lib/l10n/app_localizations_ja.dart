@@ -1762,12 +1762,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle はトレントクライアント兼メディアハブです。マグネットリンクや .torrent ファイルを追加し、ダウンロードを管理し、すべてをひとつのアプリで整理できます。';
+    return '$getAppTitle は、字幕、歌詞の同期表示、パートのループ、大きく表示で音楽と動画を再生します。トレント、ファイル変換、広告をブロックするブラウザも内蔵。';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle はクロスプラットフォームのトレント＆メディアツールキットです。マグネットリンクや .torrent ファイルの追加、ダウンロード管理、形式変換、テレビへのキャストなどを、ひとつのアプリで行えます。';
+    return '$getAppTitle は、字幕、歌詞の同期表示、パートのループ、大きく表示で音楽と動画を再生し、入手も手伝います：1,800 以上のサイトからのダウンロード、トレント、変換、テレビへのキャスト。';
   }
 
   @override
@@ -1831,7 +1831,7 @@ class AppLocalizationsJa extends AppLocalizations {
       '内蔵プレーヤーでファイルを再生し、設定でフォルダ・既定の形式・外観を指定できます。';
 
   @override
-  String get playbackShuffleRepeatSimpleLibrary => '再生、シャッフル、リピート、シンプルなライブラリ';
+  String get playbackShuffleRepeatSimpleLibrary => '字幕、歌詞、ループ、再生速度、スリープタイマー';
 
   @override
   String get convertAudioVideoBetweenFormats => 'FFmpeg で音声・動画の形式を変換';
@@ -2155,7 +2155,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get noFavouritesYetTapStar => 'お気に入りはまだありません。\n曲の星をタップするとここに追加されます。';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount 回再生 • $totalPlayedDuration';
   }
 
@@ -3493,7 +3493,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get titleCopied => 'タイトルをコピーしました';
 
   @override
-  String get homeTaglinePlay => 'トレント、音楽、動画、ファイル変換をひとつのアプリで。';
+  String get homeTaglinePlay => '音楽、動画、トレント、ファイル変換をひとつのアプリで。';
 
   @override
   String get spinUnlockColour => '回す → 色をアンロック';
@@ -4717,4 +4717,158 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get noSongsToExport => 'まだ曲がありません。まずプレーヤーで音楽フォルダーを開いてください。';
+
+  @override
+  String get loopParts => 'パートをループ';
+
+  @override
+  String get loopPartsHelp => '聴きたいパートに印を付けてください。そのパートだけが順番に繰り返し再生されます。';
+
+  @override
+  String get loopStartHere => 'ここから開始';
+
+  @override
+  String loopStartsAt(String time) {
+    return '$time から開始';
+  }
+
+  @override
+  String get loopEndHere => 'ここで終了';
+
+  @override
+  String get loopNoPartsYet =>
+      'パートの始まりまで再生して「ここから開始」を押し、終わりの所で「ここで終了」を押してください。';
+
+  @override
+  String get loopSetToNow => '現在の時間に設定';
+
+  @override
+  String get loopPlayPart => 'このパートを再生';
+
+  @override
+  String get loopDeletePart => 'このパートを削除';
+
+  @override
+  String get loopDeleteAll => 'すべてのパートを削除';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'ループ中のパート ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'ループしていないパート ($count)';
+  }
+
+  @override
+  String get loopEdit => '編集';
+
+  @override
+  String get playbackSpeed => '再生速度';
+
+  @override
+  String get sleepTimer => 'スリープタイマー';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes 分';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'このトラックの終わりに';
+
+  @override
+  String get sleepTimerOff => 'オフ';
+
+  @override
+  String sleepTimerIn(String time) {
+    return '$time 後に停止';
+  }
+
+  @override
+  String get sleepAfterTrack => 'このトラックの後に停止';
+
+  @override
+  String continuedAt(String time) {
+    return '$time から再開しました';
+  }
+
+  @override
+  String get startOver => '最初から';
+
+  @override
+  String get supportCardTitle => '一人で、無料で作っています';
+
+  @override
+  String get supportCardBody =>
+      '広告なし、トラッキングなし、購入するものもありません。このアプリで時間が節約できたなら、コーヒー1杯やスポンサーが開発の支えになります。';
+
+  @override
+  String get supportCardNotNow => '今はしない';
+
+  @override
+  String get supportCardNever => '今後表示しない';
+
+  @override
+  String get largeView => '大きく表示';
+
+  @override
+  String get exitLargeView => 'ライブラリに戻る';
+
+  @override
+  String get subtitles => '字幕';
+
+  @override
+  String get subtitlesNone => 'なし';
+
+  @override
+  String get subtitlesChooseFile => '字幕ファイルを選択…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'このファイルの横に字幕や歌詞のファイルがありません。.srt、.vtt、.lrc ファイルを選んでください。';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'タイミング: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => '早く表示';
+
+  @override
+  String get subtitlesLater => '遅く表示';
+
+  @override
+  String get subtitlesShow => '字幕を表示';
+
+  @override
+  String get downloadWhole => '全体';
+
+  @override
+  String get downloadOnlyParts => '一部のみ';
+
+  @override
+  String get downloadAddPart => 'パートを追加';
+
+  @override
+  String get downloadPartsHint => '各パートは指定した時間の範囲で、それぞれ別のファイルとして保存されます。';
+
+  @override
+  String get partFrom => '開始';
+
+  @override
+  String get partTo => '終了';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'キューに追加（$count パート）';
+  }
+
+  @override
+  String get partTimesInvalid => '各パートは開始より後、動画の長さの範囲内で終わる必要があります。';
+
+  @override
+  String get lyrics => '歌詞';
 }

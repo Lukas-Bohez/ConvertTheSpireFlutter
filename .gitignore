@@ -134,3 +134,4 @@ tv-emulator*.png
 
 # Microsoft Store upload folder (scripts/make_store_upload.ps1)
 /microsoft-upload/
+/play-upload/

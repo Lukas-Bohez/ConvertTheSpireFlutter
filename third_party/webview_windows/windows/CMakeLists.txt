@@ -52,6 +52,7 @@ add_library(${PLUGIN_NAME} SHARED
   "webview.cc"
   "webview_host.cc"
   "webview_bridge.cc"
+  "request_blocker.cc"
   "texture_bridge.cc"
   "graphics_context.cc"
   "util/direct3d11.interop.cc"

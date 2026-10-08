@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
@@ -6,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'ms_store_service.dart';
+import 'support_nudge_service.dart';
 
 class ReviewService {
   static const _launchCountKey = 'launch_count';
@@ -25,6 +27,8 @@ class ReviewService {
 
   /// Call this after a positive user action.
   static Future<void> maybePromptReview() async {
+    // The same moments count towards Home's donation card.
+    unawaited(SupportNudgeService.instance.recordSuccess());
     try {
       if (kIsWeb) return;
       final platform = defaultTargetPlatform;

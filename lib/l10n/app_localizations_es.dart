@@ -1821,12 +1821,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle es un cliente de torrents y un centro multimedia. Añade enlaces magnet y archivos .torrent, gestiona las descargas y mantén todo ordenado en una sola app.';
+    return '$getAppTitle reproduce tu música y tus vídeos, con subtítulos, letras sincronizadas, bucles y vista grande. También incluye torrents, un conversor de archivos y un navegador que bloquea anuncios.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle es un kit multiplataforma de torrents y multimedia. Añade enlaces magnet y archivos .torrent, gestiona descargas, convierte formatos, envía a tu TV y mucho más, todo en una sola app.';
+    return '$getAppTitle reproduce tu música y tus vídeos, con subtítulos, letras sincronizadas, bucles y vista grande, y te los consigue: descargas de más de 1800 sitios, torrents, un conversor y envío a la TV.';
   }
 
   @override
@@ -1897,7 +1897,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'Reproducción, aleatorio, repetición y una biblioteca sencilla';
+      'Subtítulos, letras, bucles, velocidad y temporizador';
 
   @override
   String get convertAudioVideoBetweenFormats =>
@@ -2237,7 +2237,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Aún no hay favoritos.\nPulsa la estrella de cualquier pista para añadirla aquí.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount reproducciones • $totalPlayedDuration';
   }
 
@@ -3621,7 +3621,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'Torrents, música, vídeos y conversión de archivos en una sola app.';
+      'Música, vídeos, torrents y conversión de archivos en una sola app.';
 
   @override
   String get spinUnlockColour => 'Girar → desbloquear un color';
@@ -4876,4 +4876,161 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Aún no hay canciones. Abre primero tu carpeta de música en el reproductor.';
+
+  @override
+  String get loopParts => 'Repetir partes';
+
+  @override
+  String get loopPartsHelp =>
+      'Marca las partes que quieres escuchar. Solo suenan esas, una y otra vez, una tras otra.';
+
+  @override
+  String get loopStartHere => 'Empezar aquí';
+
+  @override
+  String loopStartsAt(String time) {
+    return 'Empieza en $time';
+  }
+
+  @override
+  String get loopEndHere => 'Terminar aquí';
+
+  @override
+  String get loopNoPartsYet =>
+      'Reproduce hasta donde empieza una parte y pulsa Empezar aquí; luego pulsa Terminar aquí donde acaba.';
+
+  @override
+  String get loopSetToNow => 'Poner en el momento actual';
+
+  @override
+  String get loopPlayPart => 'Reproducir esta parte';
+
+  @override
+  String get loopDeletePart => 'Eliminar esta parte';
+
+  @override
+  String get loopDeleteAll => 'Eliminar todas las partes';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Repitiendo partes ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Partes sin repetir ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Editar';
+
+  @override
+  String get playbackSpeed => 'Velocidad de reproducción';
+
+  @override
+  String get sleepTimer => 'Temporizador de apagado';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes minutos';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'Al final de esta pista';
+
+  @override
+  String get sleepTimerOff => 'Desactivado';
+
+  @override
+  String sleepTimerIn(String time) {
+    return 'Se detiene en $time';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Se detiene tras esta pista';
+
+  @override
+  String continuedAt(String time) {
+    return 'Continúa en $time';
+  }
+
+  @override
+  String get startOver => 'Empezar de nuevo';
+
+  @override
+  String get supportCardTitle => 'Hecha por una sola persona, gratis';
+
+  @override
+  String get supportCardBody =>
+      'Sin anuncios, sin rastreo, nada que comprar. Si esta app te ha ahorrado tiempo, un café o un patrocinio la mantiene viva.';
+
+  @override
+  String get supportCardNotNow => 'Ahora no';
+
+  @override
+  String get supportCardNever => 'No volver a mostrar';
+
+  @override
+  String get largeView => 'Vista grande';
+
+  @override
+  String get exitLargeView => 'Volver a la biblioteca';
+
+  @override
+  String get subtitles => 'Subtítulos';
+
+  @override
+  String get subtitlesNone => 'Ninguno';
+
+  @override
+  String get subtitlesChooseFile => 'Elegir un archivo de subtítulos…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'No hay subtítulos ni letra junto a este archivo. Elige un archivo .srt, .vtt o .lrc.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Desfase: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Mostrar antes';
+
+  @override
+  String get subtitlesLater => 'Mostrar después';
+
+  @override
+  String get subtitlesShow => 'Mostrar subtítulos';
+
+  @override
+  String get downloadWhole => 'Completo';
+
+  @override
+  String get downloadOnlyParts => 'Solo partes';
+
+  @override
+  String get downloadAddPart => 'Añadir una parte';
+
+  @override
+  String get downloadPartsHint =>
+      'Cada parte se guarda como un archivo propio, desde y hasta los momentos que indiques.';
+
+  @override
+  String get partFrom => 'Desde';
+
+  @override
+  String get partTo => 'Hasta';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Añadir a la cola ($count partes)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Cada parte debe terminar después de empezar, dentro del vídeo.';
+
+  @override
+  String get lyrics => 'Letra';
 }

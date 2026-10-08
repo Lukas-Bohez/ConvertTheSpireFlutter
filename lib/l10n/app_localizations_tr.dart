@@ -1807,12 +1807,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String torrentVaultMediaHubAdd(Object getAppTitle) {
-    return '$getAppTitle bir torrent istemcisi ve medya merkezidir. Magnet bağlantıları ve .torrent dosyaları ekleyin, indirmeleri yönetin ve her şeyi tek bir uygulamada düzenli tutun.';
+    return '$getAppTitle müziğini ve videolarını altyazı, senkronize şarkı sözleri, bölüm döngüsü ve büyük görünümle oynatır. Torrentler, dosya dönüştürücü ve reklamları engelleyen bir tarayıcı da içinde.';
   }
 
   @override
   String crossPlatformTorrentMediaToolkit(Object getAppTitle) {
-    return '$getAppTitle çapraz platform bir torrent ve medya araç setidir. Magnet bağlantıları ve .torrent dosyaları ekle, indirmeleri yönet, biçim dönüştür, TV\'ne yayınla ve daha fazlası; hepsi tek uygulamada.';
+    return '$getAppTitle müziğini ve videolarını altyazı, senkronize şarkı sözleri, bölüm döngüsü ve büyük görünümle oynatır ve onları senin için getirir: 1.800\'den fazla siteden indirme, torrentler, dönüştürücü ve TV\'ye yayın.';
   }
 
   @override
@@ -1882,7 +1882,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get playbackShuffleRepeatSimpleLibrary =>
-      'Oynatma, karıştırma, tekrarlama ve basit bir kitaplık';
+      'Altyazı, şarkı sözleri, döngü, hız ve uyku zamanlayıcısı';
 
   @override
   String get convertAudioVideoBetweenFormats =>
@@ -2221,7 +2221,7 @@ class AppLocalizationsTr extends AppLocalizations {
       'Henüz favori yok.\nBuraya eklemek için herhangi bir parçadaki yıldıza dokun.';
 
   @override
-  String plays(Object playCount, Object totalPlayedDuration) {
+  String plays(int playCount, Object totalPlayedDuration) {
     return '$playCount kez çalındı • $totalPlayedDuration';
   }
 
@@ -3599,7 +3599,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'Torrentler, müzik, videolar ve dosya dönüştürme tek bir uygulamada.';
+      'Müzik, videolar, torrentler ve dosya dönüştürme tek bir uygulamada.';
 
   @override
   String get spinUnlockColour => 'Çevir → bir rengin kilidini aç';
@@ -4852,4 +4852,161 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get noSongsToExport =>
       'Henüz şarkı yok. Önce oynatıcıda müzik klasörünüzü açın.';
+
+  @override
+  String get loopParts => 'Bölümleri döngüye al';
+
+  @override
+  String get loopPartsHelp =>
+      'Dinlemek istediğin bölümleri işaretle. Yalnızca onlar, art arda, tekrar tekrar çalar.';
+
+  @override
+  String get loopStartHere => 'Buradan başla';
+
+  @override
+  String loopStartsAt(String time) {
+    return '$time konumunda başlar';
+  }
+
+  @override
+  String get loopEndHere => 'Burada bitir';
+
+  @override
+  String get loopNoPartsYet =>
+      'Bir bölümün başladığı yere kadar oynat ve Buradan başla düğmesine bas, sonra bittiği yerde Burada bitir düğmesine bas.';
+
+  @override
+  String get loopSetToNow => 'Şu anki zamana ayarla';
+
+  @override
+  String get loopPlayPart => 'Bu bölümü oynat';
+
+  @override
+  String get loopDeletePart => 'Bu bölümü sil';
+
+  @override
+  String get loopDeleteAll => 'Tüm bölümleri sil';
+
+  @override
+  String loopingPartsCount(int count) {
+    return 'Döngüdeki bölümler ($count)';
+  }
+
+  @override
+  String loopPartsOffCount(int count) {
+    return 'Döngüde olmayan bölümler ($count)';
+  }
+
+  @override
+  String get loopEdit => 'Düzenle';
+
+  @override
+  String get playbackSpeed => 'Oynatma hızı';
+
+  @override
+  String get sleepTimer => 'Uyku zamanlayıcısı';
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes dakika';
+  }
+
+  @override
+  String get sleepTimerEndOfTrack => 'Bu parçanın sonunda';
+
+  @override
+  String get sleepTimerOff => 'Kapalı';
+
+  @override
+  String sleepTimerIn(String time) {
+    return '$time sonra durur';
+  }
+
+  @override
+  String get sleepAfterTrack => 'Bu parçadan sonra durur';
+
+  @override
+  String continuedAt(String time) {
+    return '$time konumundan devam ediliyor';
+  }
+
+  @override
+  String get startOver => 'Baştan başla';
+
+  @override
+  String get supportCardTitle => 'Tek bir kişi tarafından, ücretsiz yapıldı';
+
+  @override
+  String get supportCardBody =>
+      'Reklam yok, izleme yok, satın alınacak bir şey yok. Bu uygulama sana zaman kazandırdıysa, bir kahve ya da sponsorluk onu ayakta tutar.';
+
+  @override
+  String get supportCardNotNow => 'Şimdi değil';
+
+  @override
+  String get supportCardNever => 'Bir daha gösterme';
+
+  @override
+  String get largeView => 'Büyük görünüm';
+
+  @override
+  String get exitLargeView => 'Kitaplığa dön';
+
+  @override
+  String get subtitles => 'Altyazılar';
+
+  @override
+  String get subtitlesNone => 'Yok';
+
+  @override
+  String get subtitlesChooseFile => 'Altyazı dosyası seç…';
+
+  @override
+  String get subtitlesNoneFound =>
+      'Bu dosyanın yanında altyazı ya da şarkı sözü yok. Bir .srt, .vtt veya .lrc dosyası seç.';
+
+  @override
+  String subtitlesTiming(String delay) {
+    return 'Zamanlama: $delay';
+  }
+
+  @override
+  String get subtitlesEarlier => 'Daha erken göster';
+
+  @override
+  String get subtitlesLater => 'Daha geç göster';
+
+  @override
+  String get subtitlesShow => 'Altyazıları göster';
+
+  @override
+  String get downloadWhole => 'Tamamı';
+
+  @override
+  String get downloadOnlyParts => 'Yalnızca bölümler';
+
+  @override
+  String get downloadAddPart => 'Bölüm ekle';
+
+  @override
+  String get downloadPartsHint =>
+      'Her bölüm, belirttiğin zamanlar arasında ayrı bir dosya olarak kaydedilir.';
+
+  @override
+  String get partFrom => 'Başlangıç';
+
+  @override
+  String get partTo => 'Bitiş';
+
+  @override
+  String addPartsToQueue(int count) {
+    return 'Kuyruğa ekle ($count bölüm)';
+  }
+
+  @override
+  String get partTimesInvalid =>
+      'Her bölüm başladıktan sonra ve video içinde bitmelidir.';
+
+  @override
+  String get lyrics => 'Şarkı sözleri';
 }

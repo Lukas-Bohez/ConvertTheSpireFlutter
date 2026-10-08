@@ -17,7 +17,8 @@ void main() {
               size: size, textScaler: const TextScaler.linear(1.3)),
           child: Scaffold(
             body: SingleChildScrollView(
-              child: QuickDownloadCard(onDownload: (_, __, ___) async {}),
+              child: QuickDownloadCard(
+                  onDownload: (_, __, ___, {parts = const []}) async {}),
             ),
           ),
         ),

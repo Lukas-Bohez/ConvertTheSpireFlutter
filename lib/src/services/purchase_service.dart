@@ -57,9 +57,10 @@ class PurchaseService extends ChangeNotifier {
     _isAdFree = prefs.getBool(_adFreePrefsKey) ?? false;
     _hasAllThemes = prefs.getBool(_allThemesPrefsKey) ?? false;
 
-    // On GitHub release / non-Play builds we consider all colours unlocked
-    // by default so users don't need to purchase or watch ads to collect them.
-    if (kIsGithubRelease) {
+    // The GitHub and Microsoft Store builds have every colour from install:
+    // no ads there, and the Store's "All colours" add-on is free (selling
+    // it needed a company bank code the Store asks for).
+    if (kIsGithubRelease || kMsStoreBuild) {
       _hasAllThemes = true;
       await prefs.setBool(_allThemesPrefsKey, true);
       await ColourRewardService.instance.unlockAllColours();
