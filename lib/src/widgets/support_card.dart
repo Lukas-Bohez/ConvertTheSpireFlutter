@@ -14,7 +14,9 @@ class SupportCard extends StatelessWidget {
   static const buyMeACoffeeUrl = 'https://buymeacoffee.com/orokaconner';
   static const githubSponsorsUrl = 'https://github.com/sponsors/Lukas-Bohez';
 
-  Future<void> _open(String url) async {
+  /// Opens a donation page, which counts as having donated: the card stays
+  /// away for months then.
+  static Future<void> open(String url) async {
     unawaited(SupportNudgeService.instance.donated());
     try {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
@@ -70,12 +72,12 @@ class SupportCard extends StatelessWidget {
                     FilledButton.icon(
                       icon: const Icon(Icons.coffee),
                       label: Text(l10n.buyMeCoffee),
-                      onPressed: () => _open(buyMeACoffeeUrl),
+                      onPressed: () => open(buyMeACoffeeUrl),
                     ),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.favorite_border),
                       label: Text(l10n.githubSponsors),
-                      onPressed: () => _open(githubSponsorsUrl),
+                      onPressed: () => open(githubSponsorsUrl),
                     ),
                     TextButton(
                       onPressed: nudge.notNow,

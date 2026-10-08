@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../config/build_flags.dart';
 import '../services/whats_new_service.dart';
 import '../utils/l10n.dart';
+import 'support_card.dart';
 
 /// Shows a release's changelog entry after the app updates itself, followed
 /// by any releases the person skipped.
@@ -115,6 +117,15 @@ class WhatsNewDialog extends StatelessWidget {
         ),
       ),
       actions: [
+        // Right after an update, with what is new in front of them, is when
+        // people most often want to say thanks: one quiet button. Not in
+        // the Play build, where donations go through Play's own billing.
+        if (!kPlayStoreBuild)
+          TextButton.icon(
+            icon: const Icon(Icons.coffee_outlined),
+            label: Text(context.l10n.buyMeCoffee),
+            onPressed: () => SupportCard.open(SupportCard.buyMeACoffeeUrl),
+          ),
         FilledButton(
           onPressed: () => Navigator.pop(context),
           child: Text(context.l10n.got),
