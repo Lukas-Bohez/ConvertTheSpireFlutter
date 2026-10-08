@@ -476,19 +476,33 @@ class _BrowserShellState extends State<BrowserShell> {
             PlayerScreen.hiddenWhileImmersive(
                 FocusTraversalGroup(child: _buildNavBar(cs, isDesktop))),
             Expanded(
-              child: isDesktop
-                  ? Row(
-                      children: [
-                        if (!widget.queueOnRight && _showQueueDesktop)
-                          PlayerScreen.hiddenWhileImmersive(
-                              _buildDesktopQueuePanel(cs)),
-                        Expanded(child: widget.child),
-                        if (widget.queueOnRight && _showQueueDesktop)
-                          PlayerScreen.hiddenWhileImmersive(
-                              _buildDesktopQueuePanel(cs)),
-                      ],
-                    )
-                  : widget.child,
+              // The bar above already makes room for the status bar: the
+              // pages under it made it again, an empty band at the top of
+              // every page on a phone. A video filling the screen hides the
+              // bar, so it keeps the room.
+              child: ValueListenableBuilder<bool>(
+                valueListenable: PlayerScreen.immersive,
+                builder: (context, immersive, page) {
+                  final mq = MediaQuery.of(context);
+                  return MediaQuery(
+                    data: immersive ? mq : mq.removePadding(removeTop: true),
+                    child: page!,
+                  );
+                },
+                child: isDesktop
+                    ? Row(
+                        children: [
+                          if (!widget.queueOnRight && _showQueueDesktop)
+                            PlayerScreen.hiddenWhileImmersive(
+                                _buildDesktopQueuePanel(cs)),
+                          Expanded(child: widget.child),
+                          if (widget.queueOnRight && _showQueueDesktop)
+                            PlayerScreen.hiddenWhileImmersive(
+                                _buildDesktopQueuePanel(cs)),
+                        ],
+                      )
+                    : widget.child,
+              ),
             ),
           ],
         ),

@@ -207,7 +207,10 @@ class _LoopSectionsSheetState extends State<LoopSectionsSheet> {
                 ),
                 const SizedBox(width: 8),
                 // Each end is set to where playback is now by tapping it.
+                // Its own width, shrunk only on a screen too narrow for it
+                // (a third of the row cut "0:59.6" off on a phone).
                 Flexible(
+                  flex: 3,
                   child: _TimeChip(
                     time: start,
                     tooltip: l10n.loopSetToNow,
@@ -220,6 +223,7 @@ class _LoopSectionsSheetState extends State<LoopSectionsSheet> {
                   child: Text('–'),
                 ),
                 Flexible(
+                  flex: 3,
                   child: _TimeChip(
                     time: end,
                     tooltip: l10n.loopSetToNow,
@@ -283,14 +287,18 @@ class _TimeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: ActionChip(
-        label: Text(formatLoopTime(time),
-            style:
-                const TextStyle(fontFeatures: [FontFeature.tabularFigures()])),
-        visualDensity: VisualDensity.compact,
-        onPressed: onPressed,
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Tooltip(
+        message: tooltip,
+        child: ActionChip(
+          label: Text(formatLoopTime(time),
+              style: const TextStyle(
+                  fontFeatures: [FontFeature.tabularFigures()])),
+          visualDensity: VisualDensity.compact,
+          onPressed: onPressed,
+        ),
       ),
     );
   }

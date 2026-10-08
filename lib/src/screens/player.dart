@@ -5705,7 +5705,11 @@ class _PlayerScreenState extends State<PlayerScreen>
   Widget build(BuildContext context) {
     final state = context.watch<PlayerState>();
     final screenWidth = MediaQuery.of(context).size.width;
-    final searchBarHeight = screenWidth < 600 ? 72.0 : 112.0;
+    // The tabs have an icon and a label (and their indicator under them):
+    // the 48 they were given cut their labels off by 26 pixels while a
+    // video played on a phone, when the search bar under them is hidden.
+    const tabBarHeight = 72.0 + 2.0;
+    final searchBarHeight = screenWidth < 600 ? 46.0 : 86.0;
 
     final songCount = state.audioEntries.length;
     final videoCount = state.videoEntries.length;
@@ -5816,7 +5820,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                   sliver: SliverPersistentHeader(
                     pinned: true,
                     delegate: _FixedHeightSliverDelegate(
-                      height: 48.0 + (showSearch ? searchBarHeight : 0.0),
+                      height:
+                          tabBarHeight + (showSearch ? searchBarHeight : 0.0),
                       child: ColoredBox(
                         color: Theme.of(context).scaffoldBackgroundColor,
                         // Clip any content that would overflow the fixed header
