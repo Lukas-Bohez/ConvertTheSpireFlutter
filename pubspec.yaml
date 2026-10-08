@@ -5,7 +5,7 @@ description: >-
   All-in-one media app: download from 1800+ sites, convert 27+ formats,
   play, cast to DLNA/UPnP, and download torrents.
 publish_to: 'none'
-version: 15.3.1+1303
+version: 16.0.0+1304
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
