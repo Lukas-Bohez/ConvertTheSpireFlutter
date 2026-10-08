@@ -3599,7 +3599,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'Torrentler, müzik, videolar ve dosya dönüştürme tek bir uygulamada.';
+      'Müzik, videolar, torrentler ve dosya dönüştürme tek bir uygulamada.';
 
   @override
   String get spinUnlockColour => 'Çevir → bir rengin kilidini aç';

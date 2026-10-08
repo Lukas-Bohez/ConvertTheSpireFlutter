@@ -3587,7 +3587,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'Torrent, nhạc, video và chuyển đổi tệp trong một ứng dụng.';
+      'Nhạc, video, torrent và chuyển đổi tệp trong một ứng dụng.';
 
   @override
   String get spinUnlockColour => 'Quay → mở khóa một màu';

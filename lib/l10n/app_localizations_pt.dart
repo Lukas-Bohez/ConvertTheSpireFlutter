@@ -3615,7 +3615,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'Torrents, música, vídeos e conversão de arquivos em um só app.';
+      'Música, vídeos, torrents e conversão de arquivos em um só app.';
 
   @override
   String get spinUnlockColour => 'Girar → desbloqueie uma cor';

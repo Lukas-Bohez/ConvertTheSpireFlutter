@@ -3492,7 +3492,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get titleCopied => '제목을 복사했습니다';
 
   @override
-  String get homeTaglinePlay => '토렌트, 음악, 동영상, 파일 변환을 하나의 앱에서.';
+  String get homeTaglinePlay => '음악, 동영상, 토렌트, 파일 변환을 하나의 앱에서.';
 
   @override
   String get spinUnlockColour => '돌리기 → 색상 잠금 해제';

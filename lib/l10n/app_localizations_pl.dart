@@ -3602,7 +3602,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'Torrenty, muzyka, filmy i konwersja plików w jednej aplikacji.';
+      'Muzyka, filmy, torrenty i konwersja plików w jednej aplikacji.';
 
   @override
   String get spinUnlockColour => 'Zakręć → odblokuj kolor';

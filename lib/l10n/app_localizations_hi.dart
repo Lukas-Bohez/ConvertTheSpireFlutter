@@ -3592,7 +3592,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'टोरेंट, संगीत, वीडियो और फ़ाइल रूपांतरण, सब एक ऐप में।';
+      'संगीत, वीडियो, टोरेंट और फ़ाइल रूपांतरण, सब एक ऐप में।';
 
   @override
   String get spinUnlockColour => 'घुमाएँ → एक रंग अनलॉक करें';

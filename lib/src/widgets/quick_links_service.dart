@@ -67,18 +67,38 @@ class QuickLinksService {
     }).toList();
   }
 
+  // The player first: it is what the app is for, and on a phone only the
+  // first few tiles show without scrolling. It used to come last.
   static List<QuickLink> _allDefaults() => [
         const QuickLink(
-          name: 'Multi-Search',
-          icon: Icons.travel_explore,
-          route: 'multisearch.tab',
-          description: 'Search YouTube & SoundCloud',
+          name: 'Player',
+          icon: Icons.music_note,
+          route: 'player.tab',
+          description: 'Media player & library',
+        ),
+        const QuickLink(
+          name: 'Torrents',
+          icon: Icons.download,
+          route: 'torrents.tab',
+          description: 'Download and share torrents',
         ),
         const QuickLink(
           name: 'Browser',
           icon: Icons.language,
           route: 'browser.tab',
           description: 'In-app web browser',
+        ),
+        const QuickLink(
+          name: 'Convert',
+          icon: Icons.transform,
+          route: 'convert.tab',
+          description: 'Convert audio/video files',
+        ),
+        const QuickLink(
+          name: 'Multi-Search',
+          icon: Icons.travel_explore,
+          route: 'multisearch.tab',
+          description: 'Search YouTube & SoundCloud',
         ),
         const QuickLink(
           name: 'Playlists',
@@ -99,6 +119,12 @@ class QuickLinksService {
           description: 'Download statistics',
         ),
         const QuickLink(
+          name: 'Guide',
+          icon: Icons.menu_book,
+          route: 'guide.tab',
+          description: 'Help & documentation',
+        ),
+        const QuickLink(
           name: 'Settings',
           icon: Icons.settings,
           route: 'settings.tab',
@@ -117,34 +143,10 @@ class QuickLinksService {
           description: 'Leave a review',
         ),
         const QuickLink(
-          name: 'Convert',
-          icon: Icons.transform,
-          route: 'convert.tab',
-          description: 'Convert audio/video files',
-        ),
-        const QuickLink(
           name: 'Logs',
           icon: Icons.list_alt,
           route: 'logs.tab',
           description: 'Activity log viewer',
-        ),
-        const QuickLink(
-          name: 'Guide',
-          icon: Icons.menu_book,
-          route: 'guide.tab',
-          description: 'Help & documentation',
-        ),
-        const QuickLink(
-          name: 'Player',
-          icon: Icons.music_note,
-          route: 'player.tab',
-          description: 'Media player & library',
-        ),
-        const QuickLink(
-          name: 'Torrents',
-          icon: Icons.download,
-          route: 'torrents.tab',
-          description: 'Vault torrent manager',
         ),
       ];
 

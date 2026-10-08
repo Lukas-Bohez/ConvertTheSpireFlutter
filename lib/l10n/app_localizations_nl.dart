@@ -3607,7 +3607,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'Torrents, muziek, video\'s en bestanden omzetten in één app.';
+      'Muziek, video\'s, torrents en bestanden omzetten in één app.';
 
   @override
   String get spinUnlockColour => 'Draai → ontgrendel een kleur';

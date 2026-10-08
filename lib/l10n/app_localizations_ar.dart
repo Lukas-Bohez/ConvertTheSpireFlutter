@@ -3567,7 +3567,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'التورنت والموسيقى والفيديو وتحويل الملفات في تطبيق واحد.';
+      'الموسيقى والفيديو والتورنت وتحويل الملفات في تطبيق واحد.';
 
   @override
   String get spinUnlockColour => 'أدِر ← افتح لونًا';

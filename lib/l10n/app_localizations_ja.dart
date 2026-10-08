@@ -3493,7 +3493,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get titleCopied => 'タイトルをコピーしました';
 
   @override
-  String get homeTaglinePlay => 'トレント、音楽、動画、ファイル変換をひとつのアプリで。';
+  String get homeTaglinePlay => '音楽、動画、トレント、ファイル変換をひとつのアプリで。';
 
   @override
   String get spinUnlockColour => '回す → 色をアンロック';

@@ -6400,7 +6400,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeTaglinePlay.
   ///
   /// In en, this message translates to:
-  /// **'Torrents, music, videos and file conversion in one app.'**
+  /// **'Music, videos, torrents and file conversion in one app.'**
   String get homeTaglinePlay;
 
   /// No description provided for @spinUnlockColour.

@@ -3449,7 +3449,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get titleCopied => '已复制标题';
 
   @override
-  String get homeTaglinePlay => '种子下载、音乐、视频和文件转换，尽在一个应用。';
+  String get homeTaglinePlay => '音乐、视频、种子下载和文件转换，尽在一个应用。';
 
   @override
   String get spinUnlockColour => '转一转 → 解锁一种颜色';

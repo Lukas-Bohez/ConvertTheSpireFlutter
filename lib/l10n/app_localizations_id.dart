@@ -3596,7 +3596,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'Torrent, musik, video, dan konversi file dalam satu aplikasi.';
+      'Musik, video, torrent, dan konversi file dalam satu aplikasi.';
 
   @override
   String get spinUnlockColour => 'Putar → buka satu warna';

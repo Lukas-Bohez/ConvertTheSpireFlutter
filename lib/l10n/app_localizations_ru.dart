@@ -3591,7 +3591,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get homeTaglinePlay =>
-      'Торренты, музыка, видео и конвертация файлов в одном приложении.';
+      'Музыка, видео, торренты и конвертация файлов в одном приложении.';
 
   @override
   String get spinUnlockColour => 'Крутить → открыть цвет';
