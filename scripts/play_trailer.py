@@ -33,7 +33,7 @@ MAX_SECONDS = 6.0
 
 # (recording, feature, caption, small line under it)
 PLAN = [
-    ('phone', 'player', 'One player for your\nmusic and videos', 'Phones'),
+    ('phone', 'player', 'One player for your\nmusic and videos', 'With synced lyrics'),
     ('phone', 'video', 'Subtitles load\nby themselves', 'For songs too'),
     ('phone', 'loop', 'Loop just\nthe best part', 'One part or several'),
     ('tablet', 'large', 'Watch big, without the clutter', 'Tablets and Chromebooks'),
