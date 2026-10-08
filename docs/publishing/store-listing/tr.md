@@ -22,6 +22,7 @@ Convert The Spire Reborn, müziğini ve videolarını tek bir uygulamada toplar:
 OYNAT
 • Şarkıların ve videoların için tek kitaplık: çalma listeleri, favoriler, karışık çalma ve tekrar.
 • Videolar ve şarkılar için altyazı: dosyanın yanındaki .srt veya .vtt dosyası kendiliğinden yüklenir. Tek dokunuşla aç veya kapat, başka bir dosya seç ya da senkronu kaydıysa kaydır.
+• Senkronize şarkı sözleri: şarkının yanındaki .lrc dosyası her satırı söylendiği anda gösterir.
 • En iyi bölümü döngüye al: bir şarkının veya videonun bir ya da daha fazla bölümünü işaretle, yalnızca onlar arka arkaya çalsın.
 • Büyük görünüm: video, etrafında başka hiçbir şey olmadan ekranı doldurur.
 • 0,5× ile 2× arası hız ve 15–60 dakika sonra ya da şarkının sonunda durduran bir uyku zamanlayıcısı.
@@ -55,7 +56,7 @@ GİZLİLİK ODAKLI
 ## What's new in this version
 
 ```text
-Yeni: bir videonun veya şarkının yalnızca istediğin bölümünü indir. Videolar ve şarkılar için altyazı: .srt ve .vtt dosyaları kendiliğinden yüklenir. En iyi bölümü döngüye al, hızı değiştir, uyku zamanlayıcısı kur ve büyük görünümde izle. Uzun videolar kaldığın yerden devam eder ve tarayıcının reklam engelleyicisi artık uBlock Origin'in listelerini kullanır. Oynatıcının artık tek bir kontrol seti ve videoya daha fazla yeri var; tüm renklerin kilidi açıldı. Düzeltildi: torrentle indirilen bir program paylaşılırken çalışır, zaten sahip olduğun dosyaların torrentleri hemen paylaşılır ve kitaplıktaki videoların küçük resimleri var.
+Yeni: bir videonun veya şarkının yalnızca istediğin bölümünü indir. Videolar ve şarkılar için altyazı: .srt ve .vtt dosyaları kendiliğinden yüklenir. .lrc dosyalarından senkronize şarkı sözleri. En iyi bölümü döngüye al, hızı değiştir, uyku zamanlayıcısı kur ve büyük görünümde izle. Uzun videolar kaldığın yerden devam eder ve tarayıcının reklam engelleyicisi artık uBlock Origin'in listelerini kullanır. Oynatıcının artık tek bir kontrol seti ve videoya daha fazla yeri var; tüm renklerin kilidi açıldı. Düzeltildi: torrentle indirilen bir program paylaşılırken çalışır, zaten sahip olduğun dosyaların torrentleri hemen paylaşılır ve kitaplıktaki videoların küçük resimleri var.
 ```
 
 ## Product features
@@ -72,55 +73,60 @@ Videolar ve şarkılar için altyazı (.srt ve .vtt)
 
 3.
 ```text
-Bölüm döngüsü, oynatma hızı, uyku zamanlayıcısı
+Senkronize şarkı sözleri (.lrc)
 ```
 
 4.
 ```text
-Büyük görünüm: etrafında hiçbir şey olmadan video
+Bölüm döngüsü, oynatma hızı, uyku zamanlayıcısı
 ```
 
 5.
 ```text
-1.800+ siteden video ve müzik indir, istersen yalnızca bir bölüm
+Büyük görünüm: etrafında hiçbir şey olmadan video
 ```
 
 6.
 ```text
-Başlık, etiket ve kapaklarla bütün çalma listeleri
+1.800+ siteden video ve müzik indir, istersen yalnızca bir bölüm
 ```
 
 7.
 ```text
-27+ ses, video ve görüntü formatı arasında dönüştürme
+Başlık, etiket ve kapaklarla bütün çalma listeleri
 ```
 
 8.
 ```text
-TV'lere ve hoparlörlere yayın (DLNA/UPnP)
+27+ ses, video ve görüntü formatı arasında dönüştürme
 ```
 
 9.
 ```text
-Arkadaşlarınla senkronize video izle
+TV'lere ve hoparlörlere yayın (DLNA/UPnP)
 ```
 
 10.
 ```text
-Magnet bağlantıları ve paylaşımla BitTorrent istemcisi
+Arkadaşlarınla senkronize video izle
 ```
 
 11.
 ```text
-Gerçek bir reklam engelleyicili tarayıcı
+Magnet bağlantıları ve paylaşımla BitTorrent istemcisi
 ```
 
 12.
 ```text
-Hesap yok, reklam yok, izleme yok
+Gerçek bir reklam engelleyicili tarayıcı
 ```
 
 13.
+```text
+Hesap yok, reklam yok, izleme yok
+```
+
+14.
 ```text
 Açık kaynak, 18 dilde
 ```

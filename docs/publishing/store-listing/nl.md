@@ -22,6 +22,7 @@ Convert The Spire Reborn brengt je muziek en video's samen in één app: een spe
 AFSPELEN
 • Eén bibliotheek voor je liedjes en video's, met afspeellijsten, favorieten, shuffle en herhalen.
 • Ondertitels voor video's en liedjes: een .srt- of .vtt-bestand naast het bestand laadt vanzelf. Zet ze met één tik aan of uit, kies een ander bestand, of schuif ze op als ze niet gelijklopen.
+• Meelopende songteksten: een .lrc-bestand naast een liedje toont elke regel terwijl die gezongen wordt.
 • Herhaal het beste stuk: markeer een of meer stukken van een liedje of video en alleen die spelen, na elkaar.
 • Groot beeld: de video vult het scherm, zonder iets eromheen.
 • Snelheid van 0,5× tot 2×, en een slaaptimer die stopt na 15 tot 60 minuten of aan het eind van het liedje.
@@ -55,7 +56,7 @@ Beschikbaar in 18 talen. Download alleen inhoud die je mag downloaden.
 ## What's new in this version
 
 ```text
-Nieuw: download alleen het stuk van een video of liedje dat je wilt. Ondertitels voor video's en liedjes: .srt- en .vtt-bestanden laden vanzelf. Herhaal het beste stuk, verander de snelheid, zet een slaaptimer en kijk in groot beeld. Lange video's gaan verder waar je gebleven was, en de adblocker van de browser gebruikt nu de lijsten van uBlock Origin. De speler heeft nog maar één set knoppen en meer ruimte voor de video, en alle kleuren zijn vrijgespeeld. Opgelost: een programma dat via torrent binnenkwam start terwijl het seedt, torrents van bestanden die je al hebt seeden meteen, en video's in je bibliotheek hebben miniaturen.
+Nieuw: download alleen het stuk van een video of liedje dat je wilt. Ondertitels voor video's en liedjes: .srt- en .vtt-bestanden laden vanzelf. Meelopende songteksten uit .lrc-bestanden. Herhaal het beste stuk, verander de snelheid, zet een slaaptimer en kijk in groot beeld. Lange video's gaan verder waar je gebleven was, en de adblocker van de browser gebruikt nu de lijsten van uBlock Origin. De speler heeft nog maar één set knoppen en meer ruimte voor de video, en alle kleuren zijn vrijgespeeld. Opgelost: een programma dat via torrent binnenkwam start terwijl het seedt, torrents van bestanden die je al hebt seeden meteen, en video's in je bibliotheek hebben miniaturen.
 ```
 
 ## Product features
@@ -72,55 +73,60 @@ Ondertitels voor video's en liedjes (.srt en .vtt)
 
 3.
 ```text
-Het beste stuk herhalen, snelheid, slaaptimer
+Meelopende songteksten (.lrc)
 ```
 
 4.
 ```text
-Groot beeld: de video zonder iets eromheen
+Het beste stuk herhalen, snelheid, slaaptimer
 ```
 
 5.
 ```text
-Video en muziek downloaden van 1.800+ sites, of alleen een stuk
+Groot beeld: de video zonder iets eromheen
 ```
 
 6.
 ```text
-Hele afspeellijsten, met titels, tags en hoesjes
+Video en muziek downloaden van 1.800+ sites, of alleen een stuk
 ```
 
 7.
 ```text
-Converteren tussen 27+ audio-, video- en afbeeldingsformaten
+Hele afspeellijsten, met titels, tags en hoesjes
 ```
 
 8.
 ```text
-Casten naar tv's en speakers (DLNA/UPnP)
+Converteren tussen 27+ audio-, video- en afbeeldingsformaten
 ```
 
 9.
 ```text
-Samen video's kijken, gelijk met vrienden
+Casten naar tv's en speakers (DLNA/UPnP)
 ```
 
 10.
 ```text
-BitTorrent-client met magnetlinks en seeden
+Samen video's kijken, gelijk met vrienden
 ```
 
 11.
 ```text
-Browser met een echte adblocker
+BitTorrent-client met magnetlinks en seeden
 ```
 
 12.
 ```text
-Geen account, geen advertenties, geen tracking
+Browser met een echte adblocker
 ```
 
 13.
+```text
+Geen account, geen advertenties, geen tracking
+```
+
+14.
 ```text
 Open source, in 18 talen
 ```

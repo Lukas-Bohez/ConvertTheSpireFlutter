@@ -22,6 +22,7 @@ Convert The Spire Reborn reúne tu música y tus vídeos en una sola app: un rep
 REPRODUCIR
 • Una sola biblioteca para tus canciones y vídeos, con listas, favoritos, aleatorio y repetición.
 • Subtítulos para vídeos y canciones: un archivo .srt o .vtt junto al archivo se carga solo. Actívalos o desactívalos con un toque, elige otro archivo o muévelos si van desfasados.
+• Letras sincronizadas: un archivo .lrc junto a una canción muestra cada verso mientras suena.
 • La mejor parte en bucle: marca una o varias partes de una canción o vídeo y solo suenan esas, una tras otra.
 • Vista grande: el vídeo llena la pantalla, sin nada alrededor.
 • Velocidad de 0,5× a 2×, y un temporizador que se detiene tras 15 a 60 minutos o al final de la canción.
@@ -55,7 +56,7 @@ Disponible en 18 idiomas. Descarga solo contenido que tengas derecho a descargar
 ## What's new in this version
 
 ```text
-Novedades: descarga solo la parte de un vídeo o canción que quieras. Subtítulos para vídeos y canciones: los archivos .srt y .vtt se cargan solos. Pon la mejor parte en bucle, cambia la velocidad, programa un temporizador y mira en vista grande. Los vídeos largos siguen donde los dejaste, y el bloqueador de anuncios del navegador usa ahora las listas de uBlock Origin. El reproductor tiene un solo juego de controles y más espacio para el vídeo, y todos los colores están desbloqueados. Corregido: un programa descargado por torrent se abre mientras se comparte, los torrents de archivos que ya tienes se comparten al instante y los vídeos de tu biblioteca tienen miniaturas.
+Novedades: descarga solo la parte de un vídeo o canción que quieras. Subtítulos para vídeos y canciones: los archivos .srt y .vtt se cargan solos. Letras sincronizadas desde archivos .lrc. Pon la mejor parte en bucle, cambia la velocidad, programa un temporizador y mira en vista grande. Los vídeos largos siguen donde los dejaste, y el bloqueador de anuncios del navegador usa ahora las listas de uBlock Origin. El reproductor tiene un solo juego de controles y más espacio para el vídeo, y todos los colores están desbloqueados. Corregido: un programa descargado por torrent se abre mientras se comparte, los torrents de archivos que ya tienes se comparten al instante y los vídeos de tu biblioteca tienen miniaturas.
 ```
 
 ## Product features
@@ -72,55 +73,60 @@ Subtítulos para vídeos y canciones (.srt y .vtt)
 
 3.
 ```text
-La mejor parte en bucle, velocidad, temporizador
+Letras sincronizadas (.lrc)
 ```
 
 4.
 ```text
-Vista grande: el vídeo sin nada alrededor
+La mejor parte en bucle, velocidad, temporizador
 ```
 
 5.
 ```text
-Descarga vídeo y música de 1800+ sitios, o solo una parte
+Vista grande: el vídeo sin nada alrededor
 ```
 
 6.
 ```text
-Listas enteras, con títulos, etiquetas y portadas
+Descarga vídeo y música de 1800+ sitios, o solo una parte
 ```
 
 7.
 ```text
-Convierte entre 27+ formatos de audio, vídeo e imagen
+Listas enteras, con títulos, etiquetas y portadas
 ```
 
 8.
 ```text
-Envío a TV y altavoces (DLNA/UPnP)
+Convierte entre 27+ formatos de audio, vídeo e imagen
 ```
 
 9.
 ```text
-Ve vídeos sincronizados con amigos
+Envío a TV y altavoces (DLNA/UPnP)
 ```
 
 10.
 ```text
-Cliente BitTorrent con enlaces magnet y seeding
+Ve vídeos sincronizados con amigos
 ```
 
 11.
 ```text
-Navegador con un bloqueador de anuncios de verdad
+Cliente BitTorrent con enlaces magnet y seeding
 ```
 
 12.
 ```text
-Sin cuenta, sin anuncios, sin rastreo
+Navegador con un bloqueador de anuncios de verdad
 ```
 
 13.
+```text
+Sin cuenta, sin anuncios, sin rastreo
+```
+
+14.
 ```text
 Código abierto, en 18 idiomas
 ```

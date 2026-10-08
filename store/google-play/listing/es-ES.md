@@ -22,6 +22,7 @@ BitPlayer reproduce tu música y tus vídeos, con lo que otros reproductores olv
 UN REPRODUCTOR PARA MÚSICA Y VÍDEO
 • Una sola biblioteca para tus canciones y vídeos, con listas, favoritos, aleatorio y repetición.
 • Subtítulos para vídeos y canciones: un archivo .srt o .vtt junto al archivo se carga solo. Actívalos o desactívalos con un toque, elige otro archivo o muévelos si van desfasados.
+• Letras sincronizadas: un archivo .lrc junto a una canción muestra cada verso mientras suena.
 • La mejor parte en bucle: marca una o varias partes de una canción o vídeo y solo suenan esas, una tras otra.
 • Vista grande: el vídeo llena la pantalla, sin nada alrededor.
 • Velocidad de 0,5× a 2×, y un temporizador que se detiene tras 15 a 60 minutos o al final de la canción.
@@ -55,5 +56,5 @@ Reproduce, comparte y descarga solo contenido que tengas derecho a usar.
 ## Release notes (What's new)
 
 ```text
-Novedades: subtítulos para vídeos y canciones, la mejor parte en bucle, vista grande, velocidad de reproducción y temporizador. Los vídeos largos siguen donde los dejaste. El reproductor tiene un solo juego de controles y más espacio para el vídeo, y el navegador bloquea anuncios con las listas de uBlock Origin. Corregido: los torrents de archivos que ya tienes se comparten al instante y los vídeos tienen miniaturas.
+Novedades: subtítulos para vídeos y canciones, la mejor parte en bucle, vista grande, velocidad de reproducción y temporizador. Letras sincronizadas desde archivos .lrc. Los vídeos largos siguen donde los dejaste. El reproductor tiene un solo juego de controles y más espacio para el vídeo, y el navegador bloquea anuncios con las listas de uBlock Origin. Corregido: los torrents de archivos que ya tienes se comparten al instante y los vídeos tienen miniaturas.
 ```

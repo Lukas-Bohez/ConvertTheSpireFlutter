@@ -22,6 +22,7 @@ O Convert The Spire Reborn junta suas músicas e vídeos em um só app: um playe
 TOCAR
 • Uma só biblioteca para suas músicas e vídeos, com playlists, favoritos, ordem aleatória e repetição.
 • Legendas para vídeos e músicas: um arquivo .srt ou .vtt ao lado do arquivo carrega sozinho. Ative ou desative com um toque, escolha outro arquivo ou ajuste o tempo quando estiverem fora de sincronia.
+• Letras sincronizadas: um arquivo .lrc ao lado de uma música mostra cada verso enquanto é cantado.
 • A melhor parte em repetição: marque um ou mais trechos de uma música ou vídeo e só eles tocam, um depois do outro.
 • Visualização ampliada: o vídeo ocupa a tela toda, sem nada em volta.
 • Velocidade de 0,5× a 2× e um timer que para depois de 15 a 60 minutos ou no fim da música.
@@ -55,7 +56,7 @@ Disponível em 18 idiomas. Baixe apenas conteúdo que você tem o direito de bai
 ## What's new in this version
 
 ```text
-Novo: baixe só o trecho de um vídeo ou música que você quiser. Legendas para vídeos e músicas: arquivos .srt e .vtt carregam sozinhos. Repita a melhor parte, mude a velocidade, ajuste um timer e assista na visualização ampliada. Vídeos longos continuam de onde você parou, e o bloqueador de anúncios do navegador agora usa as listas do uBlock Origin. O player tem um só conjunto de controles e mais espaço para o vídeo, e todas as cores estão liberadas. Corrigido: um programa baixado por torrent abre enquanto é semeado, torrents de arquivos que você já tem são semeados na hora e os vídeos da biblioteca têm miniaturas.
+Novo: baixe só o trecho de um vídeo ou música que você quiser. Legendas para vídeos e músicas: arquivos .srt e .vtt carregam sozinhos. Letras sincronizadas de arquivos .lrc. Repita a melhor parte, mude a velocidade, ajuste um timer e assista na visualização ampliada. Vídeos longos continuam de onde você parou, e o bloqueador de anúncios do navegador agora usa as listas do uBlock Origin. O player tem um só conjunto de controles e mais espaço para o vídeo, e todas as cores estão liberadas. Corrigido: um programa baixado por torrent abre enquanto é semeado, torrents de arquivos que você já tem são semeados na hora e os vídeos da biblioteca têm miniaturas.
 ```
 
 ## Product features
@@ -72,55 +73,60 @@ Legendas para vídeos e músicas (.srt e .vtt)
 
 3.
 ```text
-A melhor parte em repetição, velocidade, timer
+Letras sincronizadas (.lrc)
 ```
 
 4.
 ```text
-Visualização ampliada: o vídeo sem nada em volta
+A melhor parte em repetição, velocidade, timer
 ```
 
 5.
 ```text
-Baixe vídeo e música de 1.800+ sites, ou só um trecho
+Visualização ampliada: o vídeo sem nada em volta
 ```
 
 6.
 ```text
-Playlists inteiras, com títulos, tags e capas
+Baixe vídeo e música de 1.800+ sites, ou só um trecho
 ```
 
 7.
 ```text
-Converta entre 27+ formatos de áudio, vídeo e imagem
+Playlists inteiras, com títulos, tags e capas
 ```
 
 8.
 ```text
-Transmita para TVs e caixas de som (DLNA/UPnP)
+Converta entre 27+ formatos de áudio, vídeo e imagem
 ```
 
 9.
 ```text
-Assista vídeos sincronizados com amigos
+Transmita para TVs e caixas de som (DLNA/UPnP)
 ```
 
 10.
 ```text
-Cliente BitTorrent com links magnet e seeding
+Assista vídeos sincronizados com amigos
 ```
 
 11.
 ```text
-Navegador com um bloqueador de anúncios de verdade
+Cliente BitTorrent com links magnet e seeding
 ```
 
 12.
 ```text
-Sem conta, sem anúncios, sem rastreamento
+Navegador com um bloqueador de anúncios de verdade
 ```
 
 13.
+```text
+Sem conta, sem anúncios, sem rastreamento
+```
+
+14.
 ```text
 Código aberto, em 18 idiomas
 ```

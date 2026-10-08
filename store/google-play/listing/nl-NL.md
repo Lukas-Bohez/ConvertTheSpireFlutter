@@ -22,6 +22,7 @@ BitPlayer speelt je muziek en video's af, met wat andere spelers overslaan: onde
 EEN SPELER VOOR MUZIEK EN VIDEO
 • Eén bibliotheek voor je liedjes en video's, met afspeellijsten, favorieten, shuffle en herhalen.
 • Ondertitels voor video's en liedjes: een .srt- of .vtt-bestand naast het bestand laadt vanzelf. Zet ze met één tik aan of uit, kies een ander bestand, of schuif ze op als ze niet gelijklopen.
+• Meelopende songteksten: een .lrc-bestand naast een liedje toont elke regel terwijl die gezongen wordt.
 • Herhaal het beste stuk: markeer een of meer stukken van een liedje of video en alleen die spelen, na elkaar.
 • Groot beeld: de video vult het scherm, zonder iets eromheen.
 • Snelheid van 0,5× tot 2×, en een slaaptimer die stopt na 15 tot 60 minuten of aan het eind van het liedje.
@@ -55,5 +56,5 @@ Speel, deel en download alleen inhoud die je mag gebruiken.
 ## Release notes (What's new)
 
 ```text
-Nieuw: ondertitels voor video's en liedjes, het beste stuk herhalen, groot beeld, afspeelsnelheid en een slaaptimer. Lange video's gaan verder waar je gebleven was. De speler heeft één set knoppen en meer ruimte voor de video, en de browser blokkeert advertenties met de lijsten van uBlock Origin. Opgelost: torrents van bestanden die je al hebt seeden meteen, en video's hebben miniaturen.
+Nieuw: ondertitels voor video's en liedjes, het beste stuk herhalen, groot beeld, afspeelsnelheid en een slaaptimer. Meelopende songteksten uit .lrc-bestanden. Lange video's gaan verder waar je gebleven was. De speler heeft één set knoppen en meer ruimte voor de video, en de browser blokkeert advertenties met de lijsten van uBlock Origin. Opgelost: torrents van bestanden die je al hebt seeden meteen, en video's hebben miniaturen.
 ```

@@ -22,6 +22,7 @@ O BitPlayer toca suas músicas e vídeos, com o que os outros players deixam de 
 UM PLAYER PARA MÚSICA E VÍDEO
 • Uma só biblioteca para suas músicas e vídeos, com playlists, favoritos, ordem aleatória e repetição.
 • Legendas para vídeos e músicas: um arquivo .srt ou .vtt ao lado do arquivo carrega sozinho. Ative ou desative com um toque, escolha outro arquivo ou ajuste o tempo quando estiverem fora de sincronia.
+• Letras sincronizadas: um arquivo .lrc ao lado de uma música mostra cada verso enquanto é cantado.
 • A melhor parte em repetição: marque um ou mais trechos de uma música ou vídeo e só eles tocam, um depois do outro.
 • Visualização ampliada: o vídeo ocupa a tela toda, sem nada em volta.
 • Velocidade de 0,5× a 2× e um timer que para depois de 15 a 60 minutos ou no fim da música.
@@ -55,5 +56,5 @@ Toque, compartilhe e baixe apenas conteúdo que você tem o direito de usar.
 ## Release notes (What's new)
 
 ```text
-Novo: legendas para vídeos e músicas, a melhor parte em repetição, visualização ampliada, velocidade de reprodução e timer de desligamento. Vídeos longos continuam de onde você parou. O player tem um só conjunto de controles e mais espaço para o vídeo, e o navegador bloqueia anúncios com as listas do uBlock Origin. Corrigido: torrents de arquivos que você já tem são semeados na hora e os vídeos têm miniaturas.
+Novo: legendas para vídeos e músicas, a melhor parte em repetição, visualização ampliada, velocidade de reprodução e timer de desligamento. Letras sincronizadas de arquivos .lrc. Vídeos longos continuam de onde você parou. O player tem um só conjunto de controles e mais espaço para o vídeo, e o navegador bloqueia anúncios com as listas do uBlock Origin. Corrigido: torrents de arquivos que você já tem são semeados na hora e os vídeos têm miniaturas.
 ```

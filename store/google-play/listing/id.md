@@ -22,6 +22,7 @@ BitPlayer memutar musik dan videomu, dengan fitur yang dilewatkan pemutar lain: 
 PEMUTAR MUSIK DAN VIDEO
 • Satu pustaka untuk lagu dan videomu, dengan playlist, favorit, acak, dan ulang.
 • Subtitel untuk video dan lagu: file .srt atau .vtt di samping file dimuat otomatis. Nyalakan atau matikan dengan satu ketukan, pilih file lain, atau geser jika tidak pas.
+• Lirik tersinkron: file .lrc di samping lagu menampilkan setiap baris saat dinyanyikan.
 • Ulangi bagian terbaik: tandai satu atau beberapa bagian lagu atau video, dan hanya bagian itu yang diputar, satu demi satu.
 • Tampilan besar: video memenuhi layar, tanpa apa pun di sekitarnya.
 • Kecepatan 0,5× sampai 2×, dan pengatur waktu tidur yang berhenti setelah 15 sampai 60 menit atau di akhir lagu.
@@ -55,5 +56,5 @@ Harap hanya putar, bagikan, dan unduh konten yang berhak kamu gunakan.
 ## Release notes (What's new)
 
 ```text
-Baru: subtitel untuk video dan lagu, mengulang bagian terbaik, tampilan besar, kecepatan putar, dan pengatur waktu tidur. Video panjang dilanjutkan dari tempat terakhir. Pemutar punya satu set kontrol dan lebih banyak ruang untuk video, dan peramban memblokir iklan dengan daftar uBlock Origin. Diperbaiki: torrent dari file yang sudah kamu punya langsung di-seed, dan video punya thumbnail.
+Baru: subtitel untuk video dan lagu, mengulang bagian terbaik, tampilan besar, kecepatan putar, dan pengatur waktu tidur. Lirik tersinkron dari file .lrc. Video panjang dilanjutkan dari tempat terakhir. Pemutar punya satu set kontrol dan lebih banyak ruang untuk video, dan peramban memblokir iklan dengan daftar uBlock Origin. Diperbaiki: torrent dari file yang sudah kamu punya langsung di-seed, dan video punya thumbnail.
 ```

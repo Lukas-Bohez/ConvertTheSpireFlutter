@@ -22,6 +22,7 @@ Convert The Spire Reborn riunisce la tua musica e i tuoi video in un'unica app: 
 RIPRODUCI
 • Un'unica libreria per canzoni e video, con playlist, preferiti, riproduzione casuale e ripetizione.
 • Sottotitoli per video e canzoni: un file .srt o .vtt accanto al file si carica da solo. Attivali o disattivali con un tocco, scegli un altro file o spostali se non sono sincronizzati.
+• Testi sincronizzati: un file .lrc accanto a una canzone mostra ogni riga mentre viene cantata.
 • La parte migliore in loop: segna una o più parti di una canzone o di un video e vengono riprodotte solo quelle, una dopo l'altra.
 • Vista grande: il video riempie lo schermo, senza nient'altro intorno.
 • Velocità da 0,5× a 2× e un timer che si ferma dopo 15–60 minuti o alla fine della canzone.
@@ -55,7 +56,7 @@ Disponibile in 18 lingue. Scarica solo contenuti che hai il diritto di scaricare
 ## What's new in this version
 
 ```text
-Novità: scarica solo la parte di un video o di una canzone che vuoi. Sottotitoli per video e canzoni: i file .srt e .vtt si caricano da soli. Metti in loop la parte migliore, cambia la velocità, imposta un timer di spegnimento e guarda in vista grande. I video lunghi riprendono da dove eri rimasto, e il blocco pubblicità del browser ora usa le liste di uBlock Origin. Il lettore ha un solo set di comandi e più spazio per il video, e tutti i colori sono sbloccati. Corretto: un programma scaricato via torrent si avvia mentre è in seeding, i torrent di file che hai già vanno subito in seeding e i video della libreria hanno le miniature.
+Novità: scarica solo la parte di un video o di una canzone che vuoi. Sottotitoli per video e canzoni: i file .srt e .vtt si caricano da soli. Testi sincronizzati dai file .lrc. Metti in loop la parte migliore, cambia la velocità, imposta un timer di spegnimento e guarda in vista grande. I video lunghi riprendono da dove eri rimasto, e il blocco pubblicità del browser ora usa le liste di uBlock Origin. Il lettore ha un solo set di comandi e più spazio per il video, e tutti i colori sono sbloccati. Corretto: un programma scaricato via torrent si avvia mentre è in seeding, i torrent di file che hai già vanno subito in seeding e i video della libreria hanno le miniature.
 ```
 
 ## Product features
@@ -72,55 +73,60 @@ Sottotitoli per video e canzoni (.srt e .vtt)
 
 3.
 ```text
-La parte migliore in loop, velocità, timer di spegnimento
+Testi sincronizzati (.lrc)
 ```
 
 4.
 ```text
-Vista grande: il video senza nient'altro intorno
+La parte migliore in loop, velocità, timer di spegnimento
 ```
 
 5.
 ```text
-Scarica video e musica da 1.800+ siti, o solo una parte
+Vista grande: il video senza nient'altro intorno
 ```
 
 6.
 ```text
-Playlist intere, con titoli, tag e copertine
+Scarica video e musica da 1.800+ siti, o solo una parte
 ```
 
 7.
 ```text
-Converti tra 27+ formati audio, video e immagine
+Playlist intere, con titoli, tag e copertine
 ```
 
 8.
 ```text
-Trasmissione a TV e altoparlanti (DLNA/UPnP)
+Converti tra 27+ formati audio, video e immagine
 ```
 
 9.
 ```text
-Guarda video in sincronia con gli amici
+Trasmissione a TV e altoparlanti (DLNA/UPnP)
 ```
 
 10.
 ```text
-Client BitTorrent con link magnet e seeding
+Guarda video in sincronia con gli amici
 ```
 
 11.
 ```text
-Browser con un vero blocco pubblicità
+Client BitTorrent con link magnet e seeding
 ```
 
 12.
 ```text
-Niente account, niente pubblicità, niente tracciamento
+Browser con un vero blocco pubblicità
 ```
 
 13.
+```text
+Niente account, niente pubblicità, niente tracciamento
+```
+
+14.
 ```text
 Open source, in 18 lingue
 ```

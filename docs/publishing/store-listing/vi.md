@@ -22,6 +22,7 @@ Convert The Spire Reborn gom nhạc và video của bạn vào một ứng dụn
 PHÁT
 • Một thư viện cho bài hát và video, với danh sách phát, mục yêu thích, phát ngẫu nhiên và lặp lại.
 • Phụ đề cho video và bài hát: tệp .srt hoặc .vtt nằm cạnh tệp sẽ tự tải. Bật hoặc tắt chỉ bằng một chạm, chọn tệp khác, hoặc dịch thời gian khi bị lệch.
+• Lời bài hát đồng bộ: tệp .lrc cạnh bài hát hiện từng dòng đúng lúc được hát.
 • Lặp đoạn hay nhất: đánh dấu một hoặc nhiều đoạn của bài hát hay video, và chỉ những đoạn đó được phát, lần lượt từng đoạn.
 • Chế độ xem lớn: video lấp đầy màn hình, không có gì xung quanh.
 • Tốc độ từ 0,5× đến 2×, và hẹn giờ tắt sau 15 đến 60 phút hoặc khi hết bài.
@@ -55,7 +56,7 @@ Có 18 ngôn ngữ. Vui lòng chỉ tải nội dung bạn có quyền tải.
 ## What's new in this version
 
 ```text
-Mới: chỉ tải đoạn video hoặc bài hát bạn muốn. Phụ đề cho video và bài hát: tệp .srt và .vtt tự tải. Lặp đoạn hay nhất, đổi tốc độ, hẹn giờ tắt và xem ở chế độ xem lớn. Video dài tiếp tục từ chỗ bạn đã dừng, và bộ chặn quảng cáo của trình duyệt giờ dùng danh sách của uBlock Origin. Trình phát giờ chỉ có một bộ nút điều khiển và nhiều chỗ hơn cho video, và mọi màu đều đã mở khóa. Đã sửa: chương trình tải qua torrent chạy được khi đang seeding, torrent của tệp bạn đã có được seed ngay, và video trong thư viện có ảnh thu nhỏ.
+Mới: chỉ tải đoạn video hoặc bài hát bạn muốn. Phụ đề cho video và bài hát: tệp .srt và .vtt tự tải. Lời bài hát đồng bộ từ tệp .lrc. Lặp đoạn hay nhất, đổi tốc độ, hẹn giờ tắt và xem ở chế độ xem lớn. Video dài tiếp tục từ chỗ bạn đã dừng, và bộ chặn quảng cáo của trình duyệt giờ dùng danh sách của uBlock Origin. Trình phát giờ chỉ có một bộ nút điều khiển và nhiều chỗ hơn cho video, và mọi màu đều đã mở khóa. Đã sửa: chương trình tải qua torrent chạy được khi đang seeding, torrent của tệp bạn đã có được seed ngay, và video trong thư viện có ảnh thu nhỏ.
 ```
 
 ## Product features
@@ -72,55 +73,60 @@ Phụ đề cho video và bài hát (.srt và .vtt)
 
 3.
 ```text
-Lặp đoạn, tốc độ phát, hẹn giờ tắt
+Lời bài hát đồng bộ (.lrc)
 ```
 
 4.
 ```text
-Chế độ xem lớn: chỉ video, không có gì xung quanh
+Lặp đoạn, tốc độ phát, hẹn giờ tắt
 ```
 
 5.
 ```text
-Tải video và nhạc từ 1.800+ trang, hoặc chỉ một đoạn
+Chế độ xem lớn: chỉ video, không có gì xung quanh
 ```
 
 6.
 ```text
-Cả danh sách phát, có tiêu đề, thẻ và ảnh bìa
+Tải video và nhạc từ 1.800+ trang, hoặc chỉ một đoạn
 ```
 
 7.
 ```text
-Chuyển đổi giữa 27+ định dạng âm thanh, video và hình ảnh
+Cả danh sách phát, có tiêu đề, thẻ và ảnh bìa
 ```
 
 8.
 ```text
-Truyền lên TV và loa (DLNA/UPnP)
+Chuyển đổi giữa 27+ định dạng âm thanh, video và hình ảnh
 ```
 
 9.
 ```text
-Xem video đồng bộ cùng bạn bè
+Truyền lên TV và loa (DLNA/UPnP)
 ```
 
 10.
 ```text
-Trình khách BitTorrent với liên kết magnet và seeding
+Xem video đồng bộ cùng bạn bè
 ```
 
 11.
 ```text
-Trình duyệt có bộ chặn quảng cáo thật sự
+Trình khách BitTorrent với liên kết magnet và seeding
 ```
 
 12.
 ```text
-Không tài khoản, không quảng cáo, không theo dõi
+Trình duyệt có bộ chặn quảng cáo thật sự
 ```
 
 13.
+```text
+Không tài khoản, không quảng cáo, không theo dõi
+```
+
+14.
 ```text
 Mã nguồn mở, 18 ngôn ngữ
 ```

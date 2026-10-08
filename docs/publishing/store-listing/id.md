@@ -22,6 +22,7 @@ Convert The Spire Reborn menyatukan musik dan videomu dalam satu aplikasi: pemut
 PUTAR
 • Satu pustaka untuk lagu dan videomu, dengan playlist, favorit, acak, dan ulang.
 • Subtitel untuk video dan lagu: file .srt atau .vtt di samping file dimuat otomatis. Nyalakan atau matikan dengan satu ketukan, pilih file lain, atau geser jika tidak pas.
+• Lirik tersinkron: file .lrc di samping lagu menampilkan setiap baris saat dinyanyikan.
 • Ulangi bagian terbaik: tandai satu atau beberapa bagian lagu atau video, dan hanya bagian itu yang diputar, satu demi satu.
 • Tampilan besar: video memenuhi layar, tanpa apa pun di sekitarnya.
 • Kecepatan 0,5× sampai 2×, dan pengatur waktu tidur yang berhenti setelah 15 sampai 60 menit atau di akhir lagu.
@@ -55,7 +56,7 @@ Tersedia dalam 18 bahasa. Harap hanya unduh konten yang berhak kamu unduh.
 ## What's new in this version
 
 ```text
-Baru: unduh hanya bagian video atau lagu yang kamu mau. Subtitel untuk video dan lagu: file .srt dan .vtt dimuat otomatis. Ulangi bagian terbaik, ubah kecepatan, pasang pengatur waktu tidur, dan tonton dalam tampilan besar. Video panjang dilanjutkan dari tempat terakhir, dan pemblokir iklan di peramban kini memakai daftar uBlock Origin. Pemutar kini hanya punya satu set kontrol dan lebih banyak ruang untuk video, dan semua warna sudah terbuka. Diperbaiki: program yang diunduh lewat torrent bisa dijalankan saat seeding, torrent dari file yang sudah kamu punya langsung di-seed, dan video di pustaka punya thumbnail.
+Baru: unduh hanya bagian video atau lagu yang kamu mau. Subtitel untuk video dan lagu: file .srt dan .vtt dimuat otomatis. Lirik tersinkron dari file .lrc. Ulangi bagian terbaik, ubah kecepatan, pasang pengatur waktu tidur, dan tonton dalam tampilan besar. Video panjang dilanjutkan dari tempat terakhir, dan pemblokir iklan di peramban kini memakai daftar uBlock Origin. Pemutar kini hanya punya satu set kontrol dan lebih banyak ruang untuk video, dan semua warna sudah terbuka. Diperbaiki: program yang diunduh lewat torrent bisa dijalankan saat seeding, torrent dari file yang sudah kamu punya langsung di-seed, dan video di pustaka punya thumbnail.
 ```
 
 ## Product features
@@ -72,55 +73,60 @@ Subtitel untuk video dan lagu (.srt dan .vtt)
 
 3.
 ```text
-Ulangi bagian, kecepatan putar, pengatur waktu tidur
+Lirik lagu tersinkron (.lrc)
 ```
 
 4.
 ```text
-Tampilan besar: video tanpa apa pun di sekitarnya
+Ulangi bagian, kecepatan putar, pengatur waktu tidur
 ```
 
 5.
 ```text
-Unduh video dan musik dari 1.800+ situs, atau hanya sebagian
+Tampilan besar: video tanpa apa pun di sekitarnya
 ```
 
 6.
 ```text
-Seluruh playlist, dengan judul, tag, dan sampul
+Unduh video dan musik dari 1.800+ situs, atau hanya sebagian
 ```
 
 7.
 ```text
-Konversi di antara 27+ format audio, video, dan gambar
+Seluruh playlist, dengan judul, tag, dan sampul
 ```
 
 8.
 ```text
-Transmisi ke TV dan speaker (DLNA/UPnP)
+Konversi di antara 27+ format audio, video, dan gambar
 ```
 
 9.
 ```text
-Nonton video serempak bersama teman
+Transmisi ke TV dan speaker (DLNA/UPnP)
 ```
 
 10.
 ```text
-Klien BitTorrent dengan tautan magnet dan seeding
+Nonton video serempak bersama teman
 ```
 
 11.
 ```text
-Peramban dengan pemblokir iklan sungguhan
+Klien BitTorrent dengan tautan magnet dan seeding
 ```
 
 12.
 ```text
-Tanpa akun, tanpa iklan, tanpa pelacakan
+Peramban dengan pemblokir iklan sungguhan
 ```
 
 13.
+```text
+Tanpa akun, tanpa iklan, tanpa pelacakan
+```
+
+14.
 ```text
 Sumber terbuka, dalam 18 bahasa
 ```

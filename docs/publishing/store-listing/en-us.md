@@ -22,6 +22,7 @@ Convert The Spire Reborn is your music and videos in one app: a player with subt
 PLAY
 • One library for your songs and videos, with playlists, favourites, shuffle and repeat.
 • Subtitles for videos and songs: an .srt or .vtt file next to the file loads by itself. Turn them on or off with one tap, pick another file, or move them when they are out of step.
+• Synced lyrics: an .lrc file next to a song shows each line as it is sung.
 • Loop the best part: mark one or more parts of a song or video and only those play, one after the other.
 • Large view: the video fills the screen, with nothing else around it.
 • Speed from 0.5× to 2×, and a sleep timer that stops after 15 to 60 minutes or at the end of the song.
@@ -55,7 +56,7 @@ Available in 18 languages. Please only download content you have the right to do
 ## What's new in this version
 
 ```text
-New: download only the part of a video or song you want. Subtitles for videos and songs: .srt and .vtt files load by themselves. Loop the best part, change the speed, set a sleep timer and watch in a large view. Long videos open where you left off, and the browser's ad blocker now uses uBlock Origin's lists. The player has one set of controls and more room for the video, and every colour is unlocked. Fixed: a program downloaded by torrent starts while it seeds, torrents of files you already have seed at once, and videos in your library have thumbnails.
+New: download only the part of a video or song you want. Subtitles for videos and songs: .srt and .vtt files load by themselves. Synced lyrics from .lrc files. Loop the best part, change the speed, set a sleep timer and watch in a large view. Long videos open where you left off, and the browser's ad blocker now uses uBlock Origin's lists. The player has one set of controls and more room for the video, and every colour is unlocked. Fixed: a program downloaded by torrent starts while it seeds, torrents of files you already have seed at once, and videos in your library have thumbnails.
 ```
 
 ## Product features
@@ -72,55 +73,60 @@ Subtitles for videos and songs (.srt and .vtt)
 
 3.
 ```text
-Loop the best part, change the speed, set a sleep timer
+Synced lyrics for your songs (.lrc)
 ```
 
 4.
 ```text
-Large view: the video without the clutter
+Loop the best part, change the speed, set a sleep timer
 ```
 
 5.
 ```text
-Download video and music from 1,800+ sites, or only a part
+Large view: the video without the clutter
 ```
 
 6.
 ```text
-Whole playlists, with titles, tags and artwork
+Download video and music from 1,800+ sites, or only a part
 ```
 
 7.
 ```text
-Convert between 27+ audio, video and image formats
+Whole playlists, with titles, tags and artwork
 ```
 
 8.
 ```text
-Cast to TVs and speakers (DLNA/UPnP)
+Convert between 27+ audio, video and image formats
 ```
 
 9.
 ```text
-Watch videos in sync with friends
+Cast to TVs and speakers (DLNA/UPnP)
 ```
 
 10.
 ```text
-BitTorrent client with magnet links and seeding
+Watch videos in sync with friends
 ```
 
 11.
 ```text
-Browser with a real ad blocker
+BitTorrent client with magnet links and seeding
 ```
 
 12.
 ```text
-No account, no ads, no tracking
+Browser with a real ad blocker
 ```
 
 13.
+```text
+No account, no ads, no tracking
+```
+
+14.
 ```text
 Open source, in 18 languages
 ```

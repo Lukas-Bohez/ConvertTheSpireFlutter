@@ -22,6 +22,7 @@ BitPlayer plays your music and videos, with the extras other players leave out: 
 A PLAYER FOR MUSIC AND VIDEO
 • One library for your songs and videos, with playlists, favourites, shuffle and repeat.
 • Subtitles for videos and songs: an .srt or .vtt file next to the file loads by itself. Turn them on or off with one tap, pick another file, or move them when they are out of step.
+• Synced lyrics: an .lrc file next to a song shows each line as it is sung.
 • Loop the best part: mark one or more parts of a song or video and only those play, one after the other.
 • Large view: the video fills the screen, with nothing else around it.
 • Speed from 0.5× to 2×, and a sleep timer that stops after 15 to 60 minutes or at the end of the song.
@@ -55,5 +56,5 @@ Please only play, share and download content you have the right to use.
 ## Release notes (What's new)
 
 ```text
-New: subtitles for videos and songs, looping the best part, a large view, playback speed and a sleep timer. Long videos open where you left off. The player has one set of controls and more room for the video, and the browser blocks ads with uBlock Origin's lists. Fixed: torrents of files you already have seed at once, and videos in your library have thumbnails.
+New: subtitles for videos and songs, looping the best part, a large view, playback speed and a sleep timer. Synced lyrics from .lrc files. Long videos open where you left off. The player has one set of controls and more room for the video, and the browser blocks ads with uBlock Origin's lists. Fixed: torrents of files you already have seed at once, and videos in your library have thumbnails.
 ```

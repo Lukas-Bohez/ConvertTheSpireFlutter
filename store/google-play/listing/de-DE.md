@@ -22,6 +22,7 @@ BitPlayer spielt deine Musik und Videos ab, mit den Extras, die anderen Playern 
 EIN PLAYER FÜR MUSIK UND VIDEO
 • Eine Bibliothek für deine Songs und Videos, mit Playlists, Favoriten, Zufallswiedergabe und Wiederholen.
 • Untertitel für Videos und Songs: Eine .srt- oder .vtt-Datei neben der Datei wird von selbst geladen. Mit einem Tipp ein- oder ausschalten, eine andere Datei wählen oder verschieben, wenn sie nicht synchron sind.
+• Synchronisierte Songtexte: Eine .lrc-Datei neben einem Song zeigt jede Zeile, während sie gesungen wird.
 • Die beste Stelle in Schleife: Markiere einen oder mehrere Abschnitte eines Songs oder Videos, und nur diese laufen, einer nach dem anderen.
 • Große Ansicht: Das Video füllt den Bildschirm, ohne alles drumherum.
 • Geschwindigkeit von 0,5× bis 2× und ein Schlaf-Timer, der nach 15 bis 60 Minuten oder am Ende des Songs stoppt.
@@ -55,5 +56,5 @@ Bitte spiele, teile und lade nur Inhalte, zu deren Nutzung du berechtigt bist.
 ## Release notes (What's new)
 
 ```text
-Neu: Untertitel für Videos und Songs, die beste Stelle in Schleife, eine große Ansicht, Wiedergabegeschwindigkeit und ein Schlaf-Timer. Lange Videos gehen dort weiter, wo du aufgehört hast. Der Player hat nur noch eine Steuerung und mehr Platz fürs Video, und der Browser blockiert Werbung mit den Listen von uBlock Origin. Behoben: Torrents von Dateien, die du schon hast, seeden sofort, und Videos haben Vorschaubilder.
+Neu: Untertitel für Videos und Songs, die beste Stelle in Schleife, eine große Ansicht, Wiedergabegeschwindigkeit und ein Schlaf-Timer. Synchronisierte Songtexte aus .lrc-Dateien. Lange Videos gehen dort weiter, wo du aufgehört hast. Der Player hat nur noch eine Steuerung und mehr Platz fürs Video, und der Browser blockiert Werbung mit den Listen von uBlock Origin. Behoben: Torrents von Dateien, die du schon hast, seeden sofort, und Videos haben Vorschaubilder.
 ```

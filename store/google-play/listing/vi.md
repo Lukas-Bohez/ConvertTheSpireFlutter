@@ -22,6 +22,7 @@ BitPlayer phát nhạc và video của bạn, với những thứ các trình ph
 TRÌNH PHÁT NHẠC VÀ VIDEO
 • Một thư viện cho bài hát và video, với danh sách phát, mục yêu thích, phát ngẫu nhiên và lặp lại.
 • Phụ đề cho video và bài hát: tệp .srt hoặc .vtt nằm cạnh tệp sẽ tự tải. Bật hoặc tắt chỉ bằng một chạm, chọn tệp khác, hoặc dịch thời gian khi bị lệch.
+• Lời bài hát đồng bộ: tệp .lrc cạnh bài hát hiện từng dòng đúng lúc được hát.
 • Lặp đoạn hay nhất: đánh dấu một hoặc nhiều đoạn của bài hát hay video, và chỉ những đoạn đó được phát, lần lượt từng đoạn.
 • Chế độ xem lớn: video lấp đầy màn hình, không có gì xung quanh.
 • Tốc độ từ 0,5× đến 2×, và hẹn giờ tắt sau 15 đến 60 phút hoặc khi hết bài.
@@ -55,5 +56,5 @@ Vui lòng chỉ phát, chia sẻ và tải nội dung bạn có quyền sử d�
 ## Release notes (What's new)
 
 ```text
-Mới: phụ đề cho video và bài hát, lặp đoạn hay nhất, chế độ xem lớn, tốc độ phát và hẹn giờ tắt. Video dài tiếp tục từ chỗ bạn đã dừng. Trình phát chỉ còn một bộ nút điều khiển và nhiều chỗ hơn cho video, và trình duyệt chặn quảng cáo bằng danh sách của uBlock Origin. Đã sửa: torrent của tệp bạn đã có được seed ngay, và video có ảnh thu nhỏ.
+Mới: phụ đề cho video và bài hát, lặp đoạn hay nhất, chế độ xem lớn, tốc độ phát và hẹn giờ tắt. Lời bài hát đồng bộ từ tệp .lrc. Video dài tiếp tục từ chỗ bạn đã dừng. Trình phát chỉ còn một bộ nút điều khiển và nhiều chỗ hơn cho video, và trình duyệt chặn quảng cáo bằng danh sách của uBlock Origin. Đã sửa: torrent của tệp bạn đã có được seed ngay, và video có ảnh thu nhỏ.
 ```

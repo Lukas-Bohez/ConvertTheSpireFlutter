@@ -22,6 +22,7 @@ BitPlayer müziğini ve videolarını, diğer oynatıcıların atladığı özel
 MÜZİK VE VİDEO İÇİN BİR OYNATICI
 • Şarkıların ve videoların için tek kitaplık: çalma listeleri, favoriler, karışık çalma ve tekrar.
 • Videolar ve şarkılar için altyazı: dosyanın yanındaki .srt veya .vtt dosyası kendiliğinden yüklenir. Tek dokunuşla aç veya kapat, başka bir dosya seç ya da senkronu kaydıysa kaydır.
+• Senkronize şarkı sözleri: şarkının yanındaki .lrc dosyası her satırı söylendiği anda gösterir.
 • En iyi bölümü döngüye al: bir şarkının veya videonun bir ya da daha fazla bölümünü işaretle, yalnızca onlar arka arkaya çalsın.
 • Büyük görünüm: video, etrafında başka hiçbir şey olmadan ekranı doldurur.
 • 0,5× ile 2× arası hız ve 15–60 dakika sonra ya da şarkının sonunda durduran bir uyku zamanlayıcısı.
@@ -55,5 +56,5 @@ Lütfen yalnızca kullanma hakkına sahip olduğun içerikleri oynat, paylaş ve
 ## Release notes (What's new)
 
 ```text
-Yeni: videolar ve şarkılar için altyazı, en iyi bölümü döngüye alma, büyük görünüm, oynatma hızı ve uyku zamanlayıcısı. Uzun videolar kaldığın yerden devam eder. Oynatıcının tek bir kontrol seti ve videoya daha fazla yeri var; tarayıcı reklamları uBlock Origin'in listeleriyle engeller. Düzeltildi: zaten sahip olduğun dosyaların torrentleri hemen paylaşılır ve videoların küçük resimleri var.
+Yeni: videolar ve şarkılar için altyazı, en iyi bölümü döngüye alma, büyük görünüm, oynatma hızı ve uyku zamanlayıcısı. .lrc dosyalarından senkronize şarkı sözleri. Uzun videolar kaldığın yerden devam eder. Oynatıcının tek bir kontrol seti ve videoya daha fazla yeri var; tarayıcı reklamları uBlock Origin'in listeleriyle engeller. Düzeltildi: zaten sahip olduğun dosyaların torrentleri hemen paylaşılır ve videoların küçük resimleri var.
 ```

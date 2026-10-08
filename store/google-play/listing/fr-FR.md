@@ -22,6 +22,7 @@ BitPlayer lit votre musique et vos vidéos, avec ce que les autres lecteurs oubl
 UN LECTEUR POUR LA MUSIQUE ET LA VIDÉO
 • Une seule bibliothèque pour vos chansons et vidéos, avec playlists, favoris, lecture aléatoire et répétition.
 • Des sous-titres pour les vidéos et les chansons : un fichier .srt ou .vtt à côté du fichier se charge tout seul. Activez-les ou coupez-les d'un geste, choisissez un autre fichier, ou décalez-les s'ils ne sont pas synchronisés.
+• Paroles synchronisées : un fichier .lrc à côté d'une chanson affiche chaque ligne au moment où elle est chantée.
 • Le meilleur passage en boucle : marquez un ou plusieurs passages d'une chanson ou d'une vidéo, et seuls ceux-là sont lus, l'un après l'autre.
 • Grand affichage : la vidéo remplit l'écran, sans rien autour.
 • Vitesse de 0,5× à 2×, et un minuteur de veille qui arrête la lecture après 15 à 60 minutes ou à la fin de la chanson.
@@ -55,5 +56,5 @@ Ne lisez, partagez et téléchargez que des contenus que vous avez le droit d'ut
 ## Release notes (What's new)
 
 ```text
-Nouveau : sous-titres pour les vidéos et les chansons, meilleur passage en boucle, grand affichage, vitesse de lecture et minuteur de veille. Les longues vidéos reprennent là où vous vous étiez arrêté. Le lecteur n'a plus qu'un jeu de commandes et plus de place pour la vidéo, et le navigateur bloque les pubs avec les listes d'uBlock Origin. Corrigé : les torrents de fichiers déjà présents se partagent aussitôt, et les vidéos ont des miniatures.
+Nouveau : sous-titres pour les vidéos et les chansons, meilleur passage en boucle, grand affichage, vitesse de lecture et minuteur de veille. Paroles synchronisées depuis les fichiers .lrc. Les longues vidéos reprennent là où vous vous étiez arrêté. Le lecteur n'a plus qu'un jeu de commandes et plus de place pour la vidéo, et le navigateur bloque les pubs avec les listes d'uBlock Origin. Corrigé : les torrents de fichiers déjà présents se partagent aussitôt, et les vidéos ont des miniatures.
 ```

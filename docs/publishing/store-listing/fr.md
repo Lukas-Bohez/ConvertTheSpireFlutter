@@ -22,6 +22,7 @@ Convert The Spire Reborn réunit votre musique et vos vidéos dans une seule app
 LECTURE
 • Une seule bibliothèque pour vos chansons et vidéos, avec playlists, favoris, lecture aléatoire et répétition.
 • Des sous-titres pour les vidéos et les chansons : un fichier .srt ou .vtt à côté du fichier se charge tout seul. Activez-les ou coupez-les d'un geste, choisissez un autre fichier, ou décalez-les s'ils ne sont pas synchronisés.
+• Paroles synchronisées : un fichier .lrc à côté d'une chanson affiche chaque ligne au moment où elle est chantée.
 • Le meilleur passage en boucle : marquez un ou plusieurs passages d'une chanson ou d'une vidéo, et seuls ceux-là sont lus, l'un après l'autre.
 • Grand affichage : la vidéo remplit l'écran, sans rien autour.
 • Vitesse de 0,5× à 2×, et un minuteur de veille qui arrête la lecture après 15 à 60 minutes ou à la fin de la chanson.
@@ -55,7 +56,7 @@ Disponible en 18 langues. Ne téléchargez que des contenus que vous avez le dro
 ## What's new in this version
 
 ```text
-Nouveau : téléchargez seulement le passage d'une vidéo ou d'une chanson que vous voulez. Des sous-titres pour les vidéos et les chansons : les fichiers .srt et .vtt se chargent tout seuls. Mettez le meilleur passage en boucle, changez la vitesse, réglez un minuteur de veille et regardez en grand affichage. Les longues vidéos reprennent là où vous vous étiez arrêté, et le bloqueur de pubs du navigateur utilise désormais les listes d'uBlock Origin. Le lecteur n'a plus qu'un seul jeu de commandes et plus de place pour la vidéo, et toutes les couleurs sont débloquées. Corrigé : un programme téléchargé par torrent se lance pendant qu'il est partagé, les torrents de fichiers que vous avez déjà se partagent aussitôt, et les vidéos de votre bibliothèque ont des miniatures.
+Nouveau : téléchargez seulement le passage d'une vidéo ou d'une chanson que vous voulez. Des sous-titres pour les vidéos et les chansons : les fichiers .srt et .vtt se chargent tout seuls. Paroles synchronisées depuis les fichiers .lrc. Mettez le meilleur passage en boucle, changez la vitesse, réglez un minuteur de veille et regardez en grand affichage. Les longues vidéos reprennent là où vous vous étiez arrêté, et le bloqueur de pubs du navigateur utilise désormais les listes d'uBlock Origin. Le lecteur n'a plus qu'un seul jeu de commandes et plus de place pour la vidéo, et toutes les couleurs sont débloquées. Corrigé : un programme téléchargé par torrent se lance pendant qu'il est partagé, les torrents de fichiers que vous avez déjà se partagent aussitôt, et les vidéos de votre bibliothèque ont des miniatures.
 ```
 
 ## Product features
@@ -72,55 +73,60 @@ Sous-titres pour les vidéos et les chansons (.srt et .vtt)
 
 3.
 ```text
-Meilleur passage en boucle, vitesse, minuteur de veille
+Paroles synchronisées (.lrc)
 ```
 
 4.
 ```text
-Grand affichage : la vidéo sans rien autour
+Meilleur passage en boucle, vitesse, minuteur de veille
 ```
 
 5.
 ```text
-Téléchargez vidéo et musique depuis 1 800+ sites, ou un seul passage
+Grand affichage : la vidéo sans rien autour
 ```
 
 6.
 ```text
-Playlists entières, avec titres, tags et pochettes
+Téléchargez vidéo et musique depuis 1 800+ sites, ou un seul passage
 ```
 
 7.
 ```text
-Conversion entre 27+ formats audio, vidéo et image
+Playlists entières, avec titres, tags et pochettes
 ```
 
 8.
 ```text
-Diffusion sur TV et enceintes (DLNA/UPnP)
+Conversion entre 27+ formats audio, vidéo et image
 ```
 
 9.
 ```text
-Regardez des vidéos en synchro avec vos amis
+Diffusion sur TV et enceintes (DLNA/UPnP)
 ```
 
 10.
 ```text
-Client BitTorrent avec liens magnet et partage
+Regardez des vidéos en synchro avec vos amis
 ```
 
 11.
 ```text
-Navigateur avec un vrai bloqueur de pubs
+Client BitTorrent avec liens magnet et partage
 ```
 
 12.
 ```text
-Sans compte, sans pub, sans pistage
+Navigateur avec un vrai bloqueur de pubs
 ```
 
 13.
+```text
+Sans compte, sans pub, sans pistage
+```
+
+14.
 ```text
 Open source, en 18 langues
 ```

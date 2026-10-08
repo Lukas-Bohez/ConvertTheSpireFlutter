@@ -22,6 +22,7 @@ BitPlayer odtwarza Twoją muzykę i filmy, z tym, czego brakuje innym odtwarzacz
 ODTWARZACZ MUZYKI I WIDEO
 • Jedna biblioteka na piosenki i filmy, z playlistami, ulubionymi, losowaniem i powtarzaniem.
 • Napisy do filmów i piosenek: plik .srt lub .vtt obok pliku wczytuje się sam. Włączaj je i wyłączaj jednym dotknięciem, wybierz inny plik albo przesuń je, gdy się rozjeżdżają.
+• Zsynchronizowane teksty: plik .lrc obok piosenki pokazuje każdy wers, gdy jest śpiewany.
 • Zapętl najlepszy fragment: zaznacz jeden lub kilka fragmentów piosenki albo filmu, a odtwarzane będą tylko one, jeden po drugim.
 • Duży widok: film wypełnia ekran, bez niczego dookoła.
 • Prędkość od 0,5× do 2× i wyłącznik czasowy, który zatrzymuje odtwarzanie po 15–60 minutach albo na końcu piosenki.
@@ -55,5 +56,5 @@ Odtwarzaj, udostępniaj i pobieraj tylko treści, do których korzystania masz p
 ## Release notes (What's new)
 
 ```text
-Nowość: napisy do filmów i piosenek, zapętlanie najlepszego fragmentu, duży widok, prędkość odtwarzania i wyłącznik czasowy. Długie filmy wracają tam, gdzie skończyłeś. Odtwarzacz ma jeden zestaw przycisków i więcej miejsca na film, a przeglądarka blokuje reklamy listami uBlock Origin. Naprawione: torrenty plików, które już masz, od razu się seedują, a filmy mają miniatury.
+Nowość: napisy do filmów i piosenek, zapętlanie najlepszego fragmentu, duży widok, prędkość odtwarzania i wyłącznik czasowy. Zsynchronizowane teksty z plików .lrc. Długie filmy wracają tam, gdzie skończyłeś. Odtwarzacz ma jeden zestaw przycisków i więcej miejsca na film, a przeglądarka blokuje reklamy listami uBlock Origin. Naprawione: torrenty plików, które już masz, od razu się seedują, a filmy mają miniatury.
 ```

@@ -22,6 +22,7 @@ Convert The Spire Reborn to Twoja muzyka i filmy w jednej aplikacji: odtwarzacz 
 ODTWARZANIE
 • Jedna biblioteka na piosenki i filmy, z playlistami, ulubionymi, losowaniem i powtarzaniem.
 • Napisy do filmów i piosenek: plik .srt lub .vtt obok pliku wczytuje się sam. Włączaj je i wyłączaj jednym dotknięciem, wybierz inny plik albo przesuń je, gdy się rozjeżdżają.
+• Zsynchronizowane teksty: plik .lrc obok piosenki pokazuje każdy wers, gdy jest śpiewany.
 • Zapętl najlepszy fragment: zaznacz jeden lub kilka fragmentów piosenki albo filmu, a odtwarzane będą tylko one, jeden po drugim.
 • Duży widok: film wypełnia ekran, bez niczego dookoła.
 • Prędkość od 0,5× do 2× i wyłącznik czasowy, który zatrzymuje odtwarzanie po 15–60 minutach albo na końcu piosenki.
@@ -55,7 +56,7 @@ Dostępna w 18 językach. Pobieraj tylko treści, do których pobrania masz praw
 ## What's new in this version
 
 ```text
-Nowość: pobierz tylko ten fragment filmu lub piosenki, który chcesz. Napisy do filmów i piosenek: pliki .srt i .vtt wczytują się same. Zapętl najlepszy fragment, zmień prędkość, ustaw wyłącznik czasowy i oglądaj w dużym widoku. Długie filmy wracają tam, gdzie skończyłeś, a bloker reklam w przeglądarce korzysta teraz z list uBlock Origin. Odtwarzacz ma jeden zestaw przycisków i więcej miejsca na film, a wszystkie kolory są odblokowane. Naprawione: program pobrany torrentem uruchamia się podczas seedowania, torrenty plików, które już masz, od razu się seedują, a filmy w bibliotece mają miniatury.
+Nowość: pobierz tylko ten fragment filmu lub piosenki, który chcesz. Napisy do filmów i piosenek: pliki .srt i .vtt wczytują się same. Zsynchronizowane teksty z plików .lrc. Zapętl najlepszy fragment, zmień prędkość, ustaw wyłącznik czasowy i oglądaj w dużym widoku. Długie filmy wracają tam, gdzie skończyłeś, a bloker reklam w przeglądarce korzysta teraz z list uBlock Origin. Odtwarzacz ma jeden zestaw przycisków i więcej miejsca na film, a wszystkie kolory są odblokowane. Naprawione: program pobrany torrentem uruchamia się podczas seedowania, torrenty plików, które już masz, od razu się seedują, a filmy w bibliotece mają miniatury.
 ```
 
 ## Product features
@@ -72,55 +73,60 @@ Napisy do filmów i piosenek (.srt i .vtt)
 
 3.
 ```text
-Zapętlanie fragmentów, prędkość, wyłącznik czasowy
+Zsynchronizowane teksty piosenek (.lrc)
 ```
 
 4.
 ```text
-Duży widok: film bez niczego dookoła
+Zapętlanie fragmentów, prędkość, wyłącznik czasowy
 ```
 
 5.
 ```text
-Pobieranie wideo i muzyki z 1800+ stron, także fragmentów
+Duży widok: film bez niczego dookoła
 ```
 
 6.
 ```text
-Całe playlisty, z tytułami, tagami i okładkami
+Pobieranie wideo i muzyki z 1800+ stron, także fragmentów
 ```
 
 7.
 ```text
-Konwersja między 27+ formatami audio, wideo i obrazów
+Całe playlisty, z tytułami, tagami i okładkami
 ```
 
 8.
 ```text
-Przesyłanie na TV i głośniki (DLNA/UPnP)
+Konwersja między 27+ formatami audio, wideo i obrazów
 ```
 
 9.
 ```text
-Wspólne oglądanie ze znajomymi, w synchronizacji
+Przesyłanie na TV i głośniki (DLNA/UPnP)
 ```
 
 10.
 ```text
-Klient BitTorrent z linkami magnet i seedowaniem
+Wspólne oglądanie ze znajomymi, w synchronizacji
 ```
 
 11.
 ```text
-Przeglądarka z prawdziwym blokerem reklam
+Klient BitTorrent z linkami magnet i seedowaniem
 ```
 
 12.
 ```text
-Bez konta, bez reklam, bez śledzenia
+Przeglądarka z prawdziwym blokerem reklam
 ```
 
 13.
+```text
+Bez konta, bez reklam, bez śledzenia
+```
+
+14.
 ```text
 Otwarte źródło, w 18 językach
 ```

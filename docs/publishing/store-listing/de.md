@@ -22,6 +22,7 @@ Convert The Spire Reborn vereint deine Musik und Videos in einer App: ein Player
 ABSPIELEN
 • Eine Bibliothek für deine Songs und Videos, mit Playlists, Favoriten, Zufallswiedergabe und Wiederholen.
 • Untertitel für Videos und Songs: Eine .srt- oder .vtt-Datei neben der Datei wird von selbst geladen. Mit einem Tipp ein- oder ausschalten, eine andere Datei wählen oder verschieben, wenn sie nicht synchron sind.
+• Synchronisierte Songtexte: Eine .lrc-Datei neben einem Song zeigt jede Zeile, während sie gesungen wird.
 • Die beste Stelle in Schleife: Markiere einen oder mehrere Abschnitte eines Songs oder Videos, und nur diese laufen, einer nach dem anderen.
 • Große Ansicht: Das Video füllt den Bildschirm, ohne alles drumherum.
 • Geschwindigkeit von 0,5× bis 2× und ein Schlaf-Timer, der nach 15 bis 60 Minuten oder am Ende des Songs stoppt.
@@ -55,7 +56,7 @@ In 18 Sprachen verfügbar. Bitte lade nur Inhalte herunter, zu deren Download du
 ## What's new in this version
 
 ```text
-Neu: Lade nur den Teil eines Videos oder Songs herunter, den du willst. Untertitel für Videos und Songs: .srt- und .vtt-Dateien werden von selbst geladen. Die beste Stelle in Schleife, Geschwindigkeit ändern, Schlaf-Timer stellen und in großer Ansicht schauen. Lange Videos gehen dort weiter, wo du aufgehört hast, und der Werbeblocker im Browser nutzt jetzt die Listen von uBlock Origin. Der Player hat nur noch eine Steuerung und mehr Platz fürs Video, und alle Farben sind freigeschaltet. Behoben: Ein per Torrent geladenes Programm startet, während es seedet, Torrents von Dateien, die du schon hast, seeden sofort, und Videos in deiner Bibliothek haben Vorschaubilder.
+Neu: Lade nur den Teil eines Videos oder Songs herunter, den du willst. Untertitel für Videos und Songs: .srt- und .vtt-Dateien werden von selbst geladen. Synchronisierte Songtexte aus .lrc-Dateien. Die beste Stelle in Schleife, Geschwindigkeit ändern, Schlaf-Timer stellen und in großer Ansicht schauen. Lange Videos gehen dort weiter, wo du aufgehört hast, und der Werbeblocker im Browser nutzt jetzt die Listen von uBlock Origin. Der Player hat nur noch eine Steuerung und mehr Platz fürs Video, und alle Farben sind freigeschaltet. Behoben: Ein per Torrent geladenes Programm startet, während es seedet, Torrents von Dateien, die du schon hast, seeden sofort, und Videos in deiner Bibliothek haben Vorschaubilder.
 ```
 
 ## Product features
@@ -72,55 +73,60 @@ Untertitel für Videos und Songs (.srt und .vtt)
 
 3.
 ```text
-Beste Stelle in Schleife, Geschwindigkeit, Schlaf-Timer
+Synchronisierte Songtexte (.lrc)
 ```
 
 4.
 ```text
-Große Ansicht: das Video ohne alles drumherum
+Beste Stelle in Schleife, Geschwindigkeit, Schlaf-Timer
 ```
 
 5.
 ```text
-Video und Musik von über 1.800 Seiten laden, auch nur einen Teil
+Große Ansicht: das Video ohne alles drumherum
 ```
 
 6.
 ```text
-Ganze Playlists, mit Titeln, Tags und Cover
+Video und Musik von über 1.800 Seiten laden, auch nur einen Teil
 ```
 
 7.
 ```text
-Konvertieren zwischen über 27 Audio-, Video- und Bildformaten
+Ganze Playlists, mit Titeln, Tags und Cover
 ```
 
 8.
 ```text
-Auf Fernseher und Lautsprecher streamen (DLNA/UPnP)
+Konvertieren zwischen über 27 Audio-, Video- und Bildformaten
 ```
 
 9.
 ```text
-Videos synchron mit Freunden schauen
+Auf Fernseher und Lautsprecher streamen (DLNA/UPnP)
 ```
 
 10.
 ```text
-BitTorrent-Client mit Magnet-Links und Seeding
+Videos synchron mit Freunden schauen
 ```
 
 11.
 ```text
-Browser mit echtem Werbeblocker
+BitTorrent-Client mit Magnet-Links und Seeding
 ```
 
 12.
 ```text
-Kein Konto, keine Werbung, kein Tracking
+Browser mit echtem Werbeblocker
 ```
 
 13.
+```text
+Kein Konto, keine Werbung, kein Tracking
+```
+
+14.
 ```text
 Open Source, in 18 Sprachen
 ```

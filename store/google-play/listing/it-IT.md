@@ -22,6 +22,7 @@ BitPlayer riproduce la tua musica e i tuoi video, con quello che gli altri letto
 UN LETTORE PER MUSICA E VIDEO
 • Un'unica libreria per canzoni e video, con playlist, preferiti, riproduzione casuale e ripetizione.
 • Sottotitoli per video e canzoni: un file .srt o .vtt accanto al file si carica da solo. Attivali o disattivali con un tocco, scegli un altro file o spostali se non sono sincronizzati.
+• Testi sincronizzati: un file .lrc accanto a una canzone mostra ogni riga mentre viene cantata.
 • La parte migliore in loop: segna una o più parti di una canzone o di un video e vengono riprodotte solo quelle, una dopo l'altra.
 • Vista grande: il video riempie lo schermo, senza nient'altro intorno.
 • Velocità da 0,5× a 2× e un timer che si ferma dopo 15–60 minuti o alla fine della canzone.
@@ -55,5 +56,5 @@ Riproduci, condividi e scarica solo contenuti che hai il diritto di usare.
 ## Release notes (What's new)
 
 ```text
-Novità: sottotitoli per video e canzoni, la parte migliore in loop, vista grande, velocità di riproduzione e timer di spegnimento. I video lunghi riprendono da dove eri rimasto. Il lettore ha un solo set di comandi e più spazio per il video, e il browser blocca la pubblicità con le liste di uBlock Origin. Corretto: i torrent di file che hai già vanno subito in seeding e i video hanno le miniature.
+Novità: sottotitoli per video e canzoni, la parte migliore in loop, vista grande, velocità di riproduzione e timer di spegnimento. Testi sincronizzati dai file .lrc. I video lunghi riprendono da dove eri rimasto. Il lettore ha un solo set di comandi e più spazio per il video, e il browser blocca la pubblicità con le liste di uBlock Origin. Corretto: i torrent di file che hai già vanno subito in seeding e i video hanno le miniature.
 ```
