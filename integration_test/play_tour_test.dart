@@ -8,6 +8,7 @@ import 'package:convert_the_spire_reborn/src/screens/player.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_creator_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemChrome, SystemUiMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -76,6 +77,16 @@ void main() {
       await app.main();
       await tour.waitFor(() => find.byType(HomeScreen).evaluate().isNotEmpty,
           const Duration(seconds: 60));
+      // The app's own handler keeps an overflow's details to itself.
+      final appOnError = FlutterError.onError;
+      FlutterError.onError = (details) {
+        debugPrint('TOUR ERROR: ${details.toString()}');
+        appOnError?.call(details);
+      };
+      if (_form == 'tablet' || _form == 'chromebook') {
+        // Android's taskbar, with other apps' icons, out of the shots.
+        await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      }
       await tour.hold(2500);
 
       final home = tester.state<HomeScreenState>(find.byType(HomeScreen));
@@ -141,6 +152,11 @@ void main() {
       await tour.waitFor(
           () => player.library.length >= 12, const Duration(seconds: 30));
       await player.playFileDirect(media('Neon Rain.mp3'));
+      // Up next, beside the player on a wide screen.
+      for (final song in const ['Midnight Drive', 'Paper Planes',
+          'Slow Sunrise', 'Northern Coast', 'City Lights']) {
+        player.enqueue(player.mediaIndexForPath(media('$song.mp3')));
+      }
       // Time for the library's covers to load.
       await tour.hold(5000);
       await tour.shot('2-player');
