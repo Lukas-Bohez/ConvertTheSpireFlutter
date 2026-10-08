@@ -110,6 +110,7 @@ flutter:
   assets:
     - assets/icons/app_icon.ico
     - assets/icons/favicon-192x192.png
+    - assets/icons/app_logo_384.png
     # Bundled so the app can show what changed after it updates itself.
     - CHANGELOG.md
   shaders: []

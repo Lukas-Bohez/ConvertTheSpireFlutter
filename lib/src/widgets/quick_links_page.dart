@@ -210,21 +210,13 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          cs.primary.withValues(alpha: 0.15),
-                          cs.tertiary.withValues(alpha: 0.10),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Icon(Icons.music_note_rounded,
-                        size: 56, color: cs.primary),
+                  // The app's own logo, not a stock music note.
+                  Image.asset(
+                    'assets/icons/app_logo_384.png',
+                    width: 96,
+                    height: 96,
+                    filterQuality: FilterQuality.medium,
+                    semanticLabel: getAppTitle(),
                   ),
                   const SizedBox(height: 18),
                   buildTitle(),
