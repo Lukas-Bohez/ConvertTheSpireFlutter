@@ -5758,9 +5758,16 @@ class _PlayerScreenState extends State<PlayerScreen>
         (state.videoController != null || state.androidVideoController != null);
 
     // Leaving a video for a song leaves the large view too. (F11 during a
-    // song used to show a black video here.)
-    if (!showVideo) _largeView = false;
-    final immersive = showVideo && (_largeView || _isFullScreen);
+    // song used to show a black video here.) So does leaving the page: the
+    // app's bar stayed hidden on every other page after a TV remote's Back
+    // in the large view, with no way to get around.
+    final onScreen = Visibility.of(context);
+    if (!showVideo || !onScreen) _largeView = false;
+    if (!onScreen && _isFullScreen && !_usesNativeWindowFullscreen) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => unawaited(_exitFullScreen()));
+    }
+    final immersive = onScreen && showVideo && (_largeView || _isFullScreen);
     if (PlayerScreen.immersive.value != immersive) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         PlayerScreen.immersive.value = immersive;
