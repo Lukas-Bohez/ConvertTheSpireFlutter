@@ -16,6 +16,7 @@ import 'package:convert_the_spire_reborn/src/vault/models/torrent.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/notification_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/settings_service.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_content_deleter.dart';
+import 'package:convert_the_spire_reborn/src/vault/services/torrent_existing_data.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_file_export.dart';
 import 'package:convert_the_spire_reborn/src/vault/services/torrent_service.dart';
 import 'package:dtorrent_common/dtorrent_common.dart';
@@ -1149,6 +1150,20 @@ class TorrentEngineService {
 
   /// Verifies all downloaded pieces against their SHA-1 hashes.
   /// Marks corrupted pieces for re-download without deleting good data.
+  /// Checks files already on disk before a torrent first starts (see
+  /// adoptExistingTorrentData).
+  Future<void> _adoptExistingData(
+      String torrentId, dt.TorrentModel model, String saveDir) async {
+    try {
+      final found = await adoptExistingTorrentData(model, saveDir);
+      if (found != null) {
+        _log(torrentId, '${found.$1} / ${found.$2} pieces already on disk.');
+      }
+    } catch (e) {
+      _log(torrentId, 'Checking the files on disk failed (non-fatal): $e');
+    }
+  }
+
   Future<Map<String, dynamic>> recheckTorrent(String torrentId) async {
     final torrent = await TorrentService.instance.getTorrentById(torrentId);
     if (torrent == null) throw StateError('Torrent not found: $torrentId');
@@ -1188,26 +1203,29 @@ class TorrentEngineService {
       if (task != null) {
         pieces = (task as dynamic).pieceManager?.pieces?.values?.toList() ?? [];
       } else {
-        // Construct minimal Piece objects from model piece hashes
-        final metaPieces = dtModel.pieces ?? [];
-        var offset = 0;
-        for (var i = 0; i < metaPieces.length; i++) {
-          final byteLength = (i == metaPieces.length - 1)
-              ? dtModel.lastPieceLength
-              : dtModel.pieceLength;
-          final hashBytes = metaPieces[i];
-          final hashString =
-              hashBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-          pieces.add(dt_piece.Piece(hashString, i, byteLength, offset));
-          offset += byteLength;
-        }
+        // Taken as written so the validator reads them: built plainly, every
+        // piece was turned down unread and a recheck found nothing.
+        pieces = verifiablePieces(dtModel);
       }
 
       final recovery = dt.StateRecovery(dtModel, savePath, pieces);
       await recovery.backupStateFile();
 
-      final validator = dt.FileValidator(dtModel, pieces, savePath);
+      final dir = savePath.endsWith(Platform.pathSeparator)
+          ? savePath
+          : '$savePath${Platform.pathSeparator}';
+      final validator = dt.FileValidator(dtModel, pieces, dir);
       final result = await validator.validateAll();
+      // What checked out is what the task starts from: the status alone
+      // said "seeding" over a task that still thought it had nothing.
+      if (!wasRunning && result.error == null) {
+        final invalid = result.invalidPieces.toSet();
+        final state = await dt.StateFileV2.getStateFile(dir, dtModel);
+        for (var i = 0; i < pieces.length; i++) {
+          await state.updateBitfield(i, !invalid.contains(i));
+        }
+        await state.close();
+      }
 
       if (result.isValid) {
         await TorrentService.instance.updateTorrentStatus(torrentId, 'seeding');
@@ -1459,6 +1477,8 @@ class TorrentEngineService {
     } else {
       await TorrentService.instance.updateTorrent(torrent);
     }
+
+    await _adoptExistingData(torrent.id, dtModel, saveDir);
 
     // stream=false: rarest-first piece selection. See _streamPieceOrder.
     final task = dt.TorrentTask.newTask(
@@ -1842,6 +1862,8 @@ class TorrentEngineService {
         torrent.copyWith(name: updatedName),
       );
     }
+
+    await _adoptExistingData(torrent.id, dtModel, saveDir);
 
     // stream=false: rarest-first piece selection. See _streamPieceOrder.
     final task = dt.TorrentTask.newTask(
