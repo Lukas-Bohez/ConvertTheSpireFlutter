@@ -1434,7 +1434,7 @@
   "subtitles": "सबटाइटल",
   "subtitlesNone": "कोई नहीं",
   "subtitlesChooseFile": "सबटाइटल फ़ाइल चुनें…",
-  "subtitlesNoneFound": "इस फ़ाइल के पास कोई सबटाइटल फ़ाइल नहीं है। कोई .srt या .vtt फ़ाइल चुनें।",
+  "subtitlesNoneFound": "इस फ़ाइल के पास कोई सबटाइटल या बोल की फ़ाइल नहीं है। कोई .srt, .vtt या .lrc फ़ाइल चुनें।",
   "subtitlesTiming": "समय: {delay}",
   "subtitlesEarlier": "पहले दिखाएं",
   "subtitlesLater": "बाद में दिखाएं",

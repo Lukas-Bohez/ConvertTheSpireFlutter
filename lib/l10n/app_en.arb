@@ -3056,7 +3056,7 @@
   "subtitles": "Subtitles",
   "subtitlesNone": "None",
   "subtitlesChooseFile": "Choose a subtitle file…",
-  "subtitlesNoneFound": "No subtitle file next to this one. Choose an .srt or .vtt file.",
+  "subtitlesNoneFound": "No subtitle or lyrics file next to this one. Choose an .srt, .vtt or .lrc file.",
   "subtitlesTiming": "Timing: {delay}",
   "@subtitlesTiming": {
     "placeholders": {

@@ -1434,7 +1434,7 @@
   "subtitles": "Untertitel",
   "subtitlesNone": "Keine",
   "subtitlesChooseFile": "Untertiteldatei wählen…",
-  "subtitlesNoneFound": "Neben dieser Datei liegen keine Untertitel. Wähle eine .srt- oder .vtt-Datei.",
+  "subtitlesNoneFound": "Neben dieser Datei liegen keine Untertitel oder Songtexte. Wähle eine .srt-, .vtt- oder .lrc-Datei.",
   "subtitlesTiming": "Zeitversatz: {delay}",
   "subtitlesEarlier": "Früher zeigen",
   "subtitlesLater": "Später zeigen",

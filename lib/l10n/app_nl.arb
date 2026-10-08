@@ -1434,7 +1434,7 @@
   "subtitles": "Ondertitels",
   "subtitlesNone": "Geen",
   "subtitlesChooseFile": "Ondertitelbestand kiezen…",
-  "subtitlesNoneFound": "Geen ondertitelbestand naast dit bestand. Kies een .srt- of .vtt-bestand.",
+  "subtitlesNoneFound": "Geen ondertitel- of songtekstbestand naast dit bestand. Kies een .srt-, .vtt- of .lrc-bestand.",
   "subtitlesTiming": "Timing: {delay}",
   "subtitlesEarlier": "Vroeger tonen",
   "subtitlesLater": "Later tonen",

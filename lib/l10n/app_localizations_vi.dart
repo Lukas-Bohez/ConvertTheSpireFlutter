@@ -4945,7 +4945,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get subtitlesNoneFound =>
-      'Không có tệp phụ đề cạnh tệp này. Hãy chọn tệp .srt hoặc .vtt.';
+      'Không có tệp phụ đề hay lời bài hát cạnh tệp này. Hãy chọn tệp .srt, .vtt hoặc .lrc.';
 
   @override
   String subtitlesTiming(String delay) {

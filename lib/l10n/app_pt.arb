@@ -1434,7 +1434,7 @@
   "subtitles": "Legendas",
   "subtitlesNone": "Nenhuma",
   "subtitlesChooseFile": "Escolher um arquivo de legenda…",
-  "subtitlesNoneFound": "Não há legenda ao lado deste arquivo. Escolha um arquivo .srt ou .vtt.",
+  "subtitlesNoneFound": "Não há legenda nem letra ao lado deste arquivo. Escolha um arquivo .srt, .vtt ou .lrc.",
   "subtitlesTiming": "Sincronia: {delay}",
   "subtitlesEarlier": "Mostrar antes",
   "subtitlesLater": "Mostrar depois",

@@ -1434,7 +1434,7 @@
   "subtitles": "الترجمة",
   "subtitlesNone": "بلا",
   "subtitlesChooseFile": "اختر ملف ترجمة…",
-  "subtitlesNoneFound": "لا يوجد ملف ترجمة بجانب هذا الملف. اختر ملف .srt أو .vtt.",
+  "subtitlesNoneFound": "لا يوجد ملف ترجمة أو كلمات بجانب هذا الملف. اختر ملف .srt أو .vtt أو .lrc.",
   "subtitlesTiming": "التوقيت: {delay}",
   "subtitlesEarlier": "اعرضها أبكر",
   "subtitlesLater": "اعرضها لاحقًا",

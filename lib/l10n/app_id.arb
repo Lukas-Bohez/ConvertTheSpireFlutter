@@ -1434,7 +1434,7 @@
   "subtitles": "Subtitel",
   "subtitlesNone": "Tidak ada",
   "subtitlesChooseFile": "Pilih file subtitel…",
-  "subtitlesNoneFound": "Tidak ada file subtitel di samping file ini. Pilih file .srt atau .vtt.",
+  "subtitlesNoneFound": "Tidak ada file subtitel atau lirik di samping file ini. Pilih file .srt, .vtt, atau .lrc.",
   "subtitlesTiming": "Waktu: {delay}",
   "subtitlesEarlier": "Tampilkan lebih awal",
   "subtitlesLater": "Tampilkan lebih lambat",

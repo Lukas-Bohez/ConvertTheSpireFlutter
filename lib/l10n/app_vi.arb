@@ -1434,7 +1434,7 @@
   "subtitles": "Phụ đề",
   "subtitlesNone": "Không có",
   "subtitlesChooseFile": "Chọn tệp phụ đề…",
-  "subtitlesNoneFound": "Không có tệp phụ đề cạnh tệp này. Hãy chọn tệp .srt hoặc .vtt.",
+  "subtitlesNoneFound": "Không có tệp phụ đề hay lời bài hát cạnh tệp này. Hãy chọn tệp .srt, .vtt hoặc .lrc.",
   "subtitlesTiming": "Độ lệch: {delay}",
   "subtitlesEarlier": "Hiện sớm hơn",
   "subtitlesLater": "Hiện muộn hơn",

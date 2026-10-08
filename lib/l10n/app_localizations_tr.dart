@@ -4963,7 +4963,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get subtitlesNoneFound =>
-      'Bu dosyanın yanında altyazı yok. Bir .srt veya .vtt dosyası seç.';
+      'Bu dosyanın yanında altyazı ya da şarkı sözü yok. Bir .srt, .vtt veya .lrc dosyası seç.';
 
   @override
   String subtitlesTiming(String delay) {

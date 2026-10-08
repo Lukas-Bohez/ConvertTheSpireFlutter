@@ -5,7 +5,8 @@ import 'package:convert_the_spire_reborn/src/models/subtitles.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
-/// Subtitles from SRT and WebVTT files, for videos and songs (issue #41).
+/// Subtitles from SRT and WebVTT files, for videos and songs (issue #41),
+/// and synced lyrics from LRC files.
 void main() {
   Duration ms(int v) => Duration(milliseconds: v);
 
@@ -50,6 +51,26 @@ void main() {
     expect(subs.cues.map((c) => c.text), ['fine']);
   });
 
+  test('LRC lyrics: each line until the next, repeated lines, offset', () {
+    final subs = Subtitles.parseLrc(const LineSplitter().convert('''
+[ar:Night Signals]
+[ti:Neon Rain]
+[offset:+500]
+[00:12.50]First line
+[00:15.00][01:00.00]Chorus <00:15.40>with <00:15.90>words
+[00:20]
+[00:25.2]Last line
+''').join('\r\n'));
+    expect(subs.cues, [
+      SubtitleCue(ms(12000), ms(14500), 'First line'),
+      SubtitleCue(ms(14500), ms(19500), 'Chorus with words'),
+      SubtitleCue(ms(24700), ms(59500), 'Last line'),
+      SubtitleCue(ms(59500), ms(67500), 'Chorus with words'),
+    ]);
+    // The empty time ends the chorus: nothing shows until the last line.
+    expect(subs.textAt(ms(21000)), isNull);
+  });
+
   group('files', () {
     late Directory dir;
     setUp(() async => dir = await Directory.systemTemp.createTemp('subs'));
@@ -81,6 +102,19 @@ void main() {
           await Subtitles.findFor(p.join(dir.path, 'Show.S01E01.mkv'));
       expect(found, hasLength(1));
       expect(found.single, contains('S01E01'));
+    });
+
+    test('lyrics next to a song are found and read as LRC', () async {
+      await touch('Neon Rain.mp3');
+      await touch('Neon Rain.lrc', '''
+[00:01.00]Hello
+[00:03.00]World
+''');
+      final found = await Subtitles.findFor(p.join(dir.path, 'Neon Rain.mp3'));
+      expect(found.map(p.basename), ['Neon Rain.lrc']);
+      final subs = await Subtitles.load(found.single);
+      expect(subs.textAt(ms(2000)), 'Hello');
+      expect(subs.textAt(ms(4000)), 'World');
     });
 
     test('a file that is not UTF-8 is read as Latin-1', () async {

@@ -27,8 +27,8 @@ class SubtitleCue {
   String toString() => 'SubtitleCue($start, $end, $text)';
 }
 
-/// Subtitles from an SRT or WebVTT file, for videos and for songs (lyrics)
-/// alike (issue #41).
+/// Subtitles from an SRT or WebVTT file, for videos and for songs alike
+/// (issue #41), and synced lyrics from an LRC file.
 class Subtitles {
   Subtitles(List<SubtitleCue> cues)
       : cues = List.unmodifiable(
@@ -36,7 +36,7 @@ class Subtitles {
 
   final List<SubtitleCue> cues;
 
-  static const extensions = {'.srt', '.vtt'};
+  static const extensions = {'.srt', '.vtt', '.lrc'};
 
   /// The text showing at [position], or null between subtitles.
   String? textAt(Duration position) {
@@ -60,8 +60,8 @@ class Subtitles {
     return lines.isEmpty ? null : lines.join('\n');
   }
 
-  /// Reads a subtitle file. Older SRT files are often not UTF-8 but
-  /// Windows-1252; those are read as Latin-1, which gets their letters
+  /// Reads a subtitle or lyrics file. Older SRT files are often not UTF-8
+  /// but Windows-1252; those are read as Latin-1, which gets their letters
   /// right but for a few punctuation marks.
   static Future<Subtitles> load(String path) async {
     final bytes = await File(path).readAsBytes();
@@ -71,7 +71,9 @@ class Subtitles {
     } on FormatException {
       text = latin1.decode(bytes);
     }
-    return parse(text);
+    return p.extension(path).toLowerCase() == '.lrc'
+        ? parseLrc(text)
+        : parse(text);
   }
 
   /// SRT and WebVTT: blocks of a time line `00:01:02,500 --> 00:01:04,000`
@@ -104,6 +106,60 @@ class Subtitles {
     }
     return Subtitles(cues);
   }
+
+  /// LRC lyrics: one or more `[01:02.50]` in front of each line, which
+  /// shows until the next one starts. `[offset:+250]` shows them all that
+  /// many milliseconds earlier; word timings (`<01:02.80>`) and tags such
+  /// as `[ar:Artist]` are left out.
+  static Subtitles parseLrc(String text) {
+    if (text.startsWith('﻿')) text = text.substring(1);
+    final offsetMs =
+        int.tryParse(_lrcOffset.firstMatch(text)?.group(1) ?? '') ?? 0;
+    final timed = <(Duration, String)>[];
+    for (final line in const LineSplitter().convert(text)) {
+      var rest = line.trim();
+      final times = <Duration>[];
+      for (var m = _lrcTime.matchAsPrefix(rest);
+          m != null;
+          m = _lrcTime.matchAsPrefix(rest)) {
+        final fraction = (m.group(3) ?? '0').padRight(3, '0').substring(0, 3);
+        final at = Duration(
+              minutes: int.parse(m.group(1)!),
+              seconds: int.parse(m.group(2)!),
+              milliseconds: int.parse(fraction),
+            ) -
+            Duration(milliseconds: offsetMs);
+        times.add(at < Duration.zero ? Duration.zero : at);
+        rest = rest.substring(m.end).trimLeft();
+      }
+      final words = _clean(rest);
+      for (final at in times) {
+        timed.add((at, words));
+      }
+    }
+    timed.sort((a, b) => a.$1.compareTo(b.$1));
+    final cues = <SubtitleCue>[];
+    for (var i = 0; i < timed.length; i++) {
+      final (start, words) = timed[i];
+      // A time with no words only ends the line before it.
+      if (words.isEmpty) continue;
+      var end = start + _lastLyricLine;
+      for (var j = i + 1; j < timed.length; j++) {
+        if (timed[j].$1 > start) {
+          end = timed[j].$1;
+          break;
+        }
+      }
+      cues.add(SubtitleCue(start, end, words));
+    }
+    return Subtitles(cues);
+  }
+
+  /// How long the last line of lyrics shows, with no line after it.
+  static const _lastLyricLine = Duration(seconds: 8);
+  static final _lrcTime = RegExp(r'\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]');
+  static final _lrcOffset = RegExp(r'^\s*\[offset:\s*([+-]?\d+)\s*\]',
+      caseSensitive: false, multiLine: true);
 
   static final _timeLine = RegExp(
       r'((?:\d+:)?\d{1,2}:\d{2}[,.]\d{1,3})\s*-->\s*((?:\d+:)?\d{1,2}:\d{2}[,.]\d{1,3})');

@@ -4967,7 +4967,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get subtitlesNoneFound =>
-      'Obok tego pliku nie ma napisów. Wybierz plik .srt lub .vtt.';
+      'Obok tego pliku nie ma napisów ani tekstu piosenki. Wybierz plik .srt, .vtt lub .lrc.';
 
   @override
   String subtitlesTiming(String delay) {

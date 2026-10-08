@@ -4981,7 +4981,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get subtitlesNoneFound =>
-      'Nessun file di sottotitoli accanto a questo. Scegli un file .srt o .vtt.';
+      'Nessun file di sottotitoli o testi accanto a questo. Scegli un file .srt, .vtt o .lrc.';
 
   @override
   String subtitlesTiming(String delay) {

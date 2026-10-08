@@ -4982,7 +4982,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get subtitlesNoneFound =>
-      'Não há legenda ao lado deste arquivo. Escolha um arquivo .srt ou .vtt.';
+      'Não há legenda nem letra ao lado deste arquivo. Escolha um arquivo .srt, .vtt ou .lrc.';
 
   @override
   String subtitlesTiming(String delay) {

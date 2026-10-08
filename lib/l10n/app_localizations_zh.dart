@@ -4769,7 +4769,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get subtitlesChooseFile => '选择字幕文件…';
 
   @override
-  String get subtitlesNoneFound => '此文件旁没有字幕文件。请选择一个 .srt 或 .vtt 文件。';
+  String get subtitlesNoneFound => '此文件旁没有字幕或歌词文件。请选择一个 .srt、.vtt 或 .lrc 文件。';
 
   @override
   String subtitlesTiming(String delay) {

@@ -1434,7 +1434,7 @@
   "subtitles": "字幕",
   "subtitlesNone": "无",
   "subtitlesChooseFile": "选择字幕文件…",
-  "subtitlesNoneFound": "此文件旁没有字幕文件。请选择一个 .srt 或 .vtt 文件。",
+  "subtitlesNoneFound": "此文件旁没有字幕或歌词文件。请选择一个 .srt、.vtt 或 .lrc 文件。",
   "subtitlesTiming": "时间偏移：{delay}",
   "subtitlesEarlier": "提前显示",
   "subtitlesLater": "延后显示",

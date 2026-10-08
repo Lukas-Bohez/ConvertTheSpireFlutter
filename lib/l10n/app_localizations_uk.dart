@@ -4959,7 +4959,7 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get subtitlesNoneFound =>
-      'Поруч із цим файлом немає субтитрів. Виберіть файл .srt або .vtt.';
+      'Поруч із цим файлом немає субтитрів чи тексту пісні. Виберіть файл .srt, .vtt або .lrc.';
 
   @override
   String subtitlesTiming(String delay) {

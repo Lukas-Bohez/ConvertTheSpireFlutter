@@ -4962,7 +4962,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get subtitlesNoneFound =>
-      'Tidak ada file subtitel di samping file ini. Pilih file .srt atau .vtt.';
+      'Tidak ada file subtitel atau lirik di samping file ini. Pilih file .srt, .vtt, atau .lrc.';
 
   @override
   String subtitlesTiming(String delay) {

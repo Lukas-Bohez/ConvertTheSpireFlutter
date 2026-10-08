@@ -1434,7 +1434,7 @@
   "subtitles": "Napisy",
   "subtitlesNone": "Brak",
   "subtitlesChooseFile": "Wybierz plik z napisami…",
-  "subtitlesNoneFound": "Obok tego pliku nie ma napisów. Wybierz plik .srt lub .vtt.",
+  "subtitlesNoneFound": "Obok tego pliku nie ma napisów ani tekstu piosenki. Wybierz plik .srt, .vtt lub .lrc.",
   "subtitlesTiming": "Przesunięcie: {delay}",
   "subtitlesEarlier": "Pokazuj wcześniej",
   "subtitlesLater": "Pokazuj później",

@@ -1434,7 +1434,7 @@
   "subtitles": "Sottotitoli",
   "subtitlesNone": "Nessuno",
   "subtitlesChooseFile": "Scegli un file di sottotitoli…",
-  "subtitlesNoneFound": "Nessun file di sottotitoli accanto a questo. Scegli un file .srt o .vtt.",
+  "subtitlesNoneFound": "Nessun file di sottotitoli o testi accanto a questo. Scegli un file .srt, .vtt o .lrc.",
   "subtitlesTiming": "Sincronia: {delay}",
   "subtitlesEarlier": "Mostra prima",
   "subtitlesLater": "Mostra dopo",

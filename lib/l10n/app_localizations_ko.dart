@@ -4826,7 +4826,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get subtitlesNoneFound =>
-      '이 파일 옆에 자막 파일이 없습니다. .srt 또는 .vtt 파일을 선택하세요.';
+      '이 파일 옆에 자막이나 가사 파일이 없습니다. .srt, .vtt 또는 .lrc 파일을 선택하세요.';
 
   @override
   String subtitlesTiming(String delay) {

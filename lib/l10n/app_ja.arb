@@ -1434,7 +1434,7 @@
   "subtitles": "字幕",
   "subtitlesNone": "なし",
   "subtitlesChooseFile": "字幕ファイルを選択…",
-  "subtitlesNoneFound": "このファイルの横に字幕ファイルがありません。.srt または .vtt ファイルを選んでください。",
+  "subtitlesNoneFound": "このファイルの横に字幕や歌詞のファイルがありません。.srt、.vtt、.lrc ファイルを選んでください。",
   "subtitlesTiming": "タイミング: {delay}",
   "subtitlesEarlier": "早く表示",
   "subtitlesLater": "遅く表示",

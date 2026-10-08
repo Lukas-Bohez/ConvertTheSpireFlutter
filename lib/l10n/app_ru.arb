@@ -1434,7 +1434,7 @@
   "subtitles": "Субтитры",
   "subtitlesNone": "Нет",
   "subtitlesChooseFile": "Выбрать файл субтитров…",
-  "subtitlesNoneFound": "Рядом с этим файлом нет субтитров. Выберите файл .srt или .vtt.",
+  "subtitlesNoneFound": "Рядом с этим файлом нет субтитров или текста песни. Выберите файл .srt, .vtt или .lrc.",
   "subtitlesTiming": "Сдвиг: {delay}",
   "subtitlesEarlier": "Показывать раньше",
   "subtitlesLater": "Показывать позже",

@@ -4971,7 +4971,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get subtitlesNoneFound =>
-      'Geen ondertitelbestand naast dit bestand. Kies een .srt- of .vtt-bestand.';
+      'Geen ondertitel- of songtekstbestand naast dit bestand. Kies een .srt-, .vtt- of .lrc-bestand.';
 
   @override
   String subtitlesTiming(String delay) {

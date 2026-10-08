@@ -4920,7 +4920,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get subtitlesNoneFound =>
-      'لا يوجد ملف ترجمة بجانب هذا الملف. اختر ملف .srt أو .vtt.';
+      'لا يوجد ملف ترجمة أو كلمات بجانب هذا الملف. اختر ملف .srt أو .vtt أو .lrc.';
 
   @override
   String subtitlesTiming(String delay) {

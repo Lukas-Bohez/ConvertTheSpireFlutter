@@ -4827,7 +4827,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get subtitlesNoneFound =>
-      'このファイルの横に字幕ファイルがありません。.srt または .vtt ファイルを選んでください。';
+      'このファイルの横に字幕や歌詞のファイルがありません。.srt、.vtt、.lrc ファイルを選んでください。';
 
   @override
   String subtitlesTiming(String delay) {

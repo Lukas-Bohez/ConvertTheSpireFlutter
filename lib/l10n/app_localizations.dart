@@ -8740,7 +8740,7 @@ abstract class AppLocalizations {
   /// No description provided for @subtitlesNoneFound.
   ///
   /// In en, this message translates to:
-  /// **'No subtitle file next to this one. Choose an .srt or .vtt file.'**
+  /// **'No subtitle or lyrics file next to this one. Choose an .srt, .vtt or .lrc file.'**
   String get subtitlesNoneFound;
 
   /// No description provided for @subtitlesTiming.

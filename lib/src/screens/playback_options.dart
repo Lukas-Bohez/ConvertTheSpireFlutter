@@ -38,7 +38,7 @@ class SubtitlesSheet extends StatelessWidget {
   Future<void> _pick(PlayerState state) async {
     final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['srt', 'vtt'],
+      allowedExtensions: const ['srt', 'vtt', 'lrc'],
     );
     final path = picked?.files.single.path;
     if (path != null) await state.useSubtitleFile(path);

@@ -4951,7 +4951,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get subtitlesNoneFound =>
-      'Рядом с этим файлом нет субтитров. Выберите файл .srt или .vtt.';
+      'Рядом с этим файлом нет субтитров или текста песни. Выберите файл .srt, .vtt или .lrc.';
 
   @override
   String subtitlesTiming(String delay) {

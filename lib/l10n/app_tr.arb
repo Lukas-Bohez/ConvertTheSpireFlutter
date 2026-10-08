@@ -1434,7 +1434,7 @@
   "subtitles": "Altyazılar",
   "subtitlesNone": "Yok",
   "subtitlesChooseFile": "Altyazı dosyası seç…",
-  "subtitlesNoneFound": "Bu dosyanın yanında altyazı yok. Bir .srt veya .vtt dosyası seç.",
+  "subtitlesNoneFound": "Bu dosyanın yanında altyazı ya da şarkı sözü yok. Bir .srt, .vtt veya .lrc dosyası seç.",
   "subtitlesTiming": "Zamanlama: {delay}",
   "subtitlesEarlier": "Daha erken göster",
   "subtitlesLater": "Daha geç göster",
