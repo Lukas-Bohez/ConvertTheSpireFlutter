@@ -31,16 +31,22 @@ FADE = 0.4
 # Longest a feature stays on screen.
 MAX_SECONDS = 6.0
 
-# (recording, feature, caption, small line under it)
+# (recording, feature, caption, small line with it, options): 'skip' the
+# first seconds of the feature (the page before the song starts), caption
+# at the 'top' (when the bottom has what the clip is about).
 PLAN = [
-    ('phone', 'player', 'One player for your\nmusic and videos', 'With synced lyrics'),
-    ('phone', 'video', 'Subtitles load\nby themselves', 'For songs too'),
-    ('phone', 'loop', 'Loop just\nthe best part', 'One part or several'),
-    ('tablet', 'large', 'Watch big, without the clutter', 'Tablets and Chromebooks'),
-    ('tablet', 'torrents', 'A torrent client built in', None),
-    ('tv', 'player', 'On your TV, with the remote', 'Android TV'),
-    ('tv', 'video', 'Subtitles on the big screen', 'Android TV'),
-    ('tablet', 'colours', 'Make it yours: 28 colours, light and dark', None),
+    ('phone', 'player', 'One player for your\nmusic and videos',
+     'With synced lyrics', {'skip': 2.0}),
+    ('phone', 'video', 'Subtitles load\nby themselves', 'For songs too', {}),
+    ('phone', 'loop', 'Loop just\nthe best part', 'One part or several', {}),
+    ('tablet', 'large', 'Watch big, without the clutter',
+     'Tablets and Chromebooks', {'top': True}),
+    ('tablet', 'torrents', 'A torrent client built in', None, {}),
+    ('tv', 'player', 'On your TV, with the remote', 'Android TV',
+     {'skip': 1.5}),
+    ('tv', 'video', 'Subtitles on the big screen', 'Android TV', {'top': True}),
+    ('tablet', 'colours', 'Make it yours: 28 colours, light and dark', None,
+     {}),
 ]
 TITLE = 'BitPlayer'
 TAGLINE = 'Your music and videos, on every screen'
@@ -61,7 +67,9 @@ def run(ffmpeg, args):
 
 def text_file(folder, name, text):
     path = Path(folder) / f'{name}.txt'
-    path.write_text(text, encoding='utf-8')
+    # Bytes, not text: on Windows text mode writes CRLF, and drawtext takes
+    # the CR for a line of its own.
+    path.write_bytes(text.encode('utf-8'))
     # drawtext's own escaping for a path: a colon needs a backslash.
     return str(path).replace('\\', '/').replace(':', '\\:')
 
@@ -150,18 +158,22 @@ def phone_clip(ffmpeg, tmp, tour, out, start, end, caption, sub, masks):
                  *encode_args(out)])
 
 
-def wide_clip(ffmpeg, tmp, tour, out, start, end, caption, sub):
-    """A tablet or TV recording across the picture, its caption in a band."""
+def wide_clip(ffmpeg, tmp, tour, out, start, end, caption, sub, top=False):
+    """A tablet or TV recording across the picture, its caption in a band at
+    the bottom (or [top]) and the small line next to it, toward the middle."""
     f = text_file(tmp, Path(out).stem, caption)
     alpha = "if(lt(t,0.25),0,if(lt(t,0.6),(t-0.25)/0.35,1))"
+    y = '110' if top else 'h-text_h-110'
     draws = [f"drawtext=fontfile='{FONT_BOLD}':textfile='{f}':fontsize=56"
              f":fontcolor=white:alpha='{alpha}':box=1:boxcolor=0x0b2545@0.82"
-             f":boxborderw=28:x=(w-text_w)/2:y=h-text_h-110"]
+             f":boxborderw=28:x=(w-text_w)/2:y={y}"]
     if sub:
         g = text_file(tmp, Path(out).stem + '_sub', sub)
+        sub_y = '236' if top else 'h-text_h-236'
         draws.append(f"drawtext=fontfile='{FONT}':textfile='{g}':fontsize=34"
                      f":fontcolor=white:alpha='{alpha}':box=1"
-                     f":boxcolor=0x1f9e7a@0.9:boxborderw=14:x=60:y=60")
+                     f":boxcolor=0x1f9e7a@0.9:boxborderw=14"
+                     f":x=(w-text_w)/2:y={sub_y}")
     run(ffmpeg, ['-ss', f'{start:.3f}', '-to', f'{end:.3f}', '-i', str(tour),
                  '-vf', 'scale=1920:1080:force_original_aspect_ratio=decrease,'
                  'pad=1920:1080:(ow-iw)/2:(oh-ih)/2,' + ','.join(draws),
@@ -182,12 +194,12 @@ def main():
     marks = {k: json.loads((v / 'marks.json').read_text(encoding='utf-8'))
              for k, v in tours.items()}
 
-    def span(kind, feature):
+    def span(kind, feature, skip=0.0):
         ms = marks[kind]
         for here, after in zip(ms, ms[1:]):
             if here['id'] == feature:
                 # A moment past the cut: the page is still settling then.
-                start = here['t'] + 0.15
+                start = here['t'] + 0.15 + skip
                 return start, min(after['t'] + FADE, start + MAX_SECONDS)
         return None
 
@@ -200,10 +212,10 @@ def main():
         ], 340, 230)
         parts.append(intro)
         masks = phone_masks(tmp)
-        for i, (kind, feature, caption, sub) in enumerate(PLAN):
+        for i, (kind, feature, caption, sub, opts) in enumerate(PLAN):
             if kind not in tours:
                 continue
-            where = span(kind, feature)
+            where = span(kind, feature, opts.get('skip', 0.0))
             if where is None:
                 continue
             out = Path(tmp) / f'{i:02d}_{kind}_{feature}.mp4'
@@ -212,7 +224,8 @@ def main():
                            *where, caption, sub, masks)
             else:
                 wide_clip(args.ffmpeg, tmp, tours[kind] / 'tour.mp4', out,
-                          *where, caption.replace('\n', ' '), sub)
+                          *where, caption.replace('\n', ' '), sub,
+                          top=opts.get('top', False))
             parts.append(out)
         outro = Path(tmp) / 'outro.mp4'
         card(args.ffmpeg, tmp, outro, 3.5, [
