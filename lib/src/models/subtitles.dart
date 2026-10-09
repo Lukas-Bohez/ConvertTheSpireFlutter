@@ -60,20 +60,52 @@ class Subtitles {
     return lines.isEmpty ? null : lines.join('\n');
   }
 
-  /// Reads a subtitle or lyrics file. Older SRT files are often not UTF-8
-  /// but Windows-1252; those are read as Latin-1, which gets their letters
-  /// right but for a few punctuation marks.
+  /// Reads a subtitle or lyrics file.
   static Future<Subtitles> load(String path) async {
-    final bytes = await File(path).readAsBytes();
-    String text;
-    try {
-      text = utf8.decode(bytes);
-    } on FormatException {
-      text = latin1.decode(bytes);
-    }
+    final text = decode(await File(path).readAsBytes());
     return p.extension(path).toLowerCase() == '.lrc'
         ? parseLrc(text)
         : parse(text);
+  }
+
+  /// The text of a subtitle file, whatever it was saved as. Subtitles made
+  /// on Windows are often UTF-16 (read as anything else, not one line was
+  /// found: issue #41's Die Hard), older ones Windows-1252, which is read as
+  /// Latin-1: its letters right but for a few punctuation marks.
+  @visibleForTesting
+  static String decode(List<int> bytes) {
+    bool starts(List<int> mark) =>
+        bytes.length >= mark.length &&
+        Iterable.generate(mark.length).every((i) => bytes[i] == mark[i]);
+    if (starts(const [0xEF, 0xBB, 0xBF])) {
+      return utf8.decode(bytes.sublist(3), allowMalformed: true);
+    }
+    if (starts(const [0xFF, 0xFE])) return _utf16(bytes.sublist(2), little: true);
+    if (starts(const [0xFE, 0xFF])) return _utf16(bytes.sublist(2), little: false);
+    // UTF-16 without a mark: in text that is mostly ASCII, every other byte
+    // is a zero.
+    final sample = bytes.length < 400 ? bytes.length : 400;
+    if (sample >= 4) {
+      var zerosOdd = 0, zerosEven = 0;
+      for (var i = 0; i < sample; i++) {
+        if (bytes[i] == 0) i.isOdd ? zerosOdd++ : zerosEven++;
+      }
+      if (zerosOdd > sample / 4) return _utf16(bytes, little: true);
+      if (zerosEven > sample / 4) return _utf16(bytes, little: false);
+    }
+    try {
+      return utf8.decode(bytes);
+    } on FormatException {
+      return latin1.decode(bytes);
+    }
+  }
+
+  static String _utf16(List<int> bytes, {required bool little}) {
+    final units = <int>[
+      for (var i = 0; i + 1 < bytes.length; i += 2)
+        little ? bytes[i] | (bytes[i + 1] << 8) : (bytes[i] << 8) | bytes[i + 1],
+    ];
+    return String.fromCharCodes(units);
   }
 
   /// SRT and WebVTT: blocks of a time line `00:01:02,500 --> 00:01:04,000`
