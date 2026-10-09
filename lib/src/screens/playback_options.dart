@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import '../utils/l10n.dart';
@@ -89,8 +88,8 @@ class SubtitlesSheet extends StatelessWidget {
           ),
           for (final path in state.subtitleOptions)
             _SubtitleChoice(
-              label: p.basename(path),
-              detail: p.basename(p.dirname(path)),
+              label: state.subtitleOptionLabel(path),
+              detail: state.subtitleOptionDetail(path),
               selected: state.subtitlePath == path,
               onTap: () => unawaited(state.useSubtitleFile(path)),
             ),

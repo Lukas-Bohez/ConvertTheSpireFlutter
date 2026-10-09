@@ -12,7 +12,8 @@ import 'player.dart';
 /// reached.
 Future<void> showLoopSectionsSheet(
     BuildContext context, PlayerState state) async {
-  final item = state.currentItem;
+  // What plays: a file opened from outside the library too.
+  final item = state.nowPlayingItem;
   if (item == null) return;
   state.loopEditing = true;
   try {
