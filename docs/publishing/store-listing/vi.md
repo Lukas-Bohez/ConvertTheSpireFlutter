@@ -56,7 +56,7 @@ Có 18 ngôn ngữ. Vui lòng chỉ tải nội dung bạn có quyền tải.
 ## What's new in this version
 
 ```text
-Mới: chỉ tải đoạn video hoặc bài hát bạn muốn. Phụ đề cho video và bài hát: tệp .srt và .vtt tự tải. Lời bài hát đồng bộ từ tệp .lrc. Lặp đoạn hay nhất, đổi tốc độ, hẹn giờ tắt và xem ở chế độ xem lớn. Video dài tiếp tục từ chỗ bạn đã dừng, và bộ chặn quảng cáo của trình duyệt giờ dùng danh sách của uBlock Origin. Trình phát giờ chỉ có một bộ nút điều khiển và nhiều chỗ hơn cho video, và mọi màu đều đã mở khóa. Đã sửa: chương trình tải qua torrent chạy được khi đang seeding, torrent của tệp bạn đã có được seed ngay, và video trong thư viện có ảnh thu nhỏ.
+Mới: chỉ tải đoạn video hoặc bài hát bạn muốn. Phụ đề cho video và bài hát: tệp .srt và .vtt tự tải. Lời bài hát đồng bộ từ tệp .lrc. Phụ đề có sẵn trong tệp MKV và MP4 cũng hiển thị. Lặp đoạn hay nhất, đổi tốc độ, hẹn giờ tắt và xem ở chế độ xem lớn. Video dài tiếp tục từ chỗ bạn đã dừng, và bộ chặn quảng cáo của trình duyệt giờ dùng danh sách của uBlock Origin. Trình phát giờ chỉ có một bộ nút điều khiển và nhiều chỗ hơn cho video, và mọi màu đều đã mở khóa. Đã sửa: chương trình tải qua torrent chạy được khi đang seeding, torrent của tệp bạn đã có được seed ngay, và video trong thư viện có ảnh thu nhỏ.
 ```
 
 ## Product features

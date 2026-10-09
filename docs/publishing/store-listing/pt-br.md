@@ -56,7 +56,7 @@ Disponível em 18 idiomas. Baixe apenas conteúdo que você tem o direito de bai
 ## What's new in this version
 
 ```text
-Novo: baixe só o trecho de um vídeo ou música que você quiser. Legendas para vídeos e músicas: arquivos .srt e .vtt carregam sozinhos. Letras sincronizadas de arquivos .lrc. Repita a melhor parte, mude a velocidade, ajuste um timer e assista na visualização ampliada. Vídeos longos continuam de onde você parou, e o bloqueador de anúncios do navegador agora usa as listas do uBlock Origin. O player tem um só conjunto de controles e mais espaço para o vídeo, e todas as cores estão liberadas. Corrigido: um programa baixado por torrent abre enquanto é semeado, torrents de arquivos que você já tem são semeados na hora e os vídeos da biblioteca têm miniaturas.
+Novo: baixe só o trecho de um vídeo ou música que você quiser. Legendas para vídeos e músicas: arquivos .srt e .vtt carregam sozinhos. Letras sincronizadas de arquivos .lrc. Legendas embutidas em arquivos MKV e MP4 também aparecem. Repita a melhor parte, mude a velocidade, ajuste um timer e assista na visualização ampliada. Vídeos longos continuam de onde você parou, e o bloqueador de anúncios do navegador agora usa as listas do uBlock Origin. O player tem um só conjunto de controles e mais espaço para o vídeo, e todas as cores estão liberadas. Corrigido: um programa baixado por torrent abre enquanto é semeado, torrents de arquivos que você já tem são semeados na hora e os vídeos da biblioteca têm miniaturas.
 ```
 
 ## Product features

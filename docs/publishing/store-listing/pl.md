@@ -56,7 +56,7 @@ Dostępna w 18 językach. Pobieraj tylko treści, do których pobrania masz praw
 ## What's new in this version
 
 ```text
-Nowość: pobierz tylko ten fragment filmu lub piosenki, który chcesz. Napisy do filmów i piosenek: pliki .srt i .vtt wczytują się same. Zsynchronizowane teksty z plików .lrc. Zapętl najlepszy fragment, zmień prędkość, ustaw wyłącznik czasowy i oglądaj w dużym widoku. Długie filmy wracają tam, gdzie skończyłeś, a bloker reklam w przeglądarce korzysta teraz z list uBlock Origin. Odtwarzacz ma jeden zestaw przycisków i więcej miejsca na film, a wszystkie kolory są odblokowane. Naprawione: program pobrany torrentem uruchamia się podczas seedowania, torrenty plików, które już masz, od razu się seedują, a filmy w bibliotece mają miniatury.
+Nowość: pobierz tylko ten fragment filmu lub piosenki, który chcesz. Napisy do filmów i piosenek: pliki .srt i .vtt wczytują się same. Zsynchronizowane teksty z plików .lrc. Napisy wbudowane w pliki MKV i MP4 też się wyświetlają. Zapętl najlepszy fragment, zmień prędkość, ustaw wyłącznik czasowy i oglądaj w dużym widoku. Długie filmy wracają tam, gdzie skończyłeś, a bloker reklam w przeglądarce korzysta teraz z list uBlock Origin. Odtwarzacz ma jeden zestaw przycisków i więcej miejsca na film, a wszystkie kolory są odblokowane. Naprawione: program pobrany torrentem uruchamia się podczas seedowania, torrenty plików, które już masz, od razu się seedują, a filmy w bibliotece mają miniatury.
 ```
 
 ## Product features

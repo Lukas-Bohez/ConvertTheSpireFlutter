@@ -56,7 +56,7 @@ GİZLİLİK ODAKLI
 ## What's new in this version
 
 ```text
-Yeni: bir videonun veya şarkının yalnızca istediğin bölümünü indir. Videolar ve şarkılar için altyazı: .srt ve .vtt dosyaları kendiliğinden yüklenir. .lrc dosyalarından senkronize şarkı sözleri. En iyi bölümü döngüye al, hızı değiştir, uyku zamanlayıcısı kur ve büyük görünümde izle. Uzun videolar kaldığın yerden devam eder ve tarayıcının reklam engelleyicisi artık uBlock Origin'in listelerini kullanır. Oynatıcının artık tek bir kontrol seti ve videoya daha fazla yeri var; tüm renklerin kilidi açıldı. Düzeltildi: torrentle indirilen bir program paylaşılırken çalışır, zaten sahip olduğun dosyaların torrentleri hemen paylaşılır ve kitaplıktaki videoların küçük resimleri var.
+Yeni: bir videonun veya şarkının yalnızca istediğin bölümünü indir. Videolar ve şarkılar için altyazı: .srt ve .vtt dosyaları kendiliğinden yüklenir. .lrc dosyalarından senkronize şarkı sözleri. MKV ve MP4 dosyalarının içindeki altyazılar da görünür. En iyi bölümü döngüye al, hızı değiştir, uyku zamanlayıcısı kur ve büyük görünümde izle. Uzun videolar kaldığın yerden devam eder ve tarayıcının reklam engelleyicisi artık uBlock Origin'in listelerini kullanır. Oynatıcının artık tek bir kontrol seti ve videoya daha fazla yeri var; tüm renklerin kilidi açıldı. Düzeltildi: torrentle indirilen bir program paylaşılırken çalışır, zaten sahip olduğun dosyaların torrentleri hemen paylaşılır ve kitaplıktaki videoların küçük resimleri var.
 ```
 
 ## Product features

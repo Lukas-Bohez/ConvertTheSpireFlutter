@@ -1,32 +1,20 @@
-# Release Notes - v16.0.0
+# Release Notes - v16.0.1
 
-## Subtitles and lyrics, a cleaner player, and only the part you want
+## Subtitles for every film, and a player for files you open
 
 ### New
 
-* **Download only the part you want.** Quick Download on Home asks whether you want the whole video or song, or only parts of it. Mark one part or several (from 1:05 to 2:30, say) and each becomes its own file.
-* **Subtitles, for videos and songs.** An .srt or .vtt file next to the file, or in a Subs folder, loads by itself. Pick another one, turn them off with one tap (or C), or move them earlier or later when they are out of step.
-* **Synced lyrics.** An .lrc file next to a song shows its lines as the song plays.
-* **Loop the best part.** Mark one or more parts of a song or video and playback stays in them, from one part to the next.
-* **Large view.** The video fills the window with nothing else around it. Esc brings the app back.
-* **Playback speed and a sleep timer.** From 0.5× to 2×, and stop after 15 to 60 minutes or at the end of the song.
-* **Long videos and podcasts open where you left off**, with Start over one tap away.
-* **An ad blocker that blocks.** The browser uses the filter lists uBlock Origin uses (EasyList and EasyPrivacy), stops ads before they load on Windows, and hides what is left.
+* **Subtitles inside the video.** MKV and MP4 files with subtitles built in show them by themselves, English first, and the Subtitles sheet lists every track to choose from. On Windows, macOS and Linux.
+* **A file you open from outside your library plays like one in it**: its subtitles or lyrics, looping parts, speed, the sleep timer, and long films open where you left off. A menu next to it has the rest.
 
 ### Changed
 
-* **One set of player controls.** No more second play button, seek bar, volume or full screen button under the video, no "Player" title, and the video gets the room it needs.
-* **Home starts with the player**, and its tiles take the room they need instead of twice that.
-* **Every colour is unlocked in the Microsoft Store version**, as in the GitHub version.
-* Like the app? A small card now and then says how to support it. It never interrupts, and once you close it, it stays away for six weeks.
+* **Calmer controls.** The play button is the biggest one; shuffle and repeat show they are on with their colour and a dot, not a big circle. With a video, the library's tools sit above it, not between the video and its controls.
+* The new trailer replaces the old demo video.
 
 ### Fixed
 
-* **A program downloaded by torrent starts while it seeds.** Windows no longer says the file is in use.
-* **A torrent of files you already have seeds at once**, instead of sitting at "Stalled 0%".
-* **Videos in your library have thumbnails**, and a song you never played no longer says "0 plays".
-* **Phones and tablets:** no more empty band at the top of every page, and the library's tabs and cards are no longer cut off.
-* **The player no longer looks songs up online by itself.** It sent the titles of songs without an artist to MusicBrainz, often guessed wrong, and on Android wrote the guess into the file. Fix missing metadata still does it, when you ask.
-* The player's scroll bar reaches the bottom of the list.
-* A YouTube download no longer fails when the video page can't be read the first time.
-* Android: the notification shows the song as soon as it starts, and the 30-second preview stops after 30 seconds.
+* **Subtitles saved as UTF-16**, as subtitles made on Windows often are, showed nothing. They load now.
+* **Covers no longer go grey** when your library loads again, as it does when a download lands in its folder, and they load without stalling the app.
+* The play button showed play while a song you opened was playing.
+* The large view showed a library song's title for a film opened from outside the library.
