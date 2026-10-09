@@ -117,6 +117,31 @@ void main() {
       expect(subs.textAt(ms(4000)), 'World');
     });
 
+    test('UTF-16 files, with or without a byte order mark', () async {
+      // As Die Hard's (issue #41): UTF-16 little-endian with a BOM, CRLF.
+      const srt = '0\r\n00:00:05,522 --> 00:00:10,522\r\nNakatomi Plaza\r\n';
+      List<int> le(String s) => [
+            for (final u in s.codeUnits) ...[u & 0xFF, u >> 8],
+          ];
+      List<int> be(String s) => [
+            for (final u in s.codeUnits) ...[u >> 8, u & 0xFF],
+          ];
+      final files = {
+        'le_bom.srt': [0xFF, 0xFE, ...le(srt)],
+        'be_bom.srt': [0xFE, 0xFF, ...be(srt)],
+        'le.srt': le(srt),
+        'be.srt': be(srt),
+        'utf8_bom.srt': [0xEF, 0xBB, 0xBF, ...utf8.encode(srt)],
+      };
+      for (final entry in files.entries) {
+        final path = p.join(dir.path, entry.key);
+        await File(path).writeAsBytes(entry.value);
+        final subs = await Subtitles.load(path);
+        expect(subs.cues, [SubtitleCue(ms(5522), ms(10522), 'Nakatomi Plaza')],
+            reason: entry.key);
+      }
+    });
+
     test('a file that is not UTF-8 is read as Latin-1', () async {
       final path = p.join(dir.path, 'old.srt');
       await File(path).writeAsBytes(latin1

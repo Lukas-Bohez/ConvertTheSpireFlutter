@@ -8,7 +8,8 @@ import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:audio_service/audio_service.dart' as audio_svc;
-import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
+import 'package:flutter/foundation.dart'
+    show compute, kIsWeb, kDebugMode, listEquals;
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
@@ -402,6 +403,17 @@ class PositionUiState {
 Future<Uint8List?> _transcodeToSafePng(Uint8List raw,
     {String? mimeType}) async {
   if (raw.length < 4) return null;
+  // Off the UI thread: a song's cover is often a 1280x720 PNG of a
+  // megabyte, and decoding a screenful of them stalled the whole app.
+  try {
+    return await compute(_transcodeCover, (raw, mimeType));
+  } catch (_) {
+    return null;
+  }
+}
+
+Uint8List? _transcodeCover((Uint8List, String?) job) {
+  final (raw, mimeType) = job;
   try {
     img.Image? decoded;
     if (mimeType != null) {
@@ -616,7 +628,137 @@ class PlayerState with ChangeNotifier {
   /// The subtitle line showing now, or null.
   final ValueNotifier<String?> subtitleLine = ValueNotifier<String?>(null);
 
-  bool get hasSubtitles => _subtitles != null;
+  /// Subtitle tracks inside the video file (an MKV's or MP4's), where the
+  /// player can show them: media_kit, on Windows, macOS and Linux. Without
+  /// a subtitle file, the first English one (or the first) shows by itself.
+  /// As an option, and as [subtitlePath], one is `embedded:<track id>`.
+  List<SubtitleTrack> embeddedSubtitles = const [];
+  static const embeddedSubtitlePrefix = 'embedded:';
+  bool _subtitleSearchDone = false;
+  bool _noSubtitlesChosen = false;
+  String? _embeddedChoice;
+
+  bool get _embeddedActive =>
+      subtitlePath?.startsWith(embeddedSubtitlePrefix) ?? false;
+
+  bool get hasSubtitles => _subtitles != null || _embeddedActive;
+
+  /// What the subtitles sheet calls an option: a file's name, or an
+  /// embedded track's title or language.
+  String subtitleOptionLabel(String option) {
+    final track = _embeddedTrack(option);
+    if (track == null) return p.basename(option);
+    final title = track.title?.trim() ?? '';
+    final language = track.language?.trim() ?? '';
+    if (title.isNotEmpty) return title;
+    if (language.isNotEmpty) return language;
+    return '#${track.id}';
+  }
+
+  /// Under an option's name: the folder a file is in, or for an embedded
+  /// track its language and the video it is in.
+  String subtitleOptionDetail(String option) {
+    final track = _embeddedTrack(option);
+    if (track == null) return p.basename(p.dirname(option));
+    final language = track.language?.trim() ?? '';
+    final title = track.title?.trim() ?? '';
+    final video = p.basename(_subtitlesFor ?? '');
+    return [if (title.isNotEmpty && language.isNotEmpty) language, video]
+        .where((part) => part.isNotEmpty)
+        .join(' · ');
+  }
+
+  SubtitleTrack? _embeddedTrack(String option) {
+    if (!option.startsWith(embeddedSubtitlePrefix)) return null;
+    final id = option.substring(embeddedSubtitlePrefix.length);
+    for (final track in embeddedSubtitles) {
+      if (track.id == id) return track;
+    }
+    return null;
+  }
+
+  List<String> get _embeddedOptions => [
+        for (final track in embeddedSubtitles)
+          '$embeddedSubtitlePrefix${track.id}',
+      ];
+
+  /// The video's own subtitle tracks have come in: one of them shows if no
+  /// file was found or picked and none was turned off for this video.
+  void _onEmbeddedSubtitles(List<SubtitleTrack> all) {
+    final tracks = [
+      for (final track in all)
+        if (track.id != 'auto' && track.id != 'no' && !track.uri && !track.data)
+          track,
+    ];
+    if (listEquals([for (final t in tracks) t.id],
+        [for (final t in embeddedSubtitles) t.id])) {
+      return;
+    }
+    embeddedSubtitles = tracks;
+    subtitleOptions = [
+      ...subtitleOptions.where((o) => !o.startsWith(embeddedSubtitlePrefix)),
+      ..._embeddedOptions,
+    ];
+    notifyListeners();
+    unawaited(_maybeUseEmbedded());
+  }
+
+  Future<void> _maybeUseEmbedded() async {
+    if (!_subtitleSearchDone ||
+        _subtitles != null ||
+        _noSubtitlesChosen ||
+        _embeddedActive ||
+        embeddedSubtitles.isEmpty) {
+      return;
+    }
+    SubtitleTrack? pick =
+        _embeddedChoice == null ? null : _embeddedTrack(_embeddedChoice!);
+    bool english(SubtitleTrack t) =>
+        (t.language?.toLowerCase().startsWith('en') ?? false) ||
+        (t.title?.toLowerCase().contains('english') ?? false);
+    pick ??= embeddedSubtitles.firstWhere(english,
+        orElse: () => embeddedSubtitles.first);
+    await _useEmbedded(pick);
+  }
+
+  Future<void> _useEmbedded(SubtitleTrack track) async {
+    final player = _mkPlayer;
+    if (player == null || _disposed) return;
+    try {
+      await player.setSubtitleTrack(track);
+    } catch (e) {
+      debugPrint('Could not show the subtitle track ${track.id}: $e');
+      return;
+    }
+    _subtitles = null;
+    subtitlePath = '$embeddedSubtitlePrefix${track.id}';
+    _applyEmbeddedDelay();
+    // What shows now, until the next line comes in.
+    _showEmbeddedLine(player.state.subtitle);
+    notifyListeners();
+  }
+
+  void _showEmbeddedLine(List<String> lines) {
+    if (!_embeddedActive) return;
+    final text = lines
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .join('\n');
+    final line = subtitlesOn && text.isNotEmpty ? text : null;
+    if (subtitleLine.value != line) subtitleLine.value = line;
+  }
+
+  /// mpv moves its own subtitles; the timing set in the sheet is its.
+  void _applyEmbeddedDelay() {
+    final platform = _mkPlayer?.platform;
+    if (!_embeddedActive || platform is! NativePlayer) return;
+    unawaited(platform
+        .setProperty(
+            'sub-delay', (subtitleDelay.inMilliseconds / 1000).toString())
+        .catchError((Object e) {
+      debugPrint('sub-delay: $e');
+    }));
+  }
 
   /// While the parts are being edited, playback goes anywhere: the editor
   /// needs to reach the moments it marks.
@@ -865,6 +1007,14 @@ class PlayerState with ChangeNotifier {
       duration = dur;
       _emitPositionUiState();
     }));
+    // Playing or paused: the play button shows it. Nothing told it when a
+    // file opened from outside the library started, so it showed play while
+    // the song played.
+    _mkSubs.add(player.stream.playing.listen((_) {
+      if (_disposed) return;
+      if (_activeType != (isAudio ? MediaType.audio : MediaType.video)) return;
+      _scheduleNotify();
+    }));
     if (!isAudio) {
       _mkSubs.add(player.stream.width.listen((w) {
         if (_disposed || _activeType != MediaType.video) return;
@@ -879,6 +1029,19 @@ class PlayerState with ChangeNotifier {
           _videoCompletionFired = true;
           _scheduleNotify(callback: _handleCompletion);
         }
+      }));
+      // The video's own subtitle tracks, and the line of the one showing.
+      _mkSubs.add(player.stream.tracks.listen((tracks) {
+        if (_disposed || _activeType != MediaType.video) return;
+        Future.microtask(() {
+          if (!_disposed) _onEmbeddedSubtitles(tracks.subtitle);
+        });
+      }));
+      _mkSubs.add(player.stream.subtitle.listen((lines) {
+        if (_disposed || _activeType != MediaType.video) return;
+        Future.microtask(() {
+          if (!_disposed) _showEmbeddedLine(lines);
+        });
       }));
     } else {
       _mkSubs.add(player.stream.completed.listen((done) {
@@ -920,6 +1083,11 @@ class PlayerState with ChangeNotifier {
   /// `currentItem?.type` whenever no room stream is active, so normal playback
   /// is unaffected.
   MediaType? get _activeType => _roomStream?.type ?? currentItem?.type;
+
+  /// Playing a Watch Together host's stream, which goes at the room's pace:
+  /// no speed, loops or resuming of its own. A file opened from outside the
+  /// library has them all, like a library one.
+  bool get _atRoomPace => _roomStream != null && !_roomStream!.openedFile;
 
   bool get isVideo => _activeType == MediaType.video;
   bool get videoReady => _videoReady;
@@ -989,6 +1157,8 @@ class PlayerState with ChangeNotifier {
   // --- Subtitles -----------------------------------------------------------
 
   void _updateSubtitleLine(Duration pos) {
+    // An embedded track's lines come from the player itself.
+    if (_subtitles == null && _embeddedActive) return;
     final subs = _subtitles;
     final line = subs == null || !subtitlesOn
         ? null
@@ -1027,6 +1197,11 @@ class PlayerState with ChangeNotifier {
     subtitleOptions = const [];
     subtitleDelay = Duration.zero;
     subtitleLine.value = null;
+    // The new file's own tracks come in once it opens.
+    embeddedSubtitles = const [];
+    _subtitleSearchDone = false;
+    _noSubtitlesChosen = false;
+    _embeddedChoice = null;
     final options = await Subtitles.findFor(mediaPath);
     if (generation != _subtitleGeneration) return;
     final choice = _subtitleChoices()[mediaPath] as Map<String, dynamic>?;
@@ -1035,10 +1210,19 @@ class PlayerState with ChangeNotifier {
       final file = choice['file'] as String? ?? '';
       // An empty choice is "no subtitles" picked for this file.
       path = file.isEmpty ? null : file;
+      _noSubtitlesChosen = file.isEmpty;
       subtitleDelay = Duration(milliseconds: choice['delayMs'] as int? ?? 0);
     }
-    subtitleOptions = {...options, if (path != null) path}.toList();
+    if (path != null && path.startsWith(embeddedSubtitlePrefix)) {
+      // One of the video's own tracks, picked before.
+      _embeddedChoice = path;
+      path = null;
+    }
+    subtitleOptions =
+        {...options, if (path != null) path, ..._embeddedOptions}.toList();
+    _subtitleSearchDone = true;
     await _readSubtitles(path, generation);
+    if (path == null) await _maybeUseEmbedded();
   }
 
   Future<void> _readSubtitles(String? path, int generation) async {
@@ -1061,6 +1245,20 @@ class PlayerState with ChangeNotifier {
   Future<void> useSubtitleFile(String? path) async {
     final media = _subtitlesFor;
     if (media == null) return;
+    if (path != null && path.startsWith(embeddedSubtitlePrefix)) {
+      final track = _embeddedTrack(path);
+      if (track == null) return;
+      ++_subtitleGeneration;
+      if (!subtitlesOn) await setSubtitlesOn(true);
+      await _useEmbedded(track);
+      await _saveSubtitleChoice(media);
+      return;
+    }
+    // A file, or none: the video's own track goes off.
+    if (_embeddedActive) {
+      unawaited(_mkPlayer?.setSubtitleTrack(SubtitleTrack.no()));
+      subtitleLine.value = null;
+    }
     if (path != null && !subtitleOptions.contains(path)) {
       subtitleOptions = [...subtitleOptions, path];
     }
@@ -1073,6 +1271,9 @@ class PlayerState with ChangeNotifier {
     subtitlesOn = on;
     await prefs.setBool(_subtitlesOnPrefsKey, on);
     _updateSubtitleLine(position);
+    if (_embeddedActive) {
+      _showEmbeddedLine(_mkPlayer?.state.subtitle ?? const []);
+    }
     notifyListeners();
   }
 
@@ -1081,6 +1282,7 @@ class PlayerState with ChangeNotifier {
   Future<void> setSubtitleDelay(Duration delay) async {
     subtitleDelay = delay;
     _updateSubtitleLine(position);
+    _applyEmbeddedDelay();
     notifyListeners();
     final media = _subtitlesFor;
     if (media != null) await _saveSubtitleChoice(media);
@@ -1096,7 +1298,7 @@ class PlayerState with ChangeNotifier {
   }
 
   /// A room's stream plays at the room's pace, or it would drift from it.
-  double get _effectiveSpeed => _roomStream != null ? 1.0 : speed;
+  double get _effectiveSpeed => _atRoomPace ? 1.0 : speed;
 
   void _applySpeed() {
     final rate = _effectiveSpeed;
@@ -1146,9 +1348,9 @@ class PlayerState with ChangeNotifier {
 
   /// Opens a long file where it was left, and remembers where that is.
   void _rememberPosition(Duration pos) {
-    final item = currentItem;
+    final item = nowPlayingItem;
     final total = duration;
-    if (item == null || _roomStream != null) return;
+    if (item == null || _atRoomPace) return;
     if (total == null || total < resumeMinDuration) return;
     final path = item.path;
     final now = DateTime.now();
@@ -1205,8 +1407,8 @@ class PlayerState with ChangeNotifier {
 
   /// The current track's parts while they loop.
   LoopSettings? get _activeLoop {
-    if (loopEditing || _roomStream != null) return null;
-    final item = currentItem;
+    if (loopEditing || _atRoomPace) return null;
+    final item = nowPlayingItem;
     if (item == null) return null;
     final settings = _loops.settingsFor(item.path);
     return settings.looping ? settings : null;
@@ -1699,7 +1901,21 @@ class PlayerState with ChangeNotifier {
     final hydratedItems = await _hydrateModifiedAt(items);
     if (_loadVersion != version) return;
 
-    library = List.from(hydratedItems);
+    // Covers already found stay with their songs, and the rest may be
+    // looked for again. A reload (the folder changed: a download landing in
+    // it) brought every song back without its cover, and none was looked
+    // for again that session, so the library stayed grey.
+    final covers = <String, Uint8List>{
+      for (final item in library)
+        if (item.thumbnailData != null) item.path: item.thumbnailData!,
+    };
+    _thumbTried.removeWhere((path, _) => !covers.containsKey(path));
+    library = [
+      for (final item in hydratedItems)
+        item.thumbnailData == null && covers.containsKey(item.path)
+            ? item.copyWith(thumbnailData: covers[item.path])
+            : item,
+    ];
     _applyStatsToLibrary();
     currentIndex = 0;
     if (!keepPlaying) {
@@ -4404,6 +4620,9 @@ class PlayerState with ChangeNotifier {
       // Its cover, for the now-playing card: covers otherwise load as their
       // library card comes on screen, which on a phone it may not be.
       unawaited(requestThumbnailForIndex(idx));
+    } else if (_roomStream?.openedFile ?? false) {
+      // A film opened from outside the library opens where it was left too.
+      _resumeCheckPath = path;
     }
 
     // Bump generation to cancel any in-flight _loadCurrent calls.
@@ -4876,7 +5095,7 @@ class _VideoStageState extends State<_VideoStage> {
   }
 
   Widget _topBar(BuildContext context, MediaQueryData mq) {
-    final item = widget.state.currentItem;
+    final item = widget.state.nowPlayingItem;
     final title = item == null
         ? ''
         : (item.title ?? p.basenameWithoutExtension(item.path));
@@ -4918,7 +5137,7 @@ class _VideoStageState extends State<_VideoStage> {
 
   Widget _controlBar(BuildContext context, MediaQueryData mq) {
     final state = widget.state;
-    final item = state.currentItem;
+    final item = state.nowPlayingItem;
     final narrow = mq.size.width < 600;
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -5772,6 +5991,10 @@ class _PlayerScreenState extends State<PlayerScreen>
               // is part of the pinned header below.
               final showSearch = !(isMobile && showVideoPane);
               return [
+                // The library's tools above the video, not between it and
+                // its controls.
+                if (!(isMobile && showVideoPane))
+                  SliverToBoxAdapter(child: _buildHeader()),
                 if (showVideoPane)
                   SliverPersistentHeader(
                     pinned: true,
@@ -5800,8 +6023,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                       ),
                     ),
                   ),
-                if (!(isMobile && showVideoPane))
-                  SliverToBoxAdapter(child: _buildHeader()),
                 if (!(isMobile && showVideoPane))
                   SliverToBoxAdapter(child: _buildNowPlaying(state)),
                 if (state.isLoading)
@@ -6874,26 +7095,42 @@ class _PlayerScreenState extends State<PlayerScreen>
                     visualDensity: VisualDensity.compact,
                     onPressed: () => _openOpenedFileFolder(stream),
                   ),
-                IconButton(
-                  icon: Icon(Icons.content_copy_rounded,
-                      size: 20, color: _PlayerTheme.sub(context)),
-                  tooltip: context.l10n.copyTitle,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => copyTrackTitle(context, stream.item),
-                ),
+                if (opened)
+                  _openedFileMenu(state, stream)
+                else
+                  IconButton(
+                    icon: Icon(Icons.content_copy_rounded,
+                        size: 20, color: _PlayerTheme.sub(context)),
+                    tooltip: context.l10n.copyTitle,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => copyTrackTitle(context, stream.item),
+                  ),
               ],
             ),
           ),
-          _PositionWidget(state: state, formatDur: _fmtDur),
+          // An opened file plays like a library one: the same seek bar with
+          // its looped parts, the same chips, lyrics and controls. (It had a
+          // row of its own, a play button and a lone repeat button squeezed
+          // in beside the volume.) A room's stream goes at the room's pace.
+          _PositionWidget(
+            state: state,
+            formatDur: _fmtDur,
+            loopSections: opened
+                ? state.loopSettingsFor(stream.url).sections
+                : const [],
+          ),
+          if (opened) _PlaybackStatusRow(state: state, path: stream.url),
+          if (opened && stream.type == MediaType.audio && state.hasSubtitles)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 2, 12, 6),
+              child: _SubtitleText(state: state, overVideo: false),
+            ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _PlayPauseButton(
-                  playing: state.isPlaying,
-                  onPressed: state.togglePlay,
-                ),
-                if (opened)
+                if (opened) ...[
                   _ControlButton(
                     icon: state.repeatMode == RepeatMode.one
                         ? Icons.repeat_one_rounded
@@ -6903,7 +7140,29 @@ class _PlayerScreenState extends State<PlayerScreen>
                     tooltip: context.l10n.playerRepeat,
                     size: 22,
                   ),
-                const SizedBox(width: 8),
+                  const SizedBox(width: 28),
+                ],
+                _PlayPauseButton(
+                  playing: state.isPlaying,
+                  onPressed: state.togglePlay,
+                ),
+                if (opened) ...[
+                  const SizedBox(width: 28),
+                  _ControlButton(
+                    icon: Icons.loop_rounded,
+                    active: state.loopSettingsFor(stream.url).looping,
+                    onPressed: () => showLoopSectionsSheet(context, state),
+                    tooltip: context.l10n.loopParts,
+                    size: 22,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+            child: Row(
+              children: [
                 Icon(Icons.volume_down_rounded,
                     size: 18, color: _PlayerTheme.sub(context)),
                 Expanded(
@@ -6921,6 +7180,53 @@ class _PlayerScreenState extends State<PlayerScreen>
           ),
         ],
       ),
+    );
+  }
+
+  /// What a library item's track menu offers that applies to a file opened
+  /// from outside the library.
+  Widget _openedFileMenu(PlayerState state, RoomStream stream) {
+    final l10n = context.l10n;
+    PopupMenuItem<_TrackMenuAction> entry(
+            _TrackMenuAction action, IconData icon, String label) =>
+        PopupMenuItem(
+          value: action,
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(icon),
+            title: Text(label),
+          ),
+        );
+    return PopupMenuButton<_TrackMenuAction>(
+      tooltip: l10n.trackActions,
+      icon: Icon(Icons.more_vert_rounded, color: _PlayerTheme.sub(context)),
+      onSelected: (action) {
+        switch (action) {
+          case _TrackMenuAction.loopParts:
+            unawaited(showLoopSectionsSheet(context, state));
+          case _TrackMenuAction.subtitles:
+            unawaited(showSubtitlesSheet(context, state));
+          case _TrackMenuAction.speed:
+            unawaited(showSpeedDialog(context, state));
+          case _TrackMenuAction.sleepTimer:
+            unawaited(showSleepTimerDialog(context, state));
+          case _TrackMenuAction.copyTitle:
+            copyTrackTitle(context, stream.item);
+          default:
+            break;
+        }
+      },
+      itemBuilder: (_) => [
+        entry(_TrackMenuAction.loopParts, Icons.loop_rounded, l10n.loopParts),
+        entry(_TrackMenuAction.subtitles, Icons.closed_caption_rounded,
+            l10n.subtitles),
+        entry(_TrackMenuAction.speed, Icons.speed_rounded, l10n.playbackSpeed),
+        entry(_TrackMenuAction.sleepTimer, Icons.bedtime_outlined,
+            l10n.sleepTimer),
+        entry(_TrackMenuAction.copyTitle, Icons.content_copy_rounded,
+            l10n.copyTitle),
+      ],
     );
   }
 
@@ -7298,27 +7604,39 @@ class _ControlButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final iconColor = active ? cs.onPrimaryContainer : theme.iconTheme.color;
+    final iconColor = active ? cs.primary : theme.iconTheme.color;
 
+    // On: the accent colour and a dot under the icon. A filled circle made
+    // shuffle and repeat look bigger than the play button.
     return Tooltip(
       message: tooltip ?? '',
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        decoration: BoxDecoration(
-          color: active ? cs.primaryContainer : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: active
-                ? cs.primary.withValues(alpha: 0.58)
-                : Colors.transparent,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          IconButton(
+            iconSize: size,
+            isSelected: active,
+            icon: Icon(icon, color: iconColor),
+            onPressed: onPressed,
           ),
-        ),
-        child: IconButton(
-          iconSize: size,
-          icon: Icon(icon, color: iconColor),
-          onPressed: onPressed,
-        ),
+          Positioned(
+            bottom: 3,
+            child: IgnorePointer(
+              child: AnimatedOpacity(
+                opacity: active ? 1 : 0,
+                duration: const Duration(milliseconds: 180),
+                child: Container(
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: cs.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -7332,18 +7650,19 @@ class _PlayPauseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The biggest control on the card, as it is the one used most.
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         shape: const CircleBorder(),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         backgroundColor: Theme.of(context).colorScheme.primary,
-        minimumSize: const Size(48, 48),
+        minimumSize: const Size(58, 58),
       ),
       onPressed: onPressed,
       child: Icon(
         playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
         color: Theme.of(context).colorScheme.onPrimary,
-        size: 24,
+        size: 30,
       ),
     );
   }

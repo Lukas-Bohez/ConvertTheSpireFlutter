@@ -56,7 +56,7 @@ Disponibile in 18 lingue. Scarica solo contenuti che hai il diritto di scaricare
 ## What's new in this version
 
 ```text
-Novità: scarica solo la parte di un video o di una canzone che vuoi. Sottotitoli per video e canzoni: i file .srt e .vtt si caricano da soli. Testi sincronizzati dai file .lrc. Metti in loop la parte migliore, cambia la velocità, imposta un timer di spegnimento e guarda in vista grande. I video lunghi riprendono da dove eri rimasto, e il blocco pubblicità del browser ora usa le liste di uBlock Origin. Il lettore ha un solo set di comandi e più spazio per il video, e tutti i colori sono sbloccati. Corretto: un programma scaricato via torrent si avvia mentre è in seeding, i torrent di file che hai già vanno subito in seeding e i video della libreria hanno le miniature.
+Novità: scarica solo la parte di un video o di una canzone che vuoi. Sottotitoli per video e canzoni: i file .srt e .vtt si caricano da soli. Testi sincronizzati dai file .lrc. Si vedono anche i sottotitoli inclusi nei file MKV e MP4. Metti in loop la parte migliore, cambia la velocità, imposta un timer di spegnimento e guarda in vista grande. I video lunghi riprendono da dove eri rimasto, e il blocco pubblicità del browser ora usa le liste di uBlock Origin. Il lettore ha un solo set di comandi e più spazio per il video, e tutti i colori sono sbloccati. Corretto: un programma scaricato via torrent si avvia mentre è in seeding, i torrent di file che hai già vanno subito in seeding e i video della libreria hanno le miniature.
 ```
 
 ## Product features

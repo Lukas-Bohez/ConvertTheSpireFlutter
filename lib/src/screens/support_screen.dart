@@ -611,16 +611,20 @@ class _SupportScreenState extends State<SupportScreen> {
           const WatchAdCard(),
           const SizedBox(height: 16),
         ],
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.play_circle_fill, color: Colors.red),
-            title: Text(context.l10n.watchDemoVideo),
-            subtitle: Text(context.l10n.quickTourAppYoutube),
-            trailing: const Icon(Icons.open_in_new),
-            onTap: () => _openUrl('https://youtu.be/66Rx8PDY_r0'),
+        // The trailer. Not in the Play build: it shows the YouTube downloads
+        // that the Play version leaves out.
+        if (!kPlayStoreBuild) ...[
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.play_circle_fill, color: Colors.red),
+              title: Text(context.l10n.watchDemoVideo),
+              subtitle: Text(context.l10n.quickTourAppYoutube),
+              trailing: const Icon(Icons.open_in_new),
+              onTap: () => _openUrl('https://youtu.be/JfT052dU5mg'),
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
+        ],
         Card(
           child: ListTile(
             leading: const Icon(Icons.coffee, color: Colors.brown),

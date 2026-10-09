@@ -79,6 +79,9 @@ $languages = @($listings.languages.PSObject.Properties.Name)
 $listingOut = New-Item -ItemType Directory -Force (Join-Path $out 'listings')
 Copy-Item (Join-Path $listingDir '*.md') $listingOut -Force
 $shotOut = New-Item -ItemType Directory -Force (Join-Path $out 'screenshots')
+# Only this release's: the import folder takes every picture in here, and
+# ones left from an earlier run went to the Store with the new ones.
+Get-ChildItem $shotOut -Filter *.png | Remove-Item -Force
 Copy-Item (Join-Path $root 'docs/screenshots/store/*.png') $shotOut -Force
 Move-Item (Join-Path $shotOut 'app-tile-300.png') (Join-Path $out 'app-tile-300.png') -Force
 Write-Host "$($languages.Count) languages in $listingOut"
@@ -366,7 +369,15 @@ Submission options > Restricted capabilities (runFullTrust):
   the user's network, and to read and write media in the folders the user
   picks.
 
-Add-on: Durable, product ID get_all_themes (exactly), 2.99, "All colours".
+Trailers (Store listings > English > Trailers)
+  trailer\trailer.mp4, with trailer\trailer-thumbnail.png as its thumbnail
+  and "Convert the Spire Reborn in 50 seconds" as its title. The other
+  languages can use the same trailer. (scripts\store_trailer.py makes it;
+  see docs\publishing\store-trailer.md.)
+
+Add-on: none needed. Every colour is unlocked in the Store version, so the
+  "All colours" add-on (get_all_themes) sells nothing; leave it free or
+  retire it.
 "@ | Set-Content -Path (Join-Path $out 'HOW-TO-UPLOAD.txt') -Encoding UTF8
 
 Step 'Done'

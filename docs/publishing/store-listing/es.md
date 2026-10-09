@@ -56,7 +56,7 @@ Disponible en 18 idiomas. Descarga solo contenido que tengas derecho a descargar
 ## What's new in this version
 
 ```text
-Novedades: descarga solo la parte de un vídeo o canción que quieras. Subtítulos para vídeos y canciones: los archivos .srt y .vtt se cargan solos. Letras sincronizadas desde archivos .lrc. Pon la mejor parte en bucle, cambia la velocidad, programa un temporizador y mira en vista grande. Los vídeos largos siguen donde los dejaste, y el bloqueador de anuncios del navegador usa ahora las listas de uBlock Origin. El reproductor tiene un solo juego de controles y más espacio para el vídeo, y todos los colores están desbloqueados. Corregido: un programa descargado por torrent se abre mientras se comparte, los torrents de archivos que ya tienes se comparten al instante y los vídeos de tu biblioteca tienen miniaturas.
+Novedades: descarga solo la parte de un vídeo o canción que quieras. Subtítulos para vídeos y canciones: los archivos .srt y .vtt se cargan solos. Letras sincronizadas desde archivos .lrc. También se muestran los subtítulos incluidos en archivos MKV y MP4. Pon la mejor parte en bucle, cambia la velocidad, programa un temporizador y mira en vista grande. Los vídeos largos siguen donde los dejaste, y el bloqueador de anuncios del navegador usa ahora las listas de uBlock Origin. El reproductor tiene un solo juego de controles y más espacio para el vídeo, y todos los colores están desbloqueados. Corregido: un programa descargado por torrent se abre mientras se comparte, los torrents de archivos que ya tienes se comparten al instante y los vídeos de tu biblioteca tienen miniaturas.
 ```
 
 ## Product features

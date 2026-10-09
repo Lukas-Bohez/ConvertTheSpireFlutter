@@ -56,7 +56,7 @@ In 18 Sprachen verfügbar. Bitte lade nur Inhalte herunter, zu deren Download du
 ## What's new in this version
 
 ```text
-Neu: Lade nur den Teil eines Videos oder Songs herunter, den du willst. Untertitel für Videos und Songs: .srt- und .vtt-Dateien werden von selbst geladen. Synchronisierte Songtexte aus .lrc-Dateien. Die beste Stelle in Schleife, Geschwindigkeit ändern, Schlaf-Timer stellen und in großer Ansicht schauen. Lange Videos gehen dort weiter, wo du aufgehört hast, und der Werbeblocker im Browser nutzt jetzt die Listen von uBlock Origin. Der Player hat nur noch eine Steuerung und mehr Platz fürs Video, und alle Farben sind freigeschaltet. Behoben: Ein per Torrent geladenes Programm startet, während es seedet, Torrents von Dateien, die du schon hast, seeden sofort, und Videos in deiner Bibliothek haben Vorschaubilder.
+Neu: Lade nur den Teil eines Videos oder Songs herunter, den du willst. Untertitel für Videos und Songs: .srt- und .vtt-Dateien werden von selbst geladen. Synchronisierte Songtexte aus .lrc-Dateien. Auch Untertitel in MKV- und MP4-Dateien werden angezeigt. Die beste Stelle in Schleife, Geschwindigkeit ändern, Schlaf-Timer stellen und in großer Ansicht schauen. Lange Videos gehen dort weiter, wo du aufgehört hast, und der Werbeblocker im Browser nutzt jetzt die Listen von uBlock Origin. Der Player hat nur noch eine Steuerung und mehr Platz fürs Video, und alle Farben sind freigeschaltet. Behoben: Ein per Torrent geladenes Programm startet, während es seedet, Torrents von Dateien, die du schon hast, seeden sofort, und Videos in deiner Bibliothek haben Vorschaubilder.
 ```
 
 ## Product features
