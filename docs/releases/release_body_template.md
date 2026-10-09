@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="https://youtu.be/66Rx8PDY_r0"><img src="https://img.youtube.com/vi/66Rx8PDY_r0/maxresdefault.jpg" width="70%" alt="Watch the demo video on YouTube"></a>
-  <br><b>▶ <a href="https://youtu.be/66Rx8PDY_r0">Watch the demo video</a></b>
+  <a href="https://youtu.be/JfT052dU5mg"><img src="https://img.youtube.com/vi/JfT052dU5mg/maxresdefault.jpg" width="70%" alt="Watch the trailer on YouTube"></a>
+  <br><b>▶ <a href="https://youtu.be/JfT052dU5mg">Watch the trailer</a></b>
 </p>
 
 <p align="center">

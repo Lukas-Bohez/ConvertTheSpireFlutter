@@ -68,11 +68,11 @@ It works with YouTube and with every site yt-dlp supports, more than 1,800 of th
 
 ---
 
-## ▶ Watch the demo
+## ▶ Watch the trailer
 
-[![Convert the Spire Reborn demonstration video](https://img.youtube.com/vi/66Rx8PDY_r0/maxresdefault.jpg)](https://youtu.be/66Rx8PDY_r0)
+[![Convert the Spire Reborn in 50 seconds](https://img.youtube.com/vi/JfT052dU5mg/maxresdefault.jpg)](https://youtu.be/JfT052dU5mg)
 
-*A quick tour of the app: [watch on YouTube](https://youtu.be/66Rx8PDY_r0).*
+*The app in 50 seconds: [watch on YouTube](https://youtu.be/JfT052dU5mg).*
 
 ---
 

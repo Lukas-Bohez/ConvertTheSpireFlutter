@@ -64,7 +64,7 @@ then check it with `python scripts/verify_play_aab.py <aab>` (see the
 - **Real app screenshots:** `screenshots/*.webp`
 - **Windows/desktop app icon:** `assets/icons/app_icon_fixed.png` (via `flutter_launcher_icons.yaml`)
 - **GitHub release layout:** `docs/releases/release_body_template.md`
-- **Demo video:** https://youtu.be/66Rx8PDY_r0
+- **Trailer (the Windows app):** https://youtu.be/JfT052dU5mg
 
 ## Not covered here
 The GitHub (full) flavor keeps its own launcher icon, the orb of the Windows app,
