@@ -107,8 +107,9 @@ void main() {
         final button = find.byTooltip(tooltip);
         if (button.evaluate().isEmpty) return;
         // Straight to the button: the controls over a video come and go.
-        final widget = tester.widget(find.ancestor(
-            of: button, matching: find.byType(IconButton)).first) as IconButton;
+        final widget = tester.widget(find
+            .ancestor(of: button, matching: find.byType(IconButton))
+            .first) as IconButton;
         widget.onPressed?.call();
         await tour.hold(600);
       }
@@ -153,8 +154,13 @@ void main() {
           () => player.library.length >= 12, const Duration(seconds: 30));
       await player.playFileDirect(media('Neon Rain.mp3'));
       // Up next, beside the player on a wide screen.
-      for (final song in const ['Midnight Drive', 'Paper Planes',
-          'Slow Sunrise', 'Northern Coast', 'City Lights']) {
+      for (final song in const [
+        'Midnight Drive',
+        'Paper Planes',
+        'Slow Sunrise',
+        'Northern Coast',
+        'City Lights'
+      ]) {
         player.enqueue(player.mediaIndexForPath(media('$song.mp3')));
       }
       // Time for the library's covers to load.

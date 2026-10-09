@@ -7,6 +7,8 @@ import 'package:media_kit/media_kit.dart' show MediaKit;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'fixtures.dart';
+
 /// Song covers: read from the file (decoded off the UI thread), and kept
 /// when the library is loaded again, as it is when a download lands in its
 /// folder. They used to stay grey for the rest of the session then.
@@ -47,7 +49,7 @@ void main() {
   testWidgets('a cover is found, and kept when the library loads again',
       (tester) async {
     final path = '${dir.path}${Platform.pathSeparator}song.mp3';
-    await File('integration_test/fixtures/song_with_cover.mp3').copy(path);
+    await writeFixture(songWithCoverMp3, path);
     MediaItem song() => MediaItem(path, MediaType.audio, title: 'Cover Song');
 
     await player.setLibrary([song()]);

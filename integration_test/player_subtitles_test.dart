@@ -7,11 +7,13 @@ import 'package:integration_test/integration_test.dart';
 import 'package:media_kit/media_kit.dart' show MediaKit;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'fixtures.dart';
+
 /// Subtitles with the real players (issue #41): a video's own tracks show
 /// without a file, a file next to it goes first even when it is UTF-16, and
 /// a film opened from outside the library has them too.
 ///
-/// The video (fixtures/embedded_subtitles.mkv) has two subtitle tracks
+/// The video (embeddedSubtitlesMkv in fixtures.dart) has two subtitle tracks
 /// inside it: French first, then English.
 ///
 ///   flutter test -d windows integration_test/player_subtitles_test.dart
@@ -44,7 +46,7 @@ void main() {
 
   Future<String> video(String name) async {
     final path = '${dir.path}${Platform.pathSeparator}$name.mkv';
-    await File('integration_test/fixtures/embedded_subtitles.mkv').copy(path);
+    await writeFixture(embeddedSubtitlesMkv, path);
     return path;
   }
 
