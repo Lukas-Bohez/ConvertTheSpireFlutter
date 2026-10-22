@@ -1452,5 +1452,12 @@
   "pictureInPictureVideosHint": "Rời ứng dụng khi đang phát video thì video tiếp tục phát trong một cửa sổ nhỏ",
   "deleteCancelled": "Chưa xóa",
   "deleteFolderAccessLost": "Ứng dụng đã mất quyền truy cập thư mục này. Hãy chọn lại thư mục để xóa tệp.",
-  "deleteRefusedBySystem": "Hệ thống không cho phép xóa tệp này"
+  "deleteRefusedBySystem": "Hệ thống không cho phép xóa tệp này",
+  "searchSourceSearching": "đang tìm…",
+  "searchSourceNothing": "không có kết quả",
+  "searchSourceTimedOut": "quá chậm",
+  "searchSourceFailed": "không hoạt động",
+  "searchSourceDesktopOnly": "chỉ trên máy tính",
+  "searchSourceNeedsYtDlp": "cần yt-dlp",
+  "searchNoSourceAnswered": "Không nguồn nào phản hồi. Hãy kiểm tra kết nối và thử lại."
 }

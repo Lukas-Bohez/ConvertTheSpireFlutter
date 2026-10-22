@@ -5026,4 +5026,26 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get deleteRefusedBySystem =>
       'Sistem tidak mengizinkan file ini dihapus';
+
+  @override
+  String get searchSourceSearching => 'mencari…';
+
+  @override
+  String get searchSourceNothing => 'tidak ada hasil';
+
+  @override
+  String get searchSourceTimedOut => 'terlalu lambat';
+
+  @override
+  String get searchSourceFailed => 'tidak berhasil';
+
+  @override
+  String get searchSourceDesktopOnly => 'hanya di komputer';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'perlu yt-dlp';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'Tidak ada sumber yang menjawab. Periksa koneksi Anda dan coba lagi.';
 }

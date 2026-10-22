@@ -1452,5 +1452,12 @@
   "pictureInPictureVideosHint": "Ao sair do app durante um vídeo, ele continua numa janela pequena",
   "deleteCancelled": "Não foi excluído",
   "deleteFolderAccessLost": "O app perdeu o acesso a esta pasta. Escolha a pasta de novo para excluir arquivos.",
-  "deleteRefusedBySystem": "O sistema não permitiu excluir este arquivo"
+  "deleteRefusedBySystem": "O sistema não permitiu excluir este arquivo",
+  "searchSourceSearching": "pesquisando…",
+  "searchSourceNothing": "nada encontrado",
+  "searchSourceTimedOut": "lento demais",
+  "searchSourceFailed": "não funcionou",
+  "searchSourceDesktopOnly": "só em computadores",
+  "searchSourceNeedsYtDlp": "precisa do yt-dlp",
+  "searchNoSourceAnswered": "Nenhuma fonte respondeu. Verifique a sua ligação e tente de novo."
 }

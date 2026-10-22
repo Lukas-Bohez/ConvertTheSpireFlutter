@@ -1452,5 +1452,12 @@
   "pictureInPictureVideosHint": "Wenn du die App verlässt, während ein Video läuft, spielt es in einem kleinen Fenster weiter",
   "deleteCancelled": "Nicht gelöscht",
   "deleteFolderAccessLost": "Die App hat keinen Zugriff mehr auf diesen Ordner. Wähle den Ordner erneut, um Dateien zu löschen.",
-  "deleteRefusedBySystem": "Das System hat das Löschen dieser Datei nicht erlaubt"
+  "deleteRefusedBySystem": "Das System hat das Löschen dieser Datei nicht erlaubt",
+  "searchSourceSearching": "sucht…",
+  "searchSourceNothing": "nichts gefunden",
+  "searchSourceTimedOut": "zu langsam",
+  "searchSourceFailed": "hat nicht geklappt",
+  "searchSourceDesktopOnly": "nur am Computer",
+  "searchSourceNeedsYtDlp": "braucht yt-dlp",
+  "searchNoSourceAnswered": "Keine Quelle hat geantwortet. Prüfe deine Verbindung und versuche es erneut."
 }

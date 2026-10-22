@@ -4886,4 +4886,25 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get deleteRefusedBySystem => '시스템에서 이 파일 삭제를 허용하지 않았습니다';
+
+  @override
+  String get searchSourceSearching => '검색 중…';
+
+  @override
+  String get searchSourceNothing => '결과 없음';
+
+  @override
+  String get searchSourceTimedOut => '너무 느림';
+
+  @override
+  String get searchSourceFailed => '실패함';
+
+  @override
+  String get searchSourceDesktopOnly => '컴퓨터에서만';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'yt-dlp 필요';
+
+  @override
+  String get searchNoSourceAnswered => '응답한 소스가 없습니다. 연결을 확인하고 다시 시도하세요.';
 }

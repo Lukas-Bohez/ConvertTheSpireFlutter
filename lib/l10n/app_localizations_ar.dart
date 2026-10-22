@@ -4983,4 +4983,26 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get deleteRefusedBySystem => 'لم يسمح النظام بحذف هذا الملف';
+
+  @override
+  String get searchSourceSearching => 'جارٍ البحث…';
+
+  @override
+  String get searchSourceNothing => 'لا نتائج';
+
+  @override
+  String get searchSourceTimedOut => 'بطيء جدًا';
+
+  @override
+  String get searchSourceFailed => 'لم ينجح';
+
+  @override
+  String get searchSourceDesktopOnly => 'على الحواسيب فقط';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'يتطلب yt-dlp';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'لم يستجب أي مصدر. تحقّق من اتصالك وحاول مرة أخرى.';
 }

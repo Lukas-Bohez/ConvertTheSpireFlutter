@@ -3106,5 +3106,33 @@
   "deleteRefusedBySystem": "The system didn't allow deleting this file",
   "@deleteRefusedBySystem": {
     "description": "Snackbar: the operating system refused to delete the file."
+  },
+  "searchSourceSearching": "searching…",
+  "@searchSourceSearching": {
+    "description": "Multi-Search source chip: this source is still searching."
+  },
+  "searchSourceNothing": "nothing found",
+  "@searchSourceNothing": {
+    "description": "Multi-Search source chip: this source found nothing."
+  },
+  "searchSourceTimedOut": "too slow",
+  "@searchSourceTimedOut": {
+    "description": "Multi-Search source chip: this source took too long to answer."
+  },
+  "searchSourceFailed": "didn't work",
+  "@searchSourceFailed": {
+    "description": "Multi-Search source chip: this source failed."
+  },
+  "searchSourceDesktopOnly": "on computers only",
+  "@searchSourceDesktopOnly": {
+    "description": "Multi-Search source chip: results from this site can only be downloaded on a computer, so it is not searched on a phone."
+  },
+  "searchSourceNeedsYtDlp": "needs yt-dlp",
+  "@searchSourceNeedsYtDlp": {
+    "description": "Multi-Search source chip: downloading from this site needs yt-dlp, which is not installed."
+  },
+  "searchNoSourceAnswered": "No source answered. Check your connection and try again.",
+  "@searchNoSourceAnswered": {
+    "description": "Multi-Search: every source failed or timed out."
   }
 }

@@ -5045,4 +5045,26 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get deleteRefusedBySystem =>
       'Il sistema non ha permesso di eliminare questo file';
+
+  @override
+  String get searchSourceSearching => 'ricerca…';
+
+  @override
+  String get searchSourceNothing => 'nessun risultato';
+
+  @override
+  String get searchSourceTimedOut => 'troppo lento';
+
+  @override
+  String get searchSourceFailed => 'non ha funzionato';
+
+  @override
+  String get searchSourceDesktopOnly => 'solo su computer';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'richiede yt-dlp';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'Nessuna fonte ha risposto. Controlla la connessione e riprova.';
 }

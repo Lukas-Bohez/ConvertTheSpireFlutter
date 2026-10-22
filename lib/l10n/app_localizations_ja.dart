@@ -4887,4 +4887,25 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get deleteRefusedBySystem => 'システムがこのファイルの削除を許可しませんでした';
+
+  @override
+  String get searchSourceSearching => '検索中…';
+
+  @override
+  String get searchSourceNothing => '見つかりません';
+
+  @override
+  String get searchSourceTimedOut => '応答が遅すぎます';
+
+  @override
+  String get searchSourceFailed => '失敗しました';
+
+  @override
+  String get searchSourceDesktopOnly => 'パソコンのみ';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'yt-dlp が必要';
+
+  @override
+  String get searchNoSourceAnswered => 'どのソースからも応答がありません。接続を確認して、もう一度お試しください。';
 }

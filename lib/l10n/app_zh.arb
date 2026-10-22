@@ -1452,5 +1452,12 @@
   "pictureInPictureVideosHint": "播放视频时离开应用，视频会在小窗口中继续播放",
   "deleteCancelled": "未删除",
   "deleteFolderAccessLost": "应用已失去对此文件夹的访问权限。请重新选择该文件夹以删除文件。",
-  "deleteRefusedBySystem": "系统不允许删除此文件"
+  "deleteRefusedBySystem": "系统不允许删除此文件",
+  "searchSourceSearching": "搜索中…",
+  "searchSourceNothing": "无结果",
+  "searchSourceTimedOut": "响应太慢",
+  "searchSourceFailed": "失败",
+  "searchSourceDesktopOnly": "仅限电脑",
+  "searchSourceNeedsYtDlp": "需要 yt-dlp",
+  "searchNoSourceAnswered": "没有来源响应。请检查网络连接后重试。"
 }

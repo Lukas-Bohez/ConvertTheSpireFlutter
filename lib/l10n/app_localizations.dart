@@ -8850,6 +8850,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The system didn\'t allow deleting this file'**
   String get deleteRefusedBySystem;
+
+  /// Multi-Search source chip: this source is still searching.
+  ///
+  /// In en, this message translates to:
+  /// **'searching…'**
+  String get searchSourceSearching;
+
+  /// Multi-Search source chip: this source found nothing.
+  ///
+  /// In en, this message translates to:
+  /// **'nothing found'**
+  String get searchSourceNothing;
+
+  /// Multi-Search source chip: this source took too long to answer.
+  ///
+  /// In en, this message translates to:
+  /// **'too slow'**
+  String get searchSourceTimedOut;
+
+  /// Multi-Search source chip: this source failed.
+  ///
+  /// In en, this message translates to:
+  /// **'didn\'t work'**
+  String get searchSourceFailed;
+
+  /// Multi-Search source chip: results from this site can only be downloaded on a computer, so it is not searched on a phone.
+  ///
+  /// In en, this message translates to:
+  /// **'on computers only'**
+  String get searchSourceDesktopOnly;
+
+  /// Multi-Search source chip: downloading from this site needs yt-dlp, which is not installed.
+  ///
+  /// In en, this message translates to:
+  /// **'needs yt-dlp'**
+  String get searchSourceNeedsYtDlp;
+
+  /// Multi-Search: every source failed or timed out.
+  ///
+  /// In en, this message translates to:
+  /// **'No source answered. Check your connection and try again.'**
+  String get searchNoSourceAnswered;
 }
 
 class _AppLocalizationsDelegate

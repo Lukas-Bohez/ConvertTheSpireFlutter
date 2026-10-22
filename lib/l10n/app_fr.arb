@@ -1452,5 +1452,12 @@
   "pictureInPictureVideosHint": "Quitter l'app pendant la lecture d'une vidéo la garde dans une petite fenêtre",
   "deleteCancelled": "Non supprimé",
   "deleteFolderAccessLost": "L'app n'a plus accès à ce dossier. Choisissez à nouveau le dossier pour supprimer des fichiers.",
-  "deleteRefusedBySystem": "Le système n'a pas autorisé la suppression de ce fichier"
+  "deleteRefusedBySystem": "Le système n'a pas autorisé la suppression de ce fichier",
+  "searchSourceSearching": "recherche…",
+  "searchSourceNothing": "aucun résultat",
+  "searchSourceTimedOut": "trop lent",
+  "searchSourceFailed": "n'a pas marché",
+  "searchSourceDesktopOnly": "sur ordinateur uniquement",
+  "searchSourceNeedsYtDlp": "nécessite yt-dlp",
+  "searchNoSourceAnswered": "Aucune source n'a répondu. Vérifiez votre connexion et réessayez."
 }

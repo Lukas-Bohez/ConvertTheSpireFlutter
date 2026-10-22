@@ -1452,5 +1452,12 @@
   "pictureInPictureVideosHint": "عند مغادرة التطبيق أثناء تشغيل فيديو، يستمر في نافذة صغيرة",
   "deleteCancelled": "لم يُحذف",
   "deleteFolderAccessLost": "فقد التطبيق إذن الوصول إلى هذا المجلد. اختر المجلد مرة أخرى لحذف الملفات.",
-  "deleteRefusedBySystem": "لم يسمح النظام بحذف هذا الملف"
+  "deleteRefusedBySystem": "لم يسمح النظام بحذف هذا الملف",
+  "searchSourceSearching": "جارٍ البحث…",
+  "searchSourceNothing": "لا نتائج",
+  "searchSourceTimedOut": "بطيء جدًا",
+  "searchSourceFailed": "لم ينجح",
+  "searchSourceDesktopOnly": "على الحواسيب فقط",
+  "searchSourceNeedsYtDlp": "يتطلب yt-dlp",
+  "searchNoSourceAnswered": "لم يستجب أي مصدر. تحقّق من اتصالك وحاول مرة أخرى."
 }

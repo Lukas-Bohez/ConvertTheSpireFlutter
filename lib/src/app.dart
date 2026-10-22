@@ -241,42 +241,32 @@ class _MyAppState extends State<MyApp>
       final convertService = ConvertService(ffmpeg: ffmpeg);
       final installerService = InstallerService();
 
-      final youtubeSearcher = YouTubeSearcher(yt: ytExplode);
-      final soundcloudSearcher = SoundCloudSearcher();
-
-      // Desktop platforms: resolve yt-dlp path for multi-platform search
       String? resolvedYtDlpPath;
-      BiliSearcher? biliSearcher;
-      RumbleSearcher? rumbleSearcher;
-      DailymotionSearcher? dailymotionSearcher;
-      OdyseeSearcher? odyseeSearcher;
-
       try {
         // Try to resolve yt-dlp from system PATH or app support dir
         // (configuredPath is null at startup since settings load asynchronously)
         resolvedYtDlpPath = await ytDlp.resolveAvailablePath(null);
-        if (resolvedYtDlpPath != null) {
-          // yt-dlp is available on desktop: instantiate platform-specific searchers
-          biliSearcher =
-              BiliSearcher(ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath);
-          rumbleSearcher =
-              RumbleSearcher(ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath);
-          dailymotionSearcher =
-              DailymotionSearcher(ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath);
-          odyseeSearcher =
-              OdyseeSearcher(ytDlp: ytDlp, ytDlpPath: resolvedYtDlpPath);
-        }
       } catch (_) {
         // yt-dlp unavailable or error resolving - continue without it
       }
 
+      // Every site is searched through its own API, on every platform.
+      // Downloading anything but YouTube takes yt-dlp, which is looked for
+      // on each search, so one set in Settings counts without a restart.
+      final isDesktop =
+          !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
       final searchService = MultiSourceSearchService(
-        youtubeSearcher: youtubeSearcher,
-        soundcloudSearcher: soundcloudSearcher,
-        biliSearcher: biliSearcher,
-        rumbleSearcher: rumbleSearcher,
-        dailymotionSearcher: dailymotionSearcher,
-        odyseeSearcher: odyseeSearcher,
+        youtubeSearcher: YouTubeSearcher(yt: ytExplode),
+        soundcloudSearcher: SoundCloudSearcher(),
+        biliSearcher: BiliSearcher(),
+        dailymotionSearcher: DailymotionSearcher(),
+        odyseeSearcher: OdyseeSearcher(),
+        canDownloadOtherSites: !isDesktop
+            ? null
+            : () async =>
+                await ytDlp.resolveAvailablePath(
+                    (await settingsStore.load()).ytDlpPath) !=
+                null,
       );
       final previewPlayer = PreviewPlayerService();
       final playlistService = PlaylistService(

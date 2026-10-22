@@ -1461,10 +1461,15 @@ class AppController extends ChangeNotifier {
       MediaPart? part}) {
     final fmt = format ?? _settings?.defaultAudioFormat ?? 'mp3';
 
-    // If source is 'generic', the ID *is* the URL (set by BrowserScreen)
-    final isGeneric = result.source == 'generic';
-    final url =
-        isGeneric ? result.id : 'https://www.youtube.com/watch?v=${result.id}';
+    // A 'generic' result's id is its URL (set by BrowserScreen); YouTube's
+    // is the video id; other sites carry their page (issue #45, fix 10: a
+    // SoundCloud or Bilibili id used to be made into a YouTube link).
+    final url = result.url;
+    if (url == null) {
+      logs.add('Cannot queue ${result.source} result without a link: '
+          '${result.title}');
+      return;
+    }
 
     if (!isYouTubeConversionEnabledInCurrentBuild && _isYouTubeUrl(url)) {
       logs.add('Skipping YouTube queue add due to Play Store build policy.');

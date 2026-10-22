@@ -5027,4 +5027,26 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get deleteRefusedBySystem =>
       'Sistem bu dosyanın silinmesine izin vermedi';
+
+  @override
+  String get searchSourceSearching => 'aranıyor…';
+
+  @override
+  String get searchSourceNothing => 'sonuç yok';
+
+  @override
+  String get searchSourceTimedOut => 'çok yavaş';
+
+  @override
+  String get searchSourceFailed => 'çalışmadı';
+
+  @override
+  String get searchSourceDesktopOnly => 'yalnızca bilgisayarda';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'yt-dlp gerekli';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'Hiçbir kaynak yanıt vermedi. Bağlantınızı kontrol edip tekrar deneyin.';
 }

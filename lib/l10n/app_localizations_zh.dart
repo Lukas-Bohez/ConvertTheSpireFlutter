@@ -4828,4 +4828,25 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get deleteRefusedBySystem => '系统不允许删除此文件';
+
+  @override
+  String get searchSourceSearching => '搜索中…';
+
+  @override
+  String get searchSourceNothing => '无结果';
+
+  @override
+  String get searchSourceTimedOut => '响应太慢';
+
+  @override
+  String get searchSourceFailed => '失败';
+
+  @override
+  String get searchSourceDesktopOnly => '仅限电脑';
+
+  @override
+  String get searchSourceNeedsYtDlp => '需要 yt-dlp';
+
+  @override
+  String get searchNoSourceAnswered => '没有来源响应。请检查网络连接后重试。';
 }
