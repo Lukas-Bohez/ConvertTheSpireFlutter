@@ -3086,5 +3086,25 @@
   "lyrics": "Lyrics",
   "@lyrics": {
     "description": "The subtitles chip and sheet, when the file is synced lyrics (.lrc) for a song."
+  },
+  "pictureInPictureVideos": "Picture-in-picture for videos",
+  "@pictureInPictureVideos": {
+    "description": "Settings switch (Android): leaving the app while a video plays opens the small picture-in-picture window."
+  },
+  "pictureInPictureVideosHint": "Leaving the app while a video plays keeps it playing in a small window",
+  "@pictureInPictureVideosHint": {
+    "description": "Subtitle of the picture-in-picture settings switch."
+  },
+  "deleteCancelled": "Not deleted",
+  "@deleteCancelled": {
+    "description": "Snackbar: the user said no in the system's confirm-delete dialog."
+  },
+  "deleteFolderAccessLost": "The app lost access to this folder. Pick the folder again to delete files.",
+  "@deleteFolderAccessLost": {
+    "description": "Snackbar: deleting failed because the app lost its permission for the picked folder (Android)."
+  },
+  "deleteRefusedBySystem": "The system didn't allow deleting this file",
+  "@deleteRefusedBySystem": {
+    "description": "Snackbar: the operating system refused to delete the file."
   }
 }

@@ -1447,5 +1447,10 @@
   "partTo": "Hasta",
   "addPartsToQueue": "Añadir a la cola ({count} partes)",
   "partTimesInvalid": "Cada parte debe terminar después de empezar, dentro del vídeo.",
-  "lyrics": "Letra"
+  "lyrics": "Letra",
+  "pictureInPictureVideos": "Imagen en imagen para vídeos",
+  "pictureInPictureVideosHint": "Al salir de la app mientras se reproduce un vídeo, sigue en una ventana pequeña",
+  "deleteCancelled": "No se ha eliminado",
+  "deleteFolderAccessLost": "La app perdió el acceso a esta carpeta. Vuelve a elegir la carpeta para eliminar archivos.",
+  "deleteRefusedBySystem": "El sistema no permitió eliminar este archivo"
 }

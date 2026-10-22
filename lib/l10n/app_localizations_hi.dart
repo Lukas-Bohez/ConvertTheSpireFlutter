@@ -4991,4 +4991,22 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get lyrics => 'बोल';
+
+  @override
+  String get pictureInPictureVideos => 'वीडियो के लिए पिक्चर-इन-पिक्चर';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'वीडियो चलते समय ऐप छोड़ने पर वह एक छोटी विंडो में चलता रहता है';
+
+  @override
+  String get deleteCancelled => 'हटाया नहीं गया';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'ऐप की इस फ़ोल्डर तक पहुँच खो गई है। फ़ाइलें हटाने के लिए फ़ोल्डर फिर से चुनें।';
+
+  @override
+  String get deleteRefusedBySystem =>
+      'सिस्टम ने इस फ़ाइल को हटाने की अनुमति नहीं दी';
 }

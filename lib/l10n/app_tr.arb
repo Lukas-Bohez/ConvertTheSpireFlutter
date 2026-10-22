@@ -1447,5 +1447,10 @@
   "partTo": "Bitiş",
   "addPartsToQueue": "Kuyruğa ekle ({count} bölüm)",
   "partTimesInvalid": "Her bölüm başladıktan sonra ve video içinde bitmelidir.",
-  "lyrics": "Şarkı sözleri"
+  "lyrics": "Şarkı sözleri",
+  "pictureInPictureVideos": "Videolar için resim içinde resim",
+  "pictureInPictureVideosHint": "Video oynarken uygulamadan çıkınca küçük bir pencerede oynamaya devam eder",
+  "deleteCancelled": "Silinmedi",
+  "deleteFolderAccessLost": "Uygulama bu klasöre erişimini kaybetti. Dosyaları silmek için klasörü yeniden seçin.",
+  "deleteRefusedBySystem": "Sistem bu dosyanın silinmesine izin vermedi"
 }

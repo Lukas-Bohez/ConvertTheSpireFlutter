@@ -5005,4 +5005,21 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get lyrics => 'Текст пісні';
+
+  @override
+  String get pictureInPictureVideos => 'Картинка в картинці для відео';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Якщо вийти із застосунку під час відео, воно гратиме далі в малому вікні';
+
+  @override
+  String get deleteCancelled => 'Не видалено';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'Застосунок втратив доступ до цієї папки. Виберіть папку знову, щоб видаляти файли.';
+
+  @override
+  String get deleteRefusedBySystem => 'Система не дозволила видалити цей файл';
 }

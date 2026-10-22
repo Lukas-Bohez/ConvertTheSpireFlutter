@@ -5027,4 +5027,22 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get lyrics => 'Songtext';
+
+  @override
+  String get pictureInPictureVideos => 'Bild-im-Bild für Videos';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Wenn du die App verlässt, während ein Video läuft, spielt es in einem kleinen Fenster weiter';
+
+  @override
+  String get deleteCancelled => 'Nicht gelöscht';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'Die App hat keinen Zugriff mehr auf diesen Ordner. Wähle den Ordner erneut, um Dateien zu löschen.';
+
+  @override
+  String get deleteRefusedBySystem =>
+      'Das System hat das Löschen dieser Datei nicht erlaubt';
 }

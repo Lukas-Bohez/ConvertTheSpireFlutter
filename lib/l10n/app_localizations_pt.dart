@@ -5028,4 +5028,22 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get lyrics => 'Letra';
+
+  @override
+  String get pictureInPictureVideos => 'Imagem em imagem para vídeos';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Ao sair do app durante um vídeo, ele continua numa janela pequena';
+
+  @override
+  String get deleteCancelled => 'Não foi excluído';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'O app perdeu o acesso a esta pasta. Escolha a pasta de novo para excluir arquivos.';
+
+  @override
+  String get deleteRefusedBySystem =>
+      'O sistema não permitiu excluir este arquivo';
 }

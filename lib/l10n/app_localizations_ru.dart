@@ -4997,4 +4997,21 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get lyrics => 'Текст песни';
+
+  @override
+  String get pictureInPictureVideos => 'Картинка в картинке для видео';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Если выйти из приложения во время видео, оно продолжит играть в маленьком окне';
+
+  @override
+  String get deleteCancelled => 'Не удалено';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'Приложение потеряло доступ к этой папке. Выберите папку снова, чтобы удалять файлы.';
+
+  @override
+  String get deleteRefusedBySystem => 'Система не разрешила удалить этот файл';
 }

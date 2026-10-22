@@ -4991,4 +4991,21 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get lyrics => 'Lời bài hát';
+
+  @override
+  String get pictureInPictureVideos => 'Hình trong hình cho video';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Rời ứng dụng khi đang phát video thì video tiếp tục phát trong một cửa sổ nhỏ';
+
+  @override
+  String get deleteCancelled => 'Chưa xóa';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'Ứng dụng đã mất quyền truy cập thư mục này. Hãy chọn lại thư mục để xóa tệp.';
+
+  @override
+  String get deleteRefusedBySystem => 'Hệ thống không cho phép xóa tệp này';
 }

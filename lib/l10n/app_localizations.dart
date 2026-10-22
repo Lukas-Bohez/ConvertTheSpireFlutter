@@ -8820,6 +8820,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lyrics'**
   String get lyrics;
+
+  /// Settings switch (Android): leaving the app while a video plays opens the small picture-in-picture window.
+  ///
+  /// In en, this message translates to:
+  /// **'Picture-in-picture for videos'**
+  String get pictureInPictureVideos;
+
+  /// Subtitle of the picture-in-picture settings switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaving the app while a video plays keeps it playing in a small window'**
+  String get pictureInPictureVideosHint;
+
+  /// Snackbar: the user said no in the system's confirm-delete dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Not deleted'**
+  String get deleteCancelled;
+
+  /// Snackbar: deleting failed because the app lost its permission for the picked folder (Android).
+  ///
+  /// In en, this message translates to:
+  /// **'The app lost access to this folder. Pick the folder again to delete files.'**
+  String get deleteFolderAccessLost;
+
+  /// Snackbar: the operating system refused to delete the file.
+  ///
+  /// In en, this message translates to:
+  /// **'The system didn\'t allow deleting this file'**
+  String get deleteRefusedBySystem;
 }
 
 class _AppLocalizationsDelegate

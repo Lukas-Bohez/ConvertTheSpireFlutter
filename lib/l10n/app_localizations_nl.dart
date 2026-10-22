@@ -5017,4 +5017,22 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get lyrics => 'Songtekst';
+
+  @override
+  String get pictureInPictureVideos => 'Beeld-in-beeld voor video\'s';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Verlaat je de app terwijl een video speelt, dan speelt hij verder in een klein venster';
+
+  @override
+  String get deleteCancelled => 'Niet verwijderd';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'De app heeft geen toegang meer tot deze map. Kies de map opnieuw om bestanden te verwijderen.';
+
+  @override
+  String get deleteRefusedBySystem =>
+      'Het systeem stond het verwijderen van dit bestand niet toe';
 }

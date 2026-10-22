@@ -4813,4 +4813,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get lyrics => '歌词';
+
+  @override
+  String get pictureInPictureVideos => '视频画中画';
+
+  @override
+  String get pictureInPictureVideosHint => '播放视频时离开应用，视频会在小窗口中继续播放';
+
+  @override
+  String get deleteCancelled => '未删除';
+
+  @override
+  String get deleteFolderAccessLost => '应用已失去对此文件夹的访问权限。请重新选择该文件夹以删除文件。';
+
+  @override
+  String get deleteRefusedBySystem => '系统不允许删除此文件';
 }

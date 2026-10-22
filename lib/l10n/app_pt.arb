@@ -1447,5 +1447,10 @@
   "partTo": "Até",
   "addPartsToQueue": "Adicionar à fila ({count} trechos)",
   "partTimesInvalid": "Cada trecho precisa terminar depois de começar, dentro do vídeo.",
-  "lyrics": "Letra"
+  "lyrics": "Letra",
+  "pictureInPictureVideos": "Imagem em imagem para vídeos",
+  "pictureInPictureVideosHint": "Ao sair do app durante um vídeo, ele continua numa janela pequena",
+  "deleteCancelled": "Não foi excluído",
+  "deleteFolderAccessLost": "O app perdeu o acesso a esta pasta. Escolha a pasta de novo para excluir arquivos.",
+  "deleteRefusedBySystem": "O sistema não permitiu excluir este arquivo"
 }

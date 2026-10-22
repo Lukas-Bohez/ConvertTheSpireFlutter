@@ -4871,4 +4871,20 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get lyrics => '歌詞';
+
+  @override
+  String get pictureInPictureVideos => '動画のピクチャー・イン・ピクチャー';
+
+  @override
+  String get pictureInPictureVideosHint => '動画の再生中にアプリを離れると、小さなウィンドウで再生を続けます';
+
+  @override
+  String get deleteCancelled => '削除されませんでした';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'このフォルダーへのアクセスが失われました。ファイルを削除するには、フォルダーをもう一度選んでください。';
+
+  @override
+  String get deleteRefusedBySystem => 'システムがこのファイルの削除を許可しませんでした';
 }

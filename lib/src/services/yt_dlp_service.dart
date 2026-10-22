@@ -1020,9 +1020,10 @@ class YtDlpService {
     // Catches intermediate files yt-dlp was writing when killed (e.g. a partial
     // .mp4/.webm source download that hadn't been extracted to the final format
     // yet) that the known-suffix list above might miss.
-    // Note: matches by exact stem, so two different queued videos that sanitize
-    // to the same filename could theoretically collide — low-risk since both
-    // would have to be mid-flight at the exact same moment.
+    // The output path is in a work folder of this download's own (see
+    // DownloadNaming.createWorkDir), so this never sees anything else. In the
+    // download folder itself it deleted the earlier song with the same title
+    // (issue #45, fix 8).
     final dir = Directory(p.dirname(outputPath));
     final stem = p.basenameWithoutExtension(outputPath);
     if (await dir.exists()) {

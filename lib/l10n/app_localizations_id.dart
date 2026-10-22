@@ -5008,4 +5008,22 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get lyrics => 'Lirik';
+
+  @override
+  String get pictureInPictureVideos => 'Gambar-dalam-gambar untuk video';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Saat keluar dari aplikasi ketika video diputar, video tetap diputar di jendela kecil';
+
+  @override
+  String get deleteCancelled => 'Tidak dihapus';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'Aplikasi kehilangan akses ke folder ini. Pilih folder lagi untuk menghapus file.';
+
+  @override
+  String get deleteRefusedBySystem =>
+      'Sistem tidak mengizinkan file ini dihapus';
 }
