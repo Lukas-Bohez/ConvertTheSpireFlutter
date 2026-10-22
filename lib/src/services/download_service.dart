@@ -779,23 +779,40 @@ class DownloadService {
     String? sourceTitle,
   }) {
     final preferred = preferredTitle.trim();
+    final source = sourceTitle?.trim() ?? '';
+    if (preferred.isNotEmpty && !isPlaceholderName(preferred)) return preferred;
+    if (source.isNotEmpty) return source;
     if (preferred.isNotEmpty) return preferred;
-    final source = sourceTitle?.trim();
-    if (source != null && source.isNotEmpty) return source;
     return 'download';
   }
 
   /// Prefer the artist/uploader shown in the app; only fall back to the
-  /// source metadata when the preferred value is blank.
+  /// source metadata when the preferred value is blank or only names the
+  /// site.
   static String resolveDownloadArtist(
     String preferredArtist, {
     String? sourceArtist,
   }) {
     final preferred = preferredArtist.trim();
+    final source = sourceArtist?.trim() ?? '';
+    if (preferred.isNotEmpty && !isPlaceholderName(preferred)) return preferred;
+    if (source.isNotEmpty) return source;
     if (preferred.isNotEmpty) return preferred;
-    final source = sourceArtist?.trim();
-    if (source != null && source.isNotEmpty) return source;
     return 'Unknown';
+  }
+
+  /// A value that names the site or the page, not the song: "YouTube", a
+  /// host name, the link itself. The in-app browser queued YouTube songs
+  /// with title and artist "YouTube", and those beat the video's own
+  /// metadata, so files came out as YouTube.mp3 (issue #45, fix 9).
+  static bool isPlaceholderName(String value) {
+    final v = value.trim().toLowerCase();
+    if (v.isEmpty) return true;
+    const siteNames = {'youtube', 'youtube music', 'web', 'unknown'};
+    if (siteNames.contains(v)) return true;
+    if (v.startsWith('http://') || v.startsWith('https://')) return true;
+    return RegExp(r'^(www\.|m\.|music\.)?[a-z0-9-]+\.(com|be|net|org|tv)$')
+        .hasMatch(v);
   }
 
   /// Move the final output file to SAF / Downloads / local, cleaning up temp.
