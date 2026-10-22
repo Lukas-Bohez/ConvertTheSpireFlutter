@@ -5044,4 +5044,7 @@ class AppLocalizationsUk extends AppLocalizations {
   @override
   String get searchNoSourceAnswered =>
       'Жодне джерело не відповіло. Перевірте з\'єднання та спробуйте ще раз.';
+
+  @override
+  String get torrentStatusStarting => 'Запуск';
 }

@@ -5052,4 +5052,7 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get searchNoSourceAnswered =>
       'Żadne źródło nie odpowiedziało. Sprawdź połączenie i spróbuj ponownie.';
+
+  @override
+  String get torrentStatusStarting => 'Uruchamianie';
 }

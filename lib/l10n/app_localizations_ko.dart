@@ -4907,4 +4907,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get searchNoSourceAnswered => '응답한 소스가 없습니다. 연결을 확인하고 다시 시도하세요.';
+
+  @override
+  String get torrentStatusStarting => '시작 중';
 }

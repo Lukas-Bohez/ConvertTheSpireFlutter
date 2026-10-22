@@ -1459,5 +1459,6 @@
   "searchSourceFailed": "काम नहीं किया",
   "searchSourceDesktopOnly": "केवल कंप्यूटर पर",
   "searchSourceNeedsYtDlp": "yt-dlp चाहिए",
-  "searchNoSourceAnswered": "किसी भी स्रोत ने जवाब नहीं दिया। अपना कनेक्शन जाँचें और फिर से कोशिश करें।"
+  "searchNoSourceAnswered": "किसी भी स्रोत ने जवाब नहीं दिया। अपना कनेक्शन जाँचें और फिर से कोशिश करें।",
+  "torrentStatusStarting": "शुरू हो रहा है"
 }

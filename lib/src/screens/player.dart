@@ -603,6 +603,7 @@ class PlayerState with ChangeNotifier {
   static const _resumePrefsKey = 'player_resume_positions';
   final Map<String, int> _resumeMs = {};
   String? _resumeCheckPath;
+  final Set<String> _resumeAnnounced = {};
   DateTime _resumeSavedAt = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _resumeSeekAt = DateTime.fromMillisecondsSinceEpoch(0);
   final StreamController<Duration> _resumed =
@@ -1408,7 +1409,12 @@ class PlayerState with ChangeNotifier {
         final at = Duration(milliseconds: saved);
         _resumeSeekAt = now;
         Future.microtask(() => seek(at));
-        if (!_resumed.isClosed) _resumed.add(at);
+        // Said once per file and session: a file reopened by a reload, or
+        // coming back from the background, found its place again and said
+        // so every time (issue #45, fix 1).
+        if (!_resumed.isClosed && _resumeAnnounced.add(path)) {
+          _resumed.add(at);
+        }
         return;
       }
     }

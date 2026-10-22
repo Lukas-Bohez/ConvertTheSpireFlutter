@@ -27,6 +27,8 @@ String localizedTorrentStatus(BuildContext context, String label) {
       return l10n.torrentStatusStalled;
     case 'Checking':
       return l10n.torrentStatusChecking;
+    case TorrentService.startingLabel:
+      return l10n.torrentStatusStarting;
     case 'Pending Metadata':
       return l10n.torrentStatusPendingMetadata;
     case TorrentService.fetchingMetadataLabel:

@@ -5029,4 +5029,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get searchNoSourceAnswered =>
       'No source answered. Check your connection and try again.';
+
+  @override
+  String get torrentStatusStarting => 'Starting';
 }

@@ -1459,5 +1459,6 @@
   "searchSourceFailed": "không hoạt động",
   "searchSourceDesktopOnly": "chỉ trên máy tính",
   "searchSourceNeedsYtDlp": "cần yt-dlp",
-  "searchNoSourceAnswered": "Không nguồn nào phản hồi. Hãy kiểm tra kết nối và thử lại."
+  "searchNoSourceAnswered": "Không nguồn nào phản hồi. Hãy kiểm tra kết nối và thử lại.",
+  "torrentStatusStarting": "Đang bắt đầu"
 }

@@ -1459,5 +1459,6 @@
   "searchSourceFailed": "werkte niet",
   "searchSourceDesktopOnly": "alleen op computers",
   "searchSourceNeedsYtDlp": "heeft yt-dlp nodig",
-  "searchNoSourceAnswered": "Geen enkele bron gaf antwoord. Controleer je verbinding en probeer het opnieuw."
+  "searchNoSourceAnswered": "Geen enkele bron gaf antwoord. Controleer je verbinding en probeer het opnieuw.",
+  "torrentStatusStarting": "Starten"
 }

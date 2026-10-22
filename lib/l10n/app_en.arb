@@ -3134,5 +3134,9 @@
   "searchNoSourceAnswered": "No source answered. Check your connection and try again.",
   "@searchNoSourceAnswered": {
     "description": "Multi-Search: every source failed or timed out."
+  },
+  "torrentStatusStarting": "Starting",
+  "@torrentStatusStarting": {
+    "description": "Torrent status: the first seconds of a download, before it has any speed."
   }
 }
