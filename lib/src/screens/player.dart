@@ -1660,14 +1660,19 @@ class PlayerState with ChangeNotifier {
     final index = library.indexWhere((item) => item.path == path);
     if (index < 0) return DeleteOutcome.failed;
 
-    // The playing file is held open, and Windows will not delete an open
-    // file: playback lets go of it first, then moves on below.
+    // Windows will not delete a file that is open: playback lets go of it
+    // first. Elsewhere a playing file can be deleted, and stopping first
+    // would leave the song stopped when Android's "Allow deleting?" is
+    // answered with no.
     final wasCurrent = index == currentIndex;
-    if (wasCurrent) await _stopPlaybackBestEffort();
+    final mustRelease = wasCurrent && !kIsWeb && Platform.isWindows;
+    if (mustRelease) await _stopPlaybackBestEffort();
 
     final outcome = await (deleter ?? MediaDeleteService()).delete(path);
     if (!outcome.removed) {
       debugPrint('deleteMediaItem: $outcome for $path');
+      // It is still there: carry on with it.
+      if (mustRelease) unawaited(select(index));
       return outcome;
     }
 
