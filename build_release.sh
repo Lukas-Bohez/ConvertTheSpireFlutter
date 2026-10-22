@@ -16,6 +16,12 @@ flutter build appbundle --release --flavor play --no-tree-shake-icons \
 cp build/app/outputs/bundle/playRelease/app-play-release.aab \
   "aab/bitplayer-v${VERSION}-play-release.aab"
 
+# The one to upload to the Play Console goes in upload/newest; the one that
+# was there moves to upload/older.
+mkdir -p upload/newest/androidPlayStore upload/older/androidPlayStore
+mv upload/newest/androidPlayStore/*.aab upload/older/androidPlayStore/ 2>/dev/null || true
+cp "aab/bitplayer-v${VERSION}-play-release.aab" upload/newest/androidPlayStore/
+
 echo "Building fat universal APK (full sideload)..."
 flutter build apk --release --flavor full --no-tree-shake-icons \
   --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
