@@ -1459,5 +1459,6 @@
   "searchSourceFailed": "لم ينجح",
   "searchSourceDesktopOnly": "على الحواسيب فقط",
   "searchSourceNeedsYtDlp": "يتطلب yt-dlp",
-  "searchNoSourceAnswered": "لم يستجب أي مصدر. تحقّق من اتصالك وحاول مرة أخرى."
+  "searchNoSourceAnswered": "لم يستجب أي مصدر. تحقّق من اتصالك وحاول مرة أخرى.",
+  "torrentStatusStarting": "جارٍ البدء"
 }

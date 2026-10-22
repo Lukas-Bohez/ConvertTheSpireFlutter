@@ -1459,5 +1459,6 @@
   "searchSourceFailed": "실패함",
   "searchSourceDesktopOnly": "컴퓨터에서만",
   "searchSourceNeedsYtDlp": "yt-dlp 필요",
-  "searchNoSourceAnswered": "응답한 소스가 없습니다. 연결을 확인하고 다시 시도하세요."
+  "searchNoSourceAnswered": "응답한 소스가 없습니다. 연결을 확인하고 다시 시도하세요.",
+  "torrentStatusStarting": "시작 중"
 }

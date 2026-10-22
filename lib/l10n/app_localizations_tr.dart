@@ -5049,4 +5049,7 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get searchNoSourceAnswered =>
       'Hiçbir kaynak yanıt vermedi. Bağlantınızı kontrol edip tekrar deneyin.';
+
+  @override
+  String get torrentStatusStarting => 'Başlıyor';
 }

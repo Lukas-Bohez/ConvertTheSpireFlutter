@@ -1459,5 +1459,6 @@
   "searchSourceFailed": "çalışmadı",
   "searchSourceDesktopOnly": "yalnızca bilgisayarda",
   "searchSourceNeedsYtDlp": "yt-dlp gerekli",
-  "searchNoSourceAnswered": "Hiçbir kaynak yanıt vermedi. Bağlantınızı kontrol edip tekrar deneyin."
+  "searchNoSourceAnswered": "Hiçbir kaynak yanıt vermedi. Bağlantınızı kontrol edip tekrar deneyin.",
+  "torrentStatusStarting": "Başlıyor"
 }

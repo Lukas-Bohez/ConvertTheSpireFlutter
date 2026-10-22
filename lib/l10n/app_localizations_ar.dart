@@ -5005,4 +5005,7 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get searchNoSourceAnswered =>
       'لم يستجب أي مصدر. تحقّق من اتصالك وحاول مرة أخرى.';
+
+  @override
+  String get torrentStatusStarting => 'جارٍ البدء';
 }

@@ -4849,4 +4849,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get searchNoSourceAnswered => '没有来源响应。请检查网络连接后重试。';
+
+  @override
+  String get torrentStatusStarting => '正在开始';
 }

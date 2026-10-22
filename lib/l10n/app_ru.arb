@@ -1459,5 +1459,6 @@
   "searchSourceFailed": "не сработало",
   "searchSourceDesktopOnly": "только на компьютере",
   "searchSourceNeedsYtDlp": "нужен yt-dlp",
-  "searchNoSourceAnswered": "Ни один источник не ответил. Проверьте подключение и попробуйте снова."
+  "searchNoSourceAnswered": "Ни один источник не ответил. Проверьте подключение и попробуйте снова.",
+  "torrentStatusStarting": "Запуск"
 }

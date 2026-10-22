@@ -1459,5 +1459,6 @@
   "searchSourceFailed": "não funcionou",
   "searchSourceDesktopOnly": "só em computadores",
   "searchSourceNeedsYtDlp": "precisa do yt-dlp",
-  "searchNoSourceAnswered": "Nenhuma fonte respondeu. Verifique a sua ligação e tente de novo."
+  "searchNoSourceAnswered": "Nenhuma fonte respondeu. Verifique a sua ligação e tente de novo.",
+  "torrentStatusStarting": "A iniciar"
 }

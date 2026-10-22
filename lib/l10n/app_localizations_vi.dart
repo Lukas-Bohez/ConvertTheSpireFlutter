@@ -5030,4 +5030,7 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get searchNoSourceAnswered =>
       'Không nguồn nào phản hồi. Hãy kiểm tra kết nối và thử lại.';
+
+  @override
+  String get torrentStatusStarting => 'Đang bắt đầu';
 }

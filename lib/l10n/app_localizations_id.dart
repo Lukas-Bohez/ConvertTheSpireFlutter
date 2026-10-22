@@ -5048,4 +5048,7 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get searchNoSourceAnswered =>
       'Tidak ada sumber yang menjawab. Periksa koneksi Anda dan coba lagi.';
+
+  @override
+  String get torrentStatusStarting => 'Memulai';
 }

@@ -5057,4 +5057,7 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get searchNoSourceAnswered =>
       'Geen enkele bron gaf antwoord. Controleer je verbinding en probeer het opnieuw.';
+
+  @override
+  String get torrentStatusStarting => 'Starten';
 }

@@ -4908,4 +4908,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get searchNoSourceAnswered => 'どのソースからも応答がありません。接続を確認して、もう一度お試しください。';
+
+  @override
+  String get torrentStatusStarting => '開始中';
 }

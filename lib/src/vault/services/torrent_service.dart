@@ -532,8 +532,14 @@ class TorrentService {
           _lastDownloadActivityByTorrentId[torrent.id] = now;
         }
         final lastActive = _lastDownloadActivityByTorrentId[torrent.id];
-        final _ =
-            lastActive != null && now.difference(lastActive).inSeconds < 10;
+        final startingUp =
+            lastActive != null && now.difference(lastActive).inSeconds < 20;
+        // Everything is on disk and nothing is downloading it: the engine is
+        // only checking the files again. Not for a download in progress,
+        // whose files may be allocated at full size before they are filled.
+        final completeOnDisk = effectiveDiskComplete &&
+            !missingOnDisk &&
+            !distrustDiskDuringActiveDownload;
         final state = _deriveState(
           persistedState,
           runtimeState,
@@ -545,7 +551,7 @@ class TorrentService {
         final hasKnownTotal = totalSize > 0;
         final downloadedClamped =
             hasKnownTotal ? downloaded.clamp(0, totalSize) : downloaded;
-        final progress = state == 'seeding'
+        final progress = (state == 'seeding' || completeOnDisk)
             ? 1.0
             : (hasKnownTotal && totalSize > 0
                 ? (downloadedClamped / totalSize).clamp(0.0, 0.9999)
@@ -572,6 +578,8 @@ class TorrentService {
           uploadSpeed: ulSpeed,
           isComplete: isComplete,
           fetchingMetadata: fetchingMetadata,
+          completeOnDisk: completeOnDisk,
+          startingUp: startingUp,
         );
 
         final mergedState = TorrentViewState(
@@ -773,6 +781,9 @@ class TorrentService {
   /// Status label while a magnet is still getting its file list.
   static const String fetchingMetadataLabel = 'Fetching Metadata';
 
+  /// The first seconds of a download, before it has any speed.
+  static const String startingLabel = 'Starting';
+
   @visibleForTesting
   String deriveStateForTesting(
     String? persistedState,
@@ -799,6 +810,8 @@ class TorrentService {
     double uploadSpeed = 0,
     bool isComplete = false,
     bool fetchingMetadata = false,
+    bool completeOnDisk = false,
+    bool startingUp = false,
   }) =>
       _statusLabelForState(
         state,
@@ -806,6 +819,8 @@ class TorrentService {
         uploadSpeed: uploadSpeed,
         isComplete: isComplete,
         fetchingMetadata: fetchingMetadata,
+        completeOnDisk: completeOnDisk,
+        startingUp: startingUp,
       );
 
   static String _statusLabelForState(
@@ -814,6 +829,8 @@ class TorrentService {
     required double uploadSpeed,
     required bool isComplete,
     bool fetchingMetadata = false,
+    bool completeOnDisk = false,
+    bool startingUp = false,
   }) {
     final normalized = state.toLowerCase();
     if (normalized.contains('error_file_in_use')) return 'File In Use';
@@ -831,6 +848,12 @@ class TorrentService {
       if (fetchingMetadata) return fetchingMetadataLabel;
       if (downloadSpeed > 512) return 'Downloading';
       if (uploadSpeed > 512) return 'Seeding partial';
+      // A finished torrent that starts again reports "downloading" at 0%
+      // while its files are checked: it is never stalled (issue #45, fix 2).
+      if (isComplete) return 'Seeding';
+      if (completeOnDisk) return 'Checking';
+      // The first seconds of any download have no speed yet.
+      if (startingUp) return startingLabel;
       return 'Stalled';
     }
 

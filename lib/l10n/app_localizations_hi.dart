@@ -5031,4 +5031,7 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get searchNoSourceAnswered =>
       'किसी भी स्रोत ने जवाब नहीं दिया। अपना कनेक्शन जाँचें और फिर से कोशिश करें।';
+
+  @override
+  String get torrentStatusStarting => 'शुरू हो रहा है';
 }

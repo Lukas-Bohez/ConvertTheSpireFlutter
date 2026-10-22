@@ -8892,6 +8892,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No source answered. Check your connection and try again.'**
   String get searchNoSourceAnswered;
+
+  /// Torrent status: the first seconds of a download, before it has any speed.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting'**
+  String get torrentStatusStarting;
 }
 
 class _AppLocalizationsDelegate
