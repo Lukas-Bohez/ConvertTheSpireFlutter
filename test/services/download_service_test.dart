@@ -61,4 +61,45 @@ void main() {
       );
     });
   });
+
+  // Issue #45, fix 9: the in-app browser queued YouTube songs as "YouTube",
+  // and files came out as YouTube.mp3 without their real title or artist.
+  group('site names never beat the video', () {
+    test('"YouTube" as title or artist gives way to the source', () {
+      expect(
+        DownloadService.resolveDownloadTitle('YouTube', sourceTitle: 'Lagtrain'),
+        'Lagtrain',
+      );
+      expect(
+        DownloadService.resolveDownloadArtist('YouTube',
+            sourceArtist: 'inabakumori'),
+        'inabakumori',
+      );
+      expect(
+        DownloadService.resolveDownloadTitle('YouTube Music',
+            sourceTitle: 'Lagtrain'),
+        'Lagtrain',
+      );
+    });
+
+    test('a link or a host name is not a title', () {
+      expect(
+        DownloadService.resolveDownloadTitle(
+            'https://www.youtube.com/watch?v=UnIhRpIT7nc',
+            sourceTitle: 'Lagtrain'),
+        'Lagtrain',
+      );
+      expect(
+        DownloadService.resolveDownloadArtist('m.youtube.com',
+            sourceArtist: 'inabakumori'),
+        'inabakumori',
+      );
+    });
+
+    test('a placeholder is still used when nothing better is known', () {
+      expect(DownloadService.resolveDownloadTitle('YouTube'), 'YouTube');
+      expect(DownloadService.isPlaceholderName('Lagtrain'), isFalse);
+      expect(DownloadService.isPlaceholderName('Mr. Blue Sky'), isFalse);
+    });
+  });
 }

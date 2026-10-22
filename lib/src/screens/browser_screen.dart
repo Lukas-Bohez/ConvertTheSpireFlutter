@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -439,6 +440,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       }),
       adapter.jsMessages.listen(_onJsMessage),
       adapter.urlEvents.listen(_onUrlChanged),
+      adapter.titleEvents.listen(_onTitleChanged),
       adapter.consoleEvents.listen((message) {
         if (kDebugMode) debugPrint('WebView Console: $message');
       }),
@@ -691,6 +693,18 @@ class _BrowserScreenState extends State<BrowserScreen>
       _tabManager.updateTab(activeTab.id, url: urlStr);
     }
     _checkFavouriteState();
+  }
+
+  /// Keeps the title up to date on sites that change page without loading
+  /// a new one: on YouTube it stayed "YouTube" from video to video, and
+  /// that is what downloads were named after (issue #45, fix 9).
+  void _onTitleChanged(String title) {
+    if (!mounted || title == _pageTitle) return;
+    setState(() => _pageTitle = title);
+    final activeTab = _tabManager.activeTab;
+    if (activeTab != null) {
+      _tabManager.updateTab(activeTab.id, title: title);
+    }
   }
 
   void _onErrorEvent(BrowserErrorEvent event) {
@@ -1291,10 +1305,14 @@ class _BrowserScreenState extends State<BrowserScreen>
 
     final id = youtube?.videoId;
     if (id != null) {
+      final meta = await _youTubeMetadata(id);
+      if (!mounted) return;
       widget.onAddToQueue(SearchResult(
         id: id,
-        title: _videoTitle() ?? url,
-        artist: 'YouTube',
+        // Unknown title and artist are left for the download to read from
+        // the video itself; "YouTube" used to stand in for both.
+        title: meta.title ?? url,
+        artist: meta.author ?? '',
         duration: Duration.zero,
         thumbnailUrl: 'https://img.youtube.com/vi/$id/default.jpg',
         source: 'youtube',
@@ -1317,14 +1335,68 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   }
 
-  /// The page title without YouTube's " - YouTube" suffix, or null.
+  /// The page title without YouTube's " - YouTube" suffix, or null. Just
+  /// "YouTube" is the site's own title before the video's is known.
   String? _videoTitle() {
     final title = _pageTitle
         .replaceFirst(RegExp(r'\s*[-–]\s*YouTube( Music)?\s*$'), '')
         .replaceFirst(RegExp(r'^\(\d+\)\s*'), '')
         .trim();
-    return title.isEmpty ? null : title;
+    return title.isEmpty || DownloadService.isPlaceholderName(title)
+        ? null
+        : title;
   }
+
+  /// Title and channel of the YouTube video [id] (issue #45, fix 9). The
+  /// page's own player knows them first; YouTube's oEmbed answers when the
+  /// page has not got that far; the page title is the last resort. Null
+  /// fields are filled from the video when it downloads.
+  Future<({String? title, String? author})> _youTubeMetadata(String id) async {
+    try {
+      var data = await _webViewController?.evaluateJs(_playerDataJs);
+      for (var i = 0; i < 2 && data is String; i++) {
+        data = jsonDecode(data);
+      }
+      if (data is Map && data['video_id'] == id) {
+        final title = (data['title'] as String?)?.trim();
+        final author = (data['author'] as String?)?.trim();
+        if (title != null && title.isNotEmpty) {
+          return (
+            title: title,
+            author: author == null || author.isEmpty ? null : author,
+          );
+        }
+      }
+    } catch (_) {}
+    try {
+      final response = await http.get(Uri.https('www.youtube.com', '/oembed', {
+        'url': 'https://www.youtube.com/watch?v=$id',
+        'format': 'json',
+      })).timeout(const Duration(seconds: 6));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final title = (data['title'] as String?)?.trim();
+        if (title != null && title.isNotEmpty) {
+          return (title: title, author: (data['author_name'] as String?)?.trim());
+        }
+      }
+    } catch (_) {}
+    return (title: _videoTitle(), author: null);
+  }
+
+  /// The YouTube player's own idea of what is playing, as JSON.
+  static const String _playerDataJs = r'''
+(function() {
+  try {
+    var p = document.getElementById('movie_player') ||
+        document.querySelector('.html5-video-player');
+    var d = p && typeof p.getVideoData === 'function' ? p.getVideoData() : null;
+    return JSON.stringify(d ? {video_id: d.video_id, title: d.title, author: d.author} : null);
+  } catch (e) {
+    return 'null';
+  }
+})();
+''';
 
   void _openInExternal() async {
     final url = _addressController.text.trim();
