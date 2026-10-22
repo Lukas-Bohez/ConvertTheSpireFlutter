@@ -3,24 +3,127 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:image/image.dart' as img;
 import 'package:mime/mime.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart' show Printing;
 import 'package:uuid/uuid.dart';
 
 import '../models/convert_result.dart';
 import 'ffmpeg_service.dart';
 import 'platform_dirs.dart';
 
+/// A conversion that did not work, with the reason in words for the user.
+class ConvertException implements Exception {
+  ConvertException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class ConvertService {
   final FfmpegService ffmpeg;
 
   ConvertService({required this.ffmpeg});
 
+  /// Converts [input] to [target]. Throws a [ConvertException] when it did
+  /// not work. A result is only returned for a file that is really in the
+  /// format asked for: a failed conversion used to come back as a text
+  /// report named like the result, so "PDF to JPEG" saved a .txt (issue #45,
+  /// fix 5).
   Future<ConvertResult> convertFile(File input, String target,
       {required String? ffmpegPath}) async {
     final targetLower = target.toLowerCase().replaceAll('.', '');
+    final result =
+        await _convertFile(input, targetLower, ffmpegPath: ffmpegPath);
+    final pagesZip = result.name.toLowerCase().endsWith('.zip') &&
+        _isImageTarget(targetLower) &&
+        input.path.toLowerCase().endsWith('.pdf');
+    final problem = checkOutput(result, targetLower, allowPagesZip: pagesZip);
+    if (problem != null) {
+      throw ConvertException(
+          'The conversion to ${targetLower.toUpperCase()} did not produce a '
+          'usable file ($problem).');
+    }
+    return result;
+  }
+
+  /// Why [result] is not a good file of format [target], or null when it is:
+  /// the right name, not empty, and the bytes start like that format does.
+  @visibleForTesting
+  static String? checkOutput(ConvertResult result, String target,
+      {bool allowPagesZip = false}) {
+    final name = result.name.toLowerCase();
+    final nameOk = name.endsWith('.$target') ||
+        (target == 'jpeg' && name.endsWith('.jpg')) ||
+        (target == 'tif' && name.endsWith('.tiff')) ||
+        (allowPagesZip && name.endsWith('.zip'));
+    if (!nameOk) return 'it is named ${result.name}';
+    if (result.bytes.isEmpty) return 'it is empty';
+    final ext = name.substring(name.lastIndexOf('.') + 1);
+    if (!_startsLike(result.bytes, ext)) {
+      return 'its contents are not ${ext.toUpperCase()}';
+    }
+    return null;
+  }
+
+  /// Whether [b] starts the way a file of [ext] does. Formats FFmpeg writes
+  /// in more than one way (mp3, aac, wma, mov, wmv) are not looked at.
+  static bool _startsLike(List<int> b, String ext) {
+    bool at(int offset, List<int> magic) {
+      if (b.length < offset + magic.length) return false;
+      for (var i = 0; i < magic.length; i++) {
+        if (b[offset + i] != magic[i]) return false;
+      }
+      return true;
+    }
+
+    List<int> ascii(String s) => s.codeUnits;
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return at(0, [0xFF, 0xD8, 0xFF]);
+      case 'png':
+        return at(0, [0x89, 0x50, 0x4E, 0x47]);
+      case 'gif':
+        return at(0, ascii('GIF8'));
+      case 'bmp':
+        return at(0, ascii('BM'));
+      case 'tif':
+      case 'tiff':
+        return at(0, [0x49, 0x49, 0x2A, 0x00]) ||
+            at(0, [0x4D, 0x4D, 0x00, 0x2A]);
+      case 'webp':
+        return at(0, ascii('RIFF')) && at(8, ascii('WEBP'));
+      case 'pdf':
+        return at(0, ascii('%PDF-'));
+      case 'zip':
+      case 'cbz':
+      case 'epub':
+        return at(0, ascii('PK'));
+      case 'wav':
+      case 'avi':
+        return at(0, ascii('RIFF'));
+      case 'flac':
+        return at(0, ascii('fLaC'));
+      case 'ogg':
+        return at(0, ascii('OggS'));
+      case 'mp4':
+      case 'm4a':
+        return at(4, ascii('ftyp'));
+      case 'webm':
+      case 'mkv':
+        return at(0, [0x1A, 0x45, 0xDF, 0xA3]);
+      default:
+        return true;
+    }
+  }
+
+  Future<ConvertResult> _convertFile(File input, String targetLower,
+      {required String? ffmpegPath}) async {
     final inputName = _sanitizeFileName(input.uri.pathSegments.last);
     final baseName = _stripExtension(inputName);
     final inputExt = _getExtension(inputName).toLowerCase();
@@ -34,11 +137,21 @@ class ConvertService {
 
     // The image package cannot write WebP; FFmpeg can (libwebp).
     if (targetLower == 'webp') {
+      if (inputExt == 'pdf') {
+        _report(inputName, 'webp',
+            'PDF pages can be saved as JPG, PNG, BMP, GIF or TIFF, not WebP.');
+      }
       return _convertToWebp(input, baseName, ffmpegPath: ffmpegPath);
     }
 
     // For other conversions we need the bytes; read them on demand.
     final inputBytes = Uint8List.fromList(await input.readAsBytes());
+
+    // A PDF to a picture is one picture per page, not a decode of the PDF.
+    if (_isImageTarget(targetLower) &&
+        (inputExt == 'pdf' || _looksLikePdf(inputBytes))) {
+      return _convertPdfToImages(inputBytes, targetLower, baseName);
+    }
 
     if (targetLower == 'zip' || targetLower == 'cbz') {
       return _zipBytes(inputBytes, '$baseName.$targetLower', inputName);
@@ -47,7 +160,7 @@ class ConvertService {
     if (targetLower == 'epub') {
       final text = _extractTextContent(inputBytes, inputExt);
       if (text == null || text.trim().isEmpty) {
-        return _report(inputName, 'epub', 'No text content available');
+        return _report(inputName, 'epub', 'This file has no text to put in an EPUB. A scanned PDF holds only pictures.');
       }
       return _buildEpub(text, baseName);
     }
@@ -60,7 +173,7 @@ class ConvertService {
       final text = _extractTextContent(inputBytes, inputExt);
       if (text == null || text.trim().isEmpty) {
         return _report(inputName, 'txt',
-            'Text extraction failed - unsupported or binary file');
+            'No text could be read from this file. A scanned PDF holds only pictures, and a binary file has no text.');
       }
       return ConvertResult(
         name: '$baseName.txt',
@@ -429,7 +542,7 @@ class ConvertService {
       Uint8List inputBytes, String target, String baseName) {
     final image = img.decodeImage(inputBytes);
     if (image == null) {
-      return _report(baseName, target, 'Image decode failed');
+      return _report(baseName, target, 'This file is not a picture that can be read.');
     }
 
     List<int> out;
@@ -461,6 +574,83 @@ class ConvertService {
       bytes: out,
       message: 'Image converted to ${target.toUpperCase()}',
     );
+  }
+
+  // ===== PDF to pictures =====
+
+  /// One picture per page, drawn by the platform's PDF renderer. A single
+  /// page is saved as that picture, several as a zip of them.
+  Future<ConvertResult> _convertPdfToImages(
+      Uint8List pdf, String target, String baseName) async {
+    const maxPages = 100;
+    final files = <MapEntry<String, List<int>>>[];
+    try {
+      await for (final page in Printing.raster(pdf, dpi: 150)) {
+        if (files.length >= maxPages) {
+          _report(baseName, target,
+              'This PDF has more than $maxPages pages. Split it first, or '
+              'convert it in parts.');
+        }
+        final png = await page.toPng();
+        final bytes = _encodePageImage(png, target);
+        final number = (files.length + 1).toString().padLeft(3, '0');
+        files.add(MapEntry('page-$number.$target', bytes));
+      }
+    } on ConvertException {
+      rethrow;
+    } catch (e) {
+      _report(baseName, target,
+          'The PDF could not be read ($e). It may be damaged or protected '
+          'with a password.');
+    }
+    if (files.isEmpty) {
+      _report(baseName, target, 'The PDF has no pages.');
+    }
+    final mime = lookupMimeType('x.$target') ?? 'application/octet-stream';
+    if (files.length == 1) {
+      return ConvertResult(
+        name: '$baseName.$target',
+        mime: mime,
+        bytes: files.single.value,
+        message: 'PDF page converted to ${target.toUpperCase()}',
+      );
+    }
+    final archive = Archive();
+    for (final f in files) {
+      archive.addFile(ArchiveFile(f.key, f.value.length, f.value));
+    }
+    return ConvertResult(
+      name: '$baseName.zip',
+      mime: 'application/zip',
+      bytes: ZipEncoder().encode(archive),
+      message: '${files.length} PDF pages converted to ${target.toUpperCase()}',
+    );
+  }
+
+  /// A rendered page (PNG) in the target format. Pages have a transparent
+  /// background; formats without transparency get white behind them.
+  List<int> _encodePageImage(Uint8List png, String target) {
+    if (target == 'png') return png;
+    final page = img.decodePng(png);
+    if (page == null) {
+      throw ConvertException('A page of the PDF could not be drawn.');
+    }
+    final flat = img.Image(width: page.width, height: page.height)
+      ..clear(img.ColorRgb8(255, 255, 255));
+    img.compositeImage(flat, page);
+    switch (target) {
+      case 'jpg':
+      case 'jpeg':
+        return img.encodeJpg(flat, quality: 90);
+      case 'bmp':
+        return img.encodeBmp(flat);
+      case 'gif':
+        return img.encodeGif(flat);
+      case 'tif':
+      case 'tiff':
+        return img.encodeTiff(flat);
+    }
+    throw ConvertException('PDF pages cannot be saved as $target.');
   }
 
   // ===== WebP (via FFmpeg) =====
@@ -608,13 +798,9 @@ class ConvertService {
           );
         }
       } else {
-        final report = _buildReport(
-            inputName, 'pdf', 'Unsupported input for PDF conversion');
-        doc.addPage(
-          pw.Page(
-            build: (context) => pw.Text(report),
-          ),
-        );
+        _report(inputName, 'pdf',
+            'This kind of file cannot be converted to PDF. It works from '
+            'pictures and from text, HTML and similar files.');
       }
     }
 
@@ -695,22 +881,10 @@ class ConvertService {
 
   // ===== Utility =====
 
-  ConvertResult _report(String inputName, String target, String reason) {
-    final report = _buildReport(inputName, target, reason);
-    final bytes = utf8.encode(report);
-    return ConvertResult(
-      name: '${_stripExtension(inputName)}.txt',
-      mime: 'text/plain',
-      bytes: bytes,
-      message: reason,
-    );
-  }
-
-  String _buildReport(String inputName, String target, String reason) {
-    return 'Conversion report\n'
-        'Input file: $inputName\n'
-        'Target format: $target\n'
-        'Reason: $reason\n';
+  /// Ends the conversion with [reason], in words the user can act on. This
+  /// used to return a text report that looked like the result.
+  Never _report(String inputName, String target, String reason) {
+    throw ConvertException(reason);
   }
 
   String? _decodeText(List<int> bytes) {

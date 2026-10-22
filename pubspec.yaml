@@ -104,6 +104,7 @@ dependencies:
 
   mime: any
   characters: any
+  printing: ^5.14.3
 flutter:
   generate: true
   uses-material-design: true
