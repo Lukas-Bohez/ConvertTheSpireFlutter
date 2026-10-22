@@ -5076,4 +5076,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => 'Iniciando';
+
+  @override
+  String get loopAroundHere => 'Repetir alrededor de aquí';
 }

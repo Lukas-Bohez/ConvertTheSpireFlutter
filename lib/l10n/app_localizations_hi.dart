@@ -5034,4 +5034,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => 'शुरू हो रहा है';
+
+  @override
+  String get loopAroundHere => 'यहाँ के आसपास दोहराएँ';
 }

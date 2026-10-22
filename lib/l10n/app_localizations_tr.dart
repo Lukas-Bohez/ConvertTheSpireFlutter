@@ -5052,4 +5052,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => 'Başlıyor';
+
+  @override
+  String get loopAroundHere => 'Buranın çevresini döngüye al';
 }

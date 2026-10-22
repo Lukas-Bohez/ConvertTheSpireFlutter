@@ -5032,4 +5032,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => 'Starting';
+
+  @override
+  String get loopAroundHere => 'Loop around here';
 }

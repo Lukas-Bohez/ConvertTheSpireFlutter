@@ -56,5 +56,5 @@ Lütfen yalnızca kullanma hakkına sahip olduğun içerikleri oynat, paylaş ve
 ## Release notes (What's new)
 
 ```text
-Yeni: videolar ve şarkılar için altyazı, en iyi bölümü döngüye alma, büyük görünüm, oynatma hızı ve uyku zamanlayıcısı. .lrc dosyalarından senkronize şarkı sözleri. Uzun videolar kaldığın yerden devam eder. Oynatıcının tek bir kontrol seti ve videoya daha fazla yeri var; tarayıcı reklamları uBlock Origin'in listeleriyle engeller. Düzeltildi: zaten sahip olduğun dosyaların torrentleri hemen paylaşılır ve videoların küçük resimleri var.
+Düzeltildi: oynatıcıda dosya silme telefonlarda çalışıyor. Küçük resim içinde resim penceresi artık yalnızca bir video oynarken görünüyor ve sadece videoyu gösteriyor. PDF'den JPEG ve PNG'ye dönüştürme çalışıyor; dönüştürme başarısız olursa yanlış dosya vermek yerine bunu söylüyor. “Şuradan devam edildi” mesajı kendiliğinden kayboluyor. Yeni: bir bölümü döngüye almak için ilerleme çubuğuna uzun basın.
 ```

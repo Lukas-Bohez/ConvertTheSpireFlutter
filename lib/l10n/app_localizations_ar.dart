@@ -5008,4 +5008,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => 'جارٍ البدء';
+
+  @override
+  String get loopAroundHere => 'كرّر ما حول هذه النقطة';
 }

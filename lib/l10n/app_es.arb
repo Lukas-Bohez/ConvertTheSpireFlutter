@@ -1460,5 +1460,6 @@
   "searchSourceDesktopOnly": "solo en ordenadores",
   "searchSourceNeedsYtDlp": "necesita yt-dlp",
   "searchNoSourceAnswered": "Ninguna fuente respondió. Comprueba tu conexión e inténtalo de nuevo.",
-  "torrentStatusStarting": "Iniciando"
+  "torrentStatusStarting": "Iniciando",
+  "loopAroundHere": "Repetir alrededor de aquí"
 }

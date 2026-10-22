@@ -1460,5 +1460,6 @@
   "searchSourceDesktopOnly": "仅限电脑",
   "searchSourceNeedsYtDlp": "需要 yt-dlp",
   "searchNoSourceAnswered": "没有来源响应。请检查网络连接后重试。",
-  "torrentStatusStarting": "正在开始"
+  "torrentStatusStarting": "正在开始",
+  "loopAroundHere": "循环此处前后"
 }

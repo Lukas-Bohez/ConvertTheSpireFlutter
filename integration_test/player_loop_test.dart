@@ -97,6 +97,32 @@ void main() {
     expect(restarted, isTrue, reason: 'it goes back to the first part: $seen');
     expect(player.isPlaying, isTrue);
   });
+
+  // Issue #45, fix 4: parts set from the seek bar.
+  testWidgets('"loop around here" adds a part, within the file, and loops it',
+      (tester) async {
+    final path = '${dir.path}${Platform.pathSeparator}tone.wav';
+    await File(path).writeAsBytes(_toneWav(20));
+    await player.setLibrary([MediaItem(path, MediaType.audio, title: 'tone')]);
+    await player.playFileDirect(path);
+    for (var i = 0; i < 30 && player.duration == null; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    expect(player.duration, isNotNull);
+
+    // Ten seconds either side of 15 s would run past the end of a 20 s file.
+    await player.addLoopSection(path, s(5), s(25));
+    final settings = player.loopSettingsFor(path);
+    expect(settings.on, isTrue);
+    expect(settings.sections, hasLength(1));
+    expect(settings.sections.single.start, s(5));
+    expect(settings.sections.single.end, lessThanOrEqualTo(player.duration!));
+
+    // A second part that overlaps the first joins it.
+    await player.addLoopSection(path, s(1), s(6));
+    expect(player.loopSettingsFor(path).sections, hasLength(1));
+    expect(player.loopSettingsFor(path).sections.single.start, s(1));
+  });
 }
 
 /// [seconds] of a 440 Hz tone as a WAV file.

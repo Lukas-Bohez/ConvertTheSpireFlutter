@@ -56,5 +56,5 @@ Vui lòng chỉ phát, chia sẻ và tải nội dung bạn có quyền sử d�
 ## Release notes (What's new)
 
 ```text
-Mới: phụ đề cho video và bài hát, lặp đoạn hay nhất, chế độ xem lớn, tốc độ phát và hẹn giờ tắt. Lời bài hát đồng bộ từ tệp .lrc. Video dài tiếp tục từ chỗ bạn đã dừng. Trình phát chỉ còn một bộ nút điều khiển và nhiều chỗ hơn cho video, và trình duyệt chặn quảng cáo bằng danh sách của uBlock Origin. Đã sửa: torrent của tệp bạn đã có được seed ngay, và video có ảnh thu nhỏ.
+Đã sửa: xóa tệp trong trình phát hoạt động trên điện thoại. Cửa sổ hình trong hình nhỏ chỉ xuất hiện khi đang phát video và chỉ hiện video. Chuyển PDF sang JPEG và PNG hoạt động, và khi chuyển đổi thất bại sẽ báo thay vì đưa tệp sai. Thông báo “Tiếp tục từ” tự biến mất. Mới: nhấn giữ thanh tua để lặp một đoạn.
 ```

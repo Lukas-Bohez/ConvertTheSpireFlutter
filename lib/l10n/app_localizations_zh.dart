@@ -4852,4 +4852,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => '正在开始';
+
+  @override
+  String get loopAroundHere => '循环此处前后';
 }

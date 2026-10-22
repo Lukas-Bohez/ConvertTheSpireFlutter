@@ -56,7 +56,7 @@ Available in 18 languages. Please only download content you have the right to do
 ## What's new in this version
 
 ```text
-New: download only the part of a video or song you want. Subtitles for videos and songs: .srt and .vtt files load by themselves. Synced lyrics from .lrc files. Subtitles inside MKV and MP4 files show too. Loop the best part, change the speed, set a sleep timer and watch in a large view. Long videos open where you left off, and the browser's ad blocker now uses uBlock Origin's lists. The player has one set of controls and more room for the video, and every colour is unlocked. Fixed: a program downloaded by torrent starts while it seeds, torrents of files you already have seed at once, and videos in your library have thumbnails.
+Fixed: songs with the same title no longer replace or delete each other. Multi-Search works again. Songs downloaded in the browser keep their title and artist. PDF to JPEG and PNG works. Finished torrents no longer say Stalled. The yt-dlp check no longer fails on slower PCs. New: long-press or right-click the seek bar to loop a part.
 ```
 
 ## Product features

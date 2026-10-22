@@ -56,5 +56,5 @@ Please only play, share and download content you have the right to use.
 ## Release notes (What's new)
 
 ```text
-New: subtitles for videos and songs, looping the best part, a large view, playback speed and a sleep timer. Synced lyrics from .lrc files. Long videos open where you left off. The player has one set of controls and more room for the video, and the browser blocks ads with uBlock Origin's lists. Fixed: torrents of files you already have seed at once, and videos in your library have thumbnails.
+Fixed: deleting files in the player works on phones. The small picture-in-picture window now appears only while a video plays, and shows just the video. PDF to JPEG and PNG works, and a conversion that fails says so instead of giving you the wrong file. The “Continued at” message goes away by itself. New: press and hold the seek bar to loop a part.
 ```

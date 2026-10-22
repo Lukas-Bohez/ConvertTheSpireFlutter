@@ -56,5 +56,5 @@ Riproduci, condividi e scarica solo contenuti che hai il diritto di usare.
 ## Release notes (What's new)
 
 ```text
-Novità: sottotitoli per video e canzoni, la parte migliore in loop, vista grande, velocità di riproduzione e timer di spegnimento. Testi sincronizzati dai file .lrc. I video lunghi riprendono da dove eri rimasto. Il lettore ha un solo set di comandi e più spazio per il video, e il browser blocca la pubblicità con le liste di uBlock Origin. Corretto: i torrent di file che hai già vanno subito in seeding e i video hanno le miniature.
+Corretto: eliminare file nel lettore funziona su telefono. La piccola finestra immagine nell'immagine appare solo mentre un video è in riproduzione e mostra solo il video. PDF in JPEG e PNG funziona, e una conversione fallita lo dice invece di dare un file sbagliato. Il messaggio «Ripreso da» scompare da solo. Novità: tieni premuta la barra di avanzamento per ripetere un passaggio.
 ```

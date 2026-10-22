@@ -4910,4 +4910,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => '시작 중';
+
+  @override
+  String get loopAroundHere => '여기 주변 반복';
 }
