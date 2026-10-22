@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -60,6 +61,12 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
   }
 
   @override
+  void dispose() {
+    _ytDlpRetryTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   void didUpdateWidget(covariant QuickLinksPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.downloadFolder != widget.downloadFolder) {
@@ -101,7 +108,12 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
     if (mounted) setState(() => _links = links);
   }
 
-  Future<void> _checkYtDlpVersion() async {
+  Timer? _ytDlpRetryTimer;
+  int _ytDlpAutoRetries = 0;
+
+  Future<void> _checkYtDlpVersion({bool automatic = false}) async {
+    _ytDlpRetryTimer?.cancel();
+    if (!automatic) _ytDlpAutoRetries = 0;
     setState(() {
       _ytDlpChecking = true;
       _ytDlpFailed = false;
@@ -115,14 +127,22 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
           _ytDlpFailed = v == null;
         });
       }
-    } on Exception catch (e) {
-      // Transient errors (binary busy during a download, timeout, etc.)
-      // are not the same as "not installed". Surface them as a retryable
-      // state rather than an actionable "click Settings" message.
-      debugPrint('QuickLinksPage: yt-dlp version check transient error: $e');
-      if (mounted) setState(() => _ytDlpTransientError = true);
-    } catch (_) {
-      if (mounted) setState(() => _ytDlpTransientError = true);
+    } catch (e) {
+      // yt-dlp is there but did not answer (slow start, busy during an
+      // update, antivirus scan). That is not "not installed": say the check
+      // was interrupted, and try again by itself, a little later each time
+      // (issue #45, fix 3).
+      debugPrint('QuickLinksPage: yt-dlp version check interrupted: $e');
+      if (mounted) {
+        setState(() => _ytDlpTransientError = true);
+        const waits = [5, 15, 60];
+        if (_ytDlpAutoRetries < waits.length) {
+          final wait = Duration(seconds: waits[_ytDlpAutoRetries++]);
+          _ytDlpRetryTimer = Timer(wait, () {
+            if (mounted) unawaited(_checkYtDlpVersion(automatic: true));
+          });
+        }
+      }
     } finally {
       if (mounted) setState(() => _ytDlpChecking = false);
     }

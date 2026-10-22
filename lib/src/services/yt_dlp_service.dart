@@ -559,26 +559,79 @@ class YtDlpService {
   /// Returns the local yt-dlp binary version if available.
   ///
   /// Returns `null` when yt-dlp cannot be found or cannot be executed.
+  ///
+  /// Throws when yt-dlp is there but did not answer: too slow, or it failed
+  /// to run. Only `null` means it is not installed (issue #45, fix 3). The
+  /// check used to give up after 5 seconds and call that "not available",
+  /// but the one-file yt-dlp.exe unpacks itself on every start, and a slow
+  /// disk or an antivirus scan easily takes longer: on those PCs the engine
+  /// "failed" while it worked.
   Future<String?> getVersion({String? configuredPath}) async {
     final path = await resolveAvailablePath(configuredPath);
     if (path == null) return null;
 
-    try {
-      final workDir = await _getYtDlpWorkingDir();
-      final result = await Process.run(
-        path,
-        ['--version'],
-        workingDirectory: workDir,
-        runInShell: false,
-      ).timeout(const Duration(seconds: 5));
-      if (result.exitCode == 0) {
-        final out = result.stdout.toString().trim();
-        if (out.isNotEmpty) return out.split('\n').first.trim();
-      }
-    } catch (_) {
-      // ignore
+    // The same binary has the same version: no need to start it again, which
+    // is the slow part.
+    final stamp = await _binaryStamp(path);
+    final cached = await _cachedVersion(path, stamp);
+    if (cached != null) return cached;
+
+    final workDir = await _getYtDlpWorkingDir();
+    final result = await Process.run(
+      path,
+      ['--version'],
+      workingDirectory: workDir,
+      runInShell: false,
+    ).timeout(
+      const Duration(seconds: 30),
+      onTimeout: () => throw TimeoutException(
+          'yt-dlp did not answer within 30 seconds (it may be starting slowly)'),
+    );
+    final out = result.stdout.toString().trim();
+    if (result.exitCode != 0 || out.isEmpty) {
+      throw StateError('yt-dlp --version failed (exit ${result.exitCode}): '
+          '${result.stderr.toString().trim()}');
     }
+    final version = out.split('\n').first.trim();
+    await _rememberVersion(path, stamp, version);
+    return version;
+  }
+
+  static const _versionCacheKey = 'ytdlp_version_cache';
+
+  /// Size and modification time of the binary: when either changes, the
+  /// remembered version is no longer trusted.
+  static Future<String> _binaryStamp(String path) async {
+    try {
+      final stat = await File(path).stat();
+      return '${stat.size}-${stat.modified.millisecondsSinceEpoch}';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  static Future<String?> _cachedVersion(String path, String stamp) async {
+    if (stamp.isEmpty) return null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_versionCacheKey);
+      if (raw == null) return null;
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      if (data['path'] == path && data['stamp'] == stamp) {
+        return data['version'] as String?;
+      }
+    } catch (_) {}
     return null;
+  }
+
+  static Future<void> _rememberVersion(
+      String path, String stamp, String version) async {
+    if (stamp.isEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_versionCacheKey,
+          jsonEncode({'path': path, 'stamp': stamp, 'version': version}));
+    } catch (_) {}
   }
 
   /// Download media using yt-dlp.
