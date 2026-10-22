@@ -8,6 +8,11 @@ class SearchResult {
   final String source; // 'youtube', 'soundcloud', etc.
   final String? audioUrl; // Direct audio URL (if available before download)
 
+  /// The result's own page, for sources other than YouTube. Without it a
+  /// SoundCloud or Bilibili result was queued as a YouTube link made from
+  /// its id, which could never download (issue #45, fix 10).
+  final String? pageUrl;
+
   const SearchResult({
     required this.id,
     required this.title,
@@ -16,7 +21,17 @@ class SearchResult {
     required this.thumbnailUrl,
     required this.source,
     this.audioUrl,
+    this.pageUrl,
   });
+
+  bool get isYouTube => source.toLowerCase() == 'youtube';
+
+  /// Where the result is watched or downloaded from, or null when unknown.
+  String? get url {
+    if (source == 'generic') return id;
+    if (isYouTube) return 'https://www.youtube.com/watch?v=$id';
+    return pageUrl;
+  }
 
   /// Convert to a search query string (for cross-platform matching).
   String toSearchQuery() => '$artist - $title';

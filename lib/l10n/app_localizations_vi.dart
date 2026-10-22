@@ -5008,4 +5008,26 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get deleteRefusedBySystem => 'Hệ thống không cho phép xóa tệp này';
+
+  @override
+  String get searchSourceSearching => 'đang tìm…';
+
+  @override
+  String get searchSourceNothing => 'không có kết quả';
+
+  @override
+  String get searchSourceTimedOut => 'quá chậm';
+
+  @override
+  String get searchSourceFailed => 'không hoạt động';
+
+  @override
+  String get searchSourceDesktopOnly => 'chỉ trên máy tính';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'cần yt-dlp';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'Không nguồn nào phản hồi. Hãy kiểm tra kết nối và thử lại.';
 }

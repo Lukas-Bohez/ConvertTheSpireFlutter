@@ -42,6 +42,9 @@ class _SearchScreenState extends State<SearchScreen>
     with AutomaticKeepAliveClientMixin {
   final _controller = TextEditingController();
   List<SearchResult> _results = [];
+  List<SourceStatus> _sources = [];
+  StreamSubscription<SearchProgress>? _searchSub;
+  int _searchId = 0;
   bool _loading = false;
   String? _error;
   String _selectedFormat = 'mp3';
@@ -246,28 +249,97 @@ class _SearchScreenState extends State<SearchScreen>
       _loading = true;
       _error = null;
       _hasSearched = true;
+      _results = [];
+      _sources = [];
     });
 
-    try {
-      final results =
-          await widget.searchService.searchAll(query, limitPerSource: 15);
-      if (!mounted) return;
+    // Results come in as each source answers, and each source says how it
+    // went: one failing source used to blank the whole search with a raw
+    // error (issue #45, fix 10).
+    final searchId = ++_searchId;
+    await _searchSub?.cancel();
+    _searchSub = widget.searchService
+        .searchAllStream(query, limitPerSource: 15)
+        .listen((progress) {
+      if (!mounted || searchId != _searchId) return;
       setState(() {
-        _results = results;
-        _loading = false;
+        _results = progress.results;
+        _sources = progress.sources;
+        if (progress.done) {
+          _loading = false;
+          final searched = progress.sources.where((s) =>
+              s.state != SourceState.desktopOnly &&
+              s.state != SourceState.needsYtDlp);
+          final allFailed = searched.isNotEmpty &&
+              searched.every((s) =>
+                  s.state == SourceState.failed ||
+                  s.state == SourceState.timedOut);
+          _error = allFailed ? context.l10n.searchNoSourceAnswered : null;
+        }
       });
-      unawaited(_refreshDownloadedFiles(showSnack: false));
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = '$e';
-        _loading = false;
-      });
-    }
+      if (progress.done) {
+        unawaited(_refreshDownloadedFiles(showSnack: false));
+      }
+    });
+  }
+
+  /// One chip per source: how many it found, or why it found none.
+  Widget _sourceChips(BuildContext context) {
+    final l10n = context.l10n;
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (final s in _sources)
+            Chip(
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              avatar: s.state == SourceState.searching
+                  ? const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : Icon(
+                      switch (s.state) {
+                        SourceState.found => Icons.check_circle_outline,
+                        SourceState.failed ||
+                        SourceState.timedOut =>
+                          Icons.error_outline,
+                        _ => Icons.remove_circle_outline,
+                      },
+                      size: 16,
+                      color: switch (s.state) {
+                        SourceState.found => cs.primary,
+                        SourceState.failed ||
+                        SourceState.timedOut =>
+                          cs.error,
+                        _ => cs.outline,
+                      },
+                    ),
+              label: Text(
+                '${s.label} · ${switch (s.state) {
+                  SourceState.searching => l10n.searchSourceSearching,
+                  SourceState.found => '${s.count}',
+                  SourceState.nothing => l10n.searchSourceNothing,
+                  SourceState.timedOut => l10n.searchSourceTimedOut,
+                  SourceState.failed => l10n.searchSourceFailed,
+                  SourceState.desktopOnly => l10n.searchSourceDesktopOnly,
+                  SourceState.needsYtDlp => l10n.searchSourceNeedsYtDlp,
+                }}',
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
   void dispose() {
+    unawaited(_searchSub?.cancel());
     _controller.dispose();
     super.dispose();
   }
@@ -362,7 +434,7 @@ class _SearchScreenState extends State<SearchScreen>
             ),
           ),
           if (_loading) const LinearProgressIndicator(),
-          if (_loading)
+          if (_loading && _sources.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               child: Text(context.l10n.searchingAcrossAllSources,
@@ -370,6 +442,7 @@ class _SearchScreenState extends State<SearchScreen>
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.onSurfaceVariant)),
             ),
+          if (_sources.isNotEmpty) _sourceChips(context),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.all(8),
@@ -527,7 +600,7 @@ class _SearchScreenState extends State<SearchScreen>
                                   IconButton(
                                     icon: const Icon(Icons.play_arrow),
                                     tooltip: context.l10n.previewBrowser,
-                                    onPressed: () => _launchPreview(r.id),
+                                    onPressed: () => _launchPreview(r),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.download),
@@ -555,8 +628,9 @@ class _SearchScreenState extends State<SearchScreen>
     return '$m:${s.toString().padLeft(2, '0')}';
   }
 
-  void _launchPreview(String id) {
-    final url = 'https://www.youtube.com/watch?v=$id';
+  void _launchPreview(SearchResult result) {
+    final url = result.url;
+    if (url == null) return;
     // Walk up the widget tree to find HomeScreen's state so we can open
     // the in-app browser rather than launching an external app.
     final homeState = context.findAncestorStateOfType<HomeScreenState>();

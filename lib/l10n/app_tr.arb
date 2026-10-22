@@ -1452,5 +1452,12 @@
   "pictureInPictureVideosHint": "Video oynarken uygulamadan çıkınca küçük bir pencerede oynamaya devam eder",
   "deleteCancelled": "Silinmedi",
   "deleteFolderAccessLost": "Uygulama bu klasöre erişimini kaybetti. Dosyaları silmek için klasörü yeniden seçin.",
-  "deleteRefusedBySystem": "Sistem bu dosyanın silinmesine izin vermedi"
+  "deleteRefusedBySystem": "Sistem bu dosyanın silinmesine izin vermedi",
+  "searchSourceSearching": "aranıyor…",
+  "searchSourceNothing": "sonuç yok",
+  "searchSourceTimedOut": "çok yavaş",
+  "searchSourceFailed": "çalışmadı",
+  "searchSourceDesktopOnly": "yalnızca bilgisayarda",
+  "searchSourceNeedsYtDlp": "yt-dlp gerekli",
+  "searchNoSourceAnswered": "Hiçbir kaynak yanıt vermedi. Bağlantınızı kontrol edip tekrar deneyin."
 }

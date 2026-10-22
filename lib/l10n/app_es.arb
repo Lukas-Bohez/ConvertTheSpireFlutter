@@ -1452,5 +1452,12 @@
   "pictureInPictureVideosHint": "Al salir de la app mientras se reproduce un vídeo, sigue en una ventana pequeña",
   "deleteCancelled": "No se ha eliminado",
   "deleteFolderAccessLost": "La app perdió el acceso a esta carpeta. Vuelve a elegir la carpeta para eliminar archivos.",
-  "deleteRefusedBySystem": "El sistema no permitió eliminar este archivo"
+  "deleteRefusedBySystem": "El sistema no permitió eliminar este archivo",
+  "searchSourceSearching": "buscando…",
+  "searchSourceNothing": "sin resultados",
+  "searchSourceTimedOut": "demasiado lento",
+  "searchSourceFailed": "no funcionó",
+  "searchSourceDesktopOnly": "solo en ordenadores",
+  "searchSourceNeedsYtDlp": "necesita yt-dlp",
+  "searchNoSourceAnswered": "Ninguna fuente respondió. Comprueba tu conexión e inténtalo de nuevo."
 }

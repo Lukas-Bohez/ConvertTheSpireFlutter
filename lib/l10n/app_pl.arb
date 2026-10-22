@@ -1452,5 +1452,12 @@
   "pictureInPictureVideosHint": "Po wyjściu z aplikacji podczas odtwarzania film gra dalej w małym oknie",
   "deleteCancelled": "Nie usunięto",
   "deleteFolderAccessLost": "Aplikacja straciła dostęp do tego folderu. Wybierz folder ponownie, aby usuwać pliki.",
-  "deleteRefusedBySystem": "System nie pozwolił usunąć tego pliku"
+  "deleteRefusedBySystem": "System nie pozwolił usunąć tego pliku",
+  "searchSourceSearching": "szuka…",
+  "searchSourceNothing": "brak wyników",
+  "searchSourceTimedOut": "za wolno",
+  "searchSourceFailed": "nie zadziałało",
+  "searchSourceDesktopOnly": "tylko na komputerze",
+  "searchSourceNeedsYtDlp": "wymaga yt-dlp",
+  "searchNoSourceAnswered": "Żadne źródło nie odpowiedziało. Sprawdź połączenie i spróbuj ponownie."
 }

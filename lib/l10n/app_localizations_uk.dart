@@ -5022,4 +5022,26 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get deleteRefusedBySystem => 'Система не дозволила видалити цей файл';
+
+  @override
+  String get searchSourceSearching => 'шукає…';
+
+  @override
+  String get searchSourceNothing => 'нічого не знайдено';
+
+  @override
+  String get searchSourceTimedOut => 'надто довго';
+
+  @override
+  String get searchSourceFailed => 'не спрацювало';
+
+  @override
+  String get searchSourceDesktopOnly => 'лише на комп\'ютері';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'потрібен yt-dlp';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'Жодне джерело не відповіло. Перевірте з\'єднання та спробуйте ще раз.';
 }

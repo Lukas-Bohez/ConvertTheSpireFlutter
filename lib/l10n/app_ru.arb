@@ -1452,5 +1452,12 @@
   "pictureInPictureVideosHint": "Если выйти из приложения во время видео, оно продолжит играть в маленьком окне",
   "deleteCancelled": "Не удалено",
   "deleteFolderAccessLost": "Приложение потеряло доступ к этой папке. Выберите папку снова, чтобы удалять файлы.",
-  "deleteRefusedBySystem": "Система не разрешила удалить этот файл"
+  "deleteRefusedBySystem": "Система не разрешила удалить этот файл",
+  "searchSourceSearching": "ищет…",
+  "searchSourceNothing": "ничего не найдено",
+  "searchSourceTimedOut": "слишком долго",
+  "searchSourceFailed": "не сработало",
+  "searchSourceDesktopOnly": "только на компьютере",
+  "searchSourceNeedsYtDlp": "нужен yt-dlp",
+  "searchNoSourceAnswered": "Ни один источник не ответил. Проверьте подключение и попробуйте снова."
 }

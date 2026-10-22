@@ -5035,4 +5035,26 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get deleteRefusedBySystem =>
       'Het systeem stond het verwijderen van dit bestand niet toe';
+
+  @override
+  String get searchSourceSearching => 'zoekt…';
+
+  @override
+  String get searchSourceNothing => 'niets gevonden';
+
+  @override
+  String get searchSourceTimedOut => 'te traag';
+
+  @override
+  String get searchSourceFailed => 'werkte niet';
+
+  @override
+  String get searchSourceDesktopOnly => 'alleen op computers';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'heeft yt-dlp nodig';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'Geen enkele bron gaf antwoord. Controleer je verbinding en probeer het opnieuw.';
 }
