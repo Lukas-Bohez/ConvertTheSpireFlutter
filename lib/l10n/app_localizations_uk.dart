@@ -5047,4 +5047,7 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => 'Запуск';
+
+  @override
+  String get loopAroundHere => 'Повторювати навколо цього місця';
 }
