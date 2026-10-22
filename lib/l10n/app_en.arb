@@ -3086,5 +3086,61 @@
   "lyrics": "Lyrics",
   "@lyrics": {
     "description": "The subtitles chip and sheet, when the file is synced lyrics (.lrc) for a song."
+  },
+  "pictureInPictureVideos": "Picture-in-picture for videos",
+  "@pictureInPictureVideos": {
+    "description": "Settings switch (Android): leaving the app while a video plays opens the small picture-in-picture window."
+  },
+  "pictureInPictureVideosHint": "Leaving the app while a video plays keeps it playing in a small window",
+  "@pictureInPictureVideosHint": {
+    "description": "Subtitle of the picture-in-picture settings switch."
+  },
+  "deleteCancelled": "Not deleted",
+  "@deleteCancelled": {
+    "description": "Snackbar: the user said no in the system's confirm-delete dialog."
+  },
+  "deleteFolderAccessLost": "The app lost access to this folder. Pick the folder again to delete files.",
+  "@deleteFolderAccessLost": {
+    "description": "Snackbar: deleting failed because the app lost its permission for the picked folder (Android)."
+  },
+  "deleteRefusedBySystem": "The system didn't allow deleting this file",
+  "@deleteRefusedBySystem": {
+    "description": "Snackbar: the operating system refused to delete the file."
+  },
+  "searchSourceSearching": "searching…",
+  "@searchSourceSearching": {
+    "description": "Multi-Search source chip: this source is still searching."
+  },
+  "searchSourceNothing": "nothing found",
+  "@searchSourceNothing": {
+    "description": "Multi-Search source chip: this source found nothing."
+  },
+  "searchSourceTimedOut": "too slow",
+  "@searchSourceTimedOut": {
+    "description": "Multi-Search source chip: this source took too long to answer."
+  },
+  "searchSourceFailed": "didn't work",
+  "@searchSourceFailed": {
+    "description": "Multi-Search source chip: this source failed."
+  },
+  "searchSourceDesktopOnly": "on computers only",
+  "@searchSourceDesktopOnly": {
+    "description": "Multi-Search source chip: results from this site can only be downloaded on a computer, so it is not searched on a phone."
+  },
+  "searchSourceNeedsYtDlp": "needs yt-dlp",
+  "@searchSourceNeedsYtDlp": {
+    "description": "Multi-Search source chip: downloading from this site needs yt-dlp, which is not installed."
+  },
+  "searchNoSourceAnswered": "No source answered. Check your connection and try again.",
+  "@searchNoSourceAnswered": {
+    "description": "Multi-Search: every source failed or timed out."
+  },
+  "torrentStatusStarting": "Starting",
+  "@torrentStatusStarting": {
+    "description": "Torrent status: the first seconds of a download, before it has any speed."
+  },
+  "loopAroundHere": "Loop around here",
+  "@loopAroundHere": {
+    "description": "Seek-bar menu (long press or right click): loops the 20 seconds around the pressed moment."
   }
 }

@@ -2,10 +2,14 @@ package com.torrentspire.ai
 
 import android.app.Activity
 import android.app.PictureInPictureParams
+import android.app.RecoverableSecurityException
 import android.content.ActivityNotFoundException
+import android.content.ContentUris
 import android.content.Intent
 import android.content.ContentValues
 import android.content.Context
+import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -54,6 +58,19 @@ class MainActivity : AudioServiceActivity() {
     private var browserWebView: WebView? = null
     private var keyEventChannel: MethodChannel? = null
 
+    // Deleting songs the app did not create needs the user's yes, which
+    // Android asks for in its own dialog (issue #45, fix 12).
+    private val deleteMediaRequestCode = 5012
+    private var pendingDeleteResult: MethodChannel.Result? = null
+    private var pendingDeleteUris: List<Uri> = emptyList()
+
+    // Picture-in-picture only while a video plays (issue #45, fix 11). Dart
+    // says when that is; leaving the app used to always shrink it into the
+    // little window, whatever was on screen.
+    private var pipChannel: MethodChannel? = null
+    private var pipAllowed = false
+    private var pipAspect = Rational(16, 9)
+
     // Files and links the app was asked to open: a video or song from a file
     // manager, a .torrent, a magnet link from a browser. Dart takes them with
     // takePending when it starts, whenever the app resumes, and when
@@ -93,6 +110,22 @@ class MainActivity : AudioServiceActivity() {
         keyEventChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, cursorKeysChannel)
         keyEventChannel?.setMethodCallHandler { _, result ->
             result.notImplemented()
+        }
+
+        pipChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.torrentspire.ai/pip").also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "setPipAllowed" -> {
+                        val allowed = call.argument<Boolean>("allowed") ?: false
+                        val width = call.argument<Int>("width") ?: 16
+                        val height = call.argument<Int>("height") ?: 9
+                        setPipAllowed(allowed, width, height)
+                        result.success(pipSupported())
+                    }
+                    "isSupported" -> result.success(pipSupported())
+                    else -> result.notImplemented()
+                }
+            }
         }
 
         // Downloads keep-alive. Without a handler here, ForegroundService.start()
@@ -173,7 +206,7 @@ class MainActivity : AudioServiceActivity() {
                         }
                         Thread {
                             try {
-                                val destUri = copyFileToTree(treeUri, sourcePath, displayName, mimeType, subdir)
+                                val destUri = copyFileToTree(treeUri, sourcePath, displayName, call.argument<String>("altDisplayName"), mimeType, subdir)
                                 runOnUiThread {
                                     result.success(destUri?.toString())
                                 }
@@ -241,6 +274,31 @@ class MainActivity : AudioServiceActivity() {
                                 runOnUiThread { result.error("COPY_FAILED", e.localizedMessage, null) }
                             }
                         }.start()
+                    }
+                    "deleteMediaUris" -> {
+                        val uris = call.argument<List<String>>("uris")
+                            ?.filter { it.isNotBlank() }
+                            ?.map { Uri.parse(it) }
+                            ?: emptyList()
+                        if (uris.isEmpty()) {
+                            result.success("failed")
+                            return@setMethodCallHandler
+                        }
+                        deleteMediaUris(uris, result)
+                    }
+                    "mediaUriForPath" -> {
+                        val path = call.argument<String>("path")
+                        if (path.isNullOrBlank()) {
+                            result.success(null)
+                            return@setMethodCallHandler
+                        }
+                        result.success(
+                            try {
+                                mediaUriForPath(path)
+                            } catch (_: Exception) {
+                                null
+                            }
+                        )
                     }
                     "deleteSafUri" -> {
                         val uriString = call.argument<String>("uri")
@@ -329,7 +387,7 @@ class MainActivity : AudioServiceActivity() {
                         }
                         Thread {
                             try {
-                                val dest = copyToPublicDownloads(sourcePath, displayName, mimeType, subdir)
+                                val dest = copyToPublicDownloads(sourcePath, displayName, call.argument<String>("altDisplayName"), mimeType, subdir)
                                 runOnUiThread { result.success(dest) }
                             } catch (e: Exception) {
                                 runOnUiThread { result.error("COPY_DOWNLOADS_FAILED", e.localizedMessage, null) }
@@ -628,8 +686,143 @@ class MainActivity : AudioServiceActivity() {
         return null
     }
 
+    /**
+     * Deletes MediaStore items. Android refuses for files this app did not
+     * create; it then asks the user in its own dialog (Android 11+: one
+     * request for all of them; Android 10: the exception's own request) and
+     * the answer comes back in [onActivityResult].
+     */
+    private fun deleteMediaUris(uris: List<Uri>, result: MethodChannel.Result) {
+        val refused = ArrayList<Uri>()
+        var recoverable: RecoverableSecurityException? = null
+        for (uri in uris) {
+            try {
+                if (contentResolver.delete(uri, null, null) <= 0 && mediaExists(uri)) {
+                    refused.add(uri)
+                }
+            } catch (e: SecurityException) {
+                refused.add(uri)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && e is RecoverableSecurityException) {
+                    recoverable = e
+                }
+            } catch (_: Exception) {
+                refused.add(uri)
+            }
+        }
+        if (refused.isEmpty()) {
+            result.success("deleted")
+            return
+        }
+        try {
+            val sender = when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
+                    MediaStore.createDeleteRequest(contentResolver, refused).intentSender
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && recoverable != null ->
+                    recoverable.userAction.actionIntent.intentSender
+                else -> null
+            }
+            if (sender == null || pendingDeleteResult != null) {
+                result.success("failed")
+                return
+            }
+            pendingDeleteResult = result
+            pendingDeleteUris = refused
+            startIntentSenderForResult(sender, deleteMediaRequestCode, null, 0, 0, 0)
+        } catch (e: Exception) {
+            Log.w("Delete", "delete request failed: ${e.message}")
+            pendingDeleteResult = null
+            result.success("failed")
+        }
+    }
+
+    private fun mediaExists(uri: Uri): Boolean = try {
+        contentResolver.query(uri, arrayOf(MediaStore.MediaColumns._ID), null, null, null)
+            ?.use { it.moveToFirst() } ?: false
+    } catch (_: Exception) {
+        false
+    }
+
+    /** The MediaStore item of a file in shared storage, or null. */
+    @Suppress("DEPRECATION")
+    private fun mediaUriForPath(path: String): String? {
+        val collection = MediaStore.Files.getContentUri("external")
+        contentResolver.query(
+            collection,
+            arrayOf(MediaStore.MediaColumns._ID),
+            "${MediaStore.MediaColumns.DATA}=?",
+            arrayOf(path),
+            null
+        )?.use { c ->
+            if (c.moveToFirst()) return ContentUris.withAppendedId(collection, c.getLong(0)).toString()
+        }
+        return null
+    }
+
+    private fun pipSupported(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+
+    /** Android allows aspect ratios between 1:2.39 and 2.39:1. */
+    private fun clampedAspect(width: Int, height: Int): Rational {
+        if (width <= 0 || height <= 0) return Rational(16, 9)
+        val ratio = width.toDouble() / height
+        return when {
+            ratio > 2.39 -> Rational(239, 100)
+            ratio < 1 / 2.39 -> Rational(100, 239)
+            else -> Rational(width, height)
+        }
+    }
+
+    private fun setPipAllowed(allowed: Boolean, width: Int, height: Int) {
+        pipAllowed = allowed && pipSupported()
+        pipAspect = clampedAspect(width, height)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && pipSupported()) {
+            try {
+                setPictureInPictureParams(
+                    PictureInPictureParams.Builder()
+                        .setAutoEnterEnabled(pipAllowed)
+                        .setAspectRatio(pipAspect)
+                        .build()
+                )
+            } catch (e: Exception) {
+                Log.w("PiP", "setPictureInPictureParams failed: ${e.message}")
+            }
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        pipChannel?.invokeMethod("pipModeChanged", isInPictureInPictureMode)
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == deleteMediaRequestCode) {
+            val result = pendingDeleteResult
+            val uris = pendingDeleteUris
+            pendingDeleteResult = null
+            pendingDeleteUris = emptyList()
+            if (result == null) return
+            if (resultCode != Activity.RESULT_OK) {
+                result.success("cancelled")
+                return
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Android deleted them itself when the user said yes.
+                result.success("deleted")
+                return
+            }
+            // Android 10: the yes grants access; the delete is done here.
+            val left = uris.filter { uri ->
+                try {
+                    contentResolver.delete(uri, null, null) <= 0 && mediaExists(uri)
+                } catch (_: Exception) {
+                    true
+                }
+            }
+            result.success(if (left.isEmpty()) "deleted" else "failed")
+            return
+        }
         if (requestCode == pickTreeRequestCode) {
             val result = pendingResult
             pendingResult = null
@@ -653,7 +846,40 @@ class MainActivity : AudioServiceActivity() {
         }
     }
 
-    private fun copyFileToTree(treeUriString: String, sourcePath: String, displayName: String, mimeType: String, subdir: String?): Uri? {
+    /**
+     * The name a copy is saved under (issue #45, fix 8). It used to be
+     * [displayName], deleting whatever had that name: two songs with the same
+     * title then deleted each other. A taken name now gets [altName] (the
+     * title with the video id); a taken [altName] can only be an earlier
+     * download of the same video, which is replaced. Without one the copy
+     * becomes "Name (2)", "Name (3)", ... Names are compared without case,
+     * as Android's storage does. Returns the name and whether it replaces.
+     */
+    private fun pickName(displayName: String, altName: String?, taken: (String) -> Boolean): Pair<String, Boolean> {
+        if (!taken(displayName)) return Pair(displayName, false)
+        if (!altName.isNullOrBlank() && !altName.equals(displayName, ignoreCase = true)) {
+            return Pair(altName, taken(altName))
+        }
+        val dot = displayName.lastIndexOf('.')
+        val stem = if (dot > 0) displayName.substring(0, dot) else displayName
+        val ext = if (dot > 0) displayName.substring(dot) else ""
+        for (n in 2 until 1000) {
+            val candidate = "$stem ($n)$ext"
+            if (!taken(candidate)) return Pair(candidate, false)
+        }
+        return Pair("$stem (${System.currentTimeMillis()})$ext", false)
+    }
+
+    /** Picks the name in [dir] and removes the file it replaces, if any. */
+    private fun claimName(dir: DocumentFile, displayName: String, altName: String?): String {
+        val files = dir.listFiles()
+        val names = files.mapNotNull { it.name?.lowercase() }.toHashSet()
+        val (name, replace) = pickName(displayName, altName) { names.contains(it.lowercase()) }
+        if (replace) files.firstOrNull { it.name.equals(name, ignoreCase = true) }?.delete()
+        return name
+    }
+
+    private fun copyFileToTree(treeUriString: String, sourcePath: String, displayName: String, altName: String?, mimeType: String, subdir: String?): Uri? {
         val treeUri = Uri.parse(treeUriString)
         val root = DocumentFile.fromTreeUri(this, treeUri) ?: return null
         var targetDir = root
@@ -661,9 +887,7 @@ class MainActivity : AudioServiceActivity() {
             val existing = root.findFile(subdir)
             targetDir = existing ?: root.createDirectory(subdir) ?: root
         }
-        val targetName = displayName
-        val existing = targetDir.findFile(targetName)
-        existing?.delete()
+        val targetName = claimName(targetDir, displayName, altName)
         val newFile = targetDir.createFile(mimeType, targetName) ?: return null
         contentResolver.openOutputStream(newFile.uri)?.use { out ->
             FileInputStream(File(sourcePath)).use { input ->
@@ -683,9 +907,8 @@ class MainActivity : AudioServiceActivity() {
             val existing = root.findFile(subdir)
             targetDir = existing ?: root.createDirectory(subdir) ?: root
         }
-        val existing = targetDir.findFile(displayName)
-        existing?.delete()
-        val newFile = targetDir.createFile(mimeType, displayName) ?: return null
+        val targetName = claimName(targetDir, displayName, null)
+        val newFile = targetDir.createFile(mimeType, targetName) ?: return null
         contentResolver.openInputStream(sourceUri)?.use { input ->
             contentResolver.openOutputStream(newFile.uri)?.use { out ->
                 input.copyTo(out)
@@ -738,21 +961,48 @@ class MainActivity : AudioServiceActivity() {
         }
     }
 
-    private fun copyToPublicDownloads(sourcePath: String, displayName: String, mimeType: String, subdir: String?): String? {
+    private fun copyToPublicDownloads(sourcePath: String, displayName: String, altName: String?, mimeType: String, subdir: String?): String? {
         val src = File(sourcePath)
         if (!src.exists()) return null
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val relativePath = if (subdir.isNullOrBlank()) Environment.DIRECTORY_DOWNLOADS
+                else Environment.DIRECTORY_DOWNLOADS + File.separator + subdir
+            val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+            // The names this app's own earlier downloads have there. Files of
+            // other apps are not visible, and Android renames a copy that
+            // would get one of their names itself.
+            val taken = HashMap<String, Long>()
+            contentResolver.query(
+                collection,
+                arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME),
+                "${MediaStore.MediaColumns.RELATIVE_PATH}=?",
+                arrayOf("$relativePath/"),
+                null
+            )?.use { c ->
+                while (c.moveToNext()) {
+                    val name = c.getString(1) ?: continue
+                    taken[name.lowercase()] = c.getLong(0)
+                }
+            }
+            var (name, replace) = pickName(displayName, altName) { taken.containsKey(it.lowercase()) }
+            if (replace) {
+                val id = taken[name.lowercase()]
+                val deleted = try {
+                    id != null && contentResolver.delete(ContentUris.withAppendedId(collection, id), null, null) > 0
+                } catch (_: Exception) {
+                    false
+                }
+                if (!deleted) {
+                    name = pickName(name, null) { taken.containsKey(it.lowercase()) }.first
+                }
+            }
             val values = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+                put(MediaStore.MediaColumns.DISPLAY_NAME, name)
                 put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-                put(MediaStore.MediaColumns.RELATIVE_PATH,
-                    if (subdir.isNullOrBlank()) Environment.DIRECTORY_DOWNLOADS
-                    else Environment.DIRECTORY_DOWNLOADS + File.separator + subdir
-                )
+                put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
-            val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
             val uri = contentResolver.insert(collection, values) ?: return null
             contentResolver.openOutputStream(uri)?.use { out ->
                 FileInputStream(src).use { input -> input.copyTo(out) }
@@ -766,7 +1016,10 @@ class MainActivity : AudioServiceActivity() {
         val base = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         val targetDir = if (subdir.isNullOrBlank()) base else File(base, subdir)
         if (!targetDir.exists()) targetDir.mkdirs()
-        val target = File(targetDir, displayName)
+        val names = (targetDir.list() ?: emptyArray()).map { it.lowercase() }.toHashSet()
+        val (name, replace) = pickName(displayName, altName) { names.contains(it.lowercase()) }
+        val target = File(targetDir, name)
+        if (replace) target.delete()
         FileInputStream(src).use { input ->
             FileOutputStream(target).use { out -> input.copyTo(out) }
         }
@@ -955,20 +1208,19 @@ class MainActivity : AudioServiceActivity() {
         return true
     }
 
-    // Picture-in-Picture support: called when user navigates away while video is playing
+    // Picture-in-picture when the user leaves the app, only while a video
+    // plays (see setPipAllowed). Android 12+ enters it itself through
+    // setAutoEnterEnabled, with its own animation; older versions do it here.
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        
+        if (!pipAllowed || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
-                // Request PiP mode with 16:9 aspect ratio for video content
-                val pipParams = PictureInPictureParams.Builder()
-                    .setAspectRatio(Rational(16, 9))
-                    .build()
-                enterPictureInPictureMode(pipParams)
+                enterPictureInPictureMode(
+                    PictureInPictureParams.Builder().setAspectRatio(pipAspect).build()
+                )
             } catch (e: Exception) {
-                // If PiP fails, continue with normal behavior
-                e.printStackTrace()
+                Log.w("PiP", "enterPictureInPictureMode failed: ${e.message}")
             }
         }
     }

@@ -5008,4 +5008,50 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get lyrics => 'Lirik';
+
+  @override
+  String get pictureInPictureVideos => 'Gambar-dalam-gambar untuk video';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Saat keluar dari aplikasi ketika video diputar, video tetap diputar di jendela kecil';
+
+  @override
+  String get deleteCancelled => 'Tidak dihapus';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'Aplikasi kehilangan akses ke folder ini. Pilih folder lagi untuk menghapus file.';
+
+  @override
+  String get deleteRefusedBySystem =>
+      'Sistem tidak mengizinkan file ini dihapus';
+
+  @override
+  String get searchSourceSearching => 'mencari…';
+
+  @override
+  String get searchSourceNothing => 'tidak ada hasil';
+
+  @override
+  String get searchSourceTimedOut => 'terlalu lambat';
+
+  @override
+  String get searchSourceFailed => 'tidak berhasil';
+
+  @override
+  String get searchSourceDesktopOnly => 'hanya di komputer';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'perlu yt-dlp';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'Tidak ada sumber yang menjawab. Periksa koneksi Anda dan coba lagi.';
+
+  @override
+  String get torrentStatusStarting => 'Memulai';
+
+  @override
+  String get loopAroundHere => 'Ulangi sekitar sini';
 }

@@ -56,5 +56,5 @@ Reproduce, comparte y descarga solo contenido que tengas derecho a usar.
 ## Release notes (What's new)
 
 ```text
-Novedades: subtítulos para vídeos y canciones, la mejor parte en bucle, vista grande, velocidad de reproducción y temporizador. Letras sincronizadas desde archivos .lrc. Los vídeos largos siguen donde los dejaste. El reproductor tiene un solo juego de controles y más espacio para el vídeo, y el navegador bloquea anuncios con las listas de uBlock Origin. Corregido: los torrents de archivos que ya tienes se comparten al instante y los vídeos tienen miniaturas.
+Corregido: borrar archivos en el reproductor funciona en el móvil. La pequeña ventana de imagen en imagen solo aparece mientras se reproduce un vídeo y muestra solo el vídeo. PDF a JPEG y PNG funciona, y si una conversión falla lo dice en lugar de dar un archivo equivocado. El aviso «Continuado en» desaparece solo. Novedad: mantén pulsada la barra de progreso para repetir una parte.
 ```

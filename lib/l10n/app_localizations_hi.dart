@@ -4991,4 +4991,50 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get lyrics => 'बोल';
+
+  @override
+  String get pictureInPictureVideos => 'वीडियो के लिए पिक्चर-इन-पिक्चर';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'वीडियो चलते समय ऐप छोड़ने पर वह एक छोटी विंडो में चलता रहता है';
+
+  @override
+  String get deleteCancelled => 'हटाया नहीं गया';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'ऐप की इस फ़ोल्डर तक पहुँच खो गई है। फ़ाइलें हटाने के लिए फ़ोल्डर फिर से चुनें।';
+
+  @override
+  String get deleteRefusedBySystem =>
+      'सिस्टम ने इस फ़ाइल को हटाने की अनुमति नहीं दी';
+
+  @override
+  String get searchSourceSearching => 'खोज रहा है…';
+
+  @override
+  String get searchSourceNothing => 'कुछ नहीं मिला';
+
+  @override
+  String get searchSourceTimedOut => 'बहुत धीमा';
+
+  @override
+  String get searchSourceFailed => 'काम नहीं किया';
+
+  @override
+  String get searchSourceDesktopOnly => 'केवल कंप्यूटर पर';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'yt-dlp चाहिए';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'किसी भी स्रोत ने जवाब नहीं दिया। अपना कनेक्शन जाँचें और फिर से कोशिश करें।';
+
+  @override
+  String get torrentStatusStarting => 'शुरू हो रहा है';
+
+  @override
+  String get loopAroundHere => 'यहाँ के आसपास दोहराएँ';
 }

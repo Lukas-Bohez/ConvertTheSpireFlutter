@@ -248,6 +248,11 @@ class AppController extends ChangeNotifier {
     if (_settings != null) {
       await VaultSettingsBridge.pushHostSettingsToVault(_settings!);
     }
+    try {
+      await forgetSharedDownloadPaths();
+    } catch (e) {
+      logs.add('Clearing shared download names failed: $e');
+    }
     // Load non-critical services individually so a single failure doesn't
     // prevent the app from starting. Errors are logged and initialization
     // continues.
@@ -762,6 +767,8 @@ class AppController extends ChangeNotifier {
           // YouTube → use youtube_explode_dart (with yt-dlp fast-path on desktop)
           result = await downloadService.download(
             previewItem,
+            replaceablePath:
+                item.part == null ? await _recordedPathFor(item.url) : null,
             format: item.format,
             outputDir: downloadFolder,
             ffmpegPath: ffmpegPath,
@@ -1454,10 +1461,15 @@ class AppController extends ChangeNotifier {
       MediaPart? part}) {
     final fmt = format ?? _settings?.defaultAudioFormat ?? 'mp3';
 
-    // If source is 'generic', the ID *is* the URL (set by BrowserScreen)
-    final isGeneric = result.source == 'generic';
-    final url =
-        isGeneric ? result.id : 'https://www.youtube.com/watch?v=${result.id}';
+    // A 'generic' result's id is its URL (set by BrowserScreen); YouTube's
+    // is the video id; other sites carry their page (issue #45, fix 10: a
+    // SoundCloud or Bilibili id used to be made into a YouTube link).
+    final url = result.url;
+    if (url == null) {
+      logs.add('Cannot queue ${result.source} result without a link: '
+          '${result.title}');
+      return;
+    }
 
     if (!isYouTubeConversionEnabledInCurrentBuild && _isYouTubeUrl(url)) {
       logs.add('Skipping YouTube queue add due to Play Store build policy.');
@@ -1546,8 +1558,62 @@ class AppController extends ChangeNotifier {
     final map = Map<String, String>.from(
       jsonDecode(prefs.getString(_downloadIdMapKey) ?? '{}') as Map,
     );
+    // One file belongs to one video (fix 8): a path another id still points
+    // at was that video's file before it was replaced.
+    map.removeWhere((id, path) => id != videoId && path == filePath);
     map[videoId] = filePath;
     await prefs.setString(_downloadIdMapKey, jsonEncode(map));
+  }
+
+  /// Where an earlier download of the video at [url] went, while that file
+  /// is still there. Downloading the video again replaces that file instead
+  /// of making a second one beside it (fix 8).
+  Future<String?> _recordedPathFor(String url) async {
+    final videoId = _extractYouTubeVideoId(url);
+    if (videoId == null || videoId.isEmpty) return null;
+    final prefs = await SharedPreferences.getInstance();
+    final map = Map<String, dynamic>.from(
+      jsonDecode(prefs.getString(_downloadIdMapKey) ?? '{}') as Map,
+    );
+    final path = map[videoId]?.toString();
+    if (path == null || path.isEmpty || path.startsWith('content://')) {
+      return null;
+    }
+    return File(path).existsSync() ? path : null;
+  }
+
+  /// Before 16.1, songs with the same title were saved under the same name,
+  /// so several videos can point at one file that holds only one of them.
+  /// Those records are dropped (the file stays): the songs show as not
+  /// downloaded again and download under names of their own. Runs once.
+  /// Returns how many songs that affected.
+  Future<int> forgetSharedDownloadPaths() async {
+    const doneKey = 'download_id_map_shared_paths_cleared_v1';
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(doneKey) ?? false) return 0;
+    final map = Map<String, dynamic>.from(
+      jsonDecode(prefs.getString(_downloadIdMapKey) ?? '{}') as Map,
+    );
+    final byPath = <String, List<String>>{};
+    map.forEach((id, path) {
+      final key = path?.toString().toLowerCase() ?? '';
+      if (key.isNotEmpty) byPath.putIfAbsent(key, () => []).add(id);
+    });
+    var forgotten = 0;
+    for (final ids in byPath.values) {
+      if (ids.length < 2) continue;
+      for (final id in ids) {
+        map.remove(id);
+        forgotten++;
+      }
+    }
+    if (forgotten > 0) {
+      await prefs.setString(_downloadIdMapKey, jsonEncode(map));
+      logs.add('$forgotten downloads shared a file name; they can be '
+          'downloaded again under names of their own.');
+    }
+    await prefs.setBool(doneKey, true);
+    return forgotten;
   }
 
   Future<bool> isDownloadedById(String videoId) async {

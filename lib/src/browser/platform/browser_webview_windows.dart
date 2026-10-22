@@ -71,6 +71,7 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   final _jsMessages = StreamController<BrowserJsMessage>.broadcast();
   final _urlEvents = StreamController<String>.broadcast();
   final _consoleEvents = StreamController<String>.broadcast();
+  final _titleEvents = StreamController<String>.broadcast();
   final _errorEvents = StreamController<BrowserErrorEvent>.broadcast();
   final _historyEvents = StreamController<BrowserHistoryState>.broadcast();
   final _scrollEvents = StreamController<int>.broadcast();
@@ -224,7 +225,10 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
         if (url.isEmpty || url == 'about:blank') return;
         _urlEvents.add(url);
       }),
-      _native.title.listen((title) => _lastTitle = title),
+      _native.title.listen((title) {
+        _lastTitle = title;
+        _titleEvents.add(title);
+      }),
       _native.historyChanged.listen((h) {
         _canGoBack = h.canGoBack;
         _canGoForward = h.canGoForward;
@@ -567,6 +571,9 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   Stream<String> get urlEvents => _urlEvents.stream;
 
   @override
+  Stream<String> get titleEvents => _titleEvents.stream;
+
+  @override
   Stream<String> get consoleEvents => _consoleEvents.stream;
 
   @override
@@ -616,6 +623,7 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
     await _progressEvents.close();
     await _jsMessages.close();
     await _urlEvents.close();
+    await _titleEvents.close();
     await _consoleEvents.close();
     await _errorEvents.close();
     await _historyEvents.close();

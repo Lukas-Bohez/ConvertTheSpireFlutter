@@ -1447,5 +1447,19 @@
   "partTo": "До",
   "addPartsToQueue": "Добавить в очередь (фрагментов: {count})",
   "partTimesInvalid": "Каждый фрагмент должен заканчиваться после начала и в пределах видео.",
-  "lyrics": "Текст песни"
+  "lyrics": "Текст песни",
+  "pictureInPictureVideos": "Картинка в картинке для видео",
+  "pictureInPictureVideosHint": "Если выйти из приложения во время видео, оно продолжит играть в маленьком окне",
+  "deleteCancelled": "Не удалено",
+  "deleteFolderAccessLost": "Приложение потеряло доступ к этой папке. Выберите папку снова, чтобы удалять файлы.",
+  "deleteRefusedBySystem": "Система не разрешила удалить этот файл",
+  "searchSourceSearching": "ищет…",
+  "searchSourceNothing": "ничего не найдено",
+  "searchSourceTimedOut": "слишком долго",
+  "searchSourceFailed": "не сработало",
+  "searchSourceDesktopOnly": "только на компьютере",
+  "searchSourceNeedsYtDlp": "нужен yt-dlp",
+  "searchNoSourceAnswered": "Ни один источник не ответил. Проверьте подключение и попробуйте снова.",
+  "torrentStatusStarting": "Запуск",
+  "loopAroundHere": "Повторять вокруг этого места"
 }

@@ -33,6 +33,7 @@ class BrowserWebWebViewAdapter implements BrowserWebviewController {
   final _jsMessages = StreamController<BrowserJsMessage>.broadcast();
   final _urlEvents = StreamController<String>.broadcast();
   final _consoleEvents = StreamController<String>.broadcast();
+  final _titleEvents = StreamController<String>.broadcast();
   final _errorEvents = StreamController<BrowserErrorEvent>.broadcast();
   final _historyEvents = StreamController<BrowserHistoryState>.broadcast();
   final _scrollEvents = StreamController<int>.broadcast();
@@ -45,6 +46,8 @@ class BrowserWebWebViewAdapter implements BrowserWebviewController {
   Stream<BrowserJsMessage> get jsMessages => _jsMessages.stream;
   @override
   Stream<String> get urlEvents => _urlEvents.stream;
+  @override
+  Stream<String> get titleEvents => _titleEvents.stream;
   @override
   Stream<String> get consoleEvents => _consoleEvents.stream;
   @override
@@ -105,6 +108,9 @@ class BrowserWebWebViewAdapter implements BrowserWebviewController {
       },
       onScrollChanged: (controller, x, y) {
         _scrollEvents.add(y);
+      },
+      onTitleChanged: (controller, title) {
+        if (title != null) _titleEvents.add(title);
       },
       onUpdateVisitedHistory: (controller, url, androidIsReload) {
         final urlStr = url?.toString() ?? '';
@@ -251,6 +257,7 @@ class BrowserWebWebViewAdapter implements BrowserWebviewController {
       _progressEvents,
       _jsMessages,
       _urlEvents,
+      _titleEvents,
       _consoleEvents,
       _errorEvents,
       _historyEvents,

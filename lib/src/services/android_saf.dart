@@ -29,11 +29,16 @@ class AndroidSaf {
     return _channel.invokeMethod<String>('pathToTreeUri', {'path': path});
   }
 
+  /// Copies [sourcePath] into the tree as [displayName]. A file of that name
+  /// already there is kept: the copy is named [altDisplayName] instead (a
+  /// file of *that* name is an earlier download of the same video, which is
+  /// replaced), or `Name (2)`, `Name (3)`, ... when there is no alternative.
   Future<String?> copyToTree({
     required String treeUri,
     required String sourcePath,
     required String displayName,
     required String mimeType,
+    String? altDisplayName,
     String? subdir,
   }) async {
     if (!isSupported) return null;
@@ -41,6 +46,7 @@ class AndroidSaf {
       'treeUri': treeUri,
       'sourcePath': sourcePath,
       'displayName': displayName,
+      'altDisplayName': altDisplayName,
       'mimeType': mimeType,
       'subdir': subdir,
     });
@@ -106,19 +112,39 @@ class AndroidSaf {
     return result ?? false;
   }
 
+  /// Like [copyToTree], into the public Downloads folder.
   Future<String?> copyToDownloads({
     required String sourcePath,
     required String displayName,
     required String mimeType,
+    String? altDisplayName,
     String? subdir,
   }) async {
     if (!isSupported) return null;
     return _channel.invokeMethod<String>('copyToDownloads', {
       'sourcePath': sourcePath,
       'displayName': displayName,
+      'altDisplayName': altDisplayName,
       'mimeType': mimeType,
       'subdir': subdir,
     });
+  }
+
+  /// Deletes MediaStore items (`content://media/...`). Android asks the user
+  /// first, in its own dialog, for files this app did not create. Returns
+  /// `deleted`, `cancelled` (the user said no) or `failed`.
+  Future<String> deleteMediaUris(List<String> uris) async {
+    if (!isSupported || uris.isEmpty) return 'failed';
+    return await _channel
+            .invokeMethod<String>('deleteMediaUris', {'uris': uris}) ??
+        'failed';
+  }
+
+  /// The MediaStore item for a file in shared storage, or null when Android
+  /// does not know it.
+  Future<String?> mediaUriForPath(String path) async {
+    if (!isSupported) return null;
+    return _channel.invokeMethod<String>('mediaUriForPath', {'path': path});
   }
 
   Future<String?> copyToTemp({required String uri}) async {

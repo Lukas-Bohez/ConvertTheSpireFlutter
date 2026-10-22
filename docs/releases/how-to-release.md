@@ -10,7 +10,7 @@ On a branch, update together:
 |---|---|
 | `pubspec.yaml` | `version: X.Y.Z+N`. `N` is one higher than the last build uploaded to Play. |
 | `CHANGELOG.md` | A new top section, `## X.Y.Z+N — Title`, with `### Fixed`, `### New` and `### Improved`. The app's **What's new** screen reads this file, so the heading must match the version exactly. |
-| `release_notes_vX.Y.Z.md` | `# Convert the Spire Reborn vX.Y.Z`, then `## Title`, the same sections, and a last `### Build Notes` section for developers. |
+| `docs/release-notes/release_notes_vX.Y.Z.md` | `# Convert the Spire Reborn vX.Y.Z`, then `## Title`, the same sections, and a last `### Build Notes` section for developers. |
 | `docs/releases/latest.md` | The same notes, headed `# Release Notes - vX.Y.Z`. |
 
 Write the notes for the people using the app: what changed for them, in plain words, the most noticeable first.
@@ -20,6 +20,18 @@ Write the notes for the people using the app: what changed for them, in plain wo
 * `flutter analyze` must report no issues: the release workflow stops on a single warning.
 * `flutter test` must pass.
 * Open a PR. CI builds Android and Windows and runs both checks; merge once it is green.
+
+## Where the files to upload are
+
+Everything to upload for the store versions is collected in `upload/` (not in git):
+
+| Folder | What is in it |
+|---|---|
+| `upload/newest/androidPlayStore/` | The newest `.aab` for the Play Console. |
+| `upload/newest/windowsMicrosoftStore/` | The newest `.msix` for Partner Center, and the "what's new" `.csv` for its listings. |
+| `upload/older/...` | Earlier builds, kept in case one has to be uploaded again. |
+
+When a new build is put in `newest`, the one that was there moves to `older`: `scripts/publish_local.ps1` does both.
 
 ## 3. Google Play
 
@@ -33,7 +45,7 @@ From the repo root, in Git Bash:
 gh workflow run release.yml --ref main \
   -f release_tag=vX.Y.Z \
   -f "release_name=Version X.Y.Z - Title" \
-  -f "release_notes=$(sed '1d; /^### Build Notes/,$d' release_notes_vX.Y.Z.md)" \
+  -f "release_notes=$(sed '1d; /^### Build Notes/,$d' docs/release-notes/release_notes_vX.Y.Z.md)" \
   -f is_prerelease=false
 ```
 

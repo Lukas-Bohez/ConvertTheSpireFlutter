@@ -103,6 +103,12 @@ class Snack {
               : BorderSide.none,
         ),
         margin: const EdgeInsets.all(12),
+        // Flutter keeps a snackbar with an action on screen until it is
+        // tapped. These all go away on their own, and can be closed
+        // (issue #45, fix 1: "Start over" could only be tapped or lived
+        // with).
+        persist: false,
+        showCloseIcon: actionLabel != null && onAction != null,
         action: actionLabel != null && onAction != null
             ? SnackBarAction(
                 label: actionLabel, textColor: fgColor, onPressed: onAction)

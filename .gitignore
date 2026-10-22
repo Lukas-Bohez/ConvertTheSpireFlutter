@@ -135,3 +135,7 @@ tv-emulator*.png
 # Microsoft Store upload folder (scripts/make_store_upload.ps1)
 /microsoft-upload/
 /play-upload/
+
+# Finished store builds and loose logs (see docs/releases/how-to-release.md)
+/upload/
+/logs/

@@ -1447,5 +1447,19 @@
   "partTo": "До",
   "addPartsToQueue": "Додати до черги (фрагментів: {count})",
   "partTimesInvalid": "Кожен фрагмент має закінчуватися після початку й у межах відео.",
-  "lyrics": "Текст пісні"
+  "lyrics": "Текст пісні",
+  "pictureInPictureVideos": "Картинка в картинці для відео",
+  "pictureInPictureVideosHint": "Якщо вийти із застосунку під час відео, воно гратиме далі в малому вікні",
+  "deleteCancelled": "Не видалено",
+  "deleteFolderAccessLost": "Застосунок втратив доступ до цієї папки. Виберіть папку знову, щоб видаляти файли.",
+  "deleteRefusedBySystem": "Система не дозволила видалити цей файл",
+  "searchSourceSearching": "шукає…",
+  "searchSourceNothing": "нічого не знайдено",
+  "searchSourceTimedOut": "надто довго",
+  "searchSourceFailed": "не спрацювало",
+  "searchSourceDesktopOnly": "лише на комп'ютері",
+  "searchSourceNeedsYtDlp": "потрібен yt-dlp",
+  "searchNoSourceAnswered": "Жодне джерело не відповіло. Перевірте з'єднання та спробуйте ще раз.",
+  "torrentStatusStarting": "Запуск",
+  "loopAroundHere": "Повторювати навколо цього місця"
 }

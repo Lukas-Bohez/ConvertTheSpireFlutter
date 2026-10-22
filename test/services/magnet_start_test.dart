@@ -134,6 +134,33 @@ void main() {
       );
     });
 
+    // Issue #45, fix 2: a finished torrent that starts again reports
+    // "downloading" at 0% while its files are checked.
+    test('a finished torrent that restarts is never "Stalled"', () {
+      expect(
+        TorrentService.statusLabelForTesting('downloading', isComplete: true),
+        'Seeding',
+      );
+      expect(
+        TorrentService.statusLabelForTesting('downloading',
+            completeOnDisk: true),
+        'Checking',
+      );
+    });
+
+    test('a download has no speed in its first seconds, and is not stalled',
+        () {
+      expect(
+        TorrentService.statusLabelForTesting('downloading', startingUp: true),
+        TorrentService.startingLabel,
+      );
+      expect(
+        TorrentService.statusLabelForTesting('downloading',
+            startingUp: true, downloadSpeed: 4096),
+        'Downloading',
+      );
+    });
+
     test('a paused torrent stays paused while metadata is pending', () {
       expect(
         TorrentService.statusLabelForTesting('paused', fetchingMetadata: true),

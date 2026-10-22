@@ -2504,7 +2504,6 @@ class TorrentEngineService {
     if (!isPaused && _isTaskComplete(task)) {
       _enforceSeedingPolicyIfNeeded(torrentId, seededRatio);
     }
-    final seededPct = (seededRatio * 100).clamp(0.0, double.infinity);
     final stalledNearCompletion = progress >= 0.95 &&
         ((_lastProgressChangeAtByTorrent[torrentId] == null)
             ? false
@@ -2518,7 +2517,9 @@ class TorrentEngineService {
     final msg = state == 'paused'
         ? 'Paused • ${(progress * 100).toStringAsFixed(1)}%'
         : state == 'seeding'
-            ? 'Seeding • ${(seededPct).toStringAsFixed(1)}% shared back (${_formatByteCount(uploaded)}/${_formatByteCount(totalLength)}) • $peers peer${peers == 1 ? '' : 's'} connected'
+            // The ratio, not a percentage: "0.0% shared back" next to a
+            // finished download read as if the download had been lost.
+            ? 'Seeding • ratio ${seededRatio.toStringAsFixed(2)} • ${_formatByteCount(uploaded)} uploaded • ${peers == 0 ? 'waiting for peers' : '$peers peer${peers == 1 ? '' : 's'} connected'}'
             : peers == 0
                 ? 'Searching for peers...'
                 : stalledNearCompletion

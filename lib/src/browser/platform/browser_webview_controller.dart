@@ -73,6 +73,12 @@ abstract class BrowserWebviewController {
   /// Current URL after every navigation / history update.
   Stream<String> get urlEvents;
 
+  /// The page title whenever it changes, also on sites that change page
+  /// without loading a new one (YouTube). The title used to be read only
+  /// when a page finished loading, so moving from video to video on YouTube
+  /// kept the first one's, or just "YouTube" (issue #45, fix 9).
+  Stream<String> get titleEvents;
+
   /// Console log lines (debug aid; may be empty on some platforms).
   Stream<String> get consoleEvents;
 

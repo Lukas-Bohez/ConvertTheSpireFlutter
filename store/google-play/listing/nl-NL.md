@@ -56,5 +56,5 @@ Speel, deel en download alleen inhoud die je mag gebruiken.
 ## Release notes (What's new)
 
 ```text
-Nieuw: ondertitels voor video's en liedjes, het beste stuk herhalen, groot beeld, afspeelsnelheid en een slaaptimer. Meelopende songteksten uit .lrc-bestanden. Lange video's gaan verder waar je gebleven was. De speler heeft één set knoppen en meer ruimte voor de video, en de browser blokkeert advertenties met de lijsten van uBlock Origin. Opgelost: torrents van bestanden die je al hebt seeden meteen, en video's hebben miniaturen.
+Opgelost: bestanden verwijderen in de speler werkt op telefoons. Het kleine beeld-in-beeldvenster verschijnt alleen nog terwijl een video speelt en toont alleen de video. PDF naar JPEG en PNG werkt, en een mislukte omzetting meldt dat in plaats van een verkeerd bestand te geven. De melding ‘Verdergegaan op’ verdwijnt vanzelf. Nieuw: houd de zoekbalk ingedrukt om een stuk te herhalen.
 ```

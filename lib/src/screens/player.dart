@@ -45,8 +45,10 @@ import '../services/background_media_update_guard.dart';
 
 import '../services/ffmpeg_service.dart';
 import '../services/loudness_service.dart';
+import '../services/media_delete_service.dart';
 import '../services/media_organizer.dart';
 import '../services/metadata_god_init.dart';
+import '../services/pip_service.dart';
 import '../services/platform_dirs.dart';
 import '../services/review_service.dart';
 import '../services/watch_party/watch_party_protocol.dart';
@@ -601,6 +603,7 @@ class PlayerState with ChangeNotifier {
   static const _resumePrefsKey = 'player_resume_positions';
   final Map<String, int> _resumeMs = {};
   String? _resumeCheckPath;
+  final Set<String> _resumeAnnounced = {};
   DateTime _resumeSavedAt = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _resumeSeekAt = DateTime.fromMillisecondsSinceEpoch(0);
   final StreamController<Duration> _resumed =
@@ -1091,6 +1094,49 @@ class PlayerState with ChangeNotifier {
 
   bool get isVideo => _activeType == MediaType.video;
   bool get videoReady => _videoReady;
+
+  /// The playing video's size in pixels, or null when not known yet.
+  Size? get videoSize {
+    if (!isVideo) return null;
+    if (_useMediaKit && _mkPlayer != null) {
+      final w = _mkPlayer!.state.width;
+      final h = _mkPlayer!.state.height;
+      if (w == null || h == null || w <= 0 || h <= 0) return null;
+      return Size(w.toDouble(), h.toDouble());
+    }
+    final size = _androidController?.value.size;
+    return size == null || size.isEmpty ? null : size;
+  }
+
+  /// Leaving the app opens the little picture-in-picture window while a
+  /// video plays (Android; issue #45, fix 11). On by default.
+  bool get pictureInPicture =>
+      prefs.getBool('player_picture_in_picture') ?? true;
+
+  void setPictureInPicture(bool on) {
+    unawaited(prefs.setBool('player_picture_in_picture', on));
+    notifyListeners();
+  }
+
+  void _syncPictureInPicture() {
+    if (!PipService.platformSupported || _disposed) return;
+    final size = videoSize;
+    unawaited(PipService.instance.update(
+      allowed: PipService.allowedFor(
+        enabled: pictureInPicture,
+        isVideo: isVideo,
+        isPlaying: isPlaying,
+      ),
+      width: size?.width.round() ?? 16,
+      height: size?.height.round() ?? 9,
+    ));
+  }
+
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
+    _syncPictureInPicture();
+  }
   Stream<PositionUiState> get positionUiStream => _positionUiController.stream;
   Duration get bufferedPosition {
     if (_audio != null) {
@@ -1363,7 +1409,12 @@ class PlayerState with ChangeNotifier {
         final at = Duration(milliseconds: saved);
         _resumeSeekAt = now;
         Future.microtask(() => seek(at));
-        if (!_resumed.isClosed) _resumed.add(at);
+        // Said once per file and session: a file reopened by a reload, or
+        // coming back from the background, found its place again and said
+        // so every time (issue #45, fix 1).
+        if (!_resumed.isClosed && _resumeAnnounced.add(path)) {
+          _resumed.add(at);
+        }
         return;
       }
     }
@@ -1397,6 +1448,26 @@ class PlayerState with ChangeNotifier {
   Future<void> setLoopSettings(String path, LoopSettings settings) async {
     await _loops.save(path, settings);
     notifyListeners();
+  }
+
+  /// Where a part being marked on the seek bar starts, until its end is
+  /// marked.
+  Duration? loopPendingStart;
+
+  void setLoopPendingStart(Duration? start) {
+    loopPendingStart = start;
+    notifyListeners();
+  }
+
+  /// Adds a part to the file's looped parts and starts looping them. Parts
+  /// that overlap are joined, and the part is kept within the file.
+  Future<void> addLoopSection(String path, Duration start, Duration end) {
+    final current = _loops.settingsFor(path);
+    final sections = LoopSectionStore.normalized(
+      [...current.sections, LoopSection(start, end)],
+      duration: duration,
+    );
+    return setLoopSettings(path, LoopSettings(on: true, sections: sections));
   }
 
   Future<void> toggleLoop(String path) {
@@ -1579,25 +1650,32 @@ class PlayerState with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> deleteMediaItem(String path) async {
+  /// Deletes a library file from disk and from everything that remembers it.
+  ///
+  /// On phones the library comes from a folder the user picked, whose paths
+  /// are `content://` links; those used to be refused outright, so Delete
+  /// never worked there (issue #45, fix 12).
+  Future<DeleteOutcome> deleteMediaItem(String path,
+      {MediaDeleteService? deleter}) async {
     final index = library.indexWhere((item) => item.path == path);
-    if (index < 0) return false;
-    if (path.startsWith('content://')) {
-      debugPrint(
-          'deleteMediaItem: content URI deletion is not supported: $path');
-      return false;
-    }
+    if (index < 0) return DeleteOutcome.failed;
 
-    final file = File(path);
-    try {
-      if (!await file.exists()) return false;
-      await file.delete();
-    } catch (e) {
-      debugPrint('deleteMediaItem failed for $path: $e');
-      return false;
-    }
-
+    // Windows will not delete a file that is open: playback lets go of it
+    // first. Elsewhere a playing file can be deleted, and stopping first
+    // would leave the song stopped when Android's "Allow deleting?" is
+    // answered with no.
     final wasCurrent = index == currentIndex;
+    final mustRelease = wasCurrent && !kIsWeb && Platform.isWindows;
+    if (mustRelease) await _stopPlaybackBestEffort();
+
+    final outcome = await (deleter ?? MediaDeleteService()).delete(path);
+    if (!outcome.removed) {
+      debugPrint('deleteMediaItem: $outcome for $path');
+      // It is still there: carry on with it.
+      if (mustRelease) unawaited(select(index));
+      return outcome;
+    }
+
     _favourites.remove(path);
     _favouriteCache.remove(path);
     _disliked.remove(path);
@@ -1619,7 +1697,7 @@ class PlayerState with ChangeNotifier {
       duration = null;
       _folderItemCount = 0;
       notifyListeners();
-      return true;
+      return outcome;
     }
 
     if (wasCurrent) {
@@ -1628,7 +1706,7 @@ class PlayerState with ChangeNotifier {
     } else {
       notifyListeners();
     }
-    return true;
+    return outcome;
   }
 
   void _rebaseStateAfterRemoval(int removedIndex) {
@@ -6951,17 +7029,10 @@ class _PlayerScreenState extends State<PlayerScreen>
                   tooltip: context.l10n.playerRepeat,
                   size: 22,
                 ),
-                // On a phone the row is full: there it is in the track
-                // menu, and in the row under the seek bar once there are
-                // parts.
-                if (!isMobile)
-                  _ControlButton(
-                    icon: Icons.loop_rounded,
-                    active: state.loopSettingsFor(item.path).looping,
-                    onPressed: () => showLoopSectionsSheet(context, state),
-                    tooltip: context.l10n.loopParts,
-                    size: 22,
-                  ),
+                // Loop parts are not a sixth button here (issue #45, fix 4):
+                // they are in the track menu, in the row under the seek bar
+                // once there are parts, and on the seek bar itself, with a
+                // long press or a right click.
               ],
             ),
           ),
@@ -7339,6 +7410,58 @@ class _PositionWidget extends StatelessWidget {
       required this.formatDur,
       this.loopSections = const []});
 
+  /// A long press or a right click on the seek bar: loop the part around
+  /// that moment, or start and end one there (issue #45, fix 4). The parts
+  /// used to be set only in a sheet, with Start here and End here while the
+  /// song played.
+  Future<void> _showLoopMenu(
+      BuildContext context, Offset at, Duration position) async {
+    final item = state.nowPlayingItem;
+    if (item == null) return;
+    final l10n = context.l10n;
+    final pending = state.loopPendingStart;
+    final choice = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx, at.dy),
+      items: [
+        PopupMenuItem(
+          value: 'around',
+          child: Text(
+              '${l10n.loopAroundHere} (${formatLoopTime(position)})'),
+        ),
+        if (pending == null)
+          PopupMenuItem(
+              value: 'start',
+              child: Text('${l10n.loopStartHere} (${formatLoopTime(position)})'))
+        else
+          PopupMenuItem(
+              value: 'end',
+              child: Text('${l10n.loopEndHere} (${formatLoopTime(position)}, '
+                  '${l10n.loopStartsAt(formatLoopTime(pending))})')),
+        PopupMenuItem(value: 'parts', child: Text(l10n.loopParts)),
+      ],
+    );
+    switch (choice) {
+      case 'around':
+        await state.addLoopSection(
+          item.path,
+          position - const Duration(seconds: 10),
+          position + const Duration(seconds: 10),
+        );
+      case 'start':
+        state.setLoopPendingStart(position);
+      case 'end':
+        if (pending != null) {
+          final a = pending < position ? pending : position;
+          final b = pending < position ? position : pending;
+          state.setLoopPendingStart(null);
+          await state.addLoopSection(item.path, a, b);
+        }
+      case 'parts':
+        if (context.mounted) unawaited(showLoopSectionsSheet(context, state));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<PositionUiState>(
@@ -7373,7 +7496,28 @@ class _PositionWidget extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: Stack(
+                child: LayoutBuilder(builder: (context, box) {
+                  // The slider's track runs between the overlay radius (14)
+                  // at each side.
+                  Duration at(double dx) {
+                    final width = box.maxWidth - 28;
+                    if (width <= 0) return Duration.zero;
+                    final f = ((dx - 14) / width).clamp(0.0, 1.0);
+                    return Duration(
+                        milliseconds: (f * dur.inMilliseconds).round());
+                  }
+
+                  return GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onLongPressStart: dur > Duration.zero
+                        ? (d) => _showLoopMenu(
+                            context, d.globalPosition, at(d.localPosition.dx))
+                        : null,
+                    onSecondaryTapDown: dur > Duration.zero
+                        ? (d) => _showLoopMenu(
+                            context, d.globalPosition, at(d.localPosition.dx))
+                        : null,
+                    child: Stack(
                   children: [
                     if (loopSections.isNotEmpty && dur > Duration.zero)
                       // The track runs between the overlay radius (14) at
@@ -7422,6 +7566,8 @@ class _PositionWidget extends StatelessWidget {
                     ),
                   ],
                 ),
+                  );
+                }),
               ),
               if (ui.isSeeking)
                 Padding(
@@ -7820,12 +7966,30 @@ class _TrackMenuButton extends StatelessWidget {
               ),
             );
             if (confirmed == true) {
-              final deleted = await state.deleteMediaItem(item.path);
+              final outcome = await state.deleteMediaItem(item.path);
               if (context.mounted) {
+                final l10n = context.l10n;
                 Snack.show(
                   context,
-                  deleted ? context.l10n.fileDeleted : context.l10n.couldNotDeleteFile,
-                  level: deleted ? SnackLevel.info : SnackLevel.error,
+                  switch (outcome) {
+                    DeleteOutcome.deleted ||
+                    DeleteOutcome.alreadyGone =>
+                      l10n.fileDeleted,
+                    DeleteOutcome.cancelled => l10n.deleteCancelled,
+                    DeleteOutcome.permissionLost => l10n.deleteFolderAccessLost,
+                    DeleteOutcome.refused => l10n.deleteRefusedBySystem,
+                    DeleteOutcome.failed => l10n.couldNotDeleteFile,
+                  },
+                  level: switch (outcome) {
+                    DeleteOutcome.deleted ||
+                    DeleteOutcome.alreadyGone =>
+                      SnackLevel.info,
+                    DeleteOutcome.cancelled => SnackLevel.info,
+                    DeleteOutcome.permissionLost ||
+                    DeleteOutcome.refused =>
+                      SnackLevel.warning,
+                    DeleteOutcome.failed => SnackLevel.error,
+                  },
                 );
               }
             }

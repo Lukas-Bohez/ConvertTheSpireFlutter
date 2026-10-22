@@ -56,5 +56,5 @@ Bitte spiele, teile und lade nur Inhalte, zu deren Nutzung du berechtigt bist.
 ## Release notes (What's new)
 
 ```text
-Neu: Untertitel für Videos und Songs, die beste Stelle in Schleife, eine große Ansicht, Wiedergabegeschwindigkeit und ein Schlaf-Timer. Synchronisierte Songtexte aus .lrc-Dateien. Lange Videos gehen dort weiter, wo du aufgehört hast. Der Player hat nur noch eine Steuerung und mehr Platz fürs Video, und der Browser blockiert Werbung mit den Listen von uBlock Origin. Behoben: Torrents von Dateien, die du schon hast, seeden sofort, und Videos haben Vorschaubilder.
+Behoben: Dateien im Player löschen funktioniert auf Smartphones. Das kleine Bild-im-Bild-Fenster erscheint nur noch, wenn ein Video läuft, und zeigt nur das Video. PDF in JPEG und PNG funktioniert, und eine fehlgeschlagene Umwandlung meldet das, statt eine falsche Datei zu liefern. Die Meldung „Fortgesetzt bei“ verschwindet von selbst. Neu: Leiste lange drücken, um einen Abschnitt zu wiederholen.
 ```

@@ -8820,6 +8820,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lyrics'**
   String get lyrics;
+
+  /// Settings switch (Android): leaving the app while a video plays opens the small picture-in-picture window.
+  ///
+  /// In en, this message translates to:
+  /// **'Picture-in-picture for videos'**
+  String get pictureInPictureVideos;
+
+  /// Subtitle of the picture-in-picture settings switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaving the app while a video plays keeps it playing in a small window'**
+  String get pictureInPictureVideosHint;
+
+  /// Snackbar: the user said no in the system's confirm-delete dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Not deleted'**
+  String get deleteCancelled;
+
+  /// Snackbar: deleting failed because the app lost its permission for the picked folder (Android).
+  ///
+  /// In en, this message translates to:
+  /// **'The app lost access to this folder. Pick the folder again to delete files.'**
+  String get deleteFolderAccessLost;
+
+  /// Snackbar: the operating system refused to delete the file.
+  ///
+  /// In en, this message translates to:
+  /// **'The system didn\'t allow deleting this file'**
+  String get deleteRefusedBySystem;
+
+  /// Multi-Search source chip: this source is still searching.
+  ///
+  /// In en, this message translates to:
+  /// **'searching…'**
+  String get searchSourceSearching;
+
+  /// Multi-Search source chip: this source found nothing.
+  ///
+  /// In en, this message translates to:
+  /// **'nothing found'**
+  String get searchSourceNothing;
+
+  /// Multi-Search source chip: this source took too long to answer.
+  ///
+  /// In en, this message translates to:
+  /// **'too slow'**
+  String get searchSourceTimedOut;
+
+  /// Multi-Search source chip: this source failed.
+  ///
+  /// In en, this message translates to:
+  /// **'didn\'t work'**
+  String get searchSourceFailed;
+
+  /// Multi-Search source chip: results from this site can only be downloaded on a computer, so it is not searched on a phone.
+  ///
+  /// In en, this message translates to:
+  /// **'on computers only'**
+  String get searchSourceDesktopOnly;
+
+  /// Multi-Search source chip: downloading from this site needs yt-dlp, which is not installed.
+  ///
+  /// In en, this message translates to:
+  /// **'needs yt-dlp'**
+  String get searchSourceNeedsYtDlp;
+
+  /// Multi-Search: every source failed or timed out.
+  ///
+  /// In en, this message translates to:
+  /// **'No source answered. Check your connection and try again.'**
+  String get searchNoSourceAnswered;
+
+  /// Torrent status: the first seconds of a download, before it has any speed.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting'**
+  String get torrentStatusStarting;
+
+  /// Seek-bar menu (long press or right click): loops the 20 seconds around the pressed moment.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop around here'**
+  String get loopAroundHere;
 }
 
 class _AppLocalizationsDelegate

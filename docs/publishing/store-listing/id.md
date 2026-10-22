@@ -56,7 +56,7 @@ Tersedia dalam 18 bahasa. Harap hanya unduh konten yang berhak kamu unduh.
 ## What's new in this version
 
 ```text
-Baru: unduh hanya bagian video atau lagu yang kamu mau. Subtitel untuk video dan lagu: file .srt dan .vtt dimuat otomatis. Lirik tersinkron dari file .lrc. Subtitel di dalam file MKV dan MP4 juga tampil. Ulangi bagian terbaik, ubah kecepatan, pasang pengatur waktu tidur, dan tonton dalam tampilan besar. Video panjang dilanjutkan dari tempat terakhir, dan pemblokir iklan di peramban kini memakai daftar uBlock Origin. Pemutar kini hanya punya satu set kontrol dan lebih banyak ruang untuk video, dan semua warna sudah terbuka. Diperbaiki: program yang diunduh lewat torrent bisa dijalankan saat seeding, torrent dari file yang sudah kamu punya langsung di-seed, dan video di pustaka punya thumbnail.
+Diperbaiki: lagu dengan judul sama tidak lagi saling menimpa atau menghapus. Multi-Search berfungsi lagi. Lagu yang diunduh di browser tetap memiliki judul dan artisnya. PDF ke JPEG dan PNG berfungsi. Torrent yang selesai tidak lagi menampilkan Macet. Pemeriksaan yt-dlp tidak lagi gagal di PC yang lebih lambat. Baru: tekan lama atau klik kanan bilah pemutar untuk mengulang satu bagian.
 ```
 
 ## Product features

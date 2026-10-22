@@ -1447,5 +1447,19 @@
   "partTo": "Tot",
   "addPartsToQueue": "Aan de wachtrij toevoegen ({count} stukken)",
   "partTimesInvalid": "Elk stuk moet na zijn begin eindigen, binnen de video.",
-  "lyrics": "Songtekst"
+  "lyrics": "Songtekst",
+  "pictureInPictureVideos": "Beeld-in-beeld voor video's",
+  "pictureInPictureVideosHint": "Verlaat je de app terwijl een video speelt, dan speelt hij verder in een klein venster",
+  "deleteCancelled": "Niet verwijderd",
+  "deleteFolderAccessLost": "De app heeft geen toegang meer tot deze map. Kies de map opnieuw om bestanden te verwijderen.",
+  "deleteRefusedBySystem": "Het systeem stond het verwijderen van dit bestand niet toe",
+  "searchSourceSearching": "zoekt…",
+  "searchSourceNothing": "niets gevonden",
+  "searchSourceTimedOut": "te traag",
+  "searchSourceFailed": "werkte niet",
+  "searchSourceDesktopOnly": "alleen op computers",
+  "searchSourceNeedsYtDlp": "heeft yt-dlp nodig",
+  "searchNoSourceAnswered": "Geen enkele bron gaf antwoord. Controleer je verbinding en probeer het opnieuw.",
+  "torrentStatusStarting": "Starten",
+  "loopAroundHere": "Herhaal rond hier"
 }

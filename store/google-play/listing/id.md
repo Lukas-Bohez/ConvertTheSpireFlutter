@@ -56,5 +56,5 @@ Harap hanya putar, bagikan, dan unduh konten yang berhak kamu gunakan.
 ## Release notes (What's new)
 
 ```text
-Baru: subtitel untuk video dan lagu, mengulang bagian terbaik, tampilan besar, kecepatan putar, dan pengatur waktu tidur. Lirik tersinkron dari file .lrc. Video panjang dilanjutkan dari tempat terakhir. Pemutar punya satu set kontrol dan lebih banyak ruang untuk video, dan peramban memblokir iklan dengan daftar uBlock Origin. Diperbaiki: torrent dari file yang sudah kamu punya langsung di-seed, dan video punya thumbnail.
+Diperbaiki: menghapus file di pemutar berfungsi di ponsel. Jendela kecil gambar-dalam-gambar kini hanya muncul saat video diputar dan hanya menampilkan video. PDF ke JPEG dan PNG berfungsi, dan konversi yang gagal memberi tahu, bukan memberi file yang salah. Pesan “Dilanjutkan di” hilang sendiri. Baru: tekan lama bilah pemutar untuk mengulang satu bagian.
 ```

@@ -4966,4 +4966,49 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get lyrics => 'الكلمات';
+
+  @override
+  String get pictureInPictureVideos => 'صورة داخل صورة للفيديوهات';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'عند مغادرة التطبيق أثناء تشغيل فيديو، يستمر في نافذة صغيرة';
+
+  @override
+  String get deleteCancelled => 'لم يُحذف';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'فقد التطبيق إذن الوصول إلى هذا المجلد. اختر المجلد مرة أخرى لحذف الملفات.';
+
+  @override
+  String get deleteRefusedBySystem => 'لم يسمح النظام بحذف هذا الملف';
+
+  @override
+  String get searchSourceSearching => 'جارٍ البحث…';
+
+  @override
+  String get searchSourceNothing => 'لا نتائج';
+
+  @override
+  String get searchSourceTimedOut => 'بطيء جدًا';
+
+  @override
+  String get searchSourceFailed => 'لم ينجح';
+
+  @override
+  String get searchSourceDesktopOnly => 'على الحواسيب فقط';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'يتطلب yt-dlp';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'لم يستجب أي مصدر. تحقّق من اتصالك وحاول مرة أخرى.';
+
+  @override
+  String get torrentStatusStarting => 'جارٍ البدء';
+
+  @override
+  String get loopAroundHere => 'كرّر ما حول هذه النقطة';
 }

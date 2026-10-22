@@ -56,7 +56,7 @@ Có 18 ngôn ngữ. Vui lòng chỉ tải nội dung bạn có quyền tải.
 ## What's new in this version
 
 ```text
-Mới: chỉ tải đoạn video hoặc bài hát bạn muốn. Phụ đề cho video và bài hát: tệp .srt và .vtt tự tải. Lời bài hát đồng bộ từ tệp .lrc. Phụ đề có sẵn trong tệp MKV và MP4 cũng hiển thị. Lặp đoạn hay nhất, đổi tốc độ, hẹn giờ tắt và xem ở chế độ xem lớn. Video dài tiếp tục từ chỗ bạn đã dừng, và bộ chặn quảng cáo của trình duyệt giờ dùng danh sách của uBlock Origin. Trình phát giờ chỉ có một bộ nút điều khiển và nhiều chỗ hơn cho video, và mọi màu đều đã mở khóa. Đã sửa: chương trình tải qua torrent chạy được khi đang seeding, torrent của tệp bạn đã có được seed ngay, và video trong thư viện có ảnh thu nhỏ.
+Đã sửa: các bài hát trùng tên không còn ghi đè hay xóa lẫn nhau. Tìm kiếm đa nguồn hoạt động trở lại. Bài hát tải trong trình duyệt giữ nguyên tiêu đề và nghệ sĩ. Chuyển PDF sang JPEG và PNG hoạt động. Torrent đã xong không còn hiện “Bị kẹt”. Kiểm tra yt-dlp không còn lỗi trên máy chậm. Mới: nhấn giữ hoặc nhấp chuột phải vào thanh tua để lặp một đoạn.
 ```
 
 ## Product features

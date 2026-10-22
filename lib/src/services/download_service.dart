@@ -13,6 +13,7 @@ import '../models/media_part.dart';
 import '../models/preview_item.dart';
 import '../models/queue_item.dart';
 import 'android_saf.dart';
+import 'download_naming.dart';
 import 'ffmpeg_service.dart';
 import 'yt_dlp_service.dart';
 
@@ -137,6 +138,7 @@ class DownloadService {
     String? cookiesFile,
     String? cookiesFromBrowser,
     MediaPart? part,
+    String? replaceablePath,
   }) async {
     if (kIsWeb) {
       throw Exception('Downloads are not supported on web.');
@@ -168,15 +170,14 @@ class DownloadService {
 
     onProgress(0, DownloadStatus.downloading);
 
-    final outputFolder = (isSafOutput || useMediaStoreOnly)
-        ? await _resolveTempFolder()
+    final finalFolder = (isSafOutput || useMediaStoreOnly)
+        ? null
         : (createFormatSubfolders
             ? await _resolveOutputFolder(outputDir, formatLower)
             : Directory(outputDir));
-    await outputFolder.create(recursive: true);
-
-    final outputPath =
-        '${outputFolder.path}${Platform.pathSeparator}$safeTitle.$formatLower';
+    final workDir =
+        await DownloadNaming.createWorkDir(await _resolveTempFolder());
+    final outputPath = p.join(workDir.path, '$safeTitle.$formatLower');
 
     // Build browser-like headers for difficult sites
     final headers = <String, String>{..._browserHeaders};
@@ -208,13 +209,13 @@ class DownloadService {
       );
 
       if (token.cancelled) {
-        await _safeDelete(outputPath);
+        await _safeDeleteDir(workDir.path);
         throw Exception('Cancelled');
       }
 
       onProgress(98, DownloadStatus.converting);
 
-      return _finalizeOutput(
+      return await _finalizeOutput(
         outputPath: outputPath,
         outputDir: outputDir,
         safeTitle: safeTitle,
@@ -222,7 +223,10 @@ class DownloadService {
         thumbBytes: null,
         isSafOutput: isSafOutput,
         useMediaStoreOnly: useMediaStoreOnly,
-        outputFolder: outputFolder,
+        workDir: workDir,
+        finalFolder: finalFolder,
+        videoId: null,
+        replaceablePath: replaceablePath,
       );
     } catch (e) {
       await _safeDelete(outputPath);
@@ -260,7 +264,7 @@ class DownloadService {
           );
           if (!token.cancelled) {
             onProgress(98, DownloadStatus.converting);
-            return _finalizeOutput(
+            return await _finalizeOutput(
               outputPath: outputPath,
               outputDir: outputDir,
               safeTitle: safeTitle,
@@ -268,15 +272,18 @@ class DownloadService {
               thumbBytes: null,
               isSafOutput: isSafOutput,
               useMediaStoreOnly: useMediaStoreOnly,
-              outputFolder: outputFolder,
+              workDir: workDir,
+              finalFolder: finalFolder,
+              videoId: null,
+              replaceablePath: replaceablePath,
             );
           }
         } catch (_) {
-          await _safeDelete(outputPath);
           // Fall through to user-friendly error below
         }
       }
 
+      await _safeDeleteDir(workDir.path);
       throw Exception(translateError(msg));
     }
   }
@@ -298,6 +305,7 @@ class DownloadService {
     String? cookiesFile,
     String? cookiesFromBrowser,
     MediaPart? part,
+    String? replaceablePath,
   }) async {
     if (kIsWeb) {
       throw Exception(
@@ -337,16 +345,26 @@ class DownloadService {
       sourceArtist: video?.author,
     );
     final safeTitle = _partTitle(_sanitizeFileName(downloadTitle), part);
+    final videoId = VideoId.parseVideoId(item.url);
+    final finalFolder = (isSafOutput || useMediaStoreOnly)
+        ? null
+        : (createFormatSubfolders
+            ? await _resolveOutputFolder(outputDir, formatLower)
+            : Directory(outputDir));
 
     // -- yt-dlp fast-path (when available)
     // yt-dlp handles throttle-token decryption, chunked downloads, and
     // adaptive stream merging natively - bypassing the youtube_explode_dart
     // stream issues that cause 403 errors on HD adaptive streams.
     if (resolvedYtDlp != null) {
-      final id = VideoId.parseVideoId(item.url);
       return _downloadWithYtDlp(
+        videoId: videoId,
+        finalFolder: finalFolder,
+        replaceablePath: replaceablePath,
         thumbnailUrl: video?.thumbnails.highResUrl ??
-            (id == null ? null : 'https://i.ytimg.com/vi/$id/hqdefault.jpg'),
+            (videoId == null
+                ? null
+                : 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg'),
         url: item.url,
         downloadTitle: downloadTitle,
         downloadArtist: downloadArtist,
@@ -393,12 +411,11 @@ class DownloadService {
     }
     final bool ffmpegAvailable = await ffmpeg.isAvailable(ffmpegPath);
 
-    final outputFolder = (isSafOutput || useMediaStoreOnly)
-        ? await _resolveTempFolder()
-        : (createFormatSubfolders
-            ? await _resolveOutputFolder(outputDir, formatLower)
-            : Directory(outputDir));
-    await outputFolder.create(recursive: true);
+    // Everything is written in a folder of its own and moved into the
+    // download folder only when it is done (fix 8): the file being written
+    // used to be truncated in place, emptying another song of the same name.
+    final outputFolder =
+        await DownloadNaming.createWorkDir(await _resolveTempFolder());
 
     // Track all temp files so we can clean up on success OR failure
     final tempFiles = <String>[];
@@ -569,7 +586,7 @@ class DownloadService {
             ffmpegPath: ffmpegPath, video: formatLower == 'mp4');
       }
 
-      return _finalizeOutput(
+      return await _finalizeOutput(
         outputPath: outputPath,
         outputDir: outputDir,
         safeTitle: safeTitle,
@@ -577,13 +594,14 @@ class DownloadService {
         thumbBytes: thumbBytes,
         isSafOutput: isSafOutput,
         useMediaStoreOnly: useMediaStoreOnly,
-        outputFolder: outputFolder,
+        workDir: outputFolder,
+        finalFolder: finalFolder,
+        videoId: videoId,
+        replaceablePath: replaceablePath,
       );
     } catch (e) {
-      // Clean up ALL temp files on failure so we don't leave .webm/.jpg garbage
-      for (final f in tempFiles) {
-        await _safeDelete(f);
-      }
+      // The work folder holds this download's files and nothing else.
+      await _safeDeleteDir(outputFolder.path);
       rethrow;
     }
   }
@@ -595,6 +613,9 @@ class DownloadService {
   /// youtube_explode_dart.
   Future<DownloadResult> _downloadWithYtDlp({
     MediaPart? part,
+    required String? videoId,
+    required Directory? finalFolder,
+    required String? replaceablePath,
     required String? thumbnailUrl,
     required String url,
     required String downloadTitle,
@@ -619,14 +640,13 @@ class DownloadService {
     debugPrint('DownloadService: using yt-dlp path for "$safeTitle"');
     onProgress(0, DownloadStatus.downloading);
 
-    // Resolve output folder (same structure as normal downloads)
-    final outputFolder = (isSafOutput || useMediaStoreOnly)
-        ? await _resolveTempFolder()
-        : await _resolveOutputFolder(outputDir, format);
-    await outputFolder.create(recursive: true);
-
-    final outputPath =
-        '${outputFolder.path}${Platform.pathSeparator}$safeTitle.$format';
+    // yt-dlp writes into a folder of its own. Its clean-up after a failed or
+    // cancelled run deletes every file with the output's name in that folder,
+    // which in the download folder itself was the earlier song with the same
+    // title (fix 8).
+    final workDir =
+        await DownloadNaming.createWorkDir(await _resolveTempFolder());
+    final outputPath = p.join(workDir.path, '$safeTitle.$format');
 
     // Fetch thumbnail via youtube_explode_dart for display in the queue
     Uint8List? thumbBytes =
@@ -660,13 +680,12 @@ class DownloadService {
       );
 
       if (token.cancelled) {
-        await _safeDelete(outputPath);
         throw Exception('Cancelled');
       }
 
       onProgress(98, DownloadStatus.converting);
 
-      return _finalizeOutput(
+      return await _finalizeOutput(
         outputPath: outputPath,
         outputDir: outputDir,
         safeTitle: safeTitle,
@@ -674,10 +693,13 @@ class DownloadService {
         thumbBytes: thumbBytes,
         isSafOutput: isSafOutput,
         useMediaStoreOnly: useMediaStoreOnly,
-        outputFolder: outputFolder,
+        workDir: workDir,
+        finalFolder: finalFolder,
+        videoId: videoId,
+        replaceablePath: replaceablePath,
       );
     } catch (e) {
-      await _safeDelete(outputPath);
+      await _safeDeleteDir(workDir.path);
       rethrow;
     }
   }
@@ -757,23 +779,40 @@ class DownloadService {
     String? sourceTitle,
   }) {
     final preferred = preferredTitle.trim();
+    final source = sourceTitle?.trim() ?? '';
+    if (preferred.isNotEmpty && !isPlaceholderName(preferred)) return preferred;
+    if (source.isNotEmpty) return source;
     if (preferred.isNotEmpty) return preferred;
-    final source = sourceTitle?.trim();
-    if (source != null && source.isNotEmpty) return source;
     return 'download';
   }
 
   /// Prefer the artist/uploader shown in the app; only fall back to the
-  /// source metadata when the preferred value is blank.
+  /// source metadata when the preferred value is blank or only names the
+  /// site.
   static String resolveDownloadArtist(
     String preferredArtist, {
     String? sourceArtist,
   }) {
     final preferred = preferredArtist.trim();
+    final source = sourceArtist?.trim() ?? '';
+    if (preferred.isNotEmpty && !isPlaceholderName(preferred)) return preferred;
+    if (source.isNotEmpty) return source;
     if (preferred.isNotEmpty) return preferred;
-    final source = sourceArtist?.trim();
-    if (source != null && source.isNotEmpty) return source;
     return 'Unknown';
+  }
+
+  /// A value that names the site or the page, not the song: "YouTube", a
+  /// host name, the link itself. The in-app browser queued YouTube songs
+  /// with title and artist "YouTube", and those beat the video's own
+  /// metadata, so files came out as YouTube.mp3 (issue #45, fix 9).
+  static bool isPlaceholderName(String value) {
+    final v = value.trim().toLowerCase();
+    if (v.isEmpty) return true;
+    const siteNames = {'youtube', 'youtube music', 'web', 'unknown'};
+    if (siteNames.contains(v)) return true;
+    if (v.startsWith('http://') || v.startsWith('https://')) return true;
+    return RegExp(r'^(www\.|m\.|music\.)?[a-z0-9-]+\.(com|be|net|org|tv)$')
+        .hasMatch(v);
   }
 
   /// Move the final output file to SAF / Downloads / local, cleaning up temp.
@@ -805,6 +844,9 @@ class DownloadService {
     await File(cut).rename(path);
   }
 
+  /// Moves the finished file from this download's [workDir] to where it is
+  /// kept, under a name no other download has (fix 8), and removes
+  /// [workDir]. [finalFolder] is null for an Android SAF folder or Downloads.
   Future<DownloadResult> _finalizeOutput({
     required String outputPath,
     required String outputDir,
@@ -813,65 +855,79 @@ class DownloadService {
     required Uint8List? thumbBytes,
     required bool isSafOutput,
     required bool useMediaStoreOnly,
-    required Directory outputFolder,
+    required Directory workDir,
+    required Directory? finalFolder,
+    required String? videoId,
+    required String? replaceablePath,
   }) async {
-    if (isSafOutput) {
-      var effectiveTreeUri = outputDir;
-      var destUri = await _copyFileToSaf(
-        treeUri: effectiveTreeUri,
-        sourcePath: outputPath,
-        safeTitle: safeTitle,
-        formatLower: formatLower,
-      );
+    final altTitle = videoId == null ? null : '$safeTitle [$videoId]';
+    try {
+      if (isSafOutput) {
+        var effectiveTreeUri = outputDir;
+        var destUri = await _copyFileToSaf(
+          treeUri: effectiveTreeUri,
+          sourcePath: outputPath,
+          safeTitle: safeTitle,
+          altTitle: altTitle,
+          formatLower: formatLower,
+        );
 
-      // SAF copy failed - ask the user to re-grant / pick a new folder.
-      if (destUri == null && onSafAccessDenied != null) {
-        final newUri = await onSafAccessDenied!();
-        if (newUri != null && newUri.isNotEmpty) {
-          effectiveTreeUri = newUri;
-          destUri = await _copyFileToSaf(
-            treeUri: effectiveTreeUri,
+        // SAF copy failed - ask the user to re-grant / pick a new folder.
+        if (destUri == null && onSafAccessDenied != null) {
+          final newUri = await onSafAccessDenied!();
+          if (newUri != null && newUri.isNotEmpty) {
+            effectiveTreeUri = newUri;
+            destUri = await _copyFileToSaf(
+              treeUri: effectiveTreeUri,
+              sourcePath: outputPath,
+              safeTitle: safeTitle,
+              altTitle: altTitle,
+              formatLower: formatLower,
+            );
+          }
+        }
+
+        if (destUri == null) {
+          // Last resort: save to system Downloads so the file is not lost.
+          final fallbackUri = await _copyFileToDownloads(
             sourcePath: outputPath,
             safeTitle: safeTitle,
+            altTitle: altTitle,
             formatLower: formatLower,
           );
+          if (fallbackUri == null) {
+            throw Exception('Failed to save file to selected folder');
+          }
+          return DownloadResult(path: fallbackUri, thumbnail: thumbBytes);
         }
+        return DownloadResult(path: destUri, thumbnail: thumbBytes);
       }
 
-      if (destUri == null) {
-        // Last resort: save to system Downloads so the file is not lost.
+      if (useMediaStoreOnly || finalFolder == null) {
         final fallbackUri = await _copyFileToDownloads(
           sourcePath: outputPath,
           safeTitle: safeTitle,
+          altTitle: altTitle,
           formatLower: formatLower,
         );
         if (fallbackUri == null) {
-          throw Exception('Failed to save file to selected folder');
+          throw Exception('Failed to save file to Downloads');
         }
-        await _safeDelete(outputPath);
-        await _safeDeleteDir(outputFolder.path);
         return DownloadResult(path: fallbackUri, thumbnail: thumbBytes);
       }
-      await _safeDelete(outputPath);
-      await _safeDeleteDir(outputFolder.path);
-      return DownloadResult(path: destUri, thumbnail: thumbBytes);
-    }
 
-    if (useMediaStoreOnly) {
-      final fallbackUri = await _copyFileToDownloads(
-        sourcePath: outputPath,
-        safeTitle: safeTitle,
-        formatLower: formatLower,
+      final dest = await DownloadNaming.placeLocal(
+        source: outputPath,
+        folder: finalFolder,
+        stem: safeTitle,
+        ext: formatLower,
+        videoId: videoId,
+        replaceablePath: replaceablePath,
       );
-      if (fallbackUri == null) {
-        throw Exception('Failed to save file to Downloads');
-      }
-      await _safeDelete(outputPath);
-      await _safeDeleteDir(outputFolder.path);
-      return DownloadResult(path: fallbackUri, thumbnail: thumbBytes);
+      return DownloadResult(path: dest, thumbnail: thumbBytes);
+    } finally {
+      await _safeDeleteDir(workDir.path);
     }
-
-    return DownloadResult(path: outputPath, thumbnail: thumbBytes);
   }
 
   /// Download a stream using YouTube-native chunked range parameters.
@@ -1579,18 +1635,21 @@ class DownloadService {
     }
   }
 
+  /// [altTitle] is the name to use when [safeTitle] is taken (fix 8): the
+  /// native side never replaces a file of another name any more.
   Future<String?> _copyFileToSaf({
     required String treeUri,
     required String sourcePath,
     required String safeTitle,
+    required String? altTitle,
     required String formatLower,
   }) async {
-    final displayName = '$safeTitle.$formatLower';
     final mimeType = _mimeForFormat(formatLower);
     return _saf.copyToTree(
       treeUri: treeUri,
       sourcePath: sourcePath,
-      displayName: displayName,
+      displayName: '$safeTitle.$formatLower',
+      altDisplayName: altTitle == null ? null : '$altTitle.$formatLower',
       mimeType: mimeType,
       subdir: formatLower,
     );
@@ -1599,13 +1658,14 @@ class DownloadService {
   Future<String?> _copyFileToDownloads({
     required String sourcePath,
     required String safeTitle,
+    required String? altTitle,
     required String formatLower,
   }) async {
-    final displayName = '$safeTitle.$formatLower';
     final mimeType = _mimeForFormat(formatLower);
     return _saf.copyToDownloads(
       sourcePath: sourcePath,
-      displayName: displayName,
+      displayName: '$safeTitle.$formatLower',
+      altDisplayName: altTitle == null ? null : '$altTitle.$formatLower',
       mimeType: mimeType,
       subdir: formatLower,
     );

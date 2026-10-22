@@ -56,7 +56,7 @@ Beschikbaar in 18 talen. Download alleen inhoud die je mag downloaden.
 ## What's new in this version
 
 ```text
-Nieuw: download alleen het stuk van een video of liedje dat je wilt. Ondertitels voor video's en liedjes: .srt- en .vtt-bestanden laden vanzelf. Meelopende songteksten uit .lrc-bestanden. Ook ondertitels in MKV- en MP4-bestanden verschijnen. Herhaal het beste stuk, verander de snelheid, zet een slaaptimer en kijk in groot beeld. Lange video's gaan verder waar je gebleven was, en de adblocker van de browser gebruikt nu de lijsten van uBlock Origin. De speler heeft nog maar één set knoppen en meer ruimte voor de video, en alle kleuren zijn vrijgespeeld. Opgelost: een programma dat via torrent binnenkwam start terwijl het seedt, torrents van bestanden die je al hebt seeden meteen, en video's in je bibliotheek hebben miniaturen.
+Opgelost: nummers met dezelfde titel overschrijven of verwijderen elkaar niet meer. Multi-zoeken werkt weer. Nummers die in de browser worden gedownload houden hun titel en artiest. PDF naar JPEG en PNG werkt. Klare torrents zeggen niet meer ‘Vastgelopen’. De yt-dlp-controle mislukt niet meer op tragere pc's. Nieuw: houd de zoekbalk ingedrukt of klik met rechts om een stuk te herhalen.
 ```
 
 ## Product features

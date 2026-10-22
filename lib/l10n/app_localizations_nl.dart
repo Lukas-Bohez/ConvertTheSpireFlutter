@@ -5017,4 +5017,50 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get lyrics => 'Songtekst';
+
+  @override
+  String get pictureInPictureVideos => 'Beeld-in-beeld voor video\'s';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Verlaat je de app terwijl een video speelt, dan speelt hij verder in een klein venster';
+
+  @override
+  String get deleteCancelled => 'Niet verwijderd';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'De app heeft geen toegang meer tot deze map. Kies de map opnieuw om bestanden te verwijderen.';
+
+  @override
+  String get deleteRefusedBySystem =>
+      'Het systeem stond het verwijderen van dit bestand niet toe';
+
+  @override
+  String get searchSourceSearching => 'zoekt…';
+
+  @override
+  String get searchSourceNothing => 'niets gevonden';
+
+  @override
+  String get searchSourceTimedOut => 'te traag';
+
+  @override
+  String get searchSourceFailed => 'werkte niet';
+
+  @override
+  String get searchSourceDesktopOnly => 'alleen op computers';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'heeft yt-dlp nodig';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'Geen enkele bron gaf antwoord. Controleer je verbinding en probeer het opnieuw.';
+
+  @override
+  String get torrentStatusStarting => 'Starten';
+
+  @override
+  String get loopAroundHere => 'Herhaal rond hier';
 }

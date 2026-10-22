@@ -5009,4 +5009,50 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get lyrics => 'Şarkı sözleri';
+
+  @override
+  String get pictureInPictureVideos => 'Videolar için resim içinde resim';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Video oynarken uygulamadan çıkınca küçük bir pencerede oynamaya devam eder';
+
+  @override
+  String get deleteCancelled => 'Silinmedi';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'Uygulama bu klasöre erişimini kaybetti. Dosyaları silmek için klasörü yeniden seçin.';
+
+  @override
+  String get deleteRefusedBySystem =>
+      'Sistem bu dosyanın silinmesine izin vermedi';
+
+  @override
+  String get searchSourceSearching => 'aranıyor…';
+
+  @override
+  String get searchSourceNothing => 'sonuç yok';
+
+  @override
+  String get searchSourceTimedOut => 'çok yavaş';
+
+  @override
+  String get searchSourceFailed => 'çalışmadı';
+
+  @override
+  String get searchSourceDesktopOnly => 'yalnızca bilgisayarda';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'yt-dlp gerekli';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'Hiçbir kaynak yanıt vermedi. Bağlantınızı kontrol edip tekrar deneyin.';
+
+  @override
+  String get torrentStatusStarting => 'Başlıyor';
+
+  @override
+  String get loopAroundHere => 'Buranın çevresini döngüye al';
 }

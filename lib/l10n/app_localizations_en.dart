@@ -4989,4 +4989,50 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lyrics => 'Lyrics';
+
+  @override
+  String get pictureInPictureVideos => 'Picture-in-picture for videos';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Leaving the app while a video plays keeps it playing in a small window';
+
+  @override
+  String get deleteCancelled => 'Not deleted';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'The app lost access to this folder. Pick the folder again to delete files.';
+
+  @override
+  String get deleteRefusedBySystem =>
+      'The system didn\'t allow deleting this file';
+
+  @override
+  String get searchSourceSearching => 'searching…';
+
+  @override
+  String get searchSourceNothing => 'nothing found';
+
+  @override
+  String get searchSourceTimedOut => 'too slow';
+
+  @override
+  String get searchSourceFailed => 'didn\'t work';
+
+  @override
+  String get searchSourceDesktopOnly => 'on computers only';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'needs yt-dlp';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'No source answered. Check your connection and try again.';
+
+  @override
+  String get torrentStatusStarting => 'Starting';
+
+  @override
+  String get loopAroundHere => 'Loop around here';
 }

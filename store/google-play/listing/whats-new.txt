@@ -1,54 +1,54 @@
 <en-US>
-New: subtitles for videos and songs, looping the best part, a large view, playback speed and a sleep timer. Synced lyrics from .lrc files. Long videos open where you left off. The player has one set of controls and more room for the video, and the browser blocks ads with uBlock Origin's lists. Fixed: torrents of files you already have seed at once, and videos in your library have thumbnails.
+Fixed: deleting files in the player works on phones. The small picture-in-picture window now appears only while a video plays, and shows just the video. PDF to JPEG and PNG works, and a conversion that fails says so instead of giving you the wrong file. The “Continued at” message goes away by itself. New: press and hold the seek bar to loop a part.
 </en-US>
 <de-DE>
-Neu: Untertitel für Videos und Songs, die beste Stelle in Schleife, eine große Ansicht, Wiedergabegeschwindigkeit und ein Schlaf-Timer. Synchronisierte Songtexte aus .lrc-Dateien. Lange Videos gehen dort weiter, wo du aufgehört hast. Der Player hat nur noch eine Steuerung und mehr Platz fürs Video, und der Browser blockiert Werbung mit den Listen von uBlock Origin. Behoben: Torrents von Dateien, die du schon hast, seeden sofort, und Videos haben Vorschaubilder.
+Behoben: Dateien im Player löschen funktioniert auf Smartphones. Das kleine Bild-im-Bild-Fenster erscheint nur noch, wenn ein Video läuft, und zeigt nur das Video. PDF in JPEG und PNG funktioniert, und eine fehlgeschlagene Umwandlung meldet das, statt eine falsche Datei zu liefern. Die Meldung „Fortgesetzt bei“ verschwindet von selbst. Neu: Leiste lange drücken, um einen Abschnitt zu wiederholen.
 </de-DE>
 <nl-NL>
-Nieuw: ondertitels voor video's en liedjes, het beste stuk herhalen, groot beeld, afspeelsnelheid en een slaaptimer. Meelopende songteksten uit .lrc-bestanden. Lange video's gaan verder waar je gebleven was. De speler heeft één set knoppen en meer ruimte voor de video, en de browser blokkeert advertenties met de lijsten van uBlock Origin. Opgelost: torrents van bestanden die je al hebt seeden meteen, en video's hebben miniaturen.
+Opgelost: bestanden verwijderen in de speler werkt op telefoons. Het kleine beeld-in-beeldvenster verschijnt alleen nog terwijl een video speelt en toont alleen de video. PDF naar JPEG en PNG werkt, en een mislukte omzetting meldt dat in plaats van een verkeerd bestand te geven. De melding ‘Verdergegaan op’ verdwijnt vanzelf. Nieuw: houd de zoekbalk ingedrukt om een stuk te herhalen.
 </nl-NL>
 <fr-FR>
-Nouveau : sous-titres pour les vidéos et les chansons, meilleur passage en boucle, grand affichage, vitesse de lecture et minuteur de veille. Paroles synchronisées depuis les fichiers .lrc. Les longues vidéos reprennent là où vous vous étiez arrêté. Le lecteur n'a plus qu'un jeu de commandes et plus de place pour la vidéo, et le navigateur bloque les pubs avec les listes d'uBlock Origin. Corrigé : les torrents de fichiers déjà présents se partagent aussitôt, et les vidéos ont des miniatures.
+Corrigé : la suppression de fichiers dans le lecteur fonctionne sur téléphone. La petite fenêtre image dans l'image n'apparaît plus que pendant la lecture d'une vidéo et n'affiche que la vidéo. PDF vers JPEG et PNG fonctionne, et une conversion qui échoue le dit au lieu de donner un mauvais fichier. Le message « Repris à » disparaît tout seul. Nouveau : appui long sur la barre de lecture pour boucler un passage.
 </fr-FR>
 <es-ES>
-Novedades: subtítulos para vídeos y canciones, la mejor parte en bucle, vista grande, velocidad de reproducción y temporizador. Letras sincronizadas desde archivos .lrc. Los vídeos largos siguen donde los dejaste. El reproductor tiene un solo juego de controles y más espacio para el vídeo, y el navegador bloquea anuncios con las listas de uBlock Origin. Corregido: los torrents de archivos que ya tienes se comparten al instante y los vídeos tienen miniaturas.
+Corregido: borrar archivos en el reproductor funciona en el móvil. La pequeña ventana de imagen en imagen solo aparece mientras se reproduce un vídeo y muestra solo el vídeo. PDF a JPEG y PNG funciona, y si una conversión falla lo dice en lugar de dar un archivo equivocado. El aviso «Continuado en» desaparece solo. Novedad: mantén pulsada la barra de progreso para repetir una parte.
 </es-ES>
 <it-IT>
-Novità: sottotitoli per video e canzoni, la parte migliore in loop, vista grande, velocità di riproduzione e timer di spegnimento. Testi sincronizzati dai file .lrc. I video lunghi riprendono da dove eri rimasto. Il lettore ha un solo set di comandi e più spazio per il video, e il browser blocca la pubblicità con le liste di uBlock Origin. Corretto: i torrent di file che hai già vanno subito in seeding e i video hanno le miniature.
+Corretto: eliminare file nel lettore funziona su telefono. La piccola finestra immagine nell'immagine appare solo mentre un video è in riproduzione e mostra solo il video. PDF in JPEG e PNG funziona, e una conversione fallita lo dice invece di dare un file sbagliato. Il messaggio «Ripreso da» scompare da solo. Novità: tieni premuta la barra di avanzamento per ripetere un passaggio.
 </it-IT>
 <pt-BR>
-Novo: legendas para vídeos e músicas, a melhor parte em repetição, visualização ampliada, velocidade de reprodução e timer de desligamento. Letras sincronizadas de arquivos .lrc. Vídeos longos continuam de onde você parou. O player tem um só conjunto de controles e mais espaço para o vídeo, e o navegador bloqueia anúncios com as listas do uBlock Origin. Corrigido: torrents de arquivos que você já tem são semeados na hora e os vídeos têm miniaturas.
+Corrigido: excluir arquivos no player funciona no celular. A pequena janela de picture-in-picture só aparece enquanto um vídeo toca e mostra apenas o vídeo. PDF para JPEG e PNG funciona, e uma conversão que falha avisa em vez de entregar o arquivo errado. A mensagem “Continuado em” some sozinha. Novo: pressione e segure a barra de progresso para repetir um trecho.
 </pt-BR>
 <pl-PL>
-Nowość: napisy do filmów i piosenek, zapętlanie najlepszego fragmentu, duży widok, prędkość odtwarzania i wyłącznik czasowy. Zsynchronizowane teksty z plików .lrc. Długie filmy wracają tam, gdzie skończyłeś. Odtwarzacz ma jeden zestaw przycisków i więcej miejsca na film, a przeglądarka blokuje reklamy listami uBlock Origin. Naprawione: torrenty plików, które już masz, od razu się seedują, a filmy mają miniatury.
+Naprawiono: usuwanie plików w odtwarzaczu działa na telefonach. Małe okno obrazu w obrazie pojawia się teraz tylko podczas odtwarzania filmu i pokazuje sam film. Zamiana PDF na JPEG i PNG działa, a nieudana konwersja informuje o tym zamiast dawać zły plik. Komunikat „Wznowiono od” znika sam. Nowość: przytrzymaj pasek postępu, aby zapętlić fragment.
 </pl-PL>
 <ru-RU>
-Новое: субтитры для видео и песен, повтор лучшего фрагмента, большой экран, скорость воспроизведения и таймер сна. Синхронный текст песен из файлов .lrc. Длинные видео продолжаются с того места, где вы остановились. У плеера один набор кнопок и больше места для видео, а браузер блокирует рекламу по спискам uBlock Origin. Исправлено: торренты файлов, которые у вас уже есть, сразу раздаются, а у видео есть миниатюры.
+Исправлено: удаление файлов в плеере работает на телефонах. Маленькое окно «картинка в картинке» теперь появляется только во время воспроизведения видео и показывает только видео. Преобразование PDF в JPEG и PNG работает, а при неудаче вы видите причину вместо неверного файла. Сообщение «Продолжено с» исчезает само. Новое: нажмите и удерживайте полосу перемотки, чтобы зациклить фрагмент.
 </ru-RU>
 <uk>
-Нове: субтитри для відео й пісень, повтор найкращого фрагмента, великий екран, швидкість відтворення і таймер сну. Синхронний текст пісень із файлів .lrc. Довгі відео продовжуються з того місця, де ви зупинилися. У програвача один набір кнопок і більше місця для відео, а браузер блокує рекламу за списками uBlock Origin. Виправлено: торенти файлів, які у вас уже є, одразу роздаються, а відео мають мініатюри.
+Виправлено: видалення файлів у програвачі працює на телефонах. Маленьке вікно «картинка в картинці» тепер з'являється лише під час відтворення відео й показує тільки відео. Перетворення PDF на JPEG і PNG працює, а якщо воно не вдалося, ви бачите причину замість хибного файлу. Повідомлення «Продовжено з» зникає саме. Нове: натисніть і втримуйте смугу перемотування, щоб зациклити фрагмент.
 </uk>
 <tr-TR>
-Yeni: videolar ve şarkılar için altyazı, en iyi bölümü döngüye alma, büyük görünüm, oynatma hızı ve uyku zamanlayıcısı. .lrc dosyalarından senkronize şarkı sözleri. Uzun videolar kaldığın yerden devam eder. Oynatıcının tek bir kontrol seti ve videoya daha fazla yeri var; tarayıcı reklamları uBlock Origin'in listeleriyle engeller. Düzeltildi: zaten sahip olduğun dosyaların torrentleri hemen paylaşılır ve videoların küçük resimleri var.
+Düzeltildi: oynatıcıda dosya silme telefonlarda çalışıyor. Küçük resim içinde resim penceresi artık yalnızca bir video oynarken görünüyor ve sadece videoyu gösteriyor. PDF'den JPEG ve PNG'ye dönüştürme çalışıyor; dönüştürme başarısız olursa yanlış dosya vermek yerine bunu söylüyor. “Şuradan devam edildi” mesajı kendiliğinden kayboluyor. Yeni: bir bölümü döngüye almak için ilerleme çubuğuna uzun basın.
 </tr-TR>
 <ar>
-جديد: ترجمة للفيديوهات والأغاني، وتكرار أفضل جزء، وعرض كبير، وسرعة التشغيل، ومؤقت النوم. كلمات متزامنة من ملفات .lrc. تُستأنف الفيديوهات الطويلة من حيث توقفت. للمشغّل مجموعة أزرار واحدة ومساحة أكبر للفيديو، والمتصفح يحجب الإعلانات بقوائم uBlock Origin. تم الإصلاح: ملفات التورنت لملفات لديك أصلًا تُشارَك فورًا، وللفيديوهات صور مصغّرة.
+تم الإصلاح: حذف الملفات من المشغّل يعمل على الهواتف. نافذة «صورة داخل صورة» الصغيرة تظهر الآن فقط أثناء تشغيل فيديو وتعرض الفيديو وحده. تحويل PDF إلى JPEG وPNG يعمل، وإذا فشل التحويل تظهر رسالة بدل ملف خاطئ. رسالة «تابعنا من» تختفي من تلقاء نفسها. جديد: اضغط مطولًا على شريط التقدم لتكرار مقطع.
 </ar>
 <hi-IN>
-नया: वीडियो और गानों के लिए सबटाइटल, सबसे अच्छा हिस्सा दोहराना, बड़ा दृश्य, प्लेबैक स्पीड और स्लीप टाइमर। .lrc फ़ाइलों से सिंक किए हुए बोल। लंबे वीडियो वहीं से शुरू होते हैं जहां आपने छोड़ा था। प्लेयर में कंट्रोल का एक ही सेट है और वीडियो के लिए ज़्यादा जगह, और ब्राउज़र uBlock Origin की सूचियों से विज्ञापन रोकता है। ठीक किया गया: जो फ़ाइलें पहले से आपके पास हैं उनके टॉरेंट तुरंत सीड होते हैं, और वीडियो में थंबनेल हैं।
+ठीक किया: प्लेयर में फ़ाइलें हटाना अब फ़ोन पर काम करता है। छोटी पिक्चर-इन-पिक्चर विंडो अब केवल वीडियो चलने पर दिखती है और सिर्फ़ वीडियो दिखाती है। PDF से JPEG और PNG बनाना काम करता है, और रूपांतरण विफल होने पर ग़लत फ़ाइल देने के बजाय बताया जाता है। “यहाँ से जारी” संदेश अपने आप हट जाता है। नया: किसी हिस्से को दोहराने के लिए सीक बार को देर तक दबाएँ।
 </hi-IN>
 <id>
-Baru: subtitel untuk video dan lagu, mengulang bagian terbaik, tampilan besar, kecepatan putar, dan pengatur waktu tidur. Lirik tersinkron dari file .lrc. Video panjang dilanjutkan dari tempat terakhir. Pemutar punya satu set kontrol dan lebih banyak ruang untuk video, dan peramban memblokir iklan dengan daftar uBlock Origin. Diperbaiki: torrent dari file yang sudah kamu punya langsung di-seed, dan video punya thumbnail.
+Diperbaiki: menghapus file di pemutar berfungsi di ponsel. Jendela kecil gambar-dalam-gambar kini hanya muncul saat video diputar dan hanya menampilkan video. PDF ke JPEG dan PNG berfungsi, dan konversi yang gagal memberi tahu, bukan memberi file yang salah. Pesan “Dilanjutkan di” hilang sendiri. Baru: tekan lama bilah pemutar untuk mengulang satu bagian.
 </id>
 <vi>
-Mới: phụ đề cho video và bài hát, lặp đoạn hay nhất, chế độ xem lớn, tốc độ phát và hẹn giờ tắt. Lời bài hát đồng bộ từ tệp .lrc. Video dài tiếp tục từ chỗ bạn đã dừng. Trình phát chỉ còn một bộ nút điều khiển và nhiều chỗ hơn cho video, và trình duyệt chặn quảng cáo bằng danh sách của uBlock Origin. Đã sửa: torrent của tệp bạn đã có được seed ngay, và video có ảnh thu nhỏ.
+Đã sửa: xóa tệp trong trình phát hoạt động trên điện thoại. Cửa sổ hình trong hình nhỏ chỉ xuất hiện khi đang phát video và chỉ hiện video. Chuyển PDF sang JPEG và PNG hoạt động, và khi chuyển đổi thất bại sẽ báo thay vì đưa tệp sai. Thông báo “Tiếp tục từ” tự biến mất. Mới: nhấn giữ thanh tua để lặp một đoạn.
 </vi>
 <ja-JP>
-新機能：動画と曲の字幕、好きなパートのループ、大きく表示、再生速度、スリープタイマー。.lrc ファイルによる歌詞の同期表示。長い動画は前回の続きから再生。プレーヤーの操作ボタンはひとつにまとまり、動画が大きくなりました。ブラウザは uBlock Origin のリストで広告をブロックします。修正：すでに持っているファイルのトレントはすぐにシードされ、動画にサムネイルが付きました。
+修正:プレーヤーでのファイル削除がスマートフォンで使えます。小さなピクチャー・イン・ピクチャー画面は動画の再生中だけ表示され、動画だけを映します。PDFからJPEG・PNGへの変換が使え、変換に失敗したときは誤ったファイルではなく理由を表示します。「続きから再生」の表示は自動で消えます。新機能:シークバーを長押しして区間をループできます。
 </ja-JP>
 <ko-KR>
-새 기능: 동영상과 노래 자막, 가장 좋은 구간 반복, 크게 보기, 재생 속도, 취침 타이머. .lrc 파일로 가사 동기화. 긴 동영상은 멈춘 곳부터 이어서 재생됩니다. 플레이어는 조작 버튼이 한 세트뿐이고 동영상 공간이 넓어졌으며, 브라우저는 uBlock Origin의 목록으로 광고를 차단합니다. 수정: 이미 있는 파일의 토렌트는 바로 시딩되고, 동영상에 썸네일이 생겼습니다.
+수정: 플레이어에서 파일 삭제가 휴대전화에서 작동합니다. 작은 화면 속 화면 창은 동영상을 재생 중일 때만 나타나고 동영상만 보여 줍니다. PDF를 JPEG, PNG로 변환할 수 있으며, 변환에 실패하면 잘못된 파일 대신 이유를 알려 줍니다. '이어서 재생' 안내는 저절로 사라집니다. 새 기능: 재생 막대를 길게 눌러 한 구간을 반복합니다.
 </ko-KR>
 <zh-CN>
-新功能：视频和歌曲字幕、循环最喜欢的片段、大屏观看、播放速度和睡眠定时。支持 .lrc 同步歌词。长视频会从上次停下的地方继续。播放器只有一组控制按钮，视频空间更大，浏览器使用 uBlock Origin 的列表拦截广告。修复：你已有文件的种子会立即做种，视频有了缩略图。
+已修复:播放器中的删除文件功能现可在手机上使用。小窗口画中画现在只在播放视频时出现,并且只显示视频。PDF 转 JPEG、PNG 可用,转换失败时会说明原因,而不是给出错误的文件。“从此处继续”提示会自动消失。新增:长按进度条即可循环一段。
 </zh-CN>

@@ -5028,4 +5028,50 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get lyrics => 'Letra';
+
+  @override
+  String get pictureInPictureVideos => 'Imagem em imagem para vídeos';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Ao sair do app durante um vídeo, ele continua numa janela pequena';
+
+  @override
+  String get deleteCancelled => 'Não foi excluído';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'O app perdeu o acesso a esta pasta. Escolha a pasta de novo para excluir arquivos.';
+
+  @override
+  String get deleteRefusedBySystem =>
+      'O sistema não permitiu excluir este arquivo';
+
+  @override
+  String get searchSourceSearching => 'pesquisando…';
+
+  @override
+  String get searchSourceNothing => 'nada encontrado';
+
+  @override
+  String get searchSourceTimedOut => 'lento demais';
+
+  @override
+  String get searchSourceFailed => 'não funcionou';
+
+  @override
+  String get searchSourceDesktopOnly => 'só em computadores';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'precisa do yt-dlp';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'Nenhuma fonte respondeu. Verifique a sua ligação e tente de novo.';
+
+  @override
+  String get torrentStatusStarting => 'A iniciar';
+
+  @override
+  String get loopAroundHere => 'Repetir em volta daqui';
 }

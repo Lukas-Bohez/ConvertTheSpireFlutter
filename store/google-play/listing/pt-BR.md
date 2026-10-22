@@ -56,5 +56,5 @@ Toque, compartilhe e baixe apenas conteúdo que você tem o direito de usar.
 ## Release notes (What's new)
 
 ```text
-Novo: legendas para vídeos e músicas, a melhor parte em repetição, visualização ampliada, velocidade de reprodução e timer de desligamento. Letras sincronizadas de arquivos .lrc. Vídeos longos continuam de onde você parou. O player tem um só conjunto de controles e mais espaço para o vídeo, e o navegador bloqueia anúncios com as listas do uBlock Origin. Corrigido: torrents de arquivos que você já tem são semeados na hora e os vídeos têm miniaturas.
+Corrigido: excluir arquivos no player funciona no celular. A pequena janela de picture-in-picture só aparece enquanto um vídeo toca e mostra apenas o vídeo. PDF para JPEG e PNG funciona, e uma conversão que falha avisa em vez de entregar o arquivo errado. A mensagem “Continuado em” some sozinha. Novo: pressione e segure a barra de progresso para repetir um trecho.
 ```

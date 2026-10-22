@@ -1447,5 +1447,19 @@
   "partTo": "A",
   "addPartsToQueue": "Aggiungi alla coda ({count} parti)",
   "partTimesInvalid": "Ogni parte deve finire dopo il suo inizio, entro la durata del video.",
-  "lyrics": "Testo"
+  "lyrics": "Testo",
+  "pictureInPictureVideos": "Immagine nell'immagine per i video",
+  "pictureInPictureVideosHint": "Uscendo dall'app mentre un video è in riproduzione, continua in una piccola finestra",
+  "deleteCancelled": "Non eliminato",
+  "deleteFolderAccessLost": "L'app ha perso l'accesso a questa cartella. Scegli di nuovo la cartella per eliminare i file.",
+  "deleteRefusedBySystem": "Il sistema non ha permesso di eliminare questo file",
+  "searchSourceSearching": "ricerca…",
+  "searchSourceNothing": "nessun risultato",
+  "searchSourceTimedOut": "troppo lento",
+  "searchSourceFailed": "non ha funzionato",
+  "searchSourceDesktopOnly": "solo su computer",
+  "searchSourceNeedsYtDlp": "richiede yt-dlp",
+  "searchNoSourceAnswered": "Nessuna fonte ha risposto. Controlla la connessione e riprova.",
+  "torrentStatusStarting": "Avvio",
+  "loopAroundHere": "Ripeti attorno a qui"
 }

@@ -5005,4 +5005,49 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get lyrics => 'Текст пісні';
+
+  @override
+  String get pictureInPictureVideos => 'Картинка в картинці для відео';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Якщо вийти із застосунку під час відео, воно гратиме далі в малому вікні';
+
+  @override
+  String get deleteCancelled => 'Не видалено';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'Застосунок втратив доступ до цієї папки. Виберіть папку знову, щоб видаляти файли.';
+
+  @override
+  String get deleteRefusedBySystem => 'Система не дозволила видалити цей файл';
+
+  @override
+  String get searchSourceSearching => 'шукає…';
+
+  @override
+  String get searchSourceNothing => 'нічого не знайдено';
+
+  @override
+  String get searchSourceTimedOut => 'надто довго';
+
+  @override
+  String get searchSourceFailed => 'не спрацювало';
+
+  @override
+  String get searchSourceDesktopOnly => 'лише на комп\'ютері';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'потрібен yt-dlp';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'Жодне джерело не відповіло. Перевірте з\'єднання та спробуйте ще раз.';
+
+  @override
+  String get torrentStatusStarting => 'Запуск';
+
+  @override
+  String get loopAroundHere => 'Повторювати навколо цього місця';
 }

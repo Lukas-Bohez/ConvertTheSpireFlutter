@@ -4991,4 +4991,49 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get lyrics => 'Lời bài hát';
+
+  @override
+  String get pictureInPictureVideos => 'Hình trong hình cho video';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Rời ứng dụng khi đang phát video thì video tiếp tục phát trong một cửa sổ nhỏ';
+
+  @override
+  String get deleteCancelled => 'Chưa xóa';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'Ứng dụng đã mất quyền truy cập thư mục này. Hãy chọn lại thư mục để xóa tệp.';
+
+  @override
+  String get deleteRefusedBySystem => 'Hệ thống không cho phép xóa tệp này';
+
+  @override
+  String get searchSourceSearching => 'đang tìm…';
+
+  @override
+  String get searchSourceNothing => 'không có kết quả';
+
+  @override
+  String get searchSourceTimedOut => 'quá chậm';
+
+  @override
+  String get searchSourceFailed => 'không hoạt động';
+
+  @override
+  String get searchSourceDesktopOnly => 'chỉ trên máy tính';
+
+  @override
+  String get searchSourceNeedsYtDlp => 'cần yt-dlp';
+
+  @override
+  String get searchNoSourceAnswered =>
+      'Không nguồn nào phản hồi. Hãy kiểm tra kết nối và thử lại.';
+
+  @override
+  String get torrentStatusStarting => 'Đang bắt đầu';
+
+  @override
+  String get loopAroundHere => 'Lặp quanh đây';
 }
