@@ -4870,4 +4870,20 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get lyrics => '가사';
+
+  @override
+  String get pictureInPictureVideos => '동영상 화면 속 화면';
+
+  @override
+  String get pictureInPictureVideosHint => '동영상 재생 중 앱을 나가면 작은 창에서 계속 재생됩니다';
+
+  @override
+  String get deleteCancelled => '삭제되지 않았습니다';
+
+  @override
+  String get deleteFolderAccessLost =>
+      '앱이 이 폴더에 대한 접근 권한을 잃었습니다. 파일을 삭제하려면 폴더를 다시 선택하세요.';
+
+  @override
+  String get deleteRefusedBySystem => '시스템에서 이 파일 삭제를 허용하지 않았습니다';
 }

@@ -56,6 +56,7 @@ import 'vault/services/torrent_engine_service.dart';
 import 'vault/vault_bootstrap.dart';
 import 'widgets/adaptive_ui_frame.dart';
 import 'widgets/global_cursor_overlay.dart';
+import 'widgets/pip_frame.dart';
 import 'widgets/tv_file_browser.dart';
 
 class MyApp extends StatefulWidget {
@@ -727,8 +728,9 @@ class _MyAppState extends State<MyApp>
               themeMode: themeMode,
               builder: (context, child) {
                 return GlobalCursorOverlay(
-                  child:
-                      AdaptiveUiFrame(child: child ?? const SizedBox.shrink()),
+                  child: AdaptiveUiFrame(
+                    child: PipFrame(child: child ?? const SizedBox.shrink()),
+                  ),
                 );
               },
               home: _buildHome(),

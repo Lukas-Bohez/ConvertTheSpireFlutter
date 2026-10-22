@@ -4,10 +4,12 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/build_flags.dart';
 import '../models/unified_download_task.dart';
+import 'download_naming.dart';
 import 'folder_history_service.dart';
 import 'settings_store.dart';
 
@@ -138,9 +140,16 @@ class UnifiedDownloadService extends ChangeNotifier {
     final client = http.Client();
     try {
       await Directory(destinationDir).create(recursive: true);
-      final savePath = task.savePath ??
-          '$destinationDir${Platform.pathSeparator}'
-              '${_fileNameFromUrl(task.sourceUrl, fallback: task.title)}';
+      // A file that is already there keeps its name: this one becomes
+      // "name (2).ext" instead of writing over it (issue #45, fix 8). The
+      // name is kept on the task, so a resumed download finds it again.
+      var savePath = task.savePath;
+      if (savePath == null) {
+        final chosen = await _freePath(destinationDir,
+            _fileNameFromUrl(task.sourceUrl, fallback: task.title));
+        savePath = chosen;
+        _update(taskId, (t) => t.copyWith(savePath: chosen));
+      }
 
       final request = http.Request('GET', Uri.parse(task.sourceUrl));
       var startAt = resumeFromBytes;
@@ -401,6 +410,31 @@ class UnifiedDownloadService extends ChangeNotifier {
     if (current == null) return;
     _tasks[id] = fn(current);
     notifyListeners();
+  }
+
+  /// [fileName] in [dir], or `name (2).ext`, `name (3).ext`, ... when a file
+  /// of that name is there already. Compared without case, like Windows.
+  Future<String> _freePath(String dir, String fileName) async {
+    final taken = <String>{};
+    try {
+      await for (final entity in Directory(dir).list(followLinks: false)) {
+        taken.add(p.basename(entity.path).toLowerCase());
+      }
+    } catch (_) {}
+    final dot = fileName.lastIndexOf('.');
+    if (dot <= 0) {
+      var name = fileName;
+      for (var n = 2; taken.contains(name.toLowerCase()); n++) {
+        name = '$fileName ($n)';
+      }
+      return p.join(dir, name);
+    }
+    final name = DownloadNaming.choose(
+      stem: fileName.substring(0, dot),
+      ext: fileName.substring(dot + 1),
+      taken: (n) => taken.contains(n.toLowerCase()),
+    ).name;
+    return p.join(dir, name);
   }
 
   String _fileNameFromUrl(String url, {required String fallback}) {

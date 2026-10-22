@@ -1447,5 +1447,10 @@
   "partTo": "إلى",
   "addPartsToQueue": "إضافة إلى قائمة الانتظار ({count} مقاطع)",
   "partTimesInvalid": "يجب أن ينتهي كل مقطع بعد بدايته وضمن مدة الفيديو.",
-  "lyrics": "الكلمات"
+  "lyrics": "الكلمات",
+  "pictureInPictureVideos": "صورة داخل صورة للفيديوهات",
+  "pictureInPictureVideosHint": "عند مغادرة التطبيق أثناء تشغيل فيديو، يستمر في نافذة صغيرة",
+  "deleteCancelled": "لم يُحذف",
+  "deleteFolderAccessLost": "فقد التطبيق إذن الوصول إلى هذا المجلد. اختر المجلد مرة أخرى لحذف الملفات.",
+  "deleteRefusedBySystem": "لم يسمح النظام بحذف هذا الملف"
 }

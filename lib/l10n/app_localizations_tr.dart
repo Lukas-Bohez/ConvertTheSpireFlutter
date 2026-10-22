@@ -5009,4 +5009,22 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get lyrics => 'Şarkı sözleri';
+
+  @override
+  String get pictureInPictureVideos => 'Videolar için resim içinde resim';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Video oynarken uygulamadan çıkınca küçük bir pencerede oynamaya devam eder';
+
+  @override
+  String get deleteCancelled => 'Silinmedi';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'Uygulama bu klasöre erişimini kaybetti. Dosyaları silmek için klasörü yeniden seçin.';
+
+  @override
+  String get deleteRefusedBySystem =>
+      'Sistem bu dosyanın silinmesine izin vermedi';
 }

@@ -1447,5 +1447,10 @@
   "partTo": "तक",
   "addPartsToQueue": "कतार में जोड़ें ({count} हिस्से)",
   "partTimesInvalid": "हर हिस्सा शुरू होने के बाद और वीडियो के भीतर खत्म होना चाहिए।",
-  "lyrics": "बोल"
+  "lyrics": "बोल",
+  "pictureInPictureVideos": "वीडियो के लिए पिक्चर-इन-पिक्चर",
+  "pictureInPictureVideosHint": "वीडियो चलते समय ऐप छोड़ने पर वह एक छोटी विंडो में चलता रहता है",
+  "deleteCancelled": "हटाया नहीं गया",
+  "deleteFolderAccessLost": "ऐप की इस फ़ोल्डर तक पहुँच खो गई है। फ़ाइलें हटाने के लिए फ़ोल्डर फिर से चुनें।",
+  "deleteRefusedBySystem": "सिस्टम ने इस फ़ाइल को हटाने की अनुमति नहीं दी"
 }

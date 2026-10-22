@@ -1447,5 +1447,10 @@
   "partTo": "終了",
   "addPartsToQueue": "キューに追加（{count} パート）",
   "partTimesInvalid": "各パートは開始より後、動画の長さの範囲内で終わる必要があります。",
-  "lyrics": "歌詞"
+  "lyrics": "歌詞",
+  "pictureInPictureVideos": "動画のピクチャー・イン・ピクチャー",
+  "pictureInPictureVideosHint": "動画の再生中にアプリを離れると、小さなウィンドウで再生を続けます",
+  "deleteCancelled": "削除されませんでした",
+  "deleteFolderAccessLost": "このフォルダーへのアクセスが失われました。ファイルを削除するには、フォルダーをもう一度選んでください。",
+  "deleteRefusedBySystem": "システムがこのファイルの削除を許可しませんでした"
 }

@@ -1447,5 +1447,10 @@
   "partTo": "Tot",
   "addPartsToQueue": "Aan de wachtrij toevoegen ({count} stukken)",
   "partTimesInvalid": "Elk stuk moet na zijn begin eindigen, binnen de video.",
-  "lyrics": "Songtekst"
+  "lyrics": "Songtekst",
+  "pictureInPictureVideos": "Beeld-in-beeld voor video's",
+  "pictureInPictureVideosHint": "Verlaat je de app terwijl een video speelt, dan speelt hij verder in een klein venster",
+  "deleteCancelled": "Niet verwijderd",
+  "deleteFolderAccessLost": "De app heeft geen toegang meer tot deze map. Kies de map opnieuw om bestanden te verwijderen.",
+  "deleteRefusedBySystem": "Het systeem stond het verwijderen van dit bestand niet toe"
 }

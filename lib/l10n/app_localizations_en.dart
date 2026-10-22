@@ -4989,4 +4989,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lyrics => 'Lyrics';
+
+  @override
+  String get pictureInPictureVideos => 'Picture-in-picture for videos';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'Leaving the app while a video plays keeps it playing in a small window';
+
+  @override
+  String get deleteCancelled => 'Not deleted';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'The app lost access to this folder. Pick the folder again to delete files.';
+
+  @override
+  String get deleteRefusedBySystem =>
+      'The system didn\'t allow deleting this file';
 }

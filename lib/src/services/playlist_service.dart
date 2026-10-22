@@ -13,6 +13,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart'
     hide SearchResult;
 
 import '../models/search_result.dart';
+import 'download_naming.dart';
 import 'log_service.dart';
 import 'metadata_god_init.dart';
 import 'platform_dirs.dart';
@@ -1312,9 +1313,38 @@ class PlaylistService {
     final matched = <TrackMatch>[];
     final missing = <SearchResult>[];
 
-    for (final track in playlistTracks) {
-      final result = _findBestMatch(
-          track, localFiles, usedFileIndices, matchThreshold, exactIndex);
+    // A file named with a track's video id ("Title [id].mp3") is that track,
+    // before any title is compared (issue #45, fix 8). Two tracks with the
+    // same title used to share the one file, so the other always looked
+    // missing: a watched playlist downloaded it on every sync, and that
+    // download deleted the first.
+    final fileById = <String, int>{};
+    for (var i = 0; i < localFiles.length; i++) {
+      if (localFiles[i].incomplete) continue;
+      final id = DownloadNaming.idFromName(localFiles[i].baseName);
+      if (id != null) fileById.putIfAbsent(id, () => i);
+    }
+    final byIdMatches = List<TrackMatch?>.filled(playlistTracks.length, null);
+    for (var t = 0; t < playlistTracks.length; t++) {
+      final track = playlistTracks[t];
+      final i = fileById[track.id];
+      if (i == null || usedFileIndices.contains(i)) continue;
+      byIdMatches[t] = TrackMatch(
+        track: track,
+        filePath: localFiles[i].path,
+        fileName: localFiles[i].baseName,
+        confidence: 1.0,
+        method: MatchMethod.exact,
+        fileIndex: i,
+      );
+      usedFileIndices.add(i);
+    }
+
+    for (var t = 0; t < playlistTracks.length; t++) {
+      final track = playlistTracks[t];
+      final result = byIdMatches[t] ??
+          _findBestMatch(
+              track, localFiles, usedFileIndices, matchThreshold, exactIndex);
       if (result != null) {
         matched.add(result);
         usedFileIndices.add(result._fileIndex);

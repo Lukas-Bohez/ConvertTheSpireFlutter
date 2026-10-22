@@ -111,6 +111,13 @@ class _SearchScreenState extends State<SearchScreen>
 
   bool _isAlreadyDownloaded(SearchResult r) {
     if (_downloadedVideoIds.contains(r.id)) return true;
+    // A YouTube result is known by its id. Guessing from titles marked a
+    // song as downloaded when only another song with the same title was
+    // (issue #45, fix 8).
+    if (r.source.toLowerCase() == 'youtube' && r.id.length == 11) {
+      return _downloadedFilePaths
+          .any((path) => p.basename(path).contains('[${r.id}]'));
+    }
     if (_downloadedFileKeys.isEmpty && _downloadedFilePaths.isEmpty) {
       return false;
     }

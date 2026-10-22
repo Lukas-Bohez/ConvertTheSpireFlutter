@@ -23,6 +23,7 @@ import '../services/bug_report_service.dart';
 import '../services/folder_access_service.dart';
 import '../services/ipfs_service.dart';
 import '../services/open_request_service.dart';
+import '../services/pip_service.dart';
 import '../services/review_service.dart';
 import '../services/session_log_service.dart';
 import '../services/shortcut_service.dart';
@@ -2395,6 +2396,18 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               value: _minimizeToTrayOnClose,
               onChanged: (v) => setState(() => _minimizeToTrayOnClose = v),
               secondary: const Icon(Icons.minimize),
+            ),
+
+          // The little picture-in-picture window, only for a playing video.
+          if (PipService.platformSupported)
+            Consumer<PlayerState>(
+              builder: (context, player, _) => SwitchListTile(
+                title: Text(context.l10n.pictureInPictureVideos),
+                subtitle: Text(context.l10n.pictureInPictureVideosHint),
+                value: player.pictureInPicture,
+                onChanged: player.setPictureInPicture,
+                secondary: const Icon(Icons.picture_in_picture_alt_rounded),
+              ),
             ),
 
           // Support the project (donations)

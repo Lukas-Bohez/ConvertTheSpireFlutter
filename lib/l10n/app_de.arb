@@ -1447,5 +1447,10 @@
   "partTo": "Bis",
   "addPartsToQueue": "In die Warteschlange ({count} Abschnitte)",
   "partTimesInvalid": "Jeder Abschnitt muss nach seinem Beginn enden, innerhalb des Videos.",
-  "lyrics": "Songtext"
+  "lyrics": "Songtext",
+  "pictureInPictureVideos": "Bild-im-Bild für Videos",
+  "pictureInPictureVideosHint": "Wenn du die App verlässt, während ein Video läuft, spielt es in einem kleinen Fenster weiter",
+  "deleteCancelled": "Nicht gelöscht",
+  "deleteFolderAccessLost": "Die App hat keinen Zugriff mehr auf diesen Ordner. Wähle den Ordner erneut, um Dateien zu löschen.",
+  "deleteRefusedBySystem": "Das System hat das Löschen dieser Datei nicht erlaubt"
 }

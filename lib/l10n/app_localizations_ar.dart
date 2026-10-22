@@ -4966,4 +4966,21 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get lyrics => 'الكلمات';
+
+  @override
+  String get pictureInPictureVideos => 'صورة داخل صورة للفيديوهات';
+
+  @override
+  String get pictureInPictureVideosHint =>
+      'عند مغادرة التطبيق أثناء تشغيل فيديو، يستمر في نافذة صغيرة';
+
+  @override
+  String get deleteCancelled => 'لم يُحذف';
+
+  @override
+  String get deleteFolderAccessLost =>
+      'فقد التطبيق إذن الوصول إلى هذا المجلد. اختر المجلد مرة أخرى لحذف الملفات.';
+
+  @override
+  String get deleteRefusedBySystem => 'لم يسمح النظام بحذف هذا الملف';
 }

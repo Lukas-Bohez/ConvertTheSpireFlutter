@@ -1447,5 +1447,10 @@
   "partTo": "Sampai",
   "addPartsToQueue": "Tambahkan ke antrean ({count} bagian)",
   "partTimesInvalid": "Setiap bagian harus berakhir setelah dimulai, di dalam durasi video.",
-  "lyrics": "Lirik"
+  "lyrics": "Lirik",
+  "pictureInPictureVideos": "Gambar-dalam-gambar untuk video",
+  "pictureInPictureVideosHint": "Saat keluar dari aplikasi ketika video diputar, video tetap diputar di jendela kecil",
+  "deleteCancelled": "Tidak dihapus",
+  "deleteFolderAccessLost": "Aplikasi kehilangan akses ke folder ini. Pilih folder lagi untuk menghapus file.",
+  "deleteRefusedBySystem": "Sistem tidak mengizinkan file ini dihapus"
 }

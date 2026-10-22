@@ -1447,5 +1447,10 @@
   "partTo": "À",
   "addPartsToQueue": "Ajouter à la file ({count} passages)",
   "partTimesInvalid": "Chaque passage doit se terminer après son début, dans la durée de la vidéo.",
-  "lyrics": "Paroles"
+  "lyrics": "Paroles",
+  "pictureInPictureVideos": "Image dans l'image pour les vidéos",
+  "pictureInPictureVideosHint": "Quitter l'app pendant la lecture d'une vidéo la garde dans une petite fenêtre",
+  "deleteCancelled": "Non supprimé",
+  "deleteFolderAccessLost": "L'app n'a plus accès à ce dossier. Choisissez à nouveau le dossier pour supprimer des fichiers.",
+  "deleteRefusedBySystem": "Le système n'a pas autorisé la suppression de ce fichier"
 }
