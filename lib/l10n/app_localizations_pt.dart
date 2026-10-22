@@ -5071,4 +5071,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => 'A iniciar';
+
+  @override
+  String get loopAroundHere => 'Repetir em volta daqui';
 }

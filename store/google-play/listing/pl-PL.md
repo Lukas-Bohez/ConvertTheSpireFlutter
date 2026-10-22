@@ -56,5 +56,5 @@ Odtwarzaj, udostępniaj i pobieraj tylko treści, do których korzystania masz p
 ## Release notes (What's new)
 
 ```text
-Nowość: napisy do filmów i piosenek, zapętlanie najlepszego fragmentu, duży widok, prędkość odtwarzania i wyłącznik czasowy. Zsynchronizowane teksty z plików .lrc. Długie filmy wracają tam, gdzie skończyłeś. Odtwarzacz ma jeden zestaw przycisków i więcej miejsca na film, a przeglądarka blokuje reklamy listami uBlock Origin. Naprawione: torrenty plików, które już masz, od razu się seedują, a filmy mają miniatury.
+Naprawiono: usuwanie plików w odtwarzaczu działa na telefonach. Małe okno obrazu w obrazie pojawia się teraz tylko podczas odtwarzania filmu i pokazuje sam film. Zamiana PDF na JPEG i PNG działa, a nieudana konwersja informuje o tym zamiast dawać zły plik. Komunikat „Wznowiono od” znika sam. Nowość: przytrzymaj pasek postępu, aby zapętlić fragment.
 ```

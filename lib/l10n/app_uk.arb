@@ -1460,5 +1460,6 @@
   "searchSourceDesktopOnly": "лише на комп'ютері",
   "searchSourceNeedsYtDlp": "потрібен yt-dlp",
   "searchNoSourceAnswered": "Жодне джерело не відповіло. Перевірте з'єднання та спробуйте ще раз.",
-  "torrentStatusStarting": "Запуск"
+  "torrentStatusStarting": "Запуск",
+  "loopAroundHere": "Повторювати навколо цього місця"
 }

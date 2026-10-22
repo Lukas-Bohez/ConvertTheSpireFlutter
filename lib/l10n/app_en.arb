@@ -3138,5 +3138,9 @@
   "torrentStatusStarting": "Starting",
   "@torrentStatusStarting": {
     "description": "Torrent status: the first seconds of a download, before it has any speed."
+  },
+  "loopAroundHere": "Loop around here",
+  "@loopAroundHere": {
+    "description": "Seek-bar menu (long press or right click): loops the 20 seconds around the pressed moment."
   }
 }

@@ -4911,4 +4911,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => '開始中';
+
+  @override
+  String get loopAroundHere => 'この前後をループ';
 }

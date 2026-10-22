@@ -8898,6 +8898,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Starting'**
   String get torrentStatusStarting;
+
+  /// Seek-bar menu (long press or right click): loops the 20 seconds around the pressed moment.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop around here'**
+  String get loopAroundHere;
 }
 
 class _AppLocalizationsDelegate

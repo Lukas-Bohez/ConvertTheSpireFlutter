@@ -56,5 +56,5 @@ Ne lisez, partagez et téléchargez que des contenus que vous avez le droit d'ut
 ## Release notes (What's new)
 
 ```text
-Nouveau : sous-titres pour les vidéos et les chansons, meilleur passage en boucle, grand affichage, vitesse de lecture et minuteur de veille. Paroles synchronisées depuis les fichiers .lrc. Les longues vidéos reprennent là où vous vous étiez arrêté. Le lecteur n'a plus qu'un jeu de commandes et plus de place pour la vidéo, et le navigateur bloque les pubs avec les listes d'uBlock Origin. Corrigé : les torrents de fichiers déjà présents se partagent aussitôt, et les vidéos ont des miniatures.
+Corrigé : la suppression de fichiers dans le lecteur fonctionne sur téléphone. La petite fenêtre image dans l'image n'apparaît plus que pendant la lecture d'une vidéo et n'affiche que la vidéo. PDF vers JPEG et PNG fonctionne, et une conversion qui échoue le dit au lieu de donner un mauvais fichier. Le message « Repris à » disparaît tout seul. Nouveau : appui long sur la barre de lecture pour boucler un passage.
 ```

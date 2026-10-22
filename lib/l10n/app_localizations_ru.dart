@@ -5039,4 +5039,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => 'Запуск';
+
+  @override
+  String get loopAroundHere => 'Повторять вокруг этого места';
 }

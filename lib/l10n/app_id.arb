@@ -1460,5 +1460,6 @@
   "searchSourceDesktopOnly": "hanya di komputer",
   "searchSourceNeedsYtDlp": "perlu yt-dlp",
   "searchNoSourceAnswered": "Tidak ada sumber yang menjawab. Periksa koneksi Anda dan coba lagi.",
-  "torrentStatusStarting": "Memulai"
+  "torrentStatusStarting": "Memulai",
+  "loopAroundHere": "Ulangi sekitar sini"
 }

@@ -5051,4 +5051,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => 'Memulai';
+
+  @override
+  String get loopAroundHere => 'Ulangi sekitar sini';
 }

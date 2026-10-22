@@ -5091,4 +5091,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => 'Démarrage';
+
+  @override
+  String get loopAroundHere => 'Boucler autour d\'ici';
 }

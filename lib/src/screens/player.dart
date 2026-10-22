@@ -1450,6 +1450,26 @@ class PlayerState with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Where a part being marked on the seek bar starts, until its end is
+  /// marked.
+  Duration? loopPendingStart;
+
+  void setLoopPendingStart(Duration? start) {
+    loopPendingStart = start;
+    notifyListeners();
+  }
+
+  /// Adds a part to the file's looped parts and starts looping them. Parts
+  /// that overlap are joined, and the part is kept within the file.
+  Future<void> addLoopSection(String path, Duration start, Duration end) {
+    final current = _loops.settingsFor(path);
+    final sections = LoopSectionStore.normalized(
+      [...current.sections, LoopSection(start, end)],
+      duration: duration,
+    );
+    return setLoopSettings(path, LoopSettings(on: true, sections: sections));
+  }
+
   Future<void> toggleLoop(String path) {
     final settings = _loops.settingsFor(path);
     return setLoopSettings(
@@ -7004,17 +7024,10 @@ class _PlayerScreenState extends State<PlayerScreen>
                   tooltip: context.l10n.playerRepeat,
                   size: 22,
                 ),
-                // On a phone the row is full: there it is in the track
-                // menu, and in the row under the seek bar once there are
-                // parts.
-                if (!isMobile)
-                  _ControlButton(
-                    icon: Icons.loop_rounded,
-                    active: state.loopSettingsFor(item.path).looping,
-                    onPressed: () => showLoopSectionsSheet(context, state),
-                    tooltip: context.l10n.loopParts,
-                    size: 22,
-                  ),
+                // Loop parts are not a sixth button here (issue #45, fix 4):
+                // they are in the track menu, in the row under the seek bar
+                // once there are parts, and on the seek bar itself, with a
+                // long press or a right click.
               ],
             ),
           ),
@@ -7392,6 +7405,58 @@ class _PositionWidget extends StatelessWidget {
       required this.formatDur,
       this.loopSections = const []});
 
+  /// A long press or a right click on the seek bar: loop the part around
+  /// that moment, or start and end one there (issue #45, fix 4). The parts
+  /// used to be set only in a sheet, with Start here and End here while the
+  /// song played.
+  Future<void> _showLoopMenu(
+      BuildContext context, Offset at, Duration position) async {
+    final item = state.nowPlayingItem;
+    if (item == null) return;
+    final l10n = context.l10n;
+    final pending = state.loopPendingStart;
+    final choice = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx, at.dy),
+      items: [
+        PopupMenuItem(
+          value: 'around',
+          child: Text(
+              '${l10n.loopAroundHere} (${formatLoopTime(position)})'),
+        ),
+        if (pending == null)
+          PopupMenuItem(
+              value: 'start',
+              child: Text('${l10n.loopStartHere} (${formatLoopTime(position)})'))
+        else
+          PopupMenuItem(
+              value: 'end',
+              child: Text('${l10n.loopEndHere} (${formatLoopTime(position)}, '
+                  '${l10n.loopStartsAt(formatLoopTime(pending))})')),
+        PopupMenuItem(value: 'parts', child: Text(l10n.loopParts)),
+      ],
+    );
+    switch (choice) {
+      case 'around':
+        await state.addLoopSection(
+          item.path,
+          position - const Duration(seconds: 10),
+          position + const Duration(seconds: 10),
+        );
+      case 'start':
+        state.setLoopPendingStart(position);
+      case 'end':
+        if (pending != null) {
+          final a = pending < position ? pending : position;
+          final b = pending < position ? position : pending;
+          state.setLoopPendingStart(null);
+          await state.addLoopSection(item.path, a, b);
+        }
+      case 'parts':
+        if (context.mounted) unawaited(showLoopSectionsSheet(context, state));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<PositionUiState>(
@@ -7426,7 +7491,28 @@ class _PositionWidget extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: Stack(
+                child: LayoutBuilder(builder: (context, box) {
+                  // The slider's track runs between the overlay radius (14)
+                  // at each side.
+                  Duration at(double dx) {
+                    final width = box.maxWidth - 28;
+                    if (width <= 0) return Duration.zero;
+                    final f = ((dx - 14) / width).clamp(0.0, 1.0);
+                    return Duration(
+                        milliseconds: (f * dur.inMilliseconds).round());
+                  }
+
+                  return GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onLongPressStart: dur > Duration.zero
+                        ? (d) => _showLoopMenu(
+                            context, d.globalPosition, at(d.localPosition.dx))
+                        : null,
+                    onSecondaryTapDown: dur > Duration.zero
+                        ? (d) => _showLoopMenu(
+                            context, d.globalPosition, at(d.localPosition.dx))
+                        : null,
+                    child: Stack(
                   children: [
                     if (loopSections.isNotEmpty && dur > Duration.zero)
                       // The track runs between the overlay radius (14) at
@@ -7475,6 +7561,8 @@ class _PositionWidget extends StatelessWidget {
                     ),
                   ],
                 ),
+                  );
+                }),
               ),
               if (ui.isSeeking)
                 Padding(

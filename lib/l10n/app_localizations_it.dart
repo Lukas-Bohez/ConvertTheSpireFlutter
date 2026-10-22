@@ -5070,4 +5070,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => 'Avvio';
+
+  @override
+  String get loopAroundHere => 'Ripeti attorno a qui';
 }

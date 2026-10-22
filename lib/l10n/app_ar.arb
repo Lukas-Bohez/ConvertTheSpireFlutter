@@ -1460,5 +1460,6 @@
   "searchSourceDesktopOnly": "على الحواسيب فقط",
   "searchSourceNeedsYtDlp": "يتطلب yt-dlp",
   "searchNoSourceAnswered": "لم يستجب أي مصدر. تحقّق من اتصالك وحاول مرة أخرى.",
-  "torrentStatusStarting": "جارٍ البدء"
+  "torrentStatusStarting": "جارٍ البدء",
+  "loopAroundHere": "كرّر ما حول هذه النقطة"
 }

@@ -1460,5 +1460,6 @@
   "searchSourceDesktopOnly": "yalnızca bilgisayarda",
   "searchSourceNeedsYtDlp": "yt-dlp gerekli",
   "searchNoSourceAnswered": "Hiçbir kaynak yanıt vermedi. Bağlantınızı kontrol edip tekrar deneyin.",
-  "torrentStatusStarting": "Başlıyor"
+  "torrentStatusStarting": "Başlıyor",
+  "loopAroundHere": "Buranın çevresini döngüye al"
 }
