@@ -5033,4 +5033,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get torrentStatusStarting => 'Đang bắt đầu';
+
+  @override
+  String get loopAroundHere => 'Lặp quanh đây';
 }
