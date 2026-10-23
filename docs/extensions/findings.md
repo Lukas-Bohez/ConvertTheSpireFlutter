@@ -143,7 +143,7 @@ browser integration test now fails against the old adapter.
 ## The compatibility scanner
 
 `tools/ext_api_scan` counts direct `chrome.X` / `browser.X` references and
-reads each manifest. Run on the four fixtures (`results/extensions/pilot/`),
+reads each manifest. Run on the four fixtures (`docs/extensions/pilot/`),
 it showed its own blind spot: uBlock Origin Lite's row has no
 `declarativeNetRequest`, the API it is built on, because it reaches the API
 through a wrapper (`const webext = self.browser || self.chrome`). A static

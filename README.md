@@ -210,3 +210,7 @@ If this app has saved you time, the easiest way to support it is a one-time dona
 * Buy me a coffee: [Oroka Conner](https://buymeacoffee.com/orokaconner)
 * Become a GitHub Sponsor
 * Website: [Convert the Spire](https://quizthespire.com/)
+
+## Acknowledgements
+
+The translations of the app into its 18 languages were made with the help of [Claude](https://www.anthropic.com/claude) by Anthropic.
