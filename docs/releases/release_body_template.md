@@ -15,12 +15,12 @@
 **Nothing to set up.** Download one file, open it, and it runs: no admin rights, no Python, no account.
 
 <p align="center">
-  <a href="https://apps.microsoft.com/detail/9MT834RPF8ZP"><img src="https://get.microsoft.com/images/en-us%20dark.svg" height="48" alt="Get it from Microsoft"></a>
-  &nbsp;&nbsp;
-  <a href="https://play.google.com/store/apps/details?id=com.torrentspire.ai"><img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" height="68" alt="Get it on Google Play"></a>
+  <a href="https://apps.microsoft.com/detail/9MT834RPF8ZP"><img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/main/docs/images/store-buttons/microsoft-store.svg" height="76" alt="Get it from the Microsoft Store"></a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://play.google.com/store/apps/details?id=com.torrentspire.ai"><img src="https://raw.githubusercontent.com/Lukas-Bohez/ConvertTheSpireFlutter/main/docs/images/store-buttons/google-play.svg" height="76" alt="Get it on Google Play"></a>
 </p>
 
-<p align="center"><sub><b>Official store versions.</b> The Microsoft Store has the full Windows app and keeps it up to date for you. The Google Play version (BitPlayer) is <b>limited</b>: Google Play does not allow YouTube downloads, and Multi-Search and the playlist tools are left out. A new version can reach the stores a few days after it appears here.</sub></p>
+<p align="center"><b>Official store versions.</b> The Microsoft Store has the full Windows app and keeps it up to date for you. The Google Play version (BitPlayer) is <b>limited</b>: Google Play does not allow YouTube downloads, and Multi-Search and the playlist tools are left out. A new version can reach the stores a few days after it appears here.</p>
 
 {{NOTES}}
 
