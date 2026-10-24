@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="340" height="84" viewBox="0 0 340 84" role="img" aria-label="Get it on Google Play">
-  <rect width="340" height="84" rx="14" fill="#01875F"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="316" height="84" viewBox="0 0 316 84" role="img" aria-label="Get it on Google Play (limited version)">
+  <rect width="316" height="84" rx="14" fill="#01875F"/>
   <polygon points="26,20 26,64 64,42" fill="#FFFFFF"/>
-  <text x="84" y="34" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="17" fill="#FFFFFF">Get it on</text>
+  <text x="84" y="34" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="17" fill="#FFFFFF">Get it on · limited version</text>
   <text x="84" y="63" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="27" font-weight="700" fill="#FFFFFF">Google Play</text>
 </svg>
