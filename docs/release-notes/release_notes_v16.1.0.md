@@ -2,6 +2,8 @@
 
 ## Songs that no longer delete each other, and a lot that was broken now works
 
+**Also in the Microsoft Store:** version 16.1.0 is available there now, and the Store keeps it up to date.
+
 ### New
 
 - **Loop a part from the seek bar.** Press and hold the seek bar (or right-click it on a computer) to loop the part around that moment, or to start a part and end it somewhere else. The loop button no longer takes a sixth place in the controls: it is in the track menu and on the seek bar.

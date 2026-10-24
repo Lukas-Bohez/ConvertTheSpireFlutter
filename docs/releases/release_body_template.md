@@ -14,6 +14,14 @@
 
 **Nothing to set up.** Download one file, open it, and it runs: no admin rights, no Python, no account.
 
+<p align="center">
+  <a href="https://apps.microsoft.com/detail/9MT834RPF8ZP"><img src="https://get.microsoft.com/images/en-us%20dark.svg" height="48" alt="Get it from Microsoft"></a>
+  &nbsp;&nbsp;
+  <a href="https://play.google.com/store/apps/details?id=com.torrentspire.ai"><img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" height="68" alt="Get it on Google Play"></a>
+</p>
+
+<p align="center"><sub><b>Official store versions.</b> The Microsoft Store has the full Windows app and keeps it up to date for you. The Google Play version (BitPlayer) is <b>limited</b>: Google Play does not allow YouTube downloads, and Multi-Search and the playlist tools are left out. A new version can reach the stores a few days after it appears here.</sub></p>
+
 {{NOTES}}
 
 ## Install
@@ -23,7 +31,8 @@
 | **Windows** | `ConvertTheSpireReborn-Setup.exe` | Double-click it. It installs for your account, adds a Start menu entry, and the app updates itself from then on. |
 | **Android phone or TV** | `ConvertTheSpireReborn.apk` | Open it and allow the install. |
 | **macOS** | `ConvertTheSpireReborn-macOS.dmg` | Open it and drag the app into Applications. |
-| **Google Play** | [The Play Store version](https://play.google.com/store/apps/details?id=com.torrentspire.ai) | Everything except YouTube downloads, which Play does not allow. |
+| **Microsoft Store** | [Get it from the Store](https://apps.microsoft.com/detail/9MT834RPF8ZP) | The full Windows app. The Store installs it and keeps it up to date. |
+| **Google Play** | [The Play Store version](https://play.google.com/store/apps/details?id=com.torrentspire.ai) | A limited version: no YouTube downloads (Google Play does not allow them), and Multi-Search and the playlist tools are left out. |
 
 No-install options are here too: the Windows zip (extract and run `convert_the_spire_reborn.exe`) and the Mac zip.
 

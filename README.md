@@ -17,7 +17,8 @@ One file, then it runs. No admin rights, no Python, no account.
 | **Windows** | `ConvertTheSpireReborn-Setup.exe` | Double-click it. It installs for your account, adds a Start menu entry, and the app updates itself from then on. |
 | **Android phone or TV** | `ConvertTheSpireReborn.apk` | Open it and allow the install. |
 | **macOS** | `ConvertTheSpireReborn-macOS.dmg` | Open it and drag the app into Applications. |
-| **Google Play** | [The Play Store version](https://play.google.com/store/apps/details?id=com.torrentspire.ai) | Everything except YouTube downloads, which Play does not allow. |
+| **Microsoft Store** | [Get it from the Store](https://apps.microsoft.com/detail/9MT834RPF8ZP) | The full Windows app. The Store installs it and keeps it up to date. |
+| **Google Play** | [The Play Store version](https://play.google.com/store/apps/details?id=com.torrentspire.ai) | A limited version: no YouTube downloads (Google Play does not allow them), and Multi-Search and the playlist tools are left out. |
 
 Rather not install? Take `ConvertTheSpireReborn-windows-x64.zip`, extract it and run `convert_the_spire_reborn.exe`, or the Mac zip.
 
