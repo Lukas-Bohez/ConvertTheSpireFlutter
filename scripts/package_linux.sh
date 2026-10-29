@@ -52,9 +52,10 @@ cp -a "$BUNDLE" "$STAGE"
 #    servers, GStreamer and its plugins, TLS, the SVG library the icon
 #    loaders use). Desktops all have them.
 #
-# The tray library, libsecret, libva, the X11 extensions mpv uses and the
-# like do come along: not every desktop has them, and nothing of the system's
-# loads them in their place. scripts/smoke_test_linux.sh checks the result on
+# The tray library, libsecret, libva, the Vulkan loader (it finds the
+# system's drivers itself), the X11 extensions mpv uses and the like do come
+# along: not every desktop has them, and nothing of the system's loads them
+# in their place. scripts/smoke_test_linux.sh checks the result on
 # clean Ubuntu releases that have only GTK, sound and graphics.
 
 # From https://github.com/AppImageCommunity/pkg2appimage/blob/19e30b276ffedf4d3b4b56bc6320f463625a74f8/excludelist
@@ -73,7 +74,7 @@ libuuid.so.1 libz.so.1 libpipewire-0.3.so.0 libxcb-dri3.so.0
 libxcb-dri2.so.0 libfribidi.so.0 libgmp.so.10
 '
 EXCLUDE_PATTERNS='
-^libvulkan\.so ^libpulse\.so ^libpulse-simple\.so ^libpulsecommon-
+^libpulse\.so ^libpulse-simple\.so ^libpulsecommon-
 ^libgst[a-z]*-1\.0\.so ^liborc-0\.4\.so ^libssl\.so ^libcrypto\.so
 ^libgnutls\.so ^libnettle\.so ^libhogweed\.so ^libtasn1\.so ^libp11-kit\.so
 ^libidn2\.so ^libunistring\.so ^libxml2\.so ^librsvg-2\.so ^libdbus-1\.so
