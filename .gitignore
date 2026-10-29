@@ -37,6 +37,8 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+# The Linux packages (scripts/package_linux.sh)
+/dist/
 
 # Generated code
 *.g.dart

@@ -31,10 +31,11 @@
 | **Windows** | `ConvertTheSpireReborn-Setup.exe` | Double-click it. It installs for your account, adds a Start menu entry, and the app updates itself from then on. |
 | **Android phone or TV** | `ConvertTheSpireReborn.apk` | Open it and allow the install. |
 | **macOS** | `ConvertTheSpireReborn-macOS.dmg` | Open it and drag the app into Applications. |
+| **Linux** | `ConvertTheSpireReborn-linux-x86_64.AppImage` | Allow it to run (right-click › Properties › "Allow executing", or `chmod +x`) and open it. Nothing else to install; it adds itself to your app menu and updates itself. Ubuntu 22.04 or later, Mint 21, Debian 12, Fedora. |
 | **Microsoft Store** | [Get it from the Store](https://apps.microsoft.com/detail/9MT834RPF8ZP) | The full Windows app. The Store installs it and keeps it up to date. |
 | **Google Play** | [The Play Store version](https://play.google.com/store/apps/details?id=com.torrentspire.ai) | A limited version: no YouTube downloads (Google Play does not allow them), and Multi-Search and the playlist tools are left out. |
 
-No-install options are here too: the Windows zip (extract and run `convert_the_spire_reborn.exe`) and the Mac zip.
+No-install options are here too: the Windows zip (extract and run `convert_the_spire_reborn.exe`), the Linux `.tar.gz` (extract and run `convert_the_spire_reborn`) and the Mac zip.
 
 <!-- SMARTSCREEN_UNSIGNED -->
 - **"Windows protected your PC"?** Windows shows this once for programs without a paid signature: choose **More info**, then **Run anyway**. Updates from inside the app never show it.
@@ -42,6 +43,7 @@ No-install options are here too: the Windows zip (extract and run `convert_the_s
 <!-- SMARTSCREEN_SIGNED -->
 - **"Windows protected your PC"?** The Windows downloads are signed, but Windows can still show this for a new version until enough people have downloaded it: choose **More info**, then **Run anyway**. Updates from inside the app never show it.
 <!-- /SMARTSCREEN_SIGNED -->
+- **Microsoft Store version:** start it from the Start menu or the desktop shortcut it makes. A shortcut to its exe in `C:\Program Files\WindowsApps` cannot work ("you do not have permission"); drag the app from the Start menu to the desktop instead.
 - **Mac says it cannot open the app?** Right-click it and choose **Open**, once. Converting to MP3 and M4A on a Mac needs FFmpeg: `brew install ffmpeg`.
 
 ## Code signing policy

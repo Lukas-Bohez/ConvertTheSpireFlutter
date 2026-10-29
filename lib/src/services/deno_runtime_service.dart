@@ -1,11 +1,13 @@
 // ignore_for_file: prefer_single_quotes
 import "dart:io";
 
+import "package:archive/archive_io.dart" show extractFileToDisk;
 import "package:flutter/foundation.dart" show debugPrint, kIsWeb;
 import "package:http/http.dart" as http;
 import "package:path/path.dart" as p;
 
 import "../config/build_flags.dart";
+import "../utils/cpu_arch.dart";
 import "../utils/process_runner.dart";
 import "bundled_tools.dart";
 import "platform_dirs.dart";
@@ -82,7 +84,9 @@ class DenoRuntimeService {
       if (isWindows) {
         assetName = "deno-x86_64-pc-windows-msvc.zip";
       } else if (Platform.isLinux) {
-        assetName = "deno-x86_64-unknown-linux-gnu.zip";
+        assetName = isLinuxArm64
+            ? "deno-aarch64-unknown-linux-gnu.zip"
+            : "deno-x86_64-unknown-linux-gnu.zip";
       } else if (isArmMac) {
         assetName = "deno-aarch64-apple-darwin.zip";
       } else {
@@ -141,11 +145,13 @@ class DenoRuntimeService {
               runInShell: true);
         }
       } else {
-        final out = await Process.run(
-            "tar", ["-xf", zipPath, "-C", binDir.path],
-            runInShell: true);
-        if (out.exitCode != 0) {
-          // GNU tar (most Linux systems) does not read zip files.
+        // Unpacked here rather than with a program: GNU tar (most Linux
+        // systems) does not read zip files, and not every Linux install has
+        // unzip. The zip holds the one `deno` binary.
+        try {
+          await extractFileToDisk(zipPath, binDir.path);
+        } catch (e) {
+          _note("unzip_failed", "deno-runtime: could not unpack Deno: $e");
           await Process.run("unzip", ["-o", zipPath, "-d", binDir.path]);
         }
       }
@@ -258,11 +264,14 @@ class DenoRuntimeService {
   static Future<String?> _locateExistingDeno() async {
     final bundled = BundledTools.deno;
     if (bundled != null && await File(bundled).exists()) return bundled;
-    const paths = [
+    final home = Platform.environment["HOME"];
+    final paths = [
       "C:\\Program Files\\deno\\deno.exe",
       "/usr/bin/deno",
       "/usr/local/bin/deno",
       "/opt/homebrew/bin/deno",
+      // Where Deno's own install script puts it.
+      if (home != null && home.isNotEmpty) "$home/.deno/bin/deno",
       "/root/.deno/bin/deno",
     ];
     for (final pPath in paths) {

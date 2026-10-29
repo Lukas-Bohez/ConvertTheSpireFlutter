@@ -82,10 +82,13 @@ class TrayService with TrayListener, WindowListener {
     } catch (e) {
       debugPrint('TrayService: setIcon failed ($iconPath): $e');
     }
-    try {
-      await trayManager.setToolTip(getAppTitle());
-    } catch (e) {
-      debugPrint('TrayService: setToolTip failed: $e');
+    // Linux tray icons have no tooltip (tray_manager does not offer one).
+    if (!Platform.isLinux) {
+      try {
+        await trayManager.setToolTip(getAppTitle());
+      } catch (e) {
+        debugPrint('TrayService: setToolTip failed: $e');
+      }
     }
 
     final menu = Menu(items: [

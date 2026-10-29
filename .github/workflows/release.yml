@@ -407,6 +407,52 @@ jobs:
           retention-days: 7
 
   # =========================================================================
+  # 4b. Linux x64: a tar.gz and an AppImage (issue #47)
+  # =========================================================================
+  # Built on the oldest Ubuntu the release supports: the packages carry
+  # libmpv and its libraries from the build machine (scripts/package_linux.sh)
+  # and run on that Ubuntu and later. Both are started on clean Ubuntu 22.04
+  # and 24.04 before they are published.
+  build-linux:
+    name: Build Linux
+    needs: test-and-analyze
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install the Linux build packages
+        run: bash scripts/linux_build_deps.sh
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: false
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Linux release
+        run: flutter build linux --release --no-tree-shake-icons
+
+      - name: Package (tar.gz and AppImage)
+        run: bash scripts/package_linux.sh dist
+
+      - name: Start it on a clean Ubuntu 22.04
+        run: bash scripts/smoke_test_linux.sh ubuntu:22.04 dist
+
+      - name: Start it on a clean Ubuntu 24.04
+        run: bash scripts/smoke_test_linux.sh ubuntu:24.04 dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-x64
+          path: |
+            dist/${{ env.OUTPUT_NAME }}-linux-x64.tar.gz
+            dist/${{ env.OUTPUT_NAME }}-linux-x86_64.AppImage
+          retention-days: 7
+
+  # =========================================================================
   # 5. Android (GitHub APK + Play Store AAB)
   # =========================================================================
   build-android:
@@ -544,7 +590,7 @@ jobs:
   # =========================================================================
   release:
     name: Publish Release
-    needs: [build-windows, build-macos, build-android]
+    needs: [build-windows, build-macos, build-linux, build-android]
     runs-on: ubuntu-latest
     permissions:
       contents: write   # Required to create releases and upload assets
@@ -568,7 +614,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          for dir in windows-x64 windows-installer macos-x64 android-apk; do
+          for dir in windows-x64 windows-installer macos-x64 linux-x64 android-apk; do
             count=$(find "artifacts/$dir" -type f 2>/dev/null | wc -l)
             if [ "$count" -eq 0 ]; then
               echo "ERROR: No files found in artifacts/$dir"
@@ -634,5 +680,7 @@ jobs:
             artifacts/windows-x64/*.zip
             artifacts/macos-x64/*.dmg
             artifacts/macos-x64/*.zip
+            artifacts/linux-x64/*.AppImage
+            artifacts/linux-x64/*.tar.gz
             artifacts/android-apk/${{ env.ANDROID_APK_NAME }}
             SHA256SUMS.txt

@@ -1367,15 +1367,8 @@ class AppController extends ChangeNotifier {
     if (kIsWeb) {
       throw Exception('FFmpeg is not available on web.');
     }
-    if (Platform.isLinux) {
-      throw Exception(
-        'FFmpeg is required for audio conversion but was not found on your system PATH.\n'
-        'Install it with: sudo apt install ffmpeg\n'
-        'Or on Fedora: sudo dnf install ffmpeg\n'
-        'Or set the path manually in Settings.',
-      );
-    }
-    if (!Platform.isWindows) {
+    final url = InstallerService.ffmpegDownloadUrl();
+    if (url == null) {
       throw Exception(
         'FFmpeg is required for audio conversion but was not found.\n'
         'Install it via your system package manager or set the path in Settings.',
@@ -1390,12 +1383,10 @@ class AppController extends ChangeNotifier {
     }
 
     logs.add('FFmpeg not found. Downloading automatically...');
-    const url =
-        'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip';
     try {
       final path = await installerService
           .installFfmpeg(
-            url: Uri.parse(url),
+            url: url,
             onProgress: (pct, message) {
               if (pct == 0 || pct == 60 || pct == 100) {
                 logs.add('FFmpeg $message ($pct%)');
@@ -1410,6 +1401,14 @@ class AppController extends ChangeNotifier {
       return path;
     } catch (e) {
       logs.add('FFmpeg auto-install failed: $e');
+      if (Platform.isLinux) {
+        throw Exception(
+          'FFmpeg is required for audio conversion but could not be downloaded.\n'
+          'Install it with: sudo apt install ffmpeg (Ubuntu, Debian, Mint)\n'
+          'or: sudo dnf install ffmpeg (Fedora), then try again.\n'
+          'Or set the path manually in Settings.',
+        );
+      }
       throw Exception(
         'FFmpeg is required for audio conversion but could not be installed automatically. '
         'Install FFmpeg manually and ensure it is on your system PATH, '
