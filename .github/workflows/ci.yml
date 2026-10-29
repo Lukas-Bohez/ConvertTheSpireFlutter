@@ -144,6 +144,48 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh tools/check_windows_metadata.ps1 -App "$src\convert_the_spire_reborn.exe" -Setup "installer-out\ConvertTheSpireReborn-Setup.exe"
 
+  # The Linux app went unbuilt from v14.3.1 until it no longer built (#47).
+  # Built and packaged as for a release, then started on clean Ubuntu 22.04
+  # and 24.04. The packages are kept for a week, to try a pull request.
+  linux:
+    name: Linux build and start
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install the Linux build packages
+        run: bash scripts/linux_build_deps.sh
+
+      - name: Set up Flutter
+        uses: flutter-actions/setup-flutter@v4
+        with:
+          channel: stable
+          version: '3.41.2'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Linux
+        run: flutter build linux --release --no-tree-shake-icons
+
+      - name: Package (tar.gz and AppImage)
+        run: bash scripts/package_linux.sh dist
+
+      - name: Start it on a clean Ubuntu 22.04
+        run: bash scripts/smoke_test_linux.sh ubuntu:22.04 dist
+
+      - name: Start it on a clean Ubuntu 24.04
+        run: bash scripts/smoke_test_linux.sh ubuntu:24.04 dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-x64
+          path: |
+            dist/*.tar.gz
+            dist/*.AppImage
+          retention-days: 7
+
   # Catches Kotlin and Gradle breakage before it reaches a release build.
   android:
     name: Android debug build

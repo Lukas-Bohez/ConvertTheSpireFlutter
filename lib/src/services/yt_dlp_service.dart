@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/build_flags.dart';
+import '../utils/cpu_arch.dart';
 import '../utils/safe_json.dart';
 import 'bundled_tools.dart';
 import 'deno_runtime_service.dart';
@@ -194,8 +195,9 @@ class YtDlpService {
       url =
           'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
     } else if (Platform.isLinux) {
-      url =
-          'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux';
+      url = isLinuxArm64
+          ? 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64'
+          : 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux';
     } else if (Platform.isMacOS) {
       url =
           'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos';
@@ -221,7 +223,7 @@ class YtDlpService {
             ['--version'],
             workingDirectory: workDir,
             runInShell: false,
-          ).timeout(const Duration(seconds: 5));
+          ).timeout(const Duration(seconds: 30));
           if (verify.exitCode == 0 &&
               verify.stdout.toString().trim().isNotEmpty) {
             onProgress?.call(100, 'yt-dlp installed');
@@ -291,7 +293,7 @@ class YtDlpService {
               ['--version'],
               workingDirectory: workDir,
               runInShell: false,
-            ).timeout(const Duration(seconds: 5));
+            ).timeout(const Duration(seconds: 30));
             if (verify.exitCode == 0 &&
                 verify.stdout.toString().trim().isNotEmpty) {
               onProgress?.call(100, 'yt-dlp installed');
@@ -320,7 +322,7 @@ class YtDlpService {
                   ['--version'],
                   workingDirectory: workDir,
                   runInShell: false,
-                ).timeout(const Duration(seconds: 5));
+                ).timeout(const Duration(seconds: 30));
                 if (verify.exitCode == 0 &&
                     verify.stdout.toString().trim().isNotEmpty) {
                   onProgress?.call(100, 'yt-dlp installed');
@@ -450,7 +452,7 @@ class YtDlpService {
       } else if (Platform.isMacOS) {
         assetName = 'yt-dlp_macos';
       } else {
-        assetName = 'yt-dlp_linux';
+        assetName = isLinuxArm64 ? 'yt-dlp_linux_aarch64' : 'yt-dlp_linux';
       }
 
       final asset = assets.cast<Map<String, dynamic>>().firstWhere(

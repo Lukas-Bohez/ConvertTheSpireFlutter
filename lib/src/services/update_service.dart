@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/build_flags.dart';
+import '../utils/cpu_arch.dart';
 import '../utils/safe_json.dart';
 
 class UpdateInfo {
@@ -19,7 +20,16 @@ class UpdateInfo {
   /// SHA256SUMS.txt, to check the installer before running it.
   final String checksumsUrl;
   final String androidAssetUrl;
+
+  /// The Linux tar.gz for this computer's processor.
   final String linuxAssetUrl;
+
+  /// The Linux AppImage for this computer's processor, which an AppImage
+  /// puts in its own place (see LinuxUpdater).
+  final String linuxAppImageUrl;
+
+  /// Its file name, to find its line in SHA256SUMS.txt.
+  final String linuxAppImageName;
   final bool updateAvailable;
   final String releaseNotes;
 
@@ -32,6 +42,8 @@ class UpdateInfo {
     this.checksumsUrl = '',
     required this.androidAssetUrl,
     required this.linuxAssetUrl,
+    this.linuxAppImageUrl = '',
+    this.linuxAppImageName = '',
     required this.updateAvailable,
     required this.releaseNotes,
   });
@@ -71,6 +83,10 @@ class UpdateService {
       String checksumsUrl = '';
       String androidUrl = '';
       String linuxUrl = '';
+      String linuxAppImageUrl = '';
+      String linuxAppImageName = '';
+      final linuxArch = isLinuxArm64 ? 'arm64' : 'x64';
+      final appImageArch = isLinuxArm64 ? 'aarch64' : 'x86_64';
       final assets = json['assets'] as List<dynamic>? ?? [];
       for (final asset in assets) {
         final name = (asset['name'] as String? ?? '').toLowerCase();
@@ -92,12 +108,13 @@ class UpdateService {
         } else if (Platform.isAndroid) {
           if (name.endsWith('.apk') && androidUrl.isEmpty) androidUrl = url;
         } else if (Platform.isLinux) {
-          // Prefer AppImage on Linux if present; fall back to linux.zip.
-          if (name.endsWith('.appimage')) {
-            linuxUrl = url;
-          } else if ((name.contains('linux') || name.contains('appimage')) &&
-              name.endsWith('.zip') &&
-              linuxUrl.isEmpty) {
+          // ConvertTheSpireReborn-linux-x86_64.AppImage and
+          // ConvertTheSpireReborn-linux-x64.tar.gz (scripts/package_linux.sh).
+          if (name.endsWith('-$appImageArch.appimage')) {
+            linuxAppImageUrl = url;
+            linuxAppImageName = asset['name'] as String? ?? '';
+          } else if (name.contains('linux-$linuxArch') &&
+              name.endsWith('.tar.gz')) {
             linuxUrl = url;
           }
         }
@@ -115,6 +132,8 @@ class UpdateService {
         checksumsUrl: checksumsUrl,
         androidAssetUrl: androidUrl,
         linuxAssetUrl: linuxUrl,
+        linuxAppImageUrl: linuxAppImageUrl,
+        linuxAppImageName: linuxAppImageName,
         updateAvailable: _isNewer(tagName, current),
         releaseNotes: releaseNotesPreview(body),
       );

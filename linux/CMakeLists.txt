@@ -16,6 +16,16 @@ cmake_policy(SET CMP0063 NEW)
 # Load bundled libraries from the lib/ directory relative to the binary.
 set(CMAKE_INSTALL_RPATH "$ORIGIN/lib")
 
+# "Installing" just makes a relocatable bundle in the build directory. This
+# is set before anything that can fail: a first configure that stopped on a
+# missing system package left /usr/local in the cache, and every later build
+# then failed to install there.
+set(BUILD_BUNDLE_DIR "${PROJECT_BINARY_DIR}/bundle")
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT
+   OR CMAKE_INSTALL_PREFIX STREQUAL "/usr/local")
+  set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
+endif()
+
 # Root filesystem for cross-building.
 if(FLUTTER_TARGET_PLATFORM_SYSROOT)
   set(CMAKE_SYSROOT ${FLUTTER_TARGET_PLATFORM_SYSROOT})
@@ -74,14 +84,14 @@ set_target_properties(${BINARY_NAME}
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# FFmpegKit's libraries stay out of the bundle: on Linux the app runs the
+# ffmpeg program, as on Windows, and only Android uses FFmpegKit. They also
+# need codec libraries a standard install does not have.
+list(FILTER PLUGIN_BUNDLED_LIBRARIES EXCLUDE REGEX "/ffmpeg-kit/lib/")
+
 
 # === Installation ===
-# By default, "installing" just makes a relocatable bundle in the build
-# directory.
-set(BUILD_BUNDLE_DIR "${PROJECT_BINARY_DIR}/bundle")
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
-endif()
+# The bundle directory and install prefix are set at the top of this file.
 
 # Start with a clean build bundle directory every time.
 install(CODE "
@@ -115,62 +125,17 @@ install(CODE "
   endforeach()
 " COMPONENT Runtime)
 
-# ── Bundle runtime libs so the app works on older distros ──────────────────
-
-# Locate libstdc++ and libgcc_s from the build machine's GCC toolchain
-execute_process(
-  COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libstdc++.so.6
-  OUTPUT_VARIABLE LIBSTDCPP_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-execute_process(
-  COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libgcc_s.so.1
-  OUTPUT_VARIABLE LIBGCC_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-# Resolve symlinks to get the real versioned file
-get_filename_component(LIBSTDCPP_REAL "${LIBSTDCPP_PATH}" REALPATH)
-get_filename_component(LIBGCC_REAL    "${LIBGCC_PATH}"    REALPATH)
-
-if(LIBSTDCPP_REAL AND EXISTS "${LIBSTDCPP_REAL}")
-  message(STATUS "Bundling libstdc++: ${LIBSTDCPP_REAL}")
-  install(FILES "${LIBSTDCPP_REAL}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
-          RENAME libstdc++.so.6)
-endif()
-if(LIBGCC_REAL AND EXISTS "${LIBGCC_REAL}")
-  message(STATUS "Bundling libgcc: ${LIBGCC_REAL}")
-  install(FILES "${LIBGCC_REAL}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
-          RENAME libgcc_s.so.1)
-endif()
-
 # Make the app binary look in its own lib/ dir first (before system libs)
 set_target_properties(${BINARY_NAME} PROPERTIES
   INSTALL_RPATH "\$ORIGIN/lib"
   BUILD_WITH_INSTALL_RPATH TRUE)
 
-# Locate and bundle libmpv (required by media_kit)
-find_library(LIBMPV_PATH mpv)
-if(LIBMPV_PATH)
-  get_filename_component(LIBMPV_REAL "${LIBMPV_PATH}" REALPATH)
-  if(EXISTS "${LIBMPV_REAL}")
-    get_filename_component(LIBMPV_BASENAME "${LIBMPV_REAL}" NAME)
-    message(STATUS "Bundling libmpv: ${LIBMPV_REAL} (installed as ${LIBMPV_BASENAME})")
-    install(FILES "${LIBMPV_REAL}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
-            RENAME "${LIBMPV_BASENAME}")
-  endif()
-else()
-  message(WARNING "libmpv not found — install libmpv-dev on the build machine")
-endif()
-
-# Also bundle libass if available (media_kit may depend on it)
-find_library(LIBASS_PATH ass)
-if(LIBASS_PATH)
-  get_filename_component(LIBASS_REAL "${LIBASS_PATH}" REALPATH)
-  if(EXISTS "${LIBASS_REAL}")
-    get_filename_component(LIBASS_BASENAME "${LIBASS_REAL}" NAME)
-    message(STATUS "Bundling libass: ${LIBASS_REAL} (installed as ${LIBASS_BASENAME})")
-    install(FILES "${LIBASS_REAL}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
-            RENAME "${LIBASS_BASENAME}")
-  endif()
-endif()
+# The bundle uses the system's libmpv, libstdc++ and the rest. The release
+# downloads add libmpv with everything it needs (scripts/package_linux.sh).
+# This file used to copy the build machine's libstdc++ and a lone libmpv into
+# lib/: the old libstdc++ took the place of the system's and broke graphics
+# drivers built for a newer one, and libmpv without its FFmpeg libraries could
+# not load on another Ubuntu release.
 
 # Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/linux/")

@@ -6,7 +6,7 @@
 [![Downloads](https://img.shields.io/github/downloads/Lukas-Bohez/ConvertTheSpireFlutter/total)](https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/releases)
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue)](LICENSE)
 
-Windows · Android · Android TV · macOS · 18 languages · no installer · no account · no ads in the GitHub builds
+Windows · Linux · Android · Android TV · macOS · 18 languages · no installer · no account · no ads in the GitHub builds
 
 ## 📥 Install in a minute
 
@@ -17,10 +17,11 @@ One file, then it runs. No admin rights, no Python, no account.
 | **Windows** | `ConvertTheSpireReborn-Setup.exe` | Double-click it. It installs for your account, adds a Start menu entry, and the app updates itself from then on. |
 | **Android phone or TV** | `ConvertTheSpireReborn.apk` | Open it and allow the install. |
 | **macOS** | `ConvertTheSpireReborn-macOS.dmg` | Open it and drag the app into Applications. |
+| **Linux** | `ConvertTheSpireReborn-linux-x86_64.AppImage` | Allow it to run (right-click › Properties › "Allow executing", or `chmod +x`) and open it. It adds itself to your app menu and updates itself. [More on Linux](#on-linux) |
 | **Microsoft Store** | [Get it from the Store](https://apps.microsoft.com/detail/9MT834RPF8ZP) | The full Windows app. The Store installs it and keeps it up to date. |
 | **Google Play** | [The Play Store version](https://play.google.com/store/apps/details?id=com.torrentspire.ai) | A limited version: no YouTube downloads (Google Play does not allow them), and Multi-Search and the playlist tools are left out. |
 
-Rather not install? Take `ConvertTheSpireReborn-windows-x64.zip`, extract it and run `convert_the_spire_reborn.exe`, or the Mac zip.
+Rather not install? Take `ConvertTheSpireReborn-windows-x64.zip`, extract it and run `convert_the_spire_reborn.exe`, the Linux `.tar.gz` (run `convert_the_spire_reborn` in it), or the Mac zip.
 
 **"Windows protected your PC"?** Windows shows this once for programs without a paid signature: choose **More info**, then **Run anyway**. Updates from inside the app never show it. On a Mac that says it cannot open the app, right-click it and choose **Open** once.
 
@@ -34,8 +35,8 @@ Most tools that download from YouTube and other sites expect you to do some asse
 
 | Getting set up | The usual way | Convert the Spire Reborn |
 |---|---|---|
-| The downloader | Install Python, then `pip install yt-dlp` | Built into the Android app. On Windows and macOS the app fetches a self-contained yt-dlp on first start and keeps it up to date |
-| The converter | Download FFmpeg and add it to your PATH | Built into the Android app, fetched by itself on Windows |
+| The downloader | Install Python, then `pip install yt-dlp` | Built into the Android app. On Windows, Linux and macOS the app fetches a self-contained yt-dlp on first start and keeps it up to date |
+| The converter | Download FFmpeg and add it to your PATH | Built into the Android app, fetched by itself on Windows and Linux |
 | Installing on Windows | An installer that wants administrator rights | Double-click Setup.exe: no admin rights, and it updates itself |
 | Your first playlist | Learn command-line flags, or a converter site one song at a time | Paste the link and press download |
 | Removing it | Hunt down leftover files | Settings › Apps, like any other app (or delete the zip's folder) |
@@ -109,7 +110,7 @@ It is a fully native Flutter app that handles media downloading, playlist import
 
 ### Browsing
 
-* **Built-in browser** that blocks ads and trackers with the filter lists uBlock Origin uses (EasyList and EasyPrivacy), with tabs, incognito, history and favourites.
+* **Built-in browser** (Windows, macOS and Android) that blocks ads and trackers with the filter lists uBlock Origin uses (EasyList and EasyPrivacy), with tabs, incognito, history and favourites.
 * **Userscripts** (Tampermonkey/Greasemonkey compatible) on every platform, with one-tap searches for popular ones such as dark mode, Return YouTube Dislike and SponsorBlock.
 * **Browser extensions on Windows:** Chrome extensions and add-ons from addons.mozilla.org, with a catalog, permission prompts, popups and options pages. Tested with uBlock Origin Lite and Dark Reader.
 
@@ -167,9 +168,24 @@ Older screenshots of the other pages:
 ![Full logs so you know what's happening](screenshots/full-logs.webp)
 ![Full torrent settings](screenshots/full-torrent-settings.webp)
 
+## On Linux
+
+Linux gets the same app as Windows: the player, downloads from every site yt-dlp supports, Compare, the converter, torrents, Watch Together and casting.
+
+* **The AppImage** is the whole app in one file, with nothing else to install: the player's engine (libmpv) is inside it, and on first start the app downloads yt-dlp, FFmpeg and Deno by itself, as on Windows. Allow it to run as a program and open it.
+* **The tar.gz** is the same app as a folder: extract it anywhere and run `convert_the_spire_reborn`.
+* **Where it runs:** 64-bit PCs with Ubuntu 22.04 or later, Linux Mint 21 or later, Debian 12, Fedora and other distributions of the same age. Every release is started on clean Ubuntu 22.04 and 24.04 before it is published.
+* **Menu entry and "Open with":** on its first start the app adds itself to your app menu and, if your desktop shows icons, puts a shortcut there (on Ubuntu, right-click it once and choose **Allow Launching**). Songs, videos, .torrent files and magnet links can then be opened with it. Starting it again brings the open window forward instead of a second copy.
+* **Updates:** the AppImage updates itself with **Update now**. With the tar.gz, the update banner opens the release page.
+* **The built-in browser** needs a web engine that Flutter does not offer on Linux. Links open in your own browser; paste them into the app to download.
+* **The tray icon** shows on most desktops. On GNOME it needs the AppIndicator extension, which Ubuntu has on.
+* **No FFmpeg download?** Install it yourself with `sudo apt install ffmpeg` (Ubuntu, Debian, Mint) or `sudo dnf install ffmpeg` (Fedora).
+
 ## Questions
 
 **Windows shows a blue "Windows protected your PC" screen.** That screen is SmartScreen checking a program your browser downloaded that is not signed with a paid certificate. Install with the [one line above](#-install-in-a-minute) instead and it does not appear; to update, run the same line again. With the zip, choose **More info**, then **Run anyway**, and when updating, extract into a new folder rather than over the old one.
+
+**How do I start the Microsoft Store version, or make a shortcut to it?** From the Start menu, or the desktop shortcut the app makes on its first start. Do not point a shortcut at the app's exe in `C:\Program Files\WindowsApps`: Windows does not let anyone start a Store app from there ("you do not have permission"), and that folder changes with every update. To make your own shortcut, drag the app from the Start menu to the desktop, or point the shortcut at `explorer.exe shell:AppsFolder\OrokaConner.ConvertTheSpireReborn_zbvcx9hwcv0q2!convertthespirereborn`. Versions before 16.2.0 made their desktop shortcut to that exe; 16.2.0 puts it right on its first start. Please do not change the permissions of the WindowsApps folder.
 
 **Android says the app is from an unknown source.** Android asks this for any app that does not come from the Play Store. Allow it for the app you opened the APK from (your browser or file manager).
 
@@ -192,7 +208,7 @@ The main code lives in `lib/`; platform configuration is under `android/`, `wind
 * **Services:** `YtDlpService`, `DownloadService`, `ConvertService`, `PlaylistService`, `DlnaDiscovery`, `WatchPartyService` and friends.
 * **Platform:** `dart:io`, `media_kit`, native WebView bindings (WebView2 on Windows), raw sockets for DLNA and Watch Together, and isolates for background work.
 
-Linux builds are no longer distributed (since v14.3.1 the build could not be kept reliable), but the source is here if you want to build it yourself.
+**Building for Linux:** on Ubuntu 22.04 or later, `bash scripts/linux_build_deps.sh` installs the packages the build needs (`libgtk-3-dev`, `libmpv-dev` and the rest); add [Rust](https://rustup.rs) for one plugin. Then `flutter build linux --release` builds the app, and `bash scripts/package_linux.sh` turns it into the tar.gz and the AppImage in `dist/`, with libmpv and its libraries inside. From Windows, `wsl -d Ubuntu -- bash scripts/build_linux_wsl.sh` does all of it in WSL. Running a build from source needs libmpv on the system: `sudo apt install libmpv2` (Ubuntu 24.04) or `libmpv1` (22.04).
 
 ### Contributing
 

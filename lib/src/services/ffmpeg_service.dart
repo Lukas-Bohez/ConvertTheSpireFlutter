@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../utils/process_runner.dart';
 import 'bundled_tools.dart';
+import 'installer_service.dart';
 import 'platform_dirs.dart';
 import 'session_log_service.dart';
 
@@ -100,16 +101,10 @@ class FfmpegService {
     final support = await PlatformDirs.getAppSupportDir();
     if (support == null) return null;
     final root = Directory('${support.path}${Platform.pathSeparator}ffmpeg');
-    if (!await root.exists()) return null;
-    final name = Platform.isWindows ? 'ffmpeg.exe' : 'ffmpeg';
     try {
-      await for (final entity
-          in root.list(recursive: true, followLinks: false)) {
-        if (entity is File &&
-            entity.uri.pathSegments.last.toLowerCase() == name) {
-          return _downloaded = entity.path;
-        }
-      }
+      final found = await InstallerService.findFfmpegIn(root,
+          windows: Platform.isWindows);
+      if (found != null) return _downloaded = found;
     } catch (_) {}
     return null;
   }

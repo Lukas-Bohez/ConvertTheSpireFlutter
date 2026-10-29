@@ -47,7 +47,8 @@ class OpenRequest {
 /// home screen.
 ///
 /// Each platform queues them natively (MainActivity on Android, the runner on
-/// Windows, AppDelegate on macOS) on the "convert_the_spire/open" channel.
+/// Windows and Linux, AppDelegate on macOS) on the "convert_the_spire/open"
+/// channel.
 /// This service takes the queue at startup, whenever the app resumes, and when
 /// the native side says "pending", so nothing is lost while Flutter is still
 /// starting.
@@ -100,7 +101,11 @@ class OpenRequestService with WidgetsBindingObserver {
 
   /// True on the platforms that pass opened files and links to the app.
   static bool get isSupported =>
-      !kIsWeb && (Platform.isAndroid || Platform.isWindows || Platform.isMacOS);
+      !kIsWeb &&
+      (Platform.isAndroid ||
+          Platform.isWindows ||
+          Platform.isMacOS ||
+          Platform.isLinux);
 
   void start() {
     if (_started || !isSupported) return;

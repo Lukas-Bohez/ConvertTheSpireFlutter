@@ -1,58 +1,44 @@
-#!/bin/bash
-# Build Linux release using WSL
-# Usage: Run from WSL:  bash scripts/build_linux_wsl.sh
-#   Or from PowerShell: wsl -e bash scripts/build_linux_wsl.sh
-set -e
+#!/usr/bin/env bash
+# Builds the Linux packages from Windows, in WSL (Ubuntu):
+#
+#   wsl -d Ubuntu -- bash scripts/build_linux_wsl.sh
+#
+# The project is copied into the WSL home first: building on /mnt/c is slow
+# and Flutter's plugin links do not work there. The tar.gz and AppImage come
+# back to dist/ in the project.
+#
+# Once per WSL install: bash scripts/linux_build_deps.sh (needs sudo), Rust
+# from https://rustup.rs and Flutter in ~/flutter (the version in
+# .github/workflows/release.yml).
+#
+# The release packages are built by the release workflow on Ubuntu 22.04.
+# Packages built here take their libraries from this WSL's Ubuntu and need
+# a system at least as new.
+set -euo pipefail
 
-# Locate Flutter SDK
-if [ -d "$HOME/flutter/bin" ]; then
-  export PATH="$HOME/flutter/bin:$PATH"
-elif [ -d "/opt/flutter/bin" ]; then
-  export PATH="/opt/flutter/bin:$PATH"
-fi
+PROJECT="$(cd "$(dirname "$0")/.." && pwd)"
+WORK="$HOME/convert-the-spire-linux-build"
+export PATH="$HOME/flutter/bin:$HOME/.cargo/bin:$PATH"
 
-# Determine project directory
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+# A Windows Flutter on the PATH (/mnt/c/...) cannot build for Linux.
+case "$(command -v flutter || true)" in
+  /mnt/*|"") echo "Install Flutter for Linux in ~/flutter first." >&2; exit 1 ;;
+esac
 
-# If running on /mnt/ (NTFS), copy to native FS to avoid symlink issues
-if echo "$PROJECT_DIR" | grep -q '^/mnt/'; then
-  BUILD_DIR="$HOME/flutter_linux_build"
-  echo "=== Detected NTFS mount — copying to native filesystem ==="
-  rm -rf "$BUILD_DIR"
-  mkdir -p "$BUILD_DIR"
-  rsync -a \
-    --exclude='build/' \
-    --exclude='.dart_tool/' \
-    --exclude='.pub-cache/' \
-    --exclude='releases/' \
-    --exclude='.git/' \
-    --exclude='*.log' \
-    "$PROJECT_DIR/" "$BUILD_DIR/"
-  RELEASE_DIR="$PROJECT_DIR/releases/linux"
-  cd "$BUILD_DIR"
-else
-  RELEASE_DIR="$PROJECT_DIR/releases/linux"
-  cd "$PROJECT_DIR"
-fi
+mkdir -p "$WORK"
+rsync -a --delete \
+  --exclude '/build/' --exclude '.dart_tool/' --exclude '/dist/' \
+  --exclude '/upload/' --exclude '/logs/' --exclude '/coverage/' \
+  --exclude '/android/.gradle/' --exclude '/.git/' \
+  --exclude '/linux/flutter/ephemeral/' --exclude '/windows/flutter/ephemeral/' \
+  --exclude '/macos/Flutter/ephemeral/' \
+  "$PROJECT/" "$WORK/"
 
-echo "=== Installing system dependencies ==="
-sudo apt-get update -qq
-sudo apt-get install -y libayatana-appindicator3-dev 2>/dev/null || \
-  echo "WARNING: libayatana-appindicator3-dev not found — tray may not work on Linux"
+cd "$WORK"
+flutter pub get
+flutter build linux --release --no-tree-shake-icons
+bash scripts/package_linux.sh "$WORK/dist"
 
-echo "=== Installing dependencies ==="
-flutter pub get --no-example
-
-echo "=== Analyzing ==="
-flutter analyze || true
-
-echo "=== Building Linux release ==="
-flutter build linux --release
-
-echo "=== Copying to releases ==="
-mkdir -p "$RELEASE_DIR"
-cp -r build/linux/x64/release/bundle/* "$RELEASE_DIR/"
-
-echo "=== Linux build complete ==="
-ls -la "$RELEASE_DIR/"
+mkdir -p "$PROJECT/dist"
+cp "$WORK"/dist/*.tar.gz "$WORK"/dist/*.AppImage "$PROJECT/dist/"
+ls -lh "$PROJECT/dist"

@@ -1606,10 +1606,14 @@ class DownloadService {
           return free > requiredBytes;
         }
       } else {
-        final result = await Process.run('df', ['-k', outputDir]);
+        // -P keeps each disk on one line: without it a long device name
+        // wraps and the numbers move to the next line.
+        final result = await Process.run('df', ['-Pk', outputDir]);
         final lines = (result.stdout as String).split('\n');
         if (lines.length > 1) {
-          final parts = lines[1].trim().split(RegExp('s+'));
+          // Split on whitespace. This split on the letter "s", so a disk
+          // such as /dev/disk3s1s1 (macOS) read as nearly full.
+          final parts = lines[1].trim().split(RegExp(r'\s+'));
           if (parts.length > 3) {
             final freeKb = int.tryParse(parts[3]) ?? 0;
             return (freeKb * 1024) > requiredBytes;

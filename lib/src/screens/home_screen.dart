@@ -22,6 +22,7 @@ import '../services/android_saf.dart';
 import '../services/bug_report_service.dart';
 import '../services/folder_access_service.dart';
 import '../services/ipfs_service.dart';
+import '../services/linux_updater.dart';
 import '../services/open_request_service.dart';
 import '../services/pip_service.dart';
 import '../services/review_service.dart';
@@ -268,13 +269,19 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   /// Windows releases from 15.2.0 on carry Setup.exe: the app downloads it,
   /// checks it and runs it, and the new version starts by itself.
-  bool _canInstallUpdateInPlace(UpdateInfo info) =>
-      !kIsWeb &&
-      Platform.isWindows &&
-      info.windowsInstallerUrl.isNotEmpty &&
-      info.checksumsUrl.isNotEmpty;
+  /// Windows Setup and the Linux AppImage update themselves; the Linux
+  /// tar.gz and the zips open the release page.
+  bool _canInstallUpdateInPlace(UpdateInfo info) {
+    if (kIsWeb || info.checksumsUrl.isEmpty) return false;
+    if (Platform.isWindows) return info.windowsInstallerUrl.isNotEmpty;
+    if (Platform.isLinux) {
+      return info.linuxAppImageUrl.isNotEmpty &&
+          LinuxUpdater.runningAppImage() != null;
+    }
+    return false;
+  }
 
-  Future<void> _installWindowsUpdate(UpdateInfo info) async {
+  Future<void> _installUpdate(UpdateInfo info) async {
     final progress = ValueNotifier<double?>(null);
     unawaited(showDialog<void>(
       context: context,
@@ -291,6 +298,17 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     ));
     try {
+      if (Platform.isLinux) {
+        // Quits the app once the new AppImage is in place and starting.
+        await LinuxUpdater.downloadAndReplace(
+          assetUrl: info.linuxAppImageUrl,
+          assetName: info.linuxAppImageName,
+          checksumsUrl: info.checksumsUrl,
+          onProgress: (value) => progress.value = value,
+          beforeExit: TorrentEngineService.instance.closeForExit,
+        );
+        return;
+      }
       // Quits the app once Setup is running; Setup starts the new version.
       await WindowsUpdater.downloadAndInstall(
         installerUrl: info.windowsInstallerUrl,
@@ -301,7 +319,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         beforeExit: TorrentEngineService.instance.closeForExit,
       );
     } catch (e) {
-      debugPrint('Windows update failed: $e');
+      debugPrint('Update failed: $e');
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
       Snack.show(context, context.l10n.updateCouldNotDownload,
@@ -845,9 +863,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             },
             onDownload: () {
               if (_canInstallUpdateInPlace(_updateInfo!)) {
-                unawaited(_installWindowsUpdate(_updateInfo!));
+                unawaited(_installUpdate(_updateInfo!));
                 return;
               }
+              // Linux from the tar.gz: the release page, where the AppImage
+              // (which updates itself) is too.
               String url = _updateInfo!.releaseUrl;
               if (!kIsWeb) {
                 if (Platform.isWindows &&
@@ -856,9 +876,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 } else if (Platform.isAndroid &&
                     _updateInfo!.androidAssetUrl.isNotEmpty) {
                   url = _updateInfo!.androidAssetUrl;
-                } else if (Platform.isLinux &&
-                    _updateInfo!.linuxAssetUrl.isNotEmpty) {
-                  url = _updateInfo!.linuxAssetUrl;
                 }
               }
               if (url.isNotEmpty) {

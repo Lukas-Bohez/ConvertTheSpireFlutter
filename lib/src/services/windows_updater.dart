@@ -5,6 +5,8 @@ import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
+import 'release_checksums.dart';
+
 /// Updates the Windows app in place with the release's Setup.exe.
 ///
 /// Downloads ConvertTheSpireReborn-Setup.exe, checks it against the release's
@@ -36,20 +38,9 @@ class WindowsUpdater {
         p.windows.dirname(exePath).toLowerCase(), dir.toLowerCase());
   }
 
-  /// The installer's hash from a SHA256SUMS.txt, whose lines look like
-  /// `<hash>  ./windows-installer/ConvertTheSpireReborn-Setup.exe`.
-  static String? expectedHash(String sums) {
-    for (final line in sums.split('\n')) {
-      final parts = line.trim().split(RegExp(r'\s+'));
-      if (parts.length < 2) continue;
-      final name = parts.last.replaceAll('\\', '/').split('/').last;
-      if (name.toLowerCase() == installerName.toLowerCase() &&
-          RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(parts.first)) {
-        return parts.first.toLowerCase();
-      }
-    }
-    return null;
-  }
+  /// The installer's hash from a SHA256SUMS.txt.
+  static String? expectedHash(String sums) =>
+      releaseFileHash(sums, installerName);
 
   /// Arguments for Setup: silent for the installed copy, none otherwise.
   static List<String> setupArguments(bool silent) => silent
