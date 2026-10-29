@@ -88,6 +88,10 @@ include(flutter/generated_plugins.cmake)
 # ffmpeg program, as on Windows, and only Android uses FFmpegKit. They also
 # need codec libraries a standard install does not have.
 list(FILTER PLUGIN_BUNDLED_LIBRARIES EXCLUDE REGEX "/ffmpeg-kit/lib/")
+# The same for the jni plugin (Java interop, for Android): where a JDK is
+# installed, as on the release builder, its library links the JDK's libjvm,
+# which would then be packaged too.
+list(FILTER PLUGIN_BUNDLED_LIBRARIES EXCLUDE REGEX "TARGET_FILE:jni>")
 
 
 # === Installation ===
