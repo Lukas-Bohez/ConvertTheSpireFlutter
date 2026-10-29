@@ -898,7 +898,7 @@ class PlayerState with ChangeNotifier {
       await Future.microtask(() {});
       try {
         _mkPlayer ??= Player();
-        _mkController ??= await _videoControllerFor(_mkPlayer!);
+        _mkController ??= VideoController(_mkPlayer!);
         _audioMkPlayer ??= Player();
         if (!Platform.isWindows) {
           _thumbPlayer ??= Player();
@@ -916,30 +916,6 @@ class PlayerState with ChangeNotifier {
     } catch (e) {
       debugPrint('InitMkPlayers outer error: $e');
     }
-  }
-
-  /// The video output for [player].
-  ///
-  /// On Linux mpv is told not to set up its GPU interop for hardware
-  /// decoding: libmpv probed VA-API through the Wayland display while it made
-  /// the video output, and that probe crashed the whole app inside
-  /// libva-wayland (under WSL, and on some drivers). Videos still decode on
-  /// the GPU through mpv's copy-back decoders where those work, and on the
-  /// CPU otherwise.
-  static Future<VideoController> _videoControllerFor(Player player) async {
-    if (kIsWeb || !Platform.isLinux) return VideoController(player);
-    try {
-      final native = player.platform;
-      if (native is NativePlayer) {
-        await native.setProperty('gpu-hwdec-interop', 'no');
-      }
-    } catch (e) {
-      debugPrint('media_kit: could not turn off the GPU interop: $e');
-    }
-    return VideoController(
-      player,
-      configuration: const VideoControllerConfiguration(hwdec: 'auto-copy'),
-    );
   }
 
   /// Fully dispose and recreate the media_kit video player and controller.
@@ -985,8 +961,8 @@ class PlayerState with ChangeNotifier {
       try {
         await Future.microtask(() {
           _mkPlayer = Player();
+          _mkController = VideoController(_mkPlayer!);
         });
-        _mkController = await _videoControllerFor(_mkPlayer!);
         // Reattach streams to the new player and any auxiliary audio player.
         _attachMkPlayerStreams(_mkPlayer);
         if (_audioMkPlayer != null) {
