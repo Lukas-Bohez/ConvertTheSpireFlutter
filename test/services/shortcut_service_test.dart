@@ -112,7 +112,10 @@ void main() {
       expect(await target(lnk), contains('WindowsApps'));
 
       expect(await run(create: false), 0);
-      expect(await target(lnk), app.path);
+      // The same file: the temp folder can be a short 8.3 path (RUNNER~1)
+      // that the shortcut stores in full.
+      expect(File(await target(lnk)).resolveSymbolicLinksSync(),
+          app.resolveSymbolicLinksSync());
 
       // A working one is left as it is.
       final modified = File(lnk).lastModifiedSync();

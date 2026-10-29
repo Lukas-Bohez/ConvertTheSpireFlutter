@@ -10,6 +10,11 @@ SUDO=""
 [ "$(id -u)" = 0 ] || SUDO=sudo
 
 $SUDO apt-get update
+# GitHub's Ubuntu 22.04 runners have LLVM's libunwind-14-dev, which conflicts
+# with the libunwind-dev that GStreamer's headers need.
+if [ "${GITHUB_ACTIONS:-}" = true ] && dpkg -s libunwind-14-dev >/dev/null 2>&1; then
+  $SUDO apt-get remove -y libunwind-14-dev
+fi
 # The Flutter toolchain, then what the plugins build against: libmpv and
 # epoxy (the player), libsecret (secure storage), the tray library,
 # GStreamer (audioplayers), json-glib (ffmpeg_kit). The last line is for
