@@ -1,6 +1,6 @@
 # Reddit launch drafts
 
-Use these after the corresponding release is public. Attach a real recording of the workflow described in the post. Check the community’s current rules and choose the relevant flair before submitting.
+Use these after the corresponding release is public. Check the community’s current rules and choose the relevant flair before submitting.
 
 ## r/SideProject · Convert the Spire Reborn
 
