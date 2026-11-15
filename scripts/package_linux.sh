@@ -84,12 +84,17 @@ EXCLUDE_PATTERNS='
 '
 GTK_LIBS=$(ldd "$STAGE/lib/libflutter_linux_gtk.so" | awk '/=> \// { print $1 }' | tr '\n' ' ')
 
+# Rename these dependencies before shipping them. Some distros use the same
+# SONAME with newer symbols (e.g. Ubuntu 24.04's Nettle), while CachyOS can
+# lack the old SONAME altogether. System libraries must load their own copy.
+COMPAT_LIBS=(libxml2.so.2 libnettle.so.8 libhogweed.so.6 libbsd.so.0 libmd.so.0)
+
 excluded() {
   local name="$1"
-  # These versioned dependencies can coexist with the newer system versions.
-  case "$name" in
-    libxml2.so.2|libnettle.so.8|libhogweed.so.6|libbsd.so.0|libmd.so.0) return 1 ;;
-  esac
+  local compat
+  for compat in "${COMPAT_LIBS[@]}"; do
+    [[ "$name" == "$compat" ]] && return 1
+  done
   case " $(echo $EXCLUDE_LIST) $GTK_LIBS " in *" $name "*) return 0 ;; esac
   local pattern
   for pattern in $EXCLUDE_PATTERNS; do
@@ -119,13 +124,37 @@ while read -r soname path; do
 done < <(needed)
 echo "   $added libraries"
 
+# Retarget only bundled ELF files. Leave system GTK, GnuTLS and their
+# dependency chains to resolve against the host libraries.
+for soname in "${COMPAT_LIBS[@]}"; do
+  [ -f "$STAGE/lib/$soname" ] || continue
+  private_name="libcts_${soname#lib}"
+  mv "$STAGE/lib/$soname" "$STAGE/lib/$private_name"
+  chmod u+w "$STAGE/lib/$private_name"
+  patchelf --set-soname "$private_name" "$STAGE/lib/$private_name"
+done
+
+retarget_compat() {
+  local elf="$1" soname private_name
+  local needed
+  needed=$(patchelf --print-needed "$elf")
+  for soname in "${COMPAT_LIBS[@]}"; do
+    private_name="libcts_${soname#lib}"
+    if [ -f "$STAGE/lib/$private_name" ] && grep -Fxq "$soname" <<< "$needed"; then
+      patchelf --replace-needed "$soname" "$private_name" "$elf"
+    fi
+  done
+}
+
 # The program finds them in lib/, and each library its own in the same
 # folder. libapp.so is the compiled Dart code: no dependencies, left as it is.
+retarget_compat "$STAGE/$APP"
 patchelf --set-rpath '$ORIGIN/lib' "$STAGE/$APP"
 find "$STAGE/lib" -maxdepth 1 -name '*.so*' -type f ! -name libapp.so -print0 \
   | while IFS= read -r -d '' so; do
       if [[ "$(file -b "$so")" == ELF* ]]; then
         chmod u+w "$so"
+        retarget_compat "$so"
         patchelf --set-rpath '$ORIGIN' "$so"
       fi
     done
