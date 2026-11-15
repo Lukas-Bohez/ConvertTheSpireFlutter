@@ -860,7 +860,20 @@ class YtDlpService {
           message.contains('playability status: UNPLAYABLE') ||
           message.contains('sign in to confirm') ||
           message.contains('confirm you are not a bot');
-      if (hadCookieArgs && isFormatUnavailable) {
+      final isAudioTransferForbidden =
+          (formatLower == 'mp3' || formatLower == 'm4a') &&
+              YouTubeLink.parse(url) != null &&
+              message.contains(
+                  'unable to download video data: HTTP Error 403');
+      if (isAudioTransferForbidden) {
+        // Some uploads list an audio rendition that fails at transfer time
+        // while the standard stereo AAC rendition is still available.
+        final retryArgs = List<String>.of(args);
+        retryArgs[retryArgs.indexOf('-f') + 1] =
+            'bestaudio[acodec^=mp4a][audio_channels=2]';
+        debugPrint('yt-dlp: retrying audio transfer with stereo AAC');
+        await runAttempt(retryArgs);
+      } else if (hadCookieArgs && isFormatUnavailable) {
         debugPrint(
             'yt-dlp failed with format unavailable while cookies were enabled; retrying once without cookies');
         final retryArgs = _stripCookieArgs(args);
