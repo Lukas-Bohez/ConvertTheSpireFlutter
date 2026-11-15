@@ -3047,6 +3047,13 @@
     }
   },
   "startOver": "Start over",
+  "playNext": "Play next",
+  "playNextQueued": "Added to the front of the queue",
+  "exploreSpireMuseum": "Play Spire Museum",
+  "spireMuseumDescription": "Walk through Lukas Bohez’s projects in a multiplayer 3D museum.",
+  "viewPortfolio": "View portfolio",
+  "shareApp": "Copy app download link",
+  "checkExtensionUpdates": "Check for extension updates",
   "supportCardTitle": "Made by one person, for free",
   "supportCardBody": "No ads, no tracking, nothing to buy. If this app has saved you time, a coffee or a sponsorship keeps it going.",
   "supportCardNotNow": "Not now",

@@ -4922,6 +4922,28 @@ class AppLocalizationsRu extends AppLocalizations {
   String get startOver => 'Сначала';
 
   @override
+  String get playNext => 'Воспроизвести следующим';
+
+  @override
+  String get playNextQueued => 'Добавлено в начало очереди';
+
+  @override
+  String get exploreSpireMuseum => 'Играть в Spire Museum';
+
+  @override
+  String get spireMuseumDescription =>
+      'Познакомьтесь с проектами Лукаса Бохеза в многопользовательском 3D-музее.';
+
+  @override
+  String get viewPortfolio => 'Посмотреть портфолио';
+
+  @override
+  String get shareApp => 'Скопировать ссылку на скачивание приложения';
+
+  @override
+  String get checkExtensionUpdates => 'Проверить обновления расширений';
+
+  @override
   String get supportCardTitle => 'Сделано одним человеком, бесплатно';
 
   @override

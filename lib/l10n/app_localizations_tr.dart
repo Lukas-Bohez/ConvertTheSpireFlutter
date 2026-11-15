@@ -4934,6 +4934,28 @@ class AppLocalizationsTr extends AppLocalizations {
   String get startOver => 'Baştan başla';
 
   @override
+  String get playNext => 'Sırada çal';
+
+  @override
+  String get playNextQueued => 'Kuyruğun başına eklendi';
+
+  @override
+  String get exploreSpireMuseum => 'Spire Museum’u oyna';
+
+  @override
+  String get spireMuseumDescription =>
+      'Çok oyunculu bir 3D müzede Lukas Bohez’in projelerini keşfet.';
+
+  @override
+  String get viewPortfolio => 'Portföyü görüntüle';
+
+  @override
+  String get shareApp => 'Uygulama indirme bağlantısını kopyala';
+
+  @override
+  String get checkExtensionUpdates => 'Uzantı güncellemelerini denetle';
+
+  @override
   String get supportCardTitle => 'Tek bir kişi tarafından, ücretsiz yapıldı';
 
   @override

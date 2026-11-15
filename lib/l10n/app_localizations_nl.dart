@@ -4942,6 +4942,28 @@ class AppLocalizationsNl extends AppLocalizations {
   String get startOver => 'Opnieuw beginnen';
 
   @override
+  String get playNext => 'Hierna afspelen';
+
+  @override
+  String get playNextQueued => 'Vooraan in de wachtrij geplaatst';
+
+  @override
+  String get exploreSpireMuseum => 'Speel Spire Museum';
+
+  @override
+  String get spireMuseumDescription =>
+      'Wandel langs de projecten van Lukas Bohez in een 3D-museum voor meerdere spelers.';
+
+  @override
+  String get viewPortfolio => 'Bekijk portfolio';
+
+  @override
+  String get shareApp => 'Kopieer de downloadlink van de app';
+
+  @override
+  String get checkExtensionUpdates => 'Zoek naar updates voor extensies';
+
+  @override
   String get supportCardTitle => 'Gemaakt door één persoon, gratis';
 
   @override

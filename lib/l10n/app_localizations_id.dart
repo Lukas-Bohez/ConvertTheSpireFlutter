@@ -4933,6 +4933,28 @@ class AppLocalizationsId extends AppLocalizations {
   String get startOver => 'Mulai dari awal';
 
   @override
+  String get playNext => 'Putar berikutnya';
+
+  @override
+  String get playNextQueued => 'Ditambahkan ke awal antrean';
+
+  @override
+  String get exploreSpireMuseum => 'Mainkan Spire Museum';
+
+  @override
+  String get spireMuseumDescription =>
+      'Jelajahi proyek Lukas Bohez di museum 3D multipemain.';
+
+  @override
+  String get viewPortfolio => 'Lihat portofolio';
+
+  @override
+  String get shareApp => 'Salin tautan unduhan aplikasi';
+
+  @override
+  String get checkExtensionUpdates => 'Periksa pembaruan ekstensi';
+
+  @override
   String get supportCardTitle => 'Dibuat oleh satu orang, gratis';
 
   @override

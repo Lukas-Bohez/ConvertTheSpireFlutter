@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/build_flags.dart';
 import '../utils/cpu_arch.dart';
 import '../utils/safe_json.dart';
+import '../utils/youtube_link.dart';
 import 'bundled_tools.dart';
 import 'deno_runtime_service.dart';
 import 'network_proxy_service.dart';
@@ -47,6 +48,7 @@ class YtDlpService {
     required String url,
     required String ytDlpPath,
     String? ffmpegPath,
+    String format = 'mp4',
     String videoQuality = 'best',
     Map<String, String>? extraHeaders,
     String? cookiesFile,
@@ -54,7 +56,7 @@ class YtDlpService {
     bool sponsorBlockEnabled = false,
     bool forceGenericExtractor = false,
   }) async {
-    final args = <String>['--dump-json'];
+    final args = <String>['--dump-json', '--no-playlist'];
     args.addAll([
       '--no-mtime',
       '--extractor-args',
@@ -62,9 +64,7 @@ class YtDlpService {
       '--extractor-retries',
       '3',
     ]);
-    final height = _qualityToHeight(videoQuality);
-    args.addAll(
-        ['-f', 'bestvideo[height<=$height]+bestaudio/best[height<=$height]']);
+    args.addAll(['-f', _formatSelector(format.toLowerCase(), videoQuality)]);
     if (sponsorBlockEnabled) {
       args.addAll(['--sponsorblock-remove', 'all']);
     }
@@ -93,6 +93,7 @@ class YtDlpService {
     if (forceGenericExtractor) {
       args.add('--force-generic-extractor');
     }
+    if (YouTubeLink.parse(url) != null) await _applyJsRuntimes(args);
     await _applyProxyArg(args);
     args.add(url);
 
@@ -103,13 +104,26 @@ class YtDlpService {
       workingDirectory: workDir,
       runInShell: false,
     );
-    final output = await process.stdout.transform(utf8.decoder).join();
-    await process.stderr.drain();
-    final exitCode = await process.exitCode;
+    final (output, _, exitCode) = await (
+      process.stdout.transform(utf8.decoder).join(),
+      process.stderr.drain<void>(),
+      process.exitCode,
+    ).wait;
     if (exitCode != 0) return null;
     final json = safeJsonDecode<Map<String, dynamic>>(output);
-    if (json != null && json.containsKey('filesize_approx')) {
-      return json['filesize_approx'] as int?;
+    if (json == null) return null;
+    int? readSize(Map<dynamic, dynamic> info) =>
+        ((info['filesize'] ?? info['filesize_approx']) as num?)?.toInt();
+    final size = readSize(json);
+    if (size != null) return size;
+    if (json['requested_formats'] case final List<dynamic> streams) {
+      var total = 0;
+      for (final stream in streams) {
+        final bytes = stream is Map ? readSize(stream) : null;
+        if (bytes == null) return null;
+        total += bytes;
+      }
+      if (total > 0) return total;
     }
     return null;
   }
@@ -666,13 +680,12 @@ class YtDlpService {
           ['--download-sections', section, '--force-keyframes-at-cuts']);
     }
 
+    args.addAll(['-f', _formatSelector(formatLower, videoQuality)]);
     if (formatLower == 'mp4') {
-      // Video download: best video+audio up to target quality
-      final height = _qualityToHeight(videoQuality);
       args.addAll([
-        '-f',
-        'bestvideo[height<=$height]+bestaudio/best[height<=$height]',
         '--merge-output-format',
+        'mp4',
+        '--remux-video',
         'mp4',
       ]);
     } else {
@@ -680,8 +693,6 @@ class YtDlpService {
       // Using complex format filters like bestaudio[ext=m4a] fails with YouTube's
       // SABR-only streaming experiment. Let yt-dlp choose the best format naturally.
       args.addAll([
-        '-f',
-        'bestaudio/best',
         '-x',
         '--audio-format',
         formatLower,
@@ -710,14 +721,13 @@ class YtDlpService {
 
     args.addAll([
       '--embed-metadata',
-      '--embed-thumbnail',
+      if (const {'mp3', 'm4a', 'mp4', 'flac', 'opus', 'ogg'}
+          .contains(formatLower))
+        '--embed-thumbnail',
       '--parse-metadata',
-      '%(uploader|)s:%(meta_artist)s',
+      '%(artist,artists.0,creator,uploader|)s:%(meta_artist)s',
       '--parse-metadata',
-      '%(uploader|)s:%(meta_album_artist)s',
-      '--parse-metadata',
-      '%(title)s:%(meta_title)s',
-      '--add-metadata',
+      '%(track,title)s:%(meta_title)s',
     ]);
 
     if (sponsorBlockEnabled) {
@@ -730,11 +740,7 @@ class YtDlpService {
       args.addAll(['--ffmpeg-location', ffmpegPath]);
     }
 
-    // Conditionally pass --js-runtimes node: when Node.js is available
-    await _tryApplyNodeRuntime(args);
-    // Ensure a JS runtime (Deno) is available for nsig/SABR extraction — a
-    // missing/old runtime is a common cause of "page needs to be reloaded".
-    await _tryApplyDenoRuntime(args);
+    await _applyJsRuntimes(args);
     // NOTE: do NOT force `--extractor-args youtube:player_client=tv,web` here.
     // It was added under the belief that the tv client avoids YouTube's
     // SABR-only streaming experiment, but live verification (2026-09,
@@ -797,10 +803,10 @@ class YtDlpService {
 
       try {
         final stdoutBuffer = StringBuffer();
-        final stdoutSub = process.stdout
-            .transform(utf8.decoder)
+        final stdoutDone = process.stdout
+            .transform(const Utf8Decoder(allowMalformed: true))
             .transform(const LineSplitter())
-            .listen((line) {
+            .forEach((line) {
           debugPrint('yt-dlp stdout: $line');
           stdoutBuffer.writeln(line);
           final match = _progressRegex.firstMatch(line);
@@ -813,17 +819,16 @@ class YtDlpService {
         });
 
         final stderrBuffer = StringBuffer();
-        final stderrSub = process.stderr
-            .transform(utf8.decoder)
+        final stderrDone = process.stderr
+            .transform(const Utf8Decoder(allowMalformed: true))
             .transform(const LineSplitter())
-            .listen((line) {
+            .forEach((line) {
           debugPrint('yt-dlp stderr: $line');
           stderrBuffer.writeln(line);
         });
 
+        await Future.wait<void>([stdoutDone, stderrDone]);
         final exitCode = await process.exitCode;
-        await stdoutSub.cancel();
-        await stderrSub.cancel();
 
         if (isCancelled?.call() ?? false) {
           await _cleanupFailedDownloadArtifacts(outputPath);
@@ -855,7 +860,20 @@ class YtDlpService {
           message.contains('playability status: UNPLAYABLE') ||
           message.contains('sign in to confirm') ||
           message.contains('confirm you are not a bot');
-      if (hadCookieArgs && isFormatUnavailable) {
+      final isAudioTransferForbidden =
+          (formatLower == 'mp3' || formatLower == 'm4a') &&
+              YouTubeLink.parse(url) != null &&
+              message.contains(
+                  'unable to download video data: HTTP Error 403');
+      if (isAudioTransferForbidden) {
+        // Some uploads list an audio rendition that fails at transfer time
+        // while the standard stereo AAC rendition is still available.
+        final retryArgs = List<String>.of(args);
+        retryArgs[retryArgs.indexOf('-f') + 1] =
+            'bestaudio[acodec^=mp4a][audio_channels=2]';
+        debugPrint('yt-dlp: retrying audio transfer with stereo AAC');
+        await runAttempt(retryArgs);
+      } else if (hadCookieArgs && isFormatUnavailable) {
         debugPrint(
             'yt-dlp failed with format unavailable while cookies were enabled; retrying once without cookies');
         final retryArgs = _stripCookieArgs(args);
@@ -1203,6 +1221,20 @@ class YtDlpService {
 
     throw Exception(
         'No suitable shell downloader found (curl/wget/PowerShell/BITS)');
+  }
+
+  static String _formatSelector(String format, String quality) {
+    if (format != 'mp4') return 'bestaudio/best';
+    final height = _qualityToHeight(quality);
+    // A direct media URL may have no advertised resolution. Allow it as a
+    // fallback after formats whose height is known to fit.
+    return 'bestvideo[height<=$height]+bestaudio/best[height<=$height]'
+        '/bestvideo[height<=?$height]+bestaudio/best[height<=?$height]';
+  }
+
+  Future<void> _applyJsRuntimes(List<String> args) async {
+    await _tryApplyNodeRuntime(args);
+    await _tryApplyDenoRuntime(args);
   }
 
   /// Try to detect and apply Node.js as a JS runtime for yt-dlp.

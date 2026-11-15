@@ -1,4 +1,11 @@
 {
+  "playNext": "Hierna afspelen",
+  "playNextQueued": "Vooraan in de wachtrij geplaatst",
+  "exploreSpireMuseum": "Speel Spire Museum",
+  "spireMuseumDescription": "Wandel langs de projecten van Lukas Bohez in een 3D-museum voor meerdere spelers.",
+  "viewPortfolio": "Bekijk portfolio",
+  "shareApp": "Kopieer de downloadlink van de app",
+  "checkExtensionUpdates": "Zoek naar updates voor extensies",
   "@@locale": "nl",
   "tabSearch": "Zoeken",
   "tabMultiSearch": "Zoeken+",

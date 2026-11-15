@@ -1,4 +1,11 @@
 {
+  "playNext": "Воспроизвести следующим",
+  "playNextQueued": "Добавлено в начало очереди",
+  "exploreSpireMuseum": "Играть в Spire Museum",
+  "spireMuseumDescription": "Познакомьтесь с проектами Лукаса Бохеза в многопользовательском 3D-музее.",
+  "viewPortfolio": "Посмотреть портфолио",
+  "shareApp": "Скопировать ссылку на скачивание приложения",
+  "checkExtensionUpdates": "Проверить обновления расширений",
   "@@locale": "ru",
   "tabSearch": "Поиск",
   "tabMultiSearch": "Поиск+",

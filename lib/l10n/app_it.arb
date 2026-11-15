@@ -1,4 +1,11 @@
 {
+  "playNext": "Riproduci dopo",
+  "playNextQueued": "Aggiunto all’inizio della coda",
+  "exploreSpireMuseum": "Gioca a Spire Museum",
+  "spireMuseumDescription": "Esplora i progetti di Lukas Bohez in un museo 3D multigiocatore.",
+  "viewPortfolio": "Visualizza il portfolio",
+  "shareApp": "Copia il link per scaricare l’app",
+  "checkExtensionUpdates": "Cerca aggiornamenti per le estensioni",
   "@@locale": "it",
   "tabSearch": "Cerca",
   "tabMultiSearch": "Cerca+",

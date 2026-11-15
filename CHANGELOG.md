@@ -1,5 +1,26 @@
 # Changelog
 
+## 16.3.0+1308 — CachyOS startup and a faster way to queue music
+
+### Fixed
+
+- The Linux AppImage and tar.gz include the versioned libraries the player needs on CachyOS.
+- The download preview uses the selected audio or video stream when estimating transfer size.
+
+### New
+
+- Choose **Play next** on a track to move it to the front of the playback queue.
+- Open the multiplayer Spire Museum and Lukas Bohez’s portfolio from Home in Convert the Spire Reborn. Home also has a donation link and an app download link you can copy.
+- Copy the Google Play listing directly from BitPlayer’s Home screen.
+
+### Improved
+
+- Linux opens web addresses in your default browser directly.
+- Check for catalog extension updates on demand in the Windows browser.
+- YouTube download metadata prefers the track title and artist when available.
+- If a YouTube audio stream returns HTTP 403 during transfer, MP3 and M4A downloads retry once with a stereo AAC stream.
+- Direct video downloads handle sources that omit the resolution and save them in the requested MP4 container.
+
 ## 16.2.0+1307 — Linux is back, and the Store version's desktop shortcut works
 
 ### New

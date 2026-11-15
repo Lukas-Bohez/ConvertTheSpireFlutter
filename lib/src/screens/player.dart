@@ -3110,6 +3110,15 @@ class PlayerState with ChangeNotifier {
 
   // --- Queue ----------------------------------------------------------------
 
+  void playNext(int index) {
+    if (index < 0 || index >= library.length) return;
+    manualQueue.remove(index);
+    _manualQueueBase.remove(index);
+    manualQueue.insert(0, index);
+    _manualQueueBase.insert(0, index);
+    notifyListeners();
+  }
+
   void enqueue(int index) {
     debugPrint('enqueue requested: $index, library=${library.length}');
     if (index < 0 || index >= library.length) {
@@ -7821,6 +7830,7 @@ enum _TrackMenuAction {
   sleepTimer,
   copyTitle,
   share,
+  playNext,
   queue,
   favourite,
   dislike,
@@ -7922,6 +7932,10 @@ class _TrackMenuButton extends StatelessWidget {
             break;
           case _TrackMenuAction.share:
             await _shareMediaItem(context, item);
+            break;
+          case _TrackMenuAction.playNext:
+            state.playNext(index);
+            Snack.show(context, context.l10n.playNextQueued);
             break;
           case _TrackMenuAction.queue:
             state.enqueue(index);
@@ -8047,6 +8061,14 @@ class _TrackMenuButton extends StatelessWidget {
           child: ListTile(
             leading: const Icon(Icons.share),
             title: Text(context.l10n.actionShare),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: _TrackMenuAction.playNext,
+          child: ListTile(
+            leading: const Icon(Icons.playlist_play_rounded),
+            title: Text(context.l10n.playNext),
             contentPadding: EdgeInsets.zero,
           ),
         ),

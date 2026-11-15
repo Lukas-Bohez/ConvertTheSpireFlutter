@@ -1,4 +1,11 @@
 {
+  "playNext": "Putar berikutnya",
+  "playNextQueued": "Ditambahkan ke awal antrean",
+  "exploreSpireMuseum": "Mainkan Spire Museum",
+  "spireMuseumDescription": "Jelajahi proyek Lukas Bohez di museum 3D multipemain.",
+  "viewPortfolio": "Lihat portofolio",
+  "shareApp": "Salin tautan unduhan aplikasi",
+  "checkExtensionUpdates": "Periksa pembaruan ekstensi",
   "@@locale": "id",
   "tabSearch": "Cari",
   "tabMultiSearch": "Cari+",

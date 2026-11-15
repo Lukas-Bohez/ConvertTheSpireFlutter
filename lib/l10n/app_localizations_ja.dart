@@ -4798,6 +4798,28 @@ class AppLocalizationsJa extends AppLocalizations {
   String get startOver => '最初から';
 
   @override
+  String get playNext => '次に再生';
+
+  @override
+  String get playNextQueued => 'キューの先頭に追加しました';
+
+  @override
+  String get exploreSpireMuseum => 'Spire Museum で遊ぶ';
+
+  @override
+  String get spireMuseumDescription =>
+      'マルチプレイヤー対応の 3D ミュージアムで Lukas Bohez の作品を見て回れます。';
+
+  @override
+  String get viewPortfolio => 'ポートフォリオを見る';
+
+  @override
+  String get shareApp => 'アプリのダウンロードリンクをコピー';
+
+  @override
+  String get checkExtensionUpdates => '拡張機能の更新を確認';
+
+  @override
   String get supportCardTitle => '一人で、無料で作っています';
 
   @override

@@ -49,8 +49,9 @@ cp -a "$BUNDLE" "$STAGE"
 #    drivers' libraries, X11 and the like. libjack is taken along after all:
 #    libmpv needs it, and many desktops do not have it.
 # 3. Libraries that talk to a part of the system and must match it (sound
-#    servers, GStreamer and its plugins, TLS, the SVG library the icon
-#    loaders use). Desktops all have them.
+#    servers, GStreamer and its plugins, the SVG library the icon loaders
+#    use). Keep the older XML and Nettle SONAMEs used by bundled media
+#    libraries, even when the host uses newer SONAMEs.
 #
 # The tray library, libsecret, libva, the Vulkan loader (it finds the
 # system's drivers itself), the X11 extensions mpv uses and the like do come
@@ -83,8 +84,17 @@ EXCLUDE_PATTERNS='
 '
 GTK_LIBS=$(ldd "$STAGE/lib/libflutter_linux_gtk.so" | awk '/=> \// { print $1 }' | tr '\n' ' ')
 
+# Rename these dependencies before shipping them. Some distros use the same
+# SONAME with newer symbols (e.g. Ubuntu 24.04's Nettle), while CachyOS can
+# lack the old SONAME altogether. System libraries must load their own copy.
+COMPAT_LIBS=(libxml2.so.2 libnettle.so.8 libhogweed.so.6 libbsd.so.0 libmd.so.0)
+
 excluded() {
   local name="$1"
+  local compat
+  for compat in "${COMPAT_LIBS[@]}"; do
+    [[ "$name" == "$compat" ]] && return 1
+  done
   case " $(echo $EXCLUDE_LIST) $GTK_LIBS " in *" $name "*) return 0 ;; esac
   local pattern
   for pattern in $EXCLUDE_PATTERNS; do
@@ -114,13 +124,37 @@ while read -r soname path; do
 done < <(needed)
 echo "   $added libraries"
 
+# Retarget only bundled ELF files. Leave system GTK, GnuTLS and their
+# dependency chains to resolve against the host libraries.
+for soname in "${COMPAT_LIBS[@]}"; do
+  [ -f "$STAGE/lib/$soname" ] || continue
+  private_name="libcts_${soname#lib}"
+  mv "$STAGE/lib/$soname" "$STAGE/lib/$private_name"
+  chmod u+w "$STAGE/lib/$private_name"
+  patchelf --set-soname "$private_name" "$STAGE/lib/$private_name"
+done
+
+retarget_compat() {
+  local elf="$1" soname private_name
+  local needed
+  needed=$(patchelf --print-needed "$elf")
+  for soname in "${COMPAT_LIBS[@]}"; do
+    private_name="libcts_${soname#lib}"
+    if [ -f "$STAGE/lib/$private_name" ] && grep -Fxq "$soname" <<< "$needed"; then
+      patchelf --replace-needed "$soname" "$private_name" "$elf"
+    fi
+  done
+}
+
 # The program finds them in lib/, and each library its own in the same
 # folder. libapp.so is the compiled Dart code: no dependencies, left as it is.
+retarget_compat "$STAGE/$APP"
 patchelf --set-rpath '$ORIGIN/lib' "$STAGE/$APP"
 find "$STAGE/lib" -maxdepth 1 -name '*.so*' -type f ! -name libapp.so -print0 \
   | while IFS= read -r -d '' so; do
       if [[ "$(file -b "$so")" == ELF* ]]; then
         chmod u+w "$so"
+        retarget_compat "$so"
         patchelf --set-rpath '$ORIGIN' "$so"
       fi
     done

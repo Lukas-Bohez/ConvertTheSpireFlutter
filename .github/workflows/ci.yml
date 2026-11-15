@@ -146,7 +146,7 @@ jobs:
 
   # The Linux app went unbuilt from v14.3.1 until it no longer built (#47).
   # Built and packaged as for a release, then started on clean Ubuntu 22.04
-  # and 24.04. The packages are kept for a week, to try a pull request.
+  # and 24.04 and CachyOS. The packages are kept for a week, to try a pull request.
   linux:
     name: Linux build and start
     runs-on: ubuntu-22.04
@@ -177,6 +177,9 @@ jobs:
 
       - name: Start it on a clean Ubuntu 24.04
         run: bash scripts/smoke_test_linux.sh ubuntu:24.04 dist
+
+      - name: Start it on CachyOS
+        run: bash scripts/smoke_test_linux.sh cachyos/distrobox:latest dist
 
       - uses: actions/upload-artifact@v7
         with:

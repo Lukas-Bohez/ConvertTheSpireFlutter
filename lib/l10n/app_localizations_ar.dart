@@ -4891,6 +4891,28 @@ class AppLocalizationsAr extends AppLocalizations {
   String get startOver => 'من البداية';
 
   @override
+  String get playNext => 'التشغيل التالي';
+
+  @override
+  String get playNextQueued => 'أُضيف إلى بداية قائمة الانتظار';
+
+  @override
+  String get exploreSpireMuseum => 'العب في متحف Spire';
+
+  @override
+  String get spireMuseumDescription =>
+      'تجوّل بين مشاريع لوكاس بوهيز في متحف ثلاثي الأبعاد متعدد اللاعبين.';
+
+  @override
+  String get viewPortfolio => 'عرض معرض الأعمال';
+
+  @override
+  String get shareApp => 'نسخ رابط تنزيل التطبيق';
+
+  @override
+  String get checkExtensionUpdates => 'التحقق من تحديثات الإضافات';
+
+  @override
   String get supportCardTitle => 'صنعه شخص واحد، مجانًا';
 
   @override

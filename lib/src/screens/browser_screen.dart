@@ -392,7 +392,9 @@ class _BrowserScreenState extends State<BrowserScreen>
     _addressController.text = normalized;
     _publishBrowserLocation();
 
-    if (_webViewController != null) {
+    if (!_webViewSupported) {
+      unawaited(_openInExternal());
+    } else if (_webViewController != null) {
       _webViewController!.loadUrl(normalized);
     } else {
       debugPrint('[BROWSER] controller not ready, queueing URL: $normalized');
@@ -1398,10 +1400,21 @@ class _BrowserScreenState extends State<BrowserScreen>
 })();
 ''';
 
-  void _openInExternal() async {
-    final url = _addressController.text.trim();
-    if (url.isNotEmpty) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  Future<void> _openInExternal() async {
+    final uri = Uri.tryParse(_addressController.text.trim());
+    if (uri == null ||
+        !{'https', 'http'}.contains(uri.scheme) ||
+        uri.host.isEmpty) {
+      return;
+    }
+    try {
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    } catch (e) {
+      debugPrint('Could not launch external browser: $e');
+    }
+    if (mounted) {
+      Snack.show(context, context.l10n.couldNotOpenBrowser,
+          level: SnackLevel.error);
     }
   }
 
@@ -1822,7 +1835,7 @@ class _BrowserScreenState extends State<BrowserScreen>
       return;
     }
     if (action == 'openExternal' || action == 'external') {
-      _openInExternal();
+      unawaited(_openInExternal());
       return;
     }
     if (action == 'copyLink') {
