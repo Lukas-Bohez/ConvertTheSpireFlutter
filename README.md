@@ -25,7 +25,7 @@ Rather not install? Take `ConvertTheSpireReborn-windows-x64.zip`, extract it and
 
 **"Windows protected your PC"?** Windows shows this once for programs without a paid signature: choose **More info**, then **Run anyway**. Updates from inside the app never show it. On a Mac that says it cannot open the app, right-click it and choose **Open** once.
 
-Also on the official site: [quizthespire.com](https://quizthespire.com/).
+[Media tools and portfolio](https://quizthespire.com/) · [Play Spire Museum](https://quizthespire.com/museum/walk)
 
 ---
 

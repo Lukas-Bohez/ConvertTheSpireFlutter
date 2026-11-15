@@ -1213,7 +1213,10 @@ class YtDlpService {
   static String _formatSelector(String format, String quality) {
     if (format != 'mp4') return 'bestaudio/best';
     final height = _qualityToHeight(quality);
-    return 'bestvideo[height<=$height]+bestaudio/best[height<=$height]';
+    // A direct media URL may have no advertised resolution. Allow it as a
+    // fallback after formats whose height is known to fit.
+    return 'bestvideo[height<=$height]+bestaudio/best[height<=$height]'
+        '/bestvideo[height<=?$height]+bestaudio/best[height<=?$height]';
   }
 
   Future<void> _applyJsRuntimes(List<String> args) async {

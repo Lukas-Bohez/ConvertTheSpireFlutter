@@ -18,3 +18,4 @@
 - Linux opens web addresses in your default browser directly.
 - Check for catalog extension updates on demand in the Windows browser.
 - YouTube download metadata prefers the track title and artist when available.
+- Direct video downloads handle sources that omit the resolution and save them in the requested MP4 container.
