@@ -4958,6 +4958,28 @@ class AppLocalizationsEs extends AppLocalizations {
   String get startOver => 'Empezar de nuevo';
 
   @override
+  String get playNext => 'Reproducir a continuación';
+
+  @override
+  String get playNextQueued => 'Añadido al principio de la cola';
+
+  @override
+  String get exploreSpireMuseum => 'Jugar a Spire Museum';
+
+  @override
+  String get spireMuseumDescription =>
+      'Recorre los proyectos de Lukas Bohez en un museo 3D multijugador.';
+
+  @override
+  String get viewPortfolio => 'Ver el portafolio';
+
+  @override
+  String get shareApp => 'Copiar enlace de descarga de la app';
+
+  @override
+  String get checkExtensionUpdates => 'Buscar actualizaciones de extensiones';
+
+  @override
   String get supportCardTitle => 'Hecha por una sola persona, gratis';
 
   @override

@@ -1,4 +1,11 @@
 {
+  "playNext": "التشغيل التالي",
+  "playNextQueued": "أُضيف إلى بداية قائمة الانتظار",
+  "exploreSpireMuseum": "العب في متحف Spire",
+  "spireMuseumDescription": "تجوّل بين مشاريع لوكاس بوهيز في متحف ثلاثي الأبعاد متعدد اللاعبين.",
+  "viewPortfolio": "عرض معرض الأعمال",
+  "shareApp": "نسخ رابط تنزيل التطبيق",
+  "checkExtensionUpdates": "التحقق من تحديثات الإضافات",
   "@@locale": "ar",
   "tabSearch": "بحث",
   "tabMultiSearch": "بحث+",

@@ -4930,6 +4930,28 @@ class AppLocalizationsUk extends AppLocalizations {
   String get startOver => 'Спочатку';
 
   @override
+  String get playNext => 'Відтворити наступним';
+
+  @override
+  String get playNextQueued => 'Додано на початок черги';
+
+  @override
+  String get exploreSpireMuseum => 'Грати в Spire Museum';
+
+  @override
+  String get spireMuseumDescription =>
+      'Огляньте проєкти Лукаса Бохеза в багатокористувацькому 3D-музеї.';
+
+  @override
+  String get viewPortfolio => 'Переглянути портфоліо';
+
+  @override
+  String get shareApp => 'Скопіювати посилання на завантаження застосунку';
+
+  @override
+  String get checkExtensionUpdates => 'Перевірити оновлення розширень';
+
+  @override
   String get supportCardTitle => 'Зроблено однією людиною, безкоштовно';
 
   @override

@@ -1,4 +1,11 @@
 {
+  "playNext": "Sırada çal",
+  "playNextQueued": "Kuyruğun başına eklendi",
+  "exploreSpireMuseum": "Spire Museum’u oyna",
+  "spireMuseumDescription": "Çok oyunculu bir 3D müzede Lukas Bohez’in projelerini keşfet.",
+  "viewPortfolio": "Portföyü görüntüle",
+  "shareApp": "Uygulama indirme bağlantısını kopyala",
+  "checkExtensionUpdates": "Uzantı güncellemelerini denetle",
   "@@locale": "tr",
   "tabSearch": "Ara",
   "tabMultiSearch": "Ara+",

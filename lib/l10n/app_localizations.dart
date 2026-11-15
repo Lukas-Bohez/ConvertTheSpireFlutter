@@ -8683,6 +8683,48 @@ abstract class AppLocalizations {
   /// **'Start over'**
   String get startOver;
 
+  /// No description provided for @playNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Play next'**
+  String get playNext;
+
+  /// No description provided for @playNextQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to the front of the queue'**
+  String get playNextQueued;
+
+  /// No description provided for @exploreSpireMuseum.
+  ///
+  /// In en, this message translates to:
+  /// **'Play Spire Museum'**
+  String get exploreSpireMuseum;
+
+  /// No description provided for @spireMuseumDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Walk through Lukas Bohez’s projects in a multiplayer 3D museum.'**
+  String get spireMuseumDescription;
+
+  /// No description provided for @viewPortfolio.
+  ///
+  /// In en, this message translates to:
+  /// **'View portfolio'**
+  String get viewPortfolio;
+
+  /// No description provided for @shareApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy app download link'**
+  String get shareApp;
+
+  /// No description provided for @checkExtensionUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for extension updates'**
+  String get checkExtensionUpdates;
+
   /// No description provided for @supportCardTitle.
   ///
   /// In en, this message translates to:

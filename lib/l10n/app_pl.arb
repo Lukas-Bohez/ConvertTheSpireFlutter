@@ -1,4 +1,11 @@
 {
+  "playNext": "Odtwórz jako następne",
+  "playNextQueued": "Dodano na początek kolejki",
+  "exploreSpireMuseum": "Zagraj w Spire Museum",
+  "spireMuseumDescription": "Zobacz projekty Lukasa Boheza w wieloosobowym muzeum 3D.",
+  "viewPortfolio": "Zobacz portfolio",
+  "shareApp": "Skopiuj link do pobrania aplikacji",
+  "checkExtensionUpdates": "Sprawdź aktualizacje rozszerzeń",
   "@@locale": "pl",
   "tabSearch": "Szukaj",
   "tabMultiSearch": "Szukaj+",

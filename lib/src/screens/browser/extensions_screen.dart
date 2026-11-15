@@ -42,6 +42,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
   final Set<String> _busy = {};
   bool _loading = true;
   bool _installing = false;
+  bool _checkingUpdates = false;
   String? _problem;
 
   WebExtensionHost get _host => widget.host;
@@ -101,20 +102,34 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
     }
   }
 
-  /// Looks each addons.mozilla.org extension up once per visit.
   Future<void> _checkUpdates() async {
-    for (final extension in _installed) {
-      final guid = extension.amoGuid;
-      if (guid == null) continue;
-      try {
-        final latest = await _catalog.details(guid);
-        if (latest.version.isNotEmpty && latest.version != extension.version) {
+    if (!mounted || _checkingUpdates) return;
+    setState(() => _checkingUpdates = true);
+    try {
+      for (final extension in _installed) {
+        final guid = extension.amoGuid;
+        if (guid == null) continue;
+        try {
+          final latest = await _catalog.details(guid);
           if (!mounted) return;
-          setState(() => _updates[extension.id] = latest);
+          if (!_installed.any((entry) =>
+              entry.id == extension.id && entry.version == extension.version)) {
+            continue;
+          }
+          setState(() {
+            if (latest.version.isNotEmpty &&
+                latest.version != extension.version) {
+              _updates[extension.id] = latest;
+            } else {
+              _updates.remove(extension.id);
+            }
+          });
+        } catch (_) {
+          // Preserve the last result when the catalog is unreachable.
         }
-      } catch (_) {
-        // Offline or delisted: no update badge, nothing to report.
       }
+    } finally {
+      if (mounted) setState(() => _checkingUpdates = false);
     }
   }
 
@@ -371,6 +386,15 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
           actions: [
             if (supported) ...[
               IconButton(
+                tooltip: context.l10n.checkExtensionUpdates,
+                icon: const Icon(Icons.update),
+                onPressed: _checkingUpdates ||
+                        _installing ||
+                        !_installed.any((extension) => extension.amoGuid != null)
+                    ? null
+                    : _checkUpdates,
+              ),
+              IconButton(
                 tooltip: context.l10n.installFromFileCrxZip,
                 icon: const Icon(Icons.upload_file),
                 onPressed: _installing ? null : _installFromFile,
@@ -391,7 +415,8 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
         ),
         body: Column(
           children: [
-            if (_installing) const LinearProgressIndicator(minHeight: 2),
+            if (_installing || _checkingUpdates)
+              const LinearProgressIndicator(minHeight: 2),
             Expanded(
               child: !supported
                   ? _Message(

@@ -1,4 +1,11 @@
 {
+  "playNext": "अगला चलाएँ",
+  "playNextQueued": "कतार की शुरुआत में जोड़ा गया",
+  "exploreSpireMuseum": "Spire Museum खेलें",
+  "spireMuseumDescription": "मल्टीप्लेयर 3D संग्रहालय में Lukas Bohez की परियोजनाएँ देखें।",
+  "viewPortfolio": "पोर्टफ़ोलियो देखें",
+  "shareApp": "ऐप डाउनलोड लिंक कॉपी करें",
+  "checkExtensionUpdates": "एक्सटेंशन के अपडेट देखें",
   "@@locale": "hi",
   "tabSearch": "खोजें",
   "tabMultiSearch": "खोजें+",

@@ -1,4 +1,11 @@
 {
+  "playNext": "Відтворити наступним",
+  "playNextQueued": "Додано на початок черги",
+  "exploreSpireMuseum": "Грати в Spire Museum",
+  "spireMuseumDescription": "Огляньте проєкти Лукаса Бохеза в багатокористувацькому 3D-музеї.",
+  "viewPortfolio": "Переглянути портфоліо",
+  "shareApp": "Скопіювати посилання на завантаження застосунку",
+  "checkExtensionUpdates": "Перевірити оновлення розширень",
   "@@locale": "uk",
   "tabSearch": "Пошук",
   "tabMultiSearch": "Пошук+",

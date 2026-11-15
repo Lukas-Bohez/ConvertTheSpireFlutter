@@ -174,12 +174,12 @@ Linux gets the same app as Windows: the player, downloads from every site yt-dlp
 
 * **The AppImage** is the whole app in one file, with nothing else to install: the player's engine (libmpv) is inside it, and on first start the app downloads yt-dlp, FFmpeg and Deno by itself, as on Windows. Allow it to run as a program and open it.
 * **The tar.gz** is the same app as a folder: extract it anywhere and run `convert_the_spire_reborn`.
-* **Where it runs:** 64-bit PCs with Ubuntu 22.04 or later, Linux Mint 21 or later, Debian 12, Fedora and other distributions of the same age. Every release is started on clean Ubuntu 22.04 and 24.04 before it is published.
+* **Where it runs:** 64-bit PCs with Ubuntu 22.04 or later, Linux Mint 21 or later, Debian 12, Fedora and CachyOS. The release workflow starts both packages in Ubuntu 22.04, Ubuntu 24.04 and CachyOS containers before publishing.
 * **Menu entry and "Open with":** on its first start the app adds itself to your app menu and, if your desktop shows icons, puts a shortcut there (on Ubuntu, right-click it once and choose **Allow Launching**). Songs, videos, .torrent files and magnet links can then be opened with it. Starting it again brings the open window forward instead of a second copy.
 * **Updates:** the AppImage updates itself with **Update now**. With the tar.gz, the update banner opens the release page.
-* **The built-in browser** needs a web engine that Flutter does not offer on Linux. Links open in your own browser; paste them into the app to download.
+* **Browsing:** submit a web address or search from the app’s Browser tab to open it in your default browser with its installed extensions. Paste media links into Quick Download to choose MP3, M4A or MP4.
 * **The tray icon** shows on most desktops. On GNOME it needs the AppIndicator extension, which Ubuntu has on.
-* **No FFmpeg download?** Install it yourself with `sudo apt install ffmpeg` (Ubuntu, Debian, Mint) or `sudo dnf install ffmpeg` (Fedora).
+* **No FFmpeg download?** Install it yourself with `sudo apt install ffmpeg` (Ubuntu, Debian, Mint), `sudo dnf install ffmpeg` (Fedora), or your system package manager on CachyOS.
 
 ## Questions
 

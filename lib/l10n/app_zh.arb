@@ -1,4 +1,11 @@
 {
+  "playNext": "接下来播放",
+  "playNextQueued": "已添加到队列最前面",
+  "exploreSpireMuseum": "游玩 Spire Museum",
+  "spireMuseumDescription": "在多人 3D 博物馆中参观 Lukas Bohez 的作品。",
+  "viewPortfolio": "查看作品集",
+  "shareApp": "复制应用下载链接",
+  "checkExtensionUpdates": "检查扩展程序更新",
   "@@locale": "zh",
   "tabSearch": "搜索",
   "tabMultiSearch": "搜索+",

@@ -4916,6 +4916,28 @@ class AppLocalizationsVi extends AppLocalizations {
   String get startOver => 'Phát lại từ đầu';
 
   @override
+  String get playNext => 'Phát tiếp theo';
+
+  @override
+  String get playNextQueued => 'Đã thêm vào đầu hàng đợi';
+
+  @override
+  String get exploreSpireMuseum => 'Chơi Spire Museum';
+
+  @override
+  String get spireMuseumDescription =>
+      'Khám phá các dự án của Lukas Bohez trong bảo tàng 3D nhiều người chơi.';
+
+  @override
+  String get viewPortfolio => 'Xem hồ sơ dự án';
+
+  @override
+  String get shareApp => 'Sao chép liên kết tải ứng dụng';
+
+  @override
+  String get checkExtensionUpdates => 'Kiểm tra bản cập nhật tiện ích';
+
+  @override
   String get supportCardTitle => 'Do một người làm, miễn phí';
 
   @override

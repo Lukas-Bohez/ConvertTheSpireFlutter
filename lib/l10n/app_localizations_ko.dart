@@ -4797,6 +4797,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get startOver => '처음부터';
 
   @override
+  String get playNext => '다음에 재생';
+
+  @override
+  String get playNextQueued => '재생 대기열 맨 앞에 추가됨';
+
+  @override
+  String get exploreSpireMuseum => 'Spire Museum 플레이';
+
+  @override
+  String get spireMuseumDescription =>
+      '멀티플레이 3D 박물관에서 Lukas Bohez의 프로젝트를 둘러보세요.';
+
+  @override
+  String get viewPortfolio => '포트폴리오 보기';
+
+  @override
+  String get shareApp => '앱 다운로드 링크 복사';
+
+  @override
+  String get checkExtensionUpdates => '확장 프로그램 업데이트 확인';
+
+  @override
   String get supportCardTitle => '한 사람이 무료로 만들었습니다';
 
   @override

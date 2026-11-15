@@ -1,4 +1,11 @@
 {
+  "playNext": "다음에 재생",
+  "playNextQueued": "재생 대기열 맨 앞에 추가됨",
+  "exploreSpireMuseum": "Spire Museum 플레이",
+  "spireMuseumDescription": "멀티플레이 3D 박물관에서 Lukas Bohez의 프로젝트를 둘러보세요.",
+  "viewPortfolio": "포트폴리오 보기",
+  "shareApp": "앱 다운로드 링크 복사",
+  "checkExtensionUpdates": "확장 프로그램 업데이트 확인",
   "@@locale": "ko",
   "tabSearch": "검색",
   "tabMultiSearch": "검색+",

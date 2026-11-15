@@ -412,7 +412,7 @@ jobs:
   # Built on the oldest Ubuntu the release supports: the packages carry
   # libmpv and its libraries from the build machine (scripts/package_linux.sh)
   # and run on that Ubuntu and later. Both are started on clean Ubuntu 22.04
-  # and 24.04 before they are published.
+  # and 24.04 and on CachyOS before they are published.
   build-linux:
     name: Build Linux
     needs: test-and-analyze
@@ -443,6 +443,9 @@ jobs:
 
       - name: Start it on a clean Ubuntu 24.04
         run: bash scripts/smoke_test_linux.sh ubuntu:24.04 dist
+
+      - name: Start it on CachyOS
+        run: bash scripts/smoke_test_linux.sh cachyos/distrobox:latest dist
 
       - uses: actions/upload-artifact@v7
         with:

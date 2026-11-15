@@ -1,4 +1,11 @@
 {
+  "playNext": "次に再生",
+  "playNextQueued": "キューの先頭に追加しました",
+  "exploreSpireMuseum": "Spire Museum で遊ぶ",
+  "spireMuseumDescription": "マルチプレイヤー対応の 3D ミュージアムで Lukas Bohez の作品を見て回れます。",
+  "viewPortfolio": "ポートフォリオを見る",
+  "shareApp": "アプリのダウンロードリンクをコピー",
+  "checkExtensionUpdates": "拡張機能の更新を確認",
   "@@locale": "ja",
   "tabSearch": "検索",
   "tabMultiSearch": "検索+",

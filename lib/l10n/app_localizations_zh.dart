@@ -4741,6 +4741,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get startOver => '从头开始';
 
   @override
+  String get playNext => '接下来播放';
+
+  @override
+  String get playNextQueued => '已添加到队列最前面';
+
+  @override
+  String get exploreSpireMuseum => '游玩 Spire Museum';
+
+  @override
+  String get spireMuseumDescription => '在多人 3D 博物馆中参观 Lukas Bohez 的作品。';
+
+  @override
+  String get viewPortfolio => '查看作品集';
+
+  @override
+  String get shareApp => '复制应用下载链接';
+
+  @override
+  String get checkExtensionUpdates => '检查扩展程序更新';
+
+  @override
   String get supportCardTitle => '由一个人免费制作';
 
   @override

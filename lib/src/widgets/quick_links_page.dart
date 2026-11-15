@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../config/build_flags.dart';
 import '../config/full_mode_access.dart';
 import '../services/folder_access_service.dart';
 import '../utils/l10n.dart';
+import '../utils/snack.dart';
 import 'monetization_widgets.dart';
 import 'quick_download_card.dart';
 import 'quick_links_service.dart';
@@ -414,6 +416,14 @@ class _QuickLinksPageState extends State<QuickLinksPage> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             sliver: _buildLinksGrid(crossAxisCount, visibleLinks),
           ),
+          if (!kPlayStoreBuild)
+            SliverToBoxAdapter(
+              child: _ProjectLinks(
+                onSupport: () => widget.onNavigate('support.tab'),
+              ),
+            ),
+          if (kPlayStoreBuild)
+            const SliverToBoxAdapter(child: Center(child: _ShareAppButton())),
           // Under everything, and only now and then: SupportNudgeService.
           if (!kPlayStoreBuild) const SliverToBoxAdapter(child: SupportCard()),
         ],
@@ -635,6 +645,91 @@ class _QuickLinkTileState extends State<_QuickLinkTile> {
       ),
     _ => null,
   };
+}
+
+class _ProjectLinks extends StatelessWidget {
+  const _ProjectLinks({required this.onSupport});
+
+  final VoidCallback onSupport;
+
+  Future<void> _open(BuildContext context, String path) async {
+    try {
+      final opened = await launchUrl(
+        Uri.https('quizthespire.com', path),
+        mode: LaunchMode.externalApplication,
+      );
+      if (opened) return;
+    } catch (e) {
+      debugPrint('Could not open Quiz the Spire: $e');
+    }
+    if (context.mounted) {
+      Snack.show(context, context.l10n.couldNotOpenBrowser,
+          level: SnackLevel.error);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Quiz the Spire', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 6),
+            Text(l10n.spireMuseumDescription),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  onPressed: () => _open(context, '/museum/walk'),
+                  icon: const Icon(Icons.videogame_asset_outlined),
+                  label: Text(l10n.exploreSpireMuseum),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _open(context, '/portfolio'),
+                  icon: const Icon(Icons.work_outline),
+                  label: Text(l10n.viewPortfolio),
+                ),
+                TextButton.icon(
+                  onPressed: onSupport,
+                  icon: const Icon(Icons.favorite_border),
+                  label: Text(l10n.supportDonation),
+                ),
+                const _ShareAppButton(),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ShareAppButton extends StatelessWidget {
+  const _ShareAppButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: () async {
+        final link = kPlayStoreBuild
+            ? 'https://play.google.com/store/apps/details?id=com.torrentspire.ai'
+            : 'https://quizthespire.com/tools/convert';
+        await Clipboard.setData(ClipboardData(text: link));
+        if (context.mounted) {
+          Snack.show(context, context.l10n.linkCopiedClipboard);
+        }
+      },
+      icon: const Icon(Icons.link),
+      label: Text(context.l10n.shareApp),
+    );
+  }
 }
 
 final AppLocalizations _englishText =

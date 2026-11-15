@@ -4916,6 +4916,28 @@ class AppLocalizationsHi extends AppLocalizations {
   String get startOver => 'शुरू से चलाएं';
 
   @override
+  String get playNext => 'अगला चलाएँ';
+
+  @override
+  String get playNextQueued => 'कतार की शुरुआत में जोड़ा गया';
+
+  @override
+  String get exploreSpireMuseum => 'Spire Museum खेलें';
+
+  @override
+  String get spireMuseumDescription =>
+      'मल्टीप्लेयर 3D संग्रहालय में Lukas Bohez की परियोजनाएँ देखें।';
+
+  @override
+  String get viewPortfolio => 'पोर्टफ़ोलियो देखें';
+
+  @override
+  String get shareApp => 'ऐप डाउनलोड लिंक कॉपी करें';
+
+  @override
+  String get checkExtensionUpdates => 'एक्सटेंशन के अपडेट देखें';
+
+  @override
   String get supportCardTitle => 'एक व्यक्ति ने बनाया, मुफ़्त';
 
   @override

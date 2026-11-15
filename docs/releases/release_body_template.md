@@ -31,7 +31,7 @@
 | **Windows** | `ConvertTheSpireReborn-Setup.exe` | Double-click it. It installs for your account, adds a Start menu entry, and the app updates itself from then on. |
 | **Android phone or TV** | `ConvertTheSpireReborn.apk` | Open it and allow the install. |
 | **macOS** | `ConvertTheSpireReborn-macOS.dmg` | Open it and drag the app into Applications. |
-| **Linux** | `ConvertTheSpireReborn-linux-x86_64.AppImage` | Allow it to run (right-click › Properties › "Allow executing", or `chmod +x`) and open it. Nothing else to install; it adds itself to your app menu and updates itself. Ubuntu 22.04 or later, Mint 21, Debian 12, Fedora. |
+| **Linux** | `ConvertTheSpireReborn-linux-x86_64.AppImage` | Allow it to run (right-click › Properties › "Allow executing", or `chmod +x`) and open it. It adds itself to your app menu and updates itself. Ubuntu 22.04 or later, Mint 21, Debian 12, Fedora, CachyOS. |
 | **Microsoft Store** | [Get it from the Store](https://apps.microsoft.com/detail/9MT834RPF8ZP) | The full Windows app. The Store installs it and keeps it up to date. |
 | **Google Play** | [The Play Store version](https://play.google.com/store/apps/details?id=com.torrentspire.ai) | A limited version: no YouTube downloads (Google Play does not allow them), and Multi-Search and the playlist tools are left out. |
 

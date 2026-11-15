@@ -541,6 +541,7 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
       // You may need to adjust how you get ytDlpPath and ffmpegPath in your app context
       final ytDlpService = YtDlpService();
       final ytDlpPath = await ytDlpService.resolveAvailablePath(null);
+      if (!mounted) return;
       if (ytDlpPath == null) {
         // Don't surface "not available" on platforms where yt-dlp isn't relevant.
         setState(() {
@@ -551,15 +552,21 @@ class _DownloadPreviewSheetState extends State<_DownloadPreviewSheet> {
         return;
       }
       final size = await ytDlpService.fetchEstimatedSize(
-        url: widget.result.id,
+        url: widget.result.source == 'youtube'
+            ? Uri.https('www.youtube.com', '/watch', {'v': widget.result.id})
+                .toString()
+            : widget.result.id,
         ytDlpPath: ytDlpPath,
+        format: widget.format,
         videoQuality: widget.quality,
       );
+      if (!mounted) return;
       setState(() {
         _estimatedSize = size;
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = context.l10n.couldNotFetchSize;
         _loading = false;
