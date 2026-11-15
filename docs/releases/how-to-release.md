@@ -55,5 +55,5 @@ The page is [release_body_template.md](release_body_template.md) with the notes 
 
 ## 5. Afterwards
 
-* Open the release page: nine files under Assets (Windows Setup and zip, macOS dmg and zip, Linux AppImage and tar.gz, APK, `SHA256SUMS.txt`), screenshots showing, install table in place.
+* Open the release page and check the screenshots and install table. The eight files under Assets are Windows Setup and zip, macOS dmg and zip, Linux AppImage and tar.gz, the Android APK, and `SHA256SUMS.txt`. The checksum list should include all seven public packages.
 * The README links to "latest release", so it needs no version change.

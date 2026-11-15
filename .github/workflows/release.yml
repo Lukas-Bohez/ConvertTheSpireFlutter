@@ -636,8 +636,9 @@ jobs:
           find . -type f \
             ! -name "*.sha256" \
             ! -path "*/coverage-report/*" \
+            ! -path "*/android-aab-play/*" \
           | sort | xargs sha256sum \
-          | sed -E 's#  (\./)?([^ ]*/)?([^/]+)$#  \3#' > ../SHA256SUMS.txt
+          | sed -E 's# [ *](\./)?([^ ]*/)?([^/]+)$#  \3#' > ../SHA256SUMS.txt
           cat ../SHA256SUMS.txt
 
       # Screenshots go at the TOP of the release body so they are the first
