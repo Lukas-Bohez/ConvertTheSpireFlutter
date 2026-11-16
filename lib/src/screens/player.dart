@@ -847,8 +847,7 @@ class PlayerState with ChangeNotifier {
   /// session, so leaving and returning to the Player does not rescan it.
   bool libraryRestoreAttempted = false;
 
-  PlayerState(this.prefs, {LoudnessService? loudness}) {
-    _loudness = loudness;
+  PlayerState(this.prefs) {
     if (_useMediaKit) {
       _mkPlayersReady = _initMkPlayers();
     }
@@ -3775,6 +3774,9 @@ class PlayerState with ChangeNotifier {
   }
 
   static const _loudnessWait = Duration(seconds: 10);
+
+  @visibleForTesting
+  set loudnessServiceForTesting(LoudnessService service) => _loudness = service;
 
   Timer? _levelFadeTimer;
   String? _levelFadePath;

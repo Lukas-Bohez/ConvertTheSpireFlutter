@@ -41,6 +41,13 @@ void main() {
     return path;
   }
 
+  // The player opens a file as "C:/dir/a.wav" (or file:///..., when that
+  // fails): the same file either way.
+  String? sameForm(String? uriOrPath) => uriOrPath
+      ?.replaceFirst(RegExp(r'^file:///?'), '')
+      .replaceAll('\\', '/')
+      .toLowerCase();
+
   Future<void> waitFor(bool Function() condition, Duration timeout) async {
     final end = DateTime.now().add(timeout);
     while (!condition() && DateTime.now().isBefore(end)) {
@@ -77,13 +84,14 @@ void main() {
     expect(player.nativeAudioVolumeForTesting, closeTo(firstVolume!, 0.01));
   }, skip: !Platform.isWindows);
 
+  // Leveling is switched on in the player setUp made: disposing a player
+  // right after it was made and making another froze the test (media_kit,
+  // with the video output still starting). The app makes one for good.
   testWidgets('slow leveling uses the same native gain on first and second play',
       (tester) async {
-    player.dispose();
-    await Future<void>.delayed(const Duration(milliseconds: 300));
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('player_volume_leveling', true);
-    player = PlayerState(prefs, loudness: _SlowLoudness(prefs));
+    player.loudnessServiceForTesting = _SlowLoudness(prefs);
+    player.setVolumeLeveling(true);
     final path = await file('leveling', 30);
     await player.setLibrary([MediaItem(path, MediaType.audio)]);
     await player.select(0);
@@ -103,12 +111,10 @@ void main() {
 
   testWidgets('a measurement slower than the wait fades in instead of a jump',
       (tester) async {
-    player.dispose();
-    await Future<void>.delayed(const Duration(milliseconds: 300));
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('player_volume_leveling', true);
-    player = PlayerState(prefs,
-        loudness: _SlowLoudness(prefs, const Duration(seconds: 12)));
+    player.loudnessServiceForTesting =
+        _SlowLoudness(prefs, const Duration(seconds: 12));
+    player.setVolumeLeveling(true);
     final path = await file('long-video-like', 40);
     await player.setLibrary([MediaItem(path, MediaType.audio)]);
     final selected = player.select(0);
@@ -127,7 +133,6 @@ void main() {
         const Duration(seconds: 4));
     await player.select(0);
     expect(player.nativeAudioVolumeForTesting, closeTo(leveled, 0.01));
-    await prefs.setBool('player_volume_leveling', false);
   }, skip: !Platform.isWindows);
 
   testWidgets('rapid selections finish on the last requested track',
@@ -144,7 +149,7 @@ void main() {
     await waitFor(() => player.isPlaying, const Duration(seconds: 5));
     expect(player.currentItem?.path, paths.last);
     if (Platform.isWindows) {
-      expect(player.nativeAudioUriForTesting, Uri.file(paths.last).toString());
+      expect(sameForm(player.nativeAudioUriForTesting), sameForm(paths.last));
     }
     expect(player.isPlaying, isTrue);
     expect(player.duration?.inSeconds, 30);
@@ -180,7 +185,7 @@ void main() {
     await Future.wait(
         [player.select(0), player.select(400), player.select(1000)]);
     expect(player.currentItem?.path, paths[1000]);
-    expect(player.nativeAudioUriForTesting, Uri.file(paths[1000]).toString());
+    expect(sameForm(player.nativeAudioUriForTesting), sameForm(paths[1000]));
     expect(player.isPlaying, isTrue);
   },
       skip: playlistFolder.isEmpty || !Platform.isWindows,
