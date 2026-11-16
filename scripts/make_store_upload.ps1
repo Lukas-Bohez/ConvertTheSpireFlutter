@@ -306,6 +306,17 @@ if (-not $ListingsOnly) {
     'the app runs; the app''s own source: https://github.com/Lukas-Bohez/ConvertTheSpireFlutter'
   ) | Set-Content -Path (Join-Path $release 'THIRD-PARTY-PROGRAMS.txt') -Encoding UTF8
 
+  # A debug build of the Windows app (flutter run, or an integration test
+  # with -d windows) leaves its JIT kernel, kernel_blob.bin (about 120 MB),
+  # in build\flutter_assets, which debug and release builds share, and the
+  # release build copies it along. The release app runs from data\app.so
+  # and never reads it: the 16.2.0 package carried 126 MB of it.
+  $kernelBlob = Join-Path $release 'data\flutter_assets\kernel_blob.bin'
+  if (Test-Path $kernelBlob) {
+    Remove-Item $kernelBlob -Force
+    Write-Host 'Left out data\flutter_assets\kernel_blob.bin (from a debug build)'
+  }
+
   Step 'Making the MSIX'
   if (Test-Path $msixPath) { Remove-Item $msixPath -Force }
   dart run msix:create --store `
@@ -327,6 +338,9 @@ if (-not $ListingsOnly) {
                         'ffmpeg/ffmpeg.exe', 'yt-dlp/yt-dlp.exe', 'deno/deno.exe',
                         'AppxManifest.xml')) {
       if ($names -notcontains $need) { throw "$need is not in the package" }
+    }
+    if ($names -contains 'data/flutter_assets/kernel_blob.bin') {
+      throw 'data/flutter_assets/kernel_blob.bin (a debug build''s) is in the package'
     }
     $reader = New-Object IO.StreamReader($zip.GetEntry('AppxManifest.xml').Open())
     [xml]$manifest = $reader.ReadToEnd()
