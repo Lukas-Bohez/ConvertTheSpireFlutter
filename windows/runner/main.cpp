@@ -6,6 +6,7 @@
 #include <cwchar>
 #include <string>
 
+#include "accessibility_guard.h"
 #include "flutter_window.h"
 #include "open_requests.h"
 #include "utils.h"
@@ -72,15 +73,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     CreateAndAttachConsole();
   }
   ::SetUnhandledExceptionFilter(WriteNativeCrashDump);
-
-  // A file or link to open: "Open with", a double-click, a magnet link in a
-  // browser. Windows starts a new copy of the app for each; when one is
-  // already running, it gets the request instead and this copy quits.
-  std::vector<std::string> command_line_arguments = GetCommandLineArguments();
-  if (open_requests::ForwardToRunningInstance(command_line_arguments)) {
-    return EXIT_SUCCESS;
-  }
-  open_requests::RegisterAssociations();
+  accessibility_guard::Install();
 
   // All DLLs live in a "dll" folder next to the executable so the release
   // root only contains the exe, data/ and dll/. The exe delay-loads
@@ -101,6 +94,22 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
       }
     }
   }
+
+  std::vector<std::string> command_line_arguments = GetCommandLineArguments();
+  // The release build checks that the guard still finds the engine code
+  // (see accessibility_guard.h); the exit code is the result.
+  if (command_line_arguments.size() == 1 &&
+      command_line_arguments[0] == "--self-test-accessibility-guard") {
+    return accessibility_guard::SelfTest();
+  }
+
+  // A file or link to open: "Open with", a double-click, a magnet link in a
+  // browser. Windows starts a new copy of the app for each; when one is
+  // already running, it gets the request instead and this copy quits.
+  if (open_requests::ForwardToRunningInstance(command_line_arguments)) {
+    return EXIT_SUCCESS;
+  }
+  open_requests::RegisterAssociations();
 
   // Certain GPU/driver combinations crash inside dcomp.dll when the engine tries
   // to initialize DirectComposition.  Force software rendering to avoid those

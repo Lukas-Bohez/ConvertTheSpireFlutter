@@ -838,6 +838,8 @@ class PlayerState with ChangeNotifier {
 
   final _random = Random();
   final _audioLock = Lock();
+  final _selectionLock = Lock();
+  int? _loadingSelectionGeneration;
 
   // -------------------------------------------------------------------------
 
@@ -896,6 +898,7 @@ class PlayerState with ChangeNotifier {
   Future<void> _initMkPlayers() async {
     try {
       await Future.microtask(() {});
+      if (_disposed) return;
       try {
         _mkPlayer ??= Player();
         _mkController ??= VideoController(_mkPlayer!);
@@ -2378,6 +2381,20 @@ class PlayerState with ChangeNotifier {
   }
 
   Future<void> _loadCurrent(int targetIndex, int generation) async {
+    _loadingSelectionGeneration = generation;
+    await _selectionLock.acquire();
+    try {
+      await _mkPlayersReady;
+      await _loadCurrentExclusive(targetIndex, generation);
+    } finally {
+      _selectionLock.release();
+      if (_loadingSelectionGeneration == generation) {
+        _loadingSelectionGeneration = null;
+      }
+    }
+  }
+
+  Future<void> _loadCurrentExclusive(int targetIndex, int generation) async {
     if (_disposed) return;
     if (targetIndex < 0 || targetIndex >= library.length) return;
 
@@ -2404,8 +2421,7 @@ class PlayerState with ChangeNotifier {
     // Measure loudness first (cached after the first play) so the very first
     // seconds already play at the leveled volume.
     await _ensureLoudness(item, wait: true);
-    if (generation != _loadGeneration) return;
-    _applyVolume();
+    if (_disposed || generation != _loadGeneration) return;
 
     try {
       if (item.type == MediaType.audio) {
@@ -2441,16 +2457,11 @@ class PlayerState with ChangeNotifier {
             if (player != null) {
               await _audioLock.acquire();
               try {
-                final now = DateTime.now();
-                if (_lastMkOpenTime != null &&
-                    now.difference(_lastMkOpenTime!).inMilliseconds < 350) {
-                  debugPrint('Skipping rapid audio open - too soon');
-                } else {
-                  _lastMkOpenTime = now;
-                  await _openMediaWithFallback(player, item.path, play: true);
-                }
-                await player.setVolume(
-                    _mkVolume);
+                if (_disposed || generation != _loadGeneration) return;
+                await _openMediaWithFallback(player, item.path, play: false);
+                if (_disposed || generation != _loadGeneration) return;
+                await player.setVolume(_mkVolume);
+                await player.play();
                 // attempt to read duration; may be zero until stream updates
                 try {
                   duration = await player.stream.duration
@@ -2501,22 +2512,15 @@ class PlayerState with ChangeNotifier {
 
         if (_useMediaKit && _mkPlayer != null) {
           try {
-            final now = DateTime.now();
-            if (_lastMkOpenTime != null &&
-                now.difference(_lastMkOpenTime!).inMilliseconds < 350) {
-              debugPrint('Skipping rapid mk open - too soon');
-            } else {
-              _lastMkOpenTime = now;
-              await _openMediaWithFallback(_mkPlayer!, item.path, play: true);
-            }
+            await _openMediaWithFallback(_mkPlayer!, item.path, play: false);
             if (generation != _loadGeneration) {
               try {
                 await _mkPlayer!.stop();
               } catch (_) {}
               return;
             }
-            await _mkPlayer!.setVolume(
-                _mkVolume);
+            await _mkPlayer!.setVolume(_mkVolume);
+            await _mkPlayer!.play();
             _recordPlayStart(item);
           } catch (e) {
             debugPrint('media_kit video load error: $e');
@@ -3077,6 +3081,7 @@ class PlayerState with ChangeNotifier {
   }
 
   void _applyVolume() {
+    if (_disposed) return;
     // Apply per-track ReplayGain normalization on top of user volume.
     final effective = volume * _trackGainMultiplier;
     // Only restore audio volume when audio is actually active.
@@ -3175,6 +3180,7 @@ class PlayerState with ChangeNotifier {
   }
 
   void _handleCompletion() {
+    if (_disposed || _loadingSelectionGeneration != null) return;
     final stream = _roomStream;
     if (stream != null) {
       // An opened file is the only thing playing: repeat plays it again.
@@ -3275,7 +3281,7 @@ class PlayerState with ChangeNotifier {
     subtitlesOn = prefs.getBool(_subtitlesOnPrefsKey) ?? true;
     if (speed != 1.0) _applySpeed();
     _loadResumePositions();
-    volumeLeveling = prefs.getBool(_volumeLevelingPrefsKey) ?? true;
+    volumeLeveling = prefs.getBool(_volumeLevelingPrefsKey) ?? false;
     shuffle = prefs.getBool('shuffle') ?? false;
     repeatMode = RepeatMode.values[
         (prefs.getInt('repeat') ?? 0).clamp(0, RepeatMode.values.length - 1)];
@@ -3425,13 +3431,15 @@ class PlayerState with ChangeNotifier {
   /// 0 dB = 1.0x (no change). +6 dB ≁E2.0x, -6 dB ≁E0.5x.
   double get _trackGainMultiplier {
     // A room's stream has no measured loudness; play it as it comes.
-    if (_roomStream != null) return 1.0;
+    if (_roomStream != null || !volumeLeveling) return 1.0;
     final item = currentItem;
     double gainDb = item?.trackGainDb ?? 0.0;
     if (volumeLeveling && item != null) {
       // Measured loudness beats a (rarely present) ReplayGain tag: it pulls
       // every track to the same target level.
-      gainDb = _levelGainDb[item.path] ?? gainDb;
+      gainDb = _levelFadePath == item.path
+          ? _levelFadeDb ?? gainDb
+          : _levelGainDb[item.path] ?? gainDb;
     }
     return pow(10, gainDb / 20).toDouble();
   }
@@ -3454,6 +3462,16 @@ class PlayerState with ChangeNotifier {
   /// Volume for just_audio, which only accepts 0..1.
   double get _audioPlayerVolume =>
       (volume * _trackGainMultiplier).clamp(0.0, 1.0).toDouble();
+
+  @visibleForTesting
+  double? get nativeAudioVolumeForTesting => _audioMkPlayer?.state.volume;
+
+  @visibleForTesting
+  String? get nativeAudioUriForTesting {
+    final playlist = _audioMkPlayer?.state.playlist;
+    if (playlist == null || playlist.medias.isEmpty) return null;
+    return playlist.medias[playlist.index].uri;
+  }
 
   // --- Watch Together -------------------------------------------------------
 
@@ -3700,7 +3718,7 @@ class PlayerState with ChangeNotifier {
 
   // --- Volume leveling ------------------------------------------------------
 
-  bool volumeLeveling = true;
+  bool volumeLeveling = false;
   final Map<String, double> _levelGainDb = {};
   LoudnessService? _loudness;
   static const String _volumeLevelingPrefsKey = 'player_volume_leveling';
@@ -3713,8 +3731,11 @@ class PlayerState with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Makes sure [item] has a measured gain. Waits briefly so the level is
-  /// right from the first second; slower analyses apply when they finish.
+  /// Makes sure [item] has a measured gain. With [wait], playback waits for
+  /// the measurement, so the first play sounds like every later one (it used
+  /// to start unleveled and only the replay was turned down). A song takes a
+  /// second or two; a long video can take longer than [_loudnessWait], and
+  /// then fades to its level once the measurement is in.
   Future<void> _ensureLoudness(MediaItem? item, {bool wait = false}) async {
     if (item == null || !volumeLeveling || kIsWeb) return;
     if (_levelGainDb.containsKey(item.path)) return;
@@ -3724,28 +3745,64 @@ class PlayerState with ChangeNotifier {
       final cached = loudness.cachedGainDb(local);
       if (cached != null) {
         _levelGainDb[item.path] = cached;
+        // Leveling turned on during the song.
+        if (!wait && currentItem?.path == item.path) {
+          _fadeLevel(item.path, item.trackGainDb ?? 0.0, cached);
+        }
         return;
       }
+      var playing = !wait;
       final future = loudness.gainDbFor(local).then((gain) {
         if (gain == null || _disposed) return;
+        // What the track plays at until now: its ReplayGain tag or nothing.
+        final fromDb = item.trackGainDb ?? 0.0;
         _levelGainDb[item.path] = gain;
-        // A measurement that comes in once the song is well under way is
-        // kept for its next play: the volume jumping mid-song is worse
-        // than one play at its own level.
-        if (currentItem?.path == item.path &&
-            position < const Duration(seconds: 5)) {
-          _applyVolume();
+        if (playing && currentItem?.path == item.path) {
+          _fadeLevel(item.path, fromDb, gain);
         }
       });
       if (wait) {
-        await future.timeout(const Duration(milliseconds: 2500),
-            onTimeout: () {});
+        await future.timeout(_loudnessWait, onTimeout: () {
+          playing = true;
+        });
       } else {
         unawaited(future);
       }
     } catch (e) {
       debugPrint('ensureLoudness failed: $e');
     }
+  }
+
+  static const _loudnessWait = Duration(seconds: 10);
+
+  @visibleForTesting
+  set loudnessServiceForTesting(LoudnessService service) => _loudness = service;
+
+  Timer? _levelFadeTimer;
+  String? _levelFadePath;
+  double? _levelFadeDb;
+
+  /// Moves the playing track from [fromDb] to [toDb] over two seconds: a
+  /// sudden step in the middle of a song is jarring, more so a step up.
+  void _fadeLevel(String path, double fromDb, double toDb) {
+    _levelFadeTimer?.cancel();
+    const steps = 20;
+    var step = 0;
+    _levelFadePath = path;
+    _levelFadeDb = fromDb;
+    _levelFadeTimer =
+        Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      step++;
+      final done = step >= steps || _disposed || currentItem?.path != path;
+      if (done) {
+        timer.cancel();
+        _levelFadePath = null;
+        _levelFadeDb = null;
+      } else {
+        _levelFadeDb = fromDb + (toDb - fromDb) * step / steps;
+      }
+      if (currentItem?.path == path) _applyVolume();
+    });
   }
 
   Future<DateTime?> _modifiedAtForPath(String path) async {
@@ -4544,6 +4601,7 @@ class PlayerState with ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _levelFadeTimer?.cancel();
     _watchPublishTimer?.cancel();
     _watchPublishTimer = null;
     _watchPartySub?.cancel();
@@ -7527,54 +7585,55 @@ class _PositionWidget extends StatelessWidget {
                             context, d.globalPosition, at(d.localPosition.dx))
                         : null,
                     child: Stack(
-                  children: [
-                    if (loopSections.isNotEmpty && dur > Duration.zero)
-                      // The track runs between the overlay radius (14) at
-                      // each side, centred in the slider's 48.
-                      Positioned(
-                        left: 14,
-                        right: 14,
-                        top: 29,
-                        height: 3,
-                        child: CustomPaint(
-                          painter: _LoopMarksPainter(
-                            sections: loopSections,
-                            duration: dur,
-                            color: _PlayerTheme.accent(context),
+                      children: [
+                        if (loopSections.isNotEmpty && dur > Duration.zero)
+                          // The track runs between the overlay radius (14) at
+                          // each side, centred in the slider's 48.
+                          Positioned(
+                            left: 14,
+                            right: 14,
+                            top: 29,
+                            height: 3,
+                            child: CustomPaint(
+                              painter: _LoopMarksPainter(
+                                sections: loopSections,
+                                duration: dur,
+                                color: _PlayerTheme.accent(context),
+                              ),
+                            ),
+                          ),
+                        SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 6,
+                            ),
+                            overlayShape: const RoundSliderOverlayShape(
+                              overlayRadius: 14,
+                            ),
+                            trackHeight: 3,
+                          ),
+                          child: Slider(
+                            value: progress,
+                            activeColor: _PlayerTheme.accent(context),
+                            inactiveColor: _PlayerTheme.accentDim(context),
+                            onChangeStart: dur.inMilliseconds > 0
+                                ? (_) => state.beginSeekInteraction()
+                                : null,
+                            onChanged: dur.inMilliseconds > 0
+                                ? (v) => state.previewSeekInteraction(
+                                      Duration(
+                                        milliseconds:
+                                            (v * dur.inMilliseconds).round(),
+                                      ),
+                                    )
+                                : null,
+                            onChangeEnd: dur.inMilliseconds > 0
+                                ? (_) => unawaited(state.endSeekInteraction())
+                                : null,
                           ),
                         ),
-                      ),
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        thumbShape: const RoundSliderThumbShape(
-                          enabledThumbRadius: 6,
-                        ),
-                        overlayShape: const RoundSliderOverlayShape(
-                          overlayRadius: 14,
-                        ),
-                        trackHeight: 3,
-                      ),
-                      child: Slider(
-                        value: progress,
-                        activeColor: _PlayerTheme.accent(context),
-                        inactiveColor: _PlayerTheme.accentDim(context),
-                        onChangeStart: dur.inMilliseconds > 0
-                            ? (_) => state.beginSeekInteraction()
-                            : null,
-                        onChanged: dur.inMilliseconds > 0
-                            ? (v) => state.previewSeekInteraction(
-                                  Duration(
-                                    milliseconds: (v * dur.inMilliseconds).round(),
-                                  ),
-                                )
-                            : null,
-                        onChangeEnd: dur.inMilliseconds > 0
-                            ? (_) => unawaited(state.endSeekInteraction())
-                            : null,
-                      ),
+                      ],
                     ),
-                  ],
-                ),
                   );
                 }),
               ),

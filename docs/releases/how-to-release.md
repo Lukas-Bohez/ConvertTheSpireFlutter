@@ -27,11 +27,11 @@ Everything to upload for the store versions is collected in `upload/` (not in gi
 
 | Folder | What is in it |
 |---|---|
-| `upload/newest/androidPlayStore/` | The newest `.aab` for the Play Console. |
-| `upload/newest/windowsMicrosoftStore/` | The newest `.msix` for Partner Center, and the "what's new" `.csv` for its listings. |
-| `upload/older/...` | Earlier builds, kept in case one has to be uploaded again. |
+| `upload/new/androidPlayStore/` | The newest `.aab` for the Play Console, and its "what's new" text. |
+| `upload/new/windowsMicrosoftStore/` | The newest `.msix` for Partner Center, and the "what's new" `.csv` for its listings. |
+| `upload/old/...` | Earlier builds, kept in case one has to be uploaded again. |
 
-When a new build is put in `newest`, the one that was there moves to `older`: `scripts/publish_local.ps1` does both.
+When a new build is put in `new`, the one that was there moves to `old`: `scripts/publish_local.ps1` does both.
 
 ## 3. Google Play
 

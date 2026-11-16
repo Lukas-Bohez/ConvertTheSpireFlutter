@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -152,8 +153,20 @@ class LoudnessService {
     }
     final exe = await _ffmpeg.resolveAvailablePath(null);
     if (exe == null) return '';
-    final result =
-        await Process.run(exe, args).timeout(const Duration(minutes: 3));
-    return '${result.stderr}\n${result.stdout}';
+    final process = await Process.start(exe, args);
+    // Drain both pipes concurrently. File names/tool diagnostics on Windows
+    // can contain non-UTF-8 bytes; they must not escape as zone errors.
+    final output = Future.wait([
+      process.stderr.transform(const Utf8Decoder(allowMalformed: true)).join(),
+      process.stdout.transform(const Utf8Decoder(allowMalformed: true)).join(),
+    ]);
+    final deadline = Timer(const Duration(minutes: 3), () => process.kill());
+    try {
+      final exitCode = await process.exitCode;
+      final text = (await output).join('\n');
+      return exitCode == 0 ? text : '';
+    } finally {
+      deadline.cancel();
+    }
   }
 }
