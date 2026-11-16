@@ -36,6 +36,16 @@ class AdaptiveUiFrame extends StatelessWidget {
           hoverColor: cs.primary.withValues(alpha: 0.08),
         ),
       ),
+      // Filled buttons too: left out, they stayed at the app theme's 40
+      // while the outlined and text buttons beside them grew to 48 or 56
+      // (Home's "Play Spire Museum" was the short one of its four). Only
+      // the size: the app's padding, shape and colours stay.
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: targetSize,
+          tapTargetSize: MaterialTapTargetSize.padded,
+        ).merge(theme.filledButtonTheme.style),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           minimumSize: targetSize,

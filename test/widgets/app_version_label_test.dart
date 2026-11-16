@@ -1,6 +1,7 @@
 import 'package:convert_the_spire_reborn/l10n/app_localizations.dart';
 import 'package:convert_the_spire_reborn/src/config/full_mode_access.dart';
 import 'package:convert_the_spire_reborn/src/services/purchase_service.dart';
+import 'package:convert_the_spire_reborn/src/widgets/adaptive_ui_frame.dart';
 import 'package:convert_the_spire_reborn/src/widgets/quick_links_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,7 +23,8 @@ void main() {
     );
   });
 
-  Future<void> show(WidgetTester tester, Size size) async {
+  Future<void> show(WidgetTester tester, Size size,
+      {bool appFrame = false}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -36,6 +38,11 @@ void main() {
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        // The frame the app puts around every page (app.dart), which sizes
+        // the buttons for the screen.
+        builder: appFrame
+            ? (context, child) => AdaptiveUiFrame(child: child!)
+            : null,
         home: Scaffold(
           body: QuickLinksPage(
             onNavigate: (_) {},
@@ -76,4 +83,32 @@ void main() {
     expect(label.top, greaterThanOrEqualTo(title.bottom));
     expect(label.center.dx, closeTo(title.center.dx, 1));
   });
+
+  // The museum button (the filled one) was shorter than the three beside it.
+  for (final (name, size, height) in [
+    // Tall enough that Home's last card is on screen. Narrow is under the
+    // frame's 840 but wide enough that the test font (every letter a
+    // square) keeps each label on one line.
+    ('wide', const Size(1280, 4000), 56.0),
+    ('narrow', const Size(700, 6000), 48.0),
+  ]) {
+    testWidgets('$name: the project buttons are the same height',
+        (tester) async {
+      await show(tester, size, appFrame: true);
+      final labels = [
+        'Play Spire Museum',
+        'View portfolio',
+        'Support with a donation',
+        'Copy app download link',
+      ];
+      for (final label in labels) {
+        final button = find.ancestor(
+          of: find.text(label),
+          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+        );
+        expect(button, findsOneWidget);
+        expect(tester.getSize(button).height, height, reason: label);
+      }
+    });
+  }
 }

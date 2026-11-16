@@ -47,6 +47,10 @@ on:
         description: 'Mark as pre-release?'
         type: boolean
         default: false
+      publish_release:
+        description: 'Publish publicly after building (disable for local release candidates)'
+        type: boolean
+        default: true
 
 env:
   FLUTTER_VERSION: '3.41.2'
@@ -176,6 +180,19 @@ jobs:
 
       - name: Build Windows release
         run: flutter build windows --release --no-tree-shake-icons --dart-define=PLAY_STORE_BUILD=false --dart-define=GITHUB_RELEASE=true
+
+      # The guard against Flutter's accessibility crash finds the engine's
+      # code by its bytes (windows/runner/accessibility_guard.h); a Flutter
+      # upgrade can move it. Exit code 0: the guard still catches the crash.
+      - name: Check the accessibility crash guard
+        shell: pwsh
+        run: |
+          $exe = "build\windows\x64\runner\Release\${{ env.APP_NAME }}.exe"
+          $p = Start-Process -FilePath $exe -ArgumentList '--self-test-accessibility-guard' -Wait -PassThru
+          if ($p.ExitCode -ne 0) {
+            Write-Error "The accessibility crash guard self-test failed (exit $($p.ExitCode)); see windows/runner/accessibility_guard.h"
+            exit 1
+          }
 
       # Code signing by the SignPath Foundation, off until the repository
       # variable SIGNPATH_ORGANIZATION_ID is set (docs/signing/signpath.md).
@@ -593,6 +610,7 @@ jobs:
   # =========================================================================
   release:
     name: Publish Release
+    if: ${{ inputs.publish_release }}
     needs: [build-windows, build-macos, build-linux, build-android]
     runs-on: ubuntu-latest
     permissions:
@@ -675,6 +693,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ inputs.release_tag }}
+          target_commitish: ${{ github.sha }}
           name: ${{ inputs.release_name }}
           body_path: release_body.md
           prerelease: ${{ inputs.is_prerelease }}

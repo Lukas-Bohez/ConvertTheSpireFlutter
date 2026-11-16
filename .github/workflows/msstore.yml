@@ -169,6 +169,17 @@ jobs:
       - name: Build Windows (Store build)
         run: flutter build windows --release --no-tree-shake-icons --dart-define=MS_STORE_BUILD=true
 
+      # See the same step in release.yml (windows/runner/accessibility_guard.h).
+      - name: Check the accessibility crash guard
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem build\windows\x64\runner\Release -Filter *.exe | Select-Object -First 1
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList '--self-test-accessibility-guard' -Wait -PassThru
+          if ($p.ExitCode -ne 0) {
+            Write-Error "The accessibility crash guard self-test failed (exit $($p.ExitCode)); see windows/runner/accessibility_guard.h"
+            exit 1
+          }
+
       # The Store's version may not download programs to run, so the ones
       # the app would download on first use come in the package, each in a
       # folder next to the exe (lib/src/services/bundled_tools.dart).
