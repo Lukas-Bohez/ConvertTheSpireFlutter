@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
+import '../js/js_bridge.dart';
 import 'browser_webview_controller.dart';
 
 /// Android/iOS/macOS implementation backed by `flutter_inappwebview`.
@@ -61,6 +63,26 @@ class BrowserInAppWebViewAdapter implements BrowserWebviewController {
       findInteractionController: _findInteractionController,
       onWebViewCreated: (controller) {
         _controller = controller;
+        // Without a handler registered under its name, a page's
+        // `callHandler` goes nowhere: the input focus, video detection and
+        // extension storage messages all depend on these.
+        for (final name in jsBridgeHandlerNames) {
+          controller.addJavaScriptHandler(
+            handlerName: name,
+            callback: (args) {
+              final first = args.isEmpty ? null : args.first;
+              _jsMessages.add(BrowserJsMessage(
+                handler: name,
+                payload: first == null
+                    ? ''
+                    : first is String
+                        ? first
+                        : jsonEncode(first),
+              ));
+              return null;
+            },
+          );
+        }
         if (_blocking != null) unawaited(_applyContentBlocking());
       },
       onLoadStart: _handleLoadStart,
@@ -259,6 +281,10 @@ class BrowserInAppWebViewAdapter implements BrowserWebviewController {
 
   @override
   Future<String?> getTitle() async => await _controller?.getTitle();
+
+  @override
+  Future<Object?> evaluateJsExpression(String expression) =>
+      evaluateJs(expression);
 
   @override
   Future<Object?> evaluateJs(String js) async =>

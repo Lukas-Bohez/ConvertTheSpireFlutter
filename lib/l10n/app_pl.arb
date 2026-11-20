@@ -1184,6 +1184,7 @@
   "extensionsUnavailableSessionAnotherCopy": "Rozszerzenia są niedostępne w tej sesji: inna kopia aplikacji otworzyła przeglądarkę wcześniej. Zamknij wszystkie kopie i uruchom aplikację ponownie.",
   "extensionLabel": "to rozszerzenie",
   "firefoxExtensionsRunHereWhen": "Rozszerzenia Firefox działają tutaj, jeśli obsługują też Chromium. Aplikacja sprawdza to po pobraniu i poinformuje cię, jeśli nie.",
+  "extensionsRunPageScriptsHere": "Na tym urządzeniu rozszerzenie uruchamia skrypty i style, które dodaje do stron, i zachowuje swoje ustawienia. Okienko na pasku narzędzi, praca w tle i blokowanie sieci wymagają silnika przeglądarki na komputer, który ma aplikacja dla Windows.",
   "more3": " i nie tylko",
   "installedFromFile": "zainstalowane z pliku",
   "today": "Dzisiaj",

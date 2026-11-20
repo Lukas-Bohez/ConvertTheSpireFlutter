@@ -63,7 +63,7 @@ Downloading is only the first step. Usually you then need something to check wha
 | Convert files | An upload-and-wait website | 27+ formats (audio, video, images, documents, archives), offline. |
 | Watch together | A service that needs everyone to sign up | Share a six-character code. Runs on your own Wi-Fi, no server, no account. |
 | Get it on the TV | Another casting app | DLNA/UPnP casting, and an Android TV version you can use with the remote. |
-| Browse without ads | A browser plus an ad-blocking extension | Built-in browser with ad and tracker blocking, userscripts, and on Windows real Chrome and Firefox extensions. |
+| Browse without ads | A browser plus an ad-blocking extension | Built-in browser with ad and tracker blocking, userscripts, and Chrome and Firefox extensions. |
 | Torrents | A separate torrent client | Built in, with its own queue and settings. |
 
 It works with YouTube and with every site yt-dlp supports, more than 1,800 of them, through the same pipeline.
@@ -110,9 +110,9 @@ It is a fully native Flutter app that handles media downloading, playlist import
 
 ### Browsing
 
-* **Built-in browser** (Windows, macOS and Android) that blocks ads and trackers with the filter lists uBlock Origin uses (EasyList and EasyPrivacy), with tabs, incognito, history and favourites.
+* **Built-in browser** (Windows, macOS, Linux and Android) that blocks ads and trackers with the filter lists uBlock Origin uses (EasyList and EasyPrivacy), with tabs, incognito, history and favourites.
 * **Userscripts** (Tampermonkey/Greasemonkey compatible) on every platform, with one-tap searches for popular ones such as dark mode, Return YouTube Dislike and SponsorBlock.
-* **Browser extensions on Windows:** Chrome extensions and add-ons from addons.mozilla.org, with a catalog, permission prompts, popups and options pages. Tested with uBlock Origin Lite and Dark Reader.
+* **Browser extensions:** Chrome extensions and add-ons from addons.mozilla.org, with a catalog and permission prompts. On Windows they run in full, popups and options pages included; tested with uBlock Origin Lite and Dark Reader. On Android, Android TV, Linux and macOS an extension runs the scripts and styles it adds to web pages and keeps its settings; popups, background pages and network blocking need the Windows engine, and the app says so before installing an extension that depends on them.
 
 ### Everything else
 
@@ -126,7 +126,7 @@ It is a fully native Flutter app that handles media downloading, playlist import
 The Android app is the full app, not a cut-down companion: downloads, Compare, the player, the file converter, Watch Together, casting, torrents and the browser all work there. Some things differ because of Android itself:
 
 * **Folders:** pick a download folder once in Settings and the app keeps it. Without one, downloads go to your phone's Downloads folder, where every music player can find them.
-* **Extensions:** Chrome and Firefox extensions need a desktop browser engine, which Android's web view does not have. In the browser menu, **Extensions** shows what runs on the phone instead: the built-in ad blocker and userscripts, which cover what most people install extensions for.
+* **Extensions:** Android's web view has no extension engine, so the app runs the part of a Chrome or Firefox extension that changes web pages (its scripts and styles) itself, settings included. Toolbar popups, background pages and network blocking do not run on Android; the built-in ad blocker covers the last.
 * **Android TV:** the same APK, laid out for a TV and its remote, with a file browser made for the D-pad.
 
 ## Privacy
@@ -177,7 +177,7 @@ Linux gets the same app as Windows: the player, downloads from every site yt-dlp
 * **Where it runs:** 64-bit PCs with Ubuntu 22.04 or later, Linux Mint 21 or later, Debian 12, Fedora and CachyOS. The release workflow starts both packages in Ubuntu 22.04, Ubuntu 24.04 and CachyOS containers before publishing.
 * **Menu entry and "Open with":** on its first start the app adds itself to your app menu and, if your desktop shows icons, puts a shortcut there (on Ubuntu, right-click it once and choose **Allow Launching**). Songs, videos, .torrent files and magnet links can then be opened with it. Starting it again brings the open window forward instead of a second copy.
 * **Updates:** the AppImage updates itself with **Update now**. With the tar.gz, the update banner opens the release page.
-* **Browsing:** submit a web address or search from the app’s Browser tab to open it in your default browser with its installed extensions. Paste media links into Quick Download to choose MP3, M4A or MP4.
+* **Browsing:** the Browser tab runs Chromium inside the app, with the ad blocker, userscripts and extensions' page scripts. Pasting text into a web page needs `xclip` (`sudo apt install xclip`). Paste media links into Quick Download to choose MP3, M4A or MP4.
 * **The tray icon** shows on most desktops. On GNOME it needs the AppIndicator extension, which Ubuntu has on.
 * **No FFmpeg download?** Install it yourself with `sudo apt install ffmpeg` (Ubuntu, Debian, Mint), `sudo dnf install ffmpeg` (Fedora), or your system package manager on CachyOS.
 

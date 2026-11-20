@@ -1184,6 +1184,7 @@
   "extensionsUnavailableSessionAnotherCopy": "Les extensions ne sont pas disponibles dans cette session : une autre instance de l'application a ouvert le navigateur en premier. Fermez toutes les instances puis relancez l'application.",
   "extensionLabel": "cette extension",
   "firefoxExtensionsRunHereWhen": "Les extensions Firefox fonctionnent ici si elles prennent aussi en charge Chromium. L'application le vérifie après le téléchargement et vous prévient sinon.",
+  "extensionsRunPageScriptsHere": "Sur cet appareil, une extension exécute les scripts et les styles qu’elle ajoute aux pages web, et garde ses réglages. Sa fenêtre de barre d’outils, son travail en arrière-plan et le blocage réseau demandent un moteur de navigateur de bureau, que possède l’application Windows.",
   "more3": " et plus",
   "installedFromFile": "installée depuis un fichier",
   "today": "Aujourd'hui",

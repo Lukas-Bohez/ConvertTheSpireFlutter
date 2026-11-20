@@ -4068,6 +4068,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'As extensões do Firefox funcionam aqui quando também são compatíveis com o Chromium. O app verifica depois de baixar e avisa se não forem.';
 
   @override
+  String get extensionsRunPageScriptsHere =>
+      'Neste dispositivo, uma extensão executa os scripts e estilos que adiciona às páginas da web e guarda as configurações dela. O pop-up da barra de ferramentas, o trabalho em segundo plano e o bloqueio de rede precisam de um motor de navegador de desktop, que o app para Windows tem.';
+
+  @override
   String get more3 => ' e mais';
 
   @override

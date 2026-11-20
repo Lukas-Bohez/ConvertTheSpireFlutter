@@ -3880,6 +3880,10 @@ class AppLocalizationsZh extends AppLocalizations {
       'Firefox 扩展如果同时支持 Chromium，就能在这里运行。应用会在下载后检查，不支持时会告诉你。';
 
   @override
+  String get extensionsRunPageScriptsHere =>
+      '在此设备上，扩展会运行它添加到网页中的脚本和样式，并保存自己的设置。它的工具栏弹出窗口、后台任务和网络拦截需要桌面浏览器引擎，Windows 应用中具备该引擎。';
+
+  @override
   String get more3 => ' 等';
 
   @override

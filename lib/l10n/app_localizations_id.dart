@@ -4045,6 +4045,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Ekstensi Firefox berjalan di sini jika juga mendukung Chromium. Aplikasi memeriksanya setelah mengunduh dan memberi tahu jika tidak.';
 
   @override
+  String get extensionsRunPageScriptsHere =>
+      'Di perangkat ini, ekstensi menjalankan skrip dan gaya yang ditambahkannya ke halaman web, dan menyimpan pengaturannya. Pop-up bilah alat, pekerjaan latar belakang, dan pemblokiran jaringan memerlukan mesin browser desktop, yang ada di aplikasi Windows.';
+
+  @override
   String get more3 => ' dan lainnya';
 
   @override

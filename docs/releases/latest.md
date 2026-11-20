@@ -1,16 +1,18 @@
-# Release Notes - v16.3.1
+# Release Notes - v16.4.0
 
-## No more sudden closing on Windows, and songs keep their volume
+## Extensions on every device, and a browser that scrolls
+
+### New
+
+- **Chrome and Firefox extensions on Android, Android TV, Linux and macOS.** Install them from the Extensions screen (addons.mozilla.org) or from a .crx, .zip or .xpi file, as on Windows. On these devices an extension does what it adds to web pages: page themes and dark modes, site tweaks, YouTube and reading helpers, and it keeps its settings between pages and restarts. Extensions that work only through a toolbar popup, a background page or network blocking need a desktop browser engine; the app tells you before installing one of those, and ad blocking is built into the browser anyway. On Windows extensions run in full, as before.
+- **The browser works on Linux.** It runs Chromium, drawn inside the app, so pages look as they do in Chrome, and the remote cursor, menus and dialogs stay on top of them. The Linux downloads are bigger because Chromium comes inside (about 290 MB).
 
 ### Fixed
 
-- **Windows:** the app no longer closes by itself while music plays. Windows apps tell screen readers and other window-reading tools (some come with Windows) what is on screen. When such a tool asked about something the page had just removed, Flutter, the toolkit the app is built with, crashed. The app now answers "that is gone" instead. The bug is still open in Flutter itself.
-- A song no longer plays quieter the second time. Volume leveling measured a song while it played for the first time, and only the replay used the result.
-- Clicking quickly through tracks always ends on the last one you picked. A click within a third of a second of the previous one showed the new track but kept playing the old one.
-- The **Play Spire Museum** button on Home is as tall as the buttons beside it. So is every filled button in the app, which were shorter than the outlined and text buttons next to them.
+- **Scrolling up with a TV remote works on every page.** On many sites the remote could scroll down but not back up: at the top edge the cursor sat over the site's fixed header, and the header does not scroll. Up and down now scroll whatever part of the page the cursor is over, the page itself when that part cannot move. Page Up and Page Down, and Channel Up and Down on a remote, scroll a screen at a time.
+- **The mouse wheel scrolls where the mouse is (Windows).** The browser sent every wheel turn to the page's top-left corner, so chat boxes, comment panels and side menus never scrolled, and on some sites the page did not either.
+- **Pages can reach the app again on Android, Android TV, iOS and macOS.** Since 13.0.10 nothing a page sent arrived: choosing a text field on a page, finding the video on a page and noticing that it plays all depend on it.
 
 ### Improved
 
-- Volume leveling is off unless you turn it on (the equalizer button at the top of the player). Turned on, a song plays at its leveled volume from the first second: playback waits the second or two the measurement takes. A long video that takes more than 10 seconds to measure starts anyway and fades to its level in two seconds instead of jumping.
-- With volume leveling off, every file plays at the level it was made, ReplayGain tags included.
-- Measuring a song's loudness stops FFmpeg when it takes too long, and file names with unusual characters no longer break it.
+- On Android phones and tablets a keyboard's or game controller's arrow keys and Enter go to the app as usual; only Android TV turns them into the remote cursor.

@@ -440,6 +440,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       case 2:
         return BrowserScreen(
           key: BrowserScreen.browserKey,
+          isActive: _selectedPageIndex == 2,
           onAddToQueue: (result) {
             widget.controller.addSearchResultToQueue(result);
             widget.controller.downloadAll();

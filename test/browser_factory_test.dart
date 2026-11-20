@@ -17,6 +17,7 @@ void main() {
             reason: 'Factory should return a controller on web platform');
         expect(controller, isA<BrowserWebviewController>());
       } else if (Platform.isWindows ||
+          Platform.isLinux ||
           Platform.isAndroid ||
           Platform.isIOS ||
           Platform.isMacOS) {
@@ -25,7 +26,7 @@ void main() {
                 'Factory should return a non-null controller on supported platform ${Platform.operatingSystem}');
         expect(controller, isA<BrowserWebviewController>());
       } else {
-        // Unsupported platforms (e.g. Linux) return null
+        // Any other platform has no browser.
         expect(controller, isNull,
             reason:
                 'Factory should return null on unsupported platform ${Platform.operatingSystem}');
@@ -35,7 +36,7 @@ void main() {
     test('returned controller has all required streams', () {
       final controller = BrowserWebviewFactory.create();
       if (controller == null) {
-        // On unsupported platforms (Linux), null is expected
+        // On unsupported platforms, null is expected
         return;
       }
 
@@ -74,7 +75,7 @@ void main() {
       // On Windows, it returns BrowserWindowsWebViewAdapter.
       // On web, it returns BrowserWebWebViewAdapter.
       // On Android/iOS/macOS, it returns BrowserInAppWebViewAdapter.
-      // On Linux, it returns null (unsupported).
+      // On Linux, it returns BrowserCefWebViewAdapter (Chromium).
       final controller = BrowserWebviewFactory.create();
       if (kIsWeb) {
         expect(controller, isNotNull,
@@ -82,6 +83,7 @@ void main() {
                 'Factory should return a non-null controller on web platform');
         expect(controller, isA<BrowserWebviewController>());
       } else if (Platform.isWindows ||
+          Platform.isLinux ||
           Platform.isAndroid ||
           Platform.isIOS ||
           Platform.isMacOS) {
@@ -90,7 +92,7 @@ void main() {
                 'Factory should return a non-null controller on supported platforms');
         expect(controller, isA<BrowserWebviewController>());
       } else {
-        // Unsupported platforms (e.g. Linux) return null
+        // Any other platform has no browser.
         expect(controller, isNull,
             reason:
                 'Factory should return null on unsupported platforms');

@@ -3,6 +3,7 @@
 #include <wil/resource.h>
 #include <wrl.h>
 
+#include <algorithm>
 #include <format>
 #include <iostream>
 
@@ -659,11 +660,17 @@ void Webview::SendScroll(double delta, bool horizontal) {
   // delta * 6 gives me a multiple of WHEEL_DELTA (120)
   constexpr auto kScrollMultiplier = 6;
 
-  auto offset = static_cast<short>(delta * kScrollMultiplier);
+  // The wheel goes to whatever is under this point. It was (0, 0), the
+  // top-left corner, so the wheel only scrolled what sat in that corner:
+  // a fixed header there swallowed it, and a scrollable panel, frame or
+  // list anywhere else could not be scrolled with the mouse at all. It is
+  // the last place the mouse was seen.
+  POINT point = last_cursor_pos_;
 
-  POINT point;
-  point.x = 0;
-  point.y = 0;
+  // The amount is a signed 16-bit value; a fast flick can exceed it and
+  // would wrap round to scrolling the other way.
+  const double scaled = std::clamp(delta * kScrollMultiplier, -32767.0, 32767.0);
+  auto offset = static_cast<short>(scaled);
 
   if (horizontal) {
     composition_controller_->SendMouseInput(

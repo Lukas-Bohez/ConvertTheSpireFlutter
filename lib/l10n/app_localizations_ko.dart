@@ -3932,6 +3932,10 @@ class AppLocalizationsKo extends AppLocalizations {
       'Firefox 확장 프로그램은 Chromium도 지원하면 여기서 작동합니다. 앱이 다운로드 후 확인하고, 지원하지 않으면 알려 줍니다.';
 
   @override
+  String get extensionsRunPageScriptsHere =>
+      '이 기기에서는 확장 프로그램이 웹페이지에 추가하는 스크립트와 스타일이 실행되고 설정도 저장됩니다. 툴바 팝업, 백그라운드 작업, 네트워크 차단에는 데스크톱 브라우저 엔진이 필요하며, Windows 앱에 들어 있습니다.';
+
+  @override
   String get more3 => ' 등';
 
   @override

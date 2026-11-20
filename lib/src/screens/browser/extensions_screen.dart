@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../browser/extensions/amo_catalog.dart';
+import '../../browser/extensions/content_script_extension_host.dart';
 import '../../browser/extensions/extension_package.dart';
 import '../../browser/extensions/web_extension_host.dart';
 import '../../browser/extensions/webview2_extension_host.dart';
@@ -170,6 +171,9 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
       final problem =
           _host.runsChromiumPackages ? chromiumIncompatibility(manifest) : null;
       if (problem != null) throw ExtensionPackageException(problem);
+      if (_host is ContentScriptExtensionHost) {
+        ContentScriptExtensionHost.preflight(manifest);
+      }
     } catch (e) {
       _showError(e);
       return;
@@ -179,6 +183,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
       name: manifest.nameIsLocalised ? context.l10n.extensionLabel : manifest.name,
       permissions: manifest.permissions,
       hostPermissions: manifest.hostPermissions,
+      note: _engineNote(fromCatalog: false),
     );
     if (allowed != true) return;
     await _runInstall(FileExtensionSource(path));
@@ -203,9 +208,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
       name: addon.name,
       permissions: addon.permissions,
       hostPermissions: addon.hostPermissions,
-      note: _host.runsChromiumPackages
-          ? context.l10n.firefoxExtensionsRunHereWhen
-          : null,
+      note: _engineNote(fromCatalog: true),
     );
     if (allowed != true) return;
     await _runInstall(AmoExtensionSource(
@@ -215,6 +218,17 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
       version: addon.version,
       sha256: addon.fileSha256,
     ));
+  }
+
+  /// What the install dialog says about how this platform runs extensions.
+  String? _engineNote({required bool fromCatalog}) {
+    if (_host is ContentScriptExtensionHost) {
+      return context.l10n.extensionsRunPageScriptsHere;
+    }
+    if (_host.runsChromiumPackages && fromCatalog) {
+      return context.l10n.firefoxExtensionsRunHereWhen;
+    }
+    return null;
   }
 
   Future<void> _runInstall(ExtensionSource source) async {
@@ -426,7 +440,10 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
                       _buildInstalled(),
                       _CatalogTab(
                         catalog: _catalog,
-                        forAndroid: !_host.runsChromiumPackages,
+                        // Android-listed add-ons on Android; the larger
+                        // desktop catalog on Linux and macOS.
+                        forAndroid: !_host.runsChromiumPackages &&
+                            defaultTargetPlatform == TargetPlatform.android,
                         isInstalled: _isInstalledFromAmo,
                         onInstall: _installing ? null : _installFromCatalog,
                       ),

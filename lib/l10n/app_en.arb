@@ -2390,6 +2390,7 @@
   "extensionsUnavailableSessionAnotherCopy": "Extensions are unavailable in this session: another copy of the app had the browser open first. Close every copy and start the app again.",
   "extensionLabel": "this extension",
   "firefoxExtensionsRunHereWhen": "Firefox extensions run here when they also support Chromium. The app checks after downloading and tells you if not.",
+  "extensionsRunPageScriptsHere": "On this device an extension runs the scripts and styles it adds to web pages, and keeps its settings. Its toolbar popup, background work and network blocking need a desktop browser engine, which the Windows app has.",
   "more3": " and more",
   "installedFromFile": "installed from a file",
   "today": "Today",

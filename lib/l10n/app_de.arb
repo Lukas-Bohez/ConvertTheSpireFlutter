@@ -1184,6 +1184,7 @@
   "extensionsUnavailableSessionAnotherCopy": "Erweiterungen sind in dieser Sitzung nicht verfügbar: Eine andere Instanz der App hatte den Browser zuerst geöffnet. Schließe alle Instanzen und starte die App neu.",
   "extensionLabel": "diese Erweiterung",
   "firefoxExtensionsRunHereWhen": "Firefox-Erweiterungen laufen hier, wenn sie auch Chromium unterstützen. Die App prüft das nach dem Download und sagt dir Bescheid, falls nicht.",
+  "extensionsRunPageScriptsHere": "Auf diesem Gerät führt eine Erweiterung die Skripte und Stile aus, die sie Webseiten hinzufügt, und behält ihre Einstellungen. Ihr Symbolleisten-Pop-up, Hintergrundaufgaben und Netzwerkblockierung brauchen eine Desktop-Browser-Engine, die die Windows-App hat.",
   "more3": " und mehr",
   "installedFromFile": "aus einer Datei installiert",
   "today": "Heute",

@@ -4033,6 +4033,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Firefox extensions run here when they also support Chromium. The app checks after downloading and tells you if not.';
 
   @override
+  String get extensionsRunPageScriptsHere =>
+      'On this device an extension runs the scripts and styles it adds to web pages, and keeps its settings. Its toolbar popup, background work and network blocking need a desktop browser engine, which the Windows app has.';
+
+  @override
   String get more3 => ' and more';
 
   @override

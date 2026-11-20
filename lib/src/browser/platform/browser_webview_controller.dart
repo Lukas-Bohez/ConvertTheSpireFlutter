@@ -34,7 +34,15 @@ abstract class BrowserWebviewController {
   Future<String?> getTitle();
 
   /// Runs [js] in the page and returns the raw result (may be null).
+  ///
+  /// Where a platform cannot hand a result back for arbitrary code (Linux:
+  /// CEF only answers a single expression), the result is null; use
+  /// [evaluateJsExpression] when the value is needed.
   Future<Object?> evaluateJs(String js);
+
+  /// Evaluates one JavaScript expression (an IIFE or a plain expression, no
+  /// statements around it) and returns its value, or null when there is none.
+  Future<Object?> evaluateJsExpression(String expression) => evaluateJs(expression);
 
   /// The ad blocker for this webview, or none when null: the filters'
   /// requests are blocked where the platform matches them itself (Windows;

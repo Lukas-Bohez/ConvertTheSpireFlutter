@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart'
     show FindInteractionController;
 
+import 'browser_webview_cef.dart';
 import 'browser_webview_controller.dart';
 import 'browser_webview_inappwebview.dart';
 import 'browser_webview_web.dart';
@@ -23,11 +24,11 @@ export 'package:flutter_inappwebview/flutter_inappwebview.dart'
 ///  - Web: `flutter_inappwebview` web (iframe-based)
 ///  - Android/iOS/macOS: `flutter_inappwebview` native
 ///  - Windows: `webview_windows` (WebView2)
-///  - Linux: not supported (returns null)
+///  - Linux: `webview_cef` (Chromium, drawn into a Flutter texture)
 class BrowserWebviewFactory {
   BrowserWebviewFactory._();
 
-  /// Returns null on platforms without a supported WebView (Linux only).
+  /// Returns null only if a WebView cannot be created.
   static BrowserWebviewController? create({
     FindInteractionController? findInteractionController,
     BrowserWebViewHooks? hooks,
@@ -38,6 +39,9 @@ class BrowserWebviewFactory {
       }
       if (Platform.isWindows) {
         return BrowserWindowsWebViewAdapter(hooks: hooks);
+      }
+      if (Platform.isLinux) {
+        return BrowserCefWebViewAdapter(hooks: hooks);
       }
       if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
         return BrowserInAppWebViewAdapter(

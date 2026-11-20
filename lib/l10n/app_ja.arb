@@ -1184,6 +1184,7 @@
   "extensionsUnavailableSessionAnotherCopy": "このセッションでは拡張機能を使えません。別に起動したアプリが先にブラウザを開いています。すべて閉じてからアプリを起動し直してください。",
   "extensionLabel": "この拡張機能",
   "firefoxExtensionsRunHereWhen": "Firefox の拡張機能は、Chromium にも対応していればここで動作します。ダウンロード後にアプリが確認し、対応していなければお知らせします。",
+  "extensionsRunPageScriptsHere": "このデバイスでは、拡張機能がウェブページに追加するスクリプトとスタイルが動作し、設定も保存されます。ツールバーのポップアップ、バックグラウンド処理、ネットワークのブロックにはデスクトップ用ブラウザエンジンが必要で、Windows アプリにはそれがあります。",
   "more3": " など",
   "installedFromFile": "ファイルからインストール",
   "today": "今日",

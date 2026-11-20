@@ -38,6 +38,14 @@ STAGE="$OUT/$NAME"
 rm -rf "$STAGE"
 cp -a "$BUNDLE" "$STAGE"
 
+# The browser's Chromium (CEF, lib/libcef.so) comes with its debug information:
+# 1.4 GB, of which the program uses none.
+if [ -f "$STAGE/lib/libcef.so" ]; then
+  command -v strip >/dev/null || { echo "strip (binutils) is needed" >&2; exit 1; }
+  chmod u+w "$STAGE/lib/libcef.so"
+  strip --strip-unneeded "$STAGE/lib/libcef.so"
+fi
+
 # --- Libraries -------------------------------------------------------------
 #
 # Every library the program and its libraries load comes along, except:
@@ -123,6 +131,19 @@ while read -r soname path; do
   added=$((added + 1))
 done < <(needed)
 echo "   $added libraries"
+
+# Chromium reaches NSS's crypto modules by name, from NSS's own folder: they
+# are not in ldd's list, so they are taken along with libnss3.
+if [ -f "$STAGE/lib/libnss3.so" ]; then
+  for module in libsoftokn3.so libfreebl3.so libfreeblpriv3.so libnssckbi.so libnssdbm3.so; do
+    [ -e "$STAGE/lib/$module" ] && continue
+    found=$(find /usr/lib /lib -name "$module" -print -quit 2>/dev/null || true)
+    if [ -n "$found" ]; then
+      cp -L "$found" "$STAGE/lib/$module"
+      echo "   $module (NSS)"
+    fi
+  done
+fi
 
 # Retarget only bundled ELF files. Leave system GTK, GnuTLS and their
 # dependency chains to resolve against the host libraries.

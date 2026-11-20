@@ -439,6 +439,10 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   }
 
   @override
+  Future<Object?> evaluateJsExpression(String expression) =>
+      evaluateJs(expression);
+
+  @override
   Future<Object?> evaluateJs(String js) async {
     await _ensureReady();
     return _native.executeScript(js);

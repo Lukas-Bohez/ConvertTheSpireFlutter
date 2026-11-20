@@ -68,13 +68,10 @@ const String inputFocusBridgeJs = """
         window.__bbCall('InputFocusChannel', '__blur__');
       } catch(ex){}
     });
-    if (!window.__keyBlocker) {
-      window.__keyBlocker = true;
-      document.addEventListener('keydown', function(e) {
-        if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.key)) {
-          e.preventDefault(); e.stopImmediatePropagation();
-        }
-      }, true);
-    }
+    // (A script here used to cancel every arrow key and Enter keydown in the
+    // page. On a TV the remote's keys never reach the page - MainActivity and
+    // the cursor overlay take them - so it only ever hurt: with a keyboard,
+    // the arrow keys could not scroll a page and Enter could not submit a
+    // form.)
   }
 """;

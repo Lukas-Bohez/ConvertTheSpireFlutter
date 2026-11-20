@@ -4068,6 +4068,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Le estensioni di Firefox funzionano qui se supportano anche Chromium. L\'app lo verifica dopo il download e ti avvisa in caso contrario.';
 
   @override
+  String get extensionsRunPageScriptsHere =>
+      'Su questo dispositivo un\'estensione esegue gli script e gli stili che aggiunge alle pagine web e conserva le sue impostazioni. Il popup nella barra degli strumenti, le attività in background e il blocco di rete richiedono un motore di browser desktop, presente nell\'app per Windows.';
+
+  @override
   String get more3 => ' e altro';
 
   @override

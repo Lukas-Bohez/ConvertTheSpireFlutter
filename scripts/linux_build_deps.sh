@@ -27,4 +27,10 @@ $SUDO apt-get install -y --no-install-recommends \
   libayatana-appindicator3-dev \
   libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
   libjson-glib-dev \
-  patchelf file curl desktop-file-utils
+  patchelf file curl desktop-file-utils binutils libxi-dev
+# The browser's Chromium (webview_cef) needs these to link and to be taken
+# along by scripts/package_linux.sh, which copies what ldd finds for it.
+$SUDO apt-get install -y --no-install-recommends \
+  libnss3 libnspr4 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+  libxkbcommon0 libgbm1 libcups2 libatk1.0-0 libatk-bridge2.0-0 \
+  libpango-1.0-0 libcairo2 libdbus-1-3 libexpat1 libdrm2 libxext6 libxcb1

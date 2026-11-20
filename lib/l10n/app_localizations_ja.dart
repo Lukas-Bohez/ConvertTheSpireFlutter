@@ -3932,6 +3932,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'Firefox の拡張機能は、Chromium にも対応していればここで動作します。ダウンロード後にアプリが確認し、対応していなければお知らせします。';
 
   @override
+  String get extensionsRunPageScriptsHere =>
+      'このデバイスでは、拡張機能がウェブページに追加するスクリプトとスタイルが動作し、設定も保存されます。ツールバーのポップアップ、バックグラウンド処理、ネットワークのブロックにはデスクトップ用ブラウザエンジンが必要で、Windows アプリにはそれがあります。';
+
+  @override
   String get more3 => ' など';
 
   @override

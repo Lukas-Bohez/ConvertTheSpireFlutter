@@ -4038,6 +4038,10 @@ class AppLocalizationsHi extends AppLocalizations {
       'Firefox एक्सटेंशन यहां तब चलते हैं जब वे Chromium को भी सपोर्ट करते हों। ऐप डाउनलोड के बाद जांचता है और न चलने पर बताता है।';
 
   @override
+  String get extensionsRunPageScriptsHere =>
+      'इस डिवाइस पर एक्सटेंशन वे स्क्रिप्ट और स्टाइल चलाता है जो वह वेब पेजों में जोड़ता है, और अपनी सेटिंग्स सहेजकर रखता है। उसके टूलबार पॉप-अप, बैकग्राउंड काम और नेटवर्क ब्लॉकिंग के लिए डेस्कटॉप ब्राउज़र इंजन चाहिए, जो Windows ऐप में है।';
+
+  @override
   String get more3 => ' और भी';
 
   @override

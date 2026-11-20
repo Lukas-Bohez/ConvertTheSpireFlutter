@@ -1184,6 +1184,7 @@
   "extensionsUnavailableSessionAnotherCopy": "As extensões não estão disponíveis nesta sessão: outra cópia do app abriu o navegador antes. Feche todas as cópias e abra o app de novo.",
   "extensionLabel": "esta extensão",
   "firefoxExtensionsRunHereWhen": "As extensões do Firefox funcionam aqui quando também são compatíveis com o Chromium. O app verifica depois de baixar e avisa se não forem.",
+  "extensionsRunPageScriptsHere": "Neste dispositivo, uma extensão executa os scripts e estilos que adiciona às páginas da web e guarda as configurações dela. O pop-up da barra de ferramentas, o trabalho em segundo plano e o bloqueio de rede precisam de um motor de navegador de desktop, que o app para Windows tem.",
   "more3": " e mais",
   "installedFromFile": "instalada de um arquivo",
   "today": "Hoje",

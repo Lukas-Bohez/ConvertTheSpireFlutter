@@ -1184,6 +1184,7 @@
   "extensionsUnavailableSessionAnotherCopy": "Le estensioni non sono disponibili in questa sessione: un'altra istanza dell'app ha aperto il browser per prima. Chiudi tutte le istanze e riavvia l'app.",
   "extensionLabel": "questa estensione",
   "firefoxExtensionsRunHereWhen": "Le estensioni di Firefox funzionano qui se supportano anche Chromium. L'app lo verifica dopo il download e ti avvisa in caso contrario.",
+  "extensionsRunPageScriptsHere": "Su questo dispositivo un'estensione esegue gli script e gli stili che aggiunge alle pagine web e conserva le sue impostazioni. Il popup nella barra degli strumenti, le attività in background e il blocco di rete richiedono un motore di browser desktop, presente nell'app per Windows.",
   "more3": " e altro",
   "installedFromFile": "installata da un file",
   "today": "Oggi",
