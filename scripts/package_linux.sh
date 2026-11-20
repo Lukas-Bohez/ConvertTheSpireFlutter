@@ -121,16 +121,20 @@ needed() {
   } | awk '/=> \// { print $1, $3 }' | sort -u
 }
 
+take_needed() {
+  local added=0
+  while read -r soname path; do
+    [ -e "$STAGE/lib/$soname" ] && continue
+    excluded "$soname" && continue
+    cp -L "$path" "$STAGE/lib/$soname"
+    echo "   $soname"
+    added=$((added + 1))
+  done < <(needed)
+  echo "   $added libraries"
+}
+
 echo "== Taking libraries along"
-added=0
-while read -r soname path; do
-  [ -e "$STAGE/lib/$soname" ] && continue
-  excluded "$soname" && continue
-  cp -L "$path" "$STAGE/lib/$soname"
-  echo "   $soname"
-  added=$((added + 1))
-done < <(needed)
-echo "   $added libraries"
+take_needed
 
 # Chromium reaches NSS's crypto modules by name, from NSS's own folder: they
 # are not in ldd's list, so they are taken along with libnss3.
@@ -143,6 +147,8 @@ if [ -f "$STAGE/lib/libnss3.so" ]; then
       echo "   $module (NSS)"
     fi
   done
+  # What those modules load in turn (libsqlite3 for the key database).
+  take_needed
 fi
 
 # Retarget only bundled ELF files. Leave system GTK, GnuTLS and their
