@@ -7,7 +7,10 @@ project(runner LANGUAGES CXX)
 set(BINARY_NAME "convert_the_spire_reborn")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
-set(APPLICATION_ID "com.example.convert_the_spire_reborn")
+# The Flathub id: io.github.<GitHub user, "-" as "_">.<repository>. Also the
+# name of the .desktop file and the folder under ~/.local/share the app keeps
+# its data in (lib/src/services/linux_app_id.dart moves the old one).
+set(APPLICATION_ID "io.github.Lukas_Bohez.ConvertTheSpireFlutter")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

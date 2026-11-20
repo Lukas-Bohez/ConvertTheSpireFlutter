@@ -32,6 +32,15 @@ class GlobalCursorOverlay extends StatefulWidget {
     _webViewScrollCallback = onScroll;
   }
 
+  static bool Function(LogicalKeyboardKey key, bool isDown)? _remoteKeyHandler;
+
+  /// A remote key the WebView took from the page and handed over: on
+  /// Windows the page has the keyboard once it is clicked, and the PC's
+  /// arrow keys still have to act as the TV remote. Returns whether the
+  /// cursor used it.
+  static bool handleRemoteKey(LogicalKeyboardKey key, {required bool isDown}) =>
+      _remoteKeyHandler?.call(key, isDown) ?? false;
+
   const GlobalCursorOverlay({super.key, required this.child});
 
   @override
@@ -80,6 +89,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
     if (!kIsWeb && _isDesktopPlatform) {
       _isAndroidTV = true;
       HardwareKeyboard.instance.addHandler(_onHardwareKeyEvent);
+      GlobalCursorOverlay._remoteKeyHandler = _onRemoteKey;
       return;
     }
     _detectAndroidTV();
@@ -110,6 +120,9 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   void dispose() {
     if (!kIsWeb && _isDesktopPlatform) {
       HardwareKeyboard.instance.removeHandler(_onHardwareKeyEvent);
+      if (GlobalCursorOverlay._remoteKeyHandler == _onRemoteKey) {
+        GlobalCursorOverlay._remoteKeyHandler = null;
+      }
     }
     _ticker.dispose();
     _hideTimer?.cancel();
@@ -130,15 +143,29 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
     final isDown = event is KeyDownEvent;
     final isUp = event is KeyUpEvent;
     if (!isDown && !isUp) return false;
+    return _handleKey(event.logicalKey, isDown: isDown, isUp: isUp);
+  }
 
-    final key = event.logicalKey;
+  bool _onRemoteKey(LogicalKeyboardKey key, bool isDown) {
+    if (!mounted || !_cursorEnabled) return false;
+    return _handleKey(key, isDown: isDown, isUp: !isDown, fromPage: true);
+  }
+
+  /// The PC keyboard as a TV remote: arrows move the cursor, Enter clicks
+  /// where it is, Page Up / Page Down scroll a screenful. [fromPage] keys
+  /// come from the web page, which only hands them over while none of its
+  /// text fields is focused, so Flutter's focus says nothing about them.
+  bool _handleKey(LogicalKeyboardKey key,
+      {required bool isDown, required bool isUp, bool fromPage = false}) {
     final isArrow = key == LogicalKeyboardKey.arrowLeft ||
         key == LogicalKeyboardKey.arrowRight ||
         key == LogicalKeyboardKey.arrowUp ||
         key == LogicalKeyboardKey.arrowDown;
     // Arrow keys in a text field move its caret, not the cursor, which used
     // to appear and wander off while someone typed.
-    if (isArrow && isDown && _isTextFieldFocused()) return false;
+    if (isArrow && isDown && !fromPage && _isTextFieldFocused()) {
+      return false;
+    }
 
     if (key == LogicalKeyboardKey.arrowLeft) {
       _direction =
@@ -155,7 +182,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
     } else if (key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.numpadEnter ||
         key == LogicalKeyboardKey.select) {
-      if (_isTextFieldFocused()) {
+      if (!fromPage && _isTextFieldFocused()) {
         return false;
       }
       if (isDown) {
@@ -167,6 +194,14 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
           _fireTap();
         }
         _resetHideTimer();
+      }
+    } else if (key == LogicalKeyboardKey.pageUp ||
+        key == LogicalKeyboardKey.pageDown) {
+      if (!fromPage && _isTextFieldFocused()) return false;
+      if (isDown) {
+        final sign = key == LogicalKeyboardKey.pageUp ? -1 : 1;
+        _resetHideTimer();
+        unawaited(_injectScroll(sign * _viewportSize.height * 0.85, _position));
       }
     } else {
       return false;

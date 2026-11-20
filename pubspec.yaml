@@ -5,7 +5,7 @@ description: >-
   All-in-one media app: download from 1800+ sites, convert 27+ formats,
   play, cast to DLNA/UPnP, and download torrents.
 publish_to: 'none'
-version: 16.4.0+1310
+version: 16.4.1+1311
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -16,7 +16,6 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  flutter_launcher_icons: ^0.14.4
   msix: ^3.18.0
   path_provider_platform_interface: ^2.1.2
 

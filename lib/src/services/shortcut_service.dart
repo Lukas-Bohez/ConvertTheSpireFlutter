@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/build_flags.dart';
+import 'linux_app_id.dart';
 import 'platform_dirs.dart';
 
 /// Puts a shortcut to the app on the desktop, and on Linux in the app menu.
@@ -145,7 +146,11 @@ class ShortcutService {
   /// The file name of the app's menu entry. It matches the app's id (the
   /// runner's APPLICATION_ID), which Wayland desktops use to find the
   /// entry, and so the icon, of a window.
-  static const _entryName = 'com.example.convert_the_spire_reborn.desktop';
+  static const _entryName = '$linuxAppId.desktop';
+
+  /// The menu entry of versions before 16.4.1, when the id was Flutter's
+  /// template one.
+  static const _oldEntryName = '$oldLinuxAppId.desktop';
 
   /// The name of the desktop shortcut that older versions made.
   static const _oldDesktopName = 'vault-spire.desktop';
@@ -154,6 +159,9 @@ class ShortcutService {
   /// it moves (a new AppImage); the desktop shortcut as on Windows.
   static Future<bool> _ensureLinuxEntries({required bool create}) async {
     final env = Platform.environment;
+    // Flatpak installs the menu entry itself, and the sandbox could not
+    // write one anyway.
+    if (isFlatpak) return true;
     final home = env['HOME'];
     if (home == null || home.isEmpty) return false;
 
@@ -172,6 +180,12 @@ class ShortcutService {
     final applications = Directory(p.join(dataHome, 'applications'));
     await applications.create(recursive: true);
     final menuEntry = File(p.join(applications.path, _entryName));
+    final oldEntry = File(p.join(applications.path, _oldEntryName));
+    if (await oldEntry.exists()) {
+      try {
+        await oldEntry.delete();
+      } catch (_) {}
+    }
     if (await _writeIfChanged(menuEntry, entry)) {
       // So "Open with" lists the app at once; not every system has it.
       try {
@@ -227,7 +241,7 @@ class ShortcutService {
       'Terminal=false',
       'Categories=AudioVideo;Player;',
       'MimeType=${linuxMimeTypes.join(';')};',
-      'StartupWMClass=com.example.convert_the_spire_reborn',
+      'StartupWMClass=$linuxAppId',
       'StartupNotify=true',
       '',
     ].join('\n');

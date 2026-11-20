@@ -1,7 +1,8 @@
 """Builds every store / launcher graphic from the REAL logo and REAL screenshots.
 
 Single source of truth:
-  - assets/icons/bitplayer-source-1024.png        the proper app logo
+  - assets/icons/bitplayer-source-1024.png        the app logo
+  - assets/icons/full-bleed-1024.png              the logo edge to edge (store icon)
   - screenshots/*.webp                            real app screenshots
 
 Run from the repo root:   python store/google-play/build_store_assets.py
@@ -18,20 +19,17 @@ What it writes
   docs/screenshots/banner.png         same promo image (kept for reference;
                                       GitHub releases do not show a banner)
   android/app/src/main/play_tv_assets/  copies of the three TV images above
-  android/app/src/play/res/             launcher icons (adaptive foreground, white
-                                        background colour, legacy) and the in-app
-                                        Android TV banner (android:banner)
+  android/app/src/{play,main}/res/      the in-app Android TV banner
+                                        (android:banner)
 
-The in-app TV banner and launcher icons follow Google's Android TV sizes
+The launcher icons and the logo itself come from scripts/make_app_icons.py;
+run that first when the icon changes.
+
+The in-app TV banner follows Google's Android TV sizes
 (developer.android.com/design/ui/tv/guides/system/tv-app-icon-guidelines):
-banner 320x180 px and icon 160x160 px at xhdpi, in mipmap-<density>/. Play
-review rejects the app ("no full-size app banner and/or icon") without them,
-and also when the logo sits small in the icon with a wide margin around it
-("Your icon does not fill the entire icon space"): it is as large as the icon
-allows, on white.
+320x180 px at xhdpi, in mipmap-<density>/. Play review rejects the app ("no
+full-size app banner and/or icon") without it.
 """
-import math
-import random
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -43,6 +41,7 @@ MAIN_RES = ROOT / "android/app/src/main/res"
 TV_ASSETS = ROOT / "android/app/src/main/play_tv_assets"
 
 LOGO = ROOT / "assets/icons/bitplayer-source-1024.png"
+FULL_BLEED = ROOT / "assets/icons/full-bleed-1024.png"
 SHOT_DIR = ROOT / "screenshots"
 
 # --------------------------------------------------------------------------
@@ -58,20 +57,6 @@ BULLETS = [
     "Secure & private",
 ]
 BADGE = "Designed for Android TV"
-
-# How much of the icon the logo takes up: the diameter of the smallest circle
-# around the whole logo (music note included), as a share of the icon's side.
-# Play's TV review turned down the logo sitting small in a wide margin ("Your
-# icon does not fill the entire icon space"), so it is as large as it goes
-# without being cut off.
-ICON_LOGO = 0.96
-# Adaptive icon: 108dp layers, of which Android shows the centre 72dp; the
-# logo takes 69dp of it, so a round mask does not shave the music note.
-ADAPTIVE_LOGO_DP = 69
-# The logo was drawn for white: its white centre and edges belong on white,
-# and on Android the icon looked wrong on anything else.
-ICON_BG = (255, 255, 255)
-ICON_BG_HEX = "#FFFFFF"
 
 BOLD = ["bahnschrift.ttf", "segoeuib.ttf", "arialbd.ttf", "DejaVuSans-Bold.ttf"]
 REG = ["segoeui.ttf", "SegUIVar.ttf", "arial.ttf", "DejaVuSans.ttf"]
@@ -92,19 +77,10 @@ def font(names, size):
 _LOGO_CACHE = {}
 
 
-def trim_white_edge(im):
-    """The logo was cut out of a white background with about 3 px of that
-    white left around it, a light outline on the dark icon and banner. Pulls
-    the edge in by those 3 px (of 1024), which leaves the logo's own dark rim."""
-    im = im.copy()
-    im.putalpha(im.getchannel("A").filter(ImageFilter.MinFilter(7)))
-    return im
-
-
 def logo_content():
     """The logo cropped to its visible content (drops the transparent margin)."""
     if "c" not in _LOGO_CACHE:
-        im = trim_white_edge(Image.open(LOGO).convert("RGBA"))
+        im = Image.open(LOGO).convert("RGBA")
         bbox = im.getchannel("A").point(lambda v: 255 if v > 40 else 0).getbbox()
         _LOGO_CACHE["c"] = im.crop(bbox)
     return _LOGO_CACHE["c"]
@@ -121,64 +97,6 @@ def logo_fit(box):
 def paste_center(canvas, layer, cx, cy):
     canvas.alpha_composite(layer, (round(cx - layer.width / 2),
                                    round(cy - layer.height / 2)))
-
-
-def _circle_through(p, q, s):
-    (ax, ay), (bx, by), (cx, cy) = p, q, s
-    d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by))
-    if abs(d) < 1e-9:  # in a line: the widest pair spans the circle
-        a, b = max(((p, q), (p, s), (q, s)), key=lambda t: math.dist(*t))
-        return ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), math.dist(a, b) / 2
-    ux = ((ax * ax + ay * ay) * (by - cy) + (bx * bx + by * by) * (cy - ay)
-          + (cx * cx + cy * cy) * (ay - by)) / d
-    uy = ((ax * ax + ay * ay) * (cx - bx) + (bx * bx + by * by) * (ax - cx)
-          + (cx * cx + cy * cy) * (bx - ax)) / d
-    return (ux, uy), math.dist((ux, uy), p)
-
-
-def logo_circle():
-    """Centre and radius of the smallest circle around the logo's content.
-
-    The logo is round with the music note sticking out at the top right, so
-    centring its bounding box would push the note out of a round icon mask."""
-    if "circle" not in _LOGO_CACHE:
-        mask = logo_content().getchannel("A").point(lambda v: 255 if v > 40 else 0)
-        w, h = mask.size
-        px = mask.load()
-        pts = []
-        for y in range(h):
-            xs = [x for x in range(w) if px[x, y]]
-            if xs:
-                pts += [(xs[0], y), (xs[-1] + 1, y), (xs[0], y + 1), (xs[-1] + 1, y + 1)]
-        # Welzl's incremental algorithm; a fixed shuffle keeps it fast and the
-        # output the same on every run.
-        random.Random(0).shuffle(pts)
-        c, r = pts[0], 0.0
-        for i, p in enumerate(pts):
-            if math.dist(p, c) <= r + 1e-7:
-                continue
-            c, r = p, 0.0
-            for j in range(i):
-                q = pts[j]
-                if math.dist(q, c) <= r + 1e-7:
-                    continue
-                c, r = ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2), math.dist(p, q) / 2
-                for k in range(j):
-                    if math.dist(pts[k], c) > r + 1e-7:
-                        c, r = _circle_through(p, q, pts[k])
-        _LOGO_CACHE["circle"] = (c[0], c[1], r)
-    return _LOGO_CACHE["circle"]
-
-
-def paste_logo_round(canvas, diameter):
-    """Logo scaled and centred so all of it lies in a centred circle of
-    `diameter` px."""
-    c = logo_content()
-    cx, cy, r = logo_circle()
-    s = diameter / (2 * r)
-    layer = c.resize((round(c.width * s), round(c.height * s)), Image.LANCZOS)
-    canvas.alpha_composite(layer, (round(canvas.width / 2 - cx * s),
-                                   round(canvas.height / 2 - cy * s)))
 
 
 # --------------------------------------------------------------------------
@@ -321,60 +239,10 @@ def launcher_banner(w, h):
 
 
 def store_icon(size):
-    """Opaque square icon, the logo on white (Play Console 512x512, and the
-    legacy launcher icon)."""
-    im = Image.new("RGBA", (size, size), ICON_BG + (255,))
-    paste_logo_round(im, size * ICON_LOGO)
-    return im.convert("RGB")
-
-
-# --------------------------------------------------------------------------
-# Android launcher icons (play flavor)
-# --------------------------------------------------------------------------
-DENSITIES = {"ldpi": 0.75, "mdpi": 1.0, "hdpi": 1.5, "xhdpi": 2.0,
-             "xxhdpi": 3.0, "xxxhdpi": 4.0}
-
-
-def launcher_icons():
-    for name, scale in DENSITIES.items():
-        d_dir = PLAY_RES / f"mipmap-{name}"
-        d_dir.mkdir(parents=True, exist_ok=True)
-
-        # Adaptive icon: 108dp layers, white behind (a colour, below) and the
-        # logo in front, in the centre ADAPTIVE_LOGO_DP.
-        layer = round(108 * scale)
-        (d_dir / "ic_launcher_background.png").unlink(missing_ok=True)
-        fg = Image.new("RGBA", (layer, layer), (0, 0, 0, 0))
-        paste_logo_round(fg, layer * ADAPTIVE_LOGO_DP / 108)
-        fg.save(d_dir / "ic_launcher_foreground.png", optimize=True)
-
-        # Legacy icon, at the Android TV size of 80dp (160x160 px at xhdpi)
-        # rather than the phone's 48dp: Android TV requires at least that.
-        # Opaque edge to edge, so it is a full-size icon with no see-through
-        # corners; launchers apply their own shape.
-        store_icon(round(80 * scale)).save(d_dir / "ic_launcher.png", optimize=True)
-
-    any_dir = PLAY_RES / "mipmap-anydpi-v26"
-    any_dir.mkdir(parents=True, exist_ok=True)
-    xml = (
-        '<?xml version="1.0" encoding="utf-8"?>\n'
-        '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
-        '    <background android:drawable="@color/ic_launcher_background" />\n'
-        '    <foreground android:drawable="@mipmap/ic_launcher_foreground" />\n'
-        '</adaptive-icon>\n'
-    )
-    (any_dir / "ic_launcher.xml").write_text(xml, encoding="utf-8")
-    # android:roundIcon is not used (Android TV's guidelines deprecate it in
-    # favour of the adaptive icon above).
-    (any_dir / "ic_launcher_round.xml").unlink(missing_ok=True)
-    colors = (
-        '<?xml version="1.0" encoding="utf-8"?>\n'
-        '<resources>\n'
-        f'    <color name="ic_launcher_background">{ICON_BG_HEX}</color>\n'
-        '</resources>\n'
-    )
-    (PLAY_RES / "values").mkdir(parents=True, exist_ok=True)
-    (PLAY_RES / "values/colors.xml").write_text(colors, encoding="utf-8")
+    """Play Console's 512x512 icon: opaque, edge to edge (Play applies its own
+    rounded shape). scripts/make_app_icons.py draws it."""
+    im = Image.open(FULL_BLEED).convert("RGB")
+    return im.resize((size, size), Image.LANCZOS)
 
 
 BANNER_SIZES = {"mdpi": (160, 90), "hdpi": (240, 135), "xhdpi": (320, 180),
@@ -418,9 +286,9 @@ def main():
     save(s2, STORE / "tv-screenshot-2-1920x1080.png",
          TV_ASSETS / "tv_screenshot_2_1920x1080.png")
     save(store_icon(512), STORE / "app-icon-512.png")
-    launcher_icons()
     android_tv_banner()
-    print("wrote launcher icons + TV banner under", PLAY_RES.relative_to(ROOT))
+    print("wrote the TV banner under", PLAY_RES.relative_to(ROOT),
+          "(launcher icons: scripts/make_app_icons.py)")
 
 
 if __name__ == "__main__":

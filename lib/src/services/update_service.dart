@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/build_flags.dart';
 import '../utils/cpu_arch.dart';
 import '../utils/safe_json.dart';
+import 'linux_app_id.dart';
 
 class UpdateInfo {
   final String latestVersion;
@@ -52,7 +53,8 @@ class UpdateInfo {
 class UpdateService {
   /// Whether the app looks for and installs its own updates: only the
   /// GitHub builds. Google Play and the Microsoft Store update theirs.
-  static bool get enabled => !kPlayStoreBuild && !kMsStoreBuild;
+  /// Store installs and Flatpaks are updated by their store (Flathub).
+  static bool get enabled => !kPlayStoreBuild && !kMsStoreBuild && !isFlatpak;
 
   static const _repoOwner = 'Lukas-Bohez';
   static const _repoName = 'ConvertTheSpireFlutter';

@@ -23,7 +23,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$(mkdir -p "${1:-$ROOT/dist}" && cd "${1:-$ROOT/dist}" && pwd)"
 APP=convert_the_spire_reborn
 NAME=ConvertTheSpireReborn
-APP_ID=com.example.convert_the_spire_reborn
+APP_ID=io.github.Lukas_Bohez.ConvertTheSpireFlutter
 
 case "$(uname -m)" in
   x86_64) FLUTTER_ARCH=x64; APPIMAGE_ARCH=x86_64 ;;
@@ -197,22 +197,11 @@ fi
 
 # --- Icon and menu entry -----------------------------------------------------
 
-cp "$ROOT/assets/icons/app_logo_384.png" "$STAGE/$APP_ID.png"
-cat > "$STAGE/$APP_ID.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=Convert the Spire Reborn
-GenericName=Media player and downloader
-Comment=Download, convert, play and cast music and videos
-Exec=$APP %U
-Icon=$APP_ID
-Terminal=false
-Categories=AudioVideo;Player;
-MimeType=x-scheme-handler/magnet;application/x-bittorrent;audio/mpeg;audio/mp4;audio/x-m4a;audio/flac;audio/x-flac;audio/wav;audio/x-wav;audio/ogg;audio/x-vorbis+ogg;audio/opus;audio/x-opus+ogg;audio/aac;audio/x-ms-wma;video/mp4;video/x-matroska;video/x-msvideo;video/webm;video/quicktime;video/x-ms-wmv;video/x-flv;video/x-m4v;
-StartupWMClass=$APP_ID
-StartupNotify=true
-X-AppImage-Version=$VERSION
-EOF
+# The menu entry and icon are the ones in linux/packaging and assets/icons
+# (scripts/make_app_icons.py), which a Flatpak installs too.
+cp "$ROOT/assets/icons/linux/256x256/$APP_ID.png" "$STAGE/$APP_ID.png"
+cp "$ROOT/linux/packaging/$APP_ID.desktop" "$STAGE/$APP_ID.desktop"
+echo "X-AppImage-Version=$VERSION" >> "$STAGE/$APP_ID.desktop"
 if command -v desktop-file-validate >/dev/null; then
   desktop-file-validate "$STAGE/$APP_ID.desktop"
 fi

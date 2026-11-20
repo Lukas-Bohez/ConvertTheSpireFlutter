@@ -38,6 +38,7 @@ if (!window.__bbCall) {
 /// registers each of these.
 const List<String> jsBridgeHandlerNames = [
   'InputFocusChannel',
+  'remoteKey',
   'onVideoFound',
   'onVideoPlayback',
   'ctsExtStorage',

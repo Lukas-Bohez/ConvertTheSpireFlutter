@@ -170,6 +170,13 @@ class WebviewController extends ValueNotifier<WebviewValue> {
   Stream<bool> get containsFullScreenElementChanged =>
       _containsFullScreenElementChangedStreamController.stream;
 
+  final StreamController<WebviewRemoteKey> _remoteKeyStreamController =
+      StreamController<WebviewRemoteKey>.broadcast();
+
+  /// Arrow and Page Up/Down keys pressed while the page has the keyboard,
+  /// taken from the page while [setRemoteKeys] is on.
+  Stream<WebviewRemoteKey> get remoteKeys => _remoteKeyStreamController.stream;
+
   WebviewController() : super(WebviewValue.uninitialized());
 
   /// Initializes the underlying platform view.
@@ -221,6 +228,11 @@ class WebviewController extends ValueNotifier<WebviewValue> {
             } catch (ex) {
               _webMessageStreamController.addError(ex);
             }
+            break;
+          case 'remoteKey':
+            final value = map['value'] as Map<dynamic, dynamic>;
+            _remoteKeyStreamController.add(WebviewRemoteKey(
+                value['key'] as int, value['down'] as bool));
             break;
           case 'containsFullScreenElementChanged':
             _containsFullScreenElementChangedStreamController.add(map['value']);
@@ -624,6 +636,16 @@ class WebviewController extends ValueNotifier<WebviewValue> {
         <String, dynamic>{'button': button.index, 'isDown': isDown});
   }
 
+  /// While on, arrow and Page Up/Down keys pressed in the page go to
+  /// [remoteKeys] instead of the page.
+  Future<void> setRemoteKeys(bool enabled) async {
+    if (_isDisposed) {
+      return;
+    }
+    assert(value.isInitialized);
+    return _methodChannel.invokeMethod('setRemoteKeys', enabled);
+  }
+
   /// Sets the horizontal and vertical scroll delta.
   Future<void> _setScrollDelta(double dx, double dy) async {
     if (_isDisposed) {
@@ -821,6 +843,14 @@ class _WebviewState extends State<Webview> {
     super.dispose();
     _cursorSubscription?.cancel();
   }
+}
+
+/// A remote-control key from the page: a Windows virtual-key code
+/// (VK_LEFT = 0x25 ... VK_DOWN = 0x28, VK_PRIOR = 0x21, VK_NEXT = 0x22).
+class WebviewRemoteKey {
+  const WebviewRemoteKey(this.virtualKey, this.isDown);
+  final int virtualKey;
+  final bool isDown;
 }
 
 /// An extension installed in a WebView2 profile.

@@ -99,6 +99,7 @@ struct EventRegistrations {
   EventRegistrationToken contains_fullscreen_element_changed_token_{};
   EventRegistrationToken navigation_starting_token_{};
   EventRegistrationToken web_resource_requested_token_{};
+  EventRegistrationToken accelerator_key_pressed_token_{};
 };
 
 class Webview {
@@ -241,6 +242,18 @@ class Webview {
     contains_fullscreen_element_changed_callback_ = std::move(callback);
   }
 
+  // A remote-control key (arrows, Page Up/Down) pressed or released while
+  // the page has the keyboard: the virtual key and whether it went down.
+  typedef std::function<void(uint32_t, bool)> RemoteKeyCallback;
+  void OnRemoteKey(RemoteKeyCallback callback) {
+    remote_key_callback_ = std::move(callback);
+  }
+
+  // While on, those keys go to the app (its TV-remote cursor) instead of
+  // the page. Off while a text field on the page has the focus, so the
+  // arrows move its caret.
+  void SetRemoteKeysEnabled(bool enabled) { remote_keys_enabled_ = enabled; }
+
  private:
   HWND hwnd_;
   bool owns_window_;
@@ -253,6 +266,9 @@ class Webview {
       devtools_protocol_event_receiver_;
   wil::com_ptr<ICoreWebView2Settings2> settings2_;
   POINT last_cursor_pos_ = {0, 0};
+  // The same position in Flutter's logical pixels, for DevTools input.
+  double last_cursor_x_ = 0;
+  double last_cursor_y_ = 0;
   VirtualKeyState virtual_keys_;
   WebviewPopupWindowPolicy popup_window_policy_ =
       WebviewPopupWindowPolicy::Allow;
@@ -280,6 +296,8 @@ class Webview {
   DevtoolsProtocolEventCallback devtools_protocol_event_callback_;
   ContainsFullScreenElementChangedCallback
       contains_fullscreen_element_changed_callback_;
+  RemoteKeyCallback remote_key_callback_;
+  bool remote_keys_enabled_ = false;
 
   Webview(
       wil::com_ptr<ICoreWebView2CompositionController> composition_controller,

@@ -324,6 +324,53 @@ void Webview::RegisterEventHandlers() {
           .Get(),
       &event_registrations_.cursor_changed_token_);
 
+  // Arrow keys and Page Up/Down do not map to a character, so WebView2
+  // offers them here before the page sees them. With remote keys on they
+  // go to the app's TV-remote cursor (the arrow keys of a PC stand in for a
+  // TV remote) and the page never gets them; Shift, Ctrl and Alt
+  // combinations stay with the page.
+  webview_controller_->add_AcceleratorKeyPressed(
+      Callback<ICoreWebView2AcceleratorKeyPressedEventHandler>(
+          [this](ICoreWebView2Controller* sender,
+                 ICoreWebView2AcceleratorKeyPressedEventArgs* args)
+              -> HRESULT {
+            if (!remote_keys_enabled_ || !remote_key_callback_) {
+              return S_OK;
+            }
+            COREWEBVIEW2_KEY_EVENT_KIND kind;
+            UINT key;
+            if (FAILED(args->get_KeyEventKind(&kind)) ||
+                FAILED(args->get_VirtualKey(&key))) {
+              return S_OK;
+            }
+            if (kind != COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN &&
+                kind != COREWEBVIEW2_KEY_EVENT_KIND_KEY_UP) {
+              return S_OK;
+            }
+            if (GetKeyState(VK_SHIFT) < 0 || GetKeyState(VK_CONTROL) < 0 ||
+                GetKeyState(VK_MENU) < 0) {
+              return S_OK;
+            }
+            switch (key) {
+              case VK_LEFT:
+              case VK_RIGHT:
+              case VK_UP:
+              case VK_DOWN:
+              case VK_PRIOR:
+              case VK_NEXT:
+                break;
+              default:
+                return S_OK;
+            }
+            args->put_Handled(TRUE);
+            remote_key_callback_(
+                static_cast<uint32_t>(key),
+                kind == COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN);
+            return S_OK;
+          })
+          .Get(),
+      &event_registrations_.accelerator_key_pressed_token_);
+
   webview_controller_->add_GotFocus(
       Callback<ICoreWebView2FocusChangedEventHandler>(
           [this](ICoreWebView2Controller* sender, IUnknown* args) -> HRESULT {
@@ -552,6 +599,8 @@ void Webview::SetCursorPos(double x, double y) {
   point.x = static_cast<LONG>(x * scale_factor_);
   point.y = static_cast<LONG>(y * scale_factor_);
   last_cursor_pos_ = point;
+  last_cursor_x_ = x;
+  last_cursor_y_ = y;
 
   // https://docs.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2?view=webview2-1.0.774.44
   composition_controller_->SendMouseInput(
@@ -657,34 +706,52 @@ void Webview::SetPointerButtonState(WebviewPointerButton button, bool is_down) {
 }
 
 void Webview::SendScroll(double delta, bool horizontal) {
-  // delta * 6 gives me a multiple of WHEEL_DELTA (120)
+  // Kept for runtimes where DevTools input is unavailable (see
+  // SetScrollDelta). delta * 6 gives a multiple of WHEEL_DELTA (120).
   constexpr auto kScrollMultiplier = 6;
-
-  // The wheel goes to whatever is under this point. It was (0, 0), the
-  // top-left corner, so the wheel only scrolled what sat in that corner:
-  // a fixed header there swallowed it, and a scrollable panel, frame or
-  // list anywhere else could not be scrolled with the mouse at all. It is
-  // the last place the mouse was seen.
   POINT point = last_cursor_pos_;
-
   // The amount is a signed 16-bit value; a fast flick can exceed it and
   // would wrap round to scrolling the other way.
-  const double scaled = std::clamp(delta * kScrollMultiplier, -32767.0, 32767.0);
+  const double scaled =
+      std::clamp(delta * kScrollMultiplier, -32767.0, 32767.0);
   auto offset = static_cast<short>(scaled);
 
-  if (horizontal) {
-    composition_controller_->SendMouseInput(
-        COREWEBVIEW2_MOUSE_EVENT_KIND_HORIZONTAL_WHEEL, virtual_keys_.state(),
-        offset, point);
-  } else {
-    composition_controller_->SendMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND_WHEEL,
-                                            virtual_keys_.state(), offset,
-                                            point);
-  }
+  composition_controller_->SendMouseInput(
+      horizontal ? COREWEBVIEW2_MOUSE_EVENT_KIND_HORIZONTAL_WHEEL
+                 : COREWEBVIEW2_MOUSE_EVENT_KIND_WHEEL,
+      virtual_keys_.state(), offset, point);
 }
 
 void Webview::SetScrollDelta(double delta_x, double delta_y) {
-  if (!IsValid()) {
+  if (!IsValid() || (delta_x == 0.0 && delta_y == 0.0)) {
+    return;
+  }
+
+  // The wheel goes in as a DevTools mouse-wheel event at the mouse's
+  // position. WebView2 accepts a wheel sent with SendMouseInput (S_OK) but,
+  // with the webview's parent window hidden as it is here, current runtimes
+  // never hand it to the page: the mouse wheel did nothing on any site. A
+  // DevTools wheel is handled exactly like a real one: it scrolls whatever
+  // is under the mouse, and the page sees a trusted `wheel` event.
+  //
+  // Positions and amounts are CSS pixels: Flutter's logical pixels divided
+  // by the page zoom. Flutter's delta is "how far the content moves", the
+  // opposite sign of DevTools' (the Dart side already flipped it once).
+  double zoom = 1.0;
+  if (FAILED(webview_controller_->get_ZoomFactor(&zoom)) || zoom <= 0) {
+    zoom = 1.0;
+  }
+  const double x = last_cursor_x_ / zoom;
+  const double y = last_cursor_y_ / zoom;
+  const double dx = -delta_x / zoom;
+  const double dy = -delta_y / zoom;
+  const std::wstring params =
+      std::format(L"{{\"type\":\"mouseWheel\",\"x\":{:.2f},\"y\":{:.2f},"
+                  L"\"deltaX\":{:.2f},\"deltaY\":{:.2f},\"pointerType\":\"mouse\"}}",
+                  x, y, dx, dy);
+  const HRESULT hr = webview_->CallDevToolsProtocolMethod(
+      L"Input.dispatchMouseEvent", params.c_str(), nullptr);
+  if (SUCCEEDED(hr)) {
     return;
   }
 

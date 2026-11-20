@@ -1,18 +1,13 @@
-# Release Notes - v16.4.0
+# Release Notes - v16.4.1
 
-## Extensions on every device, and a browser that scrolls
-
-### New
-
-- **Chrome and Firefox extensions on Android, Android TV, Linux and macOS.** Install them from the Extensions screen (addons.mozilla.org) or from a .crx, .zip or .xpi file, as on Windows. On these devices an extension does what it adds to web pages: page themes and dark modes, site tweaks, YouTube and reading helpers, and it keeps its settings between pages and restarts. Extensions that work only through a toolbar popup, a background page or network blocking need a desktop browser engine; the app tells you before installing one of those, and ad blocking is built into the browser anyway. On Windows extensions run in full, as before.
-- **The browser works on Linux.** It runs Chromium, drawn inside the app, so pages look as they do in Chrome, and the remote cursor, menus and dialogs stay on top of them. The Linux downloads are bigger because Chromium comes inside (about 290 MB).
+## The mouse wheel and the arrow keys work in the browser, and a new icon
 
 ### Fixed
 
-- **Scrolling up with a TV remote works on every page.** On many sites the remote could scroll down but not back up: at the top edge the cursor sat over the site's fixed header, and the header does not scroll. Up and down now scroll whatever part of the page the cursor is over, the page itself when that part cannot move. Page Up and Page Down, and Channel Up and Down on a remote, scroll a screen at a time.
-- **The mouse wheel scrolls where the mouse is (Windows).** The browser sent every wheel turn to the page's top-left corner, so chat boxes, comment panels and side menus never scrolled, and on some sites the page did not either.
-- **Pages can reach the app again on Android, Android TV, iOS and macOS.** Since 13.0.10 nothing a page sent arrived: choosing a text field on a page, finding the video on a page and noticing that it plays all depend on it.
+- **The mouse wheel scrolls web pages again (Windows).** In 16.4.0 turning the wheel over a page did nothing on current versions of Microsoft Edge WebView2, which quietly dropped the wheel turns the app passed on. The app now hands them to the page the way a real mouse does, so the page, and any panel or box under the mouse, scrolls.
+- **The arrow keys stay the TV remote after you click a page (Windows).** Once a page had been clicked it kept the keyboard, and the arrow keys scrolled it instead of moving the remote cursor, so the TV controls could not be tried on a PC. The arrow keys now move the cursor, Enter clicks where it is, and Page Up and Page Down scroll a screen at a time, as on a TV. In a text field on a page the arrow keys move the text cursor as usual, and Enter sends.
 
-### Improved
+### New
 
-- On Android phones and tablets a keyboard's or game controller's arrow keys and Enter go to the app as usual; only Android TV turns them into the remote cursor.
+- **A new app icon:** a play button with a download arrow, riding two waves on a blue-to-green tile. It replaces both older icons, on every platform and in the Play Store and Microsoft Store listings.
+- **Ready for Flathub.** The Linux app has its Flathub id (`io.github.Lukas_Bohez.ConvertTheSpireFlutter`), menu entry and AppStream description. A Linux install moves its settings and library to the new id by itself on first start.

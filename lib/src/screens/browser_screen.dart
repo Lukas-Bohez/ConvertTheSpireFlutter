@@ -523,6 +523,24 @@ class _BrowserScreenState extends State<BrowserScreen>
           _pauseCursor();
           _handleInputFocusMessage(msg);
         }
+      case 'remoteKey':
+        // "ArrowUp:down", "Enter:down", ...: a remote key the page handed
+        // over (Windows; see BrowserWindowsWebViewAdapter).
+        final parts = message.payload.split(':');
+        final key = switch (parts.first) {
+          'ArrowLeft' => LogicalKeyboardKey.arrowLeft,
+          'ArrowRight' => LogicalKeyboardKey.arrowRight,
+          'ArrowUp' => LogicalKeyboardKey.arrowUp,
+          'ArrowDown' => LogicalKeyboardKey.arrowDown,
+          'PageUp' => LogicalKeyboardKey.pageUp,
+          'PageDown' => LogicalKeyboardKey.pageDown,
+          'Enter' => LogicalKeyboardKey.enter,
+          _ => null,
+        };
+        if (key != null) {
+          GlobalCursorOverlay.handleRemoteKey(key,
+              isDown: parts.length < 2 || parts[1] != 'up');
+        }
       case 'onVideoFound':
         if (message.payload.isNotEmpty) {
           _videoDetector.handleJsCallback(message.payload);

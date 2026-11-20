@@ -211,6 +211,8 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
           case LoadingState.loading:
             _progressEvents.add(0);
             _pageEvents.add(BrowserPageEvent(isStart: true, url: _lastUrl));
+            // A new page has no focused text field yet.
+            unawaited(_setRemoteKeys(true));
             unawaited(_injectUserScripts(_lastUrl, atDocumentStart: true));
           case LoadingState.navigationCompleted:
             _progressEvents.add(1);
@@ -236,12 +238,40 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
             canGoBack: h.canGoBack, canGoForward: h.canGoForward));
       }),
       _native.webMessage.listen(_handleWebMessage),
+      _native.remoteKeys.listen((k) {
+        final name = _remoteKeyNames[k.virtualKey];
+        if (name == null) return;
+        _jsMessages.add(BrowserJsMessage(
+            handler: 'remoteKey', payload: '$name:${k.isDown ? 'down' : 'up'}'));
+      }),
       _native.onLoadError.listen((status) {
         _errorEvents.add(BrowserErrorEvent(
             url: _lastUrl, description: status.toString(), isMainFrame: true));
       }),
     ];
     await _native.initialize();
+    await _setRemoteKeys(true);
+  }
+
+  static const _remoteKeyNames = {
+    0x25: 'ArrowLeft',
+    0x26: 'ArrowUp',
+    0x27: 'ArrowRight',
+    0x28: 'ArrowDown',
+    0x21: 'PageUp',
+    0x22: 'PageDown',
+  };
+
+  /// Once the page is clicked, WebView2 has the keyboard and the arrows
+  /// would scroll the page; the PC's arrow keys are the TV remote, so the
+  /// plugin hands them to the cursor instead. Off while a text field on the
+  /// page is focused, where they move the caret.
+  Future<void> _setRemoteKeys(bool enabled) async {
+    try {
+      if (_native.value.isInitialized) await _native.setRemoteKeys(enabled);
+    } catch (e) {
+      debugPrint('[BROWSER] remote keys: $e');
+    }
   }
 
   void _handleWebMessage(dynamic message) {
@@ -250,6 +280,9 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
       if (decoded is String) decoded = jsonDecode(decoded);
       if (decoded is Map && decoded.containsKey('handler')) {
         final payload = decoded['payload'];
+        if (decoded['handler'] == 'InputFocusChannel') {
+          unawaited(_setRemoteKeys(payload == '__blur__'));
+        }
         _jsMessages.add(BrowserJsMessage(
           handler: decoded['handler'].toString(),
           payload: payload is String
@@ -309,6 +342,22 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
         window.chrome.webview.postMessage(JSON.stringify({ handler: name, payload: payload }));
       } catch (e) {}
     };
+  }
+  // Enter is the remote's OK button: it clicks where the app's cursor is.
+  // It types a character, so WebView2 does not offer it to the app the way
+  // it does the arrows; it is taken here, except in a text field or with a
+  // modifier held.
+  if (window === window.top && !window.__ctsRemoteEnter) {
+    window.__ctsRemoteEnter = true;
+    window.addEventListener('keydown', function(e) {
+      if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.isComposing) return;
+      var t = document.activeElement;
+      while (t && t.shadowRoot && t.shadowRoot.activeElement) t = t.shadowRoot.activeElement;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)\$/.test(t.tagName))) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      window.__bbCall('remoteKey', 'Enter:down');
+    }, true);
   }
 })();
 ''';
