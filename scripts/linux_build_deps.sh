@@ -48,7 +48,8 @@ if [ "${clang_major:-0}" -lt 16 ]; then
   echo "deb [signed-by=/usr/share/keyrings/apt.llvm.org.gpg] http://apt.llvm.org/$codename/ llvm-toolchain-$codename-18 main" \
     | $SUDO tee /etc/apt/sources.list.d/llvm-18.list >/dev/null
   $SUDO apt-get update
-  $SUDO apt-get install -y --no-install-recommends clang-18
+  # lld: Dart's native-asset builds look for a linker next to clang.
+  $SUDO apt-get install -y --no-install-recommends clang-18 lld-18
   $SUDO ln -sf /usr/bin/clang-18 /usr/local/bin/clang
   $SUDO ln -sf /usr/bin/clang++-18 /usr/local/bin/clang++
   hash -r
